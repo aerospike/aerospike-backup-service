@@ -1,0 +1,22 @@
+---
+aerospike-cluster:
+  - name: "cluster1"
+    host: "localhost"
+    port: 3000
+
+backup-storage:
+  - name: "local1"
+    type: 0
+    path: "./testout"
+
+backup-policy:
+  - name: "policy-daily"
+    interval: 10000
+    type: 1
+    source_cluster: "cluster1"
+    storage: "local1"
+    namespace: "test"
+    set_list:
+      - set1
+    parallel: 1
+    
