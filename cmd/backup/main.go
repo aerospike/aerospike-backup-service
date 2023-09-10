@@ -71,6 +71,7 @@ func runHTTPServer(host string, port int, config *model.Config) int {
 	// shutdown the HTTP server gracefully
 	if err := server.Shutdown(); err != nil {
 		logger.Error("HTTP server shutdown failed", "error", err)
+		return 1
 	}
 
 	logger.Info("HTTP server shutdown gracefully")
