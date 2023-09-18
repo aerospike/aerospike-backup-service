@@ -50,7 +50,7 @@ func run() int {
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path")
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		logger.Error(err.Error())
 		exitVal = 1
 	}
 
