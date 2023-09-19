@@ -7,7 +7,7 @@ tools, built as shared libraries.
 ## Feature list
 
 - [x] Local backup storage
-- [ ] S3 backup storage
+- [x] S3 backup storage
 - [x] Core REST API
 - [x] Prometheus metrics
 - [x] Backup policy configuration
