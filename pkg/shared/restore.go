@@ -62,6 +62,10 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) {
 		setCString(&restoreConfig.bin_list, &binList)
 	}
 
+	// S3 configuration
+	setCString(&restoreConfig.s3_endpoint_override, restoreRequest.S3EndpointOverride)
+	setCString(&restoreConfig.s3_region, restoreRequest.S3Region)
+	setCString(&restoreConfig.s3_profile, restoreRequest.S3Profile)
 	setCString(&restoreConfig.directory, restoreRequest.Directory)
 
 	setCBool(&restoreConfig.replace, restoreRequest.Replace)

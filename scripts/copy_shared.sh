@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-cd ..
-[ -d lib ] || mkdir lib
-cp ./modules/aerospike-tools-backup/bin/asbackup.dylib ./lib/libasbackup.dylib
-cp ./modules/aerospike-tools-backup/bin/asrestore.dylib ./lib/libasrestore.dylib
+ROOT_PATH=$(cd `dirname $0` && pwd)/..
+[ -d lib ] || mkdir $ROOT_PATH/lib
+cp $ROOT_PATH/modules/aerospike-tools-backup/bin/asbackup.dylib $ROOT_PATH/lib/libasbackup.dylib
+cp $ROOT_PATH/modules/aerospike-tools-backup/bin/asrestore.dylib $ROOT_PATH/lib/libasrestore.dylib
