@@ -18,11 +18,11 @@ type Config struct {
 
 // String satisfies the fmt.Stringer interface.
 func (c Config) String() string {
-	configString, err := json.Marshal(c)
+	cfg, err := json.Marshal(c)
 	if err != nil {
 		return err.Error()
 	}
-	return string(configString)
+	return string(cfg)
 }
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.

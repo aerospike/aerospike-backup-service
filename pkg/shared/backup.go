@@ -13,8 +13,11 @@ package shared
 */
 import "C"
 import (
+	"fmt"
 	"sync"
 	"unsafe"
+
+	"log/slog"
 
 	"github.com/aerospike/backup/pkg/model"
 )
@@ -42,6 +45,8 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	b.Lock()
 	defer b.Unlock()
 
+	slog.Debug(fmt.Sprintf("Starting backup for %s", *backupPolicy.Name))
+
 	backupConfig := C.backup_config_t{}
 	C.backup_config_default(&backupConfig)
 
@@ -51,7 +56,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCString(&backupConfig.user, cluster.User)
 	setCString(&backupConfig.password, cluster.Password)
 
-	setVector(&backupConfig.set_list, *backupPolicy.SetList)
+	setVector(&backupConfig.set_list, backupPolicy.SetList)
 
 	// namespace list configuration
 	nsCharArray := (*C.char)(C.CString(*backupPolicy.Namespace))
@@ -79,10 +84,10 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 }
 
 // set the as_vector for the backup_config
-func setVector(setVector *C.as_vector, setList []string) {
-	if len(setList) > 0 {
-		C.as_vector_init(setVector, 64, C.uint(len(setList)))
-		for i, setName := range setList {
+func setVector(setVector *C.as_vector, setList *[]string) {
+	if setList != nil && len(*setList) > 0 {
+		C.as_vector_init(setVector, 64, C.uint(len(*setList)))
+		for i, setName := range *setList {
 			setCharArray := unsafe.Pointer(C.CString(setName))
 			C.as_vector_set(setVector, C.uint(i), setCharArray)
 		}

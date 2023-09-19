@@ -1,0 +1,9 @@
+{
+    "host": "localhost",
+    "port": 3000,
+    "directory": "s3://as-backup-bucket/test-backup",
+    "s3_region": "eu-central-1",
+    "s3_profile": "minio",
+    "s3_endpoint_override": "http://localhost:9000",
+    "set_list": ["set1"]
+}

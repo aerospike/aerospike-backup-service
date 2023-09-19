@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 
+	"log/slog"
+
 	"github.com/aerospike/backup/pkg/model"
 )
 
@@ -40,6 +42,8 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) {
 	r.Lock()
 	defer r.Unlock()
 
+	slog.Debug("Starting restore operation")
+
 	restoreConfig := C.restore_config_t{}
 	C.restore_config_default(&restoreConfig)
 
@@ -62,11 +66,17 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) {
 		setCString(&restoreConfig.bin_list, &binList)
 	}
 
+	// S3 configuration
+	setCString(&restoreConfig.s3_endpoint_override, restoreRequest.S3EndpointOverride)
+	setCString(&restoreConfig.s3_region, restoreRequest.S3Region)
+	setCString(&restoreConfig.s3_profile, restoreRequest.S3Profile)
 	setCString(&restoreConfig.directory, restoreRequest.Directory)
 
 	setCBool(&restoreConfig.replace, restoreRequest.Replace)
 	setCBool(&restoreConfig.unique, restoreRequest.Unique)
 	setCBool(&restoreConfig.no_generation, restoreRequest.NoGeneration)
+
+	restoreConfig.validate = true
 
 	// fmt.Println(restoreConfig)
 	C.restore_run(&restoreConfig)
