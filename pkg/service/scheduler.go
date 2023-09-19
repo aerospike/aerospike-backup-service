@@ -13,9 +13,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// service logger
-var logger *slog.Logger = slog.New(util.LogHandler)
-
 // backup service
 var backupService shared.Backup = shared.NewBackup()
 
@@ -51,7 +48,7 @@ func scheduleBackup(ctx context.Context, config *model.Config, backupPolicy *mod
 				backupService.BackupRun(backupPolicy, cluster, storage)
 			}
 			out := util.CaptureStdout(backupRunFunc)
-			logger.Debug("Completed backup", "out", out)
+			slog.Debug("Completed backup", "out", out)
 
 			// increment backupCounter
 			backupCounter.Inc()

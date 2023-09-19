@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"strconv"
@@ -136,7 +137,7 @@ func (ws *HTTPServer) restoreHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		jobId := ws.restoreService.Restore(&request)
-		fmt.Printf("%v\njobId: %d\n\n", request, jobId)
+		slog.Info("Restore action", "jobId", jobId, "request", request)
 		fmt.Fprint(w, strconv.Itoa(jobId))
 	} else {
 		http.Error(w, "", http.StatusNotFound)

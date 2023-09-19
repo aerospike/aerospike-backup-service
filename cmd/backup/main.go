@@ -16,9 +16,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// main logger
-var logger *slog.Logger
-
 // run parses the CLI parameters and executes backup.
 func run() int {
 	var (
@@ -35,11 +32,11 @@ func run() int {
 	rootCmd.Run = func(cmd *cobra.Command, args []string) {
 		config, err := model.ReadConfiguration(configFile)
 		if err != nil {
-			logger.Error("failed to read configuration file", "error", err)
+			slog.Error("failed to read configuration file", "error", err)
 			exitVal = 1
 			return
 		}
-		logger.Info(fmt.Sprintf("Configuration: %v", *config))
+		slog.Info(fmt.Sprintf("Configuration: %v", *config))
 		// schedule all configured backups
 		go service.ScheduleBackupJobs(context.TODO(), config)
 		exitVal = runHTTPServer(host, port, config)
@@ -50,7 +47,7 @@ func run() int {
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path")
 
 	if err := rootCmd.Execute(); err != nil {
-		logger.Error(err.Error())
+		slog.Error(err.Error())
 		exitVal = 1
 	}
 
@@ -70,17 +67,17 @@ func runHTTPServer(host string, port int, config *model.Config) int {
 	<-sigch
 	// shutdown the HTTP server gracefully
 	if err := server.Shutdown(); err != nil {
-		logger.Error("HTTP server shutdown failed", "error", err)
+		slog.Error("HTTP server shutdown failed", "error", err)
 		return 1
 	}
 
-	logger.Info("HTTP server shutdown gracefully")
+	slog.Info("HTTP server shutdown gracefully")
 	return 0
 }
 
 func main() {
-	// init logger
-	logger = slog.New(util.LogHandler)
+	// set default logger
+	slog.SetDefault(slog.New(util.LogHandler))
 
 	// start the application
 	os.Exit(run())
