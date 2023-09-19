@@ -15,6 +15,8 @@ import (
 	"strings"
 	"sync"
 
+	"log/slog"
+
 	"github.com/aerospike/backup/pkg/model"
 )
 
@@ -39,6 +41,8 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) {
 	// lock to restrict parallel execution (shared library limitation)
 	r.Lock()
 	defer r.Unlock()
+
+	slog.Debug("Starting restore operation")
 
 	restoreConfig := C.restore_config_t{}
 	C.restore_config_default(&restoreConfig)
@@ -71,6 +75,8 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) {
 	setCBool(&restoreConfig.replace, restoreRequest.Replace)
 	setCBool(&restoreConfig.unique, restoreRequest.Unique)
 	setCBool(&restoreConfig.no_generation, restoreRequest.NoGeneration)
+
+	restoreConfig.validate = true
 
 	// fmt.Println(restoreConfig)
 	C.restore_run(&restoreConfig)

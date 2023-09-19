@@ -13,8 +13,11 @@ package shared
 */
 import "C"
 import (
+	"fmt"
 	"sync"
 	"unsafe"
+
+	"log/slog"
 
 	"github.com/aerospike/backup/pkg/model"
 )
@@ -41,6 +44,8 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
+
+	slog.Debug(fmt.Sprintf("Starting backup for %s", *backupPolicy.Name))
 
 	backupConfig := C.backup_config_t{}
 	C.backup_config_default(&backupConfig)
