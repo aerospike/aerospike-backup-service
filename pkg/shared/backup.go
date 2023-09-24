@@ -14,7 +14,9 @@ package shared
 import "C"
 import (
 	"fmt"
+	"strconv"
 	"sync"
+	"time"
 	"unsafe"
 
 	"log/slog"
@@ -59,7 +61,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setVector(&backupConfig.set_list, backupPolicy.SetList)
 
 	// namespace list configuration
-	nsCharArray := (*C.char)(C.CString(*backupPolicy.Namespace))
+	nsCharArray := C.CString(*backupPolicy.Namespace)
 	C.strcpy((*C.char)(unsafe.Pointer(&backupConfig.ns)), nsCharArray)
 
 	setCInt(&backupConfig.parallel, backupPolicy.Parallelism)
@@ -74,7 +76,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCString(&backupConfig.s3_endpoint_override, storage.S3EndpointOverride)
 	setCString(&backupConfig.s3_region, storage.S3Region)
 	setCString(&backupConfig.s3_profile, storage.S3Profile)
-	setCString(&backupConfig.directory, storage.Path)
+	setCString(&backupConfig.directory, getPath(storage, backupPolicy))
 
 	// fmt.Println(backupConfig)
 	C.backup_run(&backupConfig)
@@ -92,4 +94,13 @@ func setVector(setVector *C.as_vector, setList *[]string) {
 			C.as_vector_set(setVector, C.uint(i), setCharArray)
 		}
 	}
+}
+
+func getPath(storage *model.BackupStorage, backupPolicy *model.BackupPolicy) *string {
+	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
+		path := *storage.Path + "/" + strconv.FormatInt(time.Now().Unix(), 10)
+		return &path
+	}
+	path := *storage.Path + "/backup"
+	return &path
 }

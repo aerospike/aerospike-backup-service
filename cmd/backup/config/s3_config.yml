@@ -14,10 +14,11 @@ backup-storage:
 
 backup-policy:
   - name: "policy-daily"
-    interval: 10000
+    interval: 5000
     type: 1
     source_cluster: "cluster1"
     storage: "s3"
     namespace: "test"
     parallel: 1
+    remove_files: true
     

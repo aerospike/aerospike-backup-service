@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	JOB_STATUS_NA      = "NA"
-	JOB_STATUS_RUNNING = "RUNNING"
-	JOB_STATUS_DONE    = "DONE"
-	JOB_STATUS_FAILED  = "FAILED"
+	jobStatusNA      = "NA"
+	jobStatusRunning = "RUNNING"
+	jobStatusDone    = "DONE"
+	jobStatusFailed  = "FAILED"
 )
 
 // RestoreMemory implements the RestoreService interface.
@@ -30,19 +30,19 @@ func NewRestoreMemory() *RestoreMemory {
 }
 
 func (r *RestoreMemory) Restore(request *model.RestoreRequest) int {
-	jobId := rand.Int() // TODO: use a request hash code
+	jobID := rand.Int() // TODO: use a request hash code
 	go func() {
 		r.restoreService.RestoreRun(request)
-		r.restoreJobs[jobId] = JOB_STATUS_DONE
+		r.restoreJobs[jobID] = jobStatusDone
 	}()
-	r.restoreJobs[jobId] = JOB_STATUS_RUNNING
-	return jobId
+	r.restoreJobs[jobID] = jobStatusRunning
+	return jobID
 }
 
-func (r *RestoreMemory) JobStatus(jobId int) string {
-	jobStatus, ok := r.restoreJobs[jobId]
+func (r *RestoreMemory) JobStatus(jobID int) string {
+	jobStatus, ok := r.restoreJobs[jobID]
 	if !ok {
-		return JOB_STATUS_NA
+		return jobStatusNA
 	}
 	return jobStatus
 }
