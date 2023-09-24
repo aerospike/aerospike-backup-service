@@ -2,3 +2,5 @@ backup
 
 # backup files
 *.asb
+
+*.json

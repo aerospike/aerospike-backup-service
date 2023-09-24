@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"log/slog"
 
@@ -37,9 +38,13 @@ func run() int {
 			return
 		}
 		slog.Info(fmt.Sprintf("Configuration: %v", *config))
+		// get system ctx
+		ctx := systemCtx()
 		// schedule all configured backups
-		go service.ScheduleBackupJobs(context.TODO(), config)
-		exitVal = runHTTPServer(host, port, config)
+		handlers := service.BuildBackupHandlers(config)
+		service.ScheduleHandlers(ctx, handlers)
+		// run HTTP server
+		exitVal = runHTTPServer(ctx, host, port, config)
 	}
 
 	rootCmd.Flags().StringVar(&host, "host", "0.0.0.0", "service host")
@@ -47,24 +52,35 @@ func run() int {
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path")
 
 	if err := rootCmd.Execute(); err != nil {
-		slog.Error(err.Error())
+		slog.Error("Error in rootCmd.Execute", "err", err)
 		exitVal = 1
 	}
 
 	return exitVal
 }
 
-// run HTTP server
-func runHTTPServer(host string, port int, config *model.Config) int {
-	sigch := make(chan os.Signal, 1)
-	signal.Notify(sigch, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
+func systemCtx() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		sigch := make(chan os.Signal, 1)
+		signal.Notify(sigch, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
+		<-sigch
+		slog.Debug("Got system signal")
+		cancel()
+	}()
 
+	return ctx
+}
+
+// run HTTP server
+func runHTTPServer(ctx context.Context, host string, port int, config *model.Config) int {
 	server := server.NewHTTPServer(host, port, config)
 	go func() {
 		server.Start()
 	}()
 
-	<-sigch
+	<-ctx.Done()
+	time.Sleep(time.Millisecond * 100) // wait for other goroutines to exit
 	// shutdown the HTTP server gracefully
 	if err := server.Shutdown(); err != nil {
 		slog.Error("HTTP server shutdown failed", "error", err)

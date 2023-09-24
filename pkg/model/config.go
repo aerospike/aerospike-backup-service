@@ -48,7 +48,7 @@ type BackupStorage struct {
 // BackupPolicy represents a scheduled backup policy.
 type BackupPolicy struct {
 	Name            *string     `yaml:"name,omitempty" json:"name,omitempty"`
-	IntervalMillis  *int        `yaml:"interval,omitempty" json:"interval,omitempty"`
+	IntervalMillis  *int64      `yaml:"interval,omitempty" json:"interval,omitempty"`
 	BackupType      *BackupType `yaml:"type,omitempty" json:"type,omitempty"`
 	SourceCluster   *string     `yaml:"source_cluster,omitempty" json:"source_cluster,omitempty"`
 	Storage         *string     `yaml:"storage,omitempty" json:"storage,omitempty"`

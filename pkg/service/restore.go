@@ -8,5 +8,5 @@ type RestoreService interface {
 	Restore(request *model.RestoreRequest) int
 
 	// JobStatus returns status for the given job id.
-	JobStatus(jobId int) string
+	JobStatus(jobID int) string
 }

@@ -107,7 +107,7 @@ func rootActionHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "")
 }
 
-func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, r *http.Request) {
+func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, _ *http.Request) {
 	configuration, err := json.MarshalIndent(ws.config, "", "    ") // pretty print
 	if err != nil {
 		http.Error(w, "Failed to parse service configuration", http.StatusInternalServerError)
@@ -115,15 +115,15 @@ func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, r *http.Request
 	fmt.Fprint(w, string(configuration))
 }
 
-func healthActionHandler(w http.ResponseWriter, r *http.Request) {
+func healthActionHandler(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintf(w, "Ok")
 }
 
-func readyActionHandler(w http.ResponseWriter, r *http.Request) {
+func readyActionHandler(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintf(w, "Ok")
 }
 
-func versionActionHandler(w http.ResponseWriter, r *http.Request) {
+func versionActionHandler(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprint(w, util.Version)
 }
 
@@ -136,20 +136,20 @@ func (ws *HTTPServer) restoreHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		jobId := ws.restoreService.Restore(&request)
-		slog.Info("Restore action", "jobId", jobId, "request", request)
-		fmt.Fprint(w, strconv.Itoa(jobId))
+		jobID := ws.restoreService.Restore(&request)
+		slog.Info("Restore action", "jobID", jobID, "request", request)
+		fmt.Fprint(w, strconv.Itoa(jobID))
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
 }
 
 func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Request) {
-	jobIdParam := r.URL.Query().Get("jobId")
-	jobId, err := strconv.Atoi(jobIdParam)
+	jobIDParam := r.URL.Query().Get("jobId")
+	jobID, err := strconv.Atoi(jobIDParam)
 	if err != nil {
 		http.Error(w, "Invalid job id", http.StatusBadRequest)
 	} else {
-		fmt.Fprint(w, ws.restoreService.JobStatus(jobId))
+		fmt.Fprint(w, ws.restoreService.JobStatus(jobID))
 	}
 }
