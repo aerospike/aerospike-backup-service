@@ -44,7 +44,7 @@ func run() int {
 		handlers := service.BuildBackupHandlers(config)
 		service.ScheduleHandlers(ctx, handlers)
 		// run HTTP server
-		exitVal = runHTTPServer(ctx, host, port, config)
+		exitVal = runHTTPServer(ctx, host, port, handlers, config)
 	}
 
 	rootCmd.Flags().StringVar(&host, "host", "0.0.0.0", "service host")
@@ -73,8 +73,9 @@ func systemCtx() context.Context {
 }
 
 // run HTTP server
-func runHTTPServer(ctx context.Context, host string, port int, config *model.Config) int {
-	server := server.NewHTTPServer(host, port, config)
+func runHTTPServer(ctx context.Context, host string, port int,
+	handlers []service.BackupScheduler, config *model.Config) int {
+	server := server.NewHTTPServer(host, port, service.ToBackend(handlers), config)
 	go func() {
 		server.Start()
 	}()

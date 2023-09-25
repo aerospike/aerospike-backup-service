@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net/url"
 	"os"
-	"strings"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -19,20 +18,22 @@ import (
 // BackupBackendS3 implements the BackupBackend interface by
 // saving state to AWS S3.
 type BackupBackendS3 struct {
-	client        *s3.Client
-	bucket        string
-	path          string
-	stateFilePath string
+	ctx              context.Context
+	client           *s3.Client
+	bucket           string
+	path             string
+	stateFilePath    string
+	backupPolicyName string
 }
 
 var _ BackupBackend = (*BackupBackendS3)(nil)
 
 // NewBackupBackendS3 returns a new BackupBackendS3 instance.
-func NewBackupBackendS3(storage *model.BackupStorage) *BackupBackendS3 {
+func NewBackupBackendS3(storage *model.BackupStorage, backupPolicyName string) *BackupBackendS3 {
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithSharedConfigProfile(*storage.S3Profile))
+	ctx := context.TODO()
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithSharedConfigProfile(*storage.S3Profile))
 	if err != nil {
 		slog.Error("Failed to load S3 SDK configuration", "err", err)
 		os.Exit(1)
@@ -49,17 +50,19 @@ func NewBackupBackendS3(storage *model.BackupStorage) *BackupBackendS3 {
 		slog.Error("Failed to parse S3 storage path", "err", err)
 		os.Exit(1)
 	}
-	keyPath := strings.TrimLeft(parsed.Path, "/")
+
 	return &BackupBackendS3{
-		client:        client,
-		bucket:        parsed.Host,
-		path:          keyPath,
-		stateFilePath: keyPath + "/" + stateFileName,
+		ctx:              ctx,
+		client:           client,
+		bucket:           parsed.Host,
+		path:             parsed.Path,
+		stateFilePath:    parsed.Path + "/" + stateFileName,
+		backupPolicyName: backupPolicyName,
 	}
 }
 
 func (s *BackupBackendS3) readState() *model.BackupState {
-	result, err := s.client.GetObject(context.TODO(), &s3.GetObjectInput{
+	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(s.stateFilePath),
 	})
@@ -86,7 +89,7 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 		return err
 	}
 	reader := bytes.NewReader(backupState)
-	_, err = s.client.PutObject(context.TODO(), &s3.PutObjectInput{
+	_, err = s.client.PutObject(s.ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(s.stateFilePath),
 		Body:   reader,
@@ -99,18 +102,23 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 	return err
 }
 
-func (s *BackupBackendS3) backupList() ([]string, error) {
-	result, err := s.client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
-		Bucket: aws.String(s.bucket),
-		Prefix: aws.String(s.path),
+func (s *BackupBackendS3) BackupList() ([]string, error) {
+	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
+		Bucket:    aws.String(s.bucket),
+		Prefix:    aws.String(s.path + "/"),
+		Delimiter: aws.String("/"),
 	})
 	var contents []string
 	if err != nil {
-		slog.Warn("Couldn't list objects in bucket", "path", s.stateFilePath)
+		slog.Warn("Couldn't list backups in bucket", "path", s.path)
 	} else {
-		for _, metadata := range result.Contents {
-			contents = append(contents, *metadata.Key)
+		for _, prefix := range result.CommonPrefixes {
+			contents = append(contents, *prefix.Prefix)
 		}
 	}
 	return contents, err
+}
+
+func (s *BackupBackendS3) BackupPolicyName() string {
+	return s.backupPolicyName
 }

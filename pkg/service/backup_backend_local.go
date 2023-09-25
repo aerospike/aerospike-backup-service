@@ -12,17 +12,19 @@ import (
 // BackupBackendLocal implements the BackupBackend interface by
 // saving state to the local file system.
 type BackupBackendLocal struct {
-	path          string
-	stateFilePath string
+	path             string
+	stateFilePath    string
+	backupPolicyName string
 }
 
 var _ BackupBackend = (*BackupBackendLocal)(nil)
 
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
-func NewBackupBackendLocal(path string) *BackupBackendLocal {
+func NewBackupBackendLocal(path, backupPolicyName string) *BackupBackendLocal {
 	return &BackupBackendLocal{
-		path:          path,
-		stateFilePath: path + "/" + stateFileName,
+		path:             path,
+		stateFilePath:    path + "/" + stateFileName,
+		backupPolicyName: backupPolicyName,
 	}
 }
 
@@ -47,7 +49,7 @@ func (local *BackupBackendLocal) writeState(state *model.BackupState) error {
 	return os.WriteFile(local.stateFilePath, backupState, 0644)
 }
 
-func (local *BackupBackendLocal) backupList() ([]string, error) {
+func (local *BackupBackendLocal) BackupList() ([]string, error) {
 	entries, err := os.ReadDir(local.path)
 	if err != nil {
 		return nil, err
@@ -60,4 +62,8 @@ func (local *BackupBackendLocal) backupList() ([]string, error) {
 		}
 	}
 	return backupFolders, nil
+}
+
+func (local *BackupBackendLocal) BackupPolicyName() string {
+	return local.backupPolicyName
 }

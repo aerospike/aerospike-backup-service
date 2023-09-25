@@ -26,18 +26,25 @@ type HTTPServer struct {
 	config         *model.Config
 	server         *http.Server
 	restoreService service.RestoreService
+	backupBackends map[string]service.BackupBackend
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(host string, port int, config *model.Config) *HTTPServer {
+func NewHTTPServer(host string, port int, backends []service.BackupBackend,
+	config *model.Config) *HTTPServer {
 	addr := host + ":" + strconv.Itoa(port)
 
+	backendMap := make(map[string]service.BackupBackend, len(backends))
+	for _, backend := range backends {
+		backendMap[backend.BackupPolicyName()] = backend
+	}
 	return &HTTPServer{
 		config: config,
 		server: &http.Server{
 			Addr: addr,
 		},
 		restoreService: service.NewRestoreMemory(),
+		backupBackends: backendMap,
 	}
 }
 
@@ -89,6 +96,9 @@ func (ws *HTTPServer) Start() {
 
 	// Restore job status endpoint
 	mux.HandleFunc("/restore/status", ws.restoreStatusHandler)
+
+	// Returns a list of available backups for the given policy name
+	mux.HandleFunc("/backup/list", ws.getAvailableBackups)
 
 	ws.server.Handler = rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()
@@ -151,5 +161,26 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Invalid job id", http.StatusBadRequest)
 	} else {
 		fmt.Fprint(w, ws.restoreService.JobStatus(jobID))
+	}
+}
+
+func (ws *HTTPServer) getAvailableBackups(w http.ResponseWriter, r *http.Request) {
+	policyName := r.URL.Query().Get("name")
+	if policyName == "" {
+		http.Error(w, "Invalid/undefined policy name", http.StatusBadRequest)
+	} else {
+		list, err := ws.backupBackends[policyName].BackupList()
+		if err != nil {
+			slog.Error("Get backup list", "err", err)
+			http.Error(w, "", http.StatusNotFound)
+		} else {
+			response, err := json.Marshal(list)
+			if err != nil {
+				slog.Error("Failed to parse backup list", "err", err)
+				http.Error(w, "", http.StatusInternalServerError)
+			} else {
+				fmt.Fprint(w, string(response))
+			}
+		}
 	}
 }

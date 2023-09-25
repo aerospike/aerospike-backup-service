@@ -38,16 +38,19 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	if err != nil {
 		return nil, err
 	}
-	var backupbackend BackupBackend
-	if *storage.Type == model.Local {
-		backupbackend = NewBackupBackendLocal(*storage.Path)
-	} else if *storage.Type == model.S3 {
-		backupbackend = NewBackupBackendS3(storage)
-	} else {
+
+	var backupBackend BackupBackend
+	switch *storage.Type {
+	case model.Local:
+		backupBackend = NewBackupBackendLocal(*storage.Path, *backupPolicy.Name)
+	case model.S3:
+		backupBackend = NewBackupBackendS3(storage, *backupPolicy.Name)
+	default:
 		return nil, fmt.Errorf("unsupported storage type: %d", *storage.Type)
 	}
+
 	return &BackupHandler{
-		backend:      backupbackend,
+		backend:      backupBackend,
 		backupPolicy: backupPolicy,
 		cluster:      cluster,
 		storage:      storage,
