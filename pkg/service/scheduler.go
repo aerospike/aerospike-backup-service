@@ -24,12 +24,28 @@ var backupCounter = prometheus.NewCounter(
 var incrBackupCounter = prometheus.NewCounter(
 	prometheus.CounterOpts{
 		Name: "backup_incremental_runs_total",
-		Help: "Backup incremental runs counter.",
+		Help: "Incremental backup runs counter.",
+	})
+
+// a counter metric for backup skip number
+var backupSkippedCounter = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: "backup_skip_total",
+		Help: "Backup skip counter.",
+	})
+
+// a counter metric for incremental backup skip number
+var incrBackupSkippedCounter = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: "backup_incremental_skip_total",
+		Help: "Incremental backup skip counter.",
 	})
 
 func init() {
 	prometheus.MustRegister(backupCounter)
 	prometheus.MustRegister(incrBackupCounter)
+	prometheus.MustRegister(backupSkippedCounter)
+	prometheus.MustRegister(incrBackupSkippedCounter)
 }
 
 // ScheduleHandlers schedules the configured backup policies.
