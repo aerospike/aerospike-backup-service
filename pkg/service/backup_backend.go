@@ -11,8 +11,14 @@ type BackupBackend interface {
 	// writeState writes the state object for the backup.
 	writeState(*model.BackupState) error
 
-	// BackupList returns a list of available backups.
-	BackupList() ([]string, error)
+	// CleanDir cleans the directory with the given name.
+	CleanDir(name string)
+
+	// FullBackupList returns a list of available full backups.
+	FullBackupList() ([]string, error)
+
+	// IncrementalBackupList returns a list of available incremental backups.
+	IncrementalBackupList() ([]string, error)
 
 	// BackupPolicyName returns the name of the defining backup policy.
 	BackupPolicyName() string

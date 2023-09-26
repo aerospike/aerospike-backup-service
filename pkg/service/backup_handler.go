@@ -8,13 +8,17 @@ import (
 
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/shared"
 )
 
-const stateFileName = "state.json"
+const (
+	stateFileName             = "state.json"
+	incremenalBackupDirectory = "incremental"
+)
 
 // BackupScheduler knows how to schedule a backup.
 type BackupScheduler interface {
-	ScheduleBackup(ctx context.Context)
+	Schedule(ctx context.Context)
 	GetBackend() BackupBackend
 }
 
@@ -57,8 +61,8 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	}, nil
 }
 
-// ScheduleBackup runs the backup periodically.
-func (h *BackupHandler) ScheduleBackup(ctx context.Context) {
+// scheduleFullBackup runs the full backup periodically.
+func (h *BackupHandler) scheduleFullBackup(ctx context.Context) {
 	ticker := time.NewTicker(time.Duration(*h.backupPolicy.IntervalMillis) * time.Millisecond)
 	defer ticker.Stop()
 loop:
@@ -68,38 +72,100 @@ loop:
 			// read the state first and check
 			state := h.backend.readState()
 			now := time.Now()
-			if h.isEligible(now, state.LastRun) {
+			if h.isFullEligible(now, state.LastRun) {
 				backupRunFunc := func() {
-					backupService.BackupRun(h.backupPolicy, h.cluster, h.storage)
+					backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
 				}
 				out := util.CaptureStdout(backupRunFunc)
-				slog.Debug("Completed backup", "name", *h.backupPolicy.Name, "out", out)
+				slog.Debug("Completed full backup", "name", *h.backupPolicy.Name, "out", out)
 
 				// increment backupCounter metric
 				backupCounter.Inc()
 
-				// write the state
-				h.writeState(now, state)
+				// update the state
+				h.updateBackupState(now, state)
+				// clean incremental backups
+				h.backend.CleanDir(incremenalBackupDirectory)
 			} else {
-				slog.Debug("The backup is not due to run yet", "name", *h.backupPolicy.Name)
+				slog.Debug("The full backup is not due to run yet", "name", *h.backupPolicy.Name)
 			}
 		case <-ctx.Done():
-			slog.Debug("ctx.Done in ScheduleBackup")
+			slog.Debug("ctx.Done in scheduleFullBackup")
 			break loop
 		}
 	}
-	slog.Info("Exiting scheduling loop for backup", "name", *h.backupPolicy.Name)
+	slog.Info("Exiting scheduling loop for full backup", "name", *h.backupPolicy.Name)
 }
 
-func (h *BackupHandler) isEligible(n time.Time, t time.Time) bool {
+// scheduleBackup runs the incremental backup periodically.
+func (h *BackupHandler) scheduleIncrementalBackup(ctx context.Context) {
+	ticker := time.NewTicker(time.Duration(*h.backupPolicy.IncrIntervalMillis) * time.Millisecond)
+	defer ticker.Stop()
+loop:
+	for {
+		select {
+		case <-ticker.C:
+			// read the state first and check
+			state := h.backend.readState()
+			now := time.Now()
+			if h.isIncrementalEligible(now, state.LastIncrRun) {
+				backupRunFunc := func() {
+					opts := shared.BackupOptions{}
+					lastIncrRunEpoch := state.LastIncrRun.UnixNano()
+					opts.ModAfter = &lastIncrRunEpoch
+					backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts)
+				}
+				out := util.CaptureStdout(backupRunFunc)
+				slog.Debug("Completed incremental backup", "name", *h.backupPolicy.Name, "out", out)
+
+				// increment incrBackupCounter metric
+				incrBackupCounter.Inc()
+
+				// update the state
+				h.updateIncrementalBackupState(now, state)
+			} else {
+				slog.Debug("The incremental backup is not due to run yet", "name", *h.backupPolicy.Name)
+			}
+		case <-ctx.Done():
+			slog.Debug("ctx.Done in scheduleIncrementalBackup")
+			break loop
+		}
+	}
+	slog.Info("Exiting scheduling loop for incremental backup", "name", *h.backupPolicy.Name)
+}
+
+// Schedule schedules backup for the defining policy.
+func (h *BackupHandler) Schedule(ctx context.Context) {
+	if h.backupPolicy.IncrIntervalMillis != nil && *h.backupPolicy.IncrIntervalMillis > 0 {
+		slog.Info("Scheduling incremental backup", "name", *h.backupPolicy.Name)
+		go h.scheduleIncrementalBackup(ctx)
+	}
+	slog.Info("Scheduling full backup", "name", *h.backupPolicy.Name)
+	go h.scheduleFullBackup(ctx)
+}
+
+func (h *BackupHandler) isFullEligible(n time.Time, t time.Time) bool {
 	return n.UnixMilli()-t.UnixMilli() >= *h.backupPolicy.IntervalMillis
 }
 
-func (h *BackupHandler) writeState(now time.Time, state *model.BackupState) {
+func (h *BackupHandler) isIncrementalEligible(n time.Time, t time.Time) bool {
+	return n.UnixMilli()-t.UnixMilli() >= *h.backupPolicy.IncrIntervalMillis
+}
+
+func (h *BackupHandler) updateBackupState(now time.Time, state *model.BackupState) {
 	state.LastRun = now
 	state.Performed++
+	h.writeState(state)
+}
+
+func (h *BackupHandler) updateIncrementalBackupState(now time.Time, state *model.BackupState) {
+	state.LastIncrRun = now
+	h.writeState(state)
+}
+
+func (h *BackupHandler) writeState(state *model.BackupState) {
 	if err := h.backend.writeState(state); err != nil {
-		slog.Error("Failed to write state for the backup", "name", *h.backupPolicy.Name)
+		slog.Error("Failed to write state for the backup", "name", *h.backupPolicy.Name, "err", err)
 	}
 }
 

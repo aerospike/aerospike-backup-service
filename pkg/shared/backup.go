@@ -24,8 +24,13 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
+type BackupOptions struct {
+	ModAfter *int64
+}
+
 type Backup interface {
-	BackupRun(backupPolicy *model.BackupPolicy, cluster *model.AerospikeCluster, storage *model.BackupStorage)
+	BackupRun(backupPolicy *model.BackupPolicy, cluster *model.AerospikeCluster,
+		storage *model.BackupStorage, opts BackupOptions)
 }
 
 // BackupShared implements the Backup interface.
@@ -42,7 +47,7 @@ func NewBackup() *BackupShared {
 
 // BackupRun calls the backup_run function from the asbackup shared library.
 func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *model.AerospikeCluster,
-	storage *model.BackupStorage) {
+	storage *model.BackupStorage, opts BackupOptions) {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -76,7 +81,15 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCString(&backupConfig.s3_endpoint_override, storage.S3EndpointOverride)
 	setCString(&backupConfig.s3_region, storage.S3Region)
 	setCString(&backupConfig.s3_profile, storage.S3Profile)
-	setCString(&backupConfig.directory, getPath(storage, backupPolicy))
+
+	if opts.ModAfter != nil {
+		// for incremental backup
+		setCLong(&backupConfig.mod_after, opts.ModAfter)
+		setCString(&backupConfig.output_file, getIncrementalPath(storage))
+	} else {
+		// for full backup
+		setCString(&backupConfig.directory, getPath(storage, backupPolicy))
+	}
 
 	// fmt.Println(backupConfig)
 	C.backup_run(&backupConfig)
@@ -98,9 +111,18 @@ func setVector(setVector *C.as_vector, setList *[]string) {
 
 func getPath(storage *model.BackupStorage, backupPolicy *model.BackupPolicy) *string {
 	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
-		path := *storage.Path + "/" + strconv.FormatInt(time.Now().Unix(), 10)
+		path := fmt.Sprintf("%s/%s", *storage.Path, timeSuffix())
 		return &path
 	}
-	path := *storage.Path + "/backup"
+	path := fmt.Sprintf("%s/backup", *storage.Path)
 	return &path
+}
+
+func getIncrementalPath(storage *model.BackupStorage) *string {
+	path := fmt.Sprintf("%s/incremental/%s.asb", *storage.Path, timeSuffix())
+	return &path
+}
+
+func timeSuffix() string {
+	return strconv.FormatInt(time.Now().Unix(), 10)
 }

@@ -74,11 +74,12 @@ func (s *BackupBackendS3) readState() *model.BackupState {
 	defer result.Body.Close()
 	bytes, err := io.ReadAll(result.Body)
 	if err != nil {
-		slog.Warn("Couldn't read object body of backup state file", "path", s.stateFilePath,
-			"err", err)
+		slog.Warn("Couldn't read object body of backup state file",
+			"path", s.stateFilePath, "err", err)
 	}
 	if err = json.Unmarshal(bytes, state); err != nil {
-		slog.Warn("Failed unmarshal state file for backup", "path", s.stateFilePath)
+		slog.Warn("Failed unmarshal state file for backup",
+			"path", s.stateFilePath, "err", err)
 	}
 	return state
 }
@@ -102,7 +103,7 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 	return err
 }
 
-func (s *BackupBackendS3) BackupList() ([]string, error) {
+func (s *BackupBackendS3) FullBackupList() ([]string, error) {
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
 		Prefix:    aws.String(s.path + "/"),
@@ -110,13 +111,52 @@ func (s *BackupBackendS3) BackupList() ([]string, error) {
 	})
 	var contents []string
 	if err != nil {
-		slog.Warn("Couldn't list backups in bucket", "path", s.path)
+		slog.Warn("Couldn't list backups in bucket", "path", s.path, "err", err)
 	} else {
 		for _, prefix := range result.CommonPrefixes {
 			contents = append(contents, *prefix.Prefix)
 		}
 	}
 	return contents, err
+}
+
+func (s *BackupBackendS3) IncrementalBackupList() ([]string, error) {
+	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
+		Bucket:    aws.String(s.bucket),
+		Prefix:    aws.String(s.path + "/" + incremenalBackupDirectory + "/"),
+		Delimiter: aws.String(""),
+	})
+	var contents []string
+	if err != nil {
+		slog.Warn("Couldn't list incremental backups", "path", s.path, "err", err)
+	} else {
+		for _, object := range result.Contents {
+			contents = append(contents, *object.Key)
+		}
+	}
+	return contents, err
+}
+
+func (s *BackupBackendS3) CleanDir(name string) {
+	path := s.path + "/" + name
+	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
+		Bucket:    aws.String(s.bucket),
+		Prefix:    aws.String(path),
+		Delimiter: aws.String(""),
+	})
+	if err != nil {
+		slog.Warn("Couldn't list files in directory", "path", path, "err", err)
+	} else {
+		for _, file := range result.Contents {
+			_, err := s.client.DeleteObject(s.ctx, &s3.DeleteObjectInput{
+				Bucket: aws.String(s.bucket),
+				Key:    file.Key,
+			})
+			if err != nil {
+				slog.Debug("Couldn't delete file", "path", *file.Key, "err", err)
+			}
+		}
+	}
 }
 
 func (s *BackupBackendS3) BackupPolicyName() string {

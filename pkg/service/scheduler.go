@@ -20,14 +20,22 @@ var backupCounter = prometheus.NewCounter(
 		Help: "Backup runs counter.",
 	})
 
+// a counter metric for incremental backup run number
+var incrBackupCounter = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: "backup_incremental_runs_total",
+		Help: "Backup incremental runs counter.",
+	})
+
 func init() {
 	prometheus.MustRegister(backupCounter)
+	prometheus.MustRegister(incrBackupCounter)
 }
 
 // ScheduleHandlers schedules the configured backup policies.
 func ScheduleHandlers(ctx context.Context, handlers []BackupScheduler) {
 	for _, handler := range handlers {
-		go handler.ScheduleBackup(ctx)
+		handler.Schedule(ctx)
 	}
 }
 
