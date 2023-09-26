@@ -149,6 +149,10 @@ func (ws *HTTPServer) restoreHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		if err = request.Validate(); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		jobID := ws.restoreService.Restore(&request)
 		slog.Info("Restore action", "jobID", jobID, "request", request)
 		fmt.Fprint(w, strconv.Itoa(jobID))
