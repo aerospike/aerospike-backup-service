@@ -17,6 +17,12 @@ func setCInt(cint *C.int, i *int) {
 	}
 }
 
+func setCLong(clong *C.longlong, l *int64) {
+	if l != nil {
+		*clong = C.longlong(*l)
+	}
+}
+
 func setCBool(cbool *C.bool, b *bool) {
 	if b != nil {
 		*cbool = C.bool(*b)

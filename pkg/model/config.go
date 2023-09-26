@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/aerospike/backup/internal/util"
 	"gopkg.in/yaml.v3"
 )
 
@@ -47,22 +48,35 @@ type BackupStorage struct {
 
 // BackupPolicy represents a scheduled backup policy.
 type BackupPolicy struct {
-	Name            *string     `yaml:"name,omitempty" json:"name,omitempty"`
-	IntervalMillis  *int64      `yaml:"interval,omitempty" json:"interval,omitempty"`
-	BackupType      *BackupType `yaml:"type,omitempty" json:"type,omitempty"`
-	SourceCluster   *string     `yaml:"source_cluster,omitempty" json:"source_cluster,omitempty"`
-	Storage         *string     `yaml:"storage,omitempty" json:"storage,omitempty"`
-	Namespace       *string     `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Parallelism     *int        `yaml:"parallel,omitempty" json:"parallel,omitempty"`
-	SetList         *[]string   `yaml:"set_list,omitempty" json:"set_list,omitempty"`
-	NodeList        *string     `yaml:"node_list,omitempty" json:"node_list,omitempty"`
-	BinList         *string     `yaml:"bin_list,omitempty" json:"bin_list,omitempty"`
-	RemoveFiles     *bool       `yaml:"remove_files,omitempty" json:"remove_files,omitempty"`
-	RemoveArtifacts *bool       `yaml:"remove_artifacts,omitempty" json:"remove_artifacts,omitempty"`
-	NoBins          *bool       `yaml:"no_bins,omitempty" json:"no_bins,omitempty"`
-	NoRecords       *bool       `yaml:"no_records,omitempty" json:"no_records,omitempty"`
-	NoIndexes       *bool       `yaml:"no_indexes,omitempty" json:"no_indexes,omitempty"`
-	NoUdfs          *bool       `yaml:"no_udfs,omitempty" json:"no_udfs,omitempty"`
+	Name               *string     `yaml:"name,omitempty" json:"name,omitempty"`
+	IntervalMillis     *int64      `yaml:"interval,omitempty" json:"interval,omitempty"`
+	IncrIntervalMillis *int64      `yaml:"incr_interval,omitempty" json:"incr_interval,omitempty"`
+	BackupType         *BackupType `yaml:"type,omitempty" json:"type,omitempty"`
+	SourceCluster      *string     `yaml:"source_cluster,omitempty" json:"source_cluster,omitempty"`
+	Storage            *string     `yaml:"storage,omitempty" json:"storage,omitempty"`
+	Namespace          *string     `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	Parallelism        *int        `yaml:"parallel,omitempty" json:"parallel,omitempty"`
+	SetList            *[]string   `yaml:"set_list,omitempty" json:"set_list,omitempty"`
+	NodeList           *string     `yaml:"node_list,omitempty" json:"node_list,omitempty"`
+	BinList            *string     `yaml:"bin_list,omitempty" json:"bin_list,omitempty"`
+	RemoveFiles        *bool       `yaml:"remove_files,omitempty" json:"remove_files,omitempty"`
+	RemoveArtifacts    *bool       `yaml:"remove_artifacts,omitempty" json:"remove_artifacts,omitempty"`
+	NoBins             *bool       `yaml:"no_bins,omitempty" json:"no_bins,omitempty"`
+	NoRecords          *bool       `yaml:"no_records,omitempty" json:"no_records,omitempty"`
+	NoIndexes          *bool       `yaml:"no_indexes,omitempty" json:"no_indexes,omitempty"`
+	NoUdfs             *bool       `yaml:"no_udfs,omitempty" json:"no_udfs,omitempty"`
+}
+
+// Clone clones the backup policy struct.
+func (p *BackupPolicy) Clone() *BackupPolicy {
+	serialized, err := json.Marshal(p)
+	util.Check(err)
+
+	clone := BackupPolicy{}
+	err = json.Unmarshal(serialized, &clone)
+	util.Check(err)
+
+	return &clone
 }
 
 type StorageType int

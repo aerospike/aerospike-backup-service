@@ -97,8 +97,11 @@ func (ws *HTTPServer) Start() {
 	// Restore job status endpoint
 	mux.HandleFunc("/restore/status", ws.restoreStatusHandler)
 
-	// Returns a list of available backups for the given policy name
-	mux.HandleFunc("/backup/list", ws.getAvailableBackups)
+	// Returns a list of available full backups for the given policy name
+	mux.HandleFunc("/backup/full/list", ws.getAvailableFullBackups)
+
+	// Returns a list of available incremental backups for the given policy name
+	mux.HandleFunc("/backup/incremental/list", ws.getAvailableIncrBackups)
 
 	ws.server.Handler = rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()
@@ -164,19 +167,40 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (ws *HTTPServer) getAvailableBackups(w http.ResponseWriter, r *http.Request) {
+func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Request) {
 	policyName := r.URL.Query().Get("name")
 	if policyName == "" {
 		http.Error(w, "Invalid/undefined policy name", http.StatusBadRequest)
 	} else {
-		list, err := ws.backupBackends[policyName].BackupList()
+		list, err := ws.backupBackends[policyName].FullBackupList()
 		if err != nil {
-			slog.Error("Get backup list", "err", err)
+			slog.Error("Get full backup list", "err", err)
 			http.Error(w, "", http.StatusNotFound)
 		} else {
 			response, err := json.Marshal(list)
 			if err != nil {
-				slog.Error("Failed to parse backup list", "err", err)
+				slog.Error("Failed to parse full backup list", "err", err)
+				http.Error(w, "", http.StatusInternalServerError)
+			} else {
+				fmt.Fprint(w, string(response))
+			}
+		}
+	}
+}
+
+func (ws *HTTPServer) getAvailableIncrBackups(w http.ResponseWriter, r *http.Request) {
+	policyName := r.URL.Query().Get("name")
+	if policyName == "" {
+		http.Error(w, "Invalid/undefined policy name", http.StatusBadRequest)
+	} else {
+		list, err := ws.backupBackends[policyName].IncrementalBackupList()
+		if err != nil {
+			slog.Error("Get incremental backup list", "err", err)
+			http.Error(w, "", http.StatusNotFound)
+		} else {
+			response, err := json.Marshal(list)
+			if err != nil {
+				slog.Error("Failed to parse incremental backup list", "err", err)
 				http.Error(w, "", http.StatusInternalServerError)
 			} else {
 				fmt.Fprint(w, string(response))
