@@ -68,10 +68,14 @@ func (h *BackupHandler) scheduleFullBackup(ctx context.Context) {
 loop:
 	for {
 		select {
-		case <-ticker.C:
+		case now := <-ticker.C:
+			if isStaleTick(now) {
+				slog.Error("Skipped full backup", "name", *h.backupPolicy.Name)
+				backupSkippedCounter.Inc()
+				break
+			}
 			// read the state first and check
 			state := h.backend.readState()
-			now := time.Now()
 			if h.isFullEligible(now, state.LastRun) {
 				backupRunFunc := func() {
 					backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
@@ -104,10 +108,14 @@ func (h *BackupHandler) scheduleIncrementalBackup(ctx context.Context) {
 loop:
 	for {
 		select {
-		case <-ticker.C:
+		case now := <-ticker.C:
+			if isStaleTick(now) {
+				slog.Error("Skipped incremental backup", "name", *h.backupPolicy.Name)
+				incrBackupSkippedCounter.Inc()
+				break
+			}
 			// read the state first and check
 			state := h.backend.readState()
-			now := time.Now()
 			if h.isIncrementalEligible(now, state.LastIncrRun) {
 				backupRunFunc := func() {
 					opts := shared.BackupOptions{}
@@ -172,4 +180,8 @@ func (h *BackupHandler) writeState(state *model.BackupState) {
 // GetBackend returns the underlying BackupBackend.
 func (h *BackupHandler) GetBackend() BackupBackend {
 	return h.backend
+}
+
+func isStaleTick(t time.Time) bool {
+	return time.Since(t) > time.Second
 }
