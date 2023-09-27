@@ -24,14 +24,14 @@ WORKDIR /app/modules/aerospike-tools-backup/aws-sdk-cpp/build
 RUN make install
 
 WORKDIR /app/modules/aerospike-tools-backup
-RUN make EVENT_LIB=libuv
+RUN make shared EVENT_LIB=libuv
 RUN ../../scripts/copy_shared.sh
 
 ENV GOOS linux
 
 WORKDIR /app/cmd/backup
 RUN go mod download
-RUN CGO_ENABLED=1 go build .
+RUN CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-aarch64/include -I/app/modules/aerospike-tools-backup/include" CGO_ENABLED=1 go build .
 
 FROM scratch
 
