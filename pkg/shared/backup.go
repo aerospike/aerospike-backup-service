@@ -1,3 +1,5 @@
+//go:build !ci
+
 package shared
 
 /*
@@ -23,15 +25,6 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 )
-
-type BackupOptions struct {
-	ModAfter *int64
-}
-
-type Backup interface {
-	BackupRun(backupPolicy *model.BackupPolicy, cluster *model.AerospikeCluster,
-		storage *model.BackupStorage, opts BackupOptions)
-}
 
 // BackupShared implements the Backup interface.
 type BackupShared struct {
