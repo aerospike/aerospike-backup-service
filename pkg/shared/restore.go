@@ -1,3 +1,5 @@
+//go:build !ci
+
 package shared
 
 /*
@@ -19,10 +21,6 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 )
-
-type Restore interface {
-	RestoreRun(restoreRequest *model.RestoreRequest)
-}
 
 // RestoreShared implements the Restore interface.
 type RestoreShared struct {
