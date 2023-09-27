@@ -3,11 +3,13 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 
 	"log/slog"
 
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 // BackupBackendLocal implements the BackupBackend interface by
@@ -59,34 +61,34 @@ func (local *BackupBackendLocal) writeState(state *model.BackupState) error {
 	return os.WriteFile(local.stateFilePath, backupState, 0644)
 }
 
-func (local *BackupBackendLocal) FullBackupList() ([]string, error) {
+func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error) {
 	entries, err := os.ReadDir(local.path)
 	if err != nil {
 		return nil, err
 	}
 
-	var backupFolders []string
+	var backupDetails []model.BackupDetails
 	for _, e := range entries {
 		if e.IsDir() {
-			backupFolders = append(backupFolders, e.Name())
+			backupDetails = append(backupDetails, toBackupDetails(e))
 		}
 	}
-	return backupFolders, nil
+	return backupDetails, nil
 }
 
-func (local *BackupBackendLocal) IncrementalBackupList() ([]string, error) {
+func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails, error) {
 	entries, err := os.ReadDir(local.path + "/" + incremenalBackupDirectory)
 	if err != nil {
 		return nil, err
 	}
 
-	var backupFiles []string
+	var backupDetails []model.BackupDetails
 	for _, e := range entries {
 		if !e.IsDir() {
-			backupFiles = append(backupFiles, e.Name())
+			backupDetails = append(backupDetails, toBackupDetails(e))
 		}
 	}
-	return backupFiles, nil
+	return backupDetails, nil
 }
 
 func (local *BackupBackendLocal) CleanDir(name string) {
@@ -107,4 +109,16 @@ func (local *BackupBackendLocal) CleanDir(name string) {
 
 func (local *BackupBackendLocal) BackupPolicyName() string {
 	return local.backupPolicyName
+}
+
+func toBackupDetails(e fs.DirEntry) model.BackupDetails {
+	details := model.BackupDetails{
+		Key: util.Ptr(e.Name()),
+	}
+	dirInfo, err := e.Info()
+	if err == nil {
+		details.LastModified = util.Ptr(dirInfo.ModTime())
+		details.Size = util.Ptr(dirInfo.Size())
+	}
+	return details
 }

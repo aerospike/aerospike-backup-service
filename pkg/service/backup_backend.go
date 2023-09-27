@@ -15,10 +15,10 @@ type BackupBackend interface {
 	CleanDir(name string)
 
 	// FullBackupList returns a list of available full backups.
-	FullBackupList() ([]string, error)
+	FullBackupList() ([]model.BackupDetails, error)
 
 	// IncrementalBackupList returns a list of available incremental backups.
-	IncrementalBackupList() ([]string, error)
+	IncrementalBackupList() ([]model.BackupDetails, error)
 
 	// BackupPolicyName returns the name of the defining backup policy.
 	BackupPolicyName() string
