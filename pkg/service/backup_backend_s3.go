@@ -103,35 +103,43 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 	return err
 }
 
-func (s *BackupBackendS3) FullBackupList() ([]string, error) {
+func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
 		Prefix:    aws.String(s.path + "/"),
 		Delimiter: aws.String("/"),
 	})
-	var contents []string
+	var contents []model.BackupDetails
 	if err != nil {
 		slog.Warn("Couldn't list backups in bucket", "path", s.path, "err", err)
 	} else {
 		for _, prefix := range result.CommonPrefixes {
-			contents = append(contents, *prefix.Prefix)
+			details := model.BackupDetails{
+				Key: prefix.Prefix,
+			}
+			contents = append(contents, details)
 		}
 	}
 	return contents, err
 }
 
-func (s *BackupBackendS3) IncrementalBackupList() ([]string, error) {
+func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error) {
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
 		Prefix:    aws.String(s.path + "/" + incremenalBackupDirectory + "/"),
 		Delimiter: aws.String(""),
 	})
-	var contents []string
+	var contents []model.BackupDetails
 	if err != nil {
 		slog.Warn("Couldn't list incremental backups", "path", s.path, "err", err)
 	} else {
 		for _, object := range result.Contents {
-			contents = append(contents, *object.Key)
+			details := model.BackupDetails{
+				Key:          object.Key,
+				LastModified: object.LastModified,
+				Size:         &object.Size,
+			}
+			contents = append(contents, details)
 		}
 	}
 	return contents, err
