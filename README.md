@@ -1,4 +1,5 @@
 # Aerospike Backup Service
+[![Build](https://github.com/aerospike/aerospike-backup-service/actions/workflows/build.yml/badge.svg)](https://github.com/aerospike/aerospike-backup-service/actions/workflows/build.yml)
 
 The objective of this project is to provide a REST API service for the Aerospike backup and restore operations.  
 The service is written in Go and wraps the [asbackup/asrestore](https://github.com/aerospike/aerospike-tools-backup) 
@@ -20,8 +21,6 @@ tools, built as shared libraries.
 ## C Library known issues
 * Not thread-safe
 * Uncaptured stdout logs
-* System signals interceptors
-* S3 configuration properties are not read from the backup_config
 
 ## Prerequisites
 
@@ -64,6 +63,7 @@ Flags:
   -c, --config string   configuration file path
   -h, --help            help for Use
       --host string     service host (default "0.0.0.0")
+  -l, --log string      log level (default "DEBUG")
       --port int        service port (default 8080)
   -v, --version         version for Use
 ```
