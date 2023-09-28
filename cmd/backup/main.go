@@ -20,8 +20,8 @@ import (
 // run parses the CLI parameters and executes backup.
 func run() int {
 	var (
-		host, configFile string
-		port, exitVal    int
+		host, configFile, logLevel string
+		port                       int
 	)
 
 	rootCmd := &cobra.Command{
@@ -30,33 +30,34 @@ func run() int {
 		Version: util.Version,
 	}
 
-	rootCmd.Run = func(cmd *cobra.Command, args []string) {
-		config, err := model.ReadConfiguration(configFile)
+	rootCmd.Flags().StringVar(&host, "host", "0.0.0.0", "service host")
+	rootCmd.Flags().IntVar(&port, "port", 8080, "service port")
+	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path")
+	rootCmd.Flags().StringVarP(&logLevel, "log", "l", "DEBUG", "log level")
+
+	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		// set default logger
+		slog.SetDefault(slog.New(util.LogHandler(logLevel)))
+		// read configuration file
+		config, err := readConfiguration(configFile)
 		if err != nil {
-			slog.Error("failed to read configuration file", "error", err)
-			exitVal = 1
-			return
+			return err
 		}
-		slog.Info(fmt.Sprintf("Configuration: %v", *config))
 		// get system ctx
 		ctx := systemCtx()
 		// schedule all configured backups
 		handlers := service.BuildBackupHandlers(config)
 		service.ScheduleHandlers(ctx, handlers)
 		// run HTTP server
-		exitVal = runHTTPServer(ctx, host, port, handlers, config)
+		return runHTTPServer(ctx, host, port, handlers, config)
 	}
 
-	rootCmd.Flags().StringVar(&host, "host", "0.0.0.0", "service host")
-	rootCmd.Flags().IntVar(&port, "port", 8080, "service port")
-	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path")
-
-	if err := rootCmd.Execute(); err != nil {
+	err := rootCmd.Execute()
+	if err != nil {
 		slog.Error("Error in rootCmd.Execute", "err", err)
-		exitVal = 1
 	}
 
-	return exitVal
+	return util.ToExitVal(err)
 }
 
 func systemCtx() context.Context {
@@ -72,9 +73,18 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-// run HTTP server
+func readConfiguration(configFile string) (*model.Config, error) {
+	config, err := model.ReadConfiguration(configFile)
+	if err != nil {
+		slog.Error("failed to read configuration file", "error", err)
+		return nil, err
+	}
+	slog.Info(fmt.Sprintf("Configuration: %v", *config))
+	return config, nil
+}
+
 func runHTTPServer(ctx context.Context, host string, port int,
-	handlers []service.BackupScheduler, config *model.Config) int {
+	handlers []service.BackupScheduler, config *model.Config) error {
 	server := server.NewHTTPServer(host, port, service.ToBackend(handlers), config)
 	go func() {
 		server.Start()
@@ -85,17 +95,14 @@ func runHTTPServer(ctx context.Context, host string, port int,
 	// shutdown the HTTP server gracefully
 	if err := server.Shutdown(); err != nil {
 		slog.Error("HTTP server shutdown failed", "error", err)
-		return 1
+		return err
 	}
 
 	slog.Info("HTTP server shutdown gracefully")
-	return 0
+	return nil
 }
 
 func main() {
-	// set default logger
-	slog.SetDefault(slog.New(util.LogHandler))
-
 	// start the application
 	os.Exit(run())
 }
