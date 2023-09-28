@@ -5,6 +5,8 @@ The objective of this project is to provide a REST API service for the Aerospike
 The service is written in Go and wraps the [asbackup/asrestore](https://github.com/aerospike/aerospike-tools-backup) 
 tools, built as shared libraries.
 
+Refer to the [REST API Specification](./docs/rest_api.md) page for information about service endpoints.
+
 ## Feature list
 
 - [x] Local backup storage
