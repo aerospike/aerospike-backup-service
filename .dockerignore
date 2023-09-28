@@ -1,0 +1,12 @@
+.github/
+.idea/
+.vscode/
+
+**/*.o
+**/*.d
+**/*.dylib
+**/*.so
+
+/docs/
+/examples/
+/modules/

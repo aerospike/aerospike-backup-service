@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -31,7 +32,7 @@ func logLevel(level string) slog.Level {
 	case "ERROR":
 		return slog.LevelError
 	default:
-		panic("invalid log level configuration")
+		panic(fmt.Sprintf("invalid log level configuration: %s", level))
 	}
 }
 
