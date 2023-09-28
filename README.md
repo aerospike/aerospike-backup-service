@@ -28,26 +28,48 @@ tools, built as shared libraries.
 
 ## Build
 
-* Update project submodules
+### Update project submodules
 ```bash
 git submodule update —init —recursive
 ```
 
-* Build the C shared library
+### Build the C shared libraries
 ```bash
 cd modules/aerospike-tools-backup
 make shared EVENT_LIB=libuv
-./scripts/copy_shared.sh
+../../scripts/copy_shared.sh
 ```
 Read the official documentation for the [library build instructions](https://github.com/aerospike/aerospike-tools-backup#build-examples).
 
-* Build the service <sup>1</sup>
+### Build the service <sup>1</sup>
+
+**MacOS**
 ```bash
 cd cmd/backup
 CGO_ENABLED=1 go build .
 ```
+
+**Linux ARM64**
+```bash
+cd cmd/backup
+CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-aarch64/include \
+  -I/app/modules/aerospike-tools-backup/include" CGO_ENABLED=1 go build .
+```
+
+**Linux x86-64**
+```bash
+cd cmd/backup
+CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-x86_64/include \
+  -I/app/modules/aerospike-tools-backup/include" CGO_ENABLED=1 go build .
+```
+
 <sup>1</sup> By default, CGO is enabled in Go when compiling for native architecture and disabled when cross-compiling.
 It's therefore recommended to always set CGO_ENABLED=0 or CGO_ENABLED=1 when cross-compiling depending on whether you need to use CGO or not.
+
+### Build Docker image
+```
+docker build -t backup-service .
+```
 
 ## Usage
 
@@ -68,8 +90,15 @@ Flags:
   -v, --version         version for Use
 ```
 
-### Run using configuration file
+### Run
+Run as a binary using a configuration file
 ```bash
 ./backup -c config/config.yml
 ```
+
+Run in a container with a custom configuration file
+```bash
+docker run -d -p 8080:8080 -v custom_config.yml:/config.yml --name backup-service backup-service "-lINFO"
+```
+
 Example configuration files can be found in the [config](./cmd/backup/config/) folder.
