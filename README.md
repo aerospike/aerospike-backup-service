@@ -21,8 +21,6 @@ tools, built as shared libraries.
 ## C Library known issues
 * Not thread-safe
 * Uncaptured stdout logs
-* System signals interceptors
-* S3 configuration properties are not read from the backup_config
 
 ## Prerequisites
 
@@ -65,6 +63,7 @@ Flags:
   -c, --config string   configuration file path
   -h, --help            help for Use
       --host string     service host (default "0.0.0.0")
+  -l, --log string      log level (default "DEBUG")
       --port int        service port (default 8080)
   -v, --version         version for Use
 ```
