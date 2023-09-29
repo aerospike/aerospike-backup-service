@@ -5,19 +5,6 @@ The objective of this project is to provide a REST API service for the Aerospike
 The service is written in Go and wraps the [asbackup/asrestore](https://github.com/aerospike/aerospike-tools-backup) 
 tools, built as shared libraries.
 
-## Feature list
-
-- [x] Local backup storage
-- [x] S3 backup storage
-- [x] Core REST API
-- [x] Prometheus metrics
-- [x] Backup policy configuration
-- [x] Scheduled backup capability
-- [x] REST API for restore operation
-- [ ] OpenAPI Specification
-- [ ] Basic UI interface
-- [ ] Dockerfile
-
 ## C Library known issues
 * Not thread-safe
 * Uncaptured stdout logs
