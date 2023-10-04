@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 const (
@@ -80,8 +80,9 @@ loop:
 				backupRunFunc := func() {
 					backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
 				}
-				out := util.CaptureStdout(backupRunFunc)
-				slog.Debug("Completed full backup", "name", *h.backupPolicy.Name, "out", out)
+				out := stdIO.Capture(backupRunFunc)
+				util.LogCaptured(out)
+				slog.Debug("Completed full backup", "name", *h.backupPolicy.Name)
 
 				// increment backupCounter metric
 				backupCounter.Inc()
@@ -123,8 +124,9 @@ loop:
 					opts.ModAfter = &lastIncrRunEpoch
 					backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts)
 				}
-				out := util.CaptureStdout(backupRunFunc)
-				slog.Debug("Completed incremental backup", "name", *h.backupPolicy.Name, "out", out)
+				out := stdIO.Capture(backupRunFunc)
+				util.LogCaptured(out)
+				slog.Debug("Completed incremental backup", "name", *h.backupPolicy.Name)
 
 				// increment incrBackupCounter metric
 				incrBackupCounter.Inc()
