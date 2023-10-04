@@ -40,6 +40,9 @@ issues:
     - path: pkg/shared
       linters:
         - typecheck
+    - path: pkg/stdio
+      linters:
+        - typecheck
     - path: pkg/shared
       text: "dupSubExpr"
       linters:
