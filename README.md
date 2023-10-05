@@ -17,7 +17,7 @@ tools, built as shared libraries.
 
 ### Update project submodules
 ```bash
-git submodule update —init —recursive
+git submodule update --init --recursive
 ```
 
 ### Build the C shared libraries
