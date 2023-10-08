@@ -7,11 +7,14 @@ import (
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/aerospike/backup/pkg/stdio"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // backup service
 var backupService shared.Backup = shared.NewBackup()
+
+var stdIO *stdio.CgoStdio = &stdio.CgoStdio{}
 
 // a counter metric for backup run number
 var backupCounter = prometheus.NewCounter(
