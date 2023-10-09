@@ -34,7 +34,9 @@ ENV GOARCH amd64
 
 WORKDIR /app/cmd/backup
 RUN go mod download
-RUN CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-x86_64/include \
+
+RUN export ARCH=`uname -m` && \
+    CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-$ARCH/include \
     -I/app/modules/aerospike-tools-backup/include" CGO_ENABLED=1 go build -o backup .
 
 FROM ubuntu:22.04
