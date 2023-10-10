@@ -29,6 +29,7 @@ type HTTPServer struct {
 	backupBackends map[string]service.BackupBackend
 }
 
+// Annotations to generate OpenAPI description (https://github.com/swaggo/swag)
 // @title           Backup service REST API Specification
 // @version         0.1.0
 // @description     Enterprise backup service
