@@ -29,15 +29,16 @@ WORKDIR /app/modules/aerospike-tools-backup
 RUN make shared EVENT_LIB=libuv
 RUN ../../scripts/copy_shared.sh
 
-ENV GOOS linux
-ENV GOARCH amd64
+ARG GOOS linux
+ARG GOARCH amd64
 
 WORKDIR /app/cmd/backup
 RUN go mod download
 
 RUN export ARCH=`uname -m` && \
     CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-$ARCH/include \
-    -I/app/modules/aerospike-tools-backup/include" CGO_ENABLED=1 go build -o backup .
+    -I/app/modules/aerospike-tools-backup/include" \
+    GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=1 go build -o backup .
 
 FROM ubuntu:22.04
 

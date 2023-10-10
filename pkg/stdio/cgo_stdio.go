@@ -39,12 +39,12 @@ func (c *CgoStdio) Capture(f func()) string {
 		goto executeF
 	}
 
-	if err = syscall.Dup2(int(w.Fd()), syscall.Stderr); err != nil {
+	if err = dup2(int(w.Fd()), syscall.Stderr); err != nil {
 		logError(err)
 		goto executeF
 	}
 	defer func() {
-		logError(syscall.Dup2(origStderr, syscall.Stderr))
+		logError(dup2(origStderr, syscall.Stderr))
 	}()
 
 executeF:
