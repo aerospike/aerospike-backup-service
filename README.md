@@ -5,6 +5,8 @@ The objective of this project is to provide a REST API service for the Aerospike
 The service is written in Go and wraps the [asbackup/asrestore](https://github.com/aerospike/aerospike-tools-backup) 
 tools, built as shared libraries.
 
+Use the [OpenApi generation script](./scripts/generate_OpenApi.sh) to generate OpenApi Specification for the service.
+
 ## C Library known issues
 * Not thread-safe
 * Uncaptured stdout logs

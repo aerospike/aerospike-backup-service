@@ -24,18 +24,25 @@ var _ BackupBackend = (*BackupBackendLocal)(nil)
 
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
 func NewBackupBackendLocal(path, backupPolicyName string) *BackupBackendLocal {
-	if err := os.Chmod(path, 0744); err != nil {
-		slog.Warn("Failed to Chmod backup directory", "path", path, "err", err)
-	}
+	prepareDirectory(path)
 	incrDirectoryPath := path + "/" + incremenalBackupDirectory
-	if err := os.Mkdir(incrDirectoryPath, 0744); err != nil {
-		slog.Debug("Failed to Mkdir incremental backup directory",
-			"path", incrDirectoryPath, "err", err)
-	}
+	prepareDirectory(incrDirectoryPath)
 	return &BackupBackendLocal{
 		path:             path,
 		stateFilePath:    path + "/" + stateFileName,
 		backupPolicyName: backupPolicyName,
+	}
+}
+
+func prepareDirectory(path string) {
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		if err = os.Mkdir(path, 0744); err != nil {
+			slog.Warn("Error creating backup directory", "path", path, "err", err)
+		}
+	}
+	if err = os.Chmod(path, 0744); err != nil {
+		slog.Warn("Failed to Chmod backup directory", "path", path, "err", err)
 	}
 }
 
