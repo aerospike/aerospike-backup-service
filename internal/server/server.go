@@ -30,12 +30,16 @@ type HTTPServer struct {
 }
 
 // Annotations to generate OpenAPI description (https://github.com/swaggo/swag)
-// @title           Backup service REST API Specification
+// @title           Backup Service REST API Specification
 // @version         0.1.0
-// @description     Enterprise backup service
-// @host      localhost:8080
+// @description     Aerospike Backup Service
+// @license.name    Apache 2.0
+// @license.url     http://www.apache.org/licenses/LICENSE-2.0.html
+// @host            localhost:8080
+//
 // @externalDocs.description  OpenAPI
-
+// @externalDocs.url          https://swagger.io/resources/open-api/
+//
 // NewHTTPServer returns a new instance of HTTPServer.
 func NewHTTPServer(host string, port int, backends []service.BackupBackend,
 	config *model.Config) *HTTPServer {
@@ -122,6 +126,7 @@ func (ws *HTTPServer) Shutdown() error {
 
 // @Summary      Root endpoint
 // @Router       / [get]
+// @Success 200 ""
 func rootActionHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		w.WriteHeader(http.StatusNotFound)
@@ -131,6 +136,7 @@ func rootActionHandler(w http.ResponseWriter, r *http.Request) {
 
 // @Summary      Returns the configuration the service started with in the JSON format.
 // @Router       /config [get]
+// @Success 200  {array} model.Config
 func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, _ *http.Request) {
 	configuration, err := json.MarshalIndent(ws.config, "", "    ") // pretty print
 	if err != nil {
@@ -141,24 +147,28 @@ func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, _ *http.Request
 
 // @Summary      Health endpoint.
 // @Router       /health [get]
+// @Success 200  "Ok"
 func healthActionHandler(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintf(w, "Ok")
 }
 
 // @Summary      Readiness endpoint.
 // @Router       /ready [get]
+// @Success 200  "Ok"
 func readyActionHandler(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintf(w, "Ok")
 }
 
 // @Summary      Returns application version.
 // @Router       /version [get]
+// @Success 200 {string} string "version"
 func versionActionHandler(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprint(w, util.Version)
 }
 
 // @Summary      Trigger an asynchronous restore operation.
-// @Description  Specify the directory parameter for the full backup restore. Use the file parameter to restore from an incremental backup file.
+// @Description  Specify the directory parameter for the full backup restore.
+// @Description  Use the file parameter to restore from an incremental backup file.
 // @Router       /restore [post]
 // @Param request body model.RestoreRequest true "query params"
 // @Success 200 {integer} int "Job ID (int64)"
@@ -203,6 +213,7 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 // @Param name query string true "Backup policy name"
 // @Router /backup/full/list [get]
 // @Success 200 {array} model.BackupDetails "Full backups"
+// @Failure 404 {string} string ""
 func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Request) {
 	policyName := r.URL.Query().Get("name")
 	if policyName == "" {
@@ -229,6 +240,7 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 // @Param name query string true "Backup policy name"
 // @Router /backup/incremental/list [get]
 // @Success 200 {array} model.BackupDetails "Incremental backups"
+// @Failure 404 {string} string ""
 func (ws *HTTPServer) getAvailableIncrBackups(w http.ResponseWriter, r *http.Request) {
 	policyName := r.URL.Query().Get("name")
 	if policyName == "" {

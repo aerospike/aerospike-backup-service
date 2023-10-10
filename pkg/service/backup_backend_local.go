@@ -37,12 +37,11 @@ func NewBackupBackendLocal(path, backupPolicyName string) *BackupBackendLocal {
 func prepareDirectory(path string) {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
-		err := os.Mkdir(path, 0744)
-		if err != nil {
-			slog.Warn("Error creating backup directory:", err)
+		if err = os.Mkdir(path, 0744); err != nil {
+			slog.Warn("Error creating backup directory", "path", path, "err", err)
 		}
 	}
-	if err := os.Chmod(path, 0744); err != nil {
+	if err = os.Chmod(path, 0744); err != nil {
 		slog.Warn("Failed to Chmod backup directory", "path", path, "err", err)
 	}
 }

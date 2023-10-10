@@ -6,7 +6,7 @@ then
     echo "swag is not installed. Installing..."
 
     # Install swag
-    go get -u github.com/swaggo/swag/cmd/swag
+    go install github.com/swaggo/swag/cmd/swag@latest
 
     # Check if the installation was successful
     if [ $? -eq 0 ]
@@ -18,5 +18,7 @@ then
     fi
 fi
 
-swag init -d ../internal/server,../pkg/model -g server.go -o ../docs
-
+ROOT_PATH=$(cd `dirname $0` && pwd)/..
+swag init -d $ROOT_PATH/internal/server,$ROOT_PATH/pkg/model \
+    -g server.go \
+    -o $ROOT_PATH/docs
