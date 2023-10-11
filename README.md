@@ -32,20 +32,20 @@ Read the official documentation for the [library build instructions](https://git
 
 ### Build the service <sup>1</sup>
 
-**MacOS**
+#### MacOS
 ```bash
 cd cmd/backup
 CGO_ENABLED=1 go build .
 ```
 
-**Linux ARM64**
+#### Linux ARM64
 ```bash
 cd cmd/backup
 CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-aarch64/include \
   -I/app/modules/aerospike-tools-backup/include" CGO_ENABLED=1 go build .
 ```
 
-**Linux x86-64**
+#### Linux x86-64
 ```bash
 cd cmd/backup
 CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-x86_64/include \
@@ -58,6 +58,11 @@ It's therefore recommended to always set CGO_ENABLED=0 or CGO_ENABLED=1 when cro
 ### Build Docker image
 ```
 docker build -t backup-service .
+```
+
+#### ARM64
+```
+docker build --build-arg GOARCH=arm64 -t backup-service .
 ```
 
 ## Usage
