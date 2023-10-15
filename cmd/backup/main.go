@@ -39,7 +39,8 @@ func run() int {
 		// set default logger
 		slog.SetDefault(slog.New(util.LogHandler(logLevel)))
 		// read configuration file
-		config, err := readConfiguration(configFile)
+		server.ConfigurationManager = service.NewConfigurationManager(configFile)
+		config, err := readConfiguration()
 		if err != nil {
 			return err
 		}
@@ -73,8 +74,8 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func readConfiguration(configFile string) (*model.Config, error) {
-	config, err := model.ReadConfiguration(configFile)
+func readConfiguration() (*model.Config, error) {
+	config, err := server.ConfigurationManager.ReadConfiguration()
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
 		return nil, err

@@ -134,15 +134,15 @@ func rootActionHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "")
 }
 
-// @Summary      Returns the configuration the service started with in the JSON format.
-// @Router       /config [get]
-// @Success 200  {array} model.Config
-func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, _ *http.Request) {
-	configuration, err := json.MarshalIndent(ws.config, "", "    ") // pretty print
-	if err != nil {
-		http.Error(w, "Failed to parse service configuration", http.StatusInternalServerError)
+func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		ws.readConfig(w)
+	case http.MethodPut:
+		ws.updateConfig(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
-	fmt.Fprint(w, string(configuration))
 }
 
 // @Summary      Health endpoint.
