@@ -87,8 +87,17 @@ func (ws *HTTPServer) Start() {
 	// root route
 	mux.HandleFunc("/", rootActionHandler)
 
-	// status route
+	// whole config route
 	mux.HandleFunc("/config", ws.configActionHandler)
+
+	// cluster config route
+	mux.HandleFunc("/config/cluster", ws.configClusterActionHandler)
+
+	// storage config route
+	mux.HandleFunc("/config/storage", ws.configStorageActionHandler)
+
+	// policy config route
+	mux.HandleFunc("/config/policy", ws.configPolicyActionHandler)
 
 	// health route
 	mux.HandleFunc("/health", healthActionHandler)
@@ -143,6 +152,29 @@ func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, r *http.Request
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func (ws *HTTPServer) configClusterActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPut:
+		ws.AddAerospikeCluster(w, r)
+	case http.MethodGet:
+		ws.ReadAerospikeClusters(w)
+	case http.MethodPost:
+		ws.UpdateAerospikeCluster(w, r)
+	case http.MethodDelete:
+		ws.DeleteAerospikeCluster(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (ws *HTTPServer) configStorageActionHandler(writer http.ResponseWriter, r *http.Request) {
+
+}
+
+func (ws *HTTPServer) configPolicyActionHandler(writer http.ResponseWriter, r *http.Request) {
+
 }
 
 // @Summary      Health endpoint.
