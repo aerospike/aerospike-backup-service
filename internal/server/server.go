@@ -156,21 +156,32 @@ func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, r *http.Request
 
 func (ws *HTTPServer) configClusterActionHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case http.MethodPut:
-		ws.AddAerospikeCluster(w, r)
-	case http.MethodGet:
-		ws.ReadAerospikeClusters(w)
 	case http.MethodPost:
-		ws.UpdateAerospikeCluster(w, r)
+		ws.addAerospikeCluster(w, r)
+	case http.MethodGet:
+		ws.readAerospikeClusters(w)
+	case http.MethodPut:
+		ws.updateAerospikeCluster(w, r)
 	case http.MethodDelete:
-		ws.DeleteAerospikeCluster(w, r)
+		ws.deleteAerospikeCluster(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
-func (ws *HTTPServer) configStorageActionHandler(writer http.ResponseWriter, r *http.Request) {
-
+func (ws *HTTPServer) configStorageActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		ws.addStorage(w, r)
+	case http.MethodGet:
+		ws.readStorages(w)
+	case http.MethodPut:
+		ws.updateStorage(w, r)
+	case http.MethodDelete:
+		ws.deleteStorage(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func (ws *HTTPServer) configPolicyActionHandler(writer http.ResponseWriter, r *http.Request) {
