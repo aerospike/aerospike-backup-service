@@ -66,6 +66,9 @@ func TestDeleteStorage(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
+	if len(config.BackupStorage) != 1 {
+		t.Errorf("Expected size = 1")
+	}
 
 	// Deleting a non-existent storage should result in an error
 	err = DeleteStorage(config, "storage2")

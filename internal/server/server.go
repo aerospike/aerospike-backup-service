@@ -184,8 +184,19 @@ func (ws *HTTPServer) configStorageActionHandler(w http.ResponseWriter, r *http.
 	}
 }
 
-func (ws *HTTPServer) configPolicyActionHandler(writer http.ResponseWriter, r *http.Request) {
-
+func (ws *HTTPServer) configPolicyActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		ws.addPolicy(w, r)
+	case http.MethodGet:
+		ws.readPolicies(w)
+	case http.MethodPut:
+		ws.updatePolicy(w, r)
+	case http.MethodDelete:
+		ws.deletePolicy(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 // @Summary      Health endpoint.

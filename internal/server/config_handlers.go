@@ -134,6 +134,8 @@ func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Requ
 // addStorage
 // @Summary adds a storage cluster to the config.
 // @Router /config/storage [post]
+// @Accept json
+// @Param storage body model.BackupStorage true "backup storage"
 // @Success 200 ""
 func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 	var newStorage model.BackupStorage
@@ -156,6 +158,7 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 // readStorages reads all storages from the configuration.
 // @Summary Reads all storages from the configuration.
 // @Router /config/storage [get]
+// @Produce json
 // @Success 200 {array} model.BackupStorage
 func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
 	storage := ws.config.BackupStorage
@@ -205,6 +208,96 @@ func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := service.DeleteStorage(ws.config, storageName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = ConfigurationManager.WriteConfiguration(ws.config)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+}
+
+// addPolicy
+// @Summary adds a policy to the config.
+// @Router /config/policy [post]
+// @Accept json
+// @Param storage body model.BackupPolicy true "backup policy"
+// @Success 200 ""
+func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
+	var newPolicy model.BackupPolicy
+	err := json.NewDecoder(r.Body).Decode(&newPolicy)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = service.AddPolicy(ws.config, &newPolicy)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = ConfigurationManager.WriteConfiguration(ws.config)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+}
+
+// readPolicies reads all backup policies from the configuration.
+// @Summary Reads all policies from the configuration.
+// @Router /config/policy [get]
+// @Produce json
+// @Success 200 {array} model.BackupPolicy
+func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
+	policies := ws.config.BackupPolicy
+	jsonResponse, err := json.Marshal(policies)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResponse)
+}
+
+// updatePolicy updates an existing policy in the configuration.
+// @Summary Updates an existing policy in the configuration.
+// @Router /config/policy [put]
+// @Accept json
+// @Param storage body model.BackupPolicy true "backup policy"
+// @Success 200 {string} string "OK"
+// @Failure 400 {string} string "Bad Request"
+func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
+	var updatedPolicy model.BackupPolicy
+	err := json.NewDecoder(r.Body).Decode(&updatedPolicy)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = service.UpdatePolicy(ws.config, updatedPolicy)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = ConfigurationManager.WriteConfiguration(ws.config)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+}
+
+// deletePolicy
+// @Summary Deletes a policy from the configuration by name.
+// @Router /config/policy [delete]
+// @Param name query string true "Storage Name"
+// @Success 200 {string} string "OK"
+// @Failure 400 {string} string "Bad Request"
+func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
+	policyName := r.URL.Query().Get("name")
+	if policyName == "" {
+		http.Error(w, "Policy name is required", http.StatusBadRequest)
+		return
+	}
+
+	err := service.DeletePolicy(ws.config, policyName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

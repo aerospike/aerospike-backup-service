@@ -34,18 +34,18 @@ func UpdateStorage(config *model.Config, updatedStorage model.BackupStorage) err
 
 // DeleteStorage
 // deletes a BackupStorage from the configuration if it is not used in any policy
-func DeleteStorage(config *model.Config, storageName string) error {
+func DeleteStorage(config *model.Config, storageToDeleteName string) error {
 	for _, policy := range config.BackupPolicy {
-		if *policy.Storage == storageName {
+		if *policy.Storage == storageToDeleteName {
 			return errors.New(fmt.Sprintf("Cannot delete storage as it is used in a policy %s", *policy.Name))
 		}
 	}
 
 	for i, storage := range config.BackupStorage {
-		if *storage.Name == storageName {
+		if *storage.Name == storageToDeleteName {
 			config.BackupStorage = append(config.BackupStorage[:i], config.BackupStorage[i+1:]...)
 			return nil
 		}
 	}
-	return errors.New(fmt.Sprintf("Cluster %s not found", storageName))
+	return errors.New(fmt.Sprintf("Cluster %s not found", storageToDeleteName))
 }
