@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"net/http"
@@ -56,17 +55,15 @@ func (ws *HTTPServer) AddAerospikeCluster(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	for _, existingCluster := range ws.config.AerospikeClusters {
-		if *existingCluster.Name == *newCluster.Name {
-			errorMessage := fmt.Sprintf("Aerospike cluster with the same name %s already exists", *newCluster.Name)
-			http.Error(w, errorMessage, http.StatusBadRequest)
-			return
-		}
+	err = service.AddCluster(ws.config, &newCluster)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-
-	ws.config.AerospikeClusters = append(ws.config.AerospikeClusters, &newCluster)
-	ConfigurationManager.WriteConfiguration(ws.config)
+	err = ConfigurationManager.WriteConfiguration(ws.config)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
 }
 
 // ReadAerospikeClusters reads all Aerospike clusters from the configuration.
@@ -96,16 +93,15 @@ func (ws *HTTPServer) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	for i, cluster := range ws.config.AerospikeClusters {
-		if *cluster.Name == *updatedCluster.Name {
-			ws.config.AerospikeClusters[i] = &updatedCluster
-			ConfigurationManager.WriteConfiguration(ws.config)
-			return
-		}
+	err = service.UpdateCluster(ws.config, updatedCluster)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-	errorMessage := fmt.Sprintf("Cluster %s not found", *updatedCluster.Name)
-	http.Error(w, errorMessage, http.StatusBadRequest)
+	err = ConfigurationManager.WriteConfiguration(ws.config)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
 }
 
 // DeleteAerospikeCluster
@@ -121,21 +117,14 @@ func (ws *HTTPServer) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	for _, policy := range ws.config.BackupPolicy {
-		if *policy.SourceCluster == clusterName {
-			errorMessage := fmt.Sprintf("Cannot delete cluster as it is used in a policy %s", *policy.Name)
-			http.Error(w, errorMessage, http.StatusBadRequest)
-			return
-		}
+	err := service.DeleteCluster(ws.config, clusterName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	for i, cluster := range ws.config.AerospikeClusters {
-		if *cluster.Name == clusterName {
-			ws.config.AerospikeClusters = append(ws.config.AerospikeClusters[:i], ws.config.AerospikeClusters[i+1:]...)
-			ConfigurationManager.WriteConfiguration(ws.config)
-			return
-		}
+	err = ConfigurationManager.WriteConfiguration(ws.config)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	errorMessage := fmt.Sprintf("Cluster %s not found", clusterName)
-	http.Error(w, errorMessage, http.StatusBadRequest)
 }
