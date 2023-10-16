@@ -45,4 +45,8 @@ target "backup-service" {
     tags = tags("backup-service")
 
     output = ["type=image,push=true"]
+
+    args = {
+        GOARCH = "$BUILDARCH"
+    }
 }
