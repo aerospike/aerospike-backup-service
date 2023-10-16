@@ -1,8 +1,6 @@
 #!/bin/bash
 
-WORKSPACE="$(git rev-parse --show-toplevel)"
 BUILDER_NAME="aerospike-builder"
-CHANNEL="dev"
 TAG_LATEST=false
 TAG=""
 PLATFORMS="linux/amd64,linux/arm64"
@@ -39,8 +37,6 @@ done
 set -- "${POSITIONAL_ARGS[@]}"
 
 docker buildx create --name "$BUILDER_NAME" --use
-
-HUB="aerospike.jfrog.io/ecosystem-container-dev-local"
 
 docker login aerospike.jfrog.io -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 PLATFORMS="$PLATFORMS" TAG="$TAG" LATEST="$TAG_LATEST" docker buildx bake --no-cache --file docker-bake.hcl

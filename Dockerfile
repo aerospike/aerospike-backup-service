@@ -30,7 +30,7 @@ RUN make shared EVENT_LIB=libuv
 RUN ../../scripts/copy_shared.sh
 
 ARG GOOS linux
-ARG GOARCH amd64
+ARG GOARCH=$BUILDARCH
 
 WORKDIR /app/cmd/backup
 RUN go mod download
