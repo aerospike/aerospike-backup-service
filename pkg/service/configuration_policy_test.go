@@ -38,8 +38,7 @@ func TestUpdateCluster(t *testing.T) {
 	}
 
 	// Try updating a non-existent cluster, should return an error
-	cluster2 := "cluster2"
-	updatedCluster.Name = &cluster2
+	updatedCluster.Name = ptr.String("cluster2")
 	err = UpdateCluster(config, updatedCluster)
 	if err == nil {
 		t.Error("Expected an error while updating a non-existent cluster, but got nil")
