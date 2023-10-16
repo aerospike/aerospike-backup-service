@@ -39,6 +39,6 @@ set -- "${POSITIONAL_ARGS[@]}"
 docker buildx create --name "$BUILDER_NAME" --use
 
 docker login aerospike.jfrog.io -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-PLATFORMS="$PLATFORMS" TAG="$TAG" LATEST="$TAG_LATEST" docker buildx bake --no-cache --file docker-bake.hcl
+PLATFORMS="$PLATFORMS" TAG="$TAG" LATEST="$TAG_LATEST" docker buildx bake --build-arg GOARCH=$BUILDARCH --no-cache --file docker-bake.hcl
 
 docker buildx rm "$BUILDER_NAME"
