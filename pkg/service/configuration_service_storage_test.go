@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/aws/smithy-go/ptr"
 	"testing"
+
+	"github.com/aws/smithy-go/ptr"
 
 	"github.com/aerospike/backup/pkg/model"
 )

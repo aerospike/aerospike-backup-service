@@ -2,9 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
-	"net/http"
 )
 
 var ConfigurationManager service.ConfigurationManager
@@ -22,7 +23,7 @@ func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(configuration)
+	_, _ = w.Write(configuration)
 }
 
 // updateConfig
@@ -84,7 +85,7 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResponse)
+	_, _ = w.Write(jsonResponse)
 }
 
 // updateAerospikeCluster updates an existing Aerospike cluster in the configuration.
@@ -174,7 +175,7 @@ func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResponse)
+	_, _ = w.Write(jsonResponse)
 }
 
 // updateStorage updates an existing storage in the configuration.
@@ -264,7 +265,7 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResponse)
+	_, _ = w.Write(jsonResponse)
 }
 
 // updatePolicy updates an existing policy in the configuration.

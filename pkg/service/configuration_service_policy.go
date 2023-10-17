@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 )
@@ -35,7 +36,7 @@ func AddPolicy(config *model.Config, newPolicy *model.BackupPolicy) error {
 }
 
 // UpdatePolicy
-// updates an existing BackupPolicy in the configuration
+// updates an existing BackupPolicy in the configuration.
 func UpdatePolicy(config *model.Config, updatedPolicy *model.BackupPolicy) error {
 	i, existing := util.GetByName(config.BackupPolicy, updatedPolicy.Name)
 	if existing != nil {
@@ -47,7 +48,7 @@ func UpdatePolicy(config *model.Config, updatedPolicy *model.BackupPolicy) error
 }
 
 // DeletePolicy
-// deletes an BackupPolicy from the configuration if it is not used in any policy
+// deletes an BackupPolicy from the configuration if it is not used in any policy.
 func DeletePolicy(config *model.Config, policyToDeleteName *string) error {
 	i, existing := util.GetByName(config.BackupPolicy, policyToDeleteName)
 	if existing != nil {

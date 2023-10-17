@@ -1,7 +1,9 @@
+//nolint:dupl
 package service
 
 import (
 	"fmt"
+
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 )
@@ -19,7 +21,7 @@ func AddCluster(config *model.Config, newCluster *model.AerospikeCluster) error 
 }
 
 // UpdateCluster
-// updates an existing AerospikeCluster in the configuration
+// updates an existing AerospikeCluster in the configuration.
 func UpdateCluster(config *model.Config, updatedCluster *model.AerospikeCluster) error {
 	i, existing := util.GetByName(config.AerospikeClusters, updatedCluster.Name)
 	if existing != nil {
@@ -30,7 +32,7 @@ func UpdateCluster(config *model.Config, updatedCluster *model.AerospikeCluster)
 }
 
 // DeleteCluster
-// deletes an AerospikeCluster from the configuration if it is not used in any policy
+// deletes an AerospikeCluster from the configuration if it is not used in any policy.
 func DeleteCluster(config *model.Config, clusterToDeleteName *string) error {
 	_, policy := util.Find(config.BackupPolicy, func(policy *model.BackupPolicy) bool {
 		return *policy.SourceCluster == *clusterToDeleteName

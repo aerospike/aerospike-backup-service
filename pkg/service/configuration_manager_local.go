@@ -3,9 +3,10 @@ package service
 import (
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/aerospike/backup/pkg/model"
 	"gopkg.in/yaml.v3"
-	"os"
 )
 
 type FileConfigurationManager struct {

@@ -1,7 +1,9 @@
+//nolint:dupl
 package service
 
 import (
 	"fmt"
+
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 )
@@ -19,7 +21,7 @@ func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
 }
 
 // UpdateStorage
-// updates an existing BackupStorage in the configuration
+// updates an existing BackupStorage in the configuration.
 func UpdateStorage(config *model.Config, updatedStorage *model.BackupStorage) error {
 	i, existing := util.GetByName(config.BackupStorage, updatedStorage.Name)
 	if existing != nil {
@@ -31,7 +33,7 @@ func UpdateStorage(config *model.Config, updatedStorage *model.BackupStorage) er
 }
 
 // DeleteStorage
-// deletes a BackupStorage from the configuration if it is not used in any policy
+// deletes a BackupStorage from the configuration if it is not used in any policy.
 func DeleteStorage(config *model.Config, storageToDeleteName *string) error {
 	_, policy := util.Find(config.BackupPolicy, func(policy *model.BackupPolicy) bool {
 		return *policy.Storage == *storageToDeleteName

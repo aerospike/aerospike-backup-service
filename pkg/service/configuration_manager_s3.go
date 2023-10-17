@@ -10,6 +10,7 @@ func (s S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	panic("implement me")
 }
 
+// nolint:revive
 func (s S3ConfigurationManager) WriteConfiguration(config *model.Config) error {
 	panic("implement me")
 }
