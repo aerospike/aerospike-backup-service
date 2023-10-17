@@ -52,7 +52,7 @@ func TestUpdatePolicy(t *testing.T) {
 		BackupPolicy: []*model.BackupPolicy{{Name: ptr.String("policy1")}},
 	}
 
-	updatedPolicy := model.BackupPolicy{
+	updatedPolicy := &model.BackupPolicy{
 		Name: ptr.String("policy2"),
 	}
 
@@ -78,15 +78,13 @@ func TestDeletePolicy(t *testing.T) {
 		BackupPolicy: []*model.BackupPolicy{{Name: ptr.String("policy1")}},
 	}
 
-	policyToDeleteName := "policy2"
-
-	err := DeletePolicy(config, policyToDeleteName)
+	err := DeletePolicy(config, ptr.String("policy2"))
 	expectedError := "Policy policy2 not found"
 	if err.Error() != expectedError {
 		t.Errorf("DeletePolicy failed, expected error %s, got %v", expectedError, err)
 	}
 
-	err = DeletePolicy(config, "policy1")
+	err = DeletePolicy(config, ptr.String("policy1"))
 	if err != nil {
 		t.Errorf("DeletePolicy failed, expected nil error, got %v", err)
 	}

@@ -22,10 +22,10 @@ func AddCluster(config *model.Config, newCluster *model.AerospikeCluster) error 
 
 // UpdateCluster
 // updates an existing AerospikeCluster in the configuration
-func UpdateCluster(config *model.Config, updatedCluster model.AerospikeCluster) error {
+func UpdateCluster(config *model.Config, updatedCluster *model.AerospikeCluster) error {
 	i, existing := util.GetByName(config.AerospikeClusters, updatedCluster.Name)
 	if existing != nil {
-		config.AerospikeClusters[i] = &updatedCluster
+		config.AerospikeClusters[i] = updatedCluster
 		return nil
 	}
 	return errors.New(fmt.Sprintf("Cluster %s not found", *updatedCluster.Name))
@@ -33,17 +33,19 @@ func UpdateCluster(config *model.Config, updatedCluster model.AerospikeCluster) 
 
 // DeleteCluster
 // deletes an AerospikeCluster from the configuration if it is not used in any policy
-func DeleteCluster(config *model.Config, clusterToDeleteName string) error {
-	for _, policy := range config.BackupPolicy {
-		if *policy.SourceCluster == clusterToDeleteName {
-			return errors.New(fmt.Sprintf("Cannot delete cluster as it is used in a policy %s", *policy.Name))
-		}
+func DeleteCluster(config *model.Config, clusterToDeleteName *string) error {
+	_, policy := util.Find(config.BackupPolicy, func(policy *model.BackupPolicy) bool {
+		return *policy.SourceCluster == *clusterToDeleteName
+	})
+
+	if policy != nil {
+		return errors.New(fmt.Sprintf("Cannot delete cluster as it is used in a policy %s", *policy.Name))
 	}
 
-	i, existing := util.GetByName(config.AerospikeClusters, &clusterToDeleteName)
+	i, existing := util.GetByName(config.AerospikeClusters, clusterToDeleteName)
 	if existing != nil {
 		config.AerospikeClusters = append(config.AerospikeClusters[:i], config.AerospikeClusters[i+1:]...)
 		return nil
 	}
-	return errors.New(fmt.Sprintf("Cluster %s not found", clusterToDeleteName))
+	return errors.New(fmt.Sprintf("Cluster %s not found", *clusterToDeleteName))
 }

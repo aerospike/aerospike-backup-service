@@ -31,7 +31,7 @@ func TestUpdateStorage(t *testing.T) {
 		BackupStorage: []*model.BackupStorage{{Name: ptr.String("storage")}},
 	}
 
-	newStorage := model.BackupStorage{Name: ptr.String("storage"), Path: ptr.String("path")}
+	newStorage := &model.BackupStorage{Name: ptr.String("storage"), Path: ptr.String("path")}
 
 	err := UpdateStorage(config, newStorage)
 	if err != nil {
@@ -43,7 +43,7 @@ func TestUpdateStorage(t *testing.T) {
 	}
 
 	// Updating a non-existent storage should result in an error
-	newStorage.Name = ptr.String("nonExistentCluster")
+	newStorage = &model.BackupStorage{Name: ptr.String("newStorage")}
 	err = UpdateStorage(config, newStorage)
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
@@ -57,12 +57,12 @@ func TestDeleteStorage(t *testing.T) {
 	}
 
 	// Deleting a storage that is being used by a policy should result in an error
-	err := DeleteStorage(config, "storage")
+	err := DeleteStorage(config, ptr.String("storage"))
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
 	}
 
-	err = DeleteStorage(config, "storage2")
+	err = DeleteStorage(config, ptr.String("storage2"))
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
@@ -71,7 +71,7 @@ func TestDeleteStorage(t *testing.T) {
 	}
 
 	// Deleting a non-existent storage should result in an error
-	err = DeleteStorage(config, "storage2")
+	err = DeleteStorage(config, ptr.String("storage2"))
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
 	}

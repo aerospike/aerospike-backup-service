@@ -20,3 +20,13 @@ func GetByName[T model.WithName](collection []T, name *string) (int, T) {
 	var zero T
 	return -1, zero
 }
+
+func Find[T any](collection []T, f func(T) bool) (int, T) {
+	for i, item := range collection {
+		if f(item) {
+			return i, item
+		}
+	}
+	var zero T
+	return -1, zero
+}

@@ -12,6 +12,7 @@ var ConfigurationManager service.ConfigurationManager
 // readConfig
 // @Summary Returns the configuration for the service.
 // @Router /config [get]
+// @Produce json
 // @Success 200 {array} model.Config
 func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 	configuration, err := json.MarshalIndent(ws.config, "", "    ") // pretty print
@@ -27,7 +28,9 @@ func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 // updateConfig
 // @Summary Updates the configuration for the service.
 // @Router /config [post]
-// @Success 200 {array} model.Config
+// @Accept json
+// @Param storage body model.Config true "config"
+// @Success 200 ""
 func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
 	var newConfig model.Config
 
@@ -71,6 +74,7 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 // readAerospikeClusters reads all Aerospike clusters from the configuration.
 // @Summary Reads all Aerospike clusters from the configuration.
 // @Router /config/cluster [get]
+// @Produce json
 // @Success 200 {array} model.AerospikeCluster
 func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 	clusters := ws.config.AerospikeClusters
@@ -86,6 +90,8 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 // updateAerospikeCluster updates an existing Aerospike cluster in the configuration.
 // @Summary Updates an existing Aerospike cluster in the configuration.
 // @Router /config/cluster [put]
+// @Accept json
+// @Param storage body model.AerospikeCluster true "aerospike cluster"
 // @Success 200 {string} string "OK"
 // @Failure 400 {string} string "Bad Request"
 func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +101,7 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateCluster(ws.config, updatedCluster)
+	err = service.UpdateCluster(ws.config, &updatedCluster)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -119,7 +125,7 @@ func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	err := service.DeleteCluster(ws.config, clusterName)
+	err := service.DeleteCluster(ws.config, &clusterName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -174,6 +180,8 @@ func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
 // updateStorage updates an existing storage in the configuration.
 // @Summary Updates an existing storage in the configuration.
 // @Router /config/storage [put]
+// @Accept json
+// @Param storage body model.BackupStorage true "backup storage"
 // @Success 200 {string} string "OK"
 // @Failure 400 {string} string "Bad Request"
 func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
@@ -183,7 +191,7 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateStorage(ws.config, updatedStorage)
+	err = service.UpdateStorage(ws.config, &updatedStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -207,7 +215,7 @@ func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := service.DeleteStorage(ws.config, storageName)
+	err := service.DeleteStorage(ws.config, &storageName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -273,7 +281,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = service.UpdatePolicy(ws.config, updatedPolicy)
+	err = service.UpdatePolicy(ws.config, &updatedPolicy)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -287,7 +295,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // deletePolicy
 // @Summary Deletes a policy from the configuration by name.
 // @Router /config/policy [delete]
-// @Param name query string true "Storage Name"
+// @Param name query string true "Policy Name"
 // @Success 200 {string} string "OK"
 // @Failure 400 {string} string "Bad Request"
 func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
@@ -297,7 +305,7 @@ func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := service.DeletePolicy(ws.config, policyName)
+	err := service.DeletePolicy(ws.config, &policyName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

@@ -21,10 +21,10 @@ func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
 
 // UpdateStorage
 // updates an existing BackupStorage in the configuration
-func UpdateStorage(config *model.Config, updatedStorage model.BackupStorage) error {
+func UpdateStorage(config *model.Config, updatedStorage *model.BackupStorage) error {
 	i, existing := util.GetByName(config.BackupStorage, updatedStorage.Name)
 	if existing != nil {
-		config.BackupStorage[i] = &updatedStorage
+		config.BackupStorage[i] = updatedStorage
 		return nil
 	}
 
@@ -33,17 +33,19 @@ func UpdateStorage(config *model.Config, updatedStorage model.BackupStorage) err
 
 // DeleteStorage
 // deletes a BackupStorage from the configuration if it is not used in any policy
-func DeleteStorage(config *model.Config, storageToDeleteName string) error {
-	for _, policy := range config.BackupPolicy {
-		if *policy.Storage == storageToDeleteName {
-			return errors.New(fmt.Sprintf("Cannot delete storage as it is used in a policy %s", *policy.Name))
-		}
+func DeleteStorage(config *model.Config, storageToDeleteName *string) error {
+	_, policy := util.Find(config.BackupPolicy, func(policy *model.BackupPolicy) bool {
+		return *policy.Storage == *storageToDeleteName
+	})
+
+	if policy != nil {
+		return errors.New(fmt.Sprintf("Cannot delete storage as it is used in a policy %s", *policy.Name))
 	}
 
-	i, existing := util.GetByName(config.BackupStorage, &storageToDeleteName)
+	i, existing := util.GetByName(config.BackupStorage, storageToDeleteName)
 	if existing != nil {
 		config.BackupStorage = append(config.BackupStorage[:i], config.BackupStorage[i+1:]...)
 		return nil
 	}
-	return errors.New(fmt.Sprintf("Cluster %s not found", storageToDeleteName))
+	return errors.New(fmt.Sprintf("Cluster %s not found", *storageToDeleteName))
 }

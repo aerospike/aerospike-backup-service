@@ -37,10 +37,10 @@ func AddPolicy(config *model.Config, newPolicy *model.BackupPolicy) error {
 
 // UpdatePolicy
 // updates an existing BackupPolicy in the configuration
-func UpdatePolicy(config *model.Config, updatedPolicy model.BackupPolicy) error {
+func UpdatePolicy(config *model.Config, updatedPolicy *model.BackupPolicy) error {
 	i, existing := util.GetByName(config.BackupPolicy, updatedPolicy.Name)
 	if existing != nil {
-		config.BackupPolicy[i] = &updatedPolicy
+		config.BackupPolicy[i] = updatedPolicy
 		return nil
 	}
 
@@ -49,12 +49,12 @@ func UpdatePolicy(config *model.Config, updatedPolicy model.BackupPolicy) error 
 
 // DeletePolicy
 // deletes an BackupPolicy from the configuration if it is not used in any policy
-func DeletePolicy(config *model.Config, policyToDeleteName string) error {
-	i, existing := util.GetByName(config.BackupPolicy, &policyToDeleteName)
+func DeletePolicy(config *model.Config, policyToDeleteName *string) error {
+	i, existing := util.GetByName(config.BackupPolicy, policyToDeleteName)
 	if existing != nil {
 		config.BackupPolicy = append(config.BackupPolicy[:i], config.BackupPolicy[i+1:]...)
 		return nil
 	}
 
-	return errors.New(fmt.Sprintf("Policy %s not found", policyToDeleteName))
+	return errors.New(fmt.Sprintf("Policy %s not found", *policyToDeleteName))
 }
