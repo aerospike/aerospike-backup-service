@@ -93,7 +93,7 @@ Run as a binary using a configuration file
 
 Run in a container with a custom configuration file
 ```bash
-docker run -d -p 8080:8080 -v custom_config.yml:/config.yml --name backup-service backup-service "-lINFO"
+docker run -d -p 8080:8080 -v custom_config.yml:/app/config.yml --name backup-service backup-service "-lINFO"
 ```
 
 Example configuration files can be found in the [config](./cmd/backup/config/) folder.
