@@ -45,5 +45,5 @@ func DeleteCluster(config *model.Config, clusterToDeleteName *string) error {
 		config.AerospikeClusters = append(config.AerospikeClusters[:i], config.AerospikeClusters[i+1:]...)
 		return nil
 	}
-	return fmt.Errorf("Cluster %s not found", *clusterToDeleteName)
+	return fmt.Errorf("cluster %s not found", *clusterToDeleteName)
 }

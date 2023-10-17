@@ -7,12 +7,10 @@ type S3ConfigurationManager struct {
 }
 
 func (s S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
-	//TODO implement me
 	panic("implement me")
 }
 
 func (s S3ConfigurationManager) WriteConfiguration(config *model.Config) error {
-	//TODO implement me
 	panic("implement me")
 }
 
