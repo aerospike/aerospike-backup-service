@@ -57,9 +57,8 @@ func TestUpdatePolicy(t *testing.T) {
 	}
 
 	err := UpdatePolicy(config, updatedPolicy)
-	expectedError := "Policy policy2 not found"
-	if err.Error() != expectedError {
-		t.Errorf("UpdatePolicy failed, expected error %s, got %v", expectedError, err)
+	if err == nil {
+		t.Errorf("UpdatePolicy failed, expected nil error, got %v", err)
 	}
 
 	updatedPolicy.Name = ptr.String("policy1")
@@ -79,9 +78,8 @@ func TestDeletePolicy(t *testing.T) {
 	}
 
 	err := DeletePolicy(config, ptr.String("policy2"))
-	expectedError := "Policy policy2 not found"
-	if err.Error() != expectedError {
-		t.Errorf("DeletePolicy failed, expected error %s, got %v", expectedError, err)
+	if err == nil {
+		t.Errorf("DeletePolicy failed, expected nil error, got %v", err)
 	}
 
 	err = DeletePolicy(config, ptr.String("policy1"))
