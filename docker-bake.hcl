@@ -28,15 +28,11 @@ variable PLATFORMS {
     default = "linux/amd64,linux/arm64"
 }
 
-variable TAG_PLATFORM_SUFFIX {
-    default = ""
-}
-
 function "tags" {
     params = [service]
     result = LATEST == true ? [
         "${HUB}/${PREFIX}-${service}:${TAG}${TAG_PLATFORM_SUFFIX}",
-        "${HUB}/${PREFIX}-${service}:latest${TAG_PLATFORM_SUFFIX}"] : ["${HUB}/${PREFIX}-${service}:${TAG}${TAG_PLATFORM_SUFFIX}"]
+        "${HUB}/${PREFIX}-${service}:latest${TAG_PLATFORM_SUFFIX}"] : ["${HUB}/${PREFIX}-${service}:${TAG}"]
 }
 
 target "backup-service" {
