@@ -31,7 +31,7 @@ variable PLATFORMS {
 function "tags" {
     params = [service]
     result = LATEST == true ? [
-        "${HUB}/${PREFIX}-${service}:${TAG}${TAG_PLATFORM_SUFFIX}",
+        "${HUB}/${PREFIX}-${service}:${TAG}",
         "${HUB}/${PREFIX}-${service}:latest${TAG_PLATFORM_SUFFIX}"] : ["${HUB}/${PREFIX}-${service}:${TAG}"]
 }
 
