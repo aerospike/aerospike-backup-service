@@ -87,8 +87,17 @@ func (ws *HTTPServer) Start() {
 	// root route
 	mux.HandleFunc("/", rootActionHandler)
 
-	// status route
+	// whole config route
 	mux.HandleFunc("/config", ws.configActionHandler)
+
+	// cluster config route
+	mux.HandleFunc("/config/cluster", ws.configClusterActionHandler)
+
+	// storage config route
+	mux.HandleFunc("/config/storage", ws.configStorageActionHandler)
+
+	// policy config route
+	mux.HandleFunc("/config/policy", ws.configPolicyActionHandler)
 
 	// health route
 	mux.HandleFunc("/health", healthActionHandler)
@@ -134,15 +143,60 @@ func rootActionHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "")
 }
 
-// @Summary      Returns the configuration the service started with in the JSON format.
-// @Router       /config [get]
-// @Success 200  {array} model.Config
-func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, _ *http.Request) {
-	configuration, err := json.MarshalIndent(ws.config, "", "    ") // pretty print
-	if err != nil {
-		http.Error(w, "Failed to parse service configuration", http.StatusInternalServerError)
+func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		ws.readConfig(w)
+	case http.MethodPut:
+		ws.updateConfig(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
-	fmt.Fprint(w, string(configuration))
+}
+
+func (ws *HTTPServer) configClusterActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		ws.addAerospikeCluster(w, r)
+	case http.MethodGet:
+		ws.readAerospikeClusters(w)
+	case http.MethodPut:
+		ws.updateAerospikeCluster(w, r)
+	case http.MethodDelete:
+		ws.deleteAerospikeCluster(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (ws *HTTPServer) configStorageActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		ws.addStorage(w, r)
+	case http.MethodGet:
+		ws.readStorages(w)
+	case http.MethodPut:
+		ws.updateStorage(w, r)
+	case http.MethodDelete:
+		ws.deleteStorage(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (ws *HTTPServer) configPolicyActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		ws.addPolicy(w, r)
+	case http.MethodGet:
+		ws.readPolicies(w)
+	case http.MethodPut:
+		ws.updatePolicy(w, r)
+	case http.MethodDelete:
+		ws.deletePolicy(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 // @Summary      Health endpoint.

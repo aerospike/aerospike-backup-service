@@ -2,12 +2,8 @@ package model
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
-	"os"
 
 	"github.com/aerospike/backup/internal/util"
-	"gopkg.in/yaml.v3"
 )
 
 // Config represents the service configuration file.
@@ -93,21 +89,18 @@ const (
 	Incremental
 )
 
-// ReadConfiguration reads the configuration from the given file path.
-func ReadConfiguration(filePath string) (*Config, error) {
-	if filePath == "" {
-		return nil, errors.New("configuration file is missing")
-	}
-	buf, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
+type WithName interface {
+	GetName() *string
+}
 
-	config := &Config{}
-	err = yaml.Unmarshal(buf, config)
-	if err != nil {
-		return nil, fmt.Errorf("in file %q: %w", filePath, err)
-	}
+func (p *BackupPolicy) GetName() *string {
+	return p.Name
+}
 
-	return config, err
+func (p *AerospikeCluster) GetName() *string {
+	return p.Name
+}
+
+func (p *BackupStorage) GetName() *string {
+	return p.Name
 }
