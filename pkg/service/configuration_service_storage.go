@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -12,7 +11,7 @@ import (
 func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
 	_, existing := util.GetByName(config.BackupStorage, newStorage.Name)
 	if existing != nil {
-		return errors.New(fmt.Sprintf("Cluster %s not found", *newStorage.Name))
+		return fmt.Errorf("cluster %s not found", *newStorage.Name)
 	}
 
 	config.BackupStorage = append(config.BackupStorage, newStorage)
@@ -28,7 +27,7 @@ func UpdateStorage(config *model.Config, updatedStorage *model.BackupStorage) er
 		return nil
 	}
 
-	return errors.New(fmt.Sprintf("Storage %s not found", *updatedStorage.Name))
+	return fmt.Errorf("storage %s not found", *updatedStorage.Name)
 }
 
 // DeleteStorage
@@ -39,7 +38,7 @@ func DeleteStorage(config *model.Config, storageToDeleteName *string) error {
 	})
 
 	if policy != nil {
-		return errors.New(fmt.Sprintf("Cannot delete storage as it is used in a policy %s", *policy.Name))
+		return fmt.Errorf("cannot delete storage as it is used in a policy %s", *policy.Name)
 	}
 
 	i, existing := util.GetByName(config.BackupStorage, storageToDeleteName)
@@ -47,5 +46,5 @@ func DeleteStorage(config *model.Config, storageToDeleteName *string) error {
 		config.BackupStorage = append(config.BackupStorage[:i], config.BackupStorage[i+1:]...)
 		return nil
 	}
-	return errors.New(fmt.Sprintf("Cluster %s not found", *storageToDeleteName))
+	return fmt.Errorf("cluster %s not found", *storageToDeleteName)
 }

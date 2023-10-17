@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -12,8 +11,7 @@ import (
 func AddCluster(config *model.Config, newCluster *model.AerospikeCluster) error {
 	_, existing := util.GetByName(config.AerospikeClusters, newCluster.Name)
 	if existing != nil {
-		errorMessage := fmt.Sprintf("Aerospike cluster with the same name %s already exists", *newCluster.Name)
-		return errors.New(errorMessage)
+		return fmt.Errorf("aerospike cluster with the same name %s already exists", *newCluster.Name)
 	}
 
 	config.AerospikeClusters = append(config.AerospikeClusters, newCluster)
@@ -28,7 +26,7 @@ func UpdateCluster(config *model.Config, updatedCluster *model.AerospikeCluster)
 		config.AerospikeClusters[i] = updatedCluster
 		return nil
 	}
-	return errors.New(fmt.Sprintf("Cluster %s not found", *updatedCluster.Name))
+	return fmt.Errorf("cluster %s not found", *updatedCluster.Name)
 }
 
 // DeleteCluster
@@ -39,7 +37,7 @@ func DeleteCluster(config *model.Config, clusterToDeleteName *string) error {
 	})
 
 	if policy != nil {
-		return errors.New(fmt.Sprintf("Cannot delete cluster as it is used in a policy %s", *policy.Name))
+		return fmt.Errorf("cannot delete cluster as it is used in a policy %s", *policy.Name)
 	}
 
 	i, existing := util.GetByName(config.AerospikeClusters, clusterToDeleteName)
@@ -47,5 +45,5 @@ func DeleteCluster(config *model.Config, clusterToDeleteName *string) error {
 		config.AerospikeClusters = append(config.AerospikeClusters[:i], config.AerospikeClusters[i+1:]...)
 		return nil
 	}
-	return errors.New(fmt.Sprintf("Cluster %s not found", *clusterToDeleteName))
+	return fmt.Errorf("Cluster %s not found", *clusterToDeleteName)
 }

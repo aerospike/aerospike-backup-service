@@ -18,17 +18,16 @@ func AddPolicy(config *model.Config, newPolicy *model.BackupPolicy) error {
 	}
 	_, storage := util.GetByName(config.BackupStorage, newPolicy.Storage)
 	if storage == nil {
-		return errors.New(fmt.Sprintf("storage %s not found", *newPolicy.Storage))
+		return fmt.Errorf("storage %s not found", *newPolicy.Storage)
 	}
 
 	_, cluster := util.GetByName(config.AerospikeClusters, newPolicy.SourceCluster)
 	if cluster == nil {
-		return errors.New(fmt.Sprintf("cluster %s not found", *newPolicy.SourceCluster))
+		return fmt.Errorf("cluster %s not found", *newPolicy.SourceCluster)
 	}
 	_, existing := util.GetByName(config.BackupPolicy, newPolicy.Name)
 	if existing != nil {
-		errorMessage := fmt.Sprintf("Aerospike policy with the same name %s already exists", *newPolicy.Name)
-		return errors.New(errorMessage)
+		return fmt.Errorf("aerospike policy with the same name %s already exists", *newPolicy.Name)
 	}
 
 	config.BackupPolicy = append(config.BackupPolicy, newPolicy)
@@ -44,7 +43,7 @@ func UpdatePolicy(config *model.Config, updatedPolicy *model.BackupPolicy) error
 		return nil
 	}
 
-	return errors.New(fmt.Sprintf("Policy %s not found", *updatedPolicy.Name))
+	return fmt.Errorf("policy %s not found", *updatedPolicy.Name)
 }
 
 // DeletePolicy
@@ -56,5 +55,5 @@ func DeletePolicy(config *model.Config, policyToDeleteName *string) error {
 		return nil
 	}
 
-	return errors.New(fmt.Sprintf("Policy %s not found", *policyToDeleteName))
+	return fmt.Errorf("policy %s not found", *policyToDeleteName)
 }
