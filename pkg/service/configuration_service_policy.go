@@ -4,16 +4,31 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 // AddPolicy
 // adds a new BackupPolicy to the configuration if a cluster with the same name doesn't already exist.
 func AddPolicy(config *model.Config, newPolicy *model.BackupPolicy) error {
-	for _, existingPolicy := range config.BackupPolicy {
-		if *existingPolicy.Name == *newPolicy.Name {
-			errorMessage := fmt.Sprintf("Aerospike policy with the same name %s already exists", *newPolicy.Name)
-			return errors.New(errorMessage)
-		}
+	if newPolicy.Storage == nil {
+		return errors.New("storage is nil")
+	}
+	if newPolicy.SourceCluster == nil {
+		return errors.New("cluster is nil")
+	}
+	_, storage := util.GetByName(config.BackupStorage, newPolicy.Storage)
+	if storage == nil {
+		return errors.New(fmt.Sprintf("storage %s not found", *newPolicy.Storage))
+	}
+
+	_, cluster := util.GetByName(config.AerospikeClusters, newPolicy.SourceCluster)
+	if cluster == nil {
+		return errors.New(fmt.Sprintf("cluster %s not found", *newPolicy.SourceCluster))
+	}
+	_, existing := util.GetByName(config.BackupPolicy, newPolicy.Name)
+	if existing != nil {
+		errorMessage := fmt.Sprintf("Aerospike policy with the same name %s already exists", *newPolicy.Name)
+		return errors.New(errorMessage)
 	}
 
 	config.BackupPolicy = append(config.BackupPolicy, newPolicy)
@@ -23,23 +38,23 @@ func AddPolicy(config *model.Config, newPolicy *model.BackupPolicy) error {
 // UpdatePolicy
 // updates an existing BackupPolicy in the configuration
 func UpdatePolicy(config *model.Config, updatedPolicy model.BackupPolicy) error {
-	for i, cluster := range config.BackupPolicy {
-		if *cluster.Name == *updatedPolicy.Name {
-			config.BackupPolicy[i] = &updatedPolicy
-			return nil
-		}
+	i, existing := util.GetByName(config.BackupPolicy, updatedPolicy.Name)
+	if existing != nil {
+		config.BackupPolicy[i] = &updatedPolicy
+		return nil
 	}
+
 	return errors.New(fmt.Sprintf("Policy %s not found", *updatedPolicy.Name))
 }
 
 // DeletePolicy
 // deletes an BackupPolicy from the configuration if it is not used in any policy
 func DeletePolicy(config *model.Config, policyToDeleteName string) error {
-	for i, cluster := range config.BackupPolicy {
-		if *cluster.Name == policyToDeleteName {
-			config.BackupPolicy = append(config.BackupPolicy[:i], config.BackupPolicy[i+1:]...)
-			return nil
-		}
+	i, existing := util.GetByName(config.BackupPolicy, &policyToDeleteName)
+	if existing != nil {
+		config.BackupPolicy = append(config.BackupPolicy[:i], config.BackupPolicy[i+1:]...)
+		return nil
 	}
+
 	return errors.New(fmt.Sprintf("Policy %s not found", policyToDeleteName))
 }

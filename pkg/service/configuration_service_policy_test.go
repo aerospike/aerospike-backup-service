@@ -7,23 +7,43 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-func TestAddPolicy(t *testing.T) {
+func TestAddPolicyOK(t *testing.T) {
 	config := &model.Config{
-		BackupPolicy: []*model.BackupPolicy{{Name: ptr.String("policy1")}},
+		AerospikeClusters: []*model.AerospikeCluster{{Name: ptr.String("cluster")}},
+		BackupStorage:     []*model.BackupStorage{{Name: ptr.String("storage")}},
 	}
 
-	newPolicy := &model.BackupPolicy{
-		Name: ptr.String("policy2"),
-	}
-
-	err := AddPolicy(config, newPolicy)
+	pass := model.BackupPolicy{Storage: ptr.String("storage"), SourceCluster: ptr.String("cluster")}
+	err := AddPolicy(config, &pass)
 	if err != nil {
-		t.Errorf("AddPolicy failed, expected nil error, got %v", err)
+		t.Errorf("Expected nil error, got %v", err)
+	}
+}
+
+func TestAddPolicyErrors(t *testing.T) {
+	fails := []struct {
+		name   string
+		policy model.BackupPolicy
+	}{
+		{name: "empty", policy: model.BackupPolicy{}},
+		{name: "no storage", policy: model.BackupPolicy{SourceCluster: ptr.String("cluster")}},
+		{name: "no cluster", policy: model.BackupPolicy{Storage: ptr.String("storage")}},
+		{name: "wrong storage", policy: model.BackupPolicy{Storage: ptr.String("_"), SourceCluster: ptr.String("cluster")}},
+		{name: "wrong cluster", policy: model.BackupPolicy{Storage: ptr.String("storage"), SourceCluster: ptr.String("_")}},
+		{name: "existing policy", policy: model.BackupPolicy{Name: ptr.String("policy")}},
 	}
 
-	err = AddPolicy(config, newPolicy)
-	if err == nil {
-		t.Errorf("Expected an error on adding existing policy")
+	config := &model.Config{
+		BackupPolicy:      []*model.BackupPolicy{{Name: ptr.String("policy")}},
+		AerospikeClusters: []*model.AerospikeCluster{{Name: ptr.String("cluster")}},
+		BackupStorage:     []*model.BackupStorage{{Name: ptr.String("storage")}},
+	}
+
+	for _, testPolicy := range fails {
+		err := AddPolicy(config, &testPolicy.policy)
+		if err == nil {
+			t.Errorf("Expected an error on %s", testPolicy.name)
+		}
 	}
 }
 

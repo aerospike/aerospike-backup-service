@@ -4,16 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 // AddCluster
 // adds a new AerospikeCluster to the configuration if a cluster with the same name doesn't already exist.
 func AddCluster(config *model.Config, newCluster *model.AerospikeCluster) error {
-	for _, existingCluster := range config.AerospikeClusters {
-		if *existingCluster.Name == *newCluster.Name {
-			errorMessage := fmt.Sprintf("Aerospike cluster with the same name %s already exists", *newCluster.Name)
-			return errors.New(errorMessage)
-		}
+	_, existing := util.GetByName(config.AerospikeClusters, newCluster.Name)
+	if existing != nil {
+		errorMessage := fmt.Sprintf("Aerospike cluster with the same name %s already exists", *newCluster.Name)
+		return errors.New(errorMessage)
 	}
 
 	config.AerospikeClusters = append(config.AerospikeClusters, newCluster)
@@ -23,11 +23,10 @@ func AddCluster(config *model.Config, newCluster *model.AerospikeCluster) error 
 // UpdateCluster
 // updates an existing AerospikeCluster in the configuration
 func UpdateCluster(config *model.Config, updatedCluster model.AerospikeCluster) error {
-	for i, cluster := range config.AerospikeClusters {
-		if *cluster.Name == *updatedCluster.Name {
-			config.AerospikeClusters[i] = &updatedCluster
-			return nil
-		}
+	i, existing := util.GetByName(config.AerospikeClusters, updatedCluster.Name)
+	if existing != nil {
+		config.AerospikeClusters[i] = &updatedCluster
+		return nil
 	}
 	return errors.New(fmt.Sprintf("Cluster %s not found", *updatedCluster.Name))
 }
@@ -41,11 +40,10 @@ func DeleteCluster(config *model.Config, clusterToDeleteName string) error {
 		}
 	}
 
-	for i, cluster := range config.AerospikeClusters {
-		if *cluster.Name == clusterToDeleteName {
-			config.AerospikeClusters = append(config.AerospikeClusters[:i], config.AerospikeClusters[i+1:]...)
-			return nil
-		}
+	i, existing := util.GetByName(config.AerospikeClusters, &clusterToDeleteName)
+	if existing != nil {
+		config.AerospikeClusters = append(config.AerospikeClusters[:i], config.AerospikeClusters[i+1:]...)
+		return nil
 	}
 	return errors.New(fmt.Sprintf("Cluster %s not found", clusterToDeleteName))
 }

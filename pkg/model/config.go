@@ -87,3 +87,19 @@ const (
 	Full BackupType = iota
 	Incremental
 )
+
+type WithName interface {
+	GetName() *string
+}
+
+func (p *BackupPolicy) GetName() *string {
+	return p.Name
+}
+
+func (p *AerospikeCluster) GetName() *string {
+	return p.Name
+}
+
+func (p *BackupStorage) GetName() *string {
+	return p.Name
+}

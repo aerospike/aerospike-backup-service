@@ -4,16 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 // AddStorage
 // adds a new BackupStorage to the configuration if a storage with the same name doesn't already exist.
 func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
-	for _, storage := range config.BackupStorage {
-		if *storage.Name == *newStorage.Name {
-			errorMessage := fmt.Sprintf("Aerospike cluster with the same name %s already exists", *newStorage.Name)
-			return errors.New(errorMessage)
-		}
+	_, existing := util.GetByName(config.BackupStorage, newStorage.Name)
+	if existing != nil {
+		return errors.New(fmt.Sprintf("Cluster %s not found", *newStorage.Name))
 	}
 
 	config.BackupStorage = append(config.BackupStorage, newStorage)
@@ -23,12 +22,12 @@ func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
 // UpdateStorage
 // updates an existing BackupStorage in the configuration
 func UpdateStorage(config *model.Config, updatedStorage model.BackupStorage) error {
-	for i, storage := range config.BackupStorage {
-		if *storage.Name == *updatedStorage.Name {
-			config.BackupStorage[i] = &updatedStorage
-			return nil
-		}
+	i, existing := util.GetByName(config.BackupStorage, updatedStorage.Name)
+	if existing != nil {
+		config.BackupStorage[i] = &updatedStorage
+		return nil
 	}
+
 	return errors.New(fmt.Sprintf("Storage %s not found", *updatedStorage.Name))
 }
 
@@ -41,11 +40,10 @@ func DeleteStorage(config *model.Config, storageToDeleteName string) error {
 		}
 	}
 
-	for i, storage := range config.BackupStorage {
-		if *storage.Name == storageToDeleteName {
-			config.BackupStorage = append(config.BackupStorage[:i], config.BackupStorage[i+1:]...)
-			return nil
-		}
+	i, existing := util.GetByName(config.BackupStorage, &storageToDeleteName)
+	if existing != nil {
+		config.BackupStorage = append(config.BackupStorage[:i], config.BackupStorage[i+1:]...)
+		return nil
 	}
 	return errors.New(fmt.Sprintf("Cluster %s not found", storageToDeleteName))
 }
