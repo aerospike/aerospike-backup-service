@@ -56,8 +56,9 @@ CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-
 It's therefore recommended to always set CGO_ENABLED=0 or CGO_ENABLED=1 when cross-compiling depending on whether you need to use CGO or not.
 
 ### Build Docker image
+#### AMD64
 ```
-docker build -t backup-service .
+docker build --build-arg GOARCH=amd64 -t backup-service .
 ```
 
 #### ARM64
