@@ -11,10 +11,11 @@ import (
 var ConfigurationManager service.ConfigurationManager
 
 // readConfig
-// @Summary Returns the configuration for the service.
-// @Router /config [get]
-// @Produce json
-// @Success 200 {array} model.Config
+// @Summary     Returns the configuration for the service.
+// @Tags        Configuration
+// @Router      /config [get]
+// @Produce     json
+// @Success     200 {array} model.Config
 func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 	configuration, err := json.MarshalIndent(ws.config, "", "    ") // pretty print
 	if err != nil {
@@ -27,11 +28,12 @@ func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 }
 
 // updateConfig
-// @Summary Updates the configuration for the service.
-// @Router /config [post]
-// @Accept json
-// @Param storage body model.Config true "config"
-// @Success 200 ""
+// @Summary     Updates the configuration for the service.
+// @Tags        Configuration
+// @Router      /config [post]
+// @Accept      json
+// @Param       storage body model.Config true "config"
+// @Success     200 ""
 func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
 	var newConfig model.Config
 
@@ -49,11 +51,12 @@ func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 // addAerospikeCluster
-// @Summary adds an Aerospike cluster to the config.
-// @Router /config/cluster [post]
-// @Accept json
-// @Param cluster body model.AerospikeCluster true "cluster info"
-// @Success 200 ""
+// @Summary     Adds an Aerospike cluster to the config.
+// @Tags        Configuration
+// @Router      /config/cluster [post]
+// @Accept      json
+// @Param       cluster body model.AerospikeCluster true "cluster info"
+// @Success     200 ""
 func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	var newCluster model.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&newCluster)
@@ -73,10 +76,11 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 }
 
 // readAerospikeClusters reads all Aerospike clusters from the configuration.
-// @Summary Reads all Aerospike clusters from the configuration.
-// @Router /config/cluster [get]
-// @Produce json
-// @Success 200 {array} model.AerospikeCluster
+// @Summary     Reads all Aerospike clusters from the configuration.
+// @Tags        Configuration
+// @Router      /config/cluster [get]
+// @Produce     json
+// @Success     200 {array} model.AerospikeCluster
 func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 	clusters := ws.config.AerospikeClusters
 	jsonResponse, err := json.Marshal(clusters)
@@ -89,12 +93,13 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 }
 
 // updateAerospikeCluster updates an existing Aerospike cluster in the configuration.
-// @Summary Updates an existing Aerospike cluster in the configuration.
-// @Router /config/cluster [put]
-// @Accept json
-// @Param storage body model.AerospikeCluster true "aerospike cluster"
-// @Success 200 {string} string "OK"
-// @Failure 400 {string} string "Bad Request"
+// @Summary     Updates an existing Aerospike cluster in the configuration.
+// @Tags        Configuration
+// @Router      /config/cluster [put]
+// @Accept      json
+// @Param       storage body model.AerospikeCluster true "aerospike cluster"
+// @Success     200 {string} string "OK"
+// @Failure     400 {string} string "Bad Request"
 func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	var updatedCluster model.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&updatedCluster)
@@ -114,11 +119,12 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 }
 
 // deleteAerospikeCluster
-// @Summary Deletes a cluster from the configuration by name.
-// @Router /config/cluster [delete]
-// @Param name query string true "Cluster Name"
-// @Success 200 {string} string "OK"
-// @Failure 400 {string} string "Bad Request"
+// @Summary     Deletes a cluster from the configuration by name.
+// @Tags        Configuration
+// @Router      /config/cluster [delete]
+// @Param       name query string true "Cluster Name"
+// @Success     200 {string} string "OK"
+// @Failure     400 {string} string "Bad Request"
 func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	clusterName := r.URL.Query().Get("name")
 	if clusterName == "" {
@@ -139,11 +145,12 @@ func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Requ
 }
 
 // addStorage
-// @Summary adds a storage cluster to the config.
-// @Router /config/storage [post]
-// @Accept json
-// @Param storage body model.BackupStorage true "backup storage"
-// @Success 200 ""
+// @Summary     Adds a storage cluster to the config.
+// @Tags        Configuration
+// @Router      /config/storage [post]
+// @Accept      json
+// @Param       storage body model.BackupStorage true "backup storage"
+// @Success     200 ""
 func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 	var newStorage model.BackupStorage
 	err := json.NewDecoder(r.Body).Decode(&newStorage)
@@ -163,10 +170,11 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 }
 
 // readStorages reads all storages from the configuration.
-// @Summary Reads all storages from the configuration.
-// @Router /config/storage [get]
-// @Produce json
-// @Success 200 {array} model.BackupStorage
+// @Summary     Reads all storages from the configuration.
+// @Tags        Configuration
+// @Router      /config/storage [get]
+// @Produce     json
+// @Success     200 {array} model.BackupStorage
 func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
 	storage := ws.config.BackupStorage
 	jsonResponse, err := json.Marshal(storage)
@@ -179,12 +187,13 @@ func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
 }
 
 // updateStorage updates an existing storage in the configuration.
-// @Summary Updates an existing storage in the configuration.
-// @Router /config/storage [put]
-// @Accept json
-// @Param storage body model.BackupStorage true "backup storage"
-// @Success 200 {string} string "OK"
-// @Failure 400 {string} string "Bad Request"
+// @Summary     Updates an existing storage in the configuration.
+// @Tags        Configuration
+// @Router      /config/storage [put]
+// @Accept      json
+// @Param       storage body model.BackupStorage true "backup storage"
+// @Success     200 {string} string "OK"
+// @Failure     400 {string} string "Bad Request"
 func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 	var updatedStorage model.BackupStorage
 	err := json.NewDecoder(r.Body).Decode(&updatedStorage)
@@ -204,11 +213,12 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 }
 
 // deleteStorage
-// @Summary Deletes a storage from the configuration by name.
-// @Router /config/storage [delete]
-// @Param name query string true "Storage Name"
-// @Success 200 {string} string "OK"
-// @Failure 400 {string} string "Bad Request"
+// @Summary     Deletes a storage from the configuration by name.
+// @Tags        Configuration
+// @Router      /config/storage [delete]
+// @Param       name query string true "Storage Name"
+// @Success     200 {string} string "OK"
+// @Failure     400 {string} string "Bad Request"
 func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
 	storageName := r.URL.Query().Get("name")
 	if storageName == "" {
@@ -229,11 +239,12 @@ func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
 }
 
 // addPolicy
-// @Summary adds a policy to the config.
-// @Router /config/policy [post]
-// @Accept json
-// @Param storage body model.BackupPolicy true "backup policy"
-// @Success 200 ""
+// @Summary     Adds a policy to the config.
+// @Tags        Configuration
+// @Router      /config/policy [post]
+// @Accept      json
+// @Param       storage body model.BackupPolicy true "backup policy"
+// @Success     200 ""
 func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 	var newPolicy model.BackupPolicy
 	err := json.NewDecoder(r.Body).Decode(&newPolicy)
@@ -253,10 +264,11 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 }
 
 // readPolicies reads all backup policies from the configuration.
-// @Summary Reads all policies from the configuration.
-// @Router /config/policy [get]
-// @Produce json
-// @Success 200 {array} model.BackupPolicy
+// @Summary     Reads all policies from the configuration.
+// @Tags        Configuration
+// @Router      /config/policy [get]
+// @Produce     json
+// @Success     200 {array} model.BackupPolicy
 func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
 	policies := ws.config.BackupPolicy
 	jsonResponse, err := json.Marshal(policies)
@@ -269,12 +281,13 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
 }
 
 // updatePolicy updates an existing policy in the configuration.
-// @Summary Updates an existing policy in the configuration.
-// @Router /config/policy [put]
-// @Accept json
-// @Param storage body model.BackupPolicy true "backup policy"
-// @Success 200 {string} string "OK"
-// @Failure 400 {string} string "Bad Request"
+// @Summary     Updates an existing policy in the configuration.
+// @Tags        Configuration
+// @Router      /config/policy [put]
+// @Accept      json
+// @Param       storage body model.BackupPolicy true "backup policy"
+// @Success     200 {string} string "OK"
+// @Failure     400 {string} string "Bad Request"
 func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	var updatedPolicy model.BackupPolicy
 	err := json.NewDecoder(r.Body).Decode(&updatedPolicy)
@@ -294,11 +307,12 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 }
 
 // deletePolicy
-// @Summary Deletes a policy from the configuration by name.
-// @Router /config/policy [delete]
-// @Param name query string true "Policy Name"
-// @Success 200 {string} string "OK"
-// @Failure 400 {string} string "Bad Request"
+// @Summary     Deletes a policy from the configuration by name.
+// @Tags        Configuration
+// @Router      /config/policy [delete]
+// @Param       name query string true "Policy Name"
+// @Success     200 {string} string "OK"
+// @Failure     400 {string} string "Bad Request"
 func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
 	policyName := r.URL.Query().Get("name")
 	if policyName == "" {
