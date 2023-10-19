@@ -1,9 +1,15 @@
 package service
 
-import "github.com/aerospike/backup/pkg/model"
+import (
+	"github.com/aerospike/backup/pkg/model"
+)
 
 type S3ConfigurationManager struct {
-	Path string
+	configStorage *model.BackupStorage
+}
+
+func NewS3ConfigurationManager(configStorage *model.BackupStorage) S3ConfigurationManager {
+	return S3ConfigurationManager{configStorage: configStorage}
 }
 
 func (s S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
