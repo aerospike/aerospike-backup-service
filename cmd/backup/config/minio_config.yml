@@ -9,9 +9,10 @@ aerospike-cluster:
 backup-storage:
   - name: "s3"
     type: 1
+    s3_endpoint_override: "http://localhost:9000"
     s3_region: "eu-central-1"
-    s3_profile: "default"
-    path: "s3://anton-test-bucket2/test-backup"
+    s3_profile: "minio"
+    path: "s3://as-backup-bucket/test-backup"
 
 backup-policy:
   - name: "policy-daily"
@@ -20,7 +21,7 @@ backup-policy:
     type: 1
     source_cluster: "cluster1"
     storage: "s3"
-    namespace: "test"
+    namespace: "source-ns3"
     parallel: 1
     remove_files: true
     

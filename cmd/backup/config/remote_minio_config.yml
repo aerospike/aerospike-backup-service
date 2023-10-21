@@ -1,0 +1,5 @@
+type: 1
+s3_endpoint_override: "http://localhost:9000"
+s3_region: "eu-central-1"
+s3_profile: "minio"
+path: "s3://as-backup-bucket/minio_config.yml"
