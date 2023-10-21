@@ -14,6 +14,7 @@ import (
 const (
 	stateFileName             = "state.json"
 	incremenalBackupDirectory = "incremental"
+	backupDirectory           = "backup"
 )
 
 // BackupScheduler knows how to schedule a backup.

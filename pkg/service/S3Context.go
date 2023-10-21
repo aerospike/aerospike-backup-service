@@ -3,15 +3,18 @@ package service
 import (
 	"bytes"
 	"context"
+	"io"
+	"log"
+	"log/slog"
+	"net/url"
+
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"gopkg.in/yaml.v3"
-	"io"
-	"log"
-	"log/slog"
-	"net/url"
 )
 
 type S3Context struct {
@@ -104,15 +107,45 @@ func (s *S3Context) writeFile(filePath string, v any) error {
 	return err
 }
 
-func (s *S3Context) List(prefix string) (*s3.ListObjectsV2Output, error) {
+func (s *S3Context) List(prefix string) ([]types.Object, error) {
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
-		Bucket: aws.String(s.bucket),
-		Prefix: aws.String(prefix),
+		Bucket:    aws.String(s.bucket),
+		Prefix:    aws.String(removeLeadingSlash(prefix)),
+		Delimiter: aws.String(""),
 	})
 
 	if err != nil {
 		slog.Warn("Couldn't list objects in folder", "prefix", prefix, "err", err)
 		return nil, err
 	}
-	return result, nil
+	return result.Contents, nil
+}
+
+func removeLeadingSlash(s string) string {
+	if len(s) > 0 && s[0] == '/' {
+		return s[1:]
+	}
+	return s
+}
+
+func (s *S3Context) CleanDir(name string) {
+	path := s.Path + "/" + name
+	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
+		Bucket:    aws.String(s.bucket),
+		Prefix:    aws.String(path),
+		Delimiter: aws.String(""),
+	})
+	if err != nil {
+		slog.Warn("Couldn't list files in directory", "path", path, "err", err)
+	} else {
+		for _, file := range result.Contents {
+			_, err := s.client.DeleteObject(s.ctx, &s3.DeleteObjectInput{
+				Bucket: aws.String(s.bucket),
+				Key:    file.Key,
+			})
+			if err != nil {
+				slog.Debug("Couldn't delete file", "path", *file.Key, "err", err)
+			}
+		}
+	}
 }
