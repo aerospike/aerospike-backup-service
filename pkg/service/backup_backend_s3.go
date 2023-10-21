@@ -33,12 +33,15 @@ func NewBackupBackendS3(storage *model.BackupStorage, backupPolicyName string) *
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
 	ctx := context.TODO()
-	cfg, err := config.LoadDefaultConfig(ctx, config.WithSharedConfigProfile(*storage.S3Profile))
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithRegion(*storage.S3Region),
+	)
+
 	if err != nil {
 		slog.Error("Failed to load S3 SDK configuration", "err", err)
 		os.Exit(1)
 	}
-	cfg.Region = *storage.S3Region
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(*storage.S3EndpointOverride)

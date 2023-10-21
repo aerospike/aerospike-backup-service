@@ -3,14 +3,15 @@ aerospike-cluster:
   - name: "cluster1"
     host: "localhost"
     port: 3000
+    user: "tester"
+    password: "psw"
 
 backup-storage:
   - name: "s3"
     type: 1
-    s3_endpoint_override: "http://localhost:9000"
     s3_region: "eu-central-1"
-    s3_profile: "minio"
-    path: "s3://as-backup-bucket/test-backup"
+    s3_profile: "default"
+    path: "s3://anton-test-bucket2/test-backup"
 
 backup-policy:
   - name: "policy-daily"
