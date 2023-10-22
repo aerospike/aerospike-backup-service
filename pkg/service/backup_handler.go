@@ -11,12 +11,6 @@ import (
 	"github.com/aerospike/backup/pkg/util"
 )
 
-const (
-	stateFileName             = "state.json"
-	incremenalBackupDirectory = "incremental"
-	backupDirectory           = "backup"
-)
-
 // BackupScheduler knows how to schedule a backup.
 type BackupScheduler interface {
 	Schedule(ctx context.Context)
@@ -91,7 +85,7 @@ loop:
 				// update the state
 				h.updateBackupState(now, state)
 				// clean incremental backups
-				h.backend.CleanDir(incremenalBackupDirectory)
+				h.backend.CleanDir(shared.IncrementalBackupDirectory)
 			} else {
 				slog.Debug("The full backup is not due to run yet", "name", *h.backupPolicy.Name)
 			}

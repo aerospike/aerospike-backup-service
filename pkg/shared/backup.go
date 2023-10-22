@@ -31,6 +31,12 @@ type BackupShared struct {
 	sync.Mutex
 }
 
+const (
+	StateFileName              = "state.yaml"
+	IncrementalBackupDirectory = "incremental"
+	FullBackupDirectory        = "backup"
+)
+
 var _ Backup = (*BackupShared)(nil)
 
 // NewBackup returns a new BackupShared instance.
@@ -104,15 +110,15 @@ func setVector(setVector *C.as_vector, setList *[]string) {
 
 func getPath(storage *model.BackupStorage, backupPolicy *model.BackupPolicy) *string {
 	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
-		path := fmt.Sprintf("%s/%s", *storage.Path, timeSuffix())
+		path := fmt.Sprintf("%s/%s/%s", *storage.Path, FullBackupDirectory, timeSuffix())
 		return &path
 	}
-	path := fmt.Sprintf("%s/backup", *storage.Path)
+	path := fmt.Sprintf("%s/%s", *storage.Path, FullBackupDirectory)
 	return &path
 }
 
 func getIncrementalPath(storage *model.BackupStorage) *string {
-	path := fmt.Sprintf("%s/incremental/%s.asb", *storage.Path, timeSuffix())
+	path := fmt.Sprintf("%s/%s/%s.asb", *storage.Path, IncrementalBackupDirectory, timeSuffix())
 	return &path
 }
 
