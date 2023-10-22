@@ -82,6 +82,7 @@ func NewS3Context(storage *model.BackupStorage) *S3Context {
 	}
 }
 
+// Read and decode yaml content from filepath into provided object.
 func (s *S3Context) readFile(filePath string, v any) {
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
@@ -92,17 +93,18 @@ func (s *S3Context) readFile(filePath string, v any) {
 		return
 	}
 	defer result.Body.Close()
-	bytes, err := io.ReadAll(result.Body)
+	content, err := io.ReadAll(result.Body)
 	if err != nil {
 		slog.Warn("Couldn't read object body of a file",
 			"path", filePath, "err", err)
 	}
-	if err = yaml.Unmarshal(bytes, v); err != nil {
+	if err = yaml.Unmarshal(content, v); err != nil {
 		slog.Warn("Failed unmarshal state file for backup",
 			"path", filePath, "err", err)
 	}
 }
 
+// Write provided object into filepath in yaml.
 func (s *S3Context) writeFile(filePath string, v any) error {
 	backupState, err := yaml.Marshal(v)
 	if err != nil {
@@ -122,6 +124,7 @@ func (s *S3Context) writeFile(filePath string, v any) error {
 	return err
 }
 
+// List all files in given s3 prefix path
 func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 	result, err := s.list(prefix, "")
 	if err != nil {
@@ -130,6 +133,7 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 	return result.Contents, nil
 }
 
+// List all subfolders in given s3 prefix path
 func (s *S3Context) listFolders(prefix string) ([]types.CommonPrefix, error) {
 	result, err := s.list(prefix, "/")
 	if err != nil {
@@ -138,6 +142,7 @@ func (s *S3Context) listFolders(prefix string) ([]types.CommonPrefix, error) {
 	return result.CommonPrefixes, nil
 }
 
+// executes ListObjectsV2 on s3 client
 func (s *S3Context) list(prefix string, v string) (*s3.ListObjectsV2Output, error) {
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
