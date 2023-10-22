@@ -122,7 +122,7 @@ func (s *S3Context) writeFile(filePath string, v any) error {
 	return err
 }
 
-func (s *S3Context) ListFiles(prefix string) ([]types.Object, error) {
+func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 	result, err := s.list(prefix, "")
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (s *S3Context) ListFiles(prefix string) ([]types.Object, error) {
 	return result.Contents, nil
 }
 
-func (s *S3Context) ListFolders(prefix string) ([]types.CommonPrefix, error) {
+func (s *S3Context) listFolders(prefix string) ([]types.CommonPrefix, error) {
 	result, err := s.list(prefix, "/")
 	if err != nil {
 		return nil, err

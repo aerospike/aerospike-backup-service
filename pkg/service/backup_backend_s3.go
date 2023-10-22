@@ -35,7 +35,7 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 }
 
 func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
-	list, err := s.ListFolders(s.Path + "/" + model.FullBackupDirectory + "/")
+	list, err := s.listFolders(s.Path + "/" + model.FullBackupDirectory + "/")
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 }
 
 func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error) {
-	list, err := s.ListFiles(s.Path + "/" + model.IncrementalBackupDirectory)
+	list, err := s.listFiles(s.Path + "/" + model.IncrementalBackupDirectory)
 	if err != nil {
 		return nil, err
 	}
