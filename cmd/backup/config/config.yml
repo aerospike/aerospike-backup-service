@@ -3,6 +3,8 @@ aerospike-cluster:
   - name: "cluster1"
     host: "localhost"
     port: 3000
+    user: "tester"
+    password: "psw"
 
 backup-storage:
   - name: "local1"
@@ -11,14 +13,14 @@ backup-storage:
 
 backup-policy:
   - name: "policy-daily"
-    interval: 30000
-    incr_interval: 5000
+    interval: 10000
+    incr_interval: 5000000
     type: 1
     source_cluster: "cluster1"
     storage: "local1"
-    namespace: "test"
+    namespace: "source-ns3"
     set_list:
       - set1
     parallel: 1
-    remove_files: true
+    remove_files: false
     
