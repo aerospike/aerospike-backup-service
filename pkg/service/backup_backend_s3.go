@@ -36,39 +36,31 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 }
 
 func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
-	return s.listDirs(shared.FullBackupDirectory)
-}
-
-func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error) {
-	return s.listFiles(shared.IncrementalBackupDirectory)
-}
-
-func (s *BackupBackendS3) listFiles(directory string) ([]model.BackupDetails, error) {
-	list, err := s.List(s.Path + "/" + directory)
+	list, err := s.ListFolders(s.Path + "/" + shared.FullBackupDirectory + "/")
 	if err != nil {
 		return nil, err
 	}
-	contents := make([]model.BackupDetails, len(list.Contents))
-	for i, object := range list.Contents {
+	contents := make([]model.BackupDetails, len(list))
+	for i, object := range list {
 		details := model.BackupDetails{
-			Key:          object.Key,
-			LastModified: object.LastModified,
-			Size:         &object.Size,
+			Key: object.Prefix,
 		}
 		contents[i] = details
 	}
 	return contents, err
 }
 
-func (s *BackupBackendS3) listDirs(directory string) ([]model.BackupDetails, error) {
-	list, err := s.List(s.Path + "/" + directory)
+func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error) {
+	list, err := s.ListFiles(s.Path + "/" + shared.IncrementalBackupDirectory)
 	if err != nil {
 		return nil, err
 	}
-	contents := make([]model.BackupDetails, len(list.CommonPrefixes))
-	for i, object := range list.CommonPrefixes {
+	contents := make([]model.BackupDetails, len(list))
+	for i, object := range list {
 		details := model.BackupDetails{
-			Key: object.Prefix,
+			Key:          object.Key,
+			LastModified: object.LastModified,
+			Size:         &object.Size,
 		}
 		contents[i] = details
 	}

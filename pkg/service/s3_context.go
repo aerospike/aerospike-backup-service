@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/url"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -120,11 +122,27 @@ func (s *S3Context) writeFile(filePath string, v any) error {
 	return err
 }
 
-func (s *S3Context) List(prefix string) (*s3.ListObjectsV2Output, error) {
+func (s *S3Context) ListFiles(prefix string) ([]types.Object, error) {
+	result, err := s.list(prefix, "")
+	if err != nil {
+		return nil, err
+	}
+	return result.Contents, nil
+}
+
+func (s *S3Context) ListFolders(prefix string) ([]types.CommonPrefix, error) {
+	result, err := s.list(prefix, "/")
+	if err != nil {
+		return nil, err
+	}
+	return result.CommonPrefixes, nil
+}
+
+func (s *S3Context) list(prefix string, v string) (*s3.ListObjectsV2Output, error) {
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
 		Prefix:    aws.String(removeLeadingSlash(prefix)),
-		Delimiter: aws.String("/"),
+		Delimiter: aws.String(v),
 	})
 
 	if err != nil {
