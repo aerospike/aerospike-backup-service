@@ -38,9 +38,13 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 	backupFolder := s.Path + "/" + model.FullBackupDirectory + "/"
 	if s.backupPolicy.RemoveFiles != nil && *s.backupPolicy.RemoveFiles {
-		return []model.BackupDetails{{
-			Key: ptr.String(backupFolder),
-		}}, nil
+		files, _ := s.listFiles(backupFolder)
+		if len(files) > 0 {
+			return []model.BackupDetails{{
+				Key: ptr.String(backupFolder),
+			}}, nil
+		}
+		return []model.BackupDetails{}, nil
 	}
 
 	list, err := s.listFolders(backupFolder)
