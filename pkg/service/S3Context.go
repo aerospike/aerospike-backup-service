@@ -70,7 +70,7 @@ func NewS3Context(storage *model.BackupStorage) *S3Context {
 func (s *S3Context) readFile(filePath string, v any) {
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(filePath),
+		Key:    aws.String(removeLeadingSlash(filePath)),
 	})
 	if err != nil {
 		slog.Warn("Failed to read file", "path", filePath)
@@ -121,6 +121,7 @@ func (s *S3Context) List(prefix string) ([]types.Object, error) {
 	return result.Contents, nil
 }
 
+// minio works with slashes, but not aws.
 func removeLeadingSlash(s string) string {
 	if len(s) > 0 && s[0] == '/' {
 		return s[1:]
