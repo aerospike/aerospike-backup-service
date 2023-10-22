@@ -6,8 +6,6 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/aerospike/backup/pkg/shared"
-
 	"log/slog"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -27,11 +25,11 @@ var _ BackupBackend = (*BackupBackendLocal)(nil)
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
 func NewBackupBackendLocal(path, backupPolicyName string) *BackupBackendLocal {
 	prepareDirectory(path)
-	incrDirectoryPath := path + "/" + shared.IncrementalBackupDirectory
+	incrDirectoryPath := path + "/" + model.IncrementalBackupDirectory
 	prepareDirectory(incrDirectoryPath)
 	return &BackupBackendLocal{
 		path:             path,
-		stateFilePath:    path + "/" + shared.StateFileName,
+		stateFilePath:    path + "/" + model.StateFileName,
 		backupPolicyName: backupPolicyName,
 	}
 }
@@ -86,7 +84,7 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 }
 
 func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails, error) {
-	entries, err := os.ReadDir(local.path + "/" + shared.IncrementalBackupDirectory)
+	entries, err := os.ReadDir(local.path + "/" + model.IncrementalBackupDirectory)
 	if err != nil {
 		return nil, err
 	}

@@ -2,7 +2,6 @@ package service
 
 import (
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/shared"
 )
 
 // BackupBackendS3 implements the BackupBackend interface by
@@ -20,7 +19,7 @@ func NewBackupBackendS3(storage *model.BackupStorage, backupPolicyName string) *
 	s3Context := NewS3Context(storage)
 	return &BackupBackendS3{
 		S3Context:        s3Context,
-		stateFilePath:    s3Context.Path + "/" + shared.StateFileName,
+		stateFilePath:    s3Context.Path + "/" + model.StateFileName,
 		backupPolicyName: backupPolicyName,
 	}
 }
@@ -36,7 +35,7 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 }
 
 func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
-	list, err := s.ListFolders(s.Path + "/" + shared.FullBackupDirectory + "/")
+	list, err := s.ListFolders(s.Path + "/" + model.FullBackupDirectory + "/")
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +50,7 @@ func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 }
 
 func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error) {
-	list, err := s.ListFiles(s.Path + "/" + shared.IncrementalBackupDirectory)
+	list, err := s.ListFiles(s.Path + "/" + model.IncrementalBackupDirectory)
 	if err != nil {
 		return nil, err
 	}

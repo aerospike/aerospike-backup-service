@@ -85,7 +85,7 @@ loop:
 				// update the state
 				h.updateBackupState(now, state)
 				// clean incremental backups
-				h.backend.CleanDir(shared.IncrementalBackupDirectory)
+				h.backend.CleanDir(model.IncrementalBackupDirectory)
 			} else {
 				slog.Debug("The full backup is not due to run yet", "name", *h.backupPolicy.Name)
 			}
