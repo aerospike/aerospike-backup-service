@@ -11,11 +11,6 @@ import (
 	"github.com/aerospike/backup/pkg/util"
 )
 
-const (
-	stateFileName             = "state.json"
-	incremenalBackupDirectory = "incremental"
-)
-
 // BackupScheduler knows how to schedule a backup.
 type BackupScheduler interface {
 	Schedule(ctx context.Context)
@@ -48,7 +43,7 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	case model.Local:
 		backupBackend = NewBackupBackendLocal(*storage.Path, *backupPolicy.Name)
 	case model.S3:
-		backupBackend = NewBackupBackendS3(storage, *backupPolicy.Name)
+		backupBackend = NewBackupBackendS3(storage, backupPolicy)
 	default:
 		return nil, fmt.Errorf("unsupported storage type: %d", *storage.Type)
 	}
@@ -90,7 +85,7 @@ loop:
 				// update the state
 				h.updateBackupState(now, state)
 				// clean incremental backups
-				h.backend.CleanDir(incremenalBackupDirectory)
+				h.backend.CleanDir(model.IncrementalBackupDirectory)
 			} else {
 				slog.Debug("The full backup is not due to run yet", "name", *h.backupPolicy.Name)
 			}

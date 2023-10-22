@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -18,28 +19,48 @@ import (
 )
 
 // run parses the CLI parameters and executes backup.
+
 func run() int {
 	var (
-		host, configFile, logLevel string
-		port                       int
+		host, configFile, remoteConfig, logLevel string
+		port                                     int
 	)
 
+	validateFlags := func(cmd *cobra.Command, args []string) error {
+		if len(configFile) == 0 && len(remoteConfig) == 0 {
+			return errors.New("one of --config or --remote is required")
+		}
+		if len(configFile) > 0 && len(remoteConfig) > 0 {
+			return errors.New("only one of --config or --remote is allowed")
+		}
+		return nil
+	}
 	rootCmd := &cobra.Command{
 		Use:     "Use the following properties for service configuration",
 		Short:   "Aerospike Backup Service",
 		Version: util.Version,
+		PreRunE: validateFlags,
 	}
 
 	rootCmd.Flags().StringVar(&host, "host", "0.0.0.0", "service host")
 	rootCmd.Flags().IntVar(&port, "port", 8080, "service port")
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path")
+	rootCmd.Flags().StringVarP(&remoteConfig, "remote", "r", "", "remote configuration")
 	rootCmd.Flags().StringVarP(&logLevel, "log", "l", "DEBUG", "log level")
 
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
 		// set default logger
 		slog.SetDefault(slog.New(util.LogHandler(logLevel)))
 		// read configuration file
-		server.ConfigurationManager = service.NewConfigurationManager(configFile)
+		if configFile != "" {
+			server.ConfigurationManager = service.NewConfigurationManager(configFile)
+		} else if remoteConfig != "" {
+			configurationStorage, err := service.ReadConfigStorage(remoteConfig)
+			if err != nil {
+				return err
+			}
+			server.ConfigurationManager = service.NewS3ConfigurationManager(configurationStorage)
+		}
 		config, err := readConfiguration()
 		if err != nil {
 			return err
