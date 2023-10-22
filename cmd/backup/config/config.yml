@@ -18,7 +18,7 @@ backup-policy:
     type: 1
     source_cluster: "cluster1"
     storage: "local1"
-    namespace: "source-ns3"
+    namespace: "test"
     set_list:
       - set1
     parallel: 1

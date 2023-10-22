@@ -21,7 +21,7 @@ backup-policy:
     type: 1
     source_cluster: "cluster1"
     storage: "s3"
-    namespace: "source-ns3"
+    namespace: "test"
     parallel: 1
     remove_files: false
     
