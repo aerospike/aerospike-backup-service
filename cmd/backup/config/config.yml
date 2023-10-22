@@ -14,7 +14,7 @@ backup-storage:
 backup-policy:
   - name: "policy-daily"
     interval: 10000
-    incr_interval: 5000000
+    incr_interval: 5000
     type: 1
     source_cluster: "cluster1"
     storage: "local1"
