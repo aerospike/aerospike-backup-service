@@ -43,7 +43,7 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	case model.Local:
 		backupBackend = NewBackupBackendLocal(*storage.Path, *backupPolicy.Name)
 	case model.S3:
-		backupBackend = NewBackupBackendS3(storage, *backupPolicy.Name)
+		backupBackend = NewBackupBackendS3(storage, backupPolicy)
 	default:
 		return nil, fmt.Errorf("unsupported storage type: %d", *storage.Type)
 	}

@@ -2,25 +2,26 @@ package service
 
 import (
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aws/smithy-go/ptr"
 )
 
 // BackupBackendS3 implements the BackupBackend interface by
 // saving state to AWS S3.
 type BackupBackendS3 struct {
 	*S3Context
-	stateFilePath    string
-	backupPolicyName string
+	stateFilePath string
+	backupPolicy  *model.BackupPolicy
 }
 
 var _ BackupBackend = (*BackupBackendS3)(nil)
 
 // NewBackupBackendS3 returns a new BackupBackendS3 instance.
-func NewBackupBackendS3(storage *model.BackupStorage, backupPolicyName string) *BackupBackendS3 {
+func NewBackupBackendS3(storage *model.BackupStorage, backupPolicy *model.BackupPolicy) *BackupBackendS3 {
 	s3Context := NewS3Context(storage)
 	return &BackupBackendS3{
-		S3Context:        s3Context,
-		stateFilePath:    s3Context.Path + "/" + model.StateFileName,
-		backupPolicyName: backupPolicyName,
+		S3Context:     s3Context,
+		stateFilePath: s3Context.Path + "/" + model.StateFileName,
+		backupPolicy:  backupPolicy,
 	}
 }
 
@@ -35,7 +36,14 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 }
 
 func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
-	list, err := s.listFolders(s.Path + "/" + model.FullBackupDirectory + "/")
+	backupFolder := s.Path + "/" + model.FullBackupDirectory + "/"
+	if s.backupPolicy.RemoveFiles != nil && *s.backupPolicy.RemoveFiles {
+		return []model.BackupDetails{{
+			Key: ptr.String(backupFolder),
+		}}, nil
+	}
+
+	list, err := s.listFolders(backupFolder)
 	if err != nil {
 		return nil, err
 	}
@@ -67,5 +75,5 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 }
 
 func (s *BackupBackendS3) BackupPolicyName() string {
-	return s.backupPolicyName
+	return *s.backupPolicy.Name
 }
