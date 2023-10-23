@@ -18,6 +18,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	commit    string
+	buildTime string
+)
+
 // run parses the CLI parameters and executes backup.
 func run() int {
 	var (
@@ -122,6 +127,7 @@ func runHTTPServer(ctx context.Context, handlers []service.BackupScheduler,
 }
 
 func main() {
+	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 	// start the application
 	os.Exit(run())
 }
