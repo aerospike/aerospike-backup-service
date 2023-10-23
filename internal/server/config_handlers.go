@@ -57,7 +57,7 @@ func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
 
 // addAerospikeCluster
 // @Summary     Adds an Aerospike cluster to the config.
-// @ID			addCluster
+// @ID          addCluster
 // @Tags        Configuration
 // @Router      /config/cluster [post]
 // @Accept      json
@@ -85,7 +85,7 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 
 // readAerospikeClusters reads all Aerospike clusters from the configuration.
 // @Summary     Reads all Aerospike clusters from the configuration.
-// @ID			readClusters
+// @ID	        readClusters
 // @Tags        Configuration
 // @Router      /config/cluster [get]
 // @Produce     json
@@ -105,7 +105,7 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 
 // updateAerospikeCluster updates an existing Aerospike cluster in the configuration.
 // @Summary     Updates an existing Aerospike cluster in the configuration.
-// @ID			updateCluster
+// @ID	        updateCluster
 // @Tags        Configuration
 // @Router      /config/cluster [put]
 // @Accept      json
@@ -133,7 +133,7 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 
 // deleteAerospikeCluster
 // @Summary     Deletes a cluster from the configuration by name.
-// @ID 		    deleteCluster
+// @ID          deleteCluster
 // @Tags        Configuration
 // @Router      /config/cluster [delete]
 // @Param       name query string true "Cluster Name"
@@ -162,7 +162,7 @@ func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Requ
 
 // addStorage
 // @Summary     Adds a storage cluster to the config.
-// @ID			addStorage
+// @ID	        addStorage
 // @Tags        Configuration
 // @Router      /config/storage [post]
 // @Accept      json
@@ -191,7 +191,7 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 
 // readStorages reads all storages from the configuration.
 // @Summary     Reads all storages from the configuration.
-// @ID 			readStorages
+// @ID 	        readStorages
 // @Tags        Configuration
 // @Router      /config/storage [get]
 // @Produce     json
@@ -211,7 +211,7 @@ func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
 
 // updateStorage updates an existing storage in the configuration.
 // @Summary     Updates an existing storage in the configuration.
-// @ID			updateStorage
+// @ID	        updateStorage
 // @Tags        Configuration
 // @Router      /config/storage [put]
 // @Accept      json
@@ -240,7 +240,7 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 
 // deleteStorage
 // @Summary     Deletes a storage from the configuration by name.
-// @ID			deleteStorage
+// @ID	        deleteStorage
 // @Tags        Configuration
 // @Router      /config/storage [delete]
 // @Param       name query string true "Storage Name"
@@ -269,7 +269,7 @@ func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
 
 // addPolicy
 // @Summary     Adds a policy to the config.
-// @ID  		addPolicy
+// @ID          addPolicy
 // @Tags        Configuration
 // @Router      /config/policy [post]
 // @Accept      json
@@ -298,7 +298,7 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 
 // readPolicies reads all backup policies from the configuration.
 // @Summary     Reads all policies from the configuration.
-// @ID			readPolicies
+// @ID	        readPolicies
 // @Tags        Configuration
 // @Router      /config/policy [get]
 // @Produce     json
@@ -318,7 +318,7 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
 
 // updatePolicy updates an existing policy in the configuration.
 // @Summary     Updates an existing policy in the configuration.
-// @ID 			updatePolicy
+// @ID 	        updatePolicy
 // @Tags        Configuration
 // @Router      /config/policy [put]
 // @Accept      json
@@ -347,7 +347,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 
 // deletePolicy
 // @Summary     Deletes a policy from the configuration by name.
-// @ID 			deletePolicy
+// @ID          deletePolicy
 // @Tags        Configuration
 // @Router      /config/policy [delete]
 // @Param       name query string true "Policy Name"

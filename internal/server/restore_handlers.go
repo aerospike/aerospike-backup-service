@@ -12,7 +12,7 @@ import (
 )
 
 // @Summary     Trigger an asynchronous restore operation.
-// @ID 			restore
+// @ID 	        restore
 // @Description Specify the directory parameter for the full backup restore.
 // @Description Use the file parameter to restore from an incremental backup file.
 // @Tags        Restore
@@ -43,7 +43,7 @@ func (ws *HTTPServer) restoreHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // @Summary     Retrieve status for a restore job.
-// @ID			restoreStatus
+// @ID	        restoreStatus
 // @Tags        Restore
 // @Produce     plain
 // @Param       jobId query int true "Job ID to retrieve the status"

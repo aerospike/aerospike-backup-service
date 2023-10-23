@@ -8,7 +8,7 @@ import (
 )
 
 // @Summary     Root endpoint.
-// @ID			root
+// @ID	        root
 // @Tags        System
 // @Router      / [get]
 // @Success 	200
@@ -20,7 +20,7 @@ func rootActionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // @Summary     Health endpoint.
-// @ID			health
+// @ID	        health
 // @Tags        System
 // @Router      /health [get]
 // @Success 	200
@@ -29,7 +29,7 @@ func healthActionHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 // @Summary     Readiness endpoint.
-// @ID			ready
+// @ID	        ready
 // @Tags        System
 // @Router      /ready [get]
 // @Success 	200
@@ -38,7 +38,7 @@ func readyActionHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 // @Summary     Returns application version.
-// @ID			version
+// @ID	        version
 // @Tags        System
 // @Router      /version [get]
 // @Success 	200 {string} string "version"
