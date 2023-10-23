@@ -16,7 +16,7 @@ func NewS3ConfigurationManager(configStorage *model.BackupStorage) S3Configurati
 }
 
 func (s S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
-	config := &model.Config{}
+	config := model.NewConfigWithDefaultValues()
 	s.readFile(s.Path, config)
 	return config, nil
 }

@@ -26,7 +26,7 @@ func (cm *FileConfigurationManager) ReadConfiguration() (*model.Config, error) {
 		return nil, err
 	}
 
-	config := &model.Config{}
+	config := model.NewConfigWithDefaultValues()
 	err = yaml.Unmarshal(buf, config)
 	if err != nil {
 		return nil, fmt.Errorf("in file %q: %w", filePath, err)

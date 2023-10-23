@@ -19,11 +19,9 @@ import (
 )
 
 // run parses the CLI parameters and executes backup.
-
 func run() int {
 	var (
-		host, configFile, remoteConfig, logLevel string
-		port                                     int
+		configFile, remoteConfig, logLevel string
 	)
 
 	validateFlags := func(cmd *cobra.Command, args []string) error {
@@ -35,6 +33,7 @@ func run() int {
 		}
 		return nil
 	}
+
 	rootCmd := &cobra.Command{
 		Use:     "Use the following properties for service configuration",
 		Short:   "Aerospike Backup Service",
@@ -42,10 +41,8 @@ func run() int {
 		PreRunE: validateFlags,
 	}
 
-	rootCmd.Flags().StringVar(&host, "host", "0.0.0.0", "service host")
-	rootCmd.Flags().IntVar(&port, "port", 8080, "service port")
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path")
-	rootCmd.Flags().StringVarP(&remoteConfig, "remote", "r", "", "remote configuration")
+	rootCmd.Flags().StringVarP(&remoteConfig, "remote", "r", "", "remote configuration file path")
 	rootCmd.Flags().StringVarP(&logLevel, "log", "l", "DEBUG", "log level")
 
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -71,7 +68,7 @@ func run() int {
 		handlers := service.BuildBackupHandlers(config)
 		service.ScheduleHandlers(ctx, handlers)
 		// run HTTP server
-		return runHTTPServer(ctx, host, port, handlers, config)
+		return runHTTPServer(ctx, handlers, config)
 	}
 
 	err := rootCmd.Execute()
@@ -105,9 +102,9 @@ func readConfiguration() (*model.Config, error) {
 	return config, nil
 }
 
-func runHTTPServer(ctx context.Context, host string, port int,
-	handlers []service.BackupScheduler, config *model.Config) error {
-	server := server.NewHTTPServer(host, port, service.ToBackend(handlers), config)
+func runHTTPServer(ctx context.Context, handlers []service.BackupScheduler,
+	config *model.Config) error {
+	server := server.NewHTTPServer(service.ToBackend(handlers), config)
 	go func() {
 		server.Start()
 	}()
