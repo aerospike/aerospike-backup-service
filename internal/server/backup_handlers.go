@@ -9,7 +9,7 @@ import (
 )
 
 // @Summary  Get available full backups.
-// @ID 		 getAvailableFullBackups
+// @ID 	     getAvailableFullBackups
 // @Tags     Backup
 // @Produce  plain
 // @Param    name query string true "Backup policy name"
@@ -38,7 +38,7 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 }
 
 // @Summary  Get available incremental backups.
-// @ID 		 getAvailableIncrBackups
+// @ID       getAvailableIncrBackups
 // @Tags     Backup
 // @Produce  plain
 // @Param    name query string true "Backup policy name"

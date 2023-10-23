@@ -12,7 +12,7 @@ var ConfigurationManager service.ConfigurationManager
 
 // readConfig
 // @Summary     Returns the configuration for the service.
-// @ID			readConfig
+// @ID	        readConfig
 // @Tags        Configuration
 // @Router      /config [get]
 // @Produce     json
@@ -31,7 +31,7 @@ func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 
 // updateConfig
 // @Summary     Updates the configuration for the service.
-// @ID 			updateConfig
+// @ID 	        updateConfig
 // @Tags        Configuration
 // @Router      /config [post]
 // @Accept      json
