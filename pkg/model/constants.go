@@ -1,7 +1,7 @@
 package model
 
 const (
-	StateFileName              = "state.yaml"
+	StateFileName              = "state.json"
 	IncrementalBackupDirectory = "incremental"
 	FullBackupDirectory        = "backup"
 )
