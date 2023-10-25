@@ -55,7 +55,7 @@ func run() int {
 		slog.SetDefault(slog.New(util.LogHandler(logLevel)))
 		// read configuration file
 		if configFile != "" {
-			server.ConfigurationManager = service.NewConfigurationManager(configFile)
+			server.ConfigurationManager = service.NewFileConfigurationManager(configFile)
 		} else if remoteConfig != "" {
 			configurationStorage, err := service.ReadConfigStorage(remoteConfig)
 			if err != nil {
