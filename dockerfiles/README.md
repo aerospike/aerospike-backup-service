@@ -15,9 +15,9 @@ To build the Docker images for local usage, follow these steps:
 To build the Docker images for JFrog, follow these steps:
 1. **Create the base image with multi-platform support:**
     ```shell
-     ./dockerfiles/create-multi-platform-base-image.sh <DOCKER_USERNAME> <DOCKER_PASSWORD>
+     <DOCKER_USERNAME> <DOCKER_PASSWORD> ./dockerfiles/create-multi-platform-base-image.sh
     ```
 2. **Create the backup-service image with multi-platform support:**
     ```shell
-     ./dockerfiles/create-multi-platform-backup-service-image.sh DOCKER_USERNAME=<DOCKER_USERNAME> DOCKER_PASSWORD=<DOCKER_PASSWORD>
+     TAG=<TAG> DOCKER_USERNAME=<DOCKER_USERNAME> DOCKER_PASSWORD=<DOCKER_PASSWORD> ./dockerfiles/create-multi-platform-backup-service-image.sh
     ```
