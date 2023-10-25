@@ -1,26 +1,24 @@
----
 aerospike-cluster:
-  - name: "cluster1"
+  - name: absDefaultCluster
     host: "localhost"
     port: 3000
     user: "tester"
     password: "psw"
 
 backup-storage:
-  - name: "local1"
+  - name: absDefaultStorage
     type: 0
-    path: "./testout"
+    path: ./testout
 
 backup-policy:
-  - name: "policy-daily"
+  - name: absDefaultPolicy
     interval: 10000
-    incr_interval: 5000
-    type: 1
-    source_cluster: "cluster1"
-    storage: "local1"
-    namespace: "test"
-    set_list:
-      - set1
+    incr_interval: 3000
+    type: 0
+    source_cluster: absDefaultCluster
+    storage: absDefaultStorage
+    namespace: source-ns1
     parallel: 1
+    set_list:
+      - absDefaultSet
     remove_files: false
-    

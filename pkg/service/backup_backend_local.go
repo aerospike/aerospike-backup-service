@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"github.com/aws/smithy-go/ptr"
 	"io/fs"
 	"os"
 
@@ -79,9 +78,9 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 
 	if local.backupPolicy.RemoveFiles != nil && *local.backupPolicy.RemoveFiles {
 		if len(entries) > 0 {
-			return []model.BackupDetails{{
-				Key: ptr.String(backupFolder),
-			}}, nil
+			stat, _ := os.Stat(backupFolder)
+			entry := fs.FileInfoToDirEntry(stat)
+			return []model.BackupDetails{toBackupDetails(entry, "")}, nil
 		}
 		return []model.BackupDetails{}, nil
 	}
@@ -89,7 +88,7 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 	var backupDetails []model.BackupDetails
 	for _, e := range entries {
 		if e.IsDir() {
-			backupDetails = append(backupDetails, toBackupDetails(e))
+			backupDetails = append(backupDetails, toBackupDetails(e, model.FullBackupDirectory+"/"))
 		}
 	}
 	return backupDetails, nil
@@ -105,7 +104,7 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 	var backupDetails []model.BackupDetails
 	for _, e := range entries {
 		if !e.IsDir() {
-			backupDetails = append(backupDetails, toBackupDetails(e))
+			backupDetails = append(backupDetails, toBackupDetails(e, model.IncrementalBackupDirectory+"/"))
 		}
 	}
 	return backupDetails, nil
@@ -133,9 +132,9 @@ func (local *BackupBackendLocal) BackupPolicyName() string {
 	return *local.backupPolicy.Name
 }
 
-func toBackupDetails(e fs.DirEntry) model.BackupDetails {
+func toBackupDetails(e fs.DirEntry, prefix string) model.BackupDetails {
 	details := model.BackupDetails{
-		Key: util.Ptr(e.Name()),
+		Key: util.Ptr(prefix + e.Name()),
 	}
 	dirInfo, err := e.Info()
 	if err == nil {
