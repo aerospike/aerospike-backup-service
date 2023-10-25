@@ -5,6 +5,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 const (
@@ -34,8 +35,12 @@ func NewRestoreMemory() *RestoreMemory {
 func (r *RestoreMemory) Restore(request *model.RestoreRequest) int {
 	jobID := rand.Int() // TODO: use a request hash code
 	go func() {
-		r.restoreService.RestoreRun(request)
-		r.restoreJobs[jobID] = jobStatusDone
+		restoreRunFunc := func() {
+			r.restoreService.RestoreRun(request)
+			r.restoreJobs[jobID] = jobStatusDone
+		}
+		out := stdIO.Capture(restoreRunFunc)
+		util.LogCaptured(out)
 	}()
 	r.restoreJobs[jobID] = jobStatusRunning
 	return jobID
