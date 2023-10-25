@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"github.com/aws/smithy-go/ptr"
 	"io/fs"
 	"os"
 
@@ -15,22 +16,22 @@ import (
 // BackupBackendLocal implements the BackupBackend interface by
 // saving state to the local file system.
 type BackupBackendLocal struct {
-	path             string
-	stateFilePath    string
-	backupPolicyName string
+	path          string
+	stateFilePath string
+	backupPolicy  *model.BackupPolicy
 }
 
 var _ BackupBackend = (*BackupBackendLocal)(nil)
 
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
-func NewBackupBackendLocal(path, backupPolicyName string) *BackupBackendLocal {
+func NewBackupBackendLocal(path string, backupPolicy *model.BackupPolicy) *BackupBackendLocal {
 	prepareDirectory(path)
 	prepareDirectory(path + "/" + model.IncrementalBackupDirectory)
 	prepareDirectory(path + "/" + model.FullBackupDirectory)
 	return &BackupBackendLocal{
-		path:             path,
-		stateFilePath:    path + "/" + model.StateFileName,
-		backupPolicyName: backupPolicyName,
+		path:          path,
+		stateFilePath: path + "/" + model.StateFileName,
+		backupPolicy:  backupPolicy,
 	}
 }
 
@@ -70,9 +71,19 @@ func (local *BackupBackendLocal) writeState(state *model.BackupState) error {
 
 // FullBackupList returns a list of available full backups.
 func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error) {
-	entries, err := os.ReadDir(local.path)
+	backupFolder := local.path + "/" + model.FullBackupDirectory
+	entries, err := os.ReadDir(backupFolder)
 	if err != nil {
 		return nil, err
+	}
+
+	if local.backupPolicy.RemoveFiles != nil && *local.backupPolicy.RemoveFiles {
+		if len(entries) > 0 {
+			return []model.BackupDetails{{
+				Key: ptr.String(backupFolder),
+			}}, nil
+		}
+		return []model.BackupDetails{}, nil
 	}
 
 	var backupDetails []model.BackupDetails
@@ -119,7 +130,7 @@ func (local *BackupBackendLocal) CleanDir(name string) {
 
 // BackupPolicyName returns the name of the defining backup policy.
 func (local *BackupBackendLocal) BackupPolicyName() string {
-	return local.backupPolicyName
+	return *local.backupPolicy.Name
 }
 
 func toBackupDetails(e fs.DirEntry) model.BackupDetails {

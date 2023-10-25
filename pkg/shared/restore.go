@@ -77,7 +77,7 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) {
 	setCBool(&restoreConfig.unique, restoreRequest.Unique)
 	setCBool(&restoreConfig.no_generation, restoreRequest.NoGeneration)
 
-	restoreConfig.validate = true
+	restoreConfig.validate = false
 
 	// fmt.Println(restoreConfig)
 	C.restore_run(&restoreConfig)
