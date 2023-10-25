@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
+	"gopkg.in/yaml.v3"
 )
 
 // BackupBackendLocal implements the BackupBackend interface by
@@ -25,11 +25,11 @@ var _ BackupBackend = (*BackupBackendLocal)(nil)
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
 func NewBackupBackendLocal(path, backupPolicyName string) *BackupBackendLocal {
 	prepareDirectory(path)
-	incrDirectoryPath := path + "/" + incremenalBackupDirectory
+	incrDirectoryPath := path + "/" + model.IncrementalBackupDirectory
 	prepareDirectory(incrDirectoryPath)
 	return &BackupBackendLocal{
 		path:             path,
-		stateFilePath:    path + "/" + stateFileName,
+		stateFilePath:    path + "/" + model.StateFileName,
 		backupPolicyName: backupPolicyName,
 	}
 }
@@ -53,7 +53,7 @@ func (local *BackupBackendLocal) readState() *model.BackupState {
 		slog.Warn("Failed to read state file for backup", "err", err)
 		return state
 	}
-	if err = json.Unmarshal(bytes, state); err != nil {
+	if err = yaml.Unmarshal(bytes, state); err != nil {
 		slog.Warn("Failed unmarshal state file for backup", "path",
 			local.stateFilePath, "err", err)
 	}
@@ -61,7 +61,7 @@ func (local *BackupBackendLocal) readState() *model.BackupState {
 }
 
 func (local *BackupBackendLocal) writeState(state *model.BackupState) error {
-	backupState, err := json.Marshal(state)
+	backupState, err := yaml.Marshal(state)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 }
 
 func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails, error) {
-	entries, err := os.ReadDir(local.path + "/" + incremenalBackupDirectory)
+	entries, err := os.ReadDir(local.path + "/" + model.IncrementalBackupDirectory)
 	if err != nil {
 		return nil, err
 	}

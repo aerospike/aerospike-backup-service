@@ -38,7 +38,9 @@ RUN go mod download
 RUN export ARCH=`uname -m` && \
     CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-$ARCH/include \
     -I/app/modules/aerospike-tools-backup/include" \
-    GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=1 go build -o backup .
+    GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=1 go build  \
+    -ldflags " -X main.commit=$(git rev-parse --short HEAD) -X main.buildTime=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
+    -o backup .
 
 FROM ubuntu:22.04
 

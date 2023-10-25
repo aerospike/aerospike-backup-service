@@ -79,9 +79,8 @@ Usage:
 Flags:
   -c, --config string   configuration file path
   -h, --help            help for Use
-      --host string     service host (default "0.0.0.0")
   -l, --log string      log level (default "DEBUG")
-      --port int        service port (default 8080)
+  -r, --remote string   remote configuration file path
   -v, --version         version for Use
 ```
 

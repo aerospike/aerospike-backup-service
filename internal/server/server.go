@@ -2,26 +2,82 @@ package server
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
-	"strconv"
+	"net/netip"
+	"strings"
 
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/time/rate"
 )
 
-var rateLimiter = NewIPRateLimiter(1, 10)
-
-var ipsWhiteList = map[string]struct{}{
-	"127.0.0.1": {},
+type ipWhiteList struct {
+	addresses map[string]*netip.Addr
+	networks  []*netip.Prefix
+	allowAny  bool
 }
 
-// HTTPServer is the authentication HTTP server wrapper.
+func newIPWhiteList(ipList []string) *ipWhiteList {
+	addresses := make(map[string]*netip.Addr)
+	networks := make([]*netip.Prefix, 0)
+	var allowAny bool
+	for _, ip := range ipList {
+		if strings.HasPrefix(ip, "0.0.0.0") {
+			allowAny = true
+		}
+		network, err := netip.ParsePrefix(ip)
+		if err != nil {
+			ipAddr, err := netip.ParseAddr(ip)
+			if err != nil {
+				panic(fmt.Sprintf("invalid ip configuration: %s", ip))
+			} else {
+				addresses[ip] = &ipAddr
+			}
+		} else {
+			networks = append(networks, &network)
+		}
+	}
+	return &ipWhiteList{
+		addresses: addresses,
+		networks:  networks,
+		allowAny:  allowAny,
+	}
+}
+
+func (wl *ipWhiteList) isAllowed(ip string) bool {
+	if wl.allowAny {
+		return true
+	}
+	ipAddr, err := netip.ParseAddr(ip)
+	if err != nil {
+		slog.Warn("Invalid client ip", "ip", ip)
+		return false
+	}
+	_, ok := wl.addresses[ip]
+	if ok {
+		return true
+	}
+
+	for _, network := range wl.networks {
+		if network.Contains(ipAddr) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// HTTPServer is the backup service HTTP server wrapper.
 type HTTPServer struct {
 	config         *model.Config
 	server         *http.Server
+	rateLimiter    *IPRateLimiter
+	whiteList      *ipWhiteList
 	restoreService service.RestoreService
 	backupBackends map[string]service.BackupBackend
 }
@@ -38,25 +94,30 @@ type HTTPServer struct {
 // @externalDocs.url          https://swagger.io/resources/open-api/
 //
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(host string, port int, backends []service.BackupBackend,
-	config *model.Config) *HTTPServer {
-	addr := host + ":" + strconv.Itoa(port)
+func NewHTTPServer(backends []service.BackupBackend, config *model.Config) *HTTPServer {
+	addr := fmt.Sprintf("%s:%d", config.HTTPServer.Host, config.HTTPServer.Port)
 
 	backendMap := make(map[string]service.BackupBackend, len(backends))
 	for _, backend := range backends {
 		backendMap[backend.BackupPolicyName()] = backend
 	}
+	rateLimiter := NewIPRateLimiter(
+		rate.Limit(config.HTTPServer.Rate.Tps),
+		config.HTTPServer.Rate.Size,
+	)
 	return &HTTPServer{
 		config: config,
 		server: &http.Server{
 			Addr: addr,
 		},
+		rateLimiter:    rateLimiter,
+		whiteList:      newIPWhiteList(config.HTTPServer.Rate.WhiteList),
 		restoreService: service.NewRestoreMemory(),
 		backupBackends: backendMap,
 	}
 }
 
-func rateLimiterMiddleware(next http.Handler) http.Handler {
+func (ws *HTTPServer) rateLimiterMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {
@@ -64,9 +125,8 @@ func rateLimiterMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		_, ok := ipsWhiteList[ip]
-		if !ok {
-			limiter := rateLimiter.GetLimiter(ip)
+		if !ws.whiteList.isAllowed(ip) {
+			limiter := ws.rateLimiter.GetLimiter(ip)
 			if !limiter.Allow() {
 				http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
 				return
@@ -120,7 +180,7 @@ func (ws *HTTPServer) Start() {
 	// Returns a list of available incremental backups for the given policy name
 	mux.HandleFunc("/backup/incremental/list", ws.getAvailableIncrBackups)
 
-	ws.server.Handler = rateLimiterMiddleware(mux)
+	ws.server.Handler = ws.rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()
 	util.Check(err)
 }

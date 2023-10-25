@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -17,29 +18,51 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	commit    string
+	buildTime string
+)
+
 // run parses the CLI parameters and executes backup.
 func run() int {
 	var (
-		host, configFile, logLevel string
-		port                       int
+		configFile, remoteConfig, logLevel string
 	)
+
+	validateFlags := func(cmd *cobra.Command, args []string) error {
+		if len(configFile) == 0 && len(remoteConfig) == 0 {
+			return errors.New("one of --config or --remote is required")
+		}
+		if len(configFile) > 0 && len(remoteConfig) > 0 {
+			return errors.New("only one of --config or --remote is allowed")
+		}
+		return nil
+	}
 
 	rootCmd := &cobra.Command{
 		Use:     "Use the following properties for service configuration",
 		Short:   "Aerospike Backup Service",
 		Version: util.Version,
+		PreRunE: validateFlags,
 	}
 
-	rootCmd.Flags().StringVar(&host, "host", "0.0.0.0", "service host")
-	rootCmd.Flags().IntVar(&port, "port", 8080, "service port")
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path")
+	rootCmd.Flags().StringVarP(&remoteConfig, "remote", "r", "", "remote configuration file path")
 	rootCmd.Flags().StringVarP(&logLevel, "log", "l", "DEBUG", "log level")
 
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
 		// set default logger
 		slog.SetDefault(slog.New(util.LogHandler(logLevel)))
 		// read configuration file
-		server.ConfigurationManager = service.NewConfigurationManager(configFile)
+		if configFile != "" {
+			server.ConfigurationManager = service.NewConfigurationManager(configFile)
+		} else if remoteConfig != "" {
+			configurationStorage, err := service.ReadConfigStorage(remoteConfig)
+			if err != nil {
+				return err
+			}
+			server.ConfigurationManager = service.NewS3ConfigurationManager(configurationStorage)
+		}
 		config, err := readConfiguration()
 		if err != nil {
 			return err
@@ -50,7 +73,7 @@ func run() int {
 		handlers := service.BuildBackupHandlers(config)
 		service.ScheduleHandlers(ctx, handlers)
 		// run HTTP server
-		return runHTTPServer(ctx, host, port, handlers, config)
+		return runHTTPServer(ctx, handlers, config)
 	}
 
 	err := rootCmd.Execute()
@@ -84,9 +107,9 @@ func readConfiguration() (*model.Config, error) {
 	return config, nil
 }
 
-func runHTTPServer(ctx context.Context, host string, port int,
-	handlers []service.BackupScheduler, config *model.Config) error {
-	server := server.NewHTTPServer(host, port, service.ToBackend(handlers), config)
+func runHTTPServer(ctx context.Context, handlers []service.BackupScheduler,
+	config *model.Config) error {
+	server := server.NewHTTPServer(service.ToBackend(handlers), config)
 	go func() {
 		server.Start()
 	}()
@@ -104,6 +127,7 @@ func runHTTPServer(ctx context.Context, host string, port int,
 }
 
 func main() {
+	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 	// start the application
 	os.Exit(run())
 }
