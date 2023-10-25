@@ -25,8 +25,8 @@ var _ BackupBackend = (*BackupBackendLocal)(nil)
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
 func NewBackupBackendLocal(path, backupPolicyName string) *BackupBackendLocal {
 	prepareDirectory(path)
-	incrDirectoryPath := path + "/" + model.IncrementalBackupDirectory
-	prepareDirectory(incrDirectoryPath)
+	prepareDirectory(path + "/" + model.IncrementalBackupDirectory)
+	prepareDirectory(path + "/" + model.FullBackupDirectory)
 	return &BackupBackendLocal{
 		path:             path,
 		stateFilePath:    path + "/" + model.StateFileName,

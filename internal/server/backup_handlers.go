@@ -2,10 +2,11 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"net/http"
 
-	"log/slog"
+	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/service"
 )
 
 // @Summary  Get available full backups.
@@ -17,51 +18,60 @@ import (
 // @Success  200 {array} model.BackupDetails "Full backups"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Request) {
-	policyName := r.URL.Query().Get("name")
-	if policyName == "" {
-		http.Error(w, "Invalid/undefined policy name", http.StatusBadRequest)
-	} else {
-		list, err := ws.backupBackends[policyName].FullBackupList()
-		if err != nil {
-			slog.Error("Get full backup list", "err", err)
-			http.Error(w, "", http.StatusNotFound)
-		} else {
-			response, err := json.Marshal(list)
-			if err != nil {
-				slog.Error("Failed to parse full backup list", "err", err)
-				http.Error(w, "", http.StatusInternalServerError)
-			} else {
-				fmt.Fprint(w, string(response))
-			}
-		}
-	}
+	ws.getAvailableBackups(w, r, func(backend service.BackupBackend) ([]model.BackupDetails, error) {
+		return backend.FullBackupList()
+	})
 }
 
 // @Summary  Get available incremental backups.
-// @ID       getAvailableIncrBackups
+// @ID       getAvailableIncrementalBackups
 // @Tags     Backup
 // @Produce  plain
 // @Param    name query string true "Backup policy name"
 // @Router   /backup/incremental/list [get]
 // @Success  200 {array} model.BackupDetails "Incremental backups"
 // @Failure  404 {string} string ""
-func (ws *HTTPServer) getAvailableIncrBackups(w http.ResponseWriter, r *http.Request) {
+func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *http.Request) {
+	ws.getAvailableBackups(w, r, func(backend service.BackupBackend) ([]model.BackupDetails, error) {
+		return backend.IncrementalBackupList()
+	})
+}
+
+func (ws *HTTPServer) getAvailableBackups(
+	w http.ResponseWriter,
+	r *http.Request,
+	backupListFunc func(service.BackupBackend) ([]model.BackupDetails, error)) {
+
 	policyName := r.URL.Query().Get("name")
 	if policyName == "" {
-		http.Error(w, "Invalid/undefined policy name", http.StatusBadRequest)
-	} else {
-		list, err := ws.backupBackends[policyName].IncrementalBackupList()
-		if err != nil {
-			slog.Error("Get incremental backup list", "err", err)
-			http.Error(w, "", http.StatusNotFound)
-		} else {
-			response, err := json.Marshal(list)
-			if err != nil {
-				slog.Error("Failed to parse incremental backup list", "err", err)
-				http.Error(w, "", http.StatusInternalServerError)
-			} else {
-				fmt.Fprint(w, string(response))
-			}
-		}
+		http.Error(w, "Undefined policy name", http.StatusBadRequest)
+		return
+	}
+
+	backend, exists := ws.backupBackends[policyName]
+	if !exists {
+		http.Error(w, "Backup backend does not exist for "+policyName, http.StatusNotFound)
+		return
+	}
+
+	list, err := backupListFunc(backend)
+	if err != nil {
+		slog.Error("Failed to retrieve backup list", "err", err)
+		http.Error(w, "Failed to retrieve backup list", http.StatusInternalServerError)
+		return
+	}
+
+	response, err := json.Marshal(list)
+	if err != nil {
+		slog.Error("Failed to parse backup list", "err", err)
+		http.Error(w, "Failed to parse backup list", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(response); err != nil {
+		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		return
 	}
 }
