@@ -6,6 +6,7 @@ import (
 	"github.com/aws/smithy-go/ptr"
 
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 func TestAddStorage(t *testing.T) {
@@ -13,14 +14,18 @@ func TestAddStorage(t *testing.T) {
 		BackupStorage: []*model.BackupStorage{},
 	}
 
-	newStorage := &model.BackupStorage{Name: ptr.String("storage")}
+	newStorage := &model.BackupStorage{
+		Name: ptr.String("storage"),
+		Type: util.Ptr(model.Local),
+	}
 
 	err := AddStorage(config, newStorage)
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
 
-	// Adding a storage with the same name as an existing one should result in an error
+	// Adding a storage with the same name as an existing one
+	// should result in an error
 	err = AddStorage(config, newStorage)
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
@@ -32,7 +37,11 @@ func TestUpdateStorage(t *testing.T) {
 		BackupStorage: []*model.BackupStorage{{Name: ptr.String("storage")}},
 	}
 
-	newStorage := &model.BackupStorage{Name: ptr.String("storage"), Path: ptr.String("path")}
+	newStorage := &model.BackupStorage{
+		Name: ptr.String("storage"),
+		Path: ptr.String("path"),
+		Type: util.Ptr(model.Local),
+	}
 
 	err := UpdateStorage(config, newStorage)
 	if err != nil {
