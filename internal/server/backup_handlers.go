@@ -12,7 +12,7 @@ import (
 // @Summary  Get available full backups.
 // @ID 	     getAvailableFullBackups
 // @Tags     Backup
-// @Produce  plain
+// @Produce  json
 // @Param    name query string true "Backup policy name"
 // @Router   /backup/full/list [get]
 // @Success  200 {array} model.BackupDetails "Full backups"
@@ -26,7 +26,7 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 // @Summary  Get available incremental backups.
 // @ID       getAvailableIncrementalBackups
 // @Tags     Backup
-// @Produce  plain
+// @Produce  json
 // @Param    name query string true "Backup policy name"
 // @Router   /backup/incremental/list [get]
 // @Success  200 {array} model.BackupDetails "Incremental backups"
@@ -70,8 +70,5 @@ func (ws *HTTPServer) getAvailableBackups(
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write(response); err != nil {
-		http.Error(w, "Failed to write response", http.StatusInternalServerError)
-		return
-	}
+	_, _ = w.Write(response)
 }
