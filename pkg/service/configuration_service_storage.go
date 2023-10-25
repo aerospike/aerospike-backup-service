@@ -2,6 +2,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -13,7 +14,10 @@ import (
 func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
 	_, existing := util.GetByName(config.BackupStorage, newStorage.Name)
 	if existing != nil {
-		return fmt.Errorf("cluster %s not found", *newStorage.Name)
+		return fmt.Errorf("storage %s already exists", *newStorage.Name)
+	}
+	if err := validate(newStorage); err != nil {
+		return err
 	}
 
 	config.BackupStorage = append(config.BackupStorage, newStorage)
@@ -24,12 +28,15 @@ func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
 // updates an existing BackupStorage in the configuration.
 func UpdateStorage(config *model.Config, updatedStorage *model.BackupStorage) error {
 	i, existing := util.GetByName(config.BackupStorage, updatedStorage.Name)
-	if existing != nil {
-		config.BackupStorage[i] = updatedStorage
-		return nil
+	if existing == nil {
+		return fmt.Errorf("storage %s not found", *updatedStorage.Name)
+	}
+	if err := validate(updatedStorage); err != nil {
+		return err
 	}
 
-	return fmt.Errorf("storage %s not found", *updatedStorage.Name)
+	config.BackupStorage[i] = updatedStorage
+	return nil
 }
 
 // DeleteStorage
@@ -49,4 +56,14 @@ func DeleteStorage(config *model.Config, storageToDeleteName *string) error {
 		return nil
 	}
 	return fmt.Errorf("cluster %s not found", *storageToDeleteName)
+}
+
+func validate(b *model.BackupStorage) error {
+	if b.Name == nil || *b.Name == "" {
+		return errors.New("storage name is required")
+	}
+	if b.Type == nil {
+		return errors.New("storage type is required")
+	}
+	return nil
 }
