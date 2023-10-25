@@ -8,15 +8,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ConfigurationManager represents a configuration file handler.
 type ConfigurationManager interface {
 	ReadConfiguration() (*model.Config, error)
 	WriteConfiguration(config *model.Config) error
 }
 
-func NewConfigurationManager(path string) ConfigurationManager {
-	return &FileConfigurationManager{FilePath: path}
-}
-
+// ReadConfigStorage reads and returns remote configuration details.
 func ReadConfigStorage(filePath string) (*model.BackupStorage, error) {
 	buf, err := os.ReadFile(filePath)
 	if err != nil {

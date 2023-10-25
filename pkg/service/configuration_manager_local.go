@@ -9,11 +9,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// FileConfigurationManager implements the ConfigurationManager interface,
+// performing I/O operations on local storage.
 type FileConfigurationManager struct {
 	FilePath string
 }
 
 var _ ConfigurationManager = (*FileConfigurationManager)(nil)
+
+// NewFileConfigurationManager returns a new FileConfigurationManager.
+func NewFileConfigurationManager(path string) ConfigurationManager {
+	return &FileConfigurationManager{FilePath: path}
+}
 
 // ReadConfiguration reads the configuration from the given file path.
 func (cm *FileConfigurationManager) ReadConfiguration() (*model.Config, error) {

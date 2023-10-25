@@ -68,6 +68,7 @@ func (local *BackupBackendLocal) writeState(state *model.BackupState) error {
 	return os.WriteFile(local.stateFilePath, backupState, 0644)
 }
 
+// FullBackupList returns a list of available full backups.
 func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error) {
 	entries, err := os.ReadDir(local.path)
 	if err != nil {
@@ -83,6 +84,7 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 	return backupDetails, nil
 }
 
+// IncrementalBackupList returns a list of available incremental backups.
 func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails, error) {
 	entries, err := os.ReadDir(local.path + "/" + model.IncrementalBackupDirectory)
 	if err != nil {
@@ -98,6 +100,7 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 	return backupDetails, nil
 }
 
+// CleanDir cleans the directory with the given name.
 func (local *BackupBackendLocal) CleanDir(name string) {
 	path := fmt.Sprintf("%s/%s/", local.path, name)
 	dir, err := os.ReadDir(path)
@@ -114,6 +117,7 @@ func (local *BackupBackendLocal) CleanDir(name string) {
 	}
 }
 
+// BackupPolicyName returns the name of the defining backup policy.
 func (local *BackupBackendLocal) BackupPolicyName() string {
 	return local.backupPolicyName
 }

@@ -17,6 +17,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// S3Context is responsible for performing basic operations on S3.
 type S3Context struct {
 	ctx    context.Context
 	client *s3.Client
@@ -24,6 +25,7 @@ type S3Context struct {
 	Path   string
 }
 
+// NewS3Context returns a new S3Context.
 func NewS3Context(storage *model.BackupStorage) *S3Context {
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
@@ -82,7 +84,7 @@ func NewS3Context(storage *model.BackupStorage) *S3Context {
 	}
 }
 
-// Read and decode yaml content from filepath into provided object.
+// readFile reads and decodes the YAML content from the given filePath into v.
 func (s *S3Context) readFile(filePath string, v any) {
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
@@ -104,7 +106,7 @@ func (s *S3Context) readFile(filePath string, v any) {
 	}
 }
 
-// Write provided object into filepath in yaml.
+// writeFile writes v into filepath using the YAML format.
 func (s *S3Context) writeFile(filePath string, v any) error {
 	backupState, err := yaml.Marshal(v)
 	if err != nil {
@@ -124,7 +126,7 @@ func (s *S3Context) writeFile(filePath string, v any) error {
 	return err
 }
 
-// List all files in given s3 prefix path
+// listFiles returns all files in the given s3 prefix path.
 func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 	result, err := s.list(prefix, "")
 	if err != nil {
@@ -133,7 +135,7 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 	return result.Contents, nil
 }
 
-// List all subfolders in given s3 prefix path
+// listFolders returns all subfolders in the given s3 prefix path.
 func (s *S3Context) listFolders(prefix string) ([]types.CommonPrefix, error) {
 	result, err := s.list(prefix, "/")
 	if err != nil {
@@ -142,7 +144,6 @@ func (s *S3Context) listFolders(prefix string) ([]types.CommonPrefix, error) {
 	return result.CommonPrefixes, nil
 }
 
-// executes ListObjectsV2 on s3 client
 func (s *S3Context) list(prefix string, v string) (*s3.ListObjectsV2Output, error) {
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
@@ -157,7 +158,7 @@ func (s *S3Context) list(prefix string, v string) (*s3.ListObjectsV2Output, erro
 	return result, nil
 }
 
-// minio works with slashes, but not aws.
+// MinIO works with slashes, as opposed to S3.
 func removeLeadingSlash(s string) string {
 	if len(s) > 0 && s[0] == '/' {
 		return s[1:]
@@ -165,6 +166,7 @@ func removeLeadingSlash(s string) string {
 	return s
 }
 
+// CleanDir cleans the directory with the given name.
 func (s *S3Context) CleanDir(name string) {
 	path := s.Path + "/" + name
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{

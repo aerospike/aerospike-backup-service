@@ -29,6 +29,8 @@ func NewRestoreMemory() *RestoreMemory {
 	}
 }
 
+// Restore starts the backup for a given request asynchronously and
+// returns the id of the backup job.
 func (r *RestoreMemory) Restore(request *model.RestoreRequest) int {
 	jobID := rand.Int() // TODO: use a request hash code
 	go func() {
@@ -39,6 +41,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequest) int {
 	return jobID
 }
 
+// JobStatus returns the status of the job with the given id.
 func (r *RestoreMemory) JobStatus(jobID int) string {
 	jobStatus, ok := r.restoreJobs[jobID]
 	if !ok {
