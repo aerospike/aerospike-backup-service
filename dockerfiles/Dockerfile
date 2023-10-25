@@ -1,7 +1,9 @@
 # syntax=docker/dockerfile:1
-FROM abs-base-image as build
+ARG BASE_IMAGE=abs-base-image
+FROM $BASE_IMAGE as build
 
 WORKDIR /app
+
 COPY . .
 
 ARG GOOS linux
