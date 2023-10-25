@@ -16,7 +16,7 @@ var ConfigurationManager service.ConfigurationManager
 // @Tags        Configuration
 // @Router      /config [get]
 // @Produce     json
-// @Success     200 {array} model.Config
+// @Success     200 {object} model.Config
 // @Failure     400 {string} string
 func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 	configuration, err := json.MarshalIndent(ws.config, "", "    ") // pretty print
@@ -24,8 +24,8 @@ func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 		http.Error(w, "Failed to parse service configuration", http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(configuration)
 }
 
@@ -98,8 +98,8 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(jsonResponse)
 }
 
@@ -204,8 +204,8 @@ func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(jsonResponse)
 }
 
@@ -311,8 +311,8 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(jsonResponse)
 }
 
