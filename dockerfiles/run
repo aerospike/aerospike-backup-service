@@ -1,7 +1,0 @@
-From the root directory run:
-docker build -t abs-base-image -f ./dockerfiles/Dockerfile-base-image .
-docker build --build-arg GOARCH=arm64 -t backup-service -f ./dockerfiles/Dockerfile .
-
-To create base image with multi platform support, run from the root directory:
-./dockerfiles/create-base-image.sh
-
