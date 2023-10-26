@@ -178,7 +178,7 @@ func (ws *HTTPServer) Start() {
 	mux.HandleFunc("/backup/full/list", ws.getAvailableFullBackups)
 
 	// Returns a list of available incremental backups for the given policy name
-	mux.HandleFunc("/backup/incremental/list", ws.getAvailableIncrBackups)
+	mux.HandleFunc("/backup/incremental/list", ws.getAvailableIncrementalBackups)
 
 	ws.server.Handler = ws.rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()
