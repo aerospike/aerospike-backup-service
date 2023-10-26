@@ -14,6 +14,7 @@ import (
 // backup service
 var backupService shared.Backup = shared.NewBackup()
 
+// stdIO captures standard output
 var stdIO *stdio.CgoStdio = &stdio.CgoStdio{}
 
 // a counter metric for backup run number

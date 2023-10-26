@@ -24,10 +24,11 @@ func (c *CgoStdio) Capture(f func()) string {
 	c.Lock()
 	defer c.Unlock()
 
+	sourceFd := syscall.Stderr
 	var r, w *os.File
 	var err error
 
-	origStderr, err := syscall.Dup(syscall.Stderr)
+	originalFd, err := syscall.Dup(sourceFd)
 	if err != nil {
 		logError(err)
 		goto executeF
@@ -39,12 +40,12 @@ func (c *CgoStdio) Capture(f func()) string {
 		goto executeF
 	}
 
-	if err = dup2(int(w.Fd()), syscall.Stderr); err != nil {
+	if err = dup2(int(w.Fd()), sourceFd); err != nil {
 		logError(err)
 		goto executeF
 	}
 	defer func() {
-		logError(dup2(origStderr, syscall.Stderr))
+		logError(dup2(originalFd, sourceFd))
 	}()
 
 executeF:
@@ -54,9 +55,10 @@ executeF:
 	}
 
 	C.fflush(C.stderr)
+	C.fflush(C.stdout)
 
 	logError(w.Close())
-	logError(syscall.Close(syscall.Stderr))
+	logError(syscall.Close(sourceFd))
 
 	out := copyCaptured(r)
 

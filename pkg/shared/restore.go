@@ -16,6 +16,7 @@ import "C"
 import (
 	"strings"
 	"sync"
+	"unsafe"
 
 	"log/slog"
 
@@ -77,10 +78,12 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) {
 	setCBool(&restoreConfig.unique, restoreRequest.Unique)
 	setCBool(&restoreConfig.no_generation, restoreRequest.NoGeneration)
 
-	restoreConfig.validate = true
-
 	// fmt.Println(restoreConfig)
-	C.restore_run(&restoreConfig)
+	restoreStatus := C.restore_run(&restoreConfig)
+	if unsafe.Pointer(restoreStatus) != C.RUN_RESTORE_FAILURE {
+		C.restore_status_destroy(restoreStatus)
+		C.cf_free(unsafe.Pointer(restoreStatus))
+	}
 
 	// destroy the restore_config
 	C.restore_config_destroy(&restoreConfig)

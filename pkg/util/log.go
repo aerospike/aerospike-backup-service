@@ -1,6 +1,8 @@
 package util
 
 import (
+	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -26,6 +28,8 @@ func LogCaptured(out string) {
 			default:
 				slog.Debug(groups[4])
 			}
+		} else { // print to stderr
+			fmt.Fprintln(os.Stderr, entry)
 		}
 	}
 }

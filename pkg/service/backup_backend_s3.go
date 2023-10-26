@@ -16,7 +16,8 @@ type BackupBackendS3 struct {
 var _ BackupBackend = (*BackupBackendS3)(nil)
 
 // NewBackupBackendS3 returns a new BackupBackendS3 instance.
-func NewBackupBackendS3(storage *model.BackupStorage, backupPolicy *model.BackupPolicy) *BackupBackendS3 {
+func NewBackupBackendS3(storage *model.BackupStorage,
+	backupPolicy *model.BackupPolicy) *BackupBackendS3 {
 	s3Context := NewS3Context(storage)
 	return &BackupBackendS3{
 		S3Context:     s3Context,
@@ -35,6 +36,7 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 	return s.writeFile(s.stateFilePath, state)
 }
 
+// FullBackupList returns a list of available full backups.
 func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 	backupFolder := s.Path + "/" + model.FullBackupDirectory + "/"
 	if s.backupPolicy.RemoveFiles != nil && *s.backupPolicy.RemoveFiles {
@@ -61,6 +63,7 @@ func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 	return contents, err
 }
 
+// IncrementalBackupList returns a list of available incremental backups.
 func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error) {
 	list, err := s.listFiles(s.Path + "/" + model.IncrementalBackupDirectory)
 	if err != nil {
@@ -78,6 +81,7 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 	return contents, err
 }
 
+// BackupPolicyName returns the name of the defining backup policy.
 func (s *BackupBackendS3) BackupPolicyName() string {
 	return *s.backupPolicy.Name
 }

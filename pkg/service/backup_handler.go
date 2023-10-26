@@ -41,7 +41,7 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	var backupBackend BackupBackend
 	switch *storage.Type {
 	case model.Local:
-		backupBackend = NewBackupBackendLocal(*storage.Path, *backupPolicy.Name)
+		backupBackend = NewBackupBackendLocal(*storage.Path, backupPolicy)
 	case model.S3:
 		backupBackend = NewBackupBackendS3(storage, backupPolicy)
 	default:

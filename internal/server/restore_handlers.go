@@ -17,8 +17,9 @@ import (
 // @Description Use the file parameter to restore from an incremental backup file.
 // @Tags        Restore
 // @Router      /restore [post]
+// @Accept		json
 // @Param       request body model.RestoreRequest true "query params"
-// @Success     202 {integer} int "Job ID (int64)"
+// @Success     202 {string}  "Job ID (int64)"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -35,8 +36,9 @@ func (ws *HTTPServer) restoreHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		jobID := ws.restoreService.Restore(&request)
 		slog.Info("Restore action", "jobID", jobID, "request", request)
-		fmt.Fprint(w, strconv.Itoa(jobID))
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, strconv.Itoa(jobID))
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
@@ -45,8 +47,8 @@ func (ws *HTTPServer) restoreHandler(w http.ResponseWriter, r *http.Request) {
 // @Summary     Retrieve status for a restore job.
 // @ID	        restoreStatus
 // @Tags        Restore
-// @Produce     plain
-// @Param       jobId query int true "Job ID to retrieve the status"
+// @Produce     json
+// @Param       jobId query string true "Job ID to retrieve the status"
 // @Router      /restore/status [get]
 // @Success     200 {string} string "Job status"
 // @Failure     400 {string} string
@@ -57,6 +59,7 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Invalid job id", http.StatusBadRequest)
 		return
 	}
-	fmt.Fprint(w, ws.restoreService.JobStatus(jobID))
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, ws.restoreService.JobStatus(jobID))
 }
