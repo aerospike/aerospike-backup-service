@@ -1,3 +1,4 @@
+#!/bin/bash
 TAG_LATEST=${TAG_LATEST:-false}
 LATEST_STRING=""
 if [ $TAG_LATEST = true ]; then
