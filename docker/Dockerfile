@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG BASE_IMAGE=abs-base-image
+ARG BASE_IMAGE=aerospike-backup-service-base
 FROM $BASE_IMAGE as build
 
 WORKDIR /app
