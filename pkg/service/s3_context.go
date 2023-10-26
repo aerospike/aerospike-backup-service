@@ -3,8 +3,8 @@ package service
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/url"
 
@@ -26,6 +26,7 @@ type S3Context struct {
 }
 
 // NewS3Context returns a new S3Context.
+// Panics on any error during initialization.
 func NewS3Context(storage *model.BackupStorage) *S3Context {
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
@@ -33,10 +34,10 @@ func NewS3Context(storage *model.BackupStorage) *S3Context {
 	cfg, err := config.LoadDefaultConfig(
 		ctx,
 		config.WithSharedConfigProfile(*storage.S3Profile),
-		config.WithRegion(*storage.S3Region))
-
+		config.WithRegion(*storage.S3Region),
+	)
 	if err != nil {
-		log.Fatalf("Failed to load S3 SDK configuration: %v", err)
+		panic(fmt.Sprintf("Failed to load S3 SDK configuration: %v", err))
 	}
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
@@ -48,33 +49,17 @@ func NewS3Context(storage *model.BackupStorage) *S3Context {
 
 	parsed, err := url.Parse(*storage.Path)
 	if err != nil {
-		log.Fatalf("Failed to parse S3 storage path: %v", err)
+		panic(fmt.Sprintf("Failed to parse S3 storage path: %v", err))
 	}
 
 	bucketName := parsed.Host
-
 	// Check if the bucket exists
 	_, err = client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(bucketName),
 	})
-
 	if err != nil {
-		log.Fatalf("Error checking bucket %s existence %v", bucketName, err)
+		panic(fmt.Sprintf("Error checking S3 bucket %s existence: %v", bucketName, err))
 	}
-
-	// Specify delimiter to list subfolders
-	input := &s3.ListObjectsV2Input{
-		Bucket:    aws.String(bucketName),
-		Prefix:    aws.String("test-backup/backup"),
-		Delimiter: aws.String("/"),
-	}
-
-	result, err := client.ListObjectsV2(ctx, input)
-	if err != nil {
-		return nil
-	}
-
-	print(result)
 
 	return &S3Context{
 		ctx:    ctx,
