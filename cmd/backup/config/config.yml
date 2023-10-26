@@ -13,7 +13,7 @@ backup-storage:
 
 backup-policy:
   - name: "policy-daily"
-    interval: 30000
+    interval: 10000
     incr_interval: 5000
     type: 1
     source_cluster: "cluster1"
@@ -22,5 +22,5 @@ backup-policy:
     set_list:
       - set1
     parallel: 1
-    remove_files: true
+    remove_files: false
     
