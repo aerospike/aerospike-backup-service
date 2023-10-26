@@ -43,7 +43,7 @@ func (r *RestoreRequest) Validate() error {
 }
 
 // String satisfies the fmt.Stringer interface.
-func (r *RestoreRequest) String() string {
+func (r RestoreRequest) String() string {
 	request, err := json.Marshal(r)
 	if err != nil {
 		return err.Error()
