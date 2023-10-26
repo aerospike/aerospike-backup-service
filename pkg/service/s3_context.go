@@ -61,20 +61,6 @@ func NewS3Context(storage *model.BackupStorage) *S3Context {
 		panic(fmt.Sprintf("Error checking S3 bucket %s existence: %v", bucketName, err))
 	}
 
-	// Specify delimiter to list subfolders
-	input := &s3.ListObjectsV2Input{
-		Bucket:    aws.String(bucketName),
-		Prefix:    aws.String("test-backup/backup"),
-		Delimiter: aws.String("/"),
-	}
-
-	result, err := client.ListObjectsV2(ctx, input)
-	if err != nil {
-		return nil
-	}
-
-	print(result)
-
 	return &S3Context{
 		ctx:    ctx,
 		client: client,
