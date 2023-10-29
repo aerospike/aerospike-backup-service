@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -26,15 +28,12 @@ var (
 // run parses the CLI parameters and executes backup.
 func run() int {
 	var (
-		configFile, remoteConfig, logLevel string
+		configFile, logLevel string
 	)
 
 	validateFlags := func(cmd *cobra.Command, args []string) error {
-		if len(configFile) == 0 && len(remoteConfig) == 0 {
-			return errors.New("one of --config or --remote is required")
-		}
-		if len(configFile) > 0 && len(remoteConfig) > 0 {
-			return errors.New("only one of --config or --remote is allowed")
+		if len(configFile) == 0 {
+			return errors.New("--config is required")
 		}
 		return nil
 	}
@@ -46,23 +45,14 @@ func run() int {
 		PreRunE: validateFlags,
 	}
 
-	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path")
-	rootCmd.Flags().StringVarP(&remoteConfig, "remote", "r", "", "remote configuration file path")
+	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path/URL")
 	rootCmd.Flags().StringVarP(&logLevel, "log", "l", "DEBUG", "log level")
 
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
 		// set default logger
 		slog.SetDefault(slog.New(util.LogHandler(logLevel)))
+		setConfigurationManager(configFile)
 		// read configuration file
-		if configFile != "" {
-			server.ConfigurationManager = service.NewFileConfigurationManager(configFile)
-		} else if remoteConfig != "" {
-			configurationStorage, err := service.ReadConfigStorage(remoteConfig)
-			if err != nil {
-				return err
-			}
-			server.ConfigurationManager = service.NewS3ConfigurationManager(configurationStorage)
-		}
 		config, err := readConfiguration()
 		if err != nil {
 			return err
@@ -82,6 +72,15 @@ func run() int {
 	}
 
 	return util.ToExitVal(err)
+}
+
+func setConfigurationManager(configFile string) {
+	uri, err := url.Parse(configFile)
+	if err == nil && strings.HasPrefix(uri.Scheme, "http") {
+		server.ConfigurationManager = service.NewHTTPConfigurationManager(configFile)
+	} else {
+		server.ConfigurationManager = service.NewFileConfigurationManager(configFile)
+	}
 }
 
 func systemCtx() context.Context {
