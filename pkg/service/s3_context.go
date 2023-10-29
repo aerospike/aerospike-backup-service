@@ -73,7 +73,7 @@ func NewS3Context(storage *model.BackupStorage) *S3Context {
 func (s *S3Context) readFile(filePath string, v any) {
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(removeLeadingSlash(filePath)),
+		Key:    aws.String(RemoveLeadingSlash(filePath)),
 	})
 	if err != nil {
 		slog.Warn("Failed to read file", "path", filePath)
@@ -132,7 +132,7 @@ func (s *S3Context) listFolders(prefix string) ([]types.CommonPrefix, error) {
 func (s *S3Context) list(prefix string, v string) (*s3.ListObjectsV2Output, error) {
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
-		Prefix:    aws.String(removeLeadingSlash(prefix)),
+		Prefix:    aws.String(RemoveLeadingSlash(prefix)),
 		Delimiter: aws.String(v),
 	})
 
@@ -143,8 +143,8 @@ func (s *S3Context) list(prefix string, v string) (*s3.ListObjectsV2Output, erro
 	return result, nil
 }
 
-// MinIO works with slashes, as opposed to S3.
-func removeLeadingSlash(s string) string {
+// RemoveLeadingSlash MinIO works with slashes, as opposed to S3.
+func RemoveLeadingSlash(s string) string {
 	if len(s) > 0 && s[0] == '/' {
 		return s[1:]
 	}

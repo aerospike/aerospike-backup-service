@@ -40,10 +40,11 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 	backupFolder := s.Path + "/" + model.FullBackupDirectory + "/"
 	if s.backupPolicy.RemoveFiles != nil && *s.backupPolicy.RemoveFiles {
+		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 		files, _ := s.listFiles(backupFolder)
 		if len(files) > 0 {
 			return []model.BackupDetails{{
-				Key: ptr.String(backupFolder),
+				Key: ptr.String(RemoveLeadingSlash(backupFolder)),
 			}}, nil
 		}
 		return []model.BackupDetails{}, nil
