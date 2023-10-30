@@ -143,7 +143,6 @@ func (s *S3Context) list(prefix string, v string) (*s3.ListObjectsV2Output, erro
 	return result, nil
 }
 
-// removeLeadingSlash MinIO works with slashes, as opposed to S3.
 func removeLeadingSlash(s string) string {
 	if len(s) > 0 && s[0] == '/' {
 		return s[1:]

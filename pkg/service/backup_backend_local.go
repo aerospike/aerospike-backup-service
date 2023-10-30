@@ -2,9 +2,10 @@ package service
 
 import (
 	"fmt"
-	"github.com/aws/smithy-go/ptr"
 	"io/fs"
 	"os"
+
+	"github.com/aws/smithy-go/ptr"
 
 	"log/slog"
 

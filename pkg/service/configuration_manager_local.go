@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/aerospike/backup/pkg/model"
 	"gopkg.in/yaml.v3"
@@ -12,6 +13,7 @@ import (
 // FileConfigurationManager implements the ConfigurationManager interface,
 // performing I/O operations on local storage.
 type FileConfigurationManager struct {
+	sync.Mutex
 	FilePath string
 }
 
@@ -24,6 +26,9 @@ func NewFileConfigurationManager(path string) ConfigurationManager {
 
 // ReadConfiguration reads the configuration from the given file path.
 func (cm *FileConfigurationManager) ReadConfiguration() (*model.Config, error) {
+	cm.Lock()
+	defer cm.Unlock()
+
 	filePath := cm.FilePath
 	if filePath == "" {
 		return nil, errors.New("configuration file is missing")
@@ -44,6 +49,9 @@ func (cm *FileConfigurationManager) ReadConfiguration() (*model.Config, error) {
 
 // WriteConfiguration writes the configuration to the given file path.
 func (cm *FileConfigurationManager) WriteConfiguration(config *model.Config) error {
+	cm.Lock()
+	defer cm.Unlock()
+
 	filePath := cm.FilePath
 	if filePath == "" {
 		return errors.New("configuration file path is missing")
