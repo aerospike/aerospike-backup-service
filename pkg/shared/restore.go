@@ -80,12 +80,11 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
 
 	// fmt.Println(restoreConfig)
 	restoreStatus := C.restore_run(&restoreConfig)
-	success := true
+	success := false
 	if unsafe.Pointer(restoreStatus) != C.RUN_RESTORE_FAILURE {
-		slog.Warn("Failed restore operation")
 		C.restore_status_destroy(restoreStatus)
 		C.cf_free(unsafe.Pointer(restoreStatus))
-		success = false
+		success = true
 	}
 
 	// destroy the restore_config
