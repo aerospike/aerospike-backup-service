@@ -19,13 +19,13 @@ func NewS3ConfigurationManager(configStorage *model.BackupStorage) Configuration
 }
 
 // ReadConfiguration reads and returns the configuration from S3.
-func (s S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
+func (s *S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	config := model.NewConfigWithDefaultValues()
 	s.readFile(s.Path, config)
 	return config, nil
 }
 
 // WriteConfiguration writes the configuration to S3.
-func (s S3ConfigurationManager) WriteConfiguration(config *model.Config) error {
+func (s *S3ConfigurationManager) WriteConfiguration(config *model.Config) error {
 	return s.writeFile(s.Path, config)
 }

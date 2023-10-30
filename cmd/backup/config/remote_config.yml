@@ -1,4 +1,0 @@
-type: 1
-s3_region: "eu-central-1"
-s3_profile: "default"
-path: "s3://as-backup-bucket/s3_config.yml"
