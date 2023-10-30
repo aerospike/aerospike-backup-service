@@ -40,7 +40,7 @@ func NewBackup() *BackupShared {
 
 // BackupRun calls the backup_run function from the asbackup shared library.
 func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *model.AerospikeCluster,
-	storage *model.BackupStorage, opts BackupOptions) {
+	storage *model.BackupStorage, opts BackupOptions) bool {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -84,11 +84,20 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 		setCString(&backupConfig.directory, getPath(storage, backupPolicy))
 	}
 
-	// fmt.Println(backupConfig)
-	C.backup_run(&backupConfig)
+	backupStatus := C.backup_run(&backupConfig)
+
+	var success bool
+	if unsafe.Pointer(backupStatus) != C.RUN_BACKUP_FAILURE {
+		C.backup_status_destroy(backupStatus)
+		C.cf_free(unsafe.Pointer(backupStatus))
+		success = true
+	} else {
+		slog.Warn("Failed backup operation", "policy", backupPolicy.Name)
+	}
 
 	// destroy the backup_config
 	C.backup_config_destroy(&backupConfig)
+	return success
 }
 
 // set the as_vector for the backup_config

@@ -9,7 +9,7 @@ type BackupOptions struct {
 
 type Backup interface {
 	BackupRun(backupPolicy *model.BackupPolicy, cluster *model.AerospikeCluster,
-		storage *model.BackupStorage, opts BackupOptions)
+		storage *model.BackupStorage, opts BackupOptions) bool
 }
 
 type Restore interface {

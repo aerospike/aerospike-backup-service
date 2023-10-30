@@ -31,7 +31,10 @@ func (h *HTTPConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	defer resp.Body.Close()
 	config := model.NewConfigWithDefaultValues()
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
+	_, err = buf.ReadFrom(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 	respByte := buf.Bytes()
 	if err := yaml.Unmarshal(respByte, config); err != nil {
 		return nil, err
@@ -41,6 +44,6 @@ func (h *HTTPConfigurationManager) ReadConfiguration() (*model.Config, error) {
 }
 
 // WriteConfiguration is unsupported for HTTPConfigurationManager.
-func (h *HTTPConfigurationManager) WriteConfiguration(config *model.Config) error {
+func (h *HTTPConfigurationManager) WriteConfiguration(_ *model.Config) error {
 	return errors.New("unsupported HTTPConfigurationManager.WriteConfiguration operation")
 }
