@@ -44,20 +44,20 @@ func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 		files, _ := s.listFiles(backupFolder)
 		if len(files) > 0 {
 			return []model.BackupDetails{{
-				Key: ptr.String(RemoveLeadingSlash(backupFolder)),
+				Key: ptr.String("s3://" + s.bucket + backupFolder),
 			}}, nil
 		}
 		return []model.BackupDetails{}, nil
 	}
 
-	list, err := s.listFolders(backupFolder)
+	subfolders, err := s.listFolders(backupFolder)
 	if err != nil {
 		return nil, err
 	}
-	contents := make([]model.BackupDetails, len(list))
-	for i, object := range list {
+	contents := make([]model.BackupDetails, len(subfolders))
+	for i, subfolder := range subfolders {
 		details := model.BackupDetails{
-			Key: object.Prefix,
+			Key: ptr.String("s3://" + s.bucket + "/" + *subfolder.Prefix),
 		}
 		contents[i] = details
 	}
