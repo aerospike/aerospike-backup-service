@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"os"
 
+	"github.com/aws/smithy-go/ptr"
+
 	"log/slog"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -77,10 +79,11 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 	}
 
 	if local.backupPolicy.RemoveFiles != nil && *local.backupPolicy.RemoveFiles {
+		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 		if len(entries) > 0 {
-			stat, _ := os.Stat(backupFolder)
-			entry := fs.FileInfoToDirEntry(stat)
-			return []model.BackupDetails{toBackupDetails(entry, "")}, nil
+			return []model.BackupDetails{{
+				Key: ptr.String(backupFolder),
+			}}, nil
 		}
 		return []model.BackupDetails{}, nil
 	}
@@ -88,7 +91,7 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 	var backupDetails []model.BackupDetails
 	for _, e := range entries {
 		if e.IsDir() {
-			backupDetails = append(backupDetails, toBackupDetails(e, model.FullBackupDirectory+"/"))
+			backupDetails = append(backupDetails, toBackupDetails(e, backupFolder+"/"))
 		}
 	}
 	return backupDetails, nil
@@ -96,7 +99,8 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 
 // IncrementalBackupList returns a list of available incremental backups.
 func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails, error) {
-	entries, err := os.ReadDir(local.path + "/" + model.IncrementalBackupDirectory)
+	backupFolder := local.path + "/" + model.IncrementalBackupDirectory
+	entries, err := os.ReadDir(backupFolder)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +108,7 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 	var backupDetails []model.BackupDetails
 	for _, e := range entries {
 		if !e.IsDir() {
-			backupDetails = append(backupDetails, toBackupDetails(e, model.IncrementalBackupDirectory+"/"))
+			backupDetails = append(backupDetails, toBackupDetails(e, backupFolder+"/"))
 		}
 	}
 	return backupDetails, nil

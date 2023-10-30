@@ -21,6 +21,7 @@ func NewRestore() *RestoreShared {
 }
 
 // RestoreRun mocks the interface method.
-func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) {
+func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
 	slog.Info("RestoreRun mock call")
+	return true
 }

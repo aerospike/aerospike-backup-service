@@ -36,7 +36,7 @@ func NewRestore() *RestoreShared {
 }
 
 // RestoreRun calls the restore_run function from the asrestore shared library.
-func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) {
+func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
 	// lock to restrict parallel execution (shared library limitation)
 	r.Lock()
 	defer r.Unlock()
@@ -78,13 +78,18 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) {
 	setCBool(&restoreConfig.unique, restoreRequest.Unique)
 	setCBool(&restoreConfig.no_generation, restoreRequest.NoGeneration)
 
-	// fmt.Println(restoreConfig)
 	restoreStatus := C.restore_run(&restoreConfig)
+	var success bool
 	if unsafe.Pointer(restoreStatus) != C.RUN_RESTORE_FAILURE {
 		C.restore_status_destroy(restoreStatus)
 		C.cf_free(unsafe.Pointer(restoreStatus))
+		success = true
+	} else {
+		slog.Warn("Failed restore operation", "request", restoreRequest)
+		success = false
 	}
 
 	// destroy the restore_config
 	C.restore_config_destroy(&restoreConfig)
+	return success
 }

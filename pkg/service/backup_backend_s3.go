@@ -39,24 +39,26 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 // FullBackupList returns a list of available full backups.
 func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 	backupFolder := s.Path + "/" + model.FullBackupDirectory + "/"
+	s3prefix := "s3://" + s.bucket
 	if s.backupPolicy.RemoveFiles != nil && *s.backupPolicy.RemoveFiles {
+		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 		files, _ := s.listFiles(backupFolder)
 		if len(files) > 0 {
 			return []model.BackupDetails{{
-				Key: ptr.String(backupFolder),
+				Key: ptr.String(s3prefix + backupFolder),
 			}}, nil
 		}
 		return []model.BackupDetails{}, nil
 	}
 
-	list, err := s.listFolders(backupFolder)
+	subfolders, err := s.listFolders(backupFolder)
 	if err != nil {
 		return nil, err
 	}
-	contents := make([]model.BackupDetails, len(list))
-	for i, object := range list {
+	contents := make([]model.BackupDetails, len(subfolders))
+	for i, subfolder := range subfolders {
 		details := model.BackupDetails{
-			Key: object.Prefix,
+			Key: ptr.String(s3prefix + "/" + *subfolder.Prefix),
 		}
 		contents[i] = details
 	}

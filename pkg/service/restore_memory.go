@@ -36,8 +36,12 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequest) int {
 	jobID := rand.Int() // TODO: use a request hash code
 	go func() {
 		restoreRunFunc := func() {
-			r.restoreService.RestoreRun(request)
-			r.restoreJobs[jobID] = jobStatusDone
+			restoreResult := r.restoreService.RestoreRun(request)
+			if restoreResult {
+				r.restoreJobs[jobID] = jobStatusDone
+			} else {
+				r.restoreJobs[jobID] = jobStatusFailed
+			}
 		}
 		out := stdIO.Capture(restoreRunFunc)
 		util.LogCaptured(out)
