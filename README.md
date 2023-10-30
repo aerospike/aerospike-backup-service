@@ -77,10 +77,9 @@ Usage:
   Use the following properties for service configuration [flags]
 
 Flags:
-  -c, --config string   configuration file path
+  -c, --config string   configuration file path/URL
   -h, --help            help for Use
   -l, --log string      log level (default "DEBUG")
-  -r, --remote string   remote configuration file path
   -v, --version         version for Use
 ```
 
