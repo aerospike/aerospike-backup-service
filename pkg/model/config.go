@@ -2,6 +2,9 @@ package model
 
 import (
 	"encoding/json"
+	"log/slog"
+	"os"
+	"sync"
 
 	"github.com/aerospike/backup/internal/util"
 )
@@ -54,11 +57,39 @@ type RateLimiterConfig struct {
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 type AerospikeCluster struct {
-	Name     *string `yaml:"name,omitempty" json:"name,omitempty"`
-	Host     *string `yaml:"host,omitempty" json:"host,omitempty"`
-	Port     *int    `yaml:"port,omitempty" json:"port,omitempty"`
-	User     *string `yaml:"user,omitempty" json:"user,omitempty"`
-	Password *string `yaml:"password,omitempty" json:"password,omitempty"`
+	pwdOnce      sync.Once
+	pwd          *string
+	Name         *string `yaml:"name,omitempty" json:"name,omitempty"`
+	Host         *string `yaml:"host,omitempty" json:"host,omitempty"`
+	Port         *int    `yaml:"port,omitempty" json:"port,omitempty"`
+	User         *string `yaml:"user,omitempty" json:"user,omitempty"`
+	Password     *string `yaml:"password,omitempty" json:"password,omitempty"`
+	PasswordPath *string `yaml:"password_path,omitempty" json:"password_path,omitempty"`
+}
+
+// GetPassword tries to read and set the password once from PasswordPath, if it exists.
+// Returns the password value.
+func (c *AerospikeCluster) GetPassword() *string {
+	c.pwdOnce.Do(func() {
+		if c.PasswordPath != nil {
+			data, err := os.ReadFile(*c.PasswordPath)
+			if err != nil {
+				slog.Error("Failed to read password", "path", *c.PasswordPath)
+			} else {
+				slog.Debug("Successfully read password", "path", *c.PasswordPath)
+				password := string(data)
+				c.pwd = &password
+			}
+		} else {
+			c.pwd = c.Password
+		}
+	})
+	return c.pwd
+}
+
+// GetName returns the name of the AerospikeCluster.
+func (c *AerospikeCluster) GetName() *string {
+	return c.Name
 }
 
 // BackupStorage represents the configuration for a backup storage details.
@@ -70,6 +101,11 @@ type BackupStorage struct {
 	S3Profile          *string      `yaml:"s3_profile,omitempty" json:"s3_profile,omitempty"`
 	S3EndpointOverride *string      `yaml:"s3_endpoint_override,omitempty" json:"s3_endpoint_override,omitempty"`
 	S3LogLevel         *string      `yaml:"s3_log_level,omitempty" json:"s3_log_level,omitempty"`
+}
+
+// GetName returns the name of the BackupStorage.
+func (s *BackupStorage) GetName() *string {
+	return s.Name
 }
 
 // BackupPolicy represents a scheduled backup policy.
@@ -105,6 +141,11 @@ func (p *BackupPolicy) Clone() *BackupPolicy {
 	return &clone
 }
 
+// GetName returns the name of the BackupPolicy.
+func (p *BackupPolicy) GetName() *string {
+	return p.Name
+}
+
 type StorageType int
 
 const (
@@ -121,16 +162,4 @@ const (
 
 type WithName interface {
 	GetName() *string
-}
-
-func (p *BackupPolicy) GetName() *string {
-	return p.Name
-}
-
-func (p *AerospikeCluster) GetName() *string {
-	return p.Name
-}
-
-func (p *BackupStorage) GetName() *string {
-	return p.Name
 }
