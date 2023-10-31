@@ -5,12 +5,11 @@ import (
 	"io/fs"
 	"os"
 
-	"github.com/aws/smithy-go/ptr"
-
 	"log/slog"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
+	"github.com/aws/smithy-go/ptr"
 	"gopkg.in/yaml.v3"
 )
 
