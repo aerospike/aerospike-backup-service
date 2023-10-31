@@ -17,6 +17,7 @@ import "C"
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -56,7 +57,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCString(&backupConfig.user, cluster.User)
 	setCString(&backupConfig.password, cluster.GetPassword())
 
-	setVector(&backupConfig.set_list, backupPolicy.SetList)
+	parseSetList(&backupConfig.set_list, backupPolicy.SetList)
 
 	// namespace list configuration
 	nsCharArray := C.CString(*backupPolicy.Namespace)
@@ -87,7 +88,9 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	backupStatus := C.backup_run(&backupConfig)
 
 	var success bool
-	if unsafe.Pointer(backupStatus) != C.RUN_BACKUP_FAILURE {
+	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS {
+		success = true
+	} else if unsafe.Pointer(backupStatus) != C.RUN_BACKUP_FAILURE {
 		C.backup_status_destroy(backupStatus)
 		C.cf_free(unsafe.Pointer(backupStatus))
 		success = true
@@ -100,14 +103,11 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	return success
 }
 
-// set the as_vector for the backup_config
-func setVector(setVector *C.as_vector, setList *[]string) {
+// parseSetList parses the configured set list for backup
+func parseSetList(setVector *C.as_vector, setList *[]string) {
 	if setList != nil && len(*setList) > 0 {
-		C.as_vector_init(setVector, 64, C.uint(len(*setList)))
-		for i, setName := range *setList {
-			setCharArray := unsafe.Pointer(C.CString(setName))
-			C.as_vector_set(setVector, C.uint(i), setCharArray)
-		}
+		concatenatedSetList := strings.Join(*setList, ",")
+		C.parse_set_list(setVector, C.CString(concatenatedSetList))
 	}
 }
 
