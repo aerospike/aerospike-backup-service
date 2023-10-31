@@ -9,7 +9,6 @@ import (
 	"net/netip"
 	"strings"
 
-	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -182,7 +181,11 @@ func (ws *HTTPServer) Start() {
 
 	ws.server.Handler = ws.rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()
-	util.Check(err)
+	if strings.Contains(err.Error(), "Server closed") {
+		slog.Info(err.Error())
+	} else {
+		panic(err)
+	}
 }
 
 // Shutdown shutdowns the HTTP server.

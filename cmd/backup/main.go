@@ -17,6 +17,7 @@ import (
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/aerospike/backup/pkg/shared"
 	"github.com/spf13/cobra"
 )
 
@@ -71,6 +72,8 @@ func run() int {
 	if err != nil {
 		slog.Error("Error in rootCmd.Execute", "err", err)
 	}
+	// shutdown shared resources
+	shared.Shutdown()
 
 	return util.ToExitVal(err)
 }
