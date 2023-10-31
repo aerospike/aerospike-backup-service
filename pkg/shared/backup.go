@@ -54,7 +54,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCInt(&backupConfig.port, cluster.Port)
 
 	setCString(&backupConfig.user, cluster.User)
-	setCString(&backupConfig.password, cluster.Password)
+	setCString(&backupConfig.password, cluster.GetPassword())
 
 	setVector(&backupConfig.set_list, backupPolicy.SetList)
 
