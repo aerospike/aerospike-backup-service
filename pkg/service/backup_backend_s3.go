@@ -45,7 +45,8 @@ func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 		files, _ := s.listFiles(backupFolder)
 		if len(files) > 0 {
 			return []model.BackupDetails{{
-				Key: ptr.String(s3prefix + backupFolder),
+				Key:          ptr.String(s3prefix + backupFolder),
+				LastModified: &s.readState().LastRun,
 			}}, nil
 		}
 		return []model.BackupDetails{}, nil
@@ -58,7 +59,8 @@ func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 	contents := make([]model.BackupDetails, len(subfolders))
 	for i, subfolder := range subfolders {
 		details := model.BackupDetails{
-			Key: ptr.String(s3prefix + "/" + *subfolder.Prefix),
+			Key:          ptr.String(s3prefix + "/" + *subfolder.Prefix),
+			LastModified: s.GetTime(subfolder),
 		}
 		contents[i] = details
 	}

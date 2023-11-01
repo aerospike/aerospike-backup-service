@@ -7,22 +7,24 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
-
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"gopkg.in/yaml.v3"
 )
 
 // S3Context is responsible for performing basic operations on S3.
 type S3Context struct {
-	ctx    context.Context
-	client *s3.Client
-	bucket string
-	Path   string
+	ctx        context.Context
+	client     *s3.Client
+	bucket     string
+	Path       string
+	timestamps *util.LoadingCache
 }
 
 // NewS3Context returns a new S3Context.
@@ -61,12 +63,17 @@ func NewS3Context(storage *model.BackupStorage) *S3Context {
 		panic(fmt.Sprintf("Error checking S3 bucket %s existence: %v", bucketName, err))
 	}
 
-	return &S3Context{
+	s := &S3Context{
 		ctx:    ctx,
 		client: client,
 		bucket: bucketName,
 		Path:   parsed.Path,
 	}
+
+	s.timestamps = util.NewLoadingCache(ctx, func(path string) (any, error) {
+		return s.getCreationTime(path)
+	})
+	return s
 }
 
 // readFile reads and decodes the YAML content from the given filePath into v.
@@ -171,4 +178,26 @@ func (s *S3Context) CleanDir(name string) {
 			}
 		}
 	}
+}
+
+func (s *S3Context) GetTime(l types.CommonPrefix) *time.Time {
+	createTime, err := s.timestamps.Get(*l.Prefix)
+	if err == nil {
+		return createTime.(*time.Time)
+	}
+	return nil
+}
+
+func (s *S3Context) getCreationTime(path string) (*time.Time, error) {
+	creationResult, err := s.client.ListObjects(s.ctx, &s3.ListObjectsInput{
+		Bucket: aws.String(s.bucket),
+		Prefix: aws.String(path),
+	})
+
+	if err != nil || len(creationResult.Contents) == 0 {
+		return nil, fmt.Errorf("could not fetch timestamp %s", path)
+	}
+
+	// The creation date for the subfolder is same as of any file in it
+	return creationResult.Contents[0].LastModified, nil
 }
