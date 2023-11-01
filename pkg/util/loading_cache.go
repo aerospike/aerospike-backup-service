@@ -56,7 +56,6 @@ func (c *LoadingCache) startCleanup() {
 		case <-ticker.C:
 			c.clean()
 		case <-c.ctx.Done():
-			ticker.Stop()
 			return
 		}
 	}
