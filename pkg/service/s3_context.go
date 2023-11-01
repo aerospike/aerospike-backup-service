@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 
@@ -14,15 +15,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/patrickmn/go-cache"
 	"gopkg.in/yaml.v3"
 )
 
 // S3Context is responsible for performing basic operations on S3.
 type S3Context struct {
-	ctx    context.Context
-	client *s3.Client
-	bucket string
-	Path   string
+	ctx        context.Context
+	client     *s3.Client
+	bucket     string
+	Path       string
+	timestamps *cache.Cache
 }
 
 // NewS3Context returns a new S3Context.
@@ -62,10 +65,11 @@ func NewS3Context(storage *model.BackupStorage) *S3Context {
 	}
 
 	return &S3Context{
-		ctx:    ctx,
-		client: client,
-		bucket: bucketName,
-		Path:   parsed.Path,
+		ctx:        ctx,
+		client:     client,
+		bucket:     bucketName,
+		Path:       parsed.Path,
+		timestamps: cache.New(1*time.Hour, 1*time.Hour),
 	}
 }
 
@@ -171,4 +175,30 @@ func (s *S3Context) CleanDir(name string) {
 			}
 		}
 	}
+}
+
+func (s *S3Context) GetTime(l types.CommonPrefix) *time.Time {
+	cachedResult, found := s.timestamps.Get(*l.Prefix)
+	if found {
+		return cachedResult.(*time.Time)
+	}
+
+	result := s.getCreationTime(l)
+	s.timestamps.Set(*l.Prefix, result, cache.DefaultExpiration)
+	return result
+}
+
+func (s *S3Context) getCreationTime(l types.CommonPrefix) *time.Time {
+	creationResult, err := s.client.ListObjects(s.ctx, &s3.ListObjectsInput{
+		Bucket: aws.String(s.bucket),
+		Prefix: aws.String(*l.Prefix),
+	})
+
+	if err != nil || len(creationResult.Contents) == 0 {
+		slog.Warn("could not fetch timestamp", "path", *l.Prefix)
+		return nil
+	}
+
+	// The creation date for the subfolder is same as of any file in it
+	return creationResult.Contents[0].LastModified
 }

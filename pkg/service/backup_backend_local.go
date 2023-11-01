@@ -81,7 +81,8 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 		if len(entries) > 0 {
 			return []model.BackupDetails{{
-				Key: ptr.String(backupFolder),
+				Key:          ptr.String(backupFolder),
+				LastModified: &local.readState().LastRun,
 			}}, nil
 		}
 		return []model.BackupDetails{}, nil
