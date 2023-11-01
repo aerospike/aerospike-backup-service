@@ -7,7 +7,7 @@ import (
 
 type LoadFunc func(string) (any, error)
 
-type Cache struct {
+type LoadingCache struct {
 	sync.Mutex
 	data     map[string]any
 	cleanCh  chan bool
@@ -15,8 +15,8 @@ type Cache struct {
 	loadFunc LoadFunc
 }
 
-func NewCache(loadFunc LoadFunc) *Cache {
-	cache := &Cache{
+func NewCache(loadFunc LoadFunc) *LoadingCache {
+	cache := &LoadingCache{
 		data:     make(map[string]any),
 		cleanCh:  make(chan bool),
 		stopCh:   make(chan bool),
@@ -28,7 +28,7 @@ func NewCache(loadFunc LoadFunc) *Cache {
 	return cache
 }
 
-func (c *Cache) Get(key string) (any, error) {
+func (c *LoadingCache) Get(key string) (any, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -47,7 +47,7 @@ func (c *Cache) Get(key string) (any, error) {
 	return loadedValue, nil
 }
 
-func (c *Cache) startCleanup() {
+func (c *LoadingCache) startCleanup() {
 	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
 	for {
@@ -61,12 +61,12 @@ func (c *Cache) startCleanup() {
 	}
 }
 
-func (c *Cache) clean() {
+func (c *LoadingCache) clean() {
 	c.Lock()
 	defer c.Unlock()
 	c.data = make(map[string]interface{})
 }
 
-func (c *Cache) StopCleanup() {
+func (c *LoadingCache) StopCleanup() {
 	close(c.stopCh)
 }

@@ -26,7 +26,7 @@ type S3Context struct {
 	client     *s3.Client
 	bucket     string
 	Path       string
-	timestamps util.Cache
+	timestamps util.LoadingCache
 }
 
 // NewS3Context returns a new S3Context.
