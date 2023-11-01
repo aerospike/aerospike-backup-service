@@ -88,7 +88,7 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 		return []model.BackupDetails{}, nil
 	}
 
-	var backupDetails []model.BackupDetails
+	backupDetails := make([]model.BackupDetails, 0)
 	for _, e := range entries {
 		if e.IsDir() {
 			backupDetails = append(backupDetails, toBackupDetails(e, backupFolder+"/"))
@@ -105,7 +105,7 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 		return nil, err
 	}
 
-	var backupDetails []model.BackupDetails
+	backupDetails := make([]model.BackupDetails, 0)
 	for _, e := range entries {
 		if !e.IsDir() {
 			backupDetails = append(backupDetails, toBackupDetails(e, backupFolder+"/"))
