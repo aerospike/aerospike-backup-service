@@ -26,7 +26,7 @@ type S3Context struct {
 	client     *s3.Client
 	bucket     string
 	Path       string
-	timestamps util.LoadingCache
+	timestamps *util.LoadingCache
 }
 
 // NewS3Context returns a new S3Context.
@@ -72,7 +72,7 @@ func NewS3Context(storage *model.BackupStorage) *S3Context {
 		Path:   parsed.Path,
 	}
 
-	s.timestamps = *util.NewCache(ctx, func(path string) (interface{}, error) {
+	s.timestamps = util.NewCache(ctx, func(path string) (any, error) {
 		return s.getCreationTime(path)
 	})
 	return s
