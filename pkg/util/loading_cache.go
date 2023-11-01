@@ -16,8 +16,8 @@ type LoadingCache struct {
 	ctx      context.Context
 }
 
-// NewCache returns new LoadingCache instance
-func NewCache(ctx context.Context, loadFunc LoadFunc) *LoadingCache {
+// NewLoadingCache returns new LoadingCache instance
+func NewLoadingCache(ctx context.Context, loadFunc LoadFunc) *LoadingCache {
 	cache := &LoadingCache{
 		data:     make(map[string]any),
 		cleanCh:  make(chan bool),
