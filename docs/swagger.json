@@ -1,0 +1,911 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Aerospike Backup Service",
+        "title": "Backup Service REST API Specification",
+        "contact": {},
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "0.1.0"
+    },
+    "host": "localhost:8080",
+    "paths": {
+        "/": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Root endpoint.",
+                "operationId": "root",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/backup/full/list": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Get available full backups.",
+                "operationId": "getAvailableFullBackups",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup policy name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Full backups",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.BackupDetails"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/backup/incremental/list": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Get available incremental backups.",
+                "operationId": "getAvailableIncrementalBackups",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup policy name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Incremental backups",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.BackupDetails"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Returns the configuration for the service.",
+                "operationId": "readConfig",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Config"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Updates the configuration for the service.",
+                "operationId": "updateConfig",
+                "parameters": [
+                    {
+                        "description": "config",
+                        "name": "storage",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Config"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config/cluster": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads all Aerospike clusters from the configuration.",
+                "operationId": "readClusters",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.AerospikeCluster"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Updates an existing Aerospike cluster in the configuration.",
+                "operationId": "updateCluster",
+                "parameters": [
+                    {
+                        "description": "aerospike cluster",
+                        "name": "storage",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.AerospikeCluster"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Adds an Aerospike cluster to the config.",
+                "operationId": "addCluster",
+                "parameters": [
+                    {
+                        "description": "cluster info",
+                        "name": "cluster",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.AerospikeCluster"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Deletes a cluster from the configuration by name.",
+                "operationId": "deleteCluster",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cluster Name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config/policy": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads all policies from the configuration.",
+                "operationId": "readPolicies",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.BackupPolicy"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Updates an existing policy in the configuration.",
+                "operationId": "updatePolicy",
+                "parameters": [
+                    {
+                        "description": "backup policy",
+                        "name": "storage",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupPolicy"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Adds a policy to the config.",
+                "operationId": "addPolicy",
+                "parameters": [
+                    {
+                        "description": "backup policy",
+                        "name": "storage",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupPolicy"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Deletes a policy from the configuration by name.",
+                "operationId": "deletePolicy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Policy Name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config/storage": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads all storages from the configuration.",
+                "operationId": "readStorages",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.BackupStorage"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Updates an existing storage in the configuration.",
+                "operationId": "updateStorage",
+                "parameters": [
+                    {
+                        "description": "backup storage",
+                        "name": "storage",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupStorage"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Adds a storage cluster to the config.",
+                "operationId": "addStorage",
+                "parameters": [
+                    {
+                        "description": "backup storage",
+                        "name": "storage",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupStorage"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Deletes a storage from the configuration by name.",
+                "operationId": "deleteStorage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Storage Name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Health endpoint.",
+                "operationId": "health",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/ready": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Readiness endpoint.",
+                "operationId": "ready",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/restore": {
+            "post": {
+                "description": "Specify the directory parameter for the full backup restore.\nUse the file parameter to restore from an incremental backup file.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Restore"
+                ],
+                "summary": "Trigger an asynchronous restore operation.",
+                "operationId": "restore",
+                "parameters": [
+                    {
+                        "description": "query params",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.RestoreRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Job ID (int64)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/restore/status": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Restore"
+                ],
+                "summary": "Retrieve status for a restore job.",
+                "operationId": "restoreStatus",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job ID to retrieve the status",
+                        "name": "jobId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job status",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/version": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Returns application version.",
+                "operationId": "version",
+                "responses": {
+                    "200": {
+                        "description": "version",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "model.AerospikeCluster": {
+            "type": "object",
+            "properties": {
+                "host": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "password_path": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "user": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.BackupDetails": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "last_modified": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.BackupPolicy": {
+            "type": "object",
+            "properties": {
+                "bin_list": {
+                    "type": "string"
+                },
+                "incr_interval": {
+                    "type": "integer"
+                },
+                "interval": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "namespace": {
+                    "type": "string"
+                },
+                "no_bins": {
+                    "type": "boolean"
+                },
+                "no_indexes": {
+                    "type": "boolean"
+                },
+                "no_records": {
+                    "type": "boolean"
+                },
+                "no_udfs": {
+                    "type": "boolean"
+                },
+                "node_list": {
+                    "type": "string"
+                },
+                "parallel": {
+                    "type": "integer"
+                },
+                "remove_artifacts": {
+                    "type": "boolean"
+                },
+                "remove_files": {
+                    "type": "boolean"
+                },
+                "set_list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "source_cluster": {
+                    "type": "string"
+                },
+                "storage": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.BackupType"
+                }
+            }
+        },
+        "model.BackupStorage": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "s3_endpoint_override": {
+                    "type": "string"
+                },
+                "s3_log_level": {
+                    "type": "string"
+                },
+                "s3_profile": {
+                    "type": "string"
+                },
+                "s3_region": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.StorageType"
+                }
+            }
+        },
+        "model.BackupType": {
+            "type": "integer",
+            "enum": [
+                0,
+                1
+            ],
+            "x-enum-varnames": [
+                "Full",
+                "Incremental"
+            ]
+        },
+        "model.Config": {
+            "type": "object",
+            "properties": {
+                "aerospike-cluster": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AerospikeCluster"
+                    }
+                },
+                "backup-policy": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.BackupPolicy"
+                    }
+                },
+                "backup-storage": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.BackupStorage"
+                    }
+                },
+                "http-server": {
+                    "$ref": "#/definitions/model.HTTPServerConfig"
+                }
+            }
+        },
+        "model.HTTPServerConfig": {
+            "type": "object",
+            "properties": {
+                "host": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "rate": {
+                    "$ref": "#/definitions/model.RateLimiterConfig"
+                }
+            }
+        },
+        "model.RateLimiterConfig": {
+            "type": "object",
+            "properties": {
+                "size": {
+                    "type": "integer"
+                },
+                "tps": {
+                    "type": "integer"
+                },
+                "white_list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.RestoreRequest": {
+            "type": "object",
+            "properties": {
+                "bin_list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "directory": {
+                    "type": "string"
+                },
+                "file": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "no_generation": {
+                    "type": "boolean"
+                },
+                "ns_list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "password": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "replace": {
+                    "type": "boolean"
+                },
+                "s3_endpoint_override": {
+                    "type": "string"
+                },
+                "s3_log_level": {
+                    "type": "string"
+                },
+                "s3_profile": {
+                    "type": "string"
+                },
+                "s3_region": {
+                    "type": "string"
+                },
+                "set_list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "unique": {
+                    "type": "boolean"
+                },
+                "user": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.StorageType": {
+            "type": "integer",
+            "enum": [
+                0,
+                1
+            ],
+            "x-enum-varnames": [
+                "Local",
+                "S3"
+            ]
+        }
+    },
+    "externalDocs": {
+        "description": "OpenAPI",
+        "url": "https://swagger.io/resources/open-api/"
+    }
+}
