@@ -9,14 +9,12 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/aerospike/backup/pkg/util"
-
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"gopkg.in/yaml.v3"
 )
 
