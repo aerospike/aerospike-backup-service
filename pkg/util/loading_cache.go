@@ -16,6 +16,7 @@ type LoadingCache struct {
 	ctx      context.Context
 }
 
+// NewCache returns new LoadingCache instance
 func NewCache(ctx context.Context, loadFunc LoadFunc) *LoadingCache {
 	cache := &LoadingCache{
 		data:     make(map[string]any),
@@ -29,6 +30,7 @@ func NewCache(ctx context.Context, loadFunc LoadFunc) *LoadingCache {
 	return cache
 }
 
+// Get retrieves or loads the value for the specified key and saves it in the cache.
 func (c *LoadingCache) Get(key string) (any, error) {
 	c.Lock()
 	defer c.Unlock()
