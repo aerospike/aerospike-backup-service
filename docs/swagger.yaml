@@ -1,0 +1,602 @@
+definitions:
+  model.AerospikeCluster:
+    properties:
+      host:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      password_path:
+        type: string
+      port:
+        type: integer
+      user:
+        type: string
+    type: object
+  model.BackupDetails:
+    properties:
+      key:
+        type: string
+      last_modified:
+        type: string
+      size:
+        type: integer
+    type: object
+  model.BackupPolicy:
+    properties:
+      bin_list:
+        type: string
+      incr_interval:
+        type: integer
+      interval:
+        type: integer
+      name:
+        type: string
+      namespace:
+        type: string
+      no_bins:
+        type: boolean
+      no_indexes:
+        type: boolean
+      no_records:
+        type: boolean
+      no_udfs:
+        type: boolean
+      node_list:
+        type: string
+      parallel:
+        type: integer
+      remove_artifacts:
+        type: boolean
+      remove_files:
+        type: boolean
+      set_list:
+        items:
+          type: string
+        type: array
+      source_cluster:
+        type: string
+      storage:
+        type: string
+      type:
+        $ref: '#/definitions/model.BackupType'
+    type: object
+  model.BackupStorage:
+    properties:
+      name:
+        type: string
+      path:
+        type: string
+      s3_endpoint_override:
+        type: string
+      s3_log_level:
+        type: string
+      s3_profile:
+        type: string
+      s3_region:
+        type: string
+      type:
+        $ref: '#/definitions/model.StorageType'
+    type: object
+  model.BackupType:
+    enum:
+    - 0
+    - 1
+    type: integer
+    x-enum-varnames:
+    - Full
+    - Incremental
+  model.Config:
+    properties:
+      aerospike-cluster:
+        items:
+          $ref: '#/definitions/model.AerospikeCluster'
+        type: array
+      backup-policy:
+        items:
+          $ref: '#/definitions/model.BackupPolicy'
+        type: array
+      backup-storage:
+        items:
+          $ref: '#/definitions/model.BackupStorage'
+        type: array
+      http-server:
+        $ref: '#/definitions/model.HTTPServerConfig'
+    type: object
+  model.HTTPServerConfig:
+    properties:
+      host:
+        type: string
+      port:
+        type: integer
+      rate:
+        $ref: '#/definitions/model.RateLimiterConfig'
+    type: object
+  model.RateLimiterConfig:
+    properties:
+      size:
+        type: integer
+      tps:
+        type: integer
+      white_list:
+        items:
+          type: string
+        type: array
+    type: object
+  model.RestoreRequest:
+    properties:
+      bin_list:
+        items:
+          type: string
+        type: array
+      directory:
+        type: string
+      file:
+        type: string
+      host:
+        type: string
+      no_generation:
+        type: boolean
+      ns_list:
+        items:
+          type: string
+        type: array
+      password:
+        type: string
+      port:
+        type: integer
+      replace:
+        type: boolean
+      s3_endpoint_override:
+        type: string
+      s3_log_level:
+        type: string
+      s3_profile:
+        type: string
+      s3_region:
+        type: string
+      set_list:
+        items:
+          type: string
+        type: array
+      unique:
+        type: boolean
+      user:
+        type: string
+    type: object
+  model.StorageType:
+    enum:
+    - 0
+    - 1
+    type: integer
+    x-enum-varnames:
+    - Local
+    - S3
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:8080
+info:
+  contact: {}
+  description: Aerospike Backup Service
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Backup Service REST API Specification
+  version: 0.1.0
+paths:
+  /:
+    get:
+      operationId: root
+      responses:
+        "200":
+          description: OK
+      summary: Root endpoint.
+      tags:
+      - System
+  /backup/full/list:
+    get:
+      operationId: getAvailableFullBackups
+      parameters:
+      - description: Backup policy name
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Full backups
+          schema:
+            items:
+              $ref: '#/definitions/model.BackupDetails'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Get available full backups.
+      tags:
+      - Backup
+  /backup/incremental/list:
+    get:
+      operationId: getAvailableIncrementalBackups
+      parameters:
+      - description: Backup policy name
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Incremental backups
+          schema:
+            items:
+              $ref: '#/definitions/model.BackupDetails'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Get available incremental backups.
+      tags:
+      - Backup
+  /config:
+    get:
+      operationId: readConfig
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Config'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Returns the configuration for the service.
+      tags:
+      - Configuration
+    post:
+      consumes:
+      - application/json
+      operationId: updateConfig
+      parameters:
+      - description: config
+        in: body
+        name: storage
+        required: true
+        schema:
+          $ref: '#/definitions/model.Config'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Updates the configuration for the service.
+      tags:
+      - Configuration
+  /config/cluster:
+    delete:
+      operationId: deleteCluster
+      parameters:
+      - description: Cluster Name
+        in: query
+        name: name
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Deletes a cluster from the configuration by name.
+      tags:
+      - Configuration
+    get:
+      operationId: readClusters
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.AerospikeCluster'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Reads all Aerospike clusters from the configuration.
+      tags:
+      - Configuration
+    post:
+      consumes:
+      - application/json
+      operationId: addCluster
+      parameters:
+      - description: cluster info
+        in: body
+        name: cluster
+        required: true
+        schema:
+          $ref: '#/definitions/model.AerospikeCluster'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Adds an Aerospike cluster to the config.
+      tags:
+      - Configuration
+    put:
+      consumes:
+      - application/json
+      operationId: updateCluster
+      parameters:
+      - description: aerospike cluster
+        in: body
+        name: storage
+        required: true
+        schema:
+          $ref: '#/definitions/model.AerospikeCluster'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Updates an existing Aerospike cluster in the configuration.
+      tags:
+      - Configuration
+  /config/policy:
+    delete:
+      operationId: deletePolicy
+      parameters:
+      - description: Policy Name
+        in: query
+        name: name
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Deletes a policy from the configuration by name.
+      tags:
+      - Configuration
+    get:
+      operationId: readPolicies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.BackupPolicy'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Reads all policies from the configuration.
+      tags:
+      - Configuration
+    post:
+      consumes:
+      - application/json
+      operationId: addPolicy
+      parameters:
+      - description: backup policy
+        in: body
+        name: storage
+        required: true
+        schema:
+          $ref: '#/definitions/model.BackupPolicy'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Adds a policy to the config.
+      tags:
+      - Configuration
+    put:
+      consumes:
+      - application/json
+      operationId: updatePolicy
+      parameters:
+      - description: backup policy
+        in: body
+        name: storage
+        required: true
+        schema:
+          $ref: '#/definitions/model.BackupPolicy'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Updates an existing policy in the configuration.
+      tags:
+      - Configuration
+  /config/storage:
+    delete:
+      operationId: deleteStorage
+      parameters:
+      - description: Storage Name
+        in: query
+        name: name
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Deletes a storage from the configuration by name.
+      tags:
+      - Configuration
+    get:
+      operationId: readStorages
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.BackupStorage'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Reads all storages from the configuration.
+      tags:
+      - Configuration
+    post:
+      consumes:
+      - application/json
+      operationId: addStorage
+      parameters:
+      - description: backup storage
+        in: body
+        name: storage
+        required: true
+        schema:
+          $ref: '#/definitions/model.BackupStorage'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Adds a storage cluster to the config.
+      tags:
+      - Configuration
+    put:
+      consumes:
+      - application/json
+      operationId: updateStorage
+      parameters:
+      - description: backup storage
+        in: body
+        name: storage
+        required: true
+        schema:
+          $ref: '#/definitions/model.BackupStorage'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Updates an existing storage in the configuration.
+      tags:
+      - Configuration
+  /health:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: OK
+      summary: Health endpoint.
+      tags:
+      - System
+  /ready:
+    get:
+      operationId: ready
+      responses:
+        "200":
+          description: OK
+      summary: Readiness endpoint.
+      tags:
+      - System
+  /restore:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Specify the directory parameter for the full backup restore.
+        Use the file parameter to restore from an incremental backup file.
+      operationId: restore
+      parameters:
+      - description: query params
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RestoreRequest'
+      responses:
+        "202":
+          description: Job ID (int64)
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Trigger an asynchronous restore operation.
+      tags:
+      - Restore
+  /restore/status:
+    get:
+      operationId: restoreStatus
+      parameters:
+      - description: Job ID to retrieve the status
+        in: query
+        name: jobId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Job status
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Retrieve status for a restore job.
+      tags:
+      - Restore
+  /version:
+    get:
+      operationId: version
+      responses:
+        "200":
+          description: version
+          schema:
+            type: string
+      summary: Returns application version.
+      tags:
+      - System
+swagger: "2.0"
