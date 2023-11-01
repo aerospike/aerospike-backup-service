@@ -72,7 +72,7 @@ func NewS3Context(storage *model.BackupStorage) *S3Context {
 		Path:   parsed.Path,
 	}
 
-	s.timestamps = *util.NewCache(func(path string) (interface{}, error) {
+	s.timestamps = *util.NewCache(ctx, func(path string) (interface{}, error) {
 		return s.getCreationTime(path)
 	})
 	return s

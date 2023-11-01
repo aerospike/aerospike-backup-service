@@ -1,6 +1,7 @@
 package util
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -11,16 +12,16 @@ type LoadingCache struct {
 	sync.Mutex
 	data     map[string]any
 	cleanCh  chan bool
-	stopCh   chan bool
 	loadFunc LoadFunc
+	ctx      context.Context
 }
 
-func NewCache(loadFunc LoadFunc) *LoadingCache {
+func NewCache(ctx context.Context, loadFunc LoadFunc) *LoadingCache {
 	cache := &LoadingCache{
 		data:     make(map[string]any),
 		cleanCh:  make(chan bool),
-		stopCh:   make(chan bool),
 		loadFunc: loadFunc,
+		ctx:      ctx,
 	}
 
 	go cache.startCleanup()
@@ -54,7 +55,7 @@ func (c *LoadingCache) startCleanup() {
 		select {
 		case <-ticker.C:
 			c.clean()
-		case <-c.stopCh:
+		case <-c.ctx.Done():
 			ticker.Stop()
 			return
 		}
@@ -65,8 +66,4 @@ func (c *LoadingCache) clean() {
 	c.Lock()
 	defer c.Unlock()
 	c.data = make(map[string]interface{})
-}
-
-func (c *LoadingCache) StopCleanup() {
-	close(c.stopCh)
 }
