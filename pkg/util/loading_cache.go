@@ -11,7 +11,6 @@ type LoadFunc func(string) (any, error)
 type LoadingCache struct {
 	sync.Mutex
 	data     map[string]any
-	cleanCh  chan bool
 	loadFunc LoadFunc
 	ctx      context.Context
 }
@@ -20,7 +19,6 @@ type LoadingCache struct {
 func NewLoadingCache(ctx context.Context, loadFunc LoadFunc) *LoadingCache {
 	cache := &LoadingCache{
 		data:     make(map[string]any),
-		cleanCh:  make(chan bool),
 		loadFunc: loadFunc,
 		ctx:      ctx,
 	}
