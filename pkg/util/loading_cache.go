@@ -26,7 +26,6 @@ func NewCache(ctx context.Context, loadFunc LoadFunc) *LoadingCache {
 	}
 
 	go cache.startCleanup()
-
 	return cache
 }
 
@@ -36,7 +35,6 @@ func (c *LoadingCache) Get(key string) (any, error) {
 	defer c.Unlock()
 
 	val, found := c.data[key]
-
 	if found {
 		return val, nil
 	}
@@ -67,5 +65,5 @@ func (c *LoadingCache) startCleanup() {
 func (c *LoadingCache) clean() {
 	c.Lock()
 	defer c.Unlock()
-	c.data = make(map[string]interface{})
+	c.data = make(map[string]any)
 }
