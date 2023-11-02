@@ -40,6 +40,8 @@ func NewBackup() *BackupShared {
 }
 
 // BackupRun calls the backup_run function from the asbackup shared library.
+//
+//nolint:funlen
 func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *model.AerospikeCluster,
 	storage *model.BackupStorage, opts BackupOptions) bool {
 	// lock to restrict parallel execution (shared library limitation)
@@ -53,23 +55,39 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 
 	setCString(&backupConfig.host, cluster.Host)
 	setCInt(&backupConfig.port, cluster.Port)
+	setCBool(&backupConfig.use_services_alternate, cluster.UseServicesAlternate)
 
 	setCString(&backupConfig.user, cluster.User)
 	setCString(&backupConfig.password, cluster.GetPassword())
+	setCString(&backupConfig.auth_mode, cluster.AuthMode)
 
 	parseSetList(&backupConfig.set_list, backupPolicy.SetList)
+	setCString(&backupConfig.bin_list, backupPolicy.BinList)
+
+	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
+	setCUint(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
+	setCUint(&backupConfig.max_retries, backupPolicy.MaxRetries)
+	setCUint(&backupConfig.retry_delay, backupPolicy.RetryDelay)
 
 	// namespace list configuration
 	nsCharArray := C.CString(*backupPolicy.Namespace)
 	C.strcpy((*C.char)(unsafe.Pointer(&backupConfig.ns)), nsCharArray)
 
-	setCInt(&backupConfig.parallel, backupPolicy.Parallelism)
+	setCInt(&backupConfig.parallel, backupPolicy.Parallel)
 
 	setCBool(&backupConfig.remove_files, backupPolicy.RemoveFiles)
 	setCBool(&backupConfig.no_bins, backupPolicy.NoBins)
 	setCBool(&backupConfig.no_records, backupPolicy.NoRecords)
 	setCBool(&backupConfig.no_indexes, backupPolicy.NoIndexes)
 	setCBool(&backupConfig.no_udfs, backupPolicy.NoUdfs)
+
+	setCUlong(&backupConfig.bandwidth, backupPolicy.Bandwidth)
+	setCUlong(&backupConfig.max_records, backupPolicy.MaxRecords)
+	setCUint(&backupConfig.records_per_second, backupPolicy.RecordsPerSecond)
+	setCUlong(&backupConfig.file_limit, backupPolicy.FileLimit)
+	setCString(&backupConfig.partition_list, backupPolicy.PartitionList)
+	setCString(&backupConfig.after_digest, backupPolicy.AfterDigest)
+	setCString(&backupConfig.filter_exp, backupPolicy.FilterExp)
 
 	// S3 configuration
 	setCString(&backupConfig.s3_endpoint_override, storage.S3EndpointOverride)

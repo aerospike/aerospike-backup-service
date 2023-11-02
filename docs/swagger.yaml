@@ -1,6 +1,8 @@
 definitions:
   model.AerospikeCluster:
     properties:
+      auth_mode:
+        type: string
       host:
         type: string
       name:
@@ -11,6 +13,8 @@ definitions:
         type: string
       port:
         type: integer
+      use_services_alternate:
+        type: boolean
       user:
         type: string
     type: object
@@ -25,11 +29,23 @@ definitions:
     type: object
   model.BackupPolicy:
     properties:
+      after_digest:
+        type: string
+      bandwidth:
+        type: integer
       bin_list:
+        type: string
+      file_limit:
+        type: integer
+      filter_exp:
         type: string
       incr_interval:
         type: integer
       interval:
+        type: integer
+      max_records:
+        type: integer
+      max_retries:
         type: integer
       name:
         type: string
@@ -47,18 +63,28 @@ definitions:
         type: string
       parallel:
         type: integer
+      partition_list:
+        type: string
+      records_per_second:
+        type: integer
       remove_artifacts:
         type: boolean
       remove_files:
         type: boolean
+      retry_delay:
+        type: integer
       set_list:
         items:
           type: string
         type: array
+      socket_timeout:
+        type: integer
       source_cluster:
         type: string
       storage:
         type: string
+      total_timeout:
+        type: integer
       type:
         $ref: '#/definitions/model.BackupType'
     type: object
@@ -126,22 +152,40 @@ definitions:
     type: object
   model.RestoreRequest:
     properties:
+      auth_mode:
+        type: string
+      bandwidth:
+        type: integer
+      batch_size:
+        type: integer
       bin_list:
         items:
           type: string
         type: array
       directory:
         type: string
+      disable_batch_writes:
+        type: boolean
       file:
         type: string
       host:
         type: string
+      max_async_batches:
+        type: integer
       no_generation:
+        type: boolean
+      no_indexes:
+        type: boolean
+      no_records:
+        type: boolean
+      no_udfs:
         type: boolean
       ns_list:
         items:
           type: string
         type: array
+      parallel:
+        type: integer
       password:
         type: string
       port:
@@ -160,7 +204,13 @@ definitions:
         items:
           type: string
         type: array
+      timeout:
+        type: integer
+      tps:
+        type: integer
       unique:
+        type: boolean
+      use_services_alternate:
         type: boolean
       user:
         type: string

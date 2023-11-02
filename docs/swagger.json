@@ -643,6 +643,9 @@
         "model.AerospikeCluster": {
             "type": "object",
             "properties": {
+                "auth_mode": {
+                    "type": "string"
+                },
                 "host": {
                     "type": "string"
                 },
@@ -657,6 +660,9 @@
                 },
                 "port": {
                     "type": "integer"
+                },
+                "use_services_alternate": {
+                    "type": "boolean"
                 },
                 "user": {
                     "type": "string"
@@ -680,13 +686,31 @@
         "model.BackupPolicy": {
             "type": "object",
             "properties": {
+                "after_digest": {
+                    "type": "string"
+                },
+                "bandwidth": {
+                    "type": "integer"
+                },
                 "bin_list": {
+                    "type": "string"
+                },
+                "file_limit": {
+                    "type": "integer"
+                },
+                "filter_exp": {
                     "type": "string"
                 },
                 "incr_interval": {
                     "type": "integer"
                 },
                 "interval": {
+                    "type": "integer"
+                },
+                "max_records": {
+                    "type": "integer"
+                },
+                "max_retries": {
                     "type": "integer"
                 },
                 "name": {
@@ -713,11 +737,20 @@
                 "parallel": {
                     "type": "integer"
                 },
+                "partition_list": {
+                    "type": "string"
+                },
+                "records_per_second": {
+                    "type": "integer"
+                },
                 "remove_artifacts": {
                     "type": "boolean"
                 },
                 "remove_files": {
                     "type": "boolean"
+                },
+                "retry_delay": {
+                    "type": "integer"
                 },
                 "set_list": {
                     "type": "array",
@@ -725,11 +758,17 @@
                         "type": "string"
                     }
                 },
+                "socket_timeout": {
+                    "type": "integer"
+                },
                 "source_cluster": {
                     "type": "string"
                 },
                 "storage": {
                     "type": "string"
+                },
+                "total_timeout": {
+                    "type": "integer"
                 },
                 "type": {
                     "$ref": "#/definitions/model.BackupType"
@@ -833,6 +872,15 @@
         "model.RestoreRequest": {
             "type": "object",
             "properties": {
+                "auth_mode": {
+                    "type": "string"
+                },
+                "bandwidth": {
+                    "type": "integer"
+                },
+                "batch_size": {
+                    "type": "integer"
+                },
                 "bin_list": {
                     "type": "array",
                     "items": {
@@ -842,13 +890,28 @@
                 "directory": {
                     "type": "string"
                 },
+                "disable_batch_writes": {
+                    "type": "boolean"
+                },
                 "file": {
                     "type": "string"
                 },
                 "host": {
                     "type": "string"
                 },
+                "max_async_batches": {
+                    "type": "integer"
+                },
                 "no_generation": {
+                    "type": "boolean"
+                },
+                "no_indexes": {
+                    "type": "boolean"
+                },
+                "no_records": {
+                    "type": "boolean"
+                },
+                "no_udfs": {
                     "type": "boolean"
                 },
                 "ns_list": {
@@ -856,6 +919,9 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "parallel": {
+                    "type": "integer"
                 },
                 "password": {
                     "type": "string"
@@ -884,7 +950,16 @@
                         "type": "string"
                     }
                 },
+                "timeout": {
+                    "type": "integer"
+                },
+                "tps": {
+                    "type": "integer"
+                },
                 "unique": {
+                    "type": "boolean"
+                },
+                "use_services_alternate": {
                     "type": "boolean"
                 },
                 "user": {

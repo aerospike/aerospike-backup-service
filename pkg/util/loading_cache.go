@@ -6,28 +6,32 @@ import (
 	"time"
 )
 
+// LoadFunc is the LoadingCache value loader.
 type LoadFunc func(string) (any, error)
 
+// LoadingCache maps keys to values where values are automatically
+// loaded by the cache.
 type LoadingCache struct {
 	sync.Mutex
+	ctx      context.Context
 	data     map[string]any
 	loadFunc LoadFunc
-	ctx      context.Context
 }
 
-// NewLoadingCache returns new LoadingCache instance
+// NewLoadingCache returns a new LoadingCache instance.
 func NewLoadingCache(ctx context.Context, loadFunc LoadFunc) *LoadingCache {
 	cache := &LoadingCache{
+		ctx:      ctx,
 		data:     make(map[string]any),
 		loadFunc: loadFunc,
-		ctx:      ctx,
 	}
 
 	go cache.startCleanup()
 	return cache
 }
 
-// Get retrieves or loads the value for the specified key and saves it in the cache.
+// Get retrieves or loads the value for the specified key and stores
+// it in the cache.
 func (c *LoadingCache) Get(key string) (any, error) {
 	c.Lock()
 	defer c.Unlock()
