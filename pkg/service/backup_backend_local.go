@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 
 	"log/slog"
 
@@ -91,7 +92,7 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 	backupDetails := make([]model.BackupDetails, 0)
 	for _, e := range entries {
 		if e.IsDir() {
-			backupDetails = append(backupDetails, toBackupDetails(e, backupFolder+"/"))
+			backupDetails = append(backupDetails, toBackupDetails(e, backupFolder))
 		}
 	}
 	return backupDetails, nil
@@ -108,7 +109,7 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 	backupDetails := make([]model.BackupDetails, 0)
 	for _, e := range entries {
 		if !e.IsDir() {
-			backupDetails = append(backupDetails, toBackupDetails(e, backupFolder+"/"))
+			backupDetails = append(backupDetails, toBackupDetails(e, backupFolder))
 		}
 	}
 	return backupDetails, nil
@@ -138,12 +139,33 @@ func (local *BackupBackendLocal) BackupPolicyName() string {
 
 func toBackupDetails(e fs.DirEntry, prefix string) model.BackupDetails {
 	details := model.BackupDetails{
-		Key: util.Ptr(prefix + e.Name()),
+		Key: util.Ptr(filepath.Join(prefix, e.Name())),
 	}
 	dirInfo, err := e.Info()
 	if err == nil {
 		details.LastModified = util.Ptr(dirInfo.ModTime())
-		details.Size = util.Ptr(dirInfo.Size())
+		details.Size = util.Ptr(dirEntrySize(prefix, e, dirInfo))
 	}
 	return details
+}
+
+func dirEntrySize(path string, e fs.DirEntry, info fs.FileInfo) int64 {
+	if e.IsDir() {
+		var totalSize int64
+		entries, err := os.ReadDir(filepath.Join(path, e.Name()))
+		if err == nil {
+			for _, dirEntry := range entries {
+				dirInfo, err := dirEntry.Info()
+				if err == nil {
+					if dirEntry.IsDir() {
+						totalSize += dirEntrySize(path, dirEntry, dirInfo)
+					} else {
+						totalSize += dirInfo.Size()
+					}
+				}
+			}
+		}
+		return totalSize
+	}
+	return info.Size()
 }
