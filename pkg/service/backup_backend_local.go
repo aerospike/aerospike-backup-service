@@ -152,7 +152,8 @@ func toBackupDetails(e fs.DirEntry, prefix string) model.BackupDetails {
 func dirEntrySize(path string, e fs.DirEntry, info fs.FileInfo) int64 {
 	if e.IsDir() {
 		var totalSize int64
-		entries, err := os.ReadDir(filepath.Join(path, e.Name()))
+		path = filepath.Join(path, e.Name())
+		entries, err := os.ReadDir(path)
 		if err == nil {
 			for _, dirEntry := range entries {
 				dirInfo, err := dirEntry.Info()
