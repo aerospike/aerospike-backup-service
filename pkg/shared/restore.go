@@ -36,6 +36,8 @@ func NewRestore() *RestoreShared {
 }
 
 // RestoreRun calls the restore_run function from the asrestore shared library.
+//
+//nolint:funlen
 func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
 	// lock to restrict parallel execution (shared library limitation)
 	r.Lock()
@@ -48,9 +50,21 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
 
 	setCString(&restoreConfig.host, restoreRequest.Host)
 	setCInt(&restoreConfig.port, restoreRequest.Port)
+	setCBool(&restoreConfig.use_services_alternate, restoreRequest.UseServicesAlternate)
 
 	setCString(&restoreConfig.user, restoreRequest.User)
 	setCString(&restoreConfig.password, restoreRequest.Password)
+
+	setCUint(&restoreConfig.parallel, restoreRequest.Parallel)
+	setCBool(&restoreConfig.no_records, restoreRequest.NoRecords)
+	setCBool(&restoreConfig.no_indexes, restoreRequest.NoIndexes)
+	setCBool(&restoreConfig.no_udfs, restoreRequest.NoUdfs)
+
+	setCUint(&restoreConfig.timeout, restoreRequest.Timeout)
+
+	setCBool(&restoreConfig.disable_batch_writes, restoreRequest.DisableBatchWrites)
+	setCUint(&restoreConfig.max_async_batches, restoreRequest.MaxAsyncBatches)
+	setCUint(&restoreConfig.batch_size, restoreRequest.BatchSize)
 
 	if len(restoreRequest.NsList) > 0 {
 		nsList := strings.Join(restoreRequest.NsList, ",")
@@ -77,6 +91,10 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
 	setCBool(&restoreConfig.replace, restoreRequest.Replace)
 	setCBool(&restoreConfig.unique, restoreRequest.Unique)
 	setCBool(&restoreConfig.no_generation, restoreRequest.NoGeneration)
+
+	setCUlong(&restoreConfig.bandwidth, restoreRequest.Bandwidth)
+	setCUint(&restoreConfig.tps, restoreRequest.Tps)
+	setCString(&restoreConfig.auth_mode, restoreRequest.AuthMode)
 
 	restoreStatus := C.restore_run(&restoreConfig)
 

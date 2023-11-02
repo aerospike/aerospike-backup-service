@@ -57,14 +57,16 @@ type RateLimiterConfig struct {
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 type AerospikeCluster struct {
-	pwdOnce      sync.Once
-	pwd          *string
-	Name         *string `yaml:"name,omitempty" json:"name,omitempty"`
-	Host         *string `yaml:"host,omitempty" json:"host,omitempty"`
-	Port         *int    `yaml:"port,omitempty" json:"port,omitempty"`
-	User         *string `yaml:"user,omitempty" json:"user,omitempty"`
-	Password     *string `yaml:"password,omitempty" json:"password,omitempty"`
-	PasswordPath *string `yaml:"password_path,omitempty" json:"password_path,omitempty"`
+	pwdOnce              sync.Once
+	pwd                  *string
+	Name                 *string `yaml:"name,omitempty" json:"name,omitempty"`
+	Host                 *string `yaml:"host,omitempty" json:"host,omitempty"`
+	Port                 *int32  `yaml:"port,omitempty" json:"port,omitempty"`
+	UseServicesAlternate *bool   `yaml:"use_services_alternate,omitempty" json:"use_services_alternate,omitempty"`
+	User                 *string `yaml:"user,omitempty" json:"user,omitempty"`
+	Password             *string `yaml:"password,omitempty" json:"password,omitempty"`
+	PasswordPath         *string `yaml:"password_path,omitempty" json:"password_path,omitempty"`
+	AuthMode             *string `yaml:"auth_mode,omitempty" json:"auth_mode,omitempty"`
 }
 
 // GetPassword tries to read and set the password once from PasswordPath, if it exists.
@@ -117,16 +119,27 @@ type BackupPolicy struct {
 	SourceCluster      *string     `yaml:"source_cluster,omitempty" json:"source_cluster,omitempty"`
 	Storage            *string     `yaml:"storage,omitempty" json:"storage,omitempty"`
 	Namespace          *string     `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	Parallelism        *int        `yaml:"parallel,omitempty" json:"parallel,omitempty"`
+	Parallel           *int32      `yaml:"parallel,omitempty" json:"parallel,omitempty"`
 	SetList            *[]string   `yaml:"set_list,omitempty" json:"set_list,omitempty"`
 	NodeList           *string     `yaml:"node_list,omitempty" json:"node_list,omitempty"`
 	BinList            *string     `yaml:"bin_list,omitempty" json:"bin_list,omitempty"`
+	SocketTimeout      *uint32     `yaml:"socket_timeout,omitempty" json:"socket_timeout,omitempty"`
+	TotalTimeout       *uint32     `yaml:"total_timeout,omitempty" json:"total_timeout,omitempty"`
+	MaxRetries         *uint32     `yaml:"max_retries,omitempty" json:"max_retries,omitempty"`
+	RetryDelay         *uint32     `yaml:"retry_delay,omitempty" json:"retry_delay,omitempty"`
 	RemoveFiles        *bool       `yaml:"remove_files,omitempty" json:"remove_files,omitempty"`
 	RemoveArtifacts    *bool       `yaml:"remove_artifacts,omitempty" json:"remove_artifacts,omitempty"`
 	NoBins             *bool       `yaml:"no_bins,omitempty" json:"no_bins,omitempty"`
 	NoRecords          *bool       `yaml:"no_records,omitempty" json:"no_records,omitempty"`
 	NoIndexes          *bool       `yaml:"no_indexes,omitempty" json:"no_indexes,omitempty"`
 	NoUdfs             *bool       `yaml:"no_udfs,omitempty" json:"no_udfs,omitempty"`
+	Bandwidth          *uint64     `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty"`
+	MaxRecords         *uint64     `yaml:"max_records,omitempty" json:"max_records,omitempty"`
+	RecordsPerSecond   *uint32     `yaml:"records_per_second,omitempty" json:"records_per_second,omitempty"`
+	FileLimit          *uint64     `yaml:"file_limit,omitempty" json:"file_limit,omitempty"`
+	PartitionList      *string     `yaml:"partition_list,omitempty" json:"partition_list,omitempty"`
+	AfterDigest        *string     `yaml:"after_digest,omitempty" json:"after_digest,omitempty"`
+	FilterExp          *string     `yaml:"filter_exp,omitempty" json:"filter_exp,omitempty"`
 }
 
 // Clone clones the backup policy struct.
