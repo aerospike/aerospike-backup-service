@@ -693,7 +693,10 @@
                     "type": "integer"
                 },
                 "bin_list": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "file_limit": {
                     "type": "integer"
@@ -732,7 +735,10 @@
                     "type": "boolean"
                 },
                 "node_list": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Node"
+                    }
                 },
                 "parallel": {
                     "type": "integer"
@@ -849,6 +855,17 @@
                 },
                 "rate": {
                     "$ref": "#/definitions/model.RateLimiterConfig"
+                }
+            }
+        },
+        "model.Node": {
+            "type": "object",
+            "properties": {
+                "ip": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
                 }
             }
         },
