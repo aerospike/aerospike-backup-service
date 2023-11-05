@@ -63,7 +63,7 @@ definitions:
         type: boolean
       node_list:
         items:
-          type: string
+          $ref: '#/definitions/model.Node'
         type: array
       parallel:
         type: integer
@@ -142,6 +142,13 @@ definitions:
         type: integer
       rate:
         $ref: '#/definitions/model.RateLimiterConfig'
+    type: object
+  model.Node:
+    properties:
+      ip:
+        type: string
+      port:
+        type: integer
     type: object
   model.RateLimiterConfig:
     properties:

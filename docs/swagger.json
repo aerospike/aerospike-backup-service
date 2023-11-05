@@ -737,7 +737,7 @@
                 "node_list": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/model.Node"
                     }
                 },
                 "parallel": {
@@ -855,6 +855,17 @@
                 },
                 "rate": {
                     "$ref": "#/definitions/model.RateLimiterConfig"
+                }
+            }
+        },
+        "model.Node": {
+            "type": "object",
+            "properties": {
+                "ip": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
                 }
             }
         },

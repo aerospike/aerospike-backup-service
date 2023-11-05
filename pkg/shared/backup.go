@@ -67,7 +67,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 		setCString(&backupConfig.bin_list, ptr.String(strings.Join(backupPolicy.BinList, ",")))
 	}
 	if backupPolicy.NodeList != nil {
-		setCString(&backupConfig.node_list, ptr.String(strings.Join(backupPolicy.NodeList, ",")))
+		setCString(&backupConfig.node_list, printNodes(backupPolicy.NodeList))
 	}
 	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
 	setCUint(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
@@ -150,4 +150,13 @@ func getIncrementalPath(storage *model.BackupStorage) *string {
 
 func timeSuffix() string {
 	return strconv.FormatInt(time.Now().Unix(), 10)
+}
+
+func printNodes(nodes []model.Node) *string {
+	nodeStrings := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		nodeStrings = append(nodeStrings, fmt.Sprintf("%s:%d", node.IP, node.Port))
+	}
+	concatenated := strings.Join(nodeStrings, ",")
+	return &concatenated
 }
