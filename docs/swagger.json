@@ -735,7 +735,10 @@
                     "type": "boolean"
                 },
                 "node_list": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "parallel": {
                     "type": "integer"

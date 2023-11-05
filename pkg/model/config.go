@@ -122,7 +122,7 @@ type BackupPolicy struct {
 	Parallel           *int32      `yaml:"parallel,omitempty" json:"parallel,omitempty"`
 	SetList            *[]string   `yaml:"set_list,omitempty" json:"set_list,omitempty"`
 	BinList            *[]string   `yaml:"bin_list,omitempty" json:"bin_list,omitempty"`
-	NodeList           *string     `yaml:"node_list,omitempty" json:"node_list,omitempty"`
+	NodeList           *[]string   `yaml:"node_list,omitempty" json:"node_list,omitempty"`
 	SocketTimeout      *uint32     `yaml:"socket_timeout,omitempty" json:"socket_timeout,omitempty"`
 	TotalTimeout       *uint32     `yaml:"total_timeout,omitempty" json:"total_timeout,omitempty"`
 	MaxRetries         *uint32     `yaml:"max_retries,omitempty" json:"max_retries,omitempty"`

@@ -62,7 +62,9 @@ definitions:
       no_udfs:
         type: boolean
       node_list:
-        type: string
+        items:
+          type: string
+        type: array
       parallel:
         type: integer
       partition_list:
