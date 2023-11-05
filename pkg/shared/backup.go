@@ -22,11 +22,10 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/aws/smithy-go/ptr"
-
 	"log/slog"
 
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aws/smithy-go/ptr"
 )
 
 // BackupShared implements the Backup interface.
@@ -67,7 +66,9 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	if backupPolicy.BinList != nil {
 		setCString(&backupConfig.bin_list, ptr.String(strings.Join(backupPolicy.BinList, ",")))
 	}
-
+	if backupPolicy.NodeList != nil {
+		setCString(&backupConfig.node_list, ptr.String(strings.Join(backupPolicy.NodeList, ",")))
+	}
 	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
 	setCUint(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
 	setCUint(&backupConfig.max_retries, backupPolicy.MaxRetries)
