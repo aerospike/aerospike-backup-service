@@ -1,6 +1,8 @@
 package service
 
 import (
+	"log/slog"
+
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/smithy-go/ptr"
 )
@@ -47,6 +49,7 @@ func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 			return []model.BackupDetails{{
 				Key:          ptr.String(s3prefix + backupFolder),
 				LastModified: &s.readState().LastRun,
+				Size:         ptr.Int64(s.dirSize(backupFolder)),
 			}}, nil
 		}
 		return []model.BackupDetails{}, nil
@@ -61,10 +64,24 @@ func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 		details := model.BackupDetails{
 			Key:          ptr.String(s3prefix + "/" + *subfolder.Prefix),
 			LastModified: s.GetTime(subfolder),
+			Size:         ptr.Int64(s.dirSize(*subfolder.Prefix)),
 		}
 		contents[i] = details
 	}
 	return contents, err
+}
+
+func (s *BackupBackendS3) dirSize(path string) int64 {
+	files, err := s.listFiles(path)
+	if err != nil {
+		slog.Warn("Failed to list files", "path", path)
+		return 0
+	}
+	var totalSize int64
+	for _, file := range files {
+		totalSize += file.Size
+	}
+	return totalSize
 }
 
 // IncrementalBackupList returns a list of available incremental backups.
