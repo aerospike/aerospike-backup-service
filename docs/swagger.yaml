@@ -34,7 +34,9 @@ definitions:
       bandwidth:
         type: integer
       bin_list:
-        type: string
+        items:
+          type: string
+        type: array
       file_limit:
         type: integer
       filter_exp:

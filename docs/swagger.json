@@ -693,7 +693,10 @@
                     "type": "integer"
                 },
                 "bin_list": {
-                    "type": "string"
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "file_limit": {
                     "type": "integer"

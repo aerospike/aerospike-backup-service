@@ -22,6 +22,8 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/aws/smithy-go/ptr"
+
 	"log/slog"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -62,7 +64,9 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCString(&backupConfig.auth_mode, cluster.AuthMode)
 
 	parseSetList(&backupConfig.set_list, backupPolicy.SetList)
-	setCString(&backupConfig.bin_list, backupPolicy.BinList)
+	if backupPolicy.BinList != nil {
+		setCString(&backupConfig.bin_list, ptr.String(strings.Join(*backupPolicy.BinList, ",")))
+	}
 
 	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
 	setCUint(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
