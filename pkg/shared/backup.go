@@ -63,9 +63,9 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCString(&backupConfig.password, cluster.GetPassword())
 	setCString(&backupConfig.auth_mode, cluster.AuthMode)
 
-	parseSetList(&backupConfig.set_list, backupPolicy.SetList)
+	parseSetList(&backupConfig.set_list, &backupPolicy.SetList)
 	if backupPolicy.BinList != nil {
-		setCString(&backupConfig.bin_list, ptr.String(strings.Join(*backupPolicy.BinList, ",")))
+		setCString(&backupConfig.bin_list, ptr.String(strings.Join(backupPolicy.BinList, ",")))
 	}
 
 	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
