@@ -155,8 +155,8 @@ func (p *BackupPolicy) Clone() *BackupPolicy {
 }
 
 type Node struct {
-	IP   string
-	Port int
+	IP   string `yaml:"ip" json:"ip"`
+	Port int    `yaml:"port" json:"port"`
 }
 
 // GetName returns the name of the BackupPolicy.
