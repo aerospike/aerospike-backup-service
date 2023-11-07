@@ -118,7 +118,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 		C.cf_free(unsafe.Pointer(backupStatus))
 		success = true
 	} else {
-		slog.Warn("Failed backup operation", "policy", *backupPolicy.Name, "status", backupStatus)
+		slog.Warn("Failed backup operation", "policy", *backupPolicy.Name, "status", *backupStatus)
 	}
 
 	// destroy the backup_config
