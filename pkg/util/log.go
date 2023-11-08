@@ -1,6 +1,8 @@
 package util
 
 import (
+	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -11,7 +13,6 @@ var libLogRegex = regexp.MustCompile(`^(.+)\s\[(\D+)\]\s\[\s*(\d+)\]\s(.*)$`)
 
 // LogCaptured logs the captured std output from the shared libraries.
 func LogCaptured(out string) {
-	slog.Debug(out)
 	if out == "" {
 		slog.Debug("No logs captured")
 		return
@@ -28,7 +29,7 @@ func LogCaptured(out string) {
 				slog.Debug(groups[4])
 			}
 		} else { // print to stderr
-			slog.Error(entry)
+			fmt.Fprintln(os.Stderr, entry)
 		}
 	}
 }
