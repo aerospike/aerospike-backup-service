@@ -48,8 +48,12 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
-
-	slog.Debug(fmt.Sprintf("Starting backup for %s", *backupPolicy.Name))
+	isIncremental := opts.ModAfter != nil
+	if isIncremental {
+		slog.Debug(fmt.Sprintf("Starting incremental backup for %s", *backupPolicy.Name))
+	} else {
+		slog.Debug(fmt.Sprintf("Starting full backup for %s", *backupPolicy.Name))
+	}
 
 	backupConfig := C.backup_config_t{}
 	C.backup_config_default(&backupConfig)
@@ -99,7 +103,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCString(&backupConfig.s3_region, storage.S3Region)
 	setCString(&backupConfig.s3_profile, storage.S3Profile)
 
-	if opts.ModAfter != nil {
+	if isIncremental {
 		// for incremental backup
 		setCLong(&backupConfig.mod_after, opts.ModAfter)
 		setCString(&backupConfig.output_file, getIncrementalPath(storage))
