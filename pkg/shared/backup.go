@@ -105,8 +105,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 
 	if isIncremental {
 		// for incremental backup
-		slog.Debug("Mod after is ", "after", *opts.ModAfter)
-		//setCLong(&backupConfig.mod_after, opts.ModAfter)
+		setCLong(&backupConfig.mod_after, opts.ModAfter)
 		setCString(&backupConfig.output_file, getIncrementalPath(storage))
 	} else {
 		// for full backup
