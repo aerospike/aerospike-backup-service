@@ -103,7 +103,6 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
 		C.restore_status_destroy(restoreStatus)
 		C.cf_free(unsafe.Pointer(restoreStatus))
 		success = true
-		slog.Info("Restored success", "request", restoreRequest)
 	} else {
 		slog.Warn("Failed restore operation", "request", restoreRequest)
 	}
