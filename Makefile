@@ -9,8 +9,8 @@ GOCLEAN = $(GOCMD) clean
 
 LSB_EXISTS := $(shell which lsb_release 2> /dev/null)
 ifeq ($(LSB_EXISTS),)
-	DISTRO_FULL := $(shell . /etc/os-release; echo $$NAME | tr ' ' '_')
-	DISTRO_VERSION := $(shell . /etc/os-release; echo $$VERSION_ID | tr ' ' '_')
+	DISTRO_FULL := $(shell . /etc/os-release 2> /dev/null; echo $$NAME | tr ' ' '_')
+	DISTRO_VERSION := $(shell . /etc/os-release 2> /dev/null; echo $$VERSION_ID | tr ' ' '_')
 else
 	DISTRO_FULL := $(shell lsb_release -i | cut -f2- | tr ' ' '_')
 	DISTRO_VERSION := $(shell lsb_release -r | cut -f2- | tr ' ' '_')
@@ -39,6 +39,7 @@ PKG_DIR = build/package
 PREP_DIR = $(TARGET_DIR)/pkg_install
 CONFIG_FILES = $(wildcard config/*)
 POST_INSTALL_SCRIPT = $(PKG_DIR)/post-install.sh
+TOOLS_DIR = modules/aerospike-tools-backup
 
 MAINTAINER = "Aerospike"
 DESCRIPTION = "Aerospike Backup Service"
@@ -62,8 +63,12 @@ FPM_COMMON_ARGS = \
 .PHONY: build-submodules
 build-submodules:
 	git submodule update --init --recursive
-	$(MAKE) -C modules/aerospike-tools-backup shared EVENT_LIB=libuv
+	$(MAKE) -C $(TOOLS_DIR) shared EVENT_LIB=libuv
 	./scripts/copy_shared.sh
+
+.PHONY: clean-submodules
+clean-submodules:
+	$(MAKE) -C $(TOOLS_DIR) clean
 
 .PHONY: build
 build:
