@@ -19,7 +19,10 @@
 
 .idea
 .vscode
-./lib
+
+lib/
+target/
+testout/
 
 # Go workspace file
 go.work

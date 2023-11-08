@@ -2,6 +2,9 @@ run:
   timeout: 2m
   skip-dirs:
     - examples
+    - modules
+    - docs
+    - docker
 
 linters:
   disable-all: true
