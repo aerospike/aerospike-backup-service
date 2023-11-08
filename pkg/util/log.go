@@ -9,7 +9,7 @@ import (
 	"log/slog"
 )
 
-var libLogRegex = regexp.MustCompile(`^(.+)\s\[(\D+)\]\s\[(\d+)\]\s(.*)$`)
+var libLogRegex = regexp.MustCompile(`^(.+)\s\[(\D+)\]\s\[\s*(\d+)\]\s(.*)$`)
 
 // LogCaptured logs the captured std output from the shared libraries.
 func LogCaptured(out string) {
@@ -21,9 +21,7 @@ func LogCaptured(out string) {
 	}
 	entries := strings.Split(strings.ReplaceAll(out, "\r\n", "\n"), "\n")
 	for _, entry := range entries {
-		slog.Debug("| " + entry)
-		groups := libLogRegex.FindStringSubmatch(entry)
-		if len(groups) == 5 {
+		if groups := libLogRegex.FindStringSubmatch(entry);len(groups) == 5 {
 			switch groups[2] {
 			case "ERR":
 				slog.Error(groups[4])
