@@ -13,7 +13,7 @@ var libLogRegex = regexp.MustCompile(`^(.+)\s\[(\D+)\]\s\[(\d+)\]\s(.*)$`)
 
 // LogCaptured logs the captured std output from the shared libraries.
 func LogCaptured(out string) {
-	slog.Debug("Start log capture")
+	slog.Debug(fmt.Sprintf("Start log capture:\n\n\n%s\n\n\n", out))
 	if out == "" {
 		slog.Debug("No logs captured")
 		return
