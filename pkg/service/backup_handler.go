@@ -141,12 +141,12 @@ loop:
 
 // Schedule schedules backup for the defining policy.
 func (h *BackupHandler) Schedule(ctx context.Context) {
+	slog.Info("Scheduling full backup", "name", *h.backupPolicy.Name)
+	go h.scheduleFullBackup(ctx)
 	if h.backupPolicy.IncrIntervalMillis != nil && *h.backupPolicy.IncrIntervalMillis > 0 {
 		slog.Info("Scheduling incremental backup", "name", *h.backupPolicy.Name)
 		go h.scheduleIncrementalBackup(ctx)
 	}
-	slog.Info("Scheduling full backup", "name", *h.backupPolicy.Name)
-	go h.scheduleFullBackup(ctx)
 }
 
 func (h *BackupHandler) isFullEligible(n time.Time, t time.Time) bool {
