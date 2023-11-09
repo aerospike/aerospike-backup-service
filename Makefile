@@ -1,8 +1,8 @@
 # Go parameters
 GOCMD = go
 UNAME = $(shell uname -sm | tr ' ' '-')
-CGO_CFLAGS = -I/app/modules/aerospike-tools-backup/modules/c-client/target/$(UNAME)/include \
-  -I/app/modules/aerospike-tools-backup/include
+CGO_CFLAGS = -I./modules/aerospike-tools-backup/modules/c-client/target/$(UNAME)/include \
+  -I./modules/aerospike-tools-backup/include
 GOBUILD = CGO_CFLAGS="$(CGO_CFLAGS)" CGO_ENABLED=1 $(GOCMD) build
 GOTEST = $(GOCMD) test
 GOCLEAN = $(GOCMD) clean
