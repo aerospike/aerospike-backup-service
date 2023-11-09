@@ -9,7 +9,7 @@ import (
 	"log/slog"
 )
 
-var libLogRegex = regexp.MustCompile(`^(.+)\s\[(\D+)\]\s\[(\d+)\]\s(.*)$`)
+var libLogRegex = regexp.MustCompile(`^(.+)\s\[(\D+)\]\s\[\s*(\d+)\]\s(.*)$`)
 
 // LogCaptured logs the captured std output from the shared libraries.
 func LogCaptured(out string) {

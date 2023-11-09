@@ -113,9 +113,10 @@ func (s *S3Context) writeFile(filePath string, v any) error {
 	if err != nil {
 		slog.Warn("Couldn't upload file", "path", filePath,
 			"bucket", s.bucket, "err", err)
+		return err
 	}
-
-	return err
+	slog.Debug("File written", "path", filePath, "bucket", s.bucket)
+	return nil
 }
 
 // listFiles returns all files in the given s3 prefix path.
