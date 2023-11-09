@@ -112,6 +112,10 @@ loop:
 			}
 			// read the state first and check
 			state := h.backend.readState()
+			if state.LastRun == (time.Time{}) {
+				slog.Debug("Skip incremental backup until full backup is done", "name", *h.backupPolicy.Name)
+				break
+			}
 			if h.isIncrementalEligible(now, state.LastIncrRun) {
 				backupRunFunc := func() {
 					opts := shared.BackupOptions{}
