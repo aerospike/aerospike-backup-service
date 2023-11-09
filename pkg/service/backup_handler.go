@@ -20,11 +20,11 @@ type BackupScheduler interface {
 
 // BackupHandler handles a configured backup policy.
 type BackupHandler struct {
-	backend          BackupBackend
-	backupPolicy     *model.BackupPolicy
-	cluster          *model.AerospikeCluster
-	storage          *model.BackupStorage
-	BackupInProgress *atomic.Bool
+	backend              BackupBackend
+	backupPolicy         *model.BackupPolicy
+	cluster              *model.AerospikeCluster
+	storage              *model.BackupStorage
+	fullBackupInProgress *atomic.Bool
 }
 
 var _ BackupScheduler = (*BackupHandler)(nil)
@@ -51,11 +51,11 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	}
 
 	return &BackupHandler{
-		backend:          backupBackend,
-		backupPolicy:     backupPolicy,
-		cluster:          cluster,
-		storage:          storage,
-		BackupInProgress: &atomic.Bool{},
+		backend:              backupBackend,
+		backupPolicy:         backupPolicy,
+		cluster:              cluster,
+		storage:              storage,
+		fullBackupInProgress: &atomic.Bool{},
 	}, nil
 }
 
@@ -78,7 +78,7 @@ loop:
 				slog.Debug("The full backup is not due to run yet", "name", *h.backupPolicy.Name)
 				break
 			}
-			if !h.BackupInProgress.CompareAndSwap(false, true) {
+			if !h.fullBackupInProgress.CompareAndSwap(false, true) {
 				slog.Debug("Backup is currently in progress, skipping full backup", "name", *h.backupPolicy.Name)
 				break
 			}
@@ -99,7 +99,7 @@ loop:
 			h.backend.CleanDir(model.IncrementalBackupDirectory)
 
 			// release the lock
-			h.BackupInProgress.Store(false)
+			h.fullBackupInProgress.Store(false)
 
 		case <-ctx.Done():
 			slog.Debug("ctx.Done in scheduleFullBackup")
@@ -132,7 +132,7 @@ loop:
 				slog.Debug("The incremental backup is not due to run yet", "name", *h.backupPolicy.Name)
 				break
 			}
-			if !h.BackupInProgress.CompareAndSwap(false, true) {
+			if h.fullBackupInProgress.Load() {
 				slog.Debug("Backup is currently in progress, skipping incremental backup", "name", *h.backupPolicy.Name)
 				break
 			}
@@ -151,9 +151,6 @@ loop:
 
 			// update the state
 			h.updateIncrementalBackupState(now, state)
-
-			// release the lock
-			h.BackupInProgress.Store(false)
 
 		case <-ctx.Done():
 			slog.Debug("ctx.Done in scheduleIncrementalBackup")
