@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync/atomic"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -19,10 +20,11 @@ type BackupScheduler interface {
 
 // BackupHandler handles a configured backup policy.
 type BackupHandler struct {
-	backend      BackupBackend
-	backupPolicy *model.BackupPolicy
-	cluster      *model.AerospikeCluster
-	storage      *model.BackupStorage
+	backend          BackupBackend
+	backupPolicy     *model.BackupPolicy
+	cluster          *model.AerospikeCluster
+	storage          *model.BackupStorage
+	BackupInProgress *atomic.Bool
 }
 
 var _ BackupScheduler = (*BackupHandler)(nil)
@@ -49,10 +51,11 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	}
 
 	return &BackupHandler{
-		backend:      backupBackend,
-		backupPolicy: backupPolicy,
-		cluster:      cluster,
-		storage:      storage,
+		backend:          backupBackend,
+		backupPolicy:     backupPolicy,
+		cluster:          cluster,
+		storage:          storage,
+		BackupInProgress: &atomic.Bool{},
 	}, nil
 }
 
@@ -71,24 +74,33 @@ loop:
 			}
 			// read the state first and check
 			state := h.backend.readState()
-			if h.isFullEligible(now, state.LastRun) {
-				backupRunFunc := func() {
-					backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
-				}
-				out := stdIO.Capture(backupRunFunc)
-				util.LogCaptured(out)
-				slog.Debug("Completed full backup", "name", *h.backupPolicy.Name)
-
-				// increment backupCounter metric
-				backupCounter.Inc()
-
-				// update the state
-				h.updateBackupState(now, state)
-				// clean incremental backups
-				h.backend.CleanDir(model.IncrementalBackupDirectory)
-			} else {
+			if !h.isFullEligible(now, state.LastRun) {
 				slog.Debug("The full backup is not due to run yet", "name", *h.backupPolicy.Name)
+				break
 			}
+			if !h.BackupInProgress.CompareAndSwap(false, true) {
+				slog.Debug("Backup is currently in progress, skipping full backup", "name", *h.backupPolicy.Name)
+				break
+			}
+			backupRunFunc := func() {
+				backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
+			}
+			out := stdIO.Capture(backupRunFunc)
+			util.LogCaptured(out)
+			slog.Debug("Completed full backup", "name", *h.backupPolicy.Name)
+
+			// increment backupCounter metric
+			backupCounter.Inc()
+
+			// update the state
+			h.updateBackupState(now, state)
+
+			// clean incremental backups
+			h.backend.CleanDir(model.IncrementalBackupDirectory)
+
+			// release the lock
+			h.BackupInProgress.Store(false)
+
 		case <-ctx.Done():
 			slog.Debug("ctx.Done in scheduleFullBackup")
 			break loop
@@ -116,25 +128,33 @@ loop:
 				slog.Debug("Skip incremental backup until full backup is done", "name", *h.backupPolicy.Name)
 				break
 			}
-			if h.isIncrementalEligible(now, state.LastIncrRun) {
-				backupRunFunc := func() {
-					opts := shared.BackupOptions{}
-					lastIncrRunEpoch := state.LastIncrRun.UnixNano()
-					opts.ModAfter = &lastIncrRunEpoch
-					backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts)
-				}
-				out := stdIO.Capture(backupRunFunc)
-				util.LogCaptured(out)
-				slog.Debug("Completed incremental backup", "name", *h.backupPolicy.Name)
-
-				// increment incrBackupCounter metric
-				incrBackupCounter.Inc()
-
-				// update the state
-				h.updateIncrementalBackupState(now, state)
-			} else {
+			if !h.isIncrementalEligible(now, state.LastIncrRun) {
 				slog.Debug("The incremental backup is not due to run yet", "name", *h.backupPolicy.Name)
+				break
 			}
+			if !h.BackupInProgress.CompareAndSwap(false, true) {
+				slog.Debug("Backup is currently in progress, skipping incremental backup", "name", *h.backupPolicy.Name)
+				break
+			}
+			backupRunFunc := func() {
+				opts := shared.BackupOptions{}
+				lastIncrRunEpoch := state.LastIncrRun.UnixNano()
+				opts.ModAfter = &lastIncrRunEpoch
+				backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts)
+			}
+			out := stdIO.Capture(backupRunFunc)
+			util.LogCaptured(out)
+			slog.Debug("Completed incremental backup", "name", *h.backupPolicy.Name)
+
+			// increment incrBackupCounter metric
+			incrBackupCounter.Inc()
+
+			// update the state
+			h.updateIncrementalBackupState(now, state)
+
+			// release the lock
+			h.BackupInProgress.Store(false)
+
 		case <-ctx.Done():
 			slog.Debug("ctx.Done in scheduleIncrementalBackup")
 			break loop
