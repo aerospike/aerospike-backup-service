@@ -65,5 +65,8 @@ func validate(b *model.BackupStorage) error {
 	if b.Type == nil {
 		return errors.New("storage type is required")
 	}
+	if b.Path == nil {
+		return errors.New("storage path is required")
+	}
 	return nil
 }

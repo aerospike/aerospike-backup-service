@@ -17,6 +17,7 @@ func TestAddStorage(t *testing.T) {
 	newStorage := &model.BackupStorage{
 		Name: ptr.String("storage"),
 		Type: util.Ptr(model.Local),
+		Path: ptr.String("path"),
 	}
 
 	err := AddStorage(config, newStorage)

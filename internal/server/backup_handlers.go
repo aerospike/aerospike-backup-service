@@ -15,7 +15,7 @@ import (
 // @Produce  json
 // @Param    name query string true "Backup policy name"
 // @Router   /backup/full/list [get]
-// @Success  200 {array} model.BackupDetails "Full backups"
+// @Success  200 {object} map[string][]model.BackupDetails "Full backups by policy"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Request) {
 	ws.getAvailableBackups(w, r, func(backend service.BackupBackend) ([]model.BackupDetails, error) {
@@ -29,7 +29,7 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 // @Produce  json
 // @Param    name query string true "Backup policy name"
 // @Router   /backup/incremental/list [get]
-// @Success  200 {array} model.BackupDetails "Incremental backups"
+// @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by policy"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *http.Request) {
 	ws.getAvailableBackups(w, r, func(backend service.BackupBackend) ([]model.BackupDetails, error) {
@@ -42,26 +42,23 @@ func (ws *HTTPServer) getAvailableBackups(
 	r *http.Request,
 	backupListFunc func(service.BackupBackend) ([]model.BackupDetails, error)) {
 
-	policyName := r.URL.Query().Get("name")
-	if policyName == "" {
-		http.Error(w, "Undefined policy name", http.StatusBadRequest)
-		return
+	policies := ws.requestedPolicies(r)
+	policyToBackups := make(map[string][]model.BackupDetails)
+	for _, policyName := range policies {
+		backend, exists := ws.backupBackends[policyName]
+		if !exists {
+			http.Error(w, "Backup backend does not exist for "+policyName, http.StatusNotFound)
+			return
+		}
+		list, err := backupListFunc(backend)
+		if err != nil {
+			slog.Error("Failed to retrieve backup list", "err", err)
+			http.Error(w, "Failed to retrieve backup list", http.StatusInternalServerError)
+			return
+		}
+		policyToBackups[policyName] = list
 	}
-
-	backend, exists := ws.backupBackends[policyName]
-	if !exists {
-		http.Error(w, "Backup backend does not exist for "+policyName, http.StatusNotFound)
-		return
-	}
-
-	list, err := backupListFunc(backend)
-	if err != nil {
-		slog.Error("Failed to retrieve backup list", "err", err)
-		http.Error(w, "Failed to retrieve backup list", http.StatusInternalServerError)
-		return
-	}
-
-	response, err := json.Marshal(list)
+	response, err := json.Marshal(policyToBackups)
 	if err != nil {
 		slog.Error("Failed to parse backup list", "err", err)
 		http.Error(w, "Failed to parse backup list", http.StatusInternalServerError)
@@ -71,4 +68,17 @@ func (ws *HTTPServer) getAvailableBackups(
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(response)
+}
+
+// return an array containing single policy from request (if present), or all policies
+func (ws *HTTPServer) requestedPolicies(r *http.Request) []string {
+	queryPolicyName := r.URL.Query().Get("name")
+	if queryPolicyName != "" {
+		return []string{queryPolicyName}
+	}
+	policies := make([]string, len(ws.config.BackupPolicy))
+	for i, p := range ws.config.BackupPolicy {
+		policies[i] = *p.Name
+	}
+	return policies
 }

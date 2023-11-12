@@ -47,11 +47,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Full backups",
+                        "description": "Full backups by policy",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.BackupDetails"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/model.BackupDetails"
+                                }
                             }
                         }
                     },
@@ -85,11 +88,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Incremental backups",
+                        "description": "Incremental backups by policy",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.BackupDetails"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/model.BackupDetails"
+                                }
                             }
                         }
                     },
