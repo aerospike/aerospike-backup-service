@@ -76,7 +76,7 @@ func (ws *HTTPServer) requestedPolicies(r *http.Request) []string {
 	if queryPolicyName != "" {
 		return []string{queryPolicyName}
 	}
-	var policies []string
+	policies := make([]string, len(ws.config.BackupPolicy))
 	for _, p := range ws.config.BackupPolicy {
 		policies = append(policies, *p.Name)
 	}
