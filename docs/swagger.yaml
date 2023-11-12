@@ -269,11 +269,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Full backups
+          description: Full backups by policy
           schema:
-            items:
+            additionalProperties:
               $ref: '#/definitions/model.BackupDetails'
-            type: array
+            type: object
         "404":
           description: Not Found
           schema:
@@ -294,11 +294,11 @@ paths:
       - application/json
       responses:
         "200":
-          description: Incremental backups
+          description: Incremental backups by policy
           schema:
-            items:
+            additionalProperties:
               $ref: '#/definitions/model.BackupDetails'
-            type: array
+            type: object
         "404":
           description: Not Found
           schema:

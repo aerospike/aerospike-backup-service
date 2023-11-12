@@ -47,10 +47,10 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Full backups",
+                        "description": "Full backups by policy",
                         "schema": {
-                            "type": "array",
-                            "items": {
+                            "type": "object",
+                            "additionalProperties": {
                                 "$ref": "#/definitions/model.BackupDetails"
                             }
                         }
@@ -85,10 +85,10 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Incremental backups",
+                        "description": "Incremental backups by policy",
                         "schema": {
-                            "type": "array",
-                            "items": {
+                            "type": "object",
+                            "additionalProperties": {
                                 "$ref": "#/definitions/model.BackupDetails"
                             }
                         }
