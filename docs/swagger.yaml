@@ -272,7 +272,9 @@ paths:
           description: Full backups by policy
           schema:
             additionalProperties:
-              $ref: '#/definitions/model.BackupDetails'
+              items:
+                $ref: '#/definitions/model.BackupDetails'
+              type: array
             type: object
         "404":
           description: Not Found
@@ -297,7 +299,9 @@ paths:
           description: Incremental backups by policy
           schema:
             additionalProperties:
-              $ref: '#/definitions/model.BackupDetails'
+              items:
+                $ref: '#/definitions/model.BackupDetails'
+              type: array
             type: object
         "404":
           description: Not Found

@@ -51,7 +51,10 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "$ref": "#/definitions/model.BackupDetails"
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/model.BackupDetails"
+                                }
                             }
                         }
                     },
@@ -89,7 +92,10 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "$ref": "#/definitions/model.BackupDetails"
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/model.BackupDetails"
+                                }
                             }
                         }
                     },

@@ -15,7 +15,7 @@ import (
 // @Produce  json
 // @Param    name query string true "Backup policy name"
 // @Router   /backup/full/list [get]
-// @Success 200 {object} map[string]model.BackupDetails "Full backups by policy"
+// @Success 200 {object} map[string][]model.BackupDetails "Full backups by policy"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Request) {
 	ws.getAvailableBackups(w, r, func(backend service.BackupBackend) ([]model.BackupDetails, error) {
@@ -29,7 +29,7 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 // @Produce  json
 // @Param    name query string true "Backup policy name"
 // @Router   /backup/incremental/list [get]
-// @Success 200 {object} map[string]model.BackupDetails "Incremental backups by policy"
+// @Success 200 {object} map[string][]model.BackupDetails "Incremental backups by policy"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *http.Request) {
 	ws.getAvailableBackups(w, r, func(backend service.BackupBackend) ([]model.BackupDetails, error) {
