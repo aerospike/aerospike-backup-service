@@ -58,25 +58,40 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	}, nil
 }
 
-// scheduleFullBackup runs the full backup periodically.
-func (h *BackupHandler) scheduleFullBackup(ctx context.Context) {
+// scheduleBackupPeriodically runs the backup periodically based on the provided interval.
+func (h *BackupHandler) scheduleBackupPeriodically(
+	ctx context.Context,
+	intervalMillis int64,
+	backupFunc func(time.Time)) {
 	go func() {
-		ticker := time.NewTicker(time.Duration(*h.backupPolicy.IntervalMillis) * time.Millisecond)
+		ticker := time.NewTicker(time.Duration(intervalMillis) * time.Millisecond)
 		defer ticker.Stop()
 		for {
 			select {
 			case now := <-ticker.C:
-				h.runBackup(now)
+				backupFunc(now)
 			case <-ctx.Done():
-				slog.Debug("ctx.Done in scheduleFullBackup")
+				slog.Debug("ctx.Done in scheduleBackupPeriodically")
 				return
 			}
 		}
 	}()
-	go h.runBackup(time.Now())
+	// Run the backup immediately
+	go backupFunc(time.Now())
 }
 
-func (h *BackupHandler) runBackup(now time.Time) {
+// scheduleFullBackup runs the full backup periodically.
+
+// scheduleIncrementalBackup runs the incremental backup periodically.
+func (h *BackupHandler) scheduleIncrementalBackup(ctx context.Context) {
+	h.scheduleBackupPeriodically(
+		ctx,
+		*h.backupPolicy.IncrIntervalMillis,
+		h.runIncrementalBackup,
+	)
+}
+
+func (h *BackupHandler) runFullBackup(now time.Time) {
 	if isStaleTick(now) {
 		slog.Error("Skipped full backup", "name", *h.backupPolicy.Name)
 		backupSkippedCounter.Inc()
@@ -112,64 +127,51 @@ func (h *BackupHandler) runBackup(now time.Time) {
 	h.fullBackupInProgress.Store(false)
 }
 
-// scheduleBackup runs the incremental backup periodically.
-func (h *BackupHandler) scheduleIncrementalBackup(ctx context.Context) {
-	ticker := time.NewTicker(time.Duration(*h.backupPolicy.IncrIntervalMillis) * time.Millisecond)
-	defer ticker.Stop()
-loop:
-	for {
-		select {
-		case now := <-ticker.C:
-			if isStaleTick(now) {
-				slog.Error("Skipped incremental backup", "name", *h.backupPolicy.Name)
-				incrBackupSkippedCounter.Inc()
-				break
-			}
-			// read the state first and check
-			state := h.backend.readState()
-			if state.LastRun == (time.Time{}) {
-				slog.Debug("Skip incremental backup until initial full backup is done", "name", *h.backupPolicy.Name)
-				break
-			}
-			if !h.isIncrementalEligible(now, state.LastIncrRun) {
-				slog.Debug("The incremental backup is not due to run yet", "name", *h.backupPolicy.Name)
-				break
-			}
-			if h.fullBackupInProgress.Load() {
-				slog.Debug("Full backup is currently in progress, skipping incremental backup", "name", *h.backupPolicy.Name)
-				break
-			}
-			backupRunFunc := func() {
-				opts := shared.BackupOptions{}
-				lastIncrRunEpoch := state.LastIncrRun.UnixNano()
-				opts.ModAfter = &lastIncrRunEpoch
-				backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts)
-			}
-			out := stdIO.Capture(backupRunFunc)
-			util.LogCaptured(out)
-			slog.Debug("Completed incremental backup", "name", *h.backupPolicy.Name)
-
-			// increment incrBackupCounter metric
-			incrBackupCounter.Inc()
-
-			// update the state
-			h.updateIncrementalBackupState(now, state)
-
-		case <-ctx.Done():
-			slog.Debug("ctx.Done in scheduleIncrementalBackup")
-			break loop
-		}
+func (h *BackupHandler) runIncrementalBackup(now time.Time) {
+	if isStaleTick(now) {
+		slog.Error("Skipped incremental backup", "name", *h.backupPolicy.Name)
+		incrBackupSkippedCounter.Inc()
+		return
 	}
-	slog.Info("Exiting scheduling loop for incremental backup", "name", *h.backupPolicy.Name)
+	// read the state first and check
+	state := h.backend.readState()
+	if state.LastRun == (time.Time{}) {
+		slog.Debug("Skip incremental backup until initial full backup is done", "name", *h.backupPolicy.Name)
+		return
+	}
+	if !h.isIncrementalEligible(now, state.LastIncrRun) {
+		slog.Debug("The incremental backup is not due to run yet", "name", *h.backupPolicy.Name)
+		return
+	}
+	if h.fullBackupInProgress.Load() {
+		slog.Debug("Full backup is currently in progress, skipping incremental backup", "name", *h.backupPolicy.Name)
+		return
+	}
+	backupRunFunc := func() {
+		opts := shared.BackupOptions{}
+		lastIncrRunEpoch := state.LastIncrRun.UnixNano()
+		opts.ModAfter = &lastIncrRunEpoch
+		backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts)
+	}
+	out := stdIO.Capture(backupRunFunc)
+	util.LogCaptured(out)
+	slog.Debug("Completed incremental backup", "name", *h.backupPolicy.Name)
+
+	// increment incrBackupCounter metric
+	incrBackupCounter.Inc()
+
+	// update the state
+	h.updateIncrementalBackupState(now, state)
 }
 
 // Schedule schedules backup for the defining policy.
 func (h *BackupHandler) Schedule(ctx context.Context) {
 	slog.Info("Scheduling full backup", "name", *h.backupPolicy.Name)
-	go h.scheduleFullBackup(ctx)
+	h.scheduleBackupPeriodically(ctx, *h.backupPolicy.IntervalMillis, h.runFullBackup)
+
 	if h.backupPolicy.IncrIntervalMillis != nil && *h.backupPolicy.IncrIntervalMillis > 0 {
 		slog.Info("Scheduling incremental backup", "name", *h.backupPolicy.Name)
-		go h.scheduleIncrementalBackup(ctx)
+		h.scheduleBackupPeriodically(ctx, *h.backupPolicy.IncrIntervalMillis, h.runIncrementalBackup)
 	}
 }
 
