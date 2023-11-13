@@ -58,6 +58,17 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	}, nil
 }
 
+// Schedule schedules backup for the defining policy.
+func (h *BackupHandler) Schedule(ctx context.Context) {
+	slog.Info("Scheduling full backup", "name", *h.backupPolicy.Name)
+	h.scheduleBackupPeriodically(ctx, *h.backupPolicy.IntervalMillis, h.runFullBackup)
+
+	if h.backupPolicy.IncrIntervalMillis != nil && *h.backupPolicy.IncrIntervalMillis > 0 {
+		slog.Info("Scheduling incremental backup", "name", *h.backupPolicy.Name)
+		h.scheduleBackupPeriodically(ctx, *h.backupPolicy.IncrIntervalMillis, h.runIncrementalBackup)
+	}
+}
+
 // scheduleBackupPeriodically runs the backup periodically based on the provided interval.
 func (h *BackupHandler) scheduleBackupPeriodically(
 	ctx context.Context,
@@ -78,17 +89,6 @@ func (h *BackupHandler) scheduleBackupPeriodically(
 	}()
 	// Run the backup immediately
 	go backupFunc(time.Now())
-}
-
-// scheduleFullBackup runs the full backup periodically.
-
-// scheduleIncrementalBackup runs the incremental backup periodically.
-func (h *BackupHandler) scheduleIncrementalBackup(ctx context.Context) {
-	h.scheduleBackupPeriodically(
-		ctx,
-		*h.backupPolicy.IncrIntervalMillis,
-		h.runIncrementalBackup,
-	)
 }
 
 func (h *BackupHandler) runFullBackup(now time.Time) {
@@ -162,17 +162,6 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 
 	// update the state
 	h.updateIncrementalBackupState(now, state)
-}
-
-// Schedule schedules backup for the defining policy.
-func (h *BackupHandler) Schedule(ctx context.Context) {
-	slog.Info("Scheduling full backup", "name", *h.backupPolicy.Name)
-	h.scheduleBackupPeriodically(ctx, *h.backupPolicy.IntervalMillis, h.runFullBackup)
-
-	if h.backupPolicy.IncrIntervalMillis != nil && *h.backupPolicy.IncrIntervalMillis > 0 {
-		slog.Info("Scheduling incremental backup", "name", *h.backupPolicy.Name)
-		h.scheduleBackupPeriodically(ctx, *h.backupPolicy.IncrIntervalMillis, h.runIncrementalBackup)
-	}
 }
 
 func (h *BackupHandler) isFullEligible(n time.Time, t time.Time) bool {
