@@ -119,7 +119,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupCounter.Inc()
 
 	// update the state
-	h.updateBackupState(now, state)
+	h.updateBackupState()
 
 	// clean incremental backups
 	h.backend.CleanDir(model.IncrementalBackupDirectory)
@@ -162,7 +162,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	incrBackupCounter.Inc()
 
 	// update the state
-	h.updateIncrementalBackupState(now, state)
+	h.updateIncrementalBackupState()
 }
 
 func (h *BackupHandler) isFullEligible(n time.Time, t time.Time) bool {
@@ -173,14 +173,16 @@ func (h *BackupHandler) isIncrementalEligible(n time.Time, t time.Time) bool {
 	return n.UnixMilli()-t.UnixMilli() >= *h.backupPolicy.IncrIntervalMillis
 }
 
-func (h *BackupHandler) updateBackupState(now time.Time, state *model.BackupState) {
-	state.LastRun = now
+func (h *BackupHandler) updateBackupState() {
+	state := h.backend.readState()
+	state.LastRun = time.Now()
 	state.Performed++
 	h.writeState(state)
 }
 
-func (h *BackupHandler) updateIncrementalBackupState(now time.Time, state *model.BackupState) {
-	state.LastIncrRun = now
+func (h *BackupHandler) updateIncrementalBackupState() {
+	state := h.backend.readState()
+	state.LastIncrRun = time.Now()
 	h.writeState(state)
 }
 
