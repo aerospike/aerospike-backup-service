@@ -60,8 +60,8 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 
 // scheduleFullBackup runs the full backup periodically.
 func (h *BackupHandler) scheduleFullBackup(ctx context.Context) {
-	ticker := time.NewTicker(time.Duration(*h.backupPolicy.IntervalMillis) * time.Millisecond)
 	go func() {
+		ticker := time.NewTicker(time.Duration(*h.backupPolicy.IntervalMillis) * time.Millisecond)
 		defer ticker.Stop()
 		for {
 			select {
@@ -87,7 +87,6 @@ func (h *BackupHandler) runBackup(now time.Time) {
 	if !h.isFullEligible(now, state.LastRun) {
 		slog.Debug("The full backup is not due to run yet", "name", *h.backupPolicy.Name)
 		return
-
 	}
 	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
 		slog.Debug("Backup is currently in progress, skipping full backup", "name", *h.backupPolicy.Name)
