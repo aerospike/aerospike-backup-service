@@ -92,6 +92,7 @@ func (h *BackupHandler) scheduleBackupPeriodically(
 }
 
 func (h *BackupHandler) runFullBackup(now time.Time) {
+	slog.Debug("Tick", "now", now, "name", *h.backupPolicy.Name)
 	if isStaleTick(now) {
 		slog.Error("Skipped full backup", "name", *h.backupPolicy.Name)
 		backupSkippedCounter.Inc()
