@@ -75,7 +75,7 @@ func (h *BackupHandler) scheduleBackupPeriodically(
 	intervalMillis int64,
 	backupFunc func(time.Time)) {
 	go func() {
-		ticker := time.NewTicker(time.Duration(intervalMillis) * time.Millisecond)
+		ticker := time.NewTicker(1000 * time.Millisecond)
 		defer ticker.Stop()
 		for {
 			select {
