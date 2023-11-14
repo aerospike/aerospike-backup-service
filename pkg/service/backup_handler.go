@@ -25,6 +25,7 @@ type BackupHandler struct {
 	cluster              *model.AerospikeCluster
 	storage              *model.BackupStorage
 	fullBackupInProgress atomic.Bool
+	state                *model.BackupState
 }
 
 var _ BackupScheduler = (*BackupHandler)(nil)
@@ -55,6 +56,7 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 		backupPolicy: backupPolicy,
 		cluster:      cluster,
 		storage:      storage,
+		state:        backupBackend.readState(),
 	}, nil
 }
 
@@ -91,9 +93,8 @@ func (h *BackupHandler) scheduleBackupPeriodically(
 }
 
 func (h *BackupHandler) runFullBackup(now time.Time) {
-	slog.Debug("Tick", "now", now, "name", *h.backupPolicy.Name)
 	if isStaleTick(now) {
-		slog.Error("Skipped full backup", "name", *h.backupPolicy.Name)
+		slog.Debug("Skipped full backup", "name", *h.backupPolicy.Name)
 		backupSkippedCounter.Inc()
 		return
 	}
@@ -104,9 +105,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	// release the lock
 	defer h.fullBackupInProgress.Store(false)
 
-	// read the state first and check
-	state := h.backend.readState()
-	if !h.isFullEligible(now, state.LastRun) {
+	if !h.isFullEligible(now, h.state.LastRun) {
 		slog.Debug("The full backup is not due to run yet", "name", *h.backupPolicy.Name)
 		return
 	}
@@ -121,7 +120,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupCounter.Inc()
 
 	// update the state
-	h.updateBackupState(state)
+	h.updateBackupState()
 
 	// clean incremental backups
 	h.backend.CleanDir(model.IncrementalBackupDirectory)
@@ -172,19 +171,19 @@ func (h *BackupHandler) isIncrementalEligible(n time.Time, t time.Time) bool {
 	return n.UnixMilli()-t.UnixMilli() >= *h.backupPolicy.IncrIntervalMillis
 }
 
-func (h *BackupHandler) updateBackupState(state *model.BackupState) {
-	state.LastRun = time.Now()
-	state.Performed++
-	h.writeState(state)
+func (h *BackupHandler) updateBackupState() {
+	h.state.LastRun = time.Now()
+	h.state.Performed++
+	h.writeState()
 }
 
 func (h *BackupHandler) updateIncrementalBackupState(state *model.BackupState) {
 	state.LastIncrRun = time.Now()
-	h.writeState(state)
+	h.writeState()
 }
 
-func (h *BackupHandler) writeState(state *model.BackupState) {
-	if err := h.backend.writeState(state); err != nil {
+func (h *BackupHandler) writeState() {
+	if err := h.backend.writeState(h.state); err != nil {
 		slog.Error("Failed to write state for the backup", "name", *h.backupPolicy.Name, "err", err)
 	}
 }
