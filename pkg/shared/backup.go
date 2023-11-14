@@ -103,6 +103,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCString(&backupConfig.s3_region, storage.S3Region)
 	setCString(&backupConfig.s3_profile, storage.S3Profile)
 
+	setCLong(&backupConfig.mod_before, opts.ModBefore)
 	if isIncremental {
 		// for incremental backup
 		setCLong(&backupConfig.mod_after, opts.ModAfter)

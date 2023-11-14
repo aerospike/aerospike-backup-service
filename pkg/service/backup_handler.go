@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aws/smithy-go/ptr"
+
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/util"
@@ -98,18 +100,23 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		backupSkippedCounter.Inc()
 		return
 	}
+	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
+		slog.Debug("Backup is currently in progress, skipping full backup", "name", *h.backupPolicy.Name)
+		return
+	}
+	// release the lock
+	defer h.fullBackupInProgress.Store(false)
+
 	// read the state first and check
 	state := h.backend.readState()
 	if !h.isFullEligible(now, state.LastRun) {
 		slog.Debug("The full backup is not due to run yet", "name", *h.backupPolicy.Name)
 		return
 	}
-	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
-		slog.Debug("Backup is currently in progress, skipping full backup", "name", *h.backupPolicy.Name)
-		return
-	}
 	backupRunFunc := func() {
-		backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
+		opts := shared.BackupOptions{}
+		opts.ModBefore = ptr.Int64(now.UnixNano())
+		backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts)
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
@@ -119,13 +126,10 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupCounter.Inc()
 
 	// update the state
-	h.updateBackupState()
+	h.updateBackupState(now, state)
 
 	// clean incremental backups
 	h.backend.CleanDir(model.IncrementalBackupDirectory)
-
-	// release the lock
-	h.fullBackupInProgress.Store(false)
 }
 
 func (h *BackupHandler) runIncrementalBackup(now time.Time) {
@@ -152,6 +156,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		opts := shared.BackupOptions{}
 		lastIncrRunEpoch := state.LastIncrRun.UnixNano()
 		opts.ModAfter = &lastIncrRunEpoch
+		opts.ModBefore = ptr.Int64(now.UnixNano())
 		backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts)
 	}
 	out := stdIO.Capture(backupRunFunc)
@@ -162,7 +167,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	incrBackupCounter.Inc()
 
 	// update the state
-	h.updateIncrementalBackupState()
+	h.updateIncrementalBackupState(now, state)
 }
 
 func (h *BackupHandler) isFullEligible(n time.Time, t time.Time) bool {
@@ -173,16 +178,14 @@ func (h *BackupHandler) isIncrementalEligible(n time.Time, t time.Time) bool {
 	return n.UnixMilli()-t.UnixMilli() >= *h.backupPolicy.IncrIntervalMillis
 }
 
-func (h *BackupHandler) updateBackupState() {
-	state := h.backend.readState()
-	state.LastRun = time.Now()
+func (h *BackupHandler) updateBackupState(now time.Time, state *model.BackupState) {
+	state.LastRun = now
 	state.Performed++
 	h.writeState(state)
 }
 
-func (h *BackupHandler) updateIncrementalBackupState() {
-	state := h.backend.readState()
-	state.LastIncrRun = time.Now()
+func (h *BackupHandler) updateIncrementalBackupState(now time.Time, state *model.BackupState) {
+	state.LastIncrRun = now
 	h.writeState(state)
 }
 
