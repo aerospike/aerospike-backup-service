@@ -50,9 +50,9 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	defer b.Unlock()
 	isIncremental := opts.ModAfter != nil
 	if isIncremental {
-		slog.Debug(fmt.Sprintf("Starting incremental backup operation for %s", *backupPolicy.Name))
+		slog.Debug(fmt.Sprintf("Starting incremental backup for %s", *backupPolicy.Name))
 	} else {
-		slog.Debug(fmt.Sprintf("Starting full backup operation for %s", *backupPolicy.Name))
+		slog.Debug(fmt.Sprintf("Starting full backup for %s", *backupPolicy.Name))
 	}
 
 	backupConfig := C.backup_config_t{}
