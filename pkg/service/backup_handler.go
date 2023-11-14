@@ -30,6 +30,8 @@ type BackupHandler struct {
 
 var _ BackupScheduler = (*BackupHandler)(nil)
 
+var BackupScheduleTick = 1000 * time.Millisecond
+
 // NewBackupHandler returns a new BackupHandler instance.
 func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*BackupHandler, error) {
 	cluster, err := aerospikeClusterByName(*backupPolicy.SourceCluster, config.AerospikeClusters)
@@ -76,7 +78,7 @@ func (h *BackupHandler) scheduleBackupPeriodically(
 	ctx context.Context,
 	backupFunc func(time.Time)) {
 	go func() {
-		ticker := time.NewTicker(1000 * time.Millisecond)
+		ticker := time.NewTicker(BackupScheduleTick)
 		defer ticker.Stop()
 		for {
 			select {
