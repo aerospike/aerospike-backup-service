@@ -24,8 +24,8 @@ type BackupHandler struct {
 	backupPolicy         *model.BackupPolicy
 	cluster              *model.AerospikeCluster
 	storage              *model.BackupStorage
-	fullBackupInProgress atomic.Bool
 	state                *model.BackupState
+	fullBackupInProgress atomic.Bool
 }
 
 var _ BackupScheduler = (*BackupHandler)(nil)
@@ -160,7 +160,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	incrBackupCounter.Inc()
 
 	// update the state
-	h.updateIncrementalBackupState(state)
+	h.updateIncrementalBackupState()
 }
 
 func (h *BackupHandler) isFullEligible(n time.Time, t time.Time) bool {
@@ -177,8 +177,8 @@ func (h *BackupHandler) updateBackupState() {
 	h.writeState()
 }
 
-func (h *BackupHandler) updateIncrementalBackupState(state *model.BackupState) {
-	state.LastIncrRun = time.Now()
+func (h *BackupHandler) updateIncrementalBackupState() {
+	h.state.LastIncrRun = time.Now()
 	h.writeState()
 }
 
