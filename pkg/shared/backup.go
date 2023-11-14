@@ -117,12 +117,10 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	var success bool
 	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS { //nolint:gocritic
 		success = true
-		slog.Warn("Finish backup operation", "policy", *backupPolicy.Name)
 	} else if unsafe.Pointer(backupStatus) != C.RUN_BACKUP_FAILURE {
 		C.backup_status_destroy(backupStatus)
 		C.cf_free(unsafe.Pointer(backupStatus))
 		success = true
-		slog.Warn("Finish backup operation", "policy", *backupPolicy.Name)
 	} else {
 		slog.Warn("Failed backup operation", "policy", *backupPolicy.Name)
 	}
