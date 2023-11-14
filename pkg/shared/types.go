@@ -4,8 +4,7 @@ import "github.com/aerospike/backup/pkg/model"
 
 // BackupOptions provides additional properties for running a backup.
 type BackupOptions struct {
-	ModAfter  *int64
-	ModBefore *int64
+	ModAfter *int64
 }
 
 type Backup interface {

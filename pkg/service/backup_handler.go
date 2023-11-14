@@ -7,8 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aws/smithy-go/ptr"
-
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/util"
@@ -63,18 +61,17 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 // Schedule schedules backup for the defining policy.
 func (h *BackupHandler) Schedule(ctx context.Context) {
 	slog.Info("Scheduling full backup", "name", *h.backupPolicy.Name)
-	h.scheduleBackupPeriodically(ctx, *h.backupPolicy.IntervalMillis, h.runFullBackup)
+	h.scheduleBackupPeriodically(ctx, h.runFullBackup)
 
 	if h.backupPolicy.IncrIntervalMillis != nil && *h.backupPolicy.IncrIntervalMillis > 0 {
 		slog.Info("Scheduling incremental backup", "name", *h.backupPolicy.Name)
-		h.scheduleBackupPeriodically(ctx, *h.backupPolicy.IncrIntervalMillis, h.runIncrementalBackup)
+		h.scheduleBackupPeriodically(ctx, h.runIncrementalBackup)
 	}
 }
 
 // scheduleBackupPeriodically runs the backup periodically based on the provided interval.
 func (h *BackupHandler) scheduleBackupPeriodically(
 	ctx context.Context,
-	intervalMillis int64,
 	backupFunc func(time.Time)) {
 	go func() {
 		ticker := time.NewTicker(1000 * time.Millisecond)
@@ -114,9 +111,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		return
 	}
 	backupRunFunc := func() {
-		opts := shared.BackupOptions{}
-		opts.ModBefore = ptr.Int64(now.UnixNano())
-		backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts)
+		backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
@@ -126,7 +121,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupCounter.Inc()
 
 	// update the state
-	h.updateBackupState(now, state)
+	h.updateBackupState(state)
 
 	// clean incremental backups
 	h.backend.CleanDir(model.IncrementalBackupDirectory)
@@ -156,7 +151,6 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		opts := shared.BackupOptions{}
 		lastIncrRunEpoch := state.LastIncrRun.UnixNano()
 		opts.ModAfter = &lastIncrRunEpoch
-		opts.ModBefore = ptr.Int64(now.UnixNano())
 		backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts)
 	}
 	out := stdIO.Capture(backupRunFunc)
@@ -167,7 +161,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	incrBackupCounter.Inc()
 
 	// update the state
-	h.updateIncrementalBackupState(now, state)
+	h.updateIncrementalBackupState(state)
 }
 
 func (h *BackupHandler) isFullEligible(n time.Time, t time.Time) bool {
@@ -178,14 +172,14 @@ func (h *BackupHandler) isIncrementalEligible(n time.Time, t time.Time) bool {
 	return n.UnixMilli()-t.UnixMilli() >= *h.backupPolicy.IncrIntervalMillis
 }
 
-func (h *BackupHandler) updateBackupState(now time.Time, state *model.BackupState) {
-	state.LastRun = now
+func (h *BackupHandler) updateBackupState(state *model.BackupState) {
+	state.LastRun = time.Now()
 	state.Performed++
 	h.writeState(state)
 }
 
-func (h *BackupHandler) updateIncrementalBackupState(now time.Time, state *model.BackupState) {
-	state.LastIncrRun = now
+func (h *BackupHandler) updateIncrementalBackupState(state *model.BackupState) {
+	state.LastIncrRun = time.Now()
 	h.writeState(state)
 }
 
