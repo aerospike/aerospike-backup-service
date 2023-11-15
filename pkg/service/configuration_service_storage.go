@@ -10,9 +10,9 @@ import (
 )
 
 // AddStorage
-// adds a new BackupStorage to the configuration if a storage with the same name doesn't already exist.
-func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
-	_, found := config.BackupStorages[*newStorage.Name]
+// adds a new Storage to the configuration if a storage with the same name doesn't already exist.
+func AddStorage(config *model.Config, newStorage *model.Storage) error {
+	_, found := config.Storages[*newStorage.Name]
 	if found {
 		return fmt.Errorf("storage %s already exists", *newStorage.Name)
 	}
@@ -20,14 +20,14 @@ func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
 		return err
 	}
 
-	config.BackupStorages[*newStorage.Name] = newStorage
+	config.Storages[*newStorage.Name] = newStorage
 	return nil
 }
 
 // UpdateStorage
-// updates an existing BackupStorage in the configuration.
-func UpdateStorage(config *model.Config, updatedStorage *model.BackupStorage) error {
-	_, found := config.BackupStorages[*updatedStorage.Name]
+// updates an existing Storage in the configuration.
+func UpdateStorage(config *model.Config, updatedStorage *model.Storage) error {
+	_, found := config.Storages[*updatedStorage.Name]
 	if !found {
 		return fmt.Errorf("storage %s not found", *updatedStorage.Name)
 	}
@@ -35,14 +35,14 @@ func UpdateStorage(config *model.Config, updatedStorage *model.BackupStorage) er
 		return err
 	}
 
-	config.BackupStorages[*updatedStorage.Name] = updatedStorage
+	config.Storages[*updatedStorage.Name] = updatedStorage
 	return nil
 }
 
 // DeleteStorage
-// deletes a BackupStorage from the configuration if it is not used in any policy.
+// deletes a Storage from the configuration if it is not used in any policy.
 func DeleteStorage(config *model.Config, storageToDeleteName *string) error {
-	_, found := config.BackupStorages[*storageToDeleteName]
+	_, found := config.Storages[*storageToDeleteName]
 	if !found {
 		return fmt.Errorf("storage %s not found", *storageToDeleteName)
 	}
@@ -53,11 +53,11 @@ func DeleteStorage(config *model.Config, storageToDeleteName *string) error {
 		return fmt.Errorf("cannot delete storage as it is used in a policy %s", *policy.Name)
 	}
 
-	delete(config.BackupStorages, *storageToDeleteName)
+	delete(config.Storages, *storageToDeleteName)
 	return nil
 }
 
-func validate(b *model.BackupStorage) error {
+func validate(b *model.Storage) error {
 	if b.Name == nil || *b.Name == "" {
 		return errors.New("storage name is required")
 	}

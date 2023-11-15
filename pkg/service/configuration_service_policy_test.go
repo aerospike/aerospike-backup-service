@@ -13,7 +13,7 @@ func TestAddPolicyOK(t *testing.T) {
 	storage := "storage"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {Name: &cluster}},
-		BackupStorages:    map[string]*model.BackupStorage{storage: {Name: &storage}},
+		Storages:          map[string]*model.Storage{storage: {Name: &storage}},
 		BackupPolicies:    map[string]*model.BackupPolicy{},
 	}
 
@@ -44,7 +44,7 @@ func TestAddPolicyErrors(t *testing.T) {
 	config := &model.Config{
 		BackupPolicies:    map[string]*model.BackupPolicy{policy: {Name: &policy}},
 		AerospikeClusters: map[string]*model.AerospikeCluster{policy: {Name: &cluster}},
-		BackupStorages:    map[string]*model.BackupStorage{storage: {Name: &storage}},
+		Storages:          map[string]*model.Storage{storage: {Name: &storage}},
 	}
 
 	for _, testPolicy := range fails {

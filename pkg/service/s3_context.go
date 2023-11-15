@@ -29,7 +29,7 @@ type S3Context struct {
 
 // NewS3Context returns a new S3Context.
 // Panics on any error during initialization.
-func NewS3Context(storage *model.BackupStorage) *S3Context {
+func NewS3Context(storage *model.Storage) *S3Context {
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
 	ctx := context.TODO()

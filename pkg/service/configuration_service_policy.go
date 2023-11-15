@@ -16,7 +16,7 @@ func AddPolicy(config *model.Config, newPolicy *model.BackupPolicy) error {
 	if newPolicy.SourceCluster == nil {
 		return errors.New("cluster is nil")
 	}
-	_, found := config.BackupStorages[*newPolicy.Storage]
+	_, found := config.Storages[*newPolicy.Storage]
 	if !found {
 		return fmt.Errorf("storage %s not found", *newPolicy.Storage)
 	}

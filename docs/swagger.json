@@ -422,7 +422,7 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "$ref": "#/definitions/model.BackupStorage"
+                                "$ref": "#/definitions/model.Storage"
                             }
                         }
                     },
@@ -450,7 +450,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.BackupStorage"
+                            "$ref": "#/definitions/model.Storage"
                         }
                     }
                 ],
@@ -482,7 +482,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.BackupStorage"
+                            "$ref": "#/definitions/model.Storage"
                         }
                     }
                 ],
@@ -787,32 +787,6 @@
                 }
             }
         },
-        "model.BackupStorage": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "path": {
-                    "type": "string"
-                },
-                "s3-endpoint-override": {
-                    "type": "string"
-                },
-                "s3-log-level": {
-                    "type": "string"
-                },
-                "s3-profile": {
-                    "type": "string"
-                },
-                "s3-region": {
-                    "type": "string"
-                },
-                "type": {
-                    "$ref": "#/definitions/model.StorageType"
-                }
-            }
-        },
         "model.BackupType": {
             "type": "integer",
             "enum": [
@@ -839,14 +813,14 @@
                         "$ref": "#/definitions/model.BackupPolicy"
                     }
                 },
-                "backup-storages": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/model.BackupStorage"
-                    }
-                },
                 "service": {
                     "$ref": "#/definitions/model.HTTPServerConfig"
+                },
+                "storages": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/model.Storage"
+                    }
                 }
             }
         },
@@ -987,6 +961,32 @@
                 },
                 "user": {
                     "type": "string"
+                }
+            }
+        },
+        "model.Storage": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "s3-endpoint-override": {
+                    "type": "string"
+                },
+                "s3-log-level": {
+                    "type": "string"
+                },
+                "s3-profile": {
+                    "type": "string"
+                },
+                "s3-region": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.StorageType"
                 }
             }
         },

@@ -11,10 +11,10 @@ import (
 
 func TestAddStorage(t *testing.T) {
 	config := &model.Config{
-		BackupStorages: map[string]*model.BackupStorage{},
+		Storages: map[string]*model.Storage{},
 	}
 
-	newStorage := &model.BackupStorage{
+	newStorage := &model.Storage{
 		Name: ptr.String("storage"),
 		Type: util.Ptr(model.Local),
 		Path: ptr.String("path"),
@@ -36,10 +36,10 @@ func TestAddStorage(t *testing.T) {
 func TestUpdateStorage(t *testing.T) {
 	storage := "storage"
 	config := &model.Config{
-		BackupStorages: map[string]*model.BackupStorage{storage: {Name: &storage}},
+		Storages: map[string]*model.Storage{storage: {Name: &storage}},
 	}
 
-	newStorage := &model.BackupStorage{
+	newStorage := &model.Storage{
 		Name: ptr.String(storage),
 		Path: ptr.String("path"),
 		Type: util.Ptr(model.Local),
@@ -50,12 +50,12 @@ func TestUpdateStorage(t *testing.T) {
 		t.Errorf("Expected nil error, got %v", err)
 	}
 
-	if *config.BackupStorages[storage].Path != "path" {
+	if *config.Storages[storage].Path != "path" {
 		t.Errorf("Value in storage is not updated")
 	}
 
 	// Updating a non-existent storage should result in an error
-	newStorage = &model.BackupStorage{Name: ptr.String("newStorage")}
+	newStorage = &model.Storage{Name: ptr.String("newStorage")}
 	err = UpdateStorage(config, newStorage)
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
@@ -68,7 +68,7 @@ func TestDeleteStorage(t *testing.T) {
 	storage2 := "storage2"
 	config := &model.Config{
 		BackupPolicies: map[string]*model.BackupPolicy{policy: {Name: &policy, Storage: &storage}},
-		BackupStorages: map[string]*model.BackupStorage{storage: {Name: &storage}, storage2: {Name: &storage2}},
+		Storages:       map[string]*model.Storage{storage: {Name: &storage}, storage2: {Name: &storage2}},
 	}
 
 	// Deleting a storage that is being used by a policy should result in an error
@@ -81,7 +81,7 @@ func TestDeleteStorage(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
-	if len(config.BackupStorages) != 1 {
+	if len(config.Storages) != 1 {
 		t.Errorf("Expected size = 1")
 	}
 

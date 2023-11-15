@@ -92,23 +92,6 @@ definitions:
       type:
         $ref: '#/definitions/model.BackupType'
     type: object
-  model.BackupStorage:
-    properties:
-      name:
-        type: string
-      path:
-        type: string
-      s3-endpoint-override:
-        type: string
-      s3-log-level:
-        type: string
-      s3-profile:
-        type: string
-      s3-region:
-        type: string
-      type:
-        $ref: '#/definitions/model.StorageType'
-    type: object
   model.BackupType:
     enum:
     - 0
@@ -127,12 +110,12 @@ definitions:
         additionalProperties:
           $ref: '#/definitions/model.BackupPolicy'
         type: object
-      backup-storages:
-        additionalProperties:
-          $ref: '#/definitions/model.BackupStorage'
-        type: object
       service:
         $ref: '#/definitions/model.HTTPServerConfig'
+      storages:
+        additionalProperties:
+          $ref: '#/definitions/model.Storage'
+        type: object
     type: object
   model.HTTPServerConfig:
     properties:
@@ -225,6 +208,23 @@ definitions:
         type: boolean
       user:
         type: string
+    type: object
+  model.Storage:
+    properties:
+      name:
+        type: string
+      path:
+        type: string
+      s3-endpoint-override:
+        type: string
+      s3-log-level:
+        type: string
+      s3-profile:
+        type: string
+      s3-region:
+        type: string
+      type:
+        $ref: '#/definitions/model.StorageType'
     type: object
   model.StorageType:
     enum:
@@ -534,7 +534,7 @@ paths:
           description: OK
           schema:
             additionalProperties:
-              $ref: '#/definitions/model.BackupStorage'
+              $ref: '#/definitions/model.Storage'
             type: object
         "400":
           description: Bad Request
@@ -553,7 +553,7 @@ paths:
         name: storage
         required: true
         schema:
-          $ref: '#/definitions/model.BackupStorage'
+          $ref: '#/definitions/model.Storage'
       responses:
         "201":
           description: Created
@@ -574,7 +574,7 @@ paths:
         name: storage
         required: true
         schema:
-          $ref: '#/definitions/model.BackupStorage'
+          $ref: '#/definitions/model.Storage'
       responses:
         "200":
           description: OK

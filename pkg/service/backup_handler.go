@@ -23,7 +23,7 @@ type BackupHandler struct {
 	backend              BackupBackend
 	backupPolicy         *model.BackupPolicy
 	cluster              *model.AerospikeCluster
-	storage              *model.BackupStorage
+	storage              *model.Storage
 	state                *model.BackupState
 	fullBackupInProgress atomic.Bool
 }
@@ -38,7 +38,7 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	if !found {
 		return nil, fmt.Errorf("cluster not found for %s", *backupPolicy.SourceCluster)
 	}
-	storage, found := config.BackupStorages[*backupPolicy.Storage]
+	storage, found := config.Storages[*backupPolicy.Storage]
 	if !found {
 		return nil, fmt.Errorf("storage not found for %s", *backupPolicy.Storage)
 	}

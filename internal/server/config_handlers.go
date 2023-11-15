@@ -166,11 +166,11 @@ func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Requ
 // @Tags        Configuration
 // @Router      /config/storage [post]
 // @Accept      json
-// @Param       storage body model.BackupStorage true "backup storage"
+// @Param       storage body model.Storage true "backup storage"
 // @Success     201
 // @Failure     400 {string} string
 func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
-	var newStorage model.BackupStorage
+	var newStorage model.Storage
 	err := json.NewDecoder(r.Body).Decode(&newStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -195,10 +195,10 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /config/storage [get]
 // @Produce     json
-// @Success  	200 {object} map[string]model.BackupStorage
+// @Success  	200 {object} map[string]model.Storage
 // @Failure     400 {string} string
 func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
-	storage := ws.config.BackupStorages
+	storage := ws.config.Storages
 	jsonResponse, err := json.Marshal(storage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -215,11 +215,11 @@ func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
 // @Tags        Configuration
 // @Router      /config/storage [put]
 // @Accept      json
-// @Param       storage body model.BackupStorage true "backup storage"
+// @Param       storage body model.Storage true "backup storage"
 // @Success     200
 // @Failure     400 {string} string
 func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
-	var updatedStorage model.BackupStorage
+	var updatedStorage model.Storage
 	err := json.NewDecoder(r.Body).Decode(&updatedStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

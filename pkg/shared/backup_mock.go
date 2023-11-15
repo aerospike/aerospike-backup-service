@@ -22,7 +22,7 @@ func NewBackup() *BackupShared {
 
 // BackupRun mocks the interface method.
 func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *model.AerospikeCluster,
-	storage *model.BackupStorage, opts BackupOptions) bool {
+	storage *model.Storage, opts BackupOptions) bool {
 	slog.Info("BackupRun mock call")
 	return true
 }

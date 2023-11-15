@@ -13,7 +13,7 @@ import (
 type Config struct {
 	HTTPServer        *HTTPServerConfig            `yaml:"service,omitempty" json:"service,omitempty"`
 	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
-	BackupStorages    map[string]*BackupStorage    `yaml:"backup-storages,omitempty" json:"backup-storages,omitempty"`
+	Storages          map[string]*Storage          `yaml:"storages,omitempty" json:"storages,omitempty"`
 	BackupPolicies    map[string]*BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
 }
 
@@ -94,8 +94,8 @@ func (c *AerospikeCluster) GetName() *string {
 	return c.Name
 }
 
-// BackupStorage represents the configuration for a backup storage details.
-type BackupStorage struct {
+// Storage represents the configuration for a backup storage details.
+type Storage struct {
 	Name               *string      `yaml:"name,omitempty" json:"name,omitempty"`
 	Type               *StorageType `yaml:"type,omitempty" json:"type,omitempty"`
 	Path               *string      `yaml:"path,omitempty" json:"path,omitempty"`
@@ -105,8 +105,8 @@ type BackupStorage struct {
 	S3LogLevel         *string      `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty"`
 }
 
-// GetName returns the name of the BackupStorage.
-func (s *BackupStorage) GetName() *string {
+// GetName returns the name of the Storage.
+func (s *Storage) GetName() *string {
 	return s.Name
 }
 
