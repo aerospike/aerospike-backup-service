@@ -37,7 +37,7 @@ func AddPolicy(config *model.Config, newPolicy *model.BackupPolicy) error {
 // updates an existing BackupPolicy in the configuration.
 func UpdatePolicy(config *model.Config, updatedPolicy *model.BackupPolicy) error {
 	_, found := config.BackupPolicy[*updatedPolicy.Name]
-	if found {
+	if !found {
 		return fmt.Errorf("policy %s not found", *updatedPolicy.Name)
 	}
 

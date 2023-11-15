@@ -13,7 +13,7 @@ import (
 // adds a new BackupStorage to the configuration if a storage with the same name doesn't already exist.
 func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
 	_, found := config.BackupStorage[*newStorage.Name]
-	if !found {
+	if found {
 		return fmt.Errorf("storage %s already exists", *newStorage.Name)
 	}
 	if err := validate(newStorage); err != nil {
