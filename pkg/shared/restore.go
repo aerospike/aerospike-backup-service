@@ -48,7 +48,7 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
 	restoreConfig := C.restore_config_t{}
 	C.restore_config_default(&restoreConfig)
 
-	setCString(&restoreConfig.host, restoreRequest.Address)
+	setCString(&restoreConfig.host, restoreRequest.Host)
 	setCInt(&restoreConfig.port, restoreRequest.Port)
 	setCBool(&restoreConfig.use_services_alternate, restoreRequest.UseServicesAlternate)
 

@@ -2,7 +2,7 @@
 aerospike-clusters:
   cluster1:
     name: "cluster1"
-    address: "localhost"
+    host: "localhost"
     port: 3000
     user: "tester"
     password: "psw"

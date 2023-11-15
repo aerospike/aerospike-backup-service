@@ -1,9 +1,9 @@
 definitions:
   model.AerospikeCluster:
     properties:
-      address:
-        type: string
       auth-mode:
+        type: string
+      host:
         type: string
       name:
         type: string
@@ -146,8 +146,6 @@ definitions:
     type: object
   model.RestoreRequest:
     properties:
-      address:
-        type: string
       auth-mode:
         type: string
       bandwidth:
@@ -163,6 +161,8 @@ definitions:
       disable-batch-writes:
         type: boolean
       file:
+        type: string
+      host:
         type: string
       max-async-batches:
         type: integer

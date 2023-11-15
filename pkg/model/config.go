@@ -60,7 +60,7 @@ type AerospikeCluster struct {
 	pwdOnce              sync.Once
 	pwd                  *string
 	Name                 *string `yaml:"name,omitempty" json:"name,omitempty"`
-	Address              *string `yaml:"address,omitempty" json:"address,omitempty"`
+	Host                 *string `yaml:"host,omitempty" json:"host,omitempty"`
 	Port                 *int32  `yaml:"port,omitempty" json:"port,omitempty"`
 	UseServicesAlternate *bool   `yaml:"use-services-alternate,omitempty" json:"use-services-alternate,omitempty"`
 	User                 *string `yaml:"user,omitempty" json:"user,omitempty"`
