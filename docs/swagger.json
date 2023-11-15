@@ -649,10 +649,10 @@
         "model.AerospikeCluster": {
             "type": "object",
             "properties": {
-                "auth-mode": {
+                "address": {
                     "type": "string"
                 },
-                "host": {
+                "auth-mode": {
                     "type": "string"
                 },
                 "name": {
@@ -869,6 +869,9 @@
         "model.RestoreRequest": {
             "type": "object",
             "properties": {
+                "address": {
+                    "type": "string"
+                },
                 "auth-mode": {
                     "type": "string"
                 },
@@ -891,9 +894,6 @@
                     "type": "boolean"
                 },
                 "file": {
-                    "type": "string"
-                },
-                "host": {
                     "type": "string"
                 },
                 "max-async-batches": {
