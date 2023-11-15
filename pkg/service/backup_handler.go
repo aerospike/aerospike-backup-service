@@ -34,9 +34,9 @@ var BackupScheduleTick = 1000 * time.Millisecond
 
 // NewBackupHandler returns a new BackupHandler instance.
 func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*BackupHandler, error) {
-	cluster, err := aerospikeClusterByName(*backupPolicy.SourceCluster, config.AerospikeClusters)
-	if err != nil {
-		return nil, err
+	cluster, found := config.AerospikeClusters[*backupPolicy.SourceCluster]
+	if !found {
+		return nil, fmt.Errorf("cluster not found for %s", *backupPolicy.SourceCluster)
 	}
 	storage, err := backupStorageByName(*backupPolicy.Storage, config.BackupStorage)
 	if err != nil {

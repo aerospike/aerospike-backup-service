@@ -22,8 +22,8 @@ func AddPolicy(config *model.Config, newPolicy *model.BackupPolicy) error {
 		return fmt.Errorf("storage %s not found", *newPolicy.Storage)
 	}
 
-	_, cluster := util.GetByName(config.AerospikeClusters, newPolicy.SourceCluster)
-	if cluster == nil {
+	_, found := config.AerospikeClusters[*newPolicy.SourceCluster]
+	if !found {
 		return fmt.Errorf("cluster %s not found", *newPolicy.SourceCluster)
 	}
 	_, existing := util.GetByName(config.BackupPolicy, newPolicy.Name)

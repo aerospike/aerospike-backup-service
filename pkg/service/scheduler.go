@@ -81,15 +81,6 @@ func ToBackend(handlers []BackupScheduler) []BackupBackend {
 	return backends
 }
 
-func aerospikeClusterByName(name string, clusters []*model.AerospikeCluster) (*model.AerospikeCluster, error) {
-	for _, cluster := range clusters {
-		if *cluster.Name == name {
-			return cluster, nil
-		}
-	}
-	return nil, fmt.Errorf("cluster not found for %s", name)
-}
-
 func backupStorageByName(name string, storage []*model.BackupStorage) (*model.BackupStorage, error) {
 	for _, st := range storage {
 		if *st.Name == name {

@@ -89,7 +89,7 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 // @Tags        Configuration
 // @Router      /config/cluster [get]
 // @Produce     json
-// @Success     200 {array} model.AerospikeCluster
+// @Success  	200 {object} map[string][]model.AerospikeCluster
 // @Failure     400 {string} string
 func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 	clusters := ws.config.AerospikeClusters
