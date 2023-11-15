@@ -1,5 +1,5 @@
 ---
-aerospike-cluster:
+aerospike-clusters:
   cluster1:
     name: "cluster1"
     host: "localhost"
@@ -7,23 +7,23 @@ aerospike-cluster:
     user: "tester"
     password: "psw"
 
-backup-storage:
+storage:
   local1:
     name: "local1"
     type: 0
     path: "./testout"
 
-backup-policy:
+backup-policies:
   policy-daily:
     name: "policy-daily"
     interval: 30000
-    incr_interval: 5000
+    incr-interval: 5000
     type: 1
-    source_cluster: "cluster1"
+    source-cluster: "cluster1"
     storage: "local1"
     namespace: "test"
-    set_list:
+    set-list:
       - set1
     parallel: 1
-    remove_files: false
+    remove-files: false
     
