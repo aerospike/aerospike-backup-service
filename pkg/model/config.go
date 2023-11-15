@@ -89,11 +89,6 @@ func (c *AerospikeCluster) GetPassword() *string {
 	return c.pwd
 }
 
-// GetName returns the name of the AerospikeCluster.
-func (c *AerospikeCluster) GetName() *string {
-	return c.Name
-}
-
 // Storage represents the configuration for a backup storage details.
 type Storage struct {
 	Name               *string      `yaml:"name,omitempty" json:"name,omitempty"`
@@ -103,11 +98,6 @@ type Storage struct {
 	S3Profile          *string      `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty"`
 	S3EndpointOverride *string      `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty"`
 	S3LogLevel         *string      `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty"`
-}
-
-// GetName returns the name of the Storage.
-func (s *Storage) GetName() *string {
-	return s.Name
 }
 
 // BackupPolicy represents a scheduled backup policy.
@@ -157,11 +147,6 @@ func (p *BackupPolicy) Clone() *BackupPolicy {
 type Node struct {
 	IP   string `yaml:"ip" json:"ip"`
 	Port int    `yaml:"port" json:"port"`
-}
-
-// GetName returns the name of the BackupPolicy.
-func (p *BackupPolicy) GetName() *string {
-	return p.Name
 }
 
 type StorageType int
