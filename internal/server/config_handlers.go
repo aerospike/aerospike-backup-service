@@ -198,7 +198,7 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 // @Success  	200 {object} map[string][]model.BackupStorage
 // @Failure     400 {string} string
 func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
-	storage := ws.config.BackupStorage
+	storage := ws.config.BackupStorages
 	jsonResponse, err := json.Marshal(storage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -305,8 +305,7 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Success  	200 {object} map[string][]model.BackupPolicy
 // @Failure     400 {string} string
 func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
-	policies := ws.config.BackupPolicy
-	jsonResponse, err := json.Marshal(policies)
+	jsonResponse, err := json.Marshal(ws.config.BackupPolicies)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

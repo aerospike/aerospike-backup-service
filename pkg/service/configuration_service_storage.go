@@ -12,7 +12,7 @@ import (
 // AddStorage
 // adds a new BackupStorage to the configuration if a storage with the same name doesn't already exist.
 func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
-	_, found := config.BackupStorage[*newStorage.Name]
+	_, found := config.BackupStorages[*newStorage.Name]
 	if found {
 		return fmt.Errorf("storage %s already exists", *newStorage.Name)
 	}
@@ -20,14 +20,14 @@ func AddStorage(config *model.Config, newStorage *model.BackupStorage) error {
 		return err
 	}
 
-	config.BackupStorage[*newStorage.Name] = newStorage
+	config.BackupStorages[*newStorage.Name] = newStorage
 	return nil
 }
 
 // UpdateStorage
 // updates an existing BackupStorage in the configuration.
 func UpdateStorage(config *model.Config, updatedStorage *model.BackupStorage) error {
-	_, found := config.BackupStorage[*updatedStorage.Name]
+	_, found := config.BackupStorages[*updatedStorage.Name]
 	if !found {
 		return fmt.Errorf("storage %s not found", *updatedStorage.Name)
 	}
@@ -35,25 +35,25 @@ func UpdateStorage(config *model.Config, updatedStorage *model.BackupStorage) er
 		return err
 	}
 
-	config.BackupStorage[*updatedStorage.Name] = updatedStorage
+	config.BackupStorages[*updatedStorage.Name] = updatedStorage
 	return nil
 }
 
 // DeleteStorage
 // deletes a BackupStorage from the configuration if it is not used in any policy.
 func DeleteStorage(config *model.Config, storageToDeleteName *string) error {
-	_, found := config.BackupStorage[*storageToDeleteName]
+	_, found := config.BackupStorages[*storageToDeleteName]
 	if !found {
 		return fmt.Errorf("storage %s not found", *storageToDeleteName)
 	}
-	policy, found := util.Find(config.BackupPolicy, func(policy *model.BackupPolicy) bool {
+	policy, found := util.Find(config.BackupPolicies, func(policy *model.BackupPolicy) bool {
 		return *policy.Storage == *storageToDeleteName
 	})
 	if found {
 		return fmt.Errorf("cannot delete storage as it is used in a policy %s", *policy.Name)
 	}
 
-	delete(config.BackupStorage, *storageToDeleteName)
+	delete(config.BackupStorages, *storageToDeleteName)
 	return nil
 }
 

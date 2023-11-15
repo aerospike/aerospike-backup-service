@@ -38,7 +38,7 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	if !found {
 		return nil, fmt.Errorf("cluster not found for %s", *backupPolicy.SourceCluster)
 	}
-	storage, found := config.BackupStorage[*backupPolicy.Storage]
+	storage, found := config.BackupStorages[*backupPolicy.Storage]
 	if !found {
 		return nil, fmt.Errorf("storage not found for %s", *backupPolicy.Storage)
 	}

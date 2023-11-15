@@ -11,7 +11,7 @@ import (
 
 func TestAddStorage(t *testing.T) {
 	config := &model.Config{
-		BackupStorage: map[string]*model.BackupStorage{},
+		BackupStorages: map[string]*model.BackupStorage{},
 	}
 
 	newStorage := &model.BackupStorage{
@@ -36,7 +36,7 @@ func TestAddStorage(t *testing.T) {
 func TestUpdateStorage(t *testing.T) {
 	storage := "storage"
 	config := &model.Config{
-		BackupStorage: map[string]*model.BackupStorage{storage: {Name: &storage}},
+		BackupStorages: map[string]*model.BackupStorage{storage: {Name: &storage}},
 	}
 
 	newStorage := &model.BackupStorage{
@@ -50,7 +50,7 @@ func TestUpdateStorage(t *testing.T) {
 		t.Errorf("Expected nil error, got %v", err)
 	}
 
-	if *config.BackupStorage[storage].Path != "path" {
+	if *config.BackupStorages[storage].Path != "path" {
 		t.Errorf("Value in storage is not updated")
 	}
 
@@ -67,8 +67,8 @@ func TestDeleteStorage(t *testing.T) {
 	storage := "storage"
 	storage2 := "storage2"
 	config := &model.Config{
-		BackupPolicy:  map[string]*model.BackupPolicy{policy: {Name: &policy, Storage: &storage}},
-		BackupStorage: map[string]*model.BackupStorage{storage: {Name: &storage}, storage2: {Name: &storage2}},
+		BackupPolicies: map[string]*model.BackupPolicy{policy: {Name: &policy, Storage: &storage}},
+		BackupStorages: map[string]*model.BackupStorage{storage: {Name: &storage}, storage2: {Name: &storage2}},
 	}
 
 	// Deleting a storage that is being used by a policy should result in an error
@@ -81,7 +81,7 @@ func TestDeleteStorage(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
-	if len(config.BackupStorage) != 1 {
+	if len(config.BackupStorages) != 1 {
 		t.Errorf("Expected size = 1")
 	}
 

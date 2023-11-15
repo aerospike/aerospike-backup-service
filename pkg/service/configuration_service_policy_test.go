@@ -13,8 +13,8 @@ func TestAddPolicyOK(t *testing.T) {
 	storage := "storage"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {Name: &cluster}},
-		BackupStorage:     map[string]*model.BackupStorage{storage: {Name: &storage}},
-		BackupPolicy:      map[string]*model.BackupPolicy{},
+		BackupStorages:    map[string]*model.BackupStorage{storage: {Name: &storage}},
+		BackupPolicies:    map[string]*model.BackupPolicy{},
 	}
 
 	pass := model.BackupPolicy{Name: ptr.String("newName"), Storage: &storage, SourceCluster: &cluster}
@@ -42,9 +42,9 @@ func TestAddPolicyErrors(t *testing.T) {
 	}
 
 	config := &model.Config{
-		BackupPolicy:      map[string]*model.BackupPolicy{policy: {Name: &policy}},
+		BackupPolicies:    map[string]*model.BackupPolicy{policy: {Name: &policy}},
 		AerospikeClusters: map[string]*model.AerospikeCluster{policy: {Name: &cluster}},
-		BackupStorage:     map[string]*model.BackupStorage{storage: {Name: &storage}},
+		BackupStorages:    map[string]*model.BackupStorage{storage: {Name: &storage}},
 	}
 
 	for _, testPolicy := range fails {
@@ -58,7 +58,7 @@ func TestAddPolicyErrors(t *testing.T) {
 func TestUpdatePolicy(t *testing.T) {
 	name := "policy1"
 	config := &model.Config{
-		BackupPolicy: map[string]*model.BackupPolicy{name: {Name: &name}},
+		BackupPolicies: map[string]*model.BackupPolicy{name: {Name: &name}},
 	}
 
 	updatedPolicy := &model.BackupPolicy{
@@ -76,15 +76,15 @@ func TestUpdatePolicy(t *testing.T) {
 		t.Errorf("UpdatePolicy failed, expected nil error, got %v", err)
 	}
 
-	if *config.BackupPolicy[name].Name != *updatedPolicy.Name {
-		t.Errorf("UpdatePolicy failed, expected policy name to be updated, got %v", *config.BackupPolicy[name].Name)
+	if *config.BackupPolicies[name].Name != *updatedPolicy.Name {
+		t.Errorf("UpdatePolicy failed, expected policy name to be updated, got %v", *config.BackupPolicies[name].Name)
 	}
 }
 
 func TestDeletePolicy(t *testing.T) {
 	name := "policy1"
 	config := &model.Config{
-		BackupPolicy: map[string]*model.BackupPolicy{name: {Name: &name}},
+		BackupPolicies: map[string]*model.BackupPolicy{name: {Name: &name}},
 	}
 
 	err := DeletePolicy(config, ptr.String("policy2"))
@@ -97,7 +97,7 @@ func TestDeletePolicy(t *testing.T) {
 		t.Errorf("DeletePolicy failed, expected nil error, got %v", err)
 	}
 
-	if len(config.BackupPolicy) != 0 {
-		t.Errorf("DeletePolicy failed, expected policy to be deleted, got %d", len(config.BackupPolicy))
+	if len(config.BackupPolicies) != 0 {
+		t.Errorf("DeletePolicy failed, expected policy to be deleted, got %d", len(config.BackupPolicies))
 	}
 }

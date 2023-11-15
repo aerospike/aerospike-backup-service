@@ -60,8 +60,8 @@ func ScheduleHandlers(ctx context.Context, handlers []BackupScheduler) {
 // BuildBackupHandlers builds a list of BackupSchedulers according to
 // the given configuration.
 func BuildBackupHandlers(config *model.Config) []BackupScheduler {
-	schedulers := make([]BackupScheduler, 0, len(config.BackupPolicy))
-	for _, backupPolicy := range config.BackupPolicy {
+	schedulers := make([]BackupScheduler, 0, len(config.BackupPolicies))
+	for _, backupPolicy := range config.BackupPolicies {
 		handler, err := NewBackupHandler(config, backupPolicy)
 		util.Check(err)
 		schedulers = append(schedulers, handler)

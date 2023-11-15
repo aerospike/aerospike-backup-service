@@ -52,7 +52,7 @@ func TestDeleteCluster(t *testing.T) {
 	name2 := "cluster2"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{name: {Name: &name}, name2: {Name: &name2}},
-		BackupPolicy:      map[string]*model.BackupPolicy{name: {Name: ptr.String("policy1"), SourceCluster: &name}},
+		BackupPolicies:    map[string]*model.BackupPolicy{name: {Name: ptr.String("policy1"), SourceCluster: &name}},
 	}
 	err := DeleteCluster(config, &name)
 	if err == nil {
