@@ -89,7 +89,7 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 // @Tags        Configuration
 // @Router      /config/cluster [get]
 // @Produce     json
-// @Success  	200 {object} map[string][]model.AerospikeCluster
+// @Success  	200 {object} map[string]model.AerospikeCluster
 // @Failure     400 {string} string
 func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 	clusters := ws.config.AerospikeClusters
@@ -195,7 +195,7 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /config/storage [get]
 // @Produce     json
-// @Success  	200 {object} map[string][]model.BackupStorage
+// @Success  	200 {object} map[string]model.BackupStorage
 // @Failure     400 {string} string
 func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
 	storage := ws.config.BackupStorages
@@ -302,7 +302,7 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /config/policy [get]
 // @Produce     json
-// @Success  	200 {object} map[string][]model.BackupPolicy
+// @Success  	200 {object} map[string]model.BackupPolicy
 // @Failure     400 {string} string
 func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
 	jsonResponse, err := json.Marshal(ws.config.BackupPolicies)

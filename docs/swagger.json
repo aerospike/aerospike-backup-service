@@ -180,8 +180,8 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
+                            "type": "object",
+                            "additionalProperties": {
                                 "$ref": "#/definitions/model.AerospikeCluster"
                             }
                         }
@@ -300,8 +300,8 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
+                            "type": "object",
+                            "additionalProperties": {
                                 "$ref": "#/definitions/model.BackupPolicy"
                             }
                         }
@@ -420,8 +420,8 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
+                            "type": "object",
+                            "additionalProperties": {
                                 "$ref": "#/definitions/model.BackupStorage"
                             }
                         }
@@ -649,7 +649,7 @@
         "model.AerospikeCluster": {
             "type": "object",
             "properties": {
-                "auth_mode": {
+                "auth-mode": {
                     "type": "string"
                 },
                 "host": {
@@ -661,13 +661,13 @@
                 "password": {
                     "type": "string"
                 },
-                "password_path": {
+                "password-path": {
                     "type": "string"
                 },
                 "port": {
                     "type": "integer"
                 },
-                "use_services_alternate": {
+                "use-services-alternate": {
                     "type": "boolean"
                 },
                 "user": {
@@ -681,7 +681,7 @@
                 "key": {
                     "type": "string"
                 },
-                "last_modified": {
+                "last-modified": {
                     "type": "string"
                 },
                 "size": {
@@ -692,34 +692,34 @@
         "model.BackupPolicy": {
             "type": "object",
             "properties": {
-                "after_digest": {
+                "after-digest": {
                     "type": "string"
                 },
                 "bandwidth": {
                     "type": "integer"
                 },
-                "bin_list": {
+                "bin-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
-                "file_limit": {
+                "file-limit": {
                     "type": "integer"
                 },
-                "filter_exp": {
+                "filter-exp": {
                     "type": "string"
                 },
-                "incr_interval": {
+                "incr-interval": {
                     "type": "integer"
                 },
                 "interval": {
                     "type": "integer"
                 },
-                "max_records": {
+                "max-records": {
                     "type": "integer"
                 },
-                "max_retries": {
+                "max-retries": {
                     "type": "integer"
                 },
                 "name": {
@@ -728,19 +728,19 @@
                 "namespace": {
                     "type": "string"
                 },
-                "no_bins": {
+                "no-bins": {
                     "type": "boolean"
                 },
-                "no_indexes": {
+                "no-indexes": {
                     "type": "boolean"
                 },
-                "no_records": {
+                "no-records": {
                     "type": "boolean"
                 },
-                "no_udfs": {
+                "no-udfs": {
                     "type": "boolean"
                 },
-                "node_list": {
+                "node-list": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.Node"
@@ -749,37 +749,37 @@
                 "parallel": {
                     "type": "integer"
                 },
-                "partition_list": {
+                "partition-list": {
                     "type": "string"
                 },
-                "records_per_second": {
+                "records-per-second": {
                     "type": "integer"
                 },
-                "remove_artifacts": {
+                "remove-artifacts": {
                     "type": "boolean"
                 },
-                "remove_files": {
+                "remove-files": {
                     "type": "boolean"
                 },
-                "retry_delay": {
+                "retry-delay": {
                     "type": "integer"
                 },
-                "set_list": {
+                "set-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
-                "socket_timeout": {
+                "socket-timeout": {
                     "type": "integer"
                 },
-                "source_cluster": {
+                "source-cluster": {
                     "type": "string"
                 },
                 "storage": {
                     "type": "string"
                 },
-                "total_timeout": {
+                "total-timeout": {
                     "type": "integer"
                 },
                 "type": {
@@ -796,16 +796,16 @@
                 "path": {
                     "type": "string"
                 },
-                "s3_endpoint_override": {
+                "s3-endpoint-override": {
                     "type": "string"
                 },
-                "s3_log_level": {
+                "s3-log-level": {
                     "type": "string"
                 },
-                "s3_profile": {
+                "s3-profile": {
                     "type": "string"
                 },
-                "s3_region": {
+                "s3-region": {
                     "type": "string"
                 },
                 "type": {
@@ -827,25 +827,25 @@
         "model.Config": {
             "type": "object",
             "properties": {
-                "aerospike-cluster": {
-                    "type": "array",
-                    "items": {
+                "aerospike-clusters": {
+                    "type": "object",
+                    "additionalProperties": {
                         "$ref": "#/definitions/model.AerospikeCluster"
                     }
                 },
-                "backup-policy": {
-                    "type": "array",
-                    "items": {
+                "backup-policies": {
+                    "type": "object",
+                    "additionalProperties": {
                         "$ref": "#/definitions/model.BackupPolicy"
                     }
                 },
-                "backup-storage": {
-                    "type": "array",
-                    "items": {
+                "backup-storages": {
+                    "type": "object",
+                    "additionalProperties": {
                         "$ref": "#/definitions/model.BackupStorage"
                     }
                 },
-                "http-server": {
+                "service": {
                     "$ref": "#/definitions/model.HTTPServerConfig"
                 }
             }
@@ -853,7 +853,7 @@
         "model.HTTPServerConfig": {
             "type": "object",
             "properties": {
-                "host": {
+                "address": {
                     "type": "string"
                 },
                 "port": {
@@ -884,7 +884,7 @@
                 "tps": {
                     "type": "integer"
                 },
-                "white_list": {
+                "white-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -895,16 +895,16 @@
         "model.RestoreRequest": {
             "type": "object",
             "properties": {
-                "auth_mode": {
+                "auth-mode": {
                     "type": "string"
                 },
                 "bandwidth": {
                     "type": "integer"
                 },
-                "batch_size": {
+                "batch-size": {
                     "type": "integer"
                 },
-                "bin_list": {
+                "bin-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -913,7 +913,7 @@
                 "directory": {
                     "type": "string"
                 },
-                "disable_batch_writes": {
+                "disable-batch-writes": {
                     "type": "boolean"
                 },
                 "file": {
@@ -922,22 +922,22 @@
                 "host": {
                     "type": "string"
                 },
-                "max_async_batches": {
+                "max-async-batches": {
                     "type": "integer"
                 },
-                "no_generation": {
+                "no-generation": {
                     "type": "boolean"
                 },
-                "no_indexes": {
+                "no-indexes": {
                     "type": "boolean"
                 },
-                "no_records": {
+                "no-records": {
                     "type": "boolean"
                 },
-                "no_udfs": {
+                "no-udfs": {
                     "type": "boolean"
                 },
-                "ns_list": {
+                "ns-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -955,19 +955,19 @@
                 "replace": {
                     "type": "boolean"
                 },
-                "s3_endpoint_override": {
+                "s3-endpoint-override": {
                     "type": "string"
                 },
-                "s3_log_level": {
+                "s3-log-level": {
                     "type": "string"
                 },
-                "s3_profile": {
+                "s3-profile": {
                     "type": "string"
                 },
-                "s3_region": {
+                "s3-region": {
                     "type": "string"
                 },
-                "set_list": {
+                "set-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -982,7 +982,7 @@
                 "unique": {
                     "type": "boolean"
                 },
-                "use_services_alternate": {
+                "use-services-alternate": {
                     "type": "boolean"
                 },
                 "user": {
