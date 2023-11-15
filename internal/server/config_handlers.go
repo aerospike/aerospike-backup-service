@@ -195,7 +195,7 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /config/storage [get]
 // @Produce     json
-// @Success     200 {array} model.BackupStorage
+// @Success  	200 {object} map[string][]model.BackupStorage
 // @Failure     400 {string} string
 func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
 	storage := ws.config.BackupStorage

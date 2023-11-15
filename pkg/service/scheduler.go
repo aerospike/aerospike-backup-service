@@ -2,8 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
-
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
@@ -79,13 +77,4 @@ func ToBackend(handlers []BackupScheduler) []BackupBackend {
 		backends = append(backends, scheduler.GetBackend())
 	}
 	return backends
-}
-
-func backupStorageByName(name string, storage []*model.BackupStorage) (*model.BackupStorage, error) {
-	for _, st := range storage {
-		if *st.Name == name {
-			return st, nil
-		}
-	}
-	return nil, fmt.Errorf("storage not found for %s", name)
 }
