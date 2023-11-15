@@ -112,7 +112,13 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		return
 	}
 	backupRunFunc := func() {
-		backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
+		started := time.Now()
+		if !backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{}) {
+			backupFailureCounter.Inc()
+		} else {
+			elapsed := time.Since(started)
+			backupDurationGauge.Set(float64(elapsed.Milliseconds()))
+		}
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
@@ -152,7 +158,13 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		opts := shared.BackupOptions{}
 		lastIncrRunEpoch := state.LastIncrRun.UnixNano()
 		opts.ModAfter = &lastIncrRunEpoch
-		backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts)
+		started := time.Now()
+		if !backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts) {
+			incrBackupFailureCounter.Inc()
+		} else {
+			elapsed := time.Since(started)
+			incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
+		}
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)

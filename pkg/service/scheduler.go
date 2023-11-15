@@ -8,7 +8,6 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/stdio"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // backup service
@@ -16,41 +15,6 @@ var backupService shared.Backup = shared.NewBackup()
 
 // stdIO captures standard output
 var stdIO *stdio.CgoStdio = &stdio.CgoStdio{}
-
-// a counter metric for backup run number
-var backupCounter = prometheus.NewCounter(
-	prometheus.CounterOpts{
-		Name: "backup_runs_total",
-		Help: "Backup runs counter.",
-	})
-
-// a counter metric for incremental backup run number
-var incrBackupCounter = prometheus.NewCounter(
-	prometheus.CounterOpts{
-		Name: "backup_incremental_runs_total",
-		Help: "Incremental backup runs counter.",
-	})
-
-// a counter metric for backup skip number
-var backupSkippedCounter = prometheus.NewCounter(
-	prometheus.CounterOpts{
-		Name: "backup_skip_total",
-		Help: "Backup skip counter.",
-	})
-
-// a counter metric for incremental backup skip number
-var incrBackupSkippedCounter = prometheus.NewCounter(
-	prometheus.CounterOpts{
-		Name: "backup_incremental_skip_total",
-		Help: "Incremental backup skip counter.",
-	})
-
-func init() {
-	prometheus.MustRegister(backupCounter)
-	prometheus.MustRegister(incrBackupCounter)
-	prometheus.MustRegister(backupSkippedCounter)
-	prometheus.MustRegister(incrBackupSkippedCounter)
-}
 
 // ScheduleHandlers schedules the configured backup policies.
 func ScheduleHandlers(ctx context.Context, handlers []BackupScheduler) {
