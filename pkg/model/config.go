@@ -14,7 +14,7 @@ type Config struct {
 	HTTPServer        *HTTPServerConfig            `yaml:"http-server,omitempty" json:"http-server,omitempty"`
 	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-cluster,omitempty" json:"aerospike-cluster,omitempty"`
 	BackupStorage     map[string]*BackupStorage    `yaml:"backup-storage,omitempty" json:"backup-storage,omitempty"`
-	BackupPolicy      []*BackupPolicy              `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty"`
+	BackupPolicy      map[string]*BackupPolicy     `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty"`
 }
 
 // NewConfigWithDefaultValues returns a new Config with default values.

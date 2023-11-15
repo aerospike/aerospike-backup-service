@@ -14,7 +14,8 @@ backup-storage:
     path: "./testout"
 
 backup-policy:
-  - name: "policy-daily"
+  policy-daily:
+    name: "policy-daily"
     interval: 30000
     incr_interval: 5000
     type: 1

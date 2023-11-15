@@ -22,12 +22,12 @@ func GetByName[T model.WithName](collection []T, name *string) (int, T) {
 	return -1, zero
 }
 
-func Find[T any](collection []T, f func(T) bool) (int, T) {
-	for i, item := range collection {
+func Find[T any](collection map[string]T, f func(T) bool) (T, bool) {
+	for _, item := range collection {
 		if f(item) {
-			return i, item
+			return item, true
 		}
 	}
 	var zero T
-	return -1, zero
+	return zero, false
 }

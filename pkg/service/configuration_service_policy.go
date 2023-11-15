@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/util"
 )
 
 // AddPolicy
@@ -25,35 +24,35 @@ func AddPolicy(config *model.Config, newPolicy *model.BackupPolicy) error {
 	if !found {
 		return fmt.Errorf("cluster %s not found", *newPolicy.SourceCluster)
 	}
-	_, existing := util.GetByName(config.BackupPolicy, newPolicy.Name)
-	if existing != nil {
+	_, found = config.BackupPolicy[*newPolicy.Name]
+	if found {
 		return fmt.Errorf("aerospike policy with the same name %s already exists", *newPolicy.Name)
 	}
 
-	config.BackupPolicy = append(config.BackupPolicy, newPolicy)
+	config.BackupPolicy[*newPolicy.Name] = newPolicy
 	return nil
 }
 
 // UpdatePolicy
 // updates an existing BackupPolicy in the configuration.
 func UpdatePolicy(config *model.Config, updatedPolicy *model.BackupPolicy) error {
-	i, existing := util.GetByName(config.BackupPolicy, updatedPolicy.Name)
-	if existing != nil {
-		config.BackupPolicy[i] = updatedPolicy
-		return nil
+	_, found := config.BackupPolicy[*updatedPolicy.Name]
+	if found {
+		return fmt.Errorf("policy %s not found", *updatedPolicy.Name)
 	}
 
-	return fmt.Errorf("policy %s not found", *updatedPolicy.Name)
+	config.BackupPolicy[*updatedPolicy.Name] = updatedPolicy
+	return nil
 }
 
 // DeletePolicy
 // deletes an BackupPolicy from the configuration if it is not used in any policy.
 func DeletePolicy(config *model.Config, policyToDeleteName *string) error {
-	i, existing := util.GetByName(config.BackupPolicy, policyToDeleteName)
-	if existing != nil {
-		config.BackupPolicy = append(config.BackupPolicy[:i], config.BackupPolicy[i+1:]...)
-		return nil
+	_, found := config.BackupPolicy[*policyToDeleteName]
+	if !found {
+		return fmt.Errorf("policy %s not found", *policyToDeleteName)
 	}
 
-	return fmt.Errorf("policy %s not found", *policyToDeleteName)
+	delete(config.BackupPolicy, *policyToDeleteName)
+	return nil
 }

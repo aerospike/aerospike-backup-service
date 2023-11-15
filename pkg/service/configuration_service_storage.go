@@ -46,10 +46,10 @@ func DeleteStorage(config *model.Config, storageToDeleteName *string) error {
 	if !found {
 		return fmt.Errorf("storage %s not found", *storageToDeleteName)
 	}
-	_, policy := util.Find(config.BackupPolicy, func(policy *model.BackupPolicy) bool {
+	policy, found := util.Find(config.BackupPolicy, func(policy *model.BackupPolicy) bool {
 		return *policy.Storage == *storageToDeleteName
 	})
-	if policy != nil {
+	if found {
 		return fmt.Errorf("cannot delete storage as it is used in a policy %s", *policy.Name)
 	}
 

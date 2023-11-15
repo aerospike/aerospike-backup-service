@@ -40,11 +40,10 @@ func DeleteCluster(config *model.Config, clusterToDeleteName *string) error {
 		return fmt.Errorf("cluster %s not found", *clusterToDeleteName)
 	}
 
-	_, policy := util.Find(config.BackupPolicy, func(policy *model.BackupPolicy) bool {
+	policy, found := util.Find(config.BackupPolicy, func(policy *model.BackupPolicy) bool {
 		return *policy.SourceCluster == *clusterToDeleteName
 	})
-
-	if policy != nil {
+	if found {
 		return fmt.Errorf("cannot delete cluster as it is used in a policy %s", *policy.Name)
 	}
 

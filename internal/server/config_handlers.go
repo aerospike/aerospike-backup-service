@@ -302,7 +302,7 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /config/policy [get]
 // @Produce     json
-// @Success     200 {array} model.BackupPolicy
+// @Success  	200 {object} map[string][]model.BackupPolicy
 // @Failure     400 {string} string
 func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
 	policies := ws.config.BackupPolicy
