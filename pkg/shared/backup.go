@@ -58,7 +58,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	backupConfig := C.backup_config_t{}
 	C.backup_config_default(&backupConfig)
 
-	setCString(&backupConfig.host, cluster.Host)
+	setCString(&backupConfig.host, cluster.Address)
 	setCInt(&backupConfig.port, cluster.Port)
 	setCBool(&backupConfig.use_services_alternate, cluster.UseServicesAlternate)
 

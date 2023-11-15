@@ -7,7 +7,7 @@ import (
 
 // RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
-	Host                 *string  `json:"host,omitempty"`
+	Address              *string  `json:"address,omitempty"`
 	Port                 *int32   `json:"port,omitempty"`
 	UseServicesAlternate *bool    `json:"use-services-alternate,omitempty"`
 	User                 *string  `json:"user,omitempty"`
@@ -45,8 +45,8 @@ func (r *RestoreRequest) Validate() error {
 	if r.Directory == nil && r.File == nil {
 		return errors.New("none of directory or file is specified")
 	}
-	if r.Host == nil {
-		return errors.New("host is not specified")
+	if r.Address == nil {
+		return errors.New("address is not specified")
 	}
 	if r.Port == nil {
 		return errors.New("port is not specified")
