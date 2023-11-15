@@ -7,9 +7,9 @@ import (
 
 // BackupState represents the state of a backup.
 type BackupState struct {
-	LastRun     time.Time `json:"last_run,omitempty"`
-	LastIncrRun time.Time `json:"last_incr_run,omitempty"`
-	Performed   int       `json:"performed,omitempty"`
+	LastRun     time.Time `yaml:"last-run,omitempty" json:"last-run,omitempty"`
+	LastIncrRun time.Time `yaml:"last-incr-run,omitempty" json:"last-incr-run,omitempty"`
+	Performed   int       `yaml:"performed,omitempty" json:"performed,omitempty"`
 }
 
 // String satisfies the fmt.Stringer interface.
