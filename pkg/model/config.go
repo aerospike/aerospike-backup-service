@@ -177,7 +177,3 @@ const (
 	Full BackupType = iota
 	Incremental
 )
-
-type WithName interface {
-	GetName() *string
-}
