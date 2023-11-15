@@ -89,7 +89,7 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 // @Tags        Configuration
 // @Router      /config/cluster [get]
 // @Produce     json
-// @Success     200 {array} model.AerospikeCluster
+// @Success  	200 {object} map[string]model.AerospikeCluster
 // @Failure     400 {string} string
 func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 	clusters := ws.config.AerospikeClusters
@@ -166,11 +166,11 @@ func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Requ
 // @Tags        Configuration
 // @Router      /config/storage [post]
 // @Accept      json
-// @Param       storage body model.BackupStorage true "backup storage"
+// @Param       storage body model.Storage true "backup storage"
 // @Success     201
 // @Failure     400 {string} string
 func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
-	var newStorage model.BackupStorage
+	var newStorage model.Storage
 	err := json.NewDecoder(r.Body).Decode(&newStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -189,16 +189,16 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-// readStorages reads all storages from the configuration.
-// @Summary     Reads all storages from the configuration.
-// @ID 	        readStorages
+// readStorage reads all storage from the configuration.
+// @Summary     Reads all storage from the configuration.
+// @ID 	        readStorage
 // @Tags        Configuration
 // @Router      /config/storage [get]
 // @Produce     json
-// @Success     200 {array} model.BackupStorage
+// @Success  	200 {object} map[string]model.Storage
 // @Failure     400 {string} string
-func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
-	storage := ws.config.BackupStorage
+func (ws *HTTPServer) readStorage(w http.ResponseWriter) {
+	storage := ws.config.Storage
 	jsonResponse, err := json.Marshal(storage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -215,11 +215,11 @@ func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
 // @Tags        Configuration
 // @Router      /config/storage [put]
 // @Accept      json
-// @Param       storage body model.BackupStorage true "backup storage"
+// @Param       storage body model.Storage true "backup storage"
 // @Success     200
 // @Failure     400 {string} string
 func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
-	var updatedStorage model.BackupStorage
+	var updatedStorage model.Storage
 	err := json.NewDecoder(r.Body).Decode(&updatedStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -302,11 +302,10 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /config/policy [get]
 // @Produce     json
-// @Success     200 {array} model.BackupPolicy
+// @Success  	200 {object} map[string]model.BackupPolicy
 // @Failure     400 {string} string
 func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
-	policies := ws.config.BackupPolicy
-	jsonResponse, err := json.Marshal(policies)
+	jsonResponse, err := json.Marshal(ws.config.BackupPolicies)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

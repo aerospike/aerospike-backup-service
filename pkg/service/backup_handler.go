@@ -23,7 +23,7 @@ type BackupHandler struct {
 	backend              BackupBackend
 	backupPolicy         *model.BackupPolicy
 	cluster              *model.AerospikeCluster
-	storage              *model.BackupStorage
+	storage              *model.Storage
 	state                *model.BackupState
 	fullBackupInProgress atomic.Bool
 }
@@ -34,13 +34,13 @@ var BackupScheduleTick = 1000 * time.Millisecond
 
 // NewBackupHandler returns a new BackupHandler instance.
 func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*BackupHandler, error) {
-	cluster, err := aerospikeClusterByName(*backupPolicy.SourceCluster, config.AerospikeClusters)
-	if err != nil {
-		return nil, err
+	cluster, found := config.AerospikeClusters[*backupPolicy.SourceCluster]
+	if !found {
+		return nil, fmt.Errorf("cluster not found for %s", *backupPolicy.SourceCluster)
 	}
-	storage, err := backupStorageByName(*backupPolicy.Storage, config.BackupStorage)
-	if err != nil {
-		return nil, err
+	storage, found := config.Storage[*backupPolicy.Storage]
+	if !found {
+		return nil, fmt.Errorf("storage not found for %s", *backupPolicy.Storage)
 	}
 
 	var backupBackend BackupBackend

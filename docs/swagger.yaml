@@ -1,7 +1,7 @@
 definitions:
   model.AerospikeCluster:
     properties:
-      auth_mode:
+      auth-mode:
         type: string
       host:
         type: string
@@ -9,11 +9,11 @@ definitions:
         type: string
       password:
         type: string
-      password_path:
+      password-path:
         type: string
       port:
         type: integer
-      use_services_alternate:
+      use-services-alternate:
         type: boolean
       user:
         type: string
@@ -22,92 +22,75 @@ definitions:
     properties:
       key:
         type: string
-      last_modified:
+      last-modified:
         type: string
       size:
         type: integer
     type: object
   model.BackupPolicy:
     properties:
-      after_digest:
+      after-digest:
         type: string
       bandwidth:
         type: integer
-      bin_list:
+      bin-list:
         items:
           type: string
         type: array
-      file_limit:
+      file-limit:
         type: integer
-      filter_exp:
+      filter-exp:
         type: string
-      incr_interval:
+      incr-interval:
         type: integer
       interval:
         type: integer
-      max_records:
+      max-records:
         type: integer
-      max_retries:
+      max-retries:
         type: integer
       name:
         type: string
       namespace:
         type: string
-      no_bins:
+      no-bins:
         type: boolean
-      no_indexes:
+      no-indexes:
         type: boolean
-      no_records:
+      no-records:
         type: boolean
-      no_udfs:
+      no-udfs:
         type: boolean
-      node_list:
+      node-list:
         items:
           $ref: '#/definitions/model.Node'
         type: array
       parallel:
         type: integer
-      partition_list:
+      partition-list:
         type: string
-      records_per_second:
+      records-per-second:
         type: integer
-      remove_artifacts:
+      remove-artifacts:
         type: boolean
-      remove_files:
+      remove-files:
         type: boolean
-      retry_delay:
+      retry-delay:
         type: integer
-      set_list:
+      set-list:
         items:
           type: string
         type: array
-      socket_timeout:
+      socket-timeout:
         type: integer
-      source_cluster:
+      source-cluster:
         type: string
       storage:
         type: string
-      total_timeout:
+      total-timeout:
         type: integer
       type:
         $ref: '#/definitions/model.BackupType'
-    type: object
-  model.BackupStorage:
-    properties:
-      name:
-        type: string
-      path:
-        type: string
-      s3_endpoint_override:
-        type: string
-      s3_log_level:
-        type: string
-      s3_profile:
-        type: string
-      s3_region:
-        type: string
-      type:
-        $ref: '#/definitions/model.StorageType'
     type: object
   model.BackupType:
     enum:
@@ -119,24 +102,24 @@ definitions:
     - Incremental
   model.Config:
     properties:
-      aerospike-cluster:
-        items:
+      aerospike-clusters:
+        additionalProperties:
           $ref: '#/definitions/model.AerospikeCluster'
-        type: array
-      backup-policy:
-        items:
+        type: object
+      backup-policies:
+        additionalProperties:
           $ref: '#/definitions/model.BackupPolicy'
-        type: array
-      backup-storage:
-        items:
-          $ref: '#/definitions/model.BackupStorage'
-        type: array
-      http-server:
+        type: object
+      service:
         $ref: '#/definitions/model.HTTPServerConfig'
+      storage:
+        additionalProperties:
+          $ref: '#/definitions/model.Storage'
+        type: object
     type: object
   model.HTTPServerConfig:
     properties:
-      host:
+      address:
         type: string
       port:
         type: integer
@@ -156,42 +139,42 @@ definitions:
         type: integer
       tps:
         type: integer
-      white_list:
+      white-list:
         items:
           type: string
         type: array
     type: object
   model.RestoreRequest:
     properties:
-      auth_mode:
+      auth-mode:
         type: string
       bandwidth:
         type: integer
-      batch_size:
+      batch-size:
         type: integer
-      bin_list:
+      bin-list:
         items:
           type: string
         type: array
       directory:
         type: string
-      disable_batch_writes:
+      disable-batch-writes:
         type: boolean
       file:
         type: string
       host:
         type: string
-      max_async_batches:
+      max-async-batches:
         type: integer
-      no_generation:
+      no-generation:
         type: boolean
-      no_indexes:
+      no-indexes:
         type: boolean
-      no_records:
+      no-records:
         type: boolean
-      no_udfs:
+      no-udfs:
         type: boolean
-      ns_list:
+      ns-list:
         items:
           type: string
         type: array
@@ -203,15 +186,15 @@ definitions:
         type: integer
       replace:
         type: boolean
-      s3_endpoint_override:
+      s3-endpoint-override:
         type: string
-      s3_log_level:
+      s3-log-level:
         type: string
-      s3_profile:
+      s3-profile:
         type: string
-      s3_region:
+      s3-region:
         type: string
-      set_list:
+      set-list:
         items:
           type: string
         type: array
@@ -221,10 +204,27 @@ definitions:
         type: integer
       unique:
         type: boolean
-      use_services_alternate:
+      use-services-alternate:
         type: boolean
       user:
         type: string
+    type: object
+  model.Storage:
+    properties:
+      name:
+        type: string
+      path:
+        type: string
+      s3-endpoint-override:
+        type: string
+      s3-log-level:
+        type: string
+      s3-profile:
+        type: string
+      s3-region:
+        type: string
+      type:
+        $ref: '#/definitions/model.StorageType'
     type: object
   model.StorageType:
     enum:
@@ -375,9 +375,9 @@ paths:
         "200":
           description: OK
           schema:
-            items:
+            additionalProperties:
               $ref: '#/definitions/model.AerospikeCluster'
-            type: array
+            type: object
         "400":
           description: Bad Request
           schema:
@@ -454,9 +454,9 @@ paths:
         "200":
           description: OK
           schema:
-            items:
+            additionalProperties:
               $ref: '#/definitions/model.BackupPolicy'
-            type: array
+            type: object
         "400":
           description: Bad Request
           schema:
@@ -526,21 +526,21 @@ paths:
       tags:
       - Configuration
     get:
-      operationId: readStorages
+      operationId: readStorage
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.BackupStorage'
-            type: array
+            additionalProperties:
+              $ref: '#/definitions/model.Storage'
+            type: object
         "400":
           description: Bad Request
           schema:
             type: string
-      summary: Reads all storages from the configuration.
+      summary: Reads all storage from the configuration.
       tags:
       - Configuration
     post:
@@ -553,7 +553,7 @@ paths:
         name: storage
         required: true
         schema:
-          $ref: '#/definitions/model.BackupStorage'
+          $ref: '#/definitions/model.Storage'
       responses:
         "201":
           description: Created
@@ -574,7 +574,7 @@ paths:
         name: storage
         required: true
         schema:
-          $ref: '#/definitions/model.BackupStorage'
+          $ref: '#/definitions/model.Storage'
       responses:
         "200":
           description: OK

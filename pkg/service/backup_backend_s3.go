@@ -18,7 +18,7 @@ type BackupBackendS3 struct {
 var _ BackupBackend = (*BackupBackendS3)(nil)
 
 // NewBackupBackendS3 returns a new BackupBackendS3 instance.
-func NewBackupBackendS3(storage *model.BackupStorage,
+func NewBackupBackendS3(storage *model.Storage,
 	backupPolicy *model.BackupPolicy) *BackupBackendS3 {
 	s3Context := NewS3Context(storage)
 	return &BackupBackendS3{

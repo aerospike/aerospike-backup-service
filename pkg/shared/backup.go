@@ -44,7 +44,7 @@ func NewBackup() *BackupShared {
 //
 //nolint:funlen
 func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *model.AerospikeCluster,
-	storage *model.BackupStorage, opts BackupOptions) bool {
+	storage *model.Storage, opts BackupOptions) bool {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -138,7 +138,7 @@ func parseSetList(setVector *C.as_vector, setList *[]string) {
 	}
 }
 
-func getPath(storage *model.BackupStorage, backupPolicy *model.BackupPolicy) *string {
+func getPath(storage *model.Storage, backupPolicy *model.BackupPolicy) *string {
 	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
 		path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.FullBackupDirectory, timeSuffix())
 		return &path
@@ -147,7 +147,7 @@ func getPath(storage *model.BackupStorage, backupPolicy *model.BackupPolicy) *st
 	return &path
 }
 
-func getIncrementalPath(storage *model.BackupStorage) *string {
+func getIncrementalPath(storage *model.Storage) *string {
 	path := fmt.Sprintf("%s/%s/%s.asb", *storage.Path, model.IncrementalBackupDirectory, timeSuffix())
 	return &path
 }
