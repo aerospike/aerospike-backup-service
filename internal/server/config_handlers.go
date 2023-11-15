@@ -189,16 +189,16 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-// readStorages reads all storages from the configuration.
-// @Summary     Reads all storages from the configuration.
-// @ID 	        readStorages
+// readStorage reads all storage from the configuration.
+// @Summary     Reads all storage from the configuration.
+// @ID 	        readStorage
 // @Tags        Configuration
 // @Router      /config/storage [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.Storage
 // @Failure     400 {string} string
-func (ws *HTTPServer) readStorages(w http.ResponseWriter) {
-	storage := ws.config.Storages
+func (ws *HTTPServer) readStorage(w http.ResponseWriter) {
+	storage := ws.config.Storage
 	jsonResponse, err := json.Marshal(storage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

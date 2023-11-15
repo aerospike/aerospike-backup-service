@@ -13,7 +13,7 @@ import (
 type Config struct {
 	HTTPServer        *HTTPServerConfig            `yaml:"service,omitempty" json:"service,omitempty"`
 	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
-	Storages          map[string]*Storage          `yaml:"storages,omitempty" json:"storages,omitempty"`
+	Storage           map[string]*Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
 	BackupPolicies    map[string]*BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
 }
 

@@ -414,8 +414,8 @@
                 "tags": [
                     "Configuration"
                 ],
-                "summary": "Reads all storages from the configuration.",
-                "operationId": "readStorages",
+                "summary": "Reads all storage from the configuration.",
+                "operationId": "readStorage",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -816,7 +816,7 @@
                 "service": {
                     "$ref": "#/definitions/model.HTTPServerConfig"
                 },
-                "storages": {
+                "storage": {
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/model.Storage"

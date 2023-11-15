@@ -224,7 +224,7 @@ func (ws *HTTPServer) configStorageActionHandler(w http.ResponseWriter, r *http.
 	case http.MethodPost:
 		ws.addStorage(w, r)
 	case http.MethodGet:
-		ws.readStorages(w)
+		ws.readStorage(w)
 	case http.MethodPut:
 		ws.updateStorage(w, r)
 	case http.MethodDelete:

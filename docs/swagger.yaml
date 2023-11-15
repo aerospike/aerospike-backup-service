@@ -112,7 +112,7 @@ definitions:
         type: object
       service:
         $ref: '#/definitions/model.HTTPServerConfig'
-      storages:
+      storage:
         additionalProperties:
           $ref: '#/definitions/model.Storage'
         type: object
@@ -526,7 +526,7 @@ paths:
       tags:
       - Configuration
     get:
-      operationId: readStorages
+      operationId: readStorage
       produces:
       - application/json
       responses:
@@ -540,7 +540,7 @@ paths:
           description: Bad Request
           schema:
             type: string
-      summary: Reads all storages from the configuration.
+      summary: Reads all storage from the configuration.
       tags:
       - Configuration
     post:
