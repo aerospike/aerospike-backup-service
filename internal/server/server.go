@@ -94,7 +94,7 @@ type HTTPServer struct {
 //
 // NewHTTPServer returns a new instance of HTTPServer.
 func NewHTTPServer(backends []service.BackupBackend, config *model.Config) *HTTPServer {
-	addr := fmt.Sprintf("%s:%d", config.HTTPServer.Host, config.HTTPServer.Port)
+	addr := fmt.Sprintf("%s:%d", config.HTTPServer.Address, config.HTTPServer.Port)
 
 	backendMap := make(map[string]service.BackupBackend, len(backends))
 	for _, backend := range backends {

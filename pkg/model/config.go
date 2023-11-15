@@ -11,7 +11,7 @@ import (
 
 // Config represents the service configuration file.
 type Config struct {
-	HTTPServer        *HTTPServerConfig            `yaml:"http-server,omitempty" json:"http-server,omitempty"`
+	HTTPServer        *HTTPServerConfig            `yaml:"service,omitempty" json:"service,omitempty"`
 	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-cluster,omitempty" json:"aerospike-cluster,omitempty"`
 	BackupStorage     map[string]*BackupStorage    `yaml:"backup-storage,omitempty" json:"backup-storage,omitempty"`
 	BackupPolicy      map[string]*BackupPolicy     `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty"`
@@ -21,8 +21,8 @@ type Config struct {
 func NewConfigWithDefaultValues() *Config {
 	config := &Config{}
 	config.HTTPServer = &HTTPServerConfig{
-		Host: "0.0.0.0",
-		Port: 8080,
+		Address: "0.0.0.0",
+		Port:    8080,
 		Rate: RateLimiterConfig{
 			Tps:       1024,
 			Size:      1024,
@@ -43,9 +43,9 @@ func (c Config) String() string {
 
 // HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
-	Host string            `yaml:"host,omitempty" json:"host,omitempty"`
-	Port int               `yaml:"port,omitempty" json:"port,omitempty"`
-	Rate RateLimiterConfig `yaml:"rate,omitempty" json:"rate,omitempty"`
+	Address string            `yaml:"address,omitempty" json:"address,omitempty"`
+	Port    int               `yaml:"port,omitempty" json:"port,omitempty"`
+	Rate    RateLimiterConfig `yaml:"rate,omitempty" json:"rate,omitempty"`
 }
 
 // RateLimiterConfig represents the service's HTTP server rate limiter configuration.
