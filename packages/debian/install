@@ -1,0 +1,2 @@
+../target/aerospike-backup-service /usr/bin/
+../lib/* /usr/lib

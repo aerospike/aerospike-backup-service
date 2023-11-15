@@ -1,11 +1,21 @@
 # Go parameters
+WORKSPACE = $(shell git rev-parse --show-toplevel)
 GOCMD = go
 UNAME = $(shell uname -sm | tr ' ' '-')
-CGO_CFLAGS = -I./modules/aerospike-tools-backup/modules/c-client/target/$(UNAME)/include \
-  -I./modules/aerospike-tools-backup/include
+CGO_CFLAGS=-I $(WORKSPACE)/modules/aerospike-tools-backup/modules/c-client/target/$(UNAME)/include \
+ -I $(WORKSPACE)/modules/aerospike-tools-backup/include
 GOBUILD = CGO_CFLAGS="$(CGO_CFLAGS)" CGO_ENABLED=1 $(GOCMD) build
 GOTEST = $(GOCMD) test
 GOCLEAN = $(GOCMD) clean
+GO_VERSION = 1.21.4
+GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
+OS = $(shell uname | tr '[:upper:]' '[:lower:]')
+ARCH =$(shell uname -m)
+ifeq ($(ARCH),x86_64)
+	ARCH = amd64
+else ifeq ($(ARCH),aarch64)
+	ARCH = arm64
+endif
 
 LSB_EXISTS := $(shell which lsb_release 2> /dev/null)
 ifeq ($(LSB_EXISTS),)
@@ -60,10 +70,50 @@ FPM_COMMON_ARGS = \
 	--license $(LICENSE) \
 	--after-install $(POST_INSTALL_SCRIPT)
 
+.PHONY: install-aws-sdk-cpp
+install-aws-sdk-cpp:
+	git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
+	cd $(WORKSPACE)/aws-sdk-cpp && \
+	cmake -S . -B build \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DBUILD_ONLY="s3" \
+	-DBUILD_SHARED_LIBS=OFF \
+	-DENABLE_TESTING=OFF \
+	-DCMAKE_INSTALL_PREFIX=/usr/local \
+	-DCMAKE_INSTALL_LIBDIR=lib
+	cd $(WORKSPACE)/aws-sdk-cpp/ && sudo make -C build
+	cd $(WORKSPACE)/aws-sdk-cpp/build && sudo make install
+
+.PHONY: install-go
+install-go:
+ifdef GOBIN_VERSION
+else
+	curl -L "https://go.dev/dl/go$(GO_VERSION).$(OS)-$(ARCH).tar.gz" > "go$(GO_VERSION).$(OS)-$(ARCH).tar.gz"; \
+	sudo tar -C /usr/local -xzf "go$(GO_VERSION).$(OS)-$(ARCH).tar.gz" && rm "go$(GO_VERSION).$(OS)-$(ARCH).tar.gz"; \
+	echo export PATH="\$PATH:/usr/local/go/bin" >> $(HOME)/.profile
+endif
+
+.PHONY: install-deb-build-deps
+install-deb-build-deps:
+	sudo apt-get update
+	sudo sh -c 'curl -OL https://go.dev/dl/go1.21.4.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.21.4.linux-amd64.tar.gz && rm go1.21.4.linux-amd64.tar.gz && echo "export PATH=\$PATH:/usr/local/go/bin" >> /etc/profile.d/go.sh'
+	sudo apt-get install -y \
+	build-essential \
+	libssl-dev \
+	libuv1-dev \
+	libcurl4-openssl-dev \
+	libzstd-dev \
+	cmake \
+	pkg-config \
+	zlib1g-dev \
+	debhelper \
+	lintian \
+	devscripts
+
 .PHONY: build-submodules
-build-submodules:
-	git submodule update --init --recursive
-	$(MAKE) -C $(TOOLS_DIR) shared EVENT_LIB=libuv
+build-submodules install-aws-sdk-cpp:
+	cd $(TOOLS_DIR) && git submodule update --init --recursive
+	$(MAKE) -C $(TOOLS_DIR) shared EVENT_LIB=libuv AWS_SDK_STATIC_PATH=/usr/local/lib
 	./scripts/copy_shared.sh
 
 .PHONY: clean-submodules
@@ -91,12 +141,10 @@ rpm: build prep
 		--package $(TARGET_DIR)/$(BINARY_NAME)-$(GIT_TAG)-1.$(DISTRO_SHORT)$(DISTRO_VERSION).$(ARCH).rpm
 
 .PHONY: deb
-deb: build prep
-	@which dpkg-architecture > /dev/null || (echo "dpkg-architecture is not installed"; exit 1)
-	$(eval ARCH := $(shell dpkg-architecture -q DEB_BUILD_ARCH))
-	fpm $(FPM_COMMON_ARGS) \
-		--output-type deb \
-		--package $(TARGET_DIR)/$(BINARY_NAME)_$(GIT_TAG)-1$(DISTRO_SHORT)$(DISTRO_VERSION)_$(ARCH).deb
+deb:
+	cd $(WORKSPACE)/packages && dpkg-buildpackage
+	mv $(WORKSPACE)/$(BINARY_NAME)_* $(WORKSPACE)/target
+
 
 .PHONY: tar
 tar: build prep
