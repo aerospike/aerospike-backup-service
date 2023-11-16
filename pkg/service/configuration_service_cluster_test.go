@@ -7,7 +7,7 @@ import (
 	"github.com/aws/smithy-go/ptr"
 )
 
-func TestAddCluster(t *testing.T) {
+func TestCluster_Add(t *testing.T) {
 	name := "cluster1"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{name: {Name: &name}},
@@ -25,7 +25,7 @@ func TestAddCluster(t *testing.T) {
 	}
 }
 
-func TestUpdateCluster(t *testing.T) {
+func TestCluster_Update(t *testing.T) {
 	name := "cluster1"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{name: {Name: &name}},
@@ -47,12 +47,15 @@ func TestUpdateCluster(t *testing.T) {
 	}
 }
 
-func TestDeleteCluster(t *testing.T) {
+func TestCluster_Delete(t *testing.T) {
 	name := "cluster1"
 	name2 := "cluster2"
+	policy := "policy"
+	routine := "routine"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{name: {Name: &name}, name2: {Name: &name2}},
-		BackupPolicies:    map[string]*model.BackupPolicy{name: {Name: ptr.String("policy1"), SourceCluster: &name}},
+		BackupPolicies:    map[string]*model.BackupPolicy{policy: {Name: &policy}},
+		BackupRoutines:    map[string]*model.BackupRoutine{routine: {Name: routine, SourceCluster: name}},
 	}
 	err := DeleteCluster(config, &name)
 	if err == nil {

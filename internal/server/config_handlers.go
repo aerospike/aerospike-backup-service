@@ -372,3 +372,109 @@ func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// addRoutine
+// @Summary     Adds a backup routine to the config.
+// @ID          addRoutine
+// @Tags        Configuration
+// @Router      /config/routine [post]
+// @Accept      json
+// @Param       storage body model.BackupRoutine true "backup routine"
+// @Success     201
+// @Failure     400 {string} string
+func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
+	var newRoutine model.BackupRoutine
+	err := json.NewDecoder(r.Body).Decode(&newRoutine)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = service.AddRoutine(ws.config, &newRoutine)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = ConfigurationManager.WriteConfiguration(ws.config)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+}
+
+// readRoutines reads all backup routines from the configuration.
+// @Summary     Reads all routines from the configuration.
+// @ID	        readRoutines
+// @Tags        Configuration
+// @Router      /config/routine [get]
+// @Produce     json
+// @Success  	200 {object} map[string]model.BackupRoutine
+// @Failure     400 {string} string
+func (ws *HTTPServer) readRoutines(w http.ResponseWriter) {
+	jsonResponse, err := json.Marshal(ws.config.BackupRoutines)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(jsonResponse)
+}
+
+// updateRoutine updates an existing backup routine in the configuration.
+// @Summary      Updates an existing routine in the configuration.
+// @ID 	         updateRoutine
+// @Tags         Configuration
+// @Router       /config/routine [put]
+// @Accept       json
+// @Param        storage body model.BackupRoutine true "backup routine"
+// @Success      200
+// @Failure      400 {string} string
+func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
+	var updatedRoutine model.BackupRoutine
+	err := json.NewDecoder(r.Body).Decode(&updatedRoutine)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = service.UpdateRoutine(ws.config, &updatedRoutine)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = ConfigurationManager.WriteConfiguration(ws.config)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+// deleteRoutine
+// @Summary     Deletes a backup routine from the configuration by name.
+// @ID          deleteRoutine
+// @Tags        Configuration
+// @Router      /config/routine [delete]
+// @Param       name query string true "Routine Name"
+// @Success     204
+// @Failure     400 {string} string
+func (ws *HTTPServer) deleteRoutine(w http.ResponseWriter, r *http.Request) {
+	routineName := r.URL.Query().Get("name")
+	if routineName == "" {
+		http.Error(w, "Routine name is required", http.StatusBadRequest)
+		return
+	}
+
+	err := service.DeleteRoutine(ws.config, &routineName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = ConfigurationManager.WriteConfiguration(ws.config)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

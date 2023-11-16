@@ -155,6 +155,9 @@ func (ws *HTTPServer) Start() {
 	// policy config route
 	mux.HandleFunc("/config/policy", ws.configPolicyActionHandler)
 
+	// routine config route
+	mux.HandleFunc("/config/routine", ws.configRoutineActionHandler)
+
 	// health route
 	mux.HandleFunc("/health", healthActionHandler)
 
@@ -244,6 +247,21 @@ func (ws *HTTPServer) configPolicyActionHandler(w http.ResponseWriter, r *http.R
 		ws.updatePolicy(w, r)
 	case http.MethodDelete:
 		ws.deletePolicy(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (ws *HTTPServer) configRoutineActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		ws.addRoutine(w, r)
+	case http.MethodGet:
+		ws.readRoutines(w)
+	case http.MethodPut:
+		ws.updateRoutine(w, r)
+	case http.MethodDelete:
+		ws.deleteRoutine(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}

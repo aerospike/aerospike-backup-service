@@ -37,6 +37,7 @@ issues:
         - unparam
         - prealloc
         - funlen
+        - goconst
     - path: pkg/shared
       linters:
         - typecheck

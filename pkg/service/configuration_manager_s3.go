@@ -22,7 +22,8 @@ func NewS3ConfigurationManager(configStorage *model.Storage) ConfigurationManage
 func (s *S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	config := model.NewConfigWithDefaultValues()
 	s.readFile(s.Path, config)
-	return config, nil
+	err := config.Validate()
+	return config, err
 }
 
 // WriteConfiguration writes the configuration to S3.

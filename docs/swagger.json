@@ -406,6 +406,126 @@
                 }
             }
         },
+        "/config/routine": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads all routines from the configuration.",
+                "operationId": "readRoutines",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.BackupRoutine"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Updates an existing routine in the configuration.",
+                "operationId": "updateRoutine",
+                "parameters": [
+                    {
+                        "description": "backup routine",
+                        "name": "storage",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupRoutine"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Adds a backup routine to the config.",
+                "operationId": "addRoutine",
+                "parameters": [
+                    {
+                        "description": "backup routine",
+                        "name": "storage",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupRoutine"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Deletes a backup routine from the configuration by name.",
+                "operationId": "deleteRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine Name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/config/storage": {
             "get": {
                 "produces": [
@@ -692,29 +812,14 @@
         "model.BackupPolicy": {
             "type": "object",
             "properties": {
-                "after-digest": {
-                    "type": "string"
-                },
                 "bandwidth": {
                     "type": "integer"
-                },
-                "bin-list": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 },
                 "file-limit": {
                     "type": "integer"
                 },
                 "filter-exp": {
                     "type": "string"
-                },
-                "incr-interval": {
-                    "type": "integer"
-                },
-                "interval": {
-                    "type": "integer"
                 },
                 "max-records": {
                     "type": "integer"
@@ -723,9 +828,6 @@
                     "type": "integer"
                 },
                 "name": {
-                    "type": "string"
-                },
-                "namespace": {
                     "type": "string"
                 },
                 "no-bins": {
@@ -740,17 +842,8 @@
                 "no-udfs": {
                     "type": "boolean"
                 },
-                "node-list": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Node"
-                    }
-                },
                 "parallel": {
                     "type": "integer"
-                },
-                "partition-list": {
-                    "type": "string"
                 },
                 "records-per-second": {
                     "type": "integer"
@@ -764,26 +857,64 @@
                 "retry-delay": {
                     "type": "integer"
                 },
-                "set-list": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "socket-timeout": {
                     "type": "integer"
-                },
-                "source-cluster": {
-                    "type": "string"
-                },
-                "storage": {
-                    "type": "string"
                 },
                 "total-timeout": {
                     "type": "integer"
                 },
                 "type": {
                     "$ref": "#/definitions/model.BackupType"
+                }
+            }
+        },
+        "model.BackupRoutine": {
+            "type": "object",
+            "properties": {
+                "after-digest": {
+                    "type": "string"
+                },
+                "backup-policy": {
+                    "type": "string"
+                },
+                "bin-list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "incr-interval": {
+                    "type": "integer"
+                },
+                "interval": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "namespace": {
+                    "type": "string"
+                },
+                "node-list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Node"
+                    }
+                },
+                "partition-list": {
+                    "type": "string"
+                },
+                "set-list": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "source-cluster": {
+                    "type": "string"
+                },
+                "storage": {
+                    "type": "string"
                 }
             }
         },
@@ -811,6 +942,12 @@
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/model.BackupPolicy"
+                    }
+                },
+                "backup-routines": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/model.BackupRoutine"
                     }
                 },
                 "service": {

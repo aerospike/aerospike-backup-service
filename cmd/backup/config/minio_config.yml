@@ -1,27 +1,34 @@
 ---
-aerospike-cluster:
-  - name: "cluster1"
+aerospike-clusters:
+  cluster1:
+    name: "cluster1"
     host: "localhost"
     port: 3000
     # user: "tester"
     # password: "psw"
 
-backup-storage:
-  - name: "s3"
+storage:
+  s3:
+    name: "s3"
     type: 1
-    s3_endpoint_override: "http://localhost:9000"
-    s3_region: "eu-central-1"
-    s3_profile: "minio"
+    s3-endpoint_override: "http://localhost:9000"
+    s3-region: "eu-central-1"
+    s3-profile: "minio"
     path: "s3://as-backup-bucket/test-backup"
 
-backup-policy:
-  - name: "policy-daily"
-    interval: 30000
-    incr_interval: 5000
+backup-policies:
+  policy1:
+    name: "policy1"
     type: 1
-    source_cluster: "cluster1"
+    parallel: 1
+    remove-files: false
+
+backup-routines:
+  routine1:
+    name: "routine1"
+    interval: 30000
+    incr-interval: 5000
+    backup-policy: "policy1"
+    source-cluster: "cluster1"
     storage: "s3"
     namespace: "test"
-    parallel: 1
-    remove_files: false
-    
