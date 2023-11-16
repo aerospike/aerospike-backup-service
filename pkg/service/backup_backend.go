@@ -19,7 +19,4 @@ type BackupBackend interface {
 
 	// IncrementalBackupList returns a list of available incremental backups.
 	IncrementalBackupList() ([]model.BackupDetails, error)
-
-	// BackupPolicyName returns the name of the defining backup policy.
-	BackupPolicyName() string
 }

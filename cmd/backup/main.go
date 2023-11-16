@@ -112,7 +112,7 @@ func readConfiguration() (*model.Config, error) {
 
 func runHTTPServer(ctx context.Context, handlers []service.BackupScheduler,
 	config *model.Config) error {
-	server := server.NewHTTPServer(service.ToBackend(handlers), config)
+	server := server.NewHTTPServer(handlers, config)
 	go func() {
 		server.Start()
 	}()

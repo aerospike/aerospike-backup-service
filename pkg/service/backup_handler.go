@@ -16,6 +16,7 @@ import (
 type BackupScheduler interface {
 	Schedule(ctx context.Context)
 	GetBackend() BackupBackend
+	BackupRoutineName() string
 }
 
 // BackupHandler handles a configured backup policy.
@@ -213,6 +214,11 @@ func (h *BackupHandler) writeState() {
 // GetBackend returns the underlying BackupBackend.
 func (h *BackupHandler) GetBackend() BackupBackend {
 	return h.backend
+}
+
+// BackupRoutineName returns the name of the defining backup routine.
+func (h *BackupHandler) BackupRoutineName() string {
+	return h.backupRoutine.Name
 }
 
 func isStaleTick(t time.Time) bool {
