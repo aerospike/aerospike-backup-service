@@ -132,11 +132,6 @@ func (local *BackupBackendLocal) CleanDir(name string) {
 	}
 }
 
-// BackupPolicyName returns the name of the defining backup policy.
-func (local *BackupBackendLocal) BackupPolicyName() string {
-	return *local.backupPolicy.Name
-}
-
 func toBackupDetails(e fs.DirEntry, prefix string) model.BackupDetails {
 	details := model.BackupDetails{
 		Key: util.Ptr(filepath.Join(prefix, e.Name())),

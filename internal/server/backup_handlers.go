@@ -13,9 +13,9 @@ import (
 // @ID 	     getAvailableFullBackups
 // @Tags     Backup
 // @Produce  json
-// @Param    name query string true "Backup policy name"
+// @Param    name query string true "Backup routine name"
 // @Router   /backup/full/list [get]
-// @Success  200 {object} map[string][]model.BackupDetails "Full backups by policy"
+// @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Request) {
 	ws.getAvailableBackups(w, r, func(backend service.BackupBackend) ([]model.BackupDetails, error) {
@@ -27,9 +27,9 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 // @ID       getAvailableIncrementalBackups
 // @Tags     Backup
 // @Produce  json
-// @Param    name query string true "Backup policy name"
+// @Param    name query string true "Backup routine name"
 // @Router   /backup/incremental/list [get]
-// @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by policy"
+// @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *http.Request) {
 	ws.getAvailableBackups(w, r, func(backend service.BackupBackend) ([]model.BackupDetails, error) {
@@ -42,12 +42,12 @@ func (ws *HTTPServer) getAvailableBackups(
 	r *http.Request,
 	backupListFunc func(service.BackupBackend) ([]model.BackupDetails, error)) {
 
-	policies := ws.requestedPolicies(r)
-	policyToBackups := make(map[string][]model.BackupDetails)
-	for _, policyName := range policies {
-		backend, exists := ws.backupBackends[policyName]
+	routines := ws.requestedRoutines(r)
+	routineToBackups := make(map[string][]model.BackupDetails)
+	for _, routine := range routines {
+		backend, exists := ws.backupBackends[routine]
 		if !exists {
-			http.Error(w, "Backup backend does not exist for "+policyName, http.StatusNotFound)
+			http.Error(w, "Backup backend does not exist for "+routine, http.StatusNotFound)
 			return
 		}
 		list, err := backupListFunc(backend)
@@ -56,9 +56,9 @@ func (ws *HTTPServer) getAvailableBackups(
 			http.Error(w, "Failed to retrieve backup list", http.StatusInternalServerError)
 			return
 		}
-		policyToBackups[policyName] = list
+		routineToBackups[routine] = list
 	}
-	response, err := json.Marshal(policyToBackups)
+	response, err := json.Marshal(routineToBackups)
 	if err != nil {
 		slog.Error("Failed to parse backup list", "err", err)
 		http.Error(w, "Failed to parse backup list", http.StatusInternalServerError)
@@ -70,15 +70,15 @@ func (ws *HTTPServer) getAvailableBackups(
 	_, _ = w.Write(response)
 }
 
-// return an array containing single policy from request (if present), or all policies
-func (ws *HTTPServer) requestedPolicies(r *http.Request) []string {
-	queryPolicyName := r.URL.Query().Get("name")
-	if queryPolicyName != "" {
-		return []string{queryPolicyName}
+// return an array containing single routine from request (if present), or all routines
+func (ws *HTTPServer) requestedRoutines(r *http.Request) []string {
+	queryRoutineName := r.URL.Query().Get("name")
+	if queryRoutineName != "" {
+		return []string{queryRoutineName}
 	}
-	policies := make([]string, len(ws.config.BackupPolicies))
-	for _, p := range ws.config.BackupPolicies {
-		policies = append(policies, *p.Name)
+	routines := make([]string, len(ws.config.BackupRoutines))
+	for _, p := range ws.config.BackupRoutines {
+		routines = append(routines, p.Name)
 	}
-	return policies
+	return routines
 }

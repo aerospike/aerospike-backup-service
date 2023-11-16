@@ -102,8 +102,3 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 	}
 	return contents, err
 }
-
-// BackupPolicyName returns the name of the defining backup policy.
-func (s *BackupBackendS3) BackupPolicyName() string {
-	return *s.backupPolicy.Name
-}

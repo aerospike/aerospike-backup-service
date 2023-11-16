@@ -33,13 +33,3 @@ func BuildBackupHandlers(config *model.Config) []BackupScheduler {
 	}
 	return schedulers
 }
-
-// ToBackend returns a list of underlying BackupBackends
-// for the given list of BackupSchedulers.
-func ToBackend(handlers []BackupScheduler) []BackupBackend {
-	backends := make([]BackupBackend, 0, len(handlers))
-	for _, scheduler := range handlers {
-		backends = append(backends, scheduler.GetBackend())
-	}
-	return backends
-}
