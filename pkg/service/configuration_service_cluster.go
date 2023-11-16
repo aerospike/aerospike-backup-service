@@ -33,18 +33,18 @@ func UpdateCluster(config *model.Config, updatedCluster *model.AerospikeCluster)
 }
 
 // DeleteCluster
-// deletes an AerospikeCluster from the configuration if it is not used in any policy.
+// deletes an AerospikeCluster from the configuration if it is not used in any backup routine.
 func DeleteCluster(config *model.Config, clusterToDeleteName *string) error {
 	_, found := config.AerospikeClusters[*clusterToDeleteName]
 	if !found {
 		return fmt.Errorf("cluster %s not found", *clusterToDeleteName)
 	}
 
-	policy, found := util.Find(config.BackupPolicies, func(policy *model.BackupPolicy) bool {
-		return *policy.SourceCluster == *clusterToDeleteName
+	routine, found := util.Find(config.BackupRoutines, func(policy *model.BackupRoutine) bool {
+		return policy.SourceCluster == *clusterToDeleteName
 	})
 	if found {
-		return fmt.Errorf("cannot delete cluster as it is used in a policy %s", *policy.Name)
+		return fmt.Errorf("cannot delete cluster as it is used in a routine %s", routine.Name)
 	}
 
 	delete(config.AerospikeClusters, *clusterToDeleteName)

@@ -22,6 +22,7 @@ type BackupScheduler interface {
 type BackupHandler struct {
 	backend              BackupBackend
 	backupPolicy         *model.BackupPolicy
+	backupRoutine        *model.BackupRoutine
 	cluster              *model.AerospikeCluster
 	storage              *model.Storage
 	state                *model.BackupState
@@ -33,14 +34,18 @@ var _ BackupScheduler = (*BackupHandler)(nil)
 var BackupScheduleTick = 1000 * time.Millisecond
 
 // NewBackupHandler returns a new BackupHandler instance.
-func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*BackupHandler, error) {
-	cluster, found := config.AerospikeClusters[*backupPolicy.SourceCluster]
+func NewBackupHandler(config *model.Config, backupRoutine *model.BackupRoutine) (*BackupHandler, error) {
+	cluster, found := config.AerospikeClusters[backupRoutine.SourceCluster]
 	if !found {
-		return nil, fmt.Errorf("cluster not found for %s", *backupPolicy.SourceCluster)
+		return nil, fmt.Errorf("cluster not found for %s", backupRoutine.SourceCluster)
 	}
-	storage, found := config.Storage[*backupPolicy.Storage]
+	storage, found := config.Storage[backupRoutine.Storage]
 	if !found {
-		return nil, fmt.Errorf("storage not found for %s", *backupPolicy.Storage)
+		return nil, fmt.Errorf("storage not found for %s", backupRoutine.Storage)
+	}
+	backupPolicy, found := config.BackupPolicies[backupRoutine.BackupPolicy]
+	if !found {
+		return nil, fmt.Errorf("backupPolicy not found for %s", backupRoutine.BackupPolicy)
 	}
 
 	var backupBackend BackupBackend
@@ -54,11 +59,12 @@ func NewBackupHandler(config *model.Config, backupPolicy *model.BackupPolicy) (*
 	}
 
 	return &BackupHandler{
-		backend:      backupBackend,
-		backupPolicy: backupPolicy,
-		cluster:      cluster,
-		storage:      storage,
-		state:        backupBackend.readState(),
+		backend:       backupBackend,
+		backupRoutine: backupRoutine,
+		backupPolicy:  backupPolicy,
+		cluster:       cluster,
+		storage:       storage,
+		state:         backupBackend.readState(),
 	}, nil
 }
 
@@ -67,7 +73,7 @@ func (h *BackupHandler) Schedule(ctx context.Context) {
 	slog.Info("Scheduling full backup", "name", *h.backupPolicy.Name)
 	h.scheduleBackupPeriodically(ctx, h.runFullBackup)
 
-	if h.backupPolicy.IncrIntervalMillis != nil && *h.backupPolicy.IncrIntervalMillis > 0 {
+	if h.backupRoutine.IncrIntervalMillis != nil && *h.backupRoutine.IncrIntervalMillis > 0 {
 		slog.Info("Scheduling incremental backup", "name", *h.backupPolicy.Name)
 		h.scheduleBackupPeriodically(ctx, h.runIncrementalBackup)
 	}
@@ -76,7 +82,8 @@ func (h *BackupHandler) Schedule(ctx context.Context) {
 // scheduleBackupPeriodically runs the backup periodically based on the provided interval.
 func (h *BackupHandler) scheduleBackupPeriodically(
 	ctx context.Context,
-	backupFunc func(time.Time)) {
+	backupFunc func(time.Time),
+) {
 	go func() {
 		ticker := time.NewTicker(BackupScheduleTick)
 		defer ticker.Stop()
@@ -113,7 +120,8 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	}
 	backupRunFunc := func() {
 		started := time.Now()
-		if !backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{}) {
+		if !backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster,
+			h.storage, shared.BackupOptions{}) {
 			backupFailureCounter.Inc()
 		} else {
 			elapsed := time.Since(started)
@@ -159,7 +167,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		lastIncrRunEpoch := state.LastIncrRun.UnixNano()
 		opts.ModAfter = &lastIncrRunEpoch
 		started := time.Now()
-		if !backupService.BackupRun(h.backupPolicy, h.cluster, h.storage, opts) {
+		if !backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, opts) {
 			incrBackupFailureCounter.Inc()
 		} else {
 			elapsed := time.Since(started)
@@ -178,11 +186,11 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 }
 
 func (h *BackupHandler) isFullEligible(n time.Time, t time.Time) bool {
-	return n.UnixMilli()-t.UnixMilli() >= *h.backupPolicy.IntervalMillis
+	return n.UnixMilli()-t.UnixMilli() >= *h.backupRoutine.IntervalMillis
 }
 
 func (h *BackupHandler) isIncrementalEligible(n time.Time, t time.Time) bool {
-	return n.UnixMilli()-t.UnixMilli() >= *h.backupPolicy.IncrIntervalMillis
+	return n.UnixMilli()-t.UnixMilli() >= *h.backupRoutine.IncrIntervalMillis
 }
 
 func (h *BackupHandler) updateBackupState() {

@@ -4,8 +4,8 @@ aerospike-clusters:
     name: "cluster1"
     host: "localhost"
     port: 3000
-    user: "tester"
-    password: "psw"
+    # user: "tester"
+    # password: "psw"
 
 storage:
   local1:
@@ -14,16 +14,20 @@ storage:
     path: "./testout"
 
 backup-policies:
-  policy-daily:
-    name: "policy-daily"
+  policy1:
+    name: "policy1"
+    type: 1
+    parallel: 1
+    remove-files: false
+
+backup-routines:
+  routine1:
+    name: "routine1"
     interval: 30000
     incr-interval: 5000
-    type: 1
+    backup-policy: "policy1"
     source-cluster: "cluster1"
     storage: "local1"
     namespace: "test"
     set-list:
       - set1
-    parallel: 1
-    remove-files: false
-    

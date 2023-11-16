@@ -44,6 +44,7 @@ func (cm *FileConfigurationManager) ReadConfiguration() (*model.Config, error) {
 		return nil, fmt.Errorf("in file %q: %w", filePath, err)
 	}
 
+	err = config.Validate()
 	return config, err
 }
 

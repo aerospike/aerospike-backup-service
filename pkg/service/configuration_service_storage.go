@@ -2,7 +2,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -16,7 +15,7 @@ func AddStorage(config *model.Config, newStorage *model.Storage) error {
 	if found {
 		return fmt.Errorf("storage %s already exists", *newStorage.Name)
 	}
-	if err := validate(newStorage); err != nil {
+	if err := newStorage.Validate(); err != nil {
 		return err
 	}
 
@@ -31,7 +30,7 @@ func UpdateStorage(config *model.Config, updatedStorage *model.Storage) error {
 	if !found {
 		return fmt.Errorf("storage %s not found", *updatedStorage.Name)
 	}
-	if err := validate(updatedStorage); err != nil {
+	if err := updatedStorage.Validate(); err != nil {
 		return err
 	}
 
@@ -46,26 +45,13 @@ func DeleteStorage(config *model.Config, storageToDeleteName *string) error {
 	if !found {
 		return fmt.Errorf("storage %s not found", *storageToDeleteName)
 	}
-	policy, found := util.Find(config.BackupPolicies, func(policy *model.BackupPolicy) bool {
-		return *policy.Storage == *storageToDeleteName
+	routine, found := util.Find(config.BackupRoutines, func(routine *model.BackupRoutine) bool {
+		return routine.Storage == *storageToDeleteName
 	})
 	if found {
-		return fmt.Errorf("cannot delete storage as it is used in a policy %s", *policy.Name)
+		return fmt.Errorf("cannot delete storage as it is used in a routine %s", routine.Name)
 	}
 
 	delete(config.Storage, *storageToDeleteName)
-	return nil
-}
-
-func validate(b *model.Storage) error {
-	if b.Name == nil || *b.Name == "" {
-		return errors.New("storage name is required")
-	}
-	if b.Type == nil {
-		return errors.New("storage type is required")
-	}
-	if b.Path == nil {
-		return errors.New("storage path is required")
-	}
 	return nil
 }

@@ -43,8 +43,8 @@ func NewBackup() *BackupShared {
 // BackupRun calls the backup_run function from the asbackup shared library.
 //
 //nolint:funlen
-func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *model.AerospikeCluster,
-	storage *model.Storage, opts BackupOptions) bool {
+func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
+	cluster *model.AerospikeCluster, storage *model.Storage, opts BackupOptions) bool {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -66,12 +66,12 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCString(&backupConfig.password, cluster.GetPassword())
 	setCString(&backupConfig.auth_mode, cluster.AuthMode)
 
-	parseSetList(&backupConfig.set_list, &backupPolicy.SetList)
-	if backupPolicy.BinList != nil {
-		setCString(&backupConfig.bin_list, ptr.String(strings.Join(backupPolicy.BinList, ",")))
+	parseSetList(&backupConfig.set_list, &backupRoutine.SetList)
+	if backupRoutine.BinList != nil {
+		setCString(&backupConfig.bin_list, ptr.String(strings.Join(backupRoutine.BinList, ",")))
 	}
-	if backupPolicy.NodeList != nil {
-		setCString(&backupConfig.node_list, printNodes(backupPolicy.NodeList))
+	if backupRoutine.NodeList != nil {
+		setCString(&backupConfig.node_list, printNodes(backupRoutine.NodeList))
 	}
 	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
 	setCUint(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
@@ -79,7 +79,7 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCUint(&backupConfig.retry_delay, backupPolicy.RetryDelay)
 
 	// namespace list configuration
-	nsCharArray := C.CString(*backupPolicy.Namespace)
+	nsCharArray := C.CString(*backupRoutine.Namespace)
 	C.strcpy((*C.char)(unsafe.Pointer(&backupConfig.ns)), nsCharArray)
 
 	setCInt(&backupConfig.parallel, backupPolicy.Parallel)
@@ -94,8 +94,8 @@ func (b *BackupShared) BackupRun(backupPolicy *model.BackupPolicy, cluster *mode
 	setCUlong(&backupConfig.max_records, backupPolicy.MaxRecords)
 	setCUint(&backupConfig.records_per_second, backupPolicy.RecordsPerSecond)
 	setCUlong(&backupConfig.file_limit, backupPolicy.FileLimit)
-	setCString(&backupConfig.partition_list, backupPolicy.PartitionList)
-	setCString(&backupConfig.after_digest, backupPolicy.AfterDigest)
+	setCString(&backupConfig.partition_list, backupRoutine.PartitionList)
+	setCString(&backupConfig.after_digest, backupRoutine.AfterDigest)
 	setCString(&backupConfig.filter_exp, backupPolicy.FilterExp)
 
 	// S3 configuration

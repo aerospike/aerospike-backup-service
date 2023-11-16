@@ -3,13 +3,12 @@ package service
 import (
 	"testing"
 
-	"github.com/aws/smithy-go/ptr"
-
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
+	"github.com/aws/smithy-go/ptr"
 )
 
-func TestAddStorage(t *testing.T) {
+func TestStorage_Add(t *testing.T) {
 	config := &model.Config{
 		Storage: map[string]*model.Storage{},
 	}
@@ -33,7 +32,7 @@ func TestAddStorage(t *testing.T) {
 	}
 }
 
-func TestUpdateStorage(t *testing.T) {
+func TestStorage_Update(t *testing.T) {
 	storage := "storage"
 	config := &model.Config{
 		Storage: map[string]*model.Storage{storage: {Name: &storage}},
@@ -62,13 +61,15 @@ func TestUpdateStorage(t *testing.T) {
 	}
 }
 
-func TestDeleteStorage(t *testing.T) {
-	policy := "policy"
+func TestStorage_Delete(t *testing.T) {
 	storage := "storage"
 	storage2 := "storage2"
+	policy := "policy"
+	routine := "routine"
 	config := &model.Config{
-		BackupPolicies: map[string]*model.BackupPolicy{policy: {Name: &policy, Storage: &storage}},
+		BackupPolicies: map[string]*model.BackupPolicy{policy: {Name: &policy}},
 		Storage:        map[string]*model.Storage{storage: {Name: &storage}, storage2: {Name: &storage2}},
+		BackupRoutines: map[string]*model.BackupRoutine{routine: {Name: routine, Storage: storage}},
 	}
 
 	// Deleting a storage that is being used by a policy should result in an error

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
@@ -25,8 +26,8 @@ func ScheduleHandlers(ctx context.Context, handlers []BackupScheduler) {
 // the given configuration.
 func BuildBackupHandlers(config *model.Config) []BackupScheduler {
 	schedulers := make([]BackupScheduler, 0, len(config.BackupPolicies))
-	for _, backupPolicy := range config.BackupPolicies {
-		handler, err := NewBackupHandler(config, backupPolicy)
+	for _, backupRoutine := range config.BackupRoutines {
+		handler, err := NewBackupHandler(config, backupRoutine)
 		util.Check(err)
 		schedulers = append(schedulers, handler)
 	}
