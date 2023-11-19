@@ -142,7 +142,7 @@ rpm: build prep
 
 .PHONY: deb
 deb:
-	cd $(WORKSPACE)/packages && dpkg-buildpackage
+	cd $(WORKSPACE)/package && dpkg-buildpackage
 	mv $(WORKSPACE)/$(BINARY_NAME)_* $(WORKSPACE)/target
 
 
