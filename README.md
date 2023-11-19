@@ -1,5 +1,6 @@
 # Aerospike Backup Service
 [![Build](https://github.com/aerospike/aerospike-backup-service/actions/workflows/build.yml/badge.svg)](https://github.com/aerospike/aerospike-backup-service/actions/workflows/build.yml)
+[![codecov](https://codecov.io/gh/aerospike/aerospike-backup-service/branch/main/graph/badge.svg)](https://codecov.io/gh/aerospike/aerospike-backup-service)
 
 The objective of this project is to provide a REST API service for the Aerospike backup and restore operations.  
 The service is written in Go and wraps the [asbackup/asrestore](https://github.com/aerospike/aerospike-tools-backup) 
