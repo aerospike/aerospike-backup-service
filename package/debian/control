@@ -8,7 +8,6 @@ Build-Depends: debhelper, debhelper-compat (= 13)
 Package: aerospike-backup-service
 Architecture: amd64
 Depends: libc6
-Description: Aerospike Backup Server
- This package provides wraps asbackup tool, provides
- an ability to save backups to S3, It exposes API
- to control the backup frequency and other functionality.
+Description: Aerospike Backup Service
+ This package provides backup and restore capabilities
+ for Aerospike Database.

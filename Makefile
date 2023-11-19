@@ -10,7 +10,7 @@ GOCLEAN = $(GOCMD) clean
 GO_VERSION = 1.21.4
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
 OS = $(shell uname | tr '[:upper:]' '[:lower:]')
-ARCH =$(shell uname -m)
+ARCH = $(shell uname -m)
 ifeq ($(ARCH),x86_64)
 	ARCH = amd64
 else ifeq ($(ARCH),aarch64)
@@ -144,7 +144,6 @@ rpm: build prep
 deb:
 	cd $(WORKSPACE)/package && dpkg-buildpackage
 	mv $(WORKSPACE)/$(BINARY_NAME)_* $(WORKSPACE)/target
-
 
 .PHONY: tar
 tar: build prep
