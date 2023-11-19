@@ -6,6 +6,7 @@ The service is written in Go and wraps the [asbackup/asrestore](https://github.c
 tools, built as shared libraries.
 
 Use the [OpenApi generation script](./scripts/generate_OpenApi.sh) to generate OpenApi Specification for the service.
+A pre-built OpenApi Specification is available [here](https://aerospike.github.io/aerospike-backup-service/).
 
 ## C Library known issues
 * Not thread-safe
@@ -17,43 +18,17 @@ Use the [OpenApi generation script](./scripts/generate_OpenApi.sh) to generate O
 
 ## Build
 
-### Update project submodules
-```bash
-git submodule update --init --recursive
-```
-
 ### Build the C shared libraries
 ```bash
-cd modules/aerospike-tools-backup
-make shared EVENT_LIB=libuv
-../../scripts/copy_shared.sh
+make build-submodules
 ```
 Read the official documentation for the [library build instructions](https://github.com/aerospike/aerospike-tools-backup#build-examples).
 
-### Build the service <sup>1</sup>
-
-#### MacOS
+### Build the service
+The following command will generate a binary under the `target` directory.
 ```bash
-cd cmd/backup
-CGO_ENABLED=1 go build .
+make build
 ```
-
-#### Linux ARM64
-```bash
-cd cmd/backup
-CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-aarch64/include \
-  -I/app/modules/aerospike-tools-backup/include" CGO_ENABLED=1 go build .
-```
-
-#### Linux x86-64
-```bash
-cd cmd/backup
-CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-x86_64/include \
-  -I/app/modules/aerospike-tools-backup/include" CGO_ENABLED=1 go build .
-```
-
-<sup>1</sup> By default, CGO is enabled in Go when compiling for native architecture and disabled when cross-compiling.
-It's therefore recommended to always set CGO_ENABLED=0 or CGO_ENABLED=1 when cross-compiling depending on whether you need to use CGO or not.
 
 ### Build Docker image
 #### AMD64
@@ -65,6 +40,10 @@ docker build --build-arg GOARCH=amd64 -t backup-service .
 ```
 docker build --build-arg GOARCH=arm64 -t backup-service .
 ```
+
+### Build installation package
+Run `make deb` or `make rpm` based on the desired package manager.
+This will generate a package in the `target` directory.
 
 ## Usage
 
@@ -86,7 +65,7 @@ Flags:
 ### Run
 Run as a binary using a configuration file
 ```bash
-./backup -c config/config.yml
+./target/aerospike-backup-service -c config/config.yml
 ```
 
 Run in a container with a custom configuration file
@@ -94,4 +73,4 @@ Run in a container with a custom configuration file
 docker run -d -p 8080:8080 -v custom_config.yml:/app/config.yml --name backup-service backup-service "-lINFO"
 ```
 
-Example configuration files can be found in the [config](./cmd/backup/config/) folder.
+Example configuration files can be found in the [config](./config/) folder.
