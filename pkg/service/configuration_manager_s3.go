@@ -13,7 +13,7 @@ type S3ConfigurationManager struct {
 var _ ConfigurationManager = (*S3ConfigurationManager)(nil)
 
 // NewS3ConfigurationManager returns a new S3ConfigurationManager.
-func NewS3ConfigurationManager(configStorage *model.BackupStorage) ConfigurationManager {
+func NewS3ConfigurationManager(configStorage *model.Storage) ConfigurationManager {
 	s3Context := NewS3Context(configStorage)
 	return &S3ConfigurationManager{s3Context}
 }
@@ -22,7 +22,8 @@ func NewS3ConfigurationManager(configStorage *model.BackupStorage) Configuration
 func (s *S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	config := model.NewConfigWithDefaultValues()
 	s.readFile(s.Path, config)
-	return config, nil
+	err := config.Validate()
+	return config, err
 }
 
 // WriteConfiguration writes the configuration to S3.

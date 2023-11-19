@@ -7,9 +7,10 @@ import (
 	"github.com/aws/smithy-go/ptr"
 )
 
-func TestAddCluster(t *testing.T) {
+func TestCluster_Add(t *testing.T) {
+	name := "cluster1"
 	config := &model.Config{
-		AerospikeClusters: []*model.AerospikeCluster{{Name: ptr.String("cluster1")}},
+		AerospikeClusters: map[string]*model.AerospikeCluster{name: {Name: &name}},
 	}
 	newCluster := &model.AerospikeCluster{Name: ptr.String("cluster2")}
 	err := AddCluster(config, newCluster)
@@ -24,17 +25,17 @@ func TestAddCluster(t *testing.T) {
 	}
 }
 
-func TestUpdateCluster(t *testing.T) {
+func TestCluster_Update(t *testing.T) {
 	name := "cluster1"
 	config := &model.Config{
-		AerospikeClusters: []*model.AerospikeCluster{{Name: &name}},
+		AerospikeClusters: map[string]*model.AerospikeCluster{name: {Name: &name}},
 	}
 	updatedCluster := &model.AerospikeCluster{Name: &name, User: ptr.String("user")}
 	err := UpdateCluster(config, updatedCluster)
 	if err != nil {
 		t.Errorf("Error in updating cluster: %s", err.Error())
 	}
-	if *config.AerospikeClusters[0].User != "user" {
+	if *config.AerospikeClusters[name].User != "user" {
 		t.Errorf("Value in cluster is not updated")
 	}
 
@@ -46,25 +47,28 @@ func TestUpdateCluster(t *testing.T) {
 	}
 }
 
-func TestDeleteCluster(t *testing.T) {
-	name := ptr.String("cluster1")
-	name2 := ptr.String("cluster2")
+func TestCluster_Delete(t *testing.T) {
+	name := "cluster1"
+	name2 := "cluster2"
+	policy := "policy"
+	routine := "routine"
 	config := &model.Config{
-		AerospikeClusters: []*model.AerospikeCluster{{Name: name}, {Name: name2}},
-		BackupPolicy:      []*model.BackupPolicy{{Name: ptr.String("policy1"), SourceCluster: name}},
+		AerospikeClusters: map[string]*model.AerospikeCluster{name: {Name: &name}, name2: {Name: &name2}},
+		BackupPolicies:    map[string]*model.BackupPolicy{policy: {Name: &policy}},
+		BackupRoutines:    map[string]*model.BackupRoutine{routine: {Name: routine, SourceCluster: name}},
 	}
-	err := DeleteCluster(config, name)
+	err := DeleteCluster(config, &name)
 	if err == nil {
 		t.Errorf("Expected an error while deleting cluster in use")
 	}
 
-	err = DeleteCluster(config, name2)
+	err = DeleteCluster(config, &name2)
 	if err != nil {
 		t.Errorf("Error in deleting cluster: %s", err.Error())
 	}
 
 	// Try deleting a non-existent cluster, should return an error
-	err = DeleteCluster(config, name2)
+	err = DeleteCluster(config, &name2)
 	if err == nil {
 		t.Error("Expected an error while deleting a non-existent cluster, but got nil")
 	}

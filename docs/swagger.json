@@ -47,11 +47,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Full backups",
+                        "description": "Full backups by policy",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.BackupDetails"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/model.BackupDetails"
+                                }
                             }
                         }
                     },
@@ -85,11 +88,14 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Incremental backups",
+                        "description": "Incremental backups by policy",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.BackupDetails"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/model.BackupDetails"
+                                }
                             }
                         }
                     },
@@ -174,8 +180,8 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
+                            "type": "object",
+                            "additionalProperties": {
                                 "$ref": "#/definitions/model.AerospikeCluster"
                             }
                         }
@@ -294,8 +300,8 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
+                            "type": "object",
+                            "additionalProperties": {
                                 "$ref": "#/definitions/model.BackupPolicy"
                             }
                         }
@@ -400,6 +406,126 @@
                 }
             }
         },
+        "/config/routine": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads all routines from the configuration.",
+                "operationId": "readRoutines",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.BackupRoutine"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Updates an existing routine in the configuration.",
+                "operationId": "updateRoutine",
+                "parameters": [
+                    {
+                        "description": "backup routine",
+                        "name": "storage",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupRoutine"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Adds a backup routine to the config.",
+                "operationId": "addRoutine",
+                "parameters": [
+                    {
+                        "description": "backup routine",
+                        "name": "storage",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupRoutine"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Deletes a backup routine from the configuration by name.",
+                "operationId": "deleteRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine Name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/config/storage": {
             "get": {
                 "produces": [
@@ -408,15 +534,15 @@
                 "tags": [
                     "Configuration"
                 ],
-                "summary": "Reads all storages from the configuration.",
-                "operationId": "readStorages",
+                "summary": "Reads all storage from the configuration.",
+                "operationId": "readStorage",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.BackupStorage"
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Storage"
                             }
                         }
                     },
@@ -444,7 +570,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.BackupStorage"
+                            "$ref": "#/definitions/model.Storage"
                         }
                     }
                 ],
@@ -476,7 +602,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.BackupStorage"
+                            "$ref": "#/definitions/model.Storage"
                         }
                     }
                 ],
@@ -643,7 +769,7 @@
         "model.AerospikeCluster": {
             "type": "object",
             "properties": {
-                "auth_mode": {
+                "auth-mode": {
                     "type": "string"
                 },
                 "host": {
@@ -655,13 +781,13 @@
                 "password": {
                     "type": "string"
                 },
-                "password_path": {
+                "password-path": {
                     "type": "string"
                 },
                 "port": {
                     "type": "integer"
                 },
-                "use_services_alternate": {
+                "use-services-alternate": {
                     "type": "boolean"
                 },
                 "user": {
@@ -675,7 +801,7 @@
                 "key": {
                     "type": "string"
                 },
-                "last_modified": {
+                "last-modified": {
                     "type": "string"
                 },
                 "size": {
@@ -686,34 +812,81 @@
         "model.BackupPolicy": {
             "type": "object",
             "properties": {
-                "after_digest": {
-                    "type": "string"
-                },
                 "bandwidth": {
                     "type": "integer"
                 },
-                "bin_list": {
+                "file-limit": {
+                    "type": "integer"
+                },
+                "filter-exp": {
+                    "type": "string"
+                },
+                "max-records": {
+                    "type": "integer"
+                },
+                "max-retries": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "no-bins": {
+                    "type": "boolean"
+                },
+                "no-indexes": {
+                    "type": "boolean"
+                },
+                "no-records": {
+                    "type": "boolean"
+                },
+                "no-udfs": {
+                    "type": "boolean"
+                },
+                "parallel": {
+                    "type": "integer"
+                },
+                "records-per-second": {
+                    "type": "integer"
+                },
+                "remove-artifacts": {
+                    "type": "boolean"
+                },
+                "remove-files": {
+                    "type": "boolean"
+                },
+                "retry-delay": {
+                    "type": "integer"
+                },
+                "socket-timeout": {
+                    "type": "integer"
+                },
+                "total-timeout": {
+                    "type": "integer"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.BackupType"
+                }
+            }
+        },
+        "model.BackupRoutine": {
+            "type": "object",
+            "properties": {
+                "after-digest": {
+                    "type": "string"
+                },
+                "backup-policy": {
+                    "type": "string"
+                },
+                "bin-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
-                "file_limit": {
-                    "type": "integer"
-                },
-                "filter_exp": {
-                    "type": "string"
-                },
-                "incr_interval": {
+                "incr-interval": {
                     "type": "integer"
                 },
                 "interval": {
-                    "type": "integer"
-                },
-                "max_records": {
-                    "type": "integer"
-                },
-                "max_retries": {
                     "type": "integer"
                 },
                 "name": {
@@ -722,88 +895,26 @@
                 "namespace": {
                     "type": "string"
                 },
-                "no_bins": {
-                    "type": "boolean"
-                },
-                "no_indexes": {
-                    "type": "boolean"
-                },
-                "no_records": {
-                    "type": "boolean"
-                },
-                "no_udfs": {
-                    "type": "boolean"
-                },
-                "node_list": {
+                "node-list": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/model.Node"
                     }
                 },
-                "parallel": {
-                    "type": "integer"
-                },
-                "partition_list": {
+                "partition-list": {
                     "type": "string"
                 },
-                "records_per_second": {
-                    "type": "integer"
-                },
-                "remove_artifacts": {
-                    "type": "boolean"
-                },
-                "remove_files": {
-                    "type": "boolean"
-                },
-                "retry_delay": {
-                    "type": "integer"
-                },
-                "set_list": {
+                "set-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
-                "socket_timeout": {
-                    "type": "integer"
-                },
-                "source_cluster": {
+                "source-cluster": {
                     "type": "string"
                 },
                 "storage": {
                     "type": "string"
-                },
-                "total_timeout": {
-                    "type": "integer"
-                },
-                "type": {
-                    "$ref": "#/definitions/model.BackupType"
-                }
-            }
-        },
-        "model.BackupStorage": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "path": {
-                    "type": "string"
-                },
-                "s3_endpoint_override": {
-                    "type": "string"
-                },
-                "s3_log_level": {
-                    "type": "string"
-                },
-                "s3_profile": {
-                    "type": "string"
-                },
-                "s3_region": {
-                    "type": "string"
-                },
-                "type": {
-                    "$ref": "#/definitions/model.StorageType"
                 }
             }
         },
@@ -821,33 +932,39 @@
         "model.Config": {
             "type": "object",
             "properties": {
-                "aerospike-cluster": {
-                    "type": "array",
-                    "items": {
+                "aerospike-clusters": {
+                    "type": "object",
+                    "additionalProperties": {
                         "$ref": "#/definitions/model.AerospikeCluster"
                     }
                 },
-                "backup-policy": {
-                    "type": "array",
-                    "items": {
+                "backup-policies": {
+                    "type": "object",
+                    "additionalProperties": {
                         "$ref": "#/definitions/model.BackupPolicy"
                     }
                 },
-                "backup-storage": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.BackupStorage"
+                "backup-routines": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/model.BackupRoutine"
                     }
                 },
-                "http-server": {
+                "service": {
                     "$ref": "#/definitions/model.HTTPServerConfig"
+                },
+                "storage": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/model.Storage"
+                    }
                 }
             }
         },
         "model.HTTPServerConfig": {
             "type": "object",
             "properties": {
-                "host": {
+                "address": {
                     "type": "string"
                 },
                 "port": {
@@ -878,7 +995,7 @@
                 "tps": {
                     "type": "integer"
                 },
-                "white_list": {
+                "white-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -889,16 +1006,16 @@
         "model.RestoreRequest": {
             "type": "object",
             "properties": {
-                "auth_mode": {
+                "auth-mode": {
                     "type": "string"
                 },
                 "bandwidth": {
                     "type": "integer"
                 },
-                "batch_size": {
+                "batch-size": {
                     "type": "integer"
                 },
-                "bin_list": {
+                "bin-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -907,7 +1024,7 @@
                 "directory": {
                     "type": "string"
                 },
-                "disable_batch_writes": {
+                "disable-batch-writes": {
                     "type": "boolean"
                 },
                 "file": {
@@ -916,22 +1033,22 @@
                 "host": {
                     "type": "string"
                 },
-                "max_async_batches": {
+                "max-async-batches": {
                     "type": "integer"
                 },
-                "no_generation": {
+                "no-generation": {
                     "type": "boolean"
                 },
-                "no_indexes": {
+                "no-indexes": {
                     "type": "boolean"
                 },
-                "no_records": {
+                "no-records": {
                     "type": "boolean"
                 },
-                "no_udfs": {
+                "no-udfs": {
                     "type": "boolean"
                 },
-                "ns_list": {
+                "ns-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -949,19 +1066,19 @@
                 "replace": {
                     "type": "boolean"
                 },
-                "s3_endpoint_override": {
+                "s3-endpoint-override": {
                     "type": "string"
                 },
-                "s3_log_level": {
+                "s3-log-level": {
                     "type": "string"
                 },
-                "s3_profile": {
+                "s3-profile": {
                     "type": "string"
                 },
-                "s3_region": {
+                "s3-region": {
                     "type": "string"
                 },
-                "set_list": {
+                "set-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -976,11 +1093,37 @@
                 "unique": {
                     "type": "boolean"
                 },
-                "use_services_alternate": {
+                "use-services-alternate": {
                     "type": "boolean"
                 },
                 "user": {
                     "type": "string"
+                }
+            }
+        },
+        "model.Storage": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "s3-endpoint-override": {
+                    "type": "string"
+                },
+                "s3-log-level": {
+                    "type": "string"
+                },
+                "s3-profile": {
+                    "type": "string"
+                },
+                "s3-region": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.StorageType"
                 }
             }
         },

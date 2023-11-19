@@ -93,12 +93,12 @@ type HTTPServer struct {
 // @externalDocs.url          https://swagger.io/resources/open-api/
 //
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(backends []service.BackupBackend, config *model.Config) *HTTPServer {
-	addr := fmt.Sprintf("%s:%d", config.HTTPServer.Host, config.HTTPServer.Port)
+func NewHTTPServer(handlers []service.BackupScheduler, config *model.Config) *HTTPServer {
+	addr := fmt.Sprintf("%s:%d", config.HTTPServer.Address, config.HTTPServer.Port)
 
-	backendMap := make(map[string]service.BackupBackend, len(backends))
-	for _, backend := range backends {
-		backendMap[backend.BackupPolicyName()] = backend
+	backendMap := make(map[string]service.BackupBackend, len(handlers))
+	for _, backend := range handlers {
+		backendMap[backend.BackupRoutineName()] = backend.GetBackend()
 	}
 	rateLimiter := NewIPRateLimiter(
 		rate.Limit(config.HTTPServer.Rate.Tps),
@@ -154,6 +154,9 @@ func (ws *HTTPServer) Start() {
 
 	// policy config route
 	mux.HandleFunc("/config/policy", ws.configPolicyActionHandler)
+
+	// routine config route
+	mux.HandleFunc("/config/routine", ws.configRoutineActionHandler)
 
 	// health route
 	mux.HandleFunc("/health", healthActionHandler)
@@ -224,7 +227,7 @@ func (ws *HTTPServer) configStorageActionHandler(w http.ResponseWriter, r *http.
 	case http.MethodPost:
 		ws.addStorage(w, r)
 	case http.MethodGet:
-		ws.readStorages(w)
+		ws.readStorage(w)
 	case http.MethodPut:
 		ws.updateStorage(w, r)
 	case http.MethodDelete:
@@ -244,6 +247,21 @@ func (ws *HTTPServer) configPolicyActionHandler(w http.ResponseWriter, r *http.R
 		ws.updatePolicy(w, r)
 	case http.MethodDelete:
 		ws.deletePolicy(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (ws *HTTPServer) configRoutineActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		ws.addRoutine(w, r)
+	case http.MethodGet:
+		ws.readRoutines(w)
+	case http.MethodPut:
+		ws.updateRoutine(w, r)
+	case http.MethodDelete:
+		ws.deleteRoutine(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}

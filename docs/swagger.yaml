@@ -1,7 +1,7 @@
 definitions:
   model.AerospikeCluster:
     properties:
-      auth_mode:
+      auth-mode:
         type: string
       host:
         type: string
@@ -9,11 +9,11 @@ definitions:
         type: string
       password:
         type: string
-      password_path:
+      password-path:
         type: string
       port:
         type: integer
-      use_services_alternate:
+      use-services-alternate:
         type: boolean
       user:
         type: string
@@ -22,92 +22,82 @@ definitions:
     properties:
       key:
         type: string
-      last_modified:
+      last-modified:
         type: string
       size:
         type: integer
     type: object
   model.BackupPolicy:
     properties:
-      after_digest:
-        type: string
       bandwidth:
         type: integer
-      bin_list:
+      file-limit:
+        type: integer
+      filter-exp:
+        type: string
+      max-records:
+        type: integer
+      max-retries:
+        type: integer
+      name:
+        type: string
+      no-bins:
+        type: boolean
+      no-indexes:
+        type: boolean
+      no-records:
+        type: boolean
+      no-udfs:
+        type: boolean
+      parallel:
+        type: integer
+      records-per-second:
+        type: integer
+      remove-artifacts:
+        type: boolean
+      remove-files:
+        type: boolean
+      retry-delay:
+        type: integer
+      socket-timeout:
+        type: integer
+      total-timeout:
+        type: integer
+      type:
+        $ref: '#/definitions/model.BackupType'
+    type: object
+  model.BackupRoutine:
+    properties:
+      after-digest:
+        type: string
+      backup-policy:
+        type: string
+      bin-list:
         items:
           type: string
         type: array
-      file_limit:
-        type: integer
-      filter_exp:
-        type: string
-      incr_interval:
+      incr-interval:
         type: integer
       interval:
-        type: integer
-      max_records:
-        type: integer
-      max_retries:
         type: integer
       name:
         type: string
       namespace:
         type: string
-      no_bins:
-        type: boolean
-      no_indexes:
-        type: boolean
-      no_records:
-        type: boolean
-      no_udfs:
-        type: boolean
-      node_list:
+      node-list:
         items:
           $ref: '#/definitions/model.Node'
         type: array
-      parallel:
-        type: integer
-      partition_list:
+      partition-list:
         type: string
-      records_per_second:
-        type: integer
-      remove_artifacts:
-        type: boolean
-      remove_files:
-        type: boolean
-      retry_delay:
-        type: integer
-      set_list:
+      set-list:
         items:
           type: string
         type: array
-      socket_timeout:
-        type: integer
-      source_cluster:
+      source-cluster:
         type: string
       storage:
         type: string
-      total_timeout:
-        type: integer
-      type:
-        $ref: '#/definitions/model.BackupType'
-    type: object
-  model.BackupStorage:
-    properties:
-      name:
-        type: string
-      path:
-        type: string
-      s3_endpoint_override:
-        type: string
-      s3_log_level:
-        type: string
-      s3_profile:
-        type: string
-      s3_region:
-        type: string
-      type:
-        $ref: '#/definitions/model.StorageType'
     type: object
   model.BackupType:
     enum:
@@ -119,24 +109,28 @@ definitions:
     - Incremental
   model.Config:
     properties:
-      aerospike-cluster:
-        items:
+      aerospike-clusters:
+        additionalProperties:
           $ref: '#/definitions/model.AerospikeCluster'
-        type: array
-      backup-policy:
-        items:
+        type: object
+      backup-policies:
+        additionalProperties:
           $ref: '#/definitions/model.BackupPolicy'
-        type: array
-      backup-storage:
-        items:
-          $ref: '#/definitions/model.BackupStorage'
-        type: array
-      http-server:
+        type: object
+      backup-routines:
+        additionalProperties:
+          $ref: '#/definitions/model.BackupRoutine'
+        type: object
+      service:
         $ref: '#/definitions/model.HTTPServerConfig'
+      storage:
+        additionalProperties:
+          $ref: '#/definitions/model.Storage'
+        type: object
     type: object
   model.HTTPServerConfig:
     properties:
-      host:
+      address:
         type: string
       port:
         type: integer
@@ -156,42 +150,42 @@ definitions:
         type: integer
       tps:
         type: integer
-      white_list:
+      white-list:
         items:
           type: string
         type: array
     type: object
   model.RestoreRequest:
     properties:
-      auth_mode:
+      auth-mode:
         type: string
       bandwidth:
         type: integer
-      batch_size:
+      batch-size:
         type: integer
-      bin_list:
+      bin-list:
         items:
           type: string
         type: array
       directory:
         type: string
-      disable_batch_writes:
+      disable-batch-writes:
         type: boolean
       file:
         type: string
       host:
         type: string
-      max_async_batches:
+      max-async-batches:
         type: integer
-      no_generation:
+      no-generation:
         type: boolean
-      no_indexes:
+      no-indexes:
         type: boolean
-      no_records:
+      no-records:
         type: boolean
-      no_udfs:
+      no-udfs:
         type: boolean
-      ns_list:
+      ns-list:
         items:
           type: string
         type: array
@@ -203,15 +197,15 @@ definitions:
         type: integer
       replace:
         type: boolean
-      s3_endpoint_override:
+      s3-endpoint-override:
         type: string
-      s3_log_level:
+      s3-log-level:
         type: string
-      s3_profile:
+      s3-profile:
         type: string
-      s3_region:
+      s3-region:
         type: string
-      set_list:
+      set-list:
         items:
           type: string
         type: array
@@ -221,10 +215,27 @@ definitions:
         type: integer
       unique:
         type: boolean
-      use_services_alternate:
+      use-services-alternate:
         type: boolean
       user:
         type: string
+    type: object
+  model.Storage:
+    properties:
+      name:
+        type: string
+      path:
+        type: string
+      s3-endpoint-override:
+        type: string
+      s3-log-level:
+        type: string
+      s3-profile:
+        type: string
+      s3-region:
+        type: string
+      type:
+        $ref: '#/definitions/model.StorageType'
     type: object
   model.StorageType:
     enum:
@@ -269,11 +280,13 @@ paths:
       - application/json
       responses:
         "200":
-          description: Full backups
+          description: Full backups by policy
           schema:
-            items:
-              $ref: '#/definitions/model.BackupDetails'
-            type: array
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.BackupDetails'
+              type: array
+            type: object
         "404":
           description: Not Found
           schema:
@@ -294,11 +307,13 @@ paths:
       - application/json
       responses:
         "200":
-          description: Incremental backups
+          description: Incremental backups by policy
           schema:
-            items:
-              $ref: '#/definitions/model.BackupDetails'
-            type: array
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.BackupDetails'
+              type: array
+            type: object
         "404":
           description: Not Found
           schema:
@@ -371,9 +386,9 @@ paths:
         "200":
           description: OK
           schema:
-            items:
+            additionalProperties:
               $ref: '#/definitions/model.AerospikeCluster'
-            type: array
+            type: object
         "400":
           description: Bad Request
           schema:
@@ -450,9 +465,9 @@ paths:
         "200":
           description: OK
           schema:
-            items:
+            additionalProperties:
               $ref: '#/definitions/model.BackupPolicy'
-            type: array
+            type: object
         "400":
           description: Bad Request
           schema:
@@ -502,6 +517,85 @@ paths:
       summary: Updates an existing policy in the configuration.
       tags:
       - Configuration
+  /config/routine:
+    delete:
+      operationId: deleteRoutine
+      parameters:
+      - description: Routine Name
+        in: query
+        name: name
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Deletes a backup routine from the configuration by name.
+      tags:
+      - Configuration
+    get:
+      operationId: readRoutines
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.BackupRoutine'
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Reads all routines from the configuration.
+      tags:
+      - Configuration
+    post:
+      consumes:
+      - application/json
+      operationId: addRoutine
+      parameters:
+      - description: backup routine
+        in: body
+        name: storage
+        required: true
+        schema:
+          $ref: '#/definitions/model.BackupRoutine'
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Adds a backup routine to the config.
+      tags:
+      - Configuration
+    put:
+      consumes:
+      - application/json
+      operationId: updateRoutine
+      parameters:
+      - description: backup routine
+        in: body
+        name: storage
+        required: true
+        schema:
+          $ref: '#/definitions/model.BackupRoutine'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Updates an existing routine in the configuration.
+      tags:
+      - Configuration
   /config/storage:
     delete:
       operationId: deleteStorage
@@ -522,21 +616,21 @@ paths:
       tags:
       - Configuration
     get:
-      operationId: readStorages
+      operationId: readStorage
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.BackupStorage'
-            type: array
+            additionalProperties:
+              $ref: '#/definitions/model.Storage'
+            type: object
         "400":
           description: Bad Request
           schema:
             type: string
-      summary: Reads all storages from the configuration.
+      summary: Reads all storage from the configuration.
       tags:
       - Configuration
     post:
@@ -549,7 +643,7 @@ paths:
         name: storage
         required: true
         schema:
-          $ref: '#/definitions/model.BackupStorage'
+          $ref: '#/definitions/model.Storage'
       responses:
         "201":
           description: Created
@@ -570,7 +664,7 @@ paths:
         name: storage
         required: true
         schema:
-          $ref: '#/definitions/model.BackupStorage'
+          $ref: '#/definitions/model.Storage'
       responses:
         "200":
           description: OK

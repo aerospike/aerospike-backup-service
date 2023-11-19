@@ -3,20 +3,20 @@ package service
 import (
 	"testing"
 
-	"github.com/aws/smithy-go/ptr"
-
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
+	"github.com/aws/smithy-go/ptr"
 )
 
-func TestAddStorage(t *testing.T) {
+func TestStorage_Add(t *testing.T) {
 	config := &model.Config{
-		BackupStorage: []*model.BackupStorage{},
+		Storage: map[string]*model.Storage{},
 	}
 
-	newStorage := &model.BackupStorage{
+	newStorage := &model.Storage{
 		Name: ptr.String("storage"),
 		Type: util.Ptr(model.Local),
+		Path: ptr.String("path"),
 	}
 
 	err := AddStorage(config, newStorage)
@@ -32,13 +32,14 @@ func TestAddStorage(t *testing.T) {
 	}
 }
 
-func TestUpdateStorage(t *testing.T) {
+func TestStorage_Update(t *testing.T) {
+	storage := "storage"
 	config := &model.Config{
-		BackupStorage: []*model.BackupStorage{{Name: ptr.String("storage")}},
+		Storage: map[string]*model.Storage{storage: {Name: &storage}},
 	}
 
-	newStorage := &model.BackupStorage{
-		Name: ptr.String("storage"),
+	newStorage := &model.Storage{
+		Name: ptr.String(storage),
 		Path: ptr.String("path"),
 		Type: util.Ptr(model.Local),
 	}
@@ -48,40 +49,45 @@ func TestUpdateStorage(t *testing.T) {
 		t.Errorf("Expected nil error, got %v", err)
 	}
 
-	if *config.BackupStorage[0].Path != "path" {
+	if *config.Storage[storage].Path != "path" {
 		t.Errorf("Value in storage is not updated")
 	}
 
 	// Updating a non-existent storage should result in an error
-	newStorage = &model.BackupStorage{Name: ptr.String("newStorage")}
+	newStorage = &model.Storage{Name: ptr.String("newStorage")}
 	err = UpdateStorage(config, newStorage)
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
 	}
 }
 
-func TestDeleteStorage(t *testing.T) {
+func TestStorage_Delete(t *testing.T) {
+	storage := "storage"
+	storage2 := "storage2"
+	policy := "policy"
+	routine := "routine"
 	config := &model.Config{
-		BackupPolicy:  []*model.BackupPolicy{{Name: ptr.String("policy"), Storage: ptr.String("storage")}},
-		BackupStorage: []*model.BackupStorage{{Name: ptr.String("storage")}, {Name: ptr.String("storage2")}},
+		BackupPolicies: map[string]*model.BackupPolicy{policy: {Name: &policy}},
+		Storage:        map[string]*model.Storage{storage: {Name: &storage}, storage2: {Name: &storage2}},
+		BackupRoutines: map[string]*model.BackupRoutine{routine: {Name: routine, Storage: storage}},
 	}
 
 	// Deleting a storage that is being used by a policy should result in an error
-	err := DeleteStorage(config, ptr.String("storage"))
+	err := DeleteStorage(config, &storage)
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
 	}
 
-	err = DeleteStorage(config, ptr.String("storage2"))
+	err = DeleteStorage(config, &storage2)
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
-	if len(config.BackupStorage) != 1 {
+	if len(config.Storage) != 1 {
 		t.Errorf("Expected size = 1")
 	}
 
 	// Deleting a non-existent storage should result in an error
-	err = DeleteStorage(config, ptr.String("storage2"))
+	err = DeleteStorage(config, &storage2)
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
 	}

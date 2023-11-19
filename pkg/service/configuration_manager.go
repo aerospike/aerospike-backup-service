@@ -15,13 +15,13 @@ type ConfigurationManager interface {
 }
 
 // ReadConfigStorage reads and returns remote configuration details.
-func ReadConfigStorage(filePath string) (*model.BackupStorage, error) {
+func ReadConfigStorage(filePath string) (*model.Storage, error) {
 	buf, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	configStorage := &model.BackupStorage{}
+	configStorage := &model.Storage{}
 	err = yaml.Unmarshal(buf, configStorage)
 	if err != nil {
 		return nil, fmt.Errorf("in file %q: %w", filePath, err)
