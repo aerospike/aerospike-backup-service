@@ -6,8 +6,10 @@ func Ptr[T any](obj T) *T {
 	return &obj
 }
 
-func Find[T any](collection map[string]T, f func(T) bool) (T, bool) {
-	for _, item := range collection {
+// Find returns the first element from the given map that satisfies
+// the predicate f.
+func Find[T any](items map[string]T, f func(T) bool) (T, bool) {
+	for _, item := range items {
 		if f(item) {
 			return item, true
 		}

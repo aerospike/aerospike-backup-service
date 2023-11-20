@@ -32,6 +32,21 @@ func TestStorage_Add(t *testing.T) {
 	}
 }
 
+func TestStorage_AddFailure(t *testing.T) {
+	config := &model.Config{
+		Storage: map[string]*model.Storage{},
+	}
+
+	newStorage := &model.Storage{
+		Name: ptr.String("storage"),
+	}
+
+	err := AddStorage(config, newStorage)
+	if err == nil {
+		t.Errorf("Expected validation error")
+	}
+}
+
 func TestStorage_Update(t *testing.T) {
 	storage := "storage"
 	config := &model.Config{
@@ -61,6 +76,22 @@ func TestStorage_Update(t *testing.T) {
 	}
 }
 
+func TestStorage_UpdateFailure(t *testing.T) {
+	storage := "storage"
+	config := &model.Config{
+		Storage: map[string]*model.Storage{storage: {Name: &storage}},
+	}
+
+	newStorage := &model.Storage{
+		Name: ptr.String(storage),
+	}
+
+	err := UpdateStorage(config, newStorage)
+	if err == nil {
+		t.Errorf("Expected validation error")
+	}
+}
+
 func TestStorage_Delete(t *testing.T) {
 	storage := "storage"
 	storage2 := "storage2"
@@ -83,7 +114,7 @@ func TestStorage_Delete(t *testing.T) {
 		t.Errorf("Expected nil error, got %v", err)
 	}
 	if len(config.Storage) != 1 {
-		t.Errorf("Expected size = 1")
+		t.Errorf("Expected config storage size to be 1")
 	}
 
 	// Deleting a non-existent storage should result in an error
