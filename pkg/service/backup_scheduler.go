@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aerospike/backup/pkg/stdio"
+
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/util"
@@ -30,12 +32,38 @@ type BackupHandler struct {
 	fullBackupInProgress *atomic.Bool
 }
 
+// stdIO captures standard output
+var stdIO = &stdio.CgoStdio{}
+
+var backupService shared.Backup = shared.NewBackup()
+
 var _ BackupScheduler = (*BackupHandler)(nil)
 
 var BackupScheduleTick = 1000 * time.Millisecond
 
-// NewBackupHandler returns a new BackupHandler instance.
-func NewBackupHandler(config *model.Config, backupRoutine *model.BackupRoutine) (*BackupHandler, error) {
+// ScheduleHandlers schedules the configured backup policies.
+func ScheduleHandlers(ctx context.Context, schedulers []BackupScheduler) {
+	for _, scheduler := range schedulers {
+		scheduler.Schedule(ctx)
+	}
+}
+
+// BuildBackupSchedulers builds a list of BackupSchedulers according to
+// the given configuration.
+func BuildBackupSchedulers(config *model.Config) []BackupScheduler {
+	schedulers := make([]BackupScheduler, 0, len(config.BackupPolicies))
+	for _, backupRoutine := range config.BackupRoutines {
+		scheduler, err := newBackupHandler(config, backupRoutine)
+		if err != nil {
+			panic(err)
+		}
+		schedulers = append(schedulers, scheduler)
+	}
+	return schedulers
+}
+
+// newBackupHandler returns a new BackupHandler instance.
+func newBackupHandler(config *model.Config, backupRoutine *model.BackupRoutine) (*BackupHandler, error) {
 	cluster, found := config.AerospikeClusters[backupRoutine.SourceCluster]
 	if !found {
 		return nil, fmt.Errorf("cluster not found for %s", backupRoutine.SourceCluster)
