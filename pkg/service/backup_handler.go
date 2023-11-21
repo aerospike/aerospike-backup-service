@@ -106,19 +106,19 @@ func (h *BackupHandler) scheduleBackupPeriodically(
 
 func (h *BackupHandler) runFullBackup(now time.Time) {
 	if isStaleTick(now) {
-		slog.Debug("Skipped full backup", "name", *h.backupPolicy.Name)
+		slog.Debug("Skipped full backup", "name", h.backupRoutine.Name)
 		backupSkippedCounter.Inc()
 		return
 	}
 	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
-		slog.Debug("Backup is currently in progress, skipping full backup", "name", *h.backupPolicy.Name)
+		slog.Debug("Backup is currently in progress, skipping full backup", "name", h.backupRoutine.Name)
 		return
 	}
 	// release the lock
 	defer h.fullBackupInProgress.Store(false)
 
 	if !h.isFullEligible(now, h.state.LastRun) {
-		slog.Debug("The full backup is not due to run yet", "name", *h.backupPolicy.Name)
+		slog.Debug("The full backup is not due to run yet", "name", h.backupRoutine.Name)
 		return
 	}
 	backupRunFunc := func() {
@@ -133,7 +133,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
-	slog.Debug("Completed full backup", "name", *h.backupPolicy.Name)
+	slog.Debug("Completed full backup", "name", h.backupRoutine.Name)
 
 	// increment backupCounter metric
 	backupCounter.Inc()
@@ -147,22 +147,22 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	if isStaleTick(now) {
-		slog.Error("Skipped incremental backup", "name", *h.backupPolicy.Name)
+		slog.Error("Skipped incremental backup", "name", h.backupRoutine.Name)
 		incrBackupSkippedCounter.Inc()
 		return
 	}
 	// read the state first and check
 	state := h.backend.readState()
 	if state.LastRun == (time.Time{}) {
-		slog.Debug("Skip incremental backup until initial full backup is done", "name", *h.backupPolicy.Name)
+		slog.Debug("Skip incremental backup until initial full backup is done", "name", h.backupRoutine.Name)
 		return
 	}
 	if !h.isIncrementalEligible(now, state.LastIncrRun) {
-		slog.Debug("The incremental backup is not due to run yet", "name", *h.backupPolicy.Name)
+		slog.Debug("The incremental backup is not due to run yet", "name", h.backupRoutine.Name)
 		return
 	}
 	if h.fullBackupInProgress.Load() {
-		slog.Debug("Full backup is currently in progress, skipping incremental backup", "name", *h.backupPolicy.Name)
+		slog.Debug("Full backup is currently in progress, skipping incremental backup", "name", h.backupRoutine.Name)
 		return
 	}
 	backupRunFunc := func() {
@@ -179,7 +179,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
-	slog.Debug("Completed incremental backup", "name", *h.backupPolicy.Name)
+	slog.Debug("Completed incremental backup", "name", h.backupRoutine.Name)
 
 	// increment incrBackupCounter metric
 	incrBackupCounter.Inc()
