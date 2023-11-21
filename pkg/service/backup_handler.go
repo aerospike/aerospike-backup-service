@@ -27,7 +27,7 @@ type BackupHandler struct {
 	cluster              *model.AerospikeCluster
 	storage              *model.Storage
 	state                *model.BackupState
-	fullBackupInProgress atomic.Bool
+	fullBackupInProgress *atomic.Bool
 }
 
 var _ BackupScheduler = (*BackupHandler)(nil)
@@ -49,23 +49,25 @@ func NewBackupHandler(config *model.Config, backupRoutine *model.BackupRoutine) 
 		return nil, fmt.Errorf("backupPolicy not found for %s", backupRoutine.BackupPolicy)
 	}
 
+	fullBackupInProgress := &atomic.Bool{}
 	var backupBackend BackupBackend
 	switch *storage.Type {
 	case model.Local:
-		backupBackend = NewBackupBackendLocal(*storage.Path, backupPolicy)
+		backupBackend = NewBackupBackendLocal(*storage.Path, backupPolicy, fullBackupInProgress)
 	case model.S3:
-		backupBackend = NewBackupBackendS3(storage, backupPolicy)
+		backupBackend = NewBackupBackendS3(storage, backupPolicy, fullBackupInProgress)
 	default:
 		return nil, fmt.Errorf("unsupported storage type: %d", *storage.Type)
 	}
 
 	return &BackupHandler{
-		backend:       backupBackend,
-		backupRoutine: backupRoutine,
-		backupPolicy:  backupPolicy,
-		cluster:       cluster,
-		storage:       storage,
-		state:         backupBackend.readState(),
+		backend:              backupBackend,
+		backupRoutine:        backupRoutine,
+		backupPolicy:         backupPolicy,
+		cluster:              cluster,
+		storage:              storage,
+		state:                backupBackend.readState(),
+		fullBackupInProgress: fullBackupInProgress,
 	}, nil
 }
 

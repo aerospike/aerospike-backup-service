@@ -153,7 +153,7 @@ func getIncrementalPath(storage *model.Storage) *string {
 }
 
 func timeSuffix() string {
-	return strconv.FormatInt(time.Now().Unix(), 10)
+	return strconv.FormatInt(time.Now().UnixMilli(), 10)
 }
 
 func printNodes(nodes []model.Node) *string {

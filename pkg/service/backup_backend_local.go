@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 
 	"log/slog"
 
@@ -17,22 +18,25 @@ import (
 // BackupBackendLocal implements the BackupBackend interface by
 // saving state to the local file system.
 type BackupBackendLocal struct {
-	path          string
-	stateFilePath string
-	backupPolicy  *model.BackupPolicy
+	path                 string
+	stateFilePath        string
+	backupPolicy         *model.BackupPolicy
+	fullBackupInProgress *atomic.Bool
 }
 
 var _ BackupBackend = (*BackupBackendLocal)(nil)
 
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
-func NewBackupBackendLocal(path string, backupPolicy *model.BackupPolicy) *BackupBackendLocal {
+func NewBackupBackendLocal(path string, backupPolicy *model.BackupPolicy,
+	fullBackupInProgress *atomic.Bool) *BackupBackendLocal {
 	prepareDirectory(path)
 	prepareDirectory(path + "/" + model.IncrementalBackupDirectory)
 	prepareDirectory(path + "/" + model.FullBackupDirectory)
 	return &BackupBackendLocal{
-		path:          path,
-		stateFilePath: path + "/" + model.StateFileName,
-		backupPolicy:  backupPolicy,
+		path:                 path,
+		stateFilePath:        path + "/" + model.StateFileName,
+		backupPolicy:         backupPolicy,
+		fullBackupInProgress: fullBackupInProgress,
 	}
 }
 
@@ -78,21 +82,28 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 		return nil, err
 	}
 
+	lastRun := local.readState().LastRun
 	if local.backupPolicy.RemoveFiles != nil && *local.backupPolicy.RemoveFiles {
 		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
-		if len(entries) > 0 {
-			return []model.BackupDetails{{
-				Key:          ptr.String(backupFolder),
-				LastModified: &local.readState().LastRun,
-			}}, nil
+		if len(entries) == 0 {
+			return []model.BackupDetails{}, nil
 		}
-		return []model.BackupDetails{}, nil
+		if local.fullBackupInProgress.Load() {
+			return []model.BackupDetails{}, nil
+		}
+		return []model.BackupDetails{{
+			Key:          ptr.String(backupFolder),
+			LastModified: &lastRun,
+		}}, nil
 	}
 
-	backupDetails := make([]model.BackupDetails, 0)
+	backupDetails := make([]model.BackupDetails, 0, len(entries))
 	for _, e := range entries {
 		if e.IsDir() {
-			backupDetails = append(backupDetails, toBackupDetails(e, backupFolder))
+			details := toBackupDetails(e, backupFolder)
+			if details.LastModified.Before(lastRun) {
+				backupDetails = append(backupDetails, details)
+			}
 		}
 	}
 	return backupDetails, nil
@@ -105,11 +116,14 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 	if err != nil {
 		return nil, err
 	}
-
-	backupDetails := make([]model.BackupDetails, 0)
+	lastIncrRun := local.readState().LastIncrRun
+	backupDetails := make([]model.BackupDetails, 0, len(entries))
 	for _, e := range entries {
 		if !e.IsDir() {
-			backupDetails = append(backupDetails, toBackupDetails(e, backupFolder))
+			details := toBackupDetails(e, backupFolder)
+			if details.LastModified.Before(lastIncrRun) {
+				backupDetails = append(backupDetails, details)
+			}
 		}
 	}
 	return backupDetails, nil
