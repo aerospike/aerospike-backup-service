@@ -7,6 +7,24 @@ import (
 	"github.com/aws/smithy-go/ptr"
 )
 
+func TestRoutine_Add(t *testing.T) {
+	policy := "policy"
+	cluster := "cluster"
+	storage := "storage"
+	config := &model.Config{
+		BackupRoutines:    make(map[string]*model.BackupRoutine),
+		BackupPolicies:    map[string]*model.BackupPolicy{policy: {Name: &policy}},
+		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {Name: &cluster}},
+		Storage:           map[string]*model.Storage{storage: {Name: &storage}},
+	}
+
+	routine := model.BackupRoutine{Storage: storage, SourceCluster: cluster}
+	err := AddRoutine(config, &routine)
+	if err != nil {
+		t.Errorf("AddRoutine failed, expected nil error, got %v", err)
+	}
+}
+
 func TestRoutine_AddErrors(t *testing.T) {
 	routine := "routine"
 	policy := "policy"
@@ -18,6 +36,7 @@ func TestRoutine_AddErrors(t *testing.T) {
 		routine model.BackupRoutine
 	}{
 		{name: "empty", routine: model.BackupRoutine{}},
+		{name: "existing", routine: model.BackupRoutine{Storage: storage, SourceCluster: cluster, Name: routine}},
 		{name: "no storage", routine: model.BackupRoutine{SourceCluster: cluster}},
 		{name: "no cluster", routine: model.BackupRoutine{Storage: storage}},
 		{name: "wrong storage", routine: model.BackupRoutine{Storage: wrong, SourceCluster: cluster}},
