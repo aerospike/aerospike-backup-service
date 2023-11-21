@@ -101,11 +101,11 @@ func newBackupHandler(config *model.Config, backupRoutine *model.BackupRoutine) 
 
 // Schedule schedules backup for the defining policy.
 func (h *BackupHandler) Schedule(ctx context.Context) {
-	slog.Info("Scheduling full backup", "name", *h.backupPolicy.Name)
+	slog.Info("Scheduling full backup", "name", h.backupRoutine.Name)
 	h.scheduleBackupPeriodically(ctx, h.runFullBackup)
 
 	if h.backupRoutine.IncrIntervalMillis != nil && *h.backupRoutine.IncrIntervalMillis > 0 {
-		slog.Info("Scheduling incremental backup", "name", *h.backupPolicy.Name)
+		slog.Info("Scheduling incremental backup", "name", h.backupRoutine.Name)
 		h.scheduleBackupPeriodically(ctx, h.runIncrementalBackup)
 	}
 }
@@ -237,7 +237,7 @@ func (h *BackupHandler) updateIncrementalBackupState() {
 
 func (h *BackupHandler) writeState() {
 	if err := h.backend.writeState(h.state); err != nil {
-		slog.Error("Failed to write state for the backup", "name", *h.backupPolicy.Name, "err", err)
+		slog.Error("Failed to write state for the backup", "name", h.backupRoutine.Name, "err", err)
 	}
 }
 

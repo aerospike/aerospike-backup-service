@@ -50,9 +50,9 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	defer b.Unlock()
 	isIncremental := opts.ModAfter != nil
 	if isIncremental {
-		slog.Debug(fmt.Sprintf("Starting incremental backup for %s", *backupPolicy.Name))
+		slog.Debug(fmt.Sprintf("Starting incremental backup for %s", backupRoutine.Name))
 	} else {
-		slog.Debug(fmt.Sprintf("Starting full backup for %s", *backupPolicy.Name))
+		slog.Debug(fmt.Sprintf("Starting full backup for %s", backupRoutine.Name))
 	}
 
 	backupConfig := C.backup_config_t{}
@@ -122,7 +122,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 		C.cf_free(unsafe.Pointer(backupStatus))
 		success = true
 	} else {
-		slog.Warn("Failed backup operation", "policy", *backupPolicy.Name)
+		slog.Warn("Failed backup operation", "policy", backupRoutine.Name)
 	}
 
 	// destroy the backup_config

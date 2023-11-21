@@ -50,9 +50,9 @@ func run() int {
 	rootCmd.Flags().StringVarP(&logLevel, "log", "l", "DEBUG", "log level")
 
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
-		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// set default logger
 		slog.SetDefault(slog.New(util.LogHandler(logLevel)))
+		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		setConfigurationManager(configFile)
 		// read configuration file
 		config, err := readConfiguration()
