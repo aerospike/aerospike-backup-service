@@ -2,6 +2,7 @@ package service
 
 import (
 	"log/slog"
+	"sync/atomic"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/smithy-go/ptr"
@@ -11,20 +12,22 @@ import (
 // saving state to AWS S3.
 type BackupBackendS3 struct {
 	*S3Context
-	stateFilePath string
-	backupPolicy  *model.BackupPolicy
+	stateFilePath        string
+	backupPolicy         *model.BackupPolicy
+	fullBackupInProgress *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
 }
 
 var _ BackupBackend = (*BackupBackendS3)(nil)
 
 // NewBackupBackendS3 returns a new BackupBackendS3 instance.
-func NewBackupBackendS3(storage *model.Storage,
-	backupPolicy *model.BackupPolicy) *BackupBackendS3 {
+func NewBackupBackendS3(storage *model.Storage, backupPolicy *model.BackupPolicy,
+	fullBackupInProgress *atomic.Bool) *BackupBackendS3 {
 	s3Context := NewS3Context(storage)
 	return &BackupBackendS3{
-		S3Context:     s3Context,
-		stateFilePath: s3Context.Path + "/" + model.StateFileName,
-		backupPolicy:  backupPolicy,
+		S3Context:            s3Context,
+		stateFilePath:        s3Context.Path + "/" + model.StateFileName,
+		backupPolicy:         backupPolicy,
+		fullBackupInProgress: fullBackupInProgress,
 	}
 }
 
@@ -42,33 +45,39 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 	backupFolder := s.Path + "/" + model.FullBackupDirectory + "/"
 	s3prefix := "s3://" + s.bucket
+	lastRun := s.readState().LastRun
 	if s.backupPolicy.RemoveFiles != nil && *s.backupPolicy.RemoveFiles {
 		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 		files, _ := s.listFiles(backupFolder)
-		if len(files) > 0 {
-			return []model.BackupDetails{{
-				Key:          ptr.String(s3prefix + backupFolder),
-				LastModified: &s.readState().LastRun,
-				Size:         ptr.Int64(s.dirSize(backupFolder)),
-			}}, nil
+		if len(files) == 0 {
+			return []model.BackupDetails{}, nil
 		}
-		return []model.BackupDetails{}, nil
+		if s.fullBackupInProgress.Load() {
+			return []model.BackupDetails{}, nil
+		}
+		return []model.BackupDetails{{
+			Key:          ptr.String(s3prefix + backupFolder),
+			LastModified: &lastRun,
+			Size:         ptr.Int64(s.dirSize(backupFolder)),
+		}}, nil
 	}
 
 	subfolders, err := s.listFolders(backupFolder)
 	if err != nil {
 		return nil, err
 	}
-	contents := make([]model.BackupDetails, len(subfolders))
-	for i, subfolder := range subfolders {
+	result := make([]model.BackupDetails, 0, len(subfolders))
+	for _, subfolder := range subfolders {
 		details := model.BackupDetails{
 			Key:          ptr.String(s3prefix + "/" + *subfolder.Prefix),
 			LastModified: s.GetTime(subfolder),
 			Size:         ptr.Int64(s.dirSize(*subfolder.Prefix)),
 		}
-		contents[i] = details
+		if details.LastModified.Before(lastRun) {
+			result = append(result, details)
+		}
 	}
-	return contents, err
+	return result, err
 }
 
 func (s *BackupBackendS3) dirSize(path string) int64 {
@@ -91,14 +100,17 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 	if err != nil {
 		return nil, err
 	}
-	contents := make([]model.BackupDetails, len(list))
-	for i, object := range list {
+	result := make([]model.BackupDetails, 0, len(list))
+	lastIncrRun := s.readState().LastIncrRun
+	for _, object := range list {
 		details := model.BackupDetails{
 			Key:          ptr.String(s3prefix + "/" + *object.Key),
 			LastModified: object.LastModified,
 			Size:         &object.Size,
 		}
-		contents[i] = details
+		if details.LastModified.Before(lastIncrRun) {
+			result = append(result, details)
+		}
 	}
-	return contents, err
+	return result, err
 }

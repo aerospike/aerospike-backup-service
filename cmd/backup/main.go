@@ -62,10 +62,10 @@ func run() int {
 		// get system ctx
 		ctx := systemCtx()
 		// schedule all configured backups
-		handlers := service.BuildBackupHandlers(config)
-		service.ScheduleHandlers(ctx, handlers)
+		schedulers := service.BuildBackupSchedulers(config)
+		service.ScheduleHandlers(ctx, schedulers)
 		// run HTTP server
-		return runHTTPServer(ctx, handlers, config)
+		return runHTTPServer(ctx, schedulers, config)
 	}
 
 	err := rootCmd.Execute()
