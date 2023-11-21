@@ -14,7 +14,7 @@ type BackupBackendS3 struct {
 	*S3Context
 	stateFilePath        string
 	backupPolicy         *model.BackupPolicy
-	fullBackupInProgress *atomic.Bool
+	fullBackupInProgress *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
 }
 
 var _ BackupBackend = (*BackupBackendS3)(nil)

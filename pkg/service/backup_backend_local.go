@@ -21,7 +21,7 @@ type BackupBackendLocal struct {
 	path                 string
 	stateFilePath        string
 	backupPolicy         *model.BackupPolicy
-	fullBackupInProgress *atomic.Bool
+	fullBackupInProgress *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
 }
 
 var _ BackupBackend = (*BackupBackendLocal)(nil)
