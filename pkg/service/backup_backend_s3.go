@@ -95,13 +95,13 @@ func (s *BackupBackendS3) dirSize(path string) int64 {
 
 // IncrementalBackupList returns a list of available incremental backups.
 func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error) {
-	lastIncrRun := s.readState().LastIncrRun
 	s3prefix := "s3://" + s.bucket
 	list, err := s.listFiles(s.Path + "/" + model.IncrementalBackupDirectory)
 	if err != nil {
 		return nil, err
 	}
 	result := make([]model.BackupDetails, 0, len(list))
+	lastIncrRun := s.readState().LastIncrRun
 	for _, object := range list {
 		details := model.BackupDetails{
 			Key:          ptr.String(s3prefix + "/" + *object.Key),
