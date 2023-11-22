@@ -32,6 +32,7 @@ func run() int {
 		configFile, logLevel string
 	)
 
+	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 	validateFlags := func(cmd *cobra.Command, args []string) error {
 		if len(configFile) == 0 {
 			return errors.New("--config is required")
@@ -52,7 +53,6 @@ func run() int {
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
 		// set default logger
 		slog.SetDefault(slog.New(util.LogHandler(logLevel)))
-		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		setConfigurationManager(configFile)
 		// read configuration file
 		config, err := readConfiguration()
