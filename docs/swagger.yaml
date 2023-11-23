@@ -757,9 +757,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: |-
-        Specify the directory parameter for the full backup restore.
-        Use the file parameter to restore from an incremental backup file.
+      description: Restores backup from given point in time
       operationId: restoreTime
       parameters:
       - description: query params
