@@ -111,7 +111,7 @@ func NewHTTPServer(handlers []service.BackupScheduler, config *model.Config) *HT
 		},
 		rateLimiter:    rateLimiter,
 		whiteList:      newIPWhiteList(config.HTTPServer.Rate.WhiteList),
-		restoreService: service.NewRestoreMemory(),
+		restoreService: service.NewRestoreMemory(backendMap),
 		backupBackends: backendMap,
 	}
 }
@@ -172,6 +172,9 @@ func (ws *HTTPServer) Start() {
 
 	// Restore job endpoint
 	mux.HandleFunc("/restore", ws.restoreHandler)
+
+	// Restore by timestamp endpoint
+	mux.HandleFunc("/restoreTime", ws.restoreByTimeHandler)
 
 	// Restore job status endpoint
 	mux.HandleFunc("/restore/status", ws.restoreStatusHandler)

@@ -76,7 +76,7 @@ func (ws *HTTPServer) requestedRoutines(r *http.Request) []string {
 	if queryRoutineName != "" {
 		return []string{queryRoutineName}
 	}
-	routines := make([]string, len(ws.config.BackupRoutines))
+	routines := make([]string, 0, len(ws.config.BackupRoutines))
 	for _, p := range ws.config.BackupRoutines {
 		routines = append(routines, p.Name)
 	}

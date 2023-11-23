@@ -44,6 +44,38 @@ func (ws *HTTPServer) restoreHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// @Summary     Trigger an asynchronous restore operation.
+// @ID 	        restoreTime
+// @Description Restores backup from given point in time
+// @Tags        Restore
+// @Router      /restoreTime [post]
+// @Accept		json
+// @Param       request body model.RestoreTimeRequest true "query params"
+// @Success     202 {string}  "Job ID (int64)"
+// @Failure     400 {string} string
+func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		var request model.RestoreTimeRequest
+
+		err := json.NewDecoder(r.Body).Decode(&request)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err = request.Validate(); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		jobID := ws.restoreService.RestoreByTime(&request)
+		slog.Info("Restore action", "jobID", jobID, "request", request)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, strconv.Itoa(jobID))
+	} else {
+		http.Error(w, "", http.StatusNotFound)
+	}
+}
+
 // @Summary     Retrieve status for a restore job.
 // @ID	        restoreStatus
 // @Tags        Restore

@@ -37,6 +37,12 @@ type RestoreRequest struct {
 	AuthMode             *string  `json:"auth-mode,omitempty"`
 }
 
+type RestoreTimeRequest struct {
+	Time           int64  `json:"time,omitempty" format:"int64"`
+	Routine        string `json:"routine,omitempty"`
+	RestoreRequest RestoreRequest
+}
+
 // Validate validates the restore operation request.
 func (r *RestoreRequest) Validate() error {
 	if r.Directory != nil && r.File != nil {
@@ -50,6 +56,19 @@ func (r *RestoreRequest) Validate() error {
 	}
 	if r.Port == nil {
 		return errors.New("port is not specified")
+	}
+	return nil
+}
+
+func (r *RestoreTimeRequest) Validate() error {
+	if err := r.RestoreRequest.Validate(); err != nil {
+		return err
+	}
+	if r.Time == 0 {
+		return errors.New("restore point in time is not specified")
+	}
+	if r.Routine == "" {
+		return errors.New("routine to restore is not specified")
 	}
 	return nil
 }

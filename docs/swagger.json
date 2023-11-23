@@ -39,7 +39,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Backup policy name",
+                        "description": "Backup routine name",
                         "name": "name",
                         "in": "query",
                         "required": true
@@ -47,7 +47,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Full backups by policy",
+                        "description": "Full backups by routine",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -80,7 +80,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Backup policy name",
+                        "description": "Backup routine name",
                         "name": "name",
                         "in": "query",
                         "required": true
@@ -88,7 +88,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Incremental backups by policy",
+                        "description": "Incremental backups by routine",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -747,6 +747,44 @@
                 }
             }
         },
+        "/restoreTime": {
+            "post": {
+                "description": "Specify the directory parameter for the full backup restore.\nUse the file parameter to restore from an incremental backup file.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Restore"
+                ],
+                "summary": "Trigger an asynchronous restore operation.",
+                "operationId": "restoreTime",
+                "parameters": [
+                    {
+                        "description": "query params",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.RestoreTimeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Job ID (int64)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/version": {
             "get": {
                 "tags": [
@@ -1098,6 +1136,21 @@
                 },
                 "user": {
                     "type": "string"
+                }
+            }
+        },
+        "model.RestoreTimeRequest": {
+            "type": "object",
+            "properties": {
+                "restoreRequest": {
+                    "$ref": "#/definitions/model.RestoreRequest"
+                },
+                "routine": {
+                    "type": "string"
+                },
+                "time": {
+                    "type": "integer",
+                    "format": "int64"
                 }
             }
         },

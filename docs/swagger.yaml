@@ -220,6 +220,16 @@ definitions:
       user:
         type: string
     type: object
+  model.RestoreTimeRequest:
+    properties:
+      restoreRequest:
+        $ref: '#/definitions/model.RestoreRequest'
+      routine:
+        type: string
+      time:
+        format: int64
+        type: integer
+    type: object
   model.Storage:
     properties:
       name:
@@ -271,7 +281,7 @@ paths:
     get:
       operationId: getAvailableFullBackups
       parameters:
-      - description: Backup policy name
+      - description: Backup routine name
         in: query
         name: name
         required: true
@@ -280,7 +290,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Full backups by policy
+          description: Full backups by routine
           schema:
             additionalProperties:
               items:
@@ -298,7 +308,7 @@ paths:
     get:
       operationId: getAvailableIncrementalBackups
       parameters:
-      - description: Backup policy name
+      - description: Backup routine name
         in: query
         name: name
         required: true
@@ -307,7 +317,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Incremental backups by policy
+          description: Incremental backups by routine
           schema:
             additionalProperties:
               items:
@@ -741,6 +751,33 @@ paths:
           schema:
             type: string
       summary: Retrieve status for a restore job.
+      tags:
+      - Restore
+  /restoreTime:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Specify the directory parameter for the full backup restore.
+        Use the file parameter to restore from an incremental backup file.
+      operationId: restoreTime
+      parameters:
+      - description: query params
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RestoreTimeRequest'
+      responses:
+        "202":
+          description: Job ID (int64)
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Trigger an asynchronous restore operation.
       tags:
       - Restore
   /version:
