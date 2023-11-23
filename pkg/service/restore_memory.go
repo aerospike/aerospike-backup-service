@@ -132,7 +132,8 @@ func (r *RestoreMemory) restoreFullBackup(request *model.RestoreTimeRequest, key
 	return r.doRestore(&restoreRequest)
 }
 
-func (r *RestoreMemory) findLastFullBackup(backend BackupBackend, request *model.RestoreTimeRequest, jobID int) (*model.BackupDetails, error) {
+func (r *RestoreMemory) findLastFullBackup(backend BackupBackend,
+	request *model.RestoreTimeRequest, jobID int) (*model.BackupDetails, error) {
 	fullBackupList, err := backend.FullBackupList()
 	if err != nil {
 		slog.Error("cannot read full backup list", "name", request.Routine)
@@ -143,7 +144,7 @@ func (r *RestoreMemory) findLastFullBackup(backend BackupBackend, request *model
 	fullBackup := latestFullBackup(fullBackupList, time.UnixMilli(request.Time))
 	if fullBackup == nil {
 		r.restoreJobs[jobID] = jobStatusFailed
-		return nil, fmt.Errorf("No full backup found for %s at %s", request.Routine, request.Time)
+		return nil, fmt.Errorf("no full backup found for %s at %d", request.Routine, request.Time)
 	}
 
 	return fullBackup, nil

@@ -8,7 +8,7 @@ import (
 )
 
 func TestRestoreMemory(t *testing.T) {
-	restoreService := NewRestoreMemory()
+	restoreService := NewRestoreMemory(nil)
 	restoreRequest := &model.RestoreRequest{
 		Host:      util.Ptr("localhost"),
 		Port:      util.Ptr(int32(3000)),
