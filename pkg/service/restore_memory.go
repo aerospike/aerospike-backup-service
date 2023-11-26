@@ -63,9 +63,9 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) in
 	jobID := r.restoreJobs.newJob()
 	go func() {
 		backend := r.backends[request.Routine]
-		fullBackup, err := r.findLastFullBackup(backend, request, jobID)
+		fullBackup, err := r.findLastFullBackup(backend, request)
 		if err != nil {
-			slog.Error(err.Error())
+			slog.Error(err.Error(), "JobId", jobID)
 			r.restoreJobs.setFailed(jobID)
 			return
 		}
@@ -78,13 +78,13 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) in
 
 		incrementalBackups, err := r.findIncrementalBackups(backend, *fullBackup.LastModified)
 		if err != nil {
-			slog.Error(err.Error())
+			slog.Error(err.Error(), "JobId", jobID)
 			r.restoreJobs.setFailed(jobID)
 			return
 		}
 
 		if err = r.restoreIncrementalBackups(incrementalBackups, request); err != nil {
-			slog.Error(err.Error())
+			slog.Error(err.Error(), "JobId", jobID)
 			r.restoreJobs.setFailed(jobID)
 			return
 		}
@@ -95,17 +95,15 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) in
 }
 
 func (r *RestoreMemory) findLastFullBackup(backend BackupBackend,
-	request *model.RestoreTimestampRequest, jobID int) (*model.BackupDetails, error) {
+	request *model.RestoreTimestampRequest) (*model.BackupDetails, error) {
 	fullBackupList, err := backend.FullBackupList()
 	if err != nil {
 		slog.Error("cannot read full backup list", "name", request.Routine, "error", err)
-		r.restoreJobs.setFailed(jobID)
 		return nil, fmt.Errorf("cannot read full backup list for %s", request.Routine)
 	}
 
 	fullBackup := latestFullBackupBeforeTime(fullBackupList, time.UnixMilli(request.Time))
 	if fullBackup == nil {
-		r.restoreJobs.setFailed(jobID)
 		return nil, fmt.Errorf("no full backup found for %s at %d", request.Routine, request.Time)
 	}
 
@@ -114,10 +112,11 @@ func (r *RestoreMemory) findLastFullBackup(backend BackupBackend,
 
 func latestFullBackupBeforeTime(list []model.BackupDetails, time time.Time) *model.BackupDetails {
 	var latestFullBackup *model.BackupDetails
-	for _, b := range list {
+	for i := range list {
+		b := &list[i]
 		if b.LastModified.Before(time) {
 			if latestFullBackup == nil || latestFullBackup.LastModified.After(*b.LastModified) {
-				latestFullBackup = &b
+				latestFullBackup = b
 			}
 		}
 	}
