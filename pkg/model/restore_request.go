@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-// RestoreRequest represents a restore operation request.
+// RestoreFullRequest represents a full restore operation request.
 type RestoreFullRequest struct {
 	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
 	SourceStorage     *Storage          `json:"source,omitempty"`
@@ -13,7 +13,7 @@ type RestoreFullRequest struct {
 	Directory         *string           `json:"directory,omitempty"`
 }
 
-// RestoreRequest represents a restore operation request.
+// RestoreIncrementalRequest represents an incremental restore operation request.
 type RestoreIncrementalRequest struct {
 	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
 	SourceStorage     *Storage          `json:"source,omitempty"`
@@ -21,7 +21,7 @@ type RestoreIncrementalRequest struct {
 	File              *string           `json:"file,omitempty"`
 }
 
-// RestoreRequest represents a restore operation request.
+// RestoreTimestampRequest represents a restore by timestamp operation request.
 type RestoreTimestampRequest struct {
 	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
 	SourceStorage     *Storage          `json:"source,omitempty"`
@@ -30,6 +30,8 @@ type RestoreTimestampRequest struct {
 	Routine           string            `json:"routine,omitempty"`
 }
 
+// RestoreRequest represents generic restore request.
+// It is only used internally to pass data to restore library.
 type RestoreRequest struct {
 	DestinationCuster *AerospikeCluster
 	SourceStorage     *Storage
@@ -40,6 +42,7 @@ type RestoreRequest struct {
 	Routine           string
 }
 
+// RestorePolicy represents a policy for restore operation.
 type RestorePolicy struct {
 	Parallel           *uint32  `json:"parallel,omitempty"`
 	NoRecords          *bool    `json:"no-records,omitempty"`
