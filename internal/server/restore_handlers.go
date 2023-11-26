@@ -16,7 +16,7 @@ import (
 // @Description Specify the directory parameter for the full backup restore.
 // @Tags        Restore
 // @Router      /restore/full [post]
-// @Accept		json
+// @Accept      json
 // @Param       request body model.RestoreFullRequest true "query params"
 // @Success     202 {string}  "Job ID (int64)"
 // @Failure     400 {string} string
@@ -49,7 +49,7 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 // @Description Specify the file parameter to restore from an incremental backup file.
 // @Tags        Restore
 // @Router      /restore/incremental [post]
-// @Accept	    json
+// @Accept      json
 // @Param       request body model.RestoreIncrementalRequest true "query params"
 // @Success     202 {string}  "Job ID (int64)"
 // @Failure     400 {string} string
@@ -82,7 +82,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 // @Description Restores backup from given point in time
 // @Tags        Restore
 // @Router      /restore/timestamp [post]
-// @Accept	    json
+// @Accept      json
 // @Param       request body model.RestoreTimestampRequest true "query params"
 // @Success     202 {string}  "Job ID (int64)"
 // @Failure     400 {string} string
