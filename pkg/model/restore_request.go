@@ -124,3 +124,30 @@ func (r RestoreRequest) String() string {
 	}
 	return string(request)
 }
+
+// String satisfies the fmt.Stringer interface.
+func (r RestoreFullRequest) String() string {
+	request, err := json.Marshal(r)
+	if err != nil {
+		return err.Error()
+	}
+	return string(request)
+}
+
+// String satisfies the fmt.Stringer interface.
+func (r RestoreIncrementalRequest) String() string {
+	request, err := json.Marshal(r)
+	if err != nil {
+		return err.Error()
+	}
+	return string(request)
+}
+
+// String satisfies the fmt.Stringer interface.
+func (r RestoreTimestampRequest) String() string {
+	request, err := json.Marshal(r)
+	if err != nil {
+		return err.Error()
+	}
+	return string(request)
+}
