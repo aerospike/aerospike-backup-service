@@ -714,9 +714,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: |-
-        Specify the directory parameter for the full backup restore.
-        Use the file parameter to restore from an incremental backup file.
+      description: Specify the directory parameter for the full backup restore.
       operationId: restoreFull
       parameters:
       - description: query params
@@ -734,17 +732,16 @@ paths:
           description: Bad Request
           schema:
             type: string
-      summary: Trigger an asynchronous restore operation.
+      summary: Trigger an asynchronous full restore operation.
       tags:
       - Restore
   /restore/incremental:
     post:
       consumes:
       - application/json
-      description: |-
-        Specify the directory parameter for the full backup restore.
-        Use the file parameter to restore from an incremental backup file.
-      operationId: restoreIncr
+      description: Specify the file parameter to restore from an incremental backup
+        file.
+      operationId: restoreIncremental
       parameters:
       - description: query params
         in: body
@@ -761,7 +758,7 @@ paths:
           description: Bad Request
           schema:
             type: string
-      summary: Trigger an asynchronous restore operation.
+      summary: Trigger an asynchronous incremental restore operation.
       tags:
       - Restore
   /restore/status:
@@ -809,7 +806,7 @@ paths:
           description: Bad Request
           schema:
             type: string
-      summary: Trigger an asynchronous restore operation.
+      summary: Trigger an asynchronous restore operation to specific point in time.
       tags:
       - Restore
   /version:

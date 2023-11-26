@@ -95,21 +95,44 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) in
 	return jobID
 }
 
-func (r *RestoreMemory) restoreIncrementalBackups(incrementalBackups []model.BackupDetails, request *model.RestoreTimestampRequest) *string {
-	for _, b := range incrementalBackups {
-		incrRestoreOK := r.doRestore(&model.RestoreRequest{
-			DestinationCuster: request.DestinationCuster,
-			SourceStorage:     request.SourceStorage,
-			Policy:            request.Policy,
-			Directory:         nil,
-			File:              b.Key,
-		})
+func (r *RestoreMemory) findLastFullBackup(backend BackupBackend,
+	request *model.RestoreTimestampRequest, jobID int) (*model.BackupDetails, error) {
+	fullBackupList, err := backend.FullBackupList()
+	if err != nil {
+		slog.Error("cannot read full backup list", "name", request.Routine, "error", err)
+		r.restoreJobs.setFailed(jobID)
+		return nil, fmt.Errorf("cannot read full backup list for %s", request.Routine)
+	}
 
-		if incrRestoreOK == false {
-			return b.Key
+	fullBackup := latestFullBackupBeforeTime(fullBackupList, time.UnixMilli(request.Time))
+	if fullBackup == nil {
+		r.restoreJobs.setFailed(jobID)
+		return nil, fmt.Errorf("no full backup found for %s at %d", request.Routine, request.Time)
+	}
+
+	return fullBackup, nil
+}
+
+func latestFullBackupBeforeTime(list []model.BackupDetails, time time.Time) *model.BackupDetails {
+	var latestFullBackup *model.BackupDetails
+	for _, b := range list {
+		if b.LastModified.Before(time) {
+			if latestFullBackup == nil || latestFullBackup.LastModified.After(*b.LastModified) {
+				latestFullBackup = &b
+			}
 		}
 	}
-	return nil
+	return latestFullBackup
+}
+
+func (r *RestoreMemory) restoreFullBackup(request *model.RestoreTimestampRequest, key *string) bool {
+	return r.doRestore(&model.RestoreRequest{
+		DestinationCuster: request.DestinationCuster,
+		SourceStorage:     request.SourceStorage,
+		Policy:            request.Policy,
+		Directory:         key,
+		File:              nil,
+	})
 }
 
 func (r *RestoreMemory) findIncrementalBackups(backend BackupBackend, u time.Time) ([]model.BackupDetails, error) {
@@ -126,44 +149,21 @@ func (r *RestoreMemory) findIncrementalBackups(backend BackupBackend, u time.Tim
 	return filteredIncrementalBackups, nil
 }
 
-func (r *RestoreMemory) restoreFullBackup(request *model.RestoreTimestampRequest, key *string) bool {
-	return r.doRestore(&model.RestoreRequest{
-		DestinationCuster: request.DestinationCuster,
-		SourceStorage:     request.SourceStorage,
-		Policy:            request.Policy,
-		Directory:         key,
-		File:              nil,
-	})
-}
+func (r *RestoreMemory) restoreIncrementalBackups(incrementalBackups []model.BackupDetails, request *model.RestoreTimestampRequest) *string {
+	for _, b := range incrementalBackups {
+		incrRestoreOK := r.doRestore(&model.RestoreRequest{
+			DestinationCuster: request.DestinationCuster,
+			SourceStorage:     request.SourceStorage,
+			Policy:            request.Policy,
+			Directory:         nil,
+			File:              b.Key,
+		})
 
-func (r *RestoreMemory) findLastFullBackup(backend BackupBackend,
-	request *model.RestoreTimestampRequest, jobID int) (*model.BackupDetails, error) {
-	fullBackupList, err := backend.FullBackupList()
-	if err != nil {
-		slog.Error("cannot read full backup list", "name", request.Routine)
-		r.restoreJobs.setFailed(jobID)
-		return nil, fmt.Errorf("cannot read full backup list for %s", request.Routine)
-	}
-
-	fullBackup := latestFullBackup(fullBackupList, time.UnixMilli(request.Time))
-	if fullBackup == nil {
-		r.restoreJobs.setFailed(jobID)
-		return nil, fmt.Errorf("no full backup found for %s at %d", request.Routine, request.Time)
-	}
-
-	return fullBackup, nil
-}
-
-func latestFullBackup(list []model.BackupDetails, time time.Time) *model.BackupDetails {
-	var latestFullBackup *model.BackupDetails
-	for _, b := range list {
-		if b.LastModified.Before(time) {
-			if latestFullBackup == nil || latestFullBackup.LastModified.After(*b.LastModified) {
-				latestFullBackup = &b
-			}
+		if incrRestoreOK == false {
+			return b.Key
 		}
 	}
-	return latestFullBackup
+	return nil
 }
 
 // JobStatus returns the status of the job with the given id.

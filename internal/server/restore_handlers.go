@@ -11,10 +11,9 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// @Summary     Trigger an asynchronous restore operation.
+// @Summary     Trigger an asynchronous full restore operation.
 // @ID 	        restoreFull
 // @Description Specify the directory parameter for the full backup restore.
-// @Description Use the file parameter to restore from an incremental backup file.
 // @Tags        Restore
 // @Router      /restore/full [post]
 // @Accept		json
@@ -45,10 +44,9 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// @Summary     Trigger an asynchronous restore operation.
-// @ID 	        restoreIncr
-// @Description Specify the directory parameter for the full backup restore.
-// @Description Use the file parameter to restore from an incremental backup file.
+// @Summary     Trigger an asynchronous incremental restore operation.
+// @ID 	        restoreIncremental
+// @Description Specify the file parameter to restore from an incremental backup file.
 // @Tags        Restore
 // @Router      /restore/incremental [post]
 // @Accept		json
@@ -79,7 +77,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 	}
 }
 
-// @Summary     Trigger an asynchronous restore operation.
+// @Summary     Trigger an asynchronous restore operation to specific point in time.
 // @ID 	        restoreTimestamp
 // @Description Restores backup from given point in time
 // @Tags        Restore
