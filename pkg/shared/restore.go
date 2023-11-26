@@ -81,9 +81,11 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
 	}
 
 	// S3 configuration
-	setCString(&restoreConfig.s3_endpoint_override, restoreRequest.SourceStorage.S3EndpointOverride)
-	setCString(&restoreConfig.s3_region, restoreRequest.SourceStorage.S3Region)
-	setCString(&restoreConfig.s3_profile, restoreRequest.SourceStorage.S3Profile)
+	if restoreRequest.SourceStorage != nil {
+		setCString(&restoreConfig.s3_endpoint_override, restoreRequest.SourceStorage.S3EndpointOverride)
+		setCString(&restoreConfig.s3_region, restoreRequest.SourceStorage.S3Region)
+		setCString(&restoreConfig.s3_profile, restoreRequest.SourceStorage.S3Profile)
+	}
 
 	// restore source configuration
 	setCString(&restoreConfig.directory, restoreRequest.Directory)
