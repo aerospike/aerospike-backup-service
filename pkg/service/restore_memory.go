@@ -81,11 +81,10 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) in
 			slog.Error(err.Error())
 			r.restoreJobs.setFailed(jobID)
 			return
-
 		}
 
-		if failed := r.restoreIncrementalBackups(incrementalBackups, request); failed != nil {
-			slog.Error("Could not restore incremental backup", "routine", request.Routine, "key", failed)
+		if err = r.restoreIncrementalBackups(incrementalBackups, request); err != nil {
+			slog.Error(err.Error())
 			r.restoreJobs.setFailed(jobID)
 			return
 		}
@@ -149,7 +148,7 @@ func (r *RestoreMemory) findIncrementalBackups(backend BackupBackend, u time.Tim
 	return filteredIncrementalBackups, nil
 }
 
-func (r *RestoreMemory) restoreIncrementalBackups(incrementalBackups []model.BackupDetails, request *model.RestoreTimestampRequest) *string {
+func (r *RestoreMemory) restoreIncrementalBackups(incrementalBackups []model.BackupDetails, request *model.RestoreTimestampRequest) error {
 	for _, b := range incrementalBackups {
 		incrRestoreOK := r.doRestore(&model.RestoreRequest{
 			DestinationCuster: request.DestinationCuster,
@@ -159,8 +158,8 @@ func (r *RestoreMemory) restoreIncrementalBackups(incrementalBackups []model.Bac
 			File:              b.Key,
 		})
 
-		if incrRestoreOK == false {
-			return b.Key
+		if !incrRestoreOK {
+			return fmt.Errorf("could not restore incremental backup %s at %s", request.Routine, *b.Key)
 		}
 	}
 	return nil
