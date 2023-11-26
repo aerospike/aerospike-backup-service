@@ -170,11 +170,15 @@ func (ws *HTTPServer) Start() {
 	// Prometheus endpoint
 	mux.Handle("/metrics", promhttp.Handler())
 
-	// Restore job endpoint
-	mux.HandleFunc("/restore", ws.restoreHandler)
+	// Restore job endpoints
+	// Restore from full backup (by folder)
+	mux.HandleFunc("/restore/full", ws.restoreFullHandler)
 
-	// Restore by timestamp endpoint
-	mux.HandleFunc("/restoreTime", ws.restoreByTimeHandler)
+	// Restore from incremental backup (by file)
+	mux.HandleFunc("/restore/incremental", ws.restoreIncrementalHandler)
+
+	// Restore to specific point in time (by timestamp and routine)
+	mux.HandleFunc("/restore/timestamp", ws.restoreByTimeHandler)
 
 	// Restore job status endpoint
 	mux.HandleFunc("/restore/status", ws.restoreStatusHandler)

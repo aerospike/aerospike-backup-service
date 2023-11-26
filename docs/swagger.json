@@ -674,7 +674,7 @@
                 }
             }
         },
-        "/restore": {
+        "/restore/full": {
             "post": {
                 "description": "Specify the directory parameter for the full backup restore.\nUse the file parameter to restore from an incremental backup file.",
                 "consumes": [
@@ -684,7 +684,7 @@
                     "Restore"
                 ],
                 "summary": "Trigger an asynchronous restore operation.",
-                "operationId": "restore",
+                "operationId": "restoreFull",
                 "parameters": [
                     {
                         "description": "query params",
@@ -692,7 +692,45 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.RestoreRequest"
+                            "$ref": "#/definitions/model.RestoreFullRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Job ID (int64)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/restore/incremental": {
+            "post": {
+                "description": "Specify the directory parameter for the full backup restore.\nUse the file parameter to restore from an incremental backup file.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Restore"
+                ],
+                "summary": "Trigger an asynchronous restore operation.",
+                "operationId": "restoreIncr",
+                "parameters": [
+                    {
+                        "description": "query params",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.RestoreIncrementalRequest"
                         }
                     }
                 ],
@@ -747,7 +785,7 @@
                 }
             }
         },
-        "/restoreTime": {
+        "/restore/timestamp": {
             "post": {
                 "description": "Restores backup from given point in time",
                 "consumes": [
@@ -757,7 +795,7 @@
                     "Restore"
                 ],
                 "summary": "Trigger an asynchronous restore operation.",
-                "operationId": "restoreTime",
+                "operationId": "restoreTimestamp",
                 "parameters": [
                     {
                         "description": "query params",
@@ -765,7 +803,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.RestoreTimeRequest"
+                            "$ref": "#/definitions/model.RestoreTimestampRequest"
                         }
                     }
                 ],
@@ -1041,12 +1079,43 @@
                 }
             }
         },
-        "model.RestoreRequest": {
+        "model.RestoreFullRequest": {
             "type": "object",
             "properties": {
-                "auth-mode": {
+                "destination": {
+                    "$ref": "#/definitions/model.AerospikeCluster"
+                },
+                "directory": {
                     "type": "string"
                 },
+                "policy": {
+                    "$ref": "#/definitions/model.RestorePolicy"
+                },
+                "source": {
+                    "$ref": "#/definitions/model.Storage"
+                }
+            }
+        },
+        "model.RestoreIncrementalRequest": {
+            "type": "object",
+            "properties": {
+                "destination": {
+                    "$ref": "#/definitions/model.AerospikeCluster"
+                },
+                "file": {
+                    "type": "string"
+                },
+                "policy": {
+                    "$ref": "#/definitions/model.RestorePolicy"
+                },
+                "source": {
+                    "$ref": "#/definitions/model.Storage"
+                }
+            }
+        },
+        "model.RestorePolicy": {
+            "type": "object",
+            "properties": {
                 "bandwidth": {
                     "type": "integer"
                 },
@@ -1059,17 +1128,8 @@
                         "type": "string"
                     }
                 },
-                "directory": {
-                    "type": "string"
-                },
                 "disable-batch-writes": {
                     "type": "boolean"
-                },
-                "file": {
-                    "type": "string"
-                },
-                "host": {
-                    "type": "string"
                 },
                 "max-async-batches": {
                     "type": "integer"
@@ -1095,25 +1155,10 @@
                 "parallel": {
                     "type": "integer"
                 },
-                "password": {
-                    "type": "string"
-                },
-                "port": {
-                    "type": "integer"
-                },
                 "replace": {
                     "type": "boolean"
                 },
-                "s3-endpoint-override": {
-                    "type": "string"
-                },
-                "s3-log-level": {
-                    "type": "string"
-                },
-                "s3-profile": {
-                    "type": "string"
-                },
-                "s3-region": {
+                "routine": {
                     "type": "string"
                 },
                 "set-list": {
@@ -1121,6 +1166,10 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "time": {
+                    "type": "integer",
+                    "format": "int64"
                 },
                 "timeout": {
                     "type": "integer"
@@ -1130,23 +1179,23 @@
                 },
                 "unique": {
                     "type": "boolean"
-                },
-                "use-services-alternate": {
-                    "type": "boolean"
-                },
-                "user": {
-                    "type": "string"
                 }
             }
         },
-        "model.RestoreTimeRequest": {
+        "model.RestoreTimestampRequest": {
             "type": "object",
             "properties": {
-                "restoreRequest": {
-                    "$ref": "#/definitions/model.RestoreRequest"
+                "destination": {
+                    "$ref": "#/definitions/model.AerospikeCluster"
+                },
+                "policy": {
+                    "$ref": "#/definitions/model.RestorePolicy"
                 },
                 "routine": {
                     "type": "string"
+                },
+                "source": {
+                    "$ref": "#/definitions/model.Storage"
                 },
                 "time": {
                     "type": "integer",

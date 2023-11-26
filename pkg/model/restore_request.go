@@ -6,14 +6,38 @@ import (
 )
 
 // RestoreRequest represents a restore operation request.
-type RestoreRequest struct {
+type RestoreFullRequest struct {
 	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
 	SourceStorage     *Storage          `json:"source,omitempty"`
 	Policy            *RestorePolicy    `json:"policy,omitempty"`
 	Directory         *string           `json:"directory,omitempty"`
+}
+
+// RestoreRequest represents a restore operation request.
+type RestoreIncrementalRequest struct {
+	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
+	SourceStorage     *Storage          `json:"source,omitempty"`
+	Policy            *RestorePolicy    `json:"policy,omitempty"`
 	File              *string           `json:"file,omitempty"`
+}
+
+// RestoreRequest represents a restore operation request.
+type RestoreTimestampRequest struct {
+	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
+	SourceStorage     *Storage          `json:"source,omitempty"`
+	Policy            *RestorePolicy    `json:"policy,omitempty"`
 	Time              int64             `json:"time,omitempty" format:"int64"`
 	Routine           string            `json:"routine,omitempty"`
+}
+
+type RestoreRequest struct {
+	DestinationCuster *AerospikeCluster
+	SourceStorage     *Storage
+	Policy            *RestorePolicy
+	Directory         *string
+	File              *string
+	Time              int64
+	Routine           string
 }
 
 type RestorePolicy struct {
@@ -38,15 +62,49 @@ type RestorePolicy struct {
 }
 
 // Validate validates the restore operation request.
-func (r *RestoreRequest) Validate() error {
+func (r *RestoreFullRequest) Validate() error {
 	if err := r.DestinationCuster.Validate(); err != nil {
 		return err
 	}
-	if r.Directory != nil && r.File != nil {
-		return errors.New("both restore directory and file are specified")
+	if r.Directory == nil {
+		return errors.New("restore directory is not specified")
 	}
-	if r.Directory == nil && r.File == nil {
-		return errors.New("none of directory or file is specified")
+	return nil
+}
+
+func (r *RestoreFullRequest) ToRestoreRequest() RestoreRequest {
+	return RestoreRequest{
+		DestinationCuster: r.DestinationCuster,
+		SourceStorage:     r.SourceStorage,
+		Policy:            r.Policy,
+		Directory:         r.Directory,
+	}
+}
+
+// Validate validates the restore operation request.
+func (r *RestoreIncrementalRequest) Validate() error {
+	if err := r.DestinationCuster.Validate(); err != nil {
+		return err
+	}
+	if r.File == nil {
+		return errors.New("restore file is not specified")
+	}
+	return nil
+}
+
+func (r *RestoreIncrementalRequest) ToRestoreRequest() RestoreRequest {
+	return RestoreRequest{
+		DestinationCuster: r.DestinationCuster,
+		SourceStorage:     r.SourceStorage,
+		Policy:            r.Policy,
+		File:              r.File,
+	}
+}
+
+// Validate validates the restore operation request.
+func (r *RestoreTimestampRequest) Validate() error {
+	if err := r.DestinationCuster.Validate(); err != nil {
+		return err
 	}
 	if r.Time == 0 {
 		return errors.New("restore point in time is not specified")
@@ -55,6 +113,16 @@ func (r *RestoreRequest) Validate() error {
 		return errors.New("routine to restore is not specified")
 	}
 	return nil
+}
+
+func (r *RestoreTimestampRequest) ToRestoreRequest() RestoreRequest {
+	return RestoreRequest{
+		DestinationCuster: r.DestinationCuster,
+		SourceStorage:     r.SourceStorage,
+		Policy:            r.Policy,
+		Routine:           r.Routine,
+		Time:              r.Time,
+	}
 }
 
 // String satisfies the fmt.Stringer interface.
