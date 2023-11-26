@@ -148,7 +148,8 @@ func (r *RestoreMemory) findIncrementalBackups(backend BackupBackend, u time.Tim
 	return filteredIncrementalBackups, nil
 }
 
-func (r *RestoreMemory) restoreIncrementalBackups(incrementalBackups []model.BackupDetails, request *model.RestoreTimestampRequest) error {
+func (r *RestoreMemory) restoreIncrementalBackups(
+	incrementalBackups []model.BackupDetails, request *model.RestoreTimestampRequest) error {
 	for _, b := range incrementalBackups {
 		incrRestoreOK := r.doRestore(&model.RestoreRequest{
 			DestinationCuster: request.DestinationCuster,
