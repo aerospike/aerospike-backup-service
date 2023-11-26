@@ -38,8 +38,6 @@ type RestoreRequest struct {
 	Policy            *RestorePolicy
 	Directory         *string
 	File              *string
-	Time              int64
-	Routine           string
 }
 
 // RestorePolicy represents a policy for restore operation.
@@ -116,16 +114,6 @@ func (r *RestoreTimestampRequest) Validate() error {
 		return errors.New("routine to restore is not specified")
 	}
 	return nil
-}
-
-func (r *RestoreTimestampRequest) ToRestoreRequest() RestoreRequest {
-	return RestoreRequest{
-		DestinationCuster: r.DestinationCuster,
-		SourceStorage:     r.SourceStorage,
-		Policy:            r.Policy,
-		Routine:           r.Routine,
-		Time:              r.Time,
-	}
 }
 
 // String satisfies the fmt.Stringer interface.
