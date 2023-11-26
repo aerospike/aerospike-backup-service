@@ -109,6 +109,17 @@ func (c *AerospikeCluster) GetPassword() *string {
 	return c.pwd
 }
 
+// Validate validates the Aerospike cluster entity.
+func (c *AerospikeCluster) Validate() error {
+	if c.Host == nil {
+		return errors.New("host is not specified")
+	}
+	if c.Port == nil {
+		return errors.New("port is not specified")
+	}
+	return nil
+}
+
 // Storage represents the configuration for a backup storage details.
 type Storage struct {
 	Name               *string      `yaml:"name,omitempty" json:"name,omitempty"`

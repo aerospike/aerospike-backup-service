@@ -49,6 +49,7 @@ func (r *RestoreMemory) doRestore(request *model.RestoreRequest) bool {
 // returns the id of the backup job.
 func (r *RestoreMemory) Restore(request *model.RestoreRequest) int {
 	jobID := rand.Int() // TODO: use a request hash code
+	r.restoreJobs[jobID] = jobStatusRunning
 	go func() {
 		restoreResult := r.doRestore(request)
 		if restoreResult {
@@ -57,11 +58,10 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequest) int {
 			r.restoreJobs[jobID] = jobStatusFailed
 		}
 	}()
-	r.restoreJobs[jobID] = jobStatusRunning
 	return jobID
 }
 
-func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimeRequest) int {
+func (r *RestoreMemory) RestoreByTime(request *model.RestoreRequest) int {
 	jobID := rand.Int() // TODO: use a request hash code
 	go func() {
 		backend := r.backends[request.Routine]
@@ -98,12 +98,16 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimeRequest) int {
 	return jobID
 }
 
-func (r *RestoreMemory) restoreIncrementalBackups(incrementalBackups []model.BackupDetails, request *model.RestoreTimeRequest) *string {
+func (r *RestoreMemory) restoreIncrementalBackups(incrementalBackups []model.BackupDetails, request *model.RestoreRequest) *string {
 	for _, b := range incrementalBackups {
-		restoreRequest := request.RestoreRequest
-		restoreRequest.Directory = nil
-		restoreRequest.File = b.Key
-		incrRestoreOK := r.doRestore(&restoreRequest)
+		incrRestoreOK := r.doRestore(&model.RestoreRequest{
+			DestinationCuster: request.DestinationCuster,
+			SourceStorage:     request.SourceStorage,
+			Policy:            request.Policy,
+			Directory:         nil,
+			File:              b.Key,
+		})
+
 		if incrRestoreOK == false {
 			return b.Key
 		}
@@ -125,15 +129,18 @@ func (r *RestoreMemory) findIncrementalBackups(backend BackupBackend, u time.Tim
 	return filteredIncrementalBackups, nil
 }
 
-func (r *RestoreMemory) restoreFullBackup(request *model.RestoreTimeRequest, key *string) bool {
-	restoreRequest := request.RestoreRequest
-	restoreRequest.Directory = key
-	restoreRequest.File = nil
-	return r.doRestore(&restoreRequest)
+func (r *RestoreMemory) restoreFullBackup(request *model.RestoreRequest, key *string) bool {
+	return r.doRestore(&model.RestoreRequest{
+		DestinationCuster: request.DestinationCuster,
+		SourceStorage:     request.SourceStorage,
+		Policy:            request.Policy,
+		Directory:         key,
+		File:              nil,
+	})
 }
 
 func (r *RestoreMemory) findLastFullBackup(backend BackupBackend,
-	request *model.RestoreTimeRequest, jobID int) (*model.BackupDetails, error) {
+	request *model.RestoreRequest, jobID int) (*model.BackupDetails, error) {
 	fullBackupList, err := backend.FullBackupList()
 	if err != nil {
 		slog.Error("cannot read full backup list", "name", request.Routine)

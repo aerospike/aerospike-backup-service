@@ -48,14 +48,14 @@ func (ws *HTTPServer) restoreHandler(w http.ResponseWriter, r *http.Request) {
 // @ID 	        restoreTime
 // @Description Restores backup from given point in time
 // @Tags        Restore
-// @Router      /restoreTime [post]
+// @Router      /restoreTimestamp [post]
 // @Accept		json
-// @Param       request body model.RestoreTimeRequest true "query params"
+// @Param       request body model.RestoreRequest true "query params"
 // @Success     202 {string}  "Job ID (int64)"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		var request model.RestoreTimeRequest
+		var request model.RestoreRequest
 
 		err := json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {

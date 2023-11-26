@@ -15,6 +15,9 @@ func AddCluster(config *model.Config, newCluster *model.AerospikeCluster) error 
 	if found {
 		return fmt.Errorf("aerospike cluster with the same name %s already exists", *newCluster.Name)
 	}
+	if err := newCluster.Validate(); err != nil {
+		return err
+	}
 
 	config.AerospikeClusters[*newCluster.Name] = newCluster
 	return nil
@@ -26,6 +29,9 @@ func UpdateCluster(config *model.Config, updatedCluster *model.AerospikeCluster)
 	_, found := config.AerospikeClusters[*updatedCluster.Name]
 	if !found {
 		return fmt.Errorf("cluster %s not found", *updatedCluster.Name)
+	}
+	if err := updatedCluster.Validate(); err != nil {
+		return err
 	}
 
 	config.AerospikeClusters[*updatedCluster.Name] = updatedCluster
