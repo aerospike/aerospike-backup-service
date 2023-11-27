@@ -155,10 +155,30 @@ definitions:
           type: string
         type: array
     type: object
-  model.RestoreRequest:
+  model.RestoreFullRequest:
     properties:
-      auth-mode:
+      destination:
+        $ref: '#/definitions/model.AerospikeCluster'
+      directory:
         type: string
+      policy:
+        $ref: '#/definitions/model.RestorePolicy'
+      source:
+        $ref: '#/definitions/model.Storage'
+    type: object
+  model.RestoreIncrementalRequest:
+    properties:
+      destination:
+        $ref: '#/definitions/model.AerospikeCluster'
+      file:
+        type: string
+      policy:
+        $ref: '#/definitions/model.RestorePolicy'
+      source:
+        $ref: '#/definitions/model.Storage'
+    type: object
+  model.RestorePolicy:
+    properties:
       bandwidth:
         type: integer
       batch-size:
@@ -167,14 +187,8 @@ definitions:
         items:
           type: string
         type: array
-      directory:
-        type: string
       disable-batch-writes:
         type: boolean
-      file:
-        type: string
-      host:
-        type: string
       max-async-batches:
         type: integer
       no-generation:
@@ -191,34 +205,37 @@ definitions:
         type: array
       parallel:
         type: integer
-      password:
-        type: string
-      port:
-        type: integer
       replace:
         type: boolean
-      s3-endpoint-override:
-        type: string
-      s3-log-level:
-        type: string
-      s3-profile:
-        type: string
-      s3-region:
+      routine:
         type: string
       set-list:
         items:
           type: string
         type: array
+      time:
+        format: int64
+        type: integer
       timeout:
         type: integer
       tps:
         type: integer
       unique:
         type: boolean
-      use-services-alternate:
-        type: boolean
-      user:
+    type: object
+  model.RestoreTimestampRequest:
+    properties:
+      destination:
+        $ref: '#/definitions/model.AerospikeCluster'
+      policy:
+        $ref: '#/definitions/model.RestorePolicy'
+      routine:
         type: string
+      source:
+        $ref: '#/definitions/model.Storage'
+      time:
+        format: int64
+        type: integer
     type: object
   model.Storage:
     properties:
@@ -271,7 +288,7 @@ paths:
     get:
       operationId: getAvailableFullBackups
       parameters:
-      - description: Backup policy name
+      - description: Backup routine name
         in: query
         name: name
         required: true
@@ -280,7 +297,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Full backups by policy
+          description: Full backups by routine
           schema:
             additionalProperties:
               items:
@@ -298,7 +315,7 @@ paths:
     get:
       operationId: getAvailableIncrementalBackups
       parameters:
-      - description: Backup policy name
+      - description: Backup routine name
         in: query
         name: name
         required: true
@@ -307,7 +324,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Incremental backups by policy
+          description: Incremental backups by routine
           schema:
             additionalProperties:
               items:
@@ -693,21 +710,19 @@ paths:
       summary: Readiness endpoint.
       tags:
       - System
-  /restore:
+  /restore/full:
     post:
       consumes:
       - application/json
-      description: |-
-        Specify the directory parameter for the full backup restore.
-        Use the file parameter to restore from an incremental backup file.
-      operationId: restore
+      description: Specify the directory parameter for the full backup restore.
+      operationId: restoreFull
       parameters:
       - description: query params
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.RestoreRequest'
+          $ref: '#/definitions/model.RestoreFullRequest'
       responses:
         "202":
           description: Job ID (int64)
@@ -717,7 +732,33 @@ paths:
           description: Bad Request
           schema:
             type: string
-      summary: Trigger an asynchronous restore operation.
+      summary: Trigger an asynchronous full restore operation.
+      tags:
+      - Restore
+  /restore/incremental:
+    post:
+      consumes:
+      - application/json
+      description: Specify the file parameter to restore from an incremental backup
+        file.
+      operationId: restoreIncremental
+      parameters:
+      - description: query params
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RestoreIncrementalRequest'
+      responses:
+        "202":
+          description: Job ID (int64)
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Trigger an asynchronous incremental restore operation.
       tags:
       - Restore
   /restore/status:
@@ -741,6 +782,31 @@ paths:
           schema:
             type: string
       summary: Retrieve status for a restore job.
+      tags:
+      - Restore
+  /restore/timestamp:
+    post:
+      consumes:
+      - application/json
+      description: Restores backup from given point in time
+      operationId: restoreTimestamp
+      parameters:
+      - description: query params
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RestoreTimestampRequest'
+      responses:
+        "202":
+          description: Job ID (int64)
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Trigger an asynchronous restore operation to specific point in time.
       tags:
       - Restore
   /version:

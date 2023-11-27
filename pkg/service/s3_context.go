@@ -107,7 +107,7 @@ func (s *S3Context) writeFile(filePath string, v any) error {
 	reader := bytes.NewReader(backupState)
 	_, err = s.client.PutObject(s.ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(filePath),
+		Key:    aws.String(removeLeadingSlash(filePath)),
 		Body:   reader,
 	})
 	if err != nil {

@@ -11,19 +11,18 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// @Summary     Trigger an asynchronous restore operation.
-// @ID 	        restore
+// @Summary     Trigger an asynchronous full restore operation.
+// @ID 	        restoreFull
 // @Description Specify the directory parameter for the full backup restore.
-// @Description Use the file parameter to restore from an incremental backup file.
 // @Tags        Restore
-// @Router      /restore [post]
-// @Accept		json
-// @Param       request body model.RestoreRequest true "query params"
+// @Router      /restore/full [post]
+// @Accept      json
+// @Param       request body model.RestoreFullRequest true "query params"
 // @Success     202 {string}  "Job ID (int64)"
 // @Failure     400 {string} string
-func (ws *HTTPServer) restoreHandler(w http.ResponseWriter, r *http.Request) {
+func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		var request model.RestoreRequest
+		var request model.RestoreFullRequest
 
 		err := json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
@@ -34,7 +33,73 @@ func (ws *HTTPServer) restoreHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		jobID := ws.restoreService.Restore(&request)
+		restoreRequest := request.ToRestoreRequest()
+		jobID := ws.restoreService.Restore(&restoreRequest)
+		slog.Info("Restore action", "jobID", jobID, "request", request)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, strconv.Itoa(jobID))
+	} else {
+		http.Error(w, "", http.StatusNotFound)
+	}
+}
+
+// @Summary     Trigger an asynchronous incremental restore operation.
+// @ID 	        restoreIncremental
+// @Description Specify the file parameter to restore from an incremental backup file.
+// @Tags        Restore
+// @Router      /restore/incremental [post]
+// @Accept      json
+// @Param       request body model.RestoreIncrementalRequest true "query params"
+// @Success     202 {string}  "Job ID (int64)"
+// @Failure     400 {string} string
+func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		var request model.RestoreIncrementalRequest
+
+		err := json.NewDecoder(r.Body).Decode(&request)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err = request.Validate(); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		restoreRequest := request.ToRestoreRequest()
+		jobID := ws.restoreService.Restore(&restoreRequest)
+		slog.Info("Restore action", "jobID", jobID, "request", request)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, strconv.Itoa(jobID))
+	} else {
+		http.Error(w, "", http.StatusNotFound)
+	}
+}
+
+// @Summary     Trigger an asynchronous restore operation to specific point in time.
+// @ID 	        restoreTimestamp
+// @Description Restores backup from given point in time
+// @Tags        Restore
+// @Router      /restore/timestamp [post]
+// @Accept      json
+// @Param       request body model.RestoreTimestampRequest true "query params"
+// @Success     202 {string}  "Job ID (int64)"
+// @Failure     400 {string} string
+func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		var request model.RestoreTimestampRequest
+
+		err := json.NewDecoder(r.Body).Decode(&request)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err = request.Validate(); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		jobID := ws.restoreService.RestoreByTime(&request)
 		slog.Info("Restore action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)

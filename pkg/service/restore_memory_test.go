@@ -8,12 +8,16 @@ import (
 )
 
 func TestRestoreMemory(t *testing.T) {
-	restoreService := NewRestoreMemory()
+	restoreService := NewRestoreMemory(nil)
 	restoreRequest := &model.RestoreRequest{
-		Host:      util.Ptr("localhost"),
-		Port:      util.Ptr(int32(3000)),
+		DestinationCuster: &model.AerospikeCluster{
+			Host: util.Ptr("localhost"),
+			Port: util.Ptr(int32(3000)),
+		},
+		Policy: &model.RestorePolicy{
+			SetList: []string{"set1"},
+		},
 		Directory: util.Ptr("./testout/backup"),
-		SetList:   []string{"set1"},
 	}
 	jobID := restoreService.Restore(restoreRequest)
 
