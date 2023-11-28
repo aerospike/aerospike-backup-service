@@ -7,10 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aerospike/backup/pkg/stdio"
-
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/aerospike/backup/pkg/stdio"
 	"github.com/aerospike/backup/pkg/util"
 )
 

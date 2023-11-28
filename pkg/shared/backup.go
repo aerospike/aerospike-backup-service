@@ -127,6 +127,9 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 
 	// destroy the backup_config
 	C.backup_config_destroy(&backupConfig)
+	// shutdown global s3 API object if required
+	shutdownS3API(storage.Path)
+
 	return success
 }
 

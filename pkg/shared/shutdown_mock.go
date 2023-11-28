@@ -10,3 +10,7 @@ import (
 func Shutdown() {
 	slog.Debug("Shutdown mock call")
 }
+
+func shutdownS3API(fullPath *string) {
+	slog.Debug("shutdownS3API mock call")
+}

@@ -111,5 +111,8 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
 
 	// destroy the restore_config
 	C.restore_config_destroy(&restoreConfig)
+	// shutdown global s3 API object if required
+	shutdownS3API(restoreRequest.SourceStorage.Path)
+
 	return success
 }
