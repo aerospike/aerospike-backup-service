@@ -139,7 +139,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		return
 	}
 	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
-		slog.Debug("Backup is currently in progress, skipping full backup", "name", h.backupRoutine.Name)
+		slog.Debug("Full backup is currently in progress, skipping full backup", "name", h.backupRoutine.Name)
 		return
 	}
 	slog.Debug("Acquire fullBackupInProgress lock", "name", h.backupRoutine.Name)
