@@ -208,12 +208,21 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
 	slog.Debug("Completed incremental backup", "name", h.backupRoutine.Name)
+	stats, _ := util.ExtractBackupStats(out)
+
+	h.deleteEmptyBackup(stats)
 
 	// increment incrBackupCounter metric
 	incrBackupCounter.Inc()
 
 	// update the state
 	h.updateIncrementalBackupState()
+}
+
+func (h *BackupHandler) deleteEmptyBackup(stats *util.BackupInfo) {
+	if stats != nil && stats.RecordCount == 0 && stats.Path != "" {
+		h.backend.DeleteFile(stats.Path)
+	}
 }
 
 func (h *BackupHandler) isFullEligible(n time.Time, t time.Time) bool {

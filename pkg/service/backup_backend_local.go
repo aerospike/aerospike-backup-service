@@ -146,6 +146,14 @@ func (local *BackupBackendLocal) CleanDir(name string) {
 	}
 }
 
+func (local *BackupBackendLocal) DeleteFile(path string) error {
+	err := os.Remove(path)
+	if err != nil {
+		return fmt.Errorf("failed to delete file: %v", err)
+	}
+	return nil
+}
+
 func toBackupDetails(e fs.DirEntry, prefix string) model.BackupDetails {
 	details := model.BackupDetails{
 		Key: util.Ptr(filepath.Join(prefix, e.Name())),

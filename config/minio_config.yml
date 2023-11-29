@@ -4,17 +4,23 @@ aerospike-clusters:
     name: "cluster1"
     host: "localhost"
     port: 3000
-    # user: "tester"
-    # password: "psw"
+    user: "tester"
+    password: "psw"
 
 storage:
-  s3:
-    name: "s3"
+  minio:
+    name: "minio"
     type: 1
     s3-endpoint_override: "http://localhost:9000"
     s3-region: "eu-central-1"
     s3-profile: "minio"
     path: "s3://as-backup-bucket/test-backup"
+  s3:
+    name: "s3"
+    type: 1
+    s3-region: "eu-central-1"
+    s3-profile: "default"
+    path: "s3://abs-test-backup-bucket-0/anton_backup"
 
 backup-policies:
   policy1:
@@ -30,5 +36,13 @@ backup-routines:
     incr-interval: 5000
     backup-policy: "policy1"
     source-cluster: "cluster1"
+    storage: "minio"
+    namespace: "source-ns1"
+  routine2:
+    name: "routine2"
+    interval: 30000
+    incr-interval: 5000
+    backup-policy: "policy1"
+    source-cluster: "cluster1"
     storage: "s3"
-    namespace: "test"
+    namespace: "source-ns1"
