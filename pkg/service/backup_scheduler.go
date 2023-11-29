@@ -138,6 +138,11 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		backupSkippedCounter.Inc()
 		return
 	}
+	if !h.isFullEligible(now, h.state.LastRun) {
+		slog.Debug("The full backup is not due to run yet", "name", h.backupRoutine.Name)
+		return
+	}
+
 	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
 		slog.Debug("Full backup is currently in progress, skipping full backup", "name", h.backupRoutine.Name)
 		return
@@ -149,10 +154,6 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		slog.Debug("Release fullBackupInProgress lock", "name", h.backupRoutine.Name)
 	}()
 
-	if !h.isFullEligible(now, h.state.LastRun) {
-		slog.Debug("The full backup is not due to run yet", "name", h.backupRoutine.Name)
-		return
-	}
 	backupRunFunc := func() {
 		started := time.Now()
 		if !backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster,
