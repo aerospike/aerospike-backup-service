@@ -156,13 +156,13 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 	backupRunFunc := func() {
 		started := time.Now()
-		if !backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster,
-			h.storage, shared.BackupOptions{}) {
+		stats := backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
+		if stats == nil {
 			backupFailureCounter.Inc()
-		} else {
-			elapsed := time.Since(started)
-			backupDurationGauge.Set(float64(elapsed.Milliseconds()))
+			return
 		}
+		elapsed := time.Since(started)
+		backupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
@@ -203,19 +203,18 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		lastIncrRunEpoch := state.LastIncrRun.UnixNano()
 		opts.ModAfter = &lastIncrRunEpoch
 		started := time.Now()
-		if !backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, opts) {
+		stats := backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, opts)
+		if stats == nil {
 			incrBackupFailureCounter.Inc()
-		} else {
-			elapsed := time.Since(started)
-			incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
+			return
 		}
+		elapsed := time.Since(started)
+		incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
+		h.deleteEmptyBackup(stats)
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
 	slog.Debug("Completed incremental backup", "name", h.backupRoutine.Name)
-	stats, _ := util.ExtractBackupStats(out)
-
-	h.deleteEmptyBackup(stats)
 
 	// increment incrBackupCounter metric
 	incrBackupCounter.Inc()
@@ -224,9 +223,12 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	h.updateIncrementalBackupState()
 }
 
-func (h *BackupHandler) deleteEmptyBackup(stats *util.BackupInfo) {
-	if stats != nil && stats.RecordCount == 0 && stats.Path != "" {
-		h.backend.DeleteFile(stats.Path)
+func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat) {
+	if stats == nil || !stats.HasStats {
+		return
+	}
+	if stats.RecordCount == 0 && stats.UDFFileCount == 0 && stats.SecondaryIndexCount == 0 {
+		h.backend.DeleteFile(*stats.Path)
 	}
 }
 

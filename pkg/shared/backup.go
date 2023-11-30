@@ -11,6 +11,7 @@ package shared
 #include <stdint.h>
 
 #include <backup.h>
+#include "backup_status.h"
 #include <utils.h>
 */
 import "C"
@@ -40,11 +41,20 @@ func NewBackup() *BackupShared {
 	return &BackupShared{}
 }
 
+// BackupStat struct to hold backup result statistics
+type BackupStat struct {
+	RecordCount         int
+	SecondaryIndexCount int
+	UDFFileCount        int
+	HasStats            bool
+	Path                *string
+}
+
 // BackupRun calls the backup_run function from the asbackup shared library.
 //
 //nolint:funlen
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
-	cluster *model.AerospikeCluster, storage *model.Storage, opts BackupOptions) bool {
+	cluster *model.AerospikeCluster, storage *model.Storage, opts BackupOptions) *BackupStat {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -103,31 +113,40 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCString(&backupConfig.s3_region, storage.S3Region)
 	setCString(&backupConfig.s3_profile, storage.S3Profile)
 
+	result := &BackupStat{}
 	if isIncremental {
-		// for incremental backup
 		setCLong(&backupConfig.mod_after, opts.ModAfter)
-		setCString(&backupConfig.output_file, getIncrementalPath(storage))
+		path := getIncrementalPath(storage)
+		result.Path = path
+		setCString(&backupConfig.output_file, path)
 	} else {
-		// for full backup
-		setCString(&backupConfig.directory, getPath(storage, backupPolicy))
+		path := getPath(storage, backupPolicy)
+		result.Path = path
+		setCString(&backupConfig.directory, path)
 	}
 
 	backupStatus := C.backup_run(&backupConfig)
+	// destroy the backup_config
+	defer C.backup_config_destroy(&backupConfig)
 
-	var success bool
-	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS { //nolint:gocritic
-		success = true
-	} else if unsafe.Pointer(backupStatus) != C.RUN_BACKUP_FAILURE {
-		C.backup_status_destroy(backupStatus)
-		C.cf_free(unsafe.Pointer(backupStatus))
-		success = true
-	} else {
+	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_FAILURE {
 		slog.Warn("Failed backup operation", "policy", backupRoutine.Name)
+		return nil
 	}
 
-	// destroy the backup_config
-	C.backup_config_destroy(&backupConfig)
-	return success
+	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS { //nolint:gocritic
+		return result
+	}
+
+	result.HasStats = true
+	result.RecordCount = int(backupStatus.rec_count_total)
+	result.SecondaryIndexCount = int(backupStatus.index_count)
+	result.UDFFileCount = int(backupStatus.udf_count)
+
+	C.backup_status_destroy(backupStatus)
+	C.cf_free(unsafe.Pointer(backupStatus))
+
+	return result
 }
 
 // parseSetList parses the configured set list for backup

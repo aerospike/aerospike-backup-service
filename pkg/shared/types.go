@@ -14,7 +14,7 @@ type Backup interface {
 		cluster *model.AerospikeCluster,
 		storage *model.Storage,
 		opts BackupOptions,
-	) bool
+	) *BackupStat
 }
 
 type Restore interface {
