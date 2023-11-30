@@ -227,7 +227,7 @@ func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat) {
 	if stats == nil || !stats.HasStats {
 		return
 	}
-	if stats.RecordCount == 0 && stats.UDFFileCount == 0 && stats.SecondaryIndexCount == 0 {
+	if !stats.IsEmpty() {
 		h.backend.DeleteFile(stats.Path)
 	}
 }

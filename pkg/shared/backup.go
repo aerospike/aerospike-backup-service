@@ -107,11 +107,11 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	if isIncremental {
 		setCLong(&backupConfig.mod_after, opts.ModAfter)
 		path := getIncrementalPath(storage)
-		result.Path = path
+		result.Path = *path
 		setCString(&backupConfig.output_file, path)
 	} else {
 		path := getPath(storage, backupPolicy)
-		result.Path = path
+		result.Path = *path
 		setCString(&backupConfig.directory, path)
 	}
 

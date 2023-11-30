@@ -16,6 +16,12 @@ type BackupStat struct {
 	Path                string
 }
 
+func (stats BackupStat) IsEmpty() bool {
+	return stats.RecordCount == 0 &&
+		stats.UDFFileCount == 0 &&
+		stats.SecondaryIndexCount == 0
+}
+
 type Backup interface {
 	BackupRun(
 		backupRoutine *model.BackupRoutine,
