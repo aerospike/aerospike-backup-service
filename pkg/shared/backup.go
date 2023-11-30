@@ -128,15 +128,19 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 		return result
 	}
 
-	result.HasStats = true
-	result.RecordCount = int(backupStatus.rec_count_total)
-	result.SecondaryIndexCount = int(backupStatus.index_count)
-	result.UDFFileCount = int(backupStatus.udf_count)
+	setStatistics(result, backupStatus)
 
 	C.backup_status_destroy(backupStatus)
 	C.cf_free(unsafe.Pointer(backupStatus))
 
 	return result
+}
+
+func setStatistics(result *BackupStat, status *C.backup_status_t) {
+	result.HasStats = true
+	result.RecordCount = int(status.rec_count_total)
+	result.SecondaryIndexCount = int(status.index_count)
+	result.UDFFileCount = int(status.udf_count)
 }
 
 // parseSetList parses the configured set list for backup
