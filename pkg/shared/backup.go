@@ -124,7 +124,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 		return nil
 	}
 
-	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS { //nolint:gocritic
+	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS {
 		return result
 	}
 
