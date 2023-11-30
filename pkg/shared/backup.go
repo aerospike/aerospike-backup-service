@@ -11,7 +11,6 @@ package shared
 #include <stdint.h>
 
 #include <backup.h>
-#include "backup_status.h"
 #include <utils.h>
 */
 import "C"
