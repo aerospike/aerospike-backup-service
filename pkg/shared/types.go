@@ -7,7 +7,7 @@ type BackupOptions struct {
 	ModAfter *int64
 }
 
-// BackupStat struct to hold backup result statistics
+// BackupStat represents partial backup result statistics.
 type BackupStat struct {
 	RecordCount         int
 	SecondaryIndexCount int
