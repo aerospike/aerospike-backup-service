@@ -44,7 +44,7 @@ func NewBackup() *BackupShared {
 //
 //nolint:funlen
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
-	cluster *model.AerospikeCluster, storage *model.Storage, opts BackupOptions) bool {
+	cluster *model.AerospikeCluster, storage *model.Storage, opts BackupOptions) *BackupStat {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -103,34 +103,46 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCString(&backupConfig.s3_region, storage.S3Region)
 	setCString(&backupConfig.s3_profile, storage.S3Profile)
 
+	result := &BackupStat{}
 	if isIncremental {
-		// for incremental backup
 		setCLong(&backupConfig.mod_after, opts.ModAfter)
-		setCString(&backupConfig.output_file, getIncrementalPath(storage))
+		path := getIncrementalPath(storage)
+		result.Path = *path
+		setCString(&backupConfig.output_file, path)
 	} else {
-		// for full backup
-		setCString(&backupConfig.directory, getPath(storage, backupPolicy))
+		path := getPath(storage, backupPolicy)
+		result.Path = *path
+		setCString(&backupConfig.directory, path)
 	}
 
 	backupStatus := C.backup_run(&backupConfig)
+	// destroy the backup_config
+	defer C.backup_config_destroy(&backupConfig)
+    // shutdown global s3 API object if required
+    defer shutdownS3API(storage.Path)
 
-	var success bool
-	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS { //nolint:gocritic
-		success = true
-	} else if unsafe.Pointer(backupStatus) != C.RUN_BACKUP_FAILURE {
-		C.backup_status_destroy(backupStatus)
-		C.cf_free(unsafe.Pointer(backupStatus))
-		success = true
-	} else {
+	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_FAILURE {
 		slog.Warn("Failed backup operation", "policy", backupRoutine.Name)
+		return nil
 	}
 
-	// destroy the backup_config
-	C.backup_config_destroy(&backupConfig)
-	// shutdown global s3 API object if required
-	shutdownS3API(storage.Path)
+	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS {
+		return result
+	}
 
-	return success
+	setStatistics(result, backupStatus)
+
+	C.backup_status_destroy(backupStatus)
+	C.cf_free(unsafe.Pointer(backupStatus))
+
+	return result
+}
+
+func setStatistics(result *BackupStat, status *C.backup_status_t) {
+	result.HasStats = true
+	result.RecordCount = int(status.rec_count_total)
+	result.SecondaryIndexCount = int(status.index_count)
+	result.UDFFileCount = int(status.udf_count)
 }
 
 // parseSetList parses the configured set list for backup

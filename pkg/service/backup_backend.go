@@ -19,4 +19,7 @@ type BackupBackend interface {
 
 	// IncrementalBackupList returns a list of available incremental backups.
 	IncrementalBackupList() ([]model.BackupDetails, error)
+
+	// DeleteFile removes file with a given path.
+	DeleteFile(path string) error
 }
