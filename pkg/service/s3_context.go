@@ -202,3 +202,17 @@ func (s *S3Context) getCreationTime(path string) (*time.Time, error) {
 	// The creation date for the subfolder is same as of any file in it
 	return creationResult.Contents[0].LastModified, nil
 }
+
+func (s *S3Context) DeleteFile(path string) error {
+	input := &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(path),
+	}
+
+	// Execute the delete operation
+	_, err := s.client.DeleteObject(s.ctx, input)
+	if err != nil {
+		return fmt.Errorf("failed to delete object from S3: %v", err)
+	}
+	return nil
+}

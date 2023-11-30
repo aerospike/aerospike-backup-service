@@ -7,6 +7,21 @@ type BackupOptions struct {
 	ModAfter *int64
 }
 
+// BackupStat represents partial backup result statistics.
+type BackupStat struct {
+	RecordCount         int
+	SecondaryIndexCount int
+	UDFFileCount        int
+	HasStats            bool
+	Path                string
+}
+
+func (stats BackupStat) IsEmpty() bool {
+	return stats.RecordCount == 0 &&
+		stats.UDFFileCount == 0 &&
+		stats.SecondaryIndexCount == 0
+}
+
 type Backup interface {
 	BackupRun(
 		backupRoutine *model.BackupRoutine,
@@ -14,7 +29,7 @@ type Backup interface {
 		cluster *model.AerospikeCluster,
 		storage *model.Storage,
 		opts BackupOptions,
-	) bool
+	) *BackupStat
 }
 
 type Restore interface {

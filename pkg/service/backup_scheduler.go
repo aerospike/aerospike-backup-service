@@ -138,26 +138,31 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		backupSkippedCounter.Inc()
 		return
 	}
-	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
-		slog.Debug("Backup is currently in progress, skipping full backup", "name", h.backupRoutine.Name)
-		return
-	}
-	// release the lock
-	defer h.fullBackupInProgress.Store(false)
-
 	if !h.isFullEligible(now, h.state.LastRun) {
 		slog.Debug("The full backup is not due to run yet", "name", h.backupRoutine.Name)
 		return
 	}
+
+	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
+		slog.Debug("Full backup is currently in progress, skipping full backup", "name", h.backupRoutine.Name)
+		return
+	}
+	slog.Debug("Acquire fullBackupInProgress lock", "name", h.backupRoutine.Name)
+	// release the lock
+	defer func() {
+		h.fullBackupInProgress.Store(false)
+		slog.Debug("Release fullBackupInProgress lock", "name", h.backupRoutine.Name)
+	}()
+
 	backupRunFunc := func() {
 		started := time.Now()
-		if !backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster,
-			h.storage, shared.BackupOptions{}) {
+		stats := backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
+		if stats == nil {
 			backupFailureCounter.Inc()
-		} else {
-			elapsed := time.Since(started)
-			backupDurationGauge.Set(float64(elapsed.Milliseconds()))
+			return
 		}
+		elapsed := time.Since(started)
+		backupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
@@ -198,12 +203,14 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		lastIncrRunEpoch := state.LastIncrRun.UnixNano()
 		opts.ModAfter = &lastIncrRunEpoch
 		started := time.Now()
-		if !backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, opts) {
+		stats := backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, opts)
+		if stats == nil {
 			incrBackupFailureCounter.Inc()
-		} else {
-			elapsed := time.Since(started)
-			incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
+			return
 		}
+		elapsed := time.Since(started)
+		incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
+		h.deleteEmptyBackup(stats)
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
@@ -214,6 +221,15 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 
 	// update the state
 	h.updateIncrementalBackupState()
+}
+
+func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat) {
+	if stats == nil || !stats.HasStats {
+		return
+	}
+	if !stats.IsEmpty() {
+		h.backend.DeleteFile(stats.Path)
+	}
 }
 
 func (h *BackupHandler) isFullEligible(n time.Time, t time.Time) bool {
