@@ -60,7 +60,7 @@ type RestorePolicy struct {
 	Tps                *uint32  `json:"tps,omitempty"`
 }
 
-func (p RestorePolicy) Validate() error {
+func (p *RestorePolicy) Validate() error {
 	return nil
 }
 
