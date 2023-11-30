@@ -40,15 +40,6 @@ func NewBackup() *BackupShared {
 	return &BackupShared{}
 }
 
-// BackupStat struct to hold backup result statistics
-type BackupStat struct {
-	RecordCount         int
-	SecondaryIndexCount int
-	UDFFileCount        int
-	HasStats            bool
-	Path                *string
-}
-
 // BackupRun calls the backup_run function from the asbackup shared library.
 //
 //nolint:funlen

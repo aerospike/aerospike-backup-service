@@ -7,6 +7,15 @@ type BackupOptions struct {
 	ModAfter *int64
 }
 
+// BackupStat struct to hold backup result statistics
+type BackupStat struct {
+	RecordCount         int
+	SecondaryIndexCount int
+	UDFFileCount        int
+	HasStats            bool
+	Path                *string
+}
+
 type Backup interface {
 	BackupRun(
 		backupRoutine *model.BackupRoutine,
