@@ -46,8 +46,6 @@ type RestorePolicy struct {
 	NoRecords          *bool    `json:"no-records,omitempty"`
 	NoIndexes          *bool    `json:"no-indexes,omitempty"`
 	NoUdfs             *bool    `json:"no-udfs,omitempty"`
-	Time               int64    `json:"time,omitempty" format:"int64"`
-	Routine            string   `json:"routine,omitempty"`
 	Timeout            *uint32  `json:"timeout,omitempty"`
 	DisableBatchWrites *bool    `json:"disable-batch-writes,omitempty"`
 	MaxAsyncBatches    *uint32  `json:"max-async-batches,omitempty"`
@@ -62,9 +60,22 @@ type RestorePolicy struct {
 	Tps                *uint32  `json:"tps,omitempty"`
 }
 
+func (p RestorePolicy) Validate() error {
+	return nil
+}
+
 // Validate validates the restore operation request.
 func (r *RestoreFullRequest) Validate() error {
+	if r.DestinationCuster == nil {
+		return errors.New("destination cluster is not specified")
+	}
 	if err := r.DestinationCuster.Validate(); err != nil {
+		return err
+	}
+	if r.Policy == nil {
+		return errors.New("restore policy is not specified")
+	}
+	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
 	if r.Directory == nil {
@@ -84,7 +95,16 @@ func (r *RestoreFullRequest) ToRestoreRequest() RestoreRequest {
 
 // Validate validates the restore operation request.
 func (r *RestoreIncrementalRequest) Validate() error {
+	if r.DestinationCuster == nil {
+		return errors.New("destination cluster is not specified")
+	}
 	if err := r.DestinationCuster.Validate(); err != nil {
+		return err
+	}
+	if r.Policy == nil {
+		return errors.New("restore policy is not specified")
+	}
+	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
 	if r.File == nil {
@@ -104,7 +124,16 @@ func (r *RestoreIncrementalRequest) ToRestoreRequest() RestoreRequest {
 
 // Validate validates the restore operation request.
 func (r *RestoreTimestampRequest) Validate() error {
+	if r.DestinationCuster == nil {
+		return errors.New("destination cluster is not specified")
+	}
 	if err := r.DestinationCuster.Validate(); err != nil {
+		return err
+	}
+	if r.Policy == nil {
+		return errors.New("restore policy is not specified")
+	}
+	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
 	if r.Time == 0 {
