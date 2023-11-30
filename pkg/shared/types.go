@@ -13,7 +13,7 @@ type BackupStat struct {
 	SecondaryIndexCount int
 	UDFFileCount        int
 	HasStats            bool
-	Path                *string
+	Path                string
 }
 
 type Backup interface {
