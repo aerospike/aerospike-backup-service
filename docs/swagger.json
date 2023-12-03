@@ -1158,18 +1158,11 @@
                 "replace": {
                     "type": "boolean"
                 },
-                "routine": {
-                    "type": "string"
-                },
                 "set-list": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
-                },
-                "time": {
-                    "type": "integer",
-                    "format": "int64"
                 },
                 "timeout": {
                     "type": "integer"

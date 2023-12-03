@@ -207,15 +207,10 @@ definitions:
         type: integer
       replace:
         type: boolean
-      routine:
-        type: string
       set-list:
         items:
           type: string
         type: array
-      time:
-        format: int64
-        type: integer
       timeout:
         type: integer
       tps:
