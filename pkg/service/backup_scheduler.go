@@ -7,10 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aerospike/backup/pkg/stdio"
-
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/aerospike/backup/pkg/stdio"
 	"github.com/aerospike/backup/pkg/util"
 )
 
@@ -227,7 +226,7 @@ func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat) {
 	if stats == nil || !stats.HasStats {
 		return
 	}
-	if !stats.IsEmpty() {
+	if stats.IsEmpty() {
 		h.backend.DeleteFile(stats.Path)
 	}
 }

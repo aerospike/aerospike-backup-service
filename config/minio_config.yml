@@ -11,7 +11,7 @@ storage:
   s3:
     name: "s3"
     type: 1
-    s3-endpoint_override: "http://localhost:9000"
+    s3-endpoint-override: "http://localhost:9000"
     s3-region: "eu-central-1"
     s3-profile: "minio"
     path: "s3://as-backup-bucket/test-backup"
