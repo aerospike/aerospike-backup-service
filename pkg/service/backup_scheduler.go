@@ -25,6 +25,7 @@ type BackupHandler struct {
 	backend              BackupBackend
 	backupPolicy         *model.BackupPolicy
 	backupRoutine        *model.BackupRoutine
+	routineName          string
 	cluster              *model.AerospikeCluster
 	storage              *model.Storage
 	state                *model.BackupState
@@ -51,8 +52,8 @@ func ScheduleHandlers(ctx context.Context, schedulers []BackupScheduler) {
 // the given configuration.
 func BuildBackupSchedulers(config *model.Config) []BackupScheduler {
 	schedulers := make([]BackupScheduler, 0, len(config.BackupPolicies))
-	for _, backupRoutine := range config.BackupRoutines {
-		scheduler, err := newBackupHandler(config, backupRoutine)
+	for routineName := range config.BackupRoutines {
+		scheduler, err := newBackupHandler(config, routineName)
 		if err != nil {
 			panic(err)
 		}
@@ -62,7 +63,8 @@ func BuildBackupSchedulers(config *model.Config) []BackupScheduler {
 }
 
 // newBackupHandler returns a new BackupHandler instance.
-func newBackupHandler(config *model.Config, backupRoutine *model.BackupRoutine) (*BackupHandler, error) {
+func newBackupHandler(config *model.Config, routineName string) (*BackupHandler, error) {
+	backupRoutine := config.BackupRoutines[routineName]
 	cluster, found := config.AerospikeClusters[backupRoutine.SourceCluster]
 	if !found {
 		return nil, fmt.Errorf("cluster not found for %s", backupRoutine.SourceCluster)
@@ -77,14 +79,9 @@ func newBackupHandler(config *model.Config, backupRoutine *model.BackupRoutine) 
 	}
 
 	fullBackupInProgress := &atomic.Bool{}
-	var backupBackend BackupBackend
-	switch *storage.Type {
-	case model.Local:
-		backupBackend = NewBackupBackendLocal(*storage.Path, backupPolicy, fullBackupInProgress)
-	case model.S3:
-		backupBackend = NewBackupBackendS3(storage, backupPolicy, fullBackupInProgress)
-	default:
-		return nil, fmt.Errorf("unsupported storage type: %d", *storage.Type)
+	backupBackend, err := newBackend(storage, backupPolicy, fullBackupInProgress)
+	if err != nil {
+		return nil, err
 	}
 
 	return &BackupHandler{
@@ -95,16 +92,30 @@ func newBackupHandler(config *model.Config, backupRoutine *model.BackupRoutine) 
 		storage:              storage,
 		state:                backupBackend.readState(),
 		fullBackupInProgress: fullBackupInProgress,
+		routineName:          routineName,
 	}, nil
+}
+
+func newBackend(storage *model.Storage, backupPolicy *model.BackupPolicy, fullBackupInProgress *atomic.Bool) (BackupBackend, error) {
+	switch *storage.Type {
+	case model.Local:
+		return NewBackupBackendLocal(storage, backupPolicy, fullBackupInProgress), nil
+	case model.S3:
+		return NewBackupBackendS3(storage, backupPolicy, fullBackupInProgress), nil
+	default:
+		return nil, fmt.Errorf("unsupported storage type: %d. Should be one of:\n"+
+			"\t%d for local storage\n"+
+			"\t%d for AWS s3 compatible", *storage.Type, model.Local, model.S3)
+	}
 }
 
 // Schedule schedules backup for the defining policy.
 func (h *BackupHandler) Schedule(ctx context.Context) {
-	slog.Info("Scheduling full backup", "name", h.backupRoutine.Name)
+	slog.Info("Scheduling full backup", "name", h.routineName)
 	h.scheduleBackupPeriodically(ctx, h.runFullBackup)
 
 	if h.backupRoutine.IncrIntervalMillis != nil && *h.backupRoutine.IncrIntervalMillis > 0 {
-		slog.Info("Scheduling incremental backup", "name", h.backupRoutine.Name)
+		slog.Info("Scheduling incremental backup", "name", h.routineName)
 		h.scheduleBackupPeriodically(ctx, h.runIncrementalBackup)
 	}
 }
@@ -133,30 +144,32 @@ func (h *BackupHandler) scheduleBackupPeriodically(
 
 func (h *BackupHandler) runFullBackup(now time.Time) {
 	if isStaleTick(now) {
-		slog.Debug("Skipped full backup", "name", h.backupRoutine.Name)
+		slog.Debug("Skipped full backup", "name", h.routineName)
 		backupSkippedCounter.Inc()
 		return
 	}
 	if !h.isFullEligible(now, h.state.LastRun) {
-		slog.Debug("The full backup is not due to run yet", "name", h.backupRoutine.Name)
+		slog.Debug("The full backup is not due to run yet", "name", h.routineName)
 		return
 	}
 
 	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
-		slog.Debug("Full backup is currently in progress, skipping full backup", "name", h.backupRoutine.Name)
+		slog.Debug("Full backup is currently in progress, skipping full backup", "name", h.routineName)
 		return
 	}
-	slog.Debug("Acquire fullBackupInProgress lock", "name", h.backupRoutine.Name)
+	slog.Debug("Acquire fullBackupInProgress lock", "name", h.routineName)
 	// release the lock
 	defer func() {
 		h.fullBackupInProgress.Store(false)
-		slog.Debug("Release fullBackupInProgress lock", "name", h.backupRoutine.Name)
+		slog.Debug("Release fullBackupInProgress lock", "name", h.routineName)
 	}()
 
 	backupRunFunc := func() {
 		started := time.Now()
+		slog.Debug("Starting full backup", "name", h.routineName)
 		stats := backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
 		if stats == nil {
+			slog.Warn("Failed full backup", "policy", h.routineName)
 			backupFailureCounter.Inc()
 			return
 		}
@@ -165,7 +178,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
-	slog.Debug("Completed full backup", "name", h.backupRoutine.Name)
+	slog.Debug("Completed full backup", "name", h.routineName)
 
 	// increment backupCounter metric
 	backupCounter.Inc()
@@ -179,22 +192,22 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	if isStaleTick(now) {
-		slog.Error("Skipped incremental backup", "name", h.backupRoutine.Name)
+		slog.Error("Skipped incremental backup", "name", h.routineName)
 		incrBackupSkippedCounter.Inc()
 		return
 	}
 	// read the state first and check
 	state := h.backend.readState()
 	if state.LastRun == (time.Time{}) {
-		slog.Debug("Skip incremental backup until initial full backup is done", "name", h.backupRoutine.Name)
+		slog.Debug("Skip incremental backup until initial full backup is done", "name", h.routineName)
 		return
 	}
 	if !h.isIncrementalEligible(now, state.LastIncrRun) {
-		slog.Debug("The incremental backup is not due to run yet", "name", h.backupRoutine.Name)
+		slog.Debug("The incremental backup is not due to run yet", "name", h.routineName)
 		return
 	}
 	if h.fullBackupInProgress.Load() {
-		slog.Debug("Full backup is currently in progress, skipping incremental backup", "name", h.backupRoutine.Name)
+		slog.Debug("Full backup is currently in progress, skipping incremental backup", "name", h.routineName)
 		return
 	}
 	backupRunFunc := func() {
@@ -202,8 +215,10 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		lastIncrRunEpoch := state.LastIncrRun.UnixNano()
 		opts.ModAfter = &lastIncrRunEpoch
 		started := time.Now()
+		slog.Debug("Starting incremental backup", "name", h.routineName)
 		stats := backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, opts)
 		if stats == nil {
+			slog.Warn("Failed incremental backup", "policy", h.routineName)
 			incrBackupFailureCounter.Inc()
 			return
 		}
@@ -213,7 +228,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
-	slog.Debug("Completed incremental backup", "name", h.backupRoutine.Name)
+	slog.Debug("Completed incremental backup", "name", h.routineName)
 
 	// increment incrBackupCounter metric
 	incrBackupCounter.Inc()
@@ -252,7 +267,7 @@ func (h *BackupHandler) updateIncrementalBackupState() {
 
 func (h *BackupHandler) writeState() {
 	if err := h.backend.writeState(h.state); err != nil {
-		slog.Error("Failed to write state for the backup", "name", h.backupRoutine.Name, "err", err)
+		slog.Error("Failed to write state for the backup", "name", h.routineName, "err", err)
 	}
 }
 
@@ -263,7 +278,7 @@ func (h *BackupHandler) GetBackend() BackupBackend {
 
 // BackupRoutineName returns the name of the defining backup routine.
 func (h *BackupHandler) BackupRoutineName() string {
-	return h.backupRoutine.Name
+	return h.routineName
 }
 
 func isStaleTick(t time.Time) bool {
