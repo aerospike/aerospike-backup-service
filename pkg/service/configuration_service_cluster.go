@@ -10,49 +10,49 @@ import (
 
 // AddCluster
 // adds a new AerospikeCluster to the configuration if a cluster with the same name doesn't already exist.
-func AddCluster(config *model.Config, newCluster *model.AerospikeCluster) error {
-	_, found := config.AerospikeClusters[*newCluster.Name]
+func AddCluster(config *model.Config, name *string, newCluster *model.AerospikeCluster) error {
+	_, found := config.AerospikeClusters[*name]
 	if found {
-		return fmt.Errorf("aerospike cluster with the same name %s already exists", *newCluster.Name)
+		return fmt.Errorf("aerospike cluster with the same name %s already exists", *name)
 	}
 	if err := newCluster.Validate(); err != nil {
 		return err
 	}
 
-	config.AerospikeClusters[*newCluster.Name] = newCluster
+	config.AerospikeClusters[*name] = newCluster
 	return nil
 }
 
 // UpdateCluster
 // updates an existing AerospikeCluster in the configuration.
-func UpdateCluster(config *model.Config, updatedCluster *model.AerospikeCluster) error {
-	_, found := config.AerospikeClusters[*updatedCluster.Name]
+func UpdateCluster(config *model.Config, name *string, updatedCluster *model.AerospikeCluster) error {
+	_, found := config.AerospikeClusters[*name]
 	if !found {
-		return fmt.Errorf("cluster %s not found", *updatedCluster.Name)
+		return fmt.Errorf("cluster %s not found", *name)
 	}
 	if err := updatedCluster.Validate(); err != nil {
 		return err
 	}
 
-	config.AerospikeClusters[*updatedCluster.Name] = updatedCluster
+	config.AerospikeClusters[*name] = updatedCluster
 	return nil
 }
 
 // DeleteCluster
 // deletes an AerospikeCluster from the configuration if it is not used in any backup routine.
-func DeleteCluster(config *model.Config, clusterToDeleteName *string) error {
-	_, found := config.AerospikeClusters[*clusterToDeleteName]
+func DeleteCluster(config *model.Config, name *string) error {
+	_, found := config.AerospikeClusters[*name]
 	if !found {
-		return fmt.Errorf("cluster %s not found", *clusterToDeleteName)
+		return fmt.Errorf("cluster %s not found", *name)
 	}
 
-	routine, found := util.Find(config.BackupRoutines, func(policy *model.BackupRoutine) bool {
-		return policy.SourceCluster == *clusterToDeleteName
+	routine := util.Find(config.BackupRoutines, func(policy *model.BackupRoutine) bool {
+		return policy.SourceCluster == *name
 	})
-	if found {
-		return fmt.Errorf("cannot delete cluster as it is used in a routine %s", routine.Name)
+	if routine != nil {
+		return fmt.Errorf("cannot delete cluster as it is used in a routine %s", *routine)
 	}
 
-	delete(config.AerospikeClusters, *clusterToDeleteName)
+	delete(config.AerospikeClusters, *name)
 	return nil
 }

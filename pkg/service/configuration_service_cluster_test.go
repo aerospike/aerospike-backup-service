@@ -11,17 +11,17 @@ func TestCluster_Add(t *testing.T) {
 	name := "cluster1"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{
-			name: {Name: &name, Host: ptr.String(""), Port: ptr.Int32(0)}},
+			name: {Host: ptr.String(""), Port: ptr.Int32(0)}},
 	}
 	newCluster := &model.AerospikeCluster{
-		Name: ptr.String("cluster2"), Host: ptr.String(""), Port: ptr.Int32(0)}
-	err := AddCluster(config, newCluster)
+		Host: ptr.String(""), Port: ptr.Int32(0)}
+	err := AddCluster(config, ptr.String("cluster2"), newCluster)
 	if err != nil {
 		t.Errorf("Error in adding cluster: %s", err.Error())
 	}
 
 	// Try adding the same cluster again, should return an error
-	err = AddCluster(config, newCluster)
+	err = AddCluster(config, ptr.String("cluster2"), newCluster)
 	if err == nil {
 		t.Error("Expected an error while adding an existing cluster, but got nil")
 	}
@@ -31,11 +31,11 @@ func TestCluster_Update(t *testing.T) {
 	name := "cluster1"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{
-			name: {Name: &name, Host: ptr.String(""), Port: ptr.Int32(0)}},
+			name: {Host: ptr.String(""), Port: ptr.Int32(0)}},
 	}
 	updatedCluster := &model.AerospikeCluster{
-		Name: &name, Host: ptr.String(""), Port: ptr.Int32(0), User: ptr.String("user")}
-	err := UpdateCluster(config, updatedCluster)
+		Host: ptr.String(""), Port: ptr.Int32(0), User: ptr.String("user")}
+	err := UpdateCluster(config, &name, updatedCluster)
 	if err != nil {
 		t.Errorf("Error in updating cluster: %s", err.Error())
 	}
@@ -44,8 +44,7 @@ func TestCluster_Update(t *testing.T) {
 	}
 
 	// Try updating a non-existent cluster, should return an error
-	updatedCluster = &model.AerospikeCluster{Name: ptr.String("cluster2")}
-	err = UpdateCluster(config, updatedCluster)
+	err = UpdateCluster(config, ptr.String("cluster2"), &model.AerospikeCluster{})
 	if err == nil {
 		t.Error("Expected an error while updating a non-existent cluster, but got nil")
 	}
@@ -57,9 +56,9 @@ func TestCluster_Delete(t *testing.T) {
 	policy := "policy"
 	routine := "routine"
 	config := &model.Config{
-		AerospikeClusters: map[string]*model.AerospikeCluster{name: {Name: &name}, name2: {Name: &name2}},
-		BackupPolicies:    map[string]*model.BackupPolicy{policy: {Name: &policy}},
-		BackupRoutines:    map[string]*model.BackupRoutine{routine: {Name: routine, SourceCluster: name}},
+		AerospikeClusters: map[string]*model.AerospikeCluster{name: {}, name2: {}},
+		BackupPolicies:    map[string]*model.BackupPolicy{policy: {}},
+		BackupRoutines:    map[string]*model.BackupRoutine{routine: {SourceCluster: name}},
 	}
 	err := DeleteCluster(config, &name)
 	if err == nil {
