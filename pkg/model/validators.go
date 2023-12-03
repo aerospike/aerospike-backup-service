@@ -17,6 +17,11 @@ func (c *Config) Validate() error {
 			return err
 		}
 	}
+	for _, cluster := range c.AerospikeClusters {
+		if err := cluster.Validate(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -40,7 +45,7 @@ func (s *Storage) Validate() error {
 		return errors.New("source storage is not specified")
 	}
 	if s.Path == nil {
-		return errors.New("storage path is required")
+		return errors.New("storage path is not specified")
 	}
 	return nil
 }
@@ -71,14 +76,8 @@ func routineValidationError(field string) error {
 
 // Validate validates the restore operation request.
 func (r *RestoreRequest) Validate() error {
-	if r.DestinationCuster == nil {
-		return errors.New("destination cluster is not specified")
-	}
 	if err := r.DestinationCuster.Validate(); err != nil {
 		return err
-	}
-	if r.Policy == nil {
-		return errors.New("restore policy is not specified")
 	}
 	if err := r.Policy.Validate(); err != nil {
 		return err
@@ -100,9 +99,6 @@ func (r *RestoreRequest) Validate() error {
 
 // Validate validates the restore operation request.
 func (r *RestoreTimestampRequest) Validate() error {
-	if r.DestinationCuster == nil {
-		return errors.New("destination cluster is not specified")
-	}
 	if err := r.DestinationCuster.Validate(); err != nil {
 		return err
 	}
@@ -112,8 +108,8 @@ func (r *RestoreTimestampRequest) Validate() error {
 	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
-	if r.Time == 0 {
-		return errors.New("restore point in time is not specified")
+	if r.Time <= 0 {
+		return errors.New("restore point in time should be positive")
 	}
 	if r.Routine == "" {
 		return errors.New("routine to restore is not specified")
@@ -122,5 +118,8 @@ func (r *RestoreTimestampRequest) Validate() error {
 }
 
 func (p *RestorePolicy) Validate() error {
+	if p == nil {
+		return errors.New("restore policy is not specified")
+	}
 	return nil
 }
