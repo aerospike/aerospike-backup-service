@@ -38,7 +38,7 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 			Dir:            request.SourceStorage.Path,
 		}
 
-		jobID := ws.restoreService.RestoreByPath(requestInternal)
+		jobID := ws.restoreService.Restore(requestInternal)
 		slog.Info("Restore full", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
@@ -75,7 +75,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 			File:           request.SourceStorage.Path,
 		}
 
-		jobID := ws.restoreService.RestoreByPath(requestInternal)
+		jobID := ws.restoreService.Restore(requestInternal)
 		slog.Info("RestoreByPath action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
