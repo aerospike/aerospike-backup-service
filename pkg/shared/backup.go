@@ -22,8 +22,6 @@ import (
 	"time"
 	"unsafe"
 
-	"log/slog"
-
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/smithy-go/ptr"
 )
@@ -49,11 +47,6 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	b.Lock()
 	defer b.Unlock()
 	isIncremental := opts.ModAfter != nil
-	if isIncremental {
-		slog.Debug("Starting incremental backup", "name", backupRoutine.Name)
-	} else {
-		slog.Debug("Starting full backup", "name", backupRoutine.Name)
-	}
 
 	backupConfig := C.backup_config_t{}
 	C.backup_config_default(&backupConfig)
@@ -120,7 +113,6 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	defer C.backup_config_destroy(&backupConfig)
 
 	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_FAILURE {
-		slog.Warn("Failed backup operation", "name", backupRoutine.Name, "incremental", isIncremental)
 		return nil
 	}
 
