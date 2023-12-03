@@ -13,7 +13,7 @@ import (
 // @ID 	     getAvailableFullBackups
 // @Tags     Backup
 // @Produce  json
-// @Param    name query string true "Backup routine name"
+// @Param    name query string false "Backup routine name"
 // @Router   /backup/full/list [get]
 // @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
 // @Failure  404 {string} string ""
@@ -27,7 +27,7 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 // @ID       getAvailableIncrementalBackups
 // @Tags     Backup
 // @Produce  json
-// @Param    name query string true "Backup routine name"
+// @Param    name query string false "Backup routine name"
 // @Router   /backup/incremental/list [get]
 // @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
 // @Failure  404 {string} string ""
@@ -77,8 +77,8 @@ func (ws *HTTPServer) requestedRoutines(r *http.Request) []string {
 		return []string{queryRoutineName}
 	}
 	routines := make([]string, 0, len(ws.config.BackupRoutines))
-	for _, p := range ws.config.BackupRoutines {
-		routines = append(routines, p.Name)
+	for name := range ws.config.BackupRoutines {
+		routines = append(routines, name)
 	}
 	return routines
 }

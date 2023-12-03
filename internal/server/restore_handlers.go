@@ -17,12 +17,12 @@ import (
 // @Tags        Restore
 // @Router      /restore/full [post]
 // @Accept      json
-// @Param       request body model.RestoreFullRequest true "query params"
+// @Param       request body model.RestoreRequest true "query params"
 // @Success     202 {string}  "Job ID (int64)"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		var request model.RestoreFullRequest
+		var request model.RestoreRequest
 
 		err := json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
@@ -33,9 +33,13 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		restoreRequest := request.ToRestoreRequest()
-		jobID := ws.restoreService.Restore(&restoreRequest)
-		slog.Info("Restore action", "jobID", jobID, "request", request)
+		requestInternal := &model.RestoreRequestInternal{
+			RestoreRequest: request,
+			Dir:            request.SourceStorage.Path,
+		}
+
+		jobID := ws.restoreService.RestoreByPath(requestInternal)
+		slog.Info("Restore full", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprint(w, strconv.Itoa(jobID))
@@ -50,12 +54,12 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 // @Tags        Restore
 // @Router      /restore/incremental [post]
 // @Accept      json
-// @Param       request body model.RestoreIncrementalRequest true "query params"
+// @Param       request body model.RestoreRequest true "query params"
 // @Success     202 {string}  "Job ID (int64)"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		var request model.RestoreIncrementalRequest
+		var request model.RestoreRequest
 
 		err := json.NewDecoder(r.Body).Decode(&request)
 		if err != nil {
@@ -66,15 +70,20 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		restoreRequest := request.ToRestoreRequest()
-		jobID := ws.restoreService.Restore(&restoreRequest)
-		slog.Info("Restore action", "jobID", jobID, "request", request)
+		requestInternal := &model.RestoreRequestInternal{
+			RestoreRequest: request,
+			File:           request.SourceStorage.Path,
+		}
+
+		jobID := ws.restoreService.RestoreByPath(requestInternal)
+		slog.Info("RestoreByPath action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprint(w, strconv.Itoa(jobID))
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
+
 }
 
 // @Summary     Trigger an asynchronous restore operation to specific point in time.

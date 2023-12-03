@@ -111,7 +111,7 @@ func NewHTTPServer(handlers []service.BackupScheduler, config *model.Config) *HT
 		},
 		rateLimiter:    rateLimiter,
 		whiteList:      newIPWhiteList(config.HTTPServer.Rate.WhiteList),
-		restoreService: service.NewRestoreMemory(backendMap),
+		restoreService: service.NewRestoreMemory(backendMap, config),
 		backupBackends: backendMap,
 	}
 }
