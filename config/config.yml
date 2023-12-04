@@ -24,6 +24,6 @@ backup-routines:
     backup-policy: "policy1"
     source-cluster: "cluster1"
     storage: "local1"
-    namespace: "source-ns1"
+    namespace: "test"
     set-list:
       - set1
