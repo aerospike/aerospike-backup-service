@@ -169,7 +169,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		slog.Debug("Starting full backup", "name", h.routineName)
 		stats := backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, shared.BackupOptions{})
 		if stats == nil {
-			slog.Warn("Failed full backup", "policy", h.routineName)
+			slog.Warn("Failed full backup", "name", h.routineName)
 			backupFailureCounter.Inc()
 			return
 		}
