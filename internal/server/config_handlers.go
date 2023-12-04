@@ -21,7 +21,7 @@ var ConfigurationManager service.ConfigurationManager
 func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 	configuration, err := json.MarshalIndent(ws.config, "", "    ") // pretty print
 	if err != nil {
-		http.Error(w, "Failed to parse service configuration", http.StatusInternalServerError)
+		http.Error(w, "failed to parse service configuration", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -273,7 +273,7 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
 	storageName := r.URL.Query().Get("name")
 	if storageName == "" {
-		http.Error(w, "Storage name is required", http.StatusBadRequest)
+		http.Error(w, "storage name is required", http.StatusBadRequest)
 		return
 	}
 
@@ -509,7 +509,7 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 func (ws *HTTPServer) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 	routineName := r.URL.Query().Get("name")
 	if routineName == "" {
-		http.Error(w, "Routine name is required", http.StatusBadRequest)
+		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return
 	}
 

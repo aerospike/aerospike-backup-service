@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -47,21 +46,19 @@ func (ws *HTTPServer) getAvailableBackups(
 	for _, routine := range routines {
 		backend, exists := ws.backupBackends[routine]
 		if !exists {
-			http.Error(w, "Backup backend does not exist for "+routine, http.StatusNotFound)
+			http.Error(w, "backup backend does not exist for "+routine, http.StatusNotFound)
 			return
 		}
 		list, err := backupListFunc(backend)
 		if err != nil {
-			slog.Error("Failed to retrieve backup list", "err", err)
-			http.Error(w, "Failed to retrieve backup list", http.StatusInternalServerError)
+			http.Error(w, "failed to retrieve backup list", http.StatusInternalServerError)
 			return
 		}
 		routineToBackups[routine] = list
 	}
 	response, err := json.Marshal(routineToBackups)
 	if err != nil {
-		slog.Error("Failed to parse backup list", "err", err)
-		http.Error(w, "Failed to parse backup list", http.StatusInternalServerError)
+		http.Error(w, "failed to parse backup list", http.StatusInternalServerError)
 		return
 	}
 

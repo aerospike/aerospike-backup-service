@@ -129,7 +129,7 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 	jobIDParam := r.URL.Query().Get("jobId")
 	jobID, err := strconv.Atoi(jobIDParam)
 	if err != nil {
-		http.Error(w, "Invalid job id", http.StatusBadRequest)
+		http.Error(w, "invalid job id", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
