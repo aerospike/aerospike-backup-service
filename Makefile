@@ -1,9 +1,13 @@
+SHELL = bash
+VERSION := $(shell cat VERSION)
+
 # Go parameters
-WORKSPACE = $(shell git rev-parse --show-toplevel)
+WORKSPACE = $(shell pwd)
 GOCMD = go
 UNAME = $(shell uname -sm | tr ' ' '-')
 CGO_CFLAGS=-I $(WORKSPACE)/modules/aerospike-tools-backup/modules/c-client/target/$(UNAME)/include \
- -I $(WORKSPACE)/modules/aerospike-tools-backup/include
+-I $(WORKSPACE)/modules/aerospike-tools-backup/modules/secret-agent-client/target/$(UNAME)/include \
+-I $(WORKSPACE)/modules/aerospike-tools-backup/include
 GOBUILD = CGO_CFLAGS="$(CGO_CFLAGS)" CGO_ENABLED=1 $(GOCMD) build
 GOTEST = $(GOCMD) test
 GOCLEAN = $(GOCMD) clean
@@ -11,6 +15,8 @@ GO_VERSION = 1.21.4
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
 OS = $(shell uname | tr '[:upper:]' '[:lower:]')
 ARCH = $(shell uname -m)
+AWS_SDK_FILES = $(shell ls /usr/local/lib/libaws-cpp-sdk-* 2>/dev/null)
+
 ifeq ($(ARCH),x86_64)
 	ARCH = amd64
 else ifeq ($(ARCH),aarch64)
@@ -26,20 +32,6 @@ else
 	DISTRO_VERSION := $(shell lsb_release -r | cut -f2- | tr ' ' '_')
 endif
 
-ifeq ($(DISTRO_FULL),Debian)
-	DISTRO_SHORT = debian
-else ifeq ($(DISTRO_FULL),Ubuntu)
-	DISTRO_SHORT = ubuntu
-else ifeq ($(DISTRO_FULL),Amazon_Linux)
-	DISTRO_SHORT = amzn
-else ifeq ($(DISTRO_FULL),CentOS_Linux)
-	DISTRO_SHORT = el
-else ifeq ($(DISTRO_FULL),Red_Hat_Enterprise_Linux)
-	DISTRO_SHORT = el
-else ifeq ($(DISTRO_FULL),Rocky_Linux)
-	DISTRO_SHORT = rocky
-endif
-
 BINARY_NAME = aerospike-backup-service
 GIT_TAG = $(shell git describe --tags)
 
@@ -49,7 +41,7 @@ PKG_DIR = build/package
 PREP_DIR = $(TARGET_DIR)/pkg_install
 CONFIG_FILES = $(wildcard config/*)
 POST_INSTALL_SCRIPT = $(PKG_DIR)/post-install.sh
-TOOLS_DIR = modules/aerospike-tools-backup
+TOOLS_DIR = $(WORKSPACE)/modules/aerospike-tools-backup
 
 MAINTAINER = "Aerospike"
 DESCRIPTION = "Aerospike Backup Service"
@@ -83,6 +75,18 @@ install-aws-sdk-cpp:
 	-DCMAKE_INSTALL_LIBDIR=lib
 	cd $(WORKSPACE)/aws-sdk-cpp/ && sudo make -C build
 	cd $(WORKSPACE)/aws-sdk-cpp/build && sudo make install
+	rm -rf aws-sdk-cpp
+
+.PHONY: install-libuv
+install-libuv:
+	git clone https://github.com/libuv/libuv && cd libuv && sh ./autogen.sh && ./configure && make && make install
+	rm -rf libuv
+
+.PHONY: install-jansson
+install-jansson:
+	curl -L https://github.com/akheron/jansson/releases/download/v2.13.1/jansson-2.13.1.tar.gz | tar xz
+	cd jansson-2.13.1 && ./configure && make && make install
+	rm -rf jansson-2.13.1
 
 .PHONY: install-go
 install-go:
@@ -108,17 +112,24 @@ install-deb-build-deps:
 	zlib1g-dev \
 	debhelper \
 	lintian \
+	patchelf \
 	devscripts
 
+.PHONY: prep-submodules
+prep-submodules:
+	cd $(TOOLS_DIR) && git submodule update --init --recursive --remote
+	#cd $(TOOLS_DIR) && git submodule update --init --recursive
+
 .PHONY: build-submodules
-build-submodules install-aws-sdk-cpp:
-	cd $(TOOLS_DIR) && git submodule update --init --recursive
+build-submodules:
 	$(MAKE) -C $(TOOLS_DIR) shared EVENT_LIB=libuv AWS_SDK_STATIC_PATH=/usr/local/lib
 	./scripts/copy_shared.sh
 
 .PHONY: clean-submodules
 clean-submodules:
 	$(MAKE) -C $(TOOLS_DIR) clean
+	git submodule foreach --recursive git clean -fd
+	git submodule deinit --all -f
 
 .PHONY: build
 build:
@@ -133,17 +144,26 @@ test:
 package: rpm deb tar
 
 .PHONY: rpm
-rpm: build prep
-	$(eval ARCH := $(shell uname -m))
-	$(eval DISTRO_VERSION := $(shell echo $(DISTRO_VERSION) | cut -d'.' -f1)) # Only major version for RPM
-	fpm $(FPM_COMMON_ARGS) \
-		--output-type rpm \
-		--package $(TARGET_DIR)/$(BINARY_NAME)-$(GIT_TAG)-1.$(DISTRO_SHORT)$(DISTRO_VERSION).$(ARCH).rpm
+rpm: tarball
+	cd $(WORKSPACE)/packages/rpm && mkdir -p BUILD BUILDROOT RPMS SOURCES SPECS SRPMS
+	mv /tmp/$(BINARY_NAME)-$(VERSION).tar.gz $(WORKSPACE)/packages/rpm/SOURCES/
+	rpmbuild -v \
+	--define "_topdir /root/aerospike-backup-service/packages/rpm" \
+	--define "pkg_version $(VERSION)" \
+	--define "pkg_name $(BINARY_NAME)" \
+	--define "build_arch $(shell uname -m)" \
+	-ba $(WORKSPACE)/packages/rpm/SPECS/$(BINARY_NAME).spec
+
+.PHONY: clean-rpm
+clean-rpm:
+	rm -rf $(WORKSPACE)/packages/rpm/SOURCES/*.tar.gz
+	rm -rf $(WORKSPACE)/packages/rpm/SRPMS/*.rpm
 
 .PHONY: deb
 deb:
-	cd $(WORKSPACE)/package && dpkg-buildpackage
+	cd $(WORKSPACE)/packages && dpkg-buildpackage
 	mv $(WORKSPACE)/$(BINARY_NAME)_* $(WORKSPACE)/target
+	mv $(WORKSPACE)/$(BINARY_NAME)-* $(WORKSPACE)/target
 
 .PHONY: tar
 tar: build prep
@@ -176,10 +196,22 @@ endif
 	install -m 644 $(CONFIG_FILES) $(PREP_DIR)/etc/$(BINARY_NAME)/
 	install -m 644 $(PKG_DIR)/$(BINARY_NAME).service $(PREP_DIR)/etc/systemd/system/$(BINARY_NAME).service
 
+.PHONY: tarball
+tarball: prep-submodules
+	cd ./scripts && ./tarball.sh
+
 .PHONY: clean
 clean:
 	$(GOCLEAN)
 	rm -rf $(TARGET_DIR)
+	cd $(WORKSPACE)/packages && dpkg-buildpackage -Tclean
+
+.PHONY: process-submodules
+process-submodules:
+	git submodule foreach --recursive | while read -r submodule_path; do \
+	echo "Processing submodule at path: $($$submodule_path | awk -F\' '{print $$2}')"; \
+	done \
 
 .PHONY: all
 all: build test package
+

@@ -1,3 +1,4 @@
 [submodule "modules/aerospike-tools-backup"]
 	path = modules/aerospike-tools-backup
 	url = https://github.com/aerospike/aerospike-tools-backup.git
+	branch = TOOLS-2780
