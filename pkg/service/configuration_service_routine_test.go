@@ -20,7 +20,7 @@ func TestRoutine_Add(t *testing.T) {
 	}
 
 	routine := model.BackupRoutine{Storage: storage, SourceCluster: cluster}
-	err := AddRoutine(config, &routineName, &routine)
+	err := AddRoutine(config, routineName, &routine)
 	if err != nil {
 		t.Errorf("AddRoutine failed, expected nil error, got %v", err)
 	}
@@ -53,7 +53,7 @@ func TestRoutine_AddErrors(t *testing.T) {
 	}
 
 	for _, testRoutine := range fails {
-		err := AddRoutine(config, &routine, &testRoutine.routine)
+		err := AddRoutine(config, routine, &testRoutine.routine)
 		if err == nil {
 			t.Errorf("Expected an error on %s", testRoutine.name)
 		}
@@ -71,12 +71,12 @@ func TestRoutine_Update(t *testing.T) {
 		IntervalMillis: ptr.Int64(1000),
 	}
 
-	err := UpdateRoutine(config, &name2, updatedRoutine)
+	err := UpdateRoutine(config, name2, updatedRoutine)
 	if err == nil {
 		t.Errorf("UpdateRoutine failed, expected routine not found error")
 	}
 
-	err = UpdateRoutine(config, &name, updatedRoutine)
+	err = UpdateRoutine(config, name, updatedRoutine)
 	if err != nil {
 		t.Errorf("UpdateRoutine failed, expected nil error, got %v", err)
 	}
@@ -92,12 +92,12 @@ func TestRoutine_Delete(t *testing.T) {
 		BackupRoutines: map[string]*model.BackupRoutine{name: {}},
 	}
 
-	err := DeleteRoutine(config, ptr.String("routine2"))
+	err := DeleteRoutine(config, "routine2")
 	if err == nil {
 		t.Errorf("DeleteRoutine failed, expected nil error, got %v", err)
 	}
 
-	err = DeleteRoutine(config, &name)
+	err = DeleteRoutine(config, name)
 	if err != nil {
 		t.Errorf("DeleteRoutine failed, expected nil error, got %v", err)
 	}

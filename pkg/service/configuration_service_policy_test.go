@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aws/smithy-go/ptr"
 )
 
 func TestPolicy_AddOK(t *testing.T) {
@@ -16,7 +15,7 @@ func TestPolicy_AddOK(t *testing.T) {
 		BackupPolicies:    map[string]*model.BackupPolicy{},
 	}
 
-	err := AddPolicy(config, ptr.String("newName"), &model.BackupPolicy{})
+	err := AddPolicy(config, "newName", &model.BackupPolicy{})
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
@@ -40,7 +39,7 @@ func TestPolicy_AddErrors(t *testing.T) {
 	}
 
 	for _, testPolicy := range fails {
-		err := AddPolicy(config, &policy, &testPolicy.policy)
+		err := AddPolicy(config, policy, &testPolicy.policy)
 		if err == nil {
 			t.Errorf("Expected an error on %s", testPolicy.name)
 		}
@@ -53,12 +52,12 @@ func TestPolicy_Update(t *testing.T) {
 		BackupPolicies: map[string]*model.BackupPolicy{name: {}},
 	}
 
-	err := UpdatePolicy(config, ptr.String("policy2"), &model.BackupPolicy{})
+	err := UpdatePolicy(config, "policy2", &model.BackupPolicy{})
 	if err == nil {
 		t.Errorf("UpdatePolicy failed, expected policy not found error")
 	}
 
-	err = UpdatePolicy(config, &name, &model.BackupPolicy{})
+	err = UpdatePolicy(config, name, &model.BackupPolicy{})
 	if err != nil {
 		t.Errorf("UpdatePolicy failed, expected nil error, got %v", err)
 	}
@@ -75,12 +74,12 @@ func TestPolicy_Delete(t *testing.T) {
 		BackupPolicies: map[string]*model.BackupPolicy{name: {}},
 	}
 
-	err := DeletePolicy(config, ptr.String("policy2"))
+	err := DeletePolicy(config, "policy2")
 	if err == nil {
 		t.Errorf("DeletePolicy failed, expected nil error, got %v", err)
 	}
 
-	err = DeletePolicy(config, ptr.String("policy1"))
+	err = DeletePolicy(config, "policy1")
 	if err != nil {
 		t.Errorf("DeletePolicy failed, expected nil error, got %v", err)
 	}
