@@ -12,7 +12,7 @@ type RestoreRequest struct {
 	SourceStorage     *Storage          `json:"source,omitempty"`
 }
 
-// RestoreRequestInternal is only used internally to pass data to restore library.
+// RestoreRequestInternal is used internally to prepopulate data for the restore operation.
 type RestoreRequestInternal struct {
 	RestoreRequest
 	File *string
