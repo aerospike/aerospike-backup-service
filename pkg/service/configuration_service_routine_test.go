@@ -11,15 +11,16 @@ func TestRoutine_Add(t *testing.T) {
 	policy := "policy"
 	cluster := "cluster"
 	storage := "storage"
+	routineName := "routine"
 	config := &model.Config{
 		BackupRoutines:    make(map[string]*model.BackupRoutine),
-		BackupPolicies:    map[string]*model.BackupPolicy{policy: {Name: &policy}},
-		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {Name: &cluster}},
-		Storage:           map[string]*model.Storage{storage: {Name: &storage}},
+		BackupPolicies:    map[string]*model.BackupPolicy{policy: {}},
+		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {}},
+		Storage:           map[string]*model.Storage{storage: {}},
 	}
 
 	routine := model.BackupRoutine{Storage: storage, SourceCluster: cluster}
-	err := AddRoutine(config, &routine)
+	err := AddRoutine(config, routineName, &routine)
 	if err != nil {
 		t.Errorf("AddRoutine failed, expected nil error, got %v", err)
 	}
@@ -36,23 +37,23 @@ func TestRoutine_AddErrors(t *testing.T) {
 		routine model.BackupRoutine
 	}{
 		{name: "empty", routine: model.BackupRoutine{}},
-		{name: "existing", routine: model.BackupRoutine{Storage: storage, SourceCluster: cluster, Name: routine}},
+		{name: "existing", routine: model.BackupRoutine{Storage: storage, SourceCluster: cluster}},
 		{name: "no storage", routine: model.BackupRoutine{SourceCluster: cluster}},
 		{name: "no cluster", routine: model.BackupRoutine{Storage: storage}},
 		{name: "wrong storage", routine: model.BackupRoutine{Storage: wrong, SourceCluster: cluster}},
 		{name: "wrong cluster", routine: model.BackupRoutine{Storage: storage, SourceCluster: wrong}},
-		{name: "existing policy", routine: model.BackupRoutine{Name: policy}},
+		{name: "existing policy", routine: model.BackupRoutine{}},
 	}
 
 	config := &model.Config{
-		BackupRoutines:    map[string]*model.BackupRoutine{routine: {Name: routine}},
-		BackupPolicies:    map[string]*model.BackupPolicy{policy: {Name: &policy}},
-		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {Name: &cluster}},
-		Storage:           map[string]*model.Storage{storage: {Name: &storage}},
+		BackupRoutines:    map[string]*model.BackupRoutine{routine: {}},
+		BackupPolicies:    map[string]*model.BackupPolicy{policy: {}},
+		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {}},
+		Storage:           map[string]*model.Storage{storage: {}},
 	}
 
 	for _, testRoutine := range fails {
-		err := AddRoutine(config, &testRoutine.routine)
+		err := AddRoutine(config, routine, &testRoutine.routine)
 		if err == nil {
 			t.Errorf("Expected an error on %s", testRoutine.name)
 		}
@@ -61,43 +62,42 @@ func TestRoutine_AddErrors(t *testing.T) {
 
 func TestRoutine_Update(t *testing.T) {
 	name := "routine1"
+	name2 := "routine2"
 	config := &model.Config{
-		BackupRoutines: map[string]*model.BackupRoutine{name: {Name: name}},
+		BackupRoutines: map[string]*model.BackupRoutine{name: {}},
 	}
 
 	updatedRoutine := &model.BackupRoutine{
-		Name: "routine2",
+		IntervalMillis: ptr.Int64(1000),
 	}
 
-	err := UpdateRoutine(config, updatedRoutine)
+	err := UpdateRoutine(config, name2, updatedRoutine)
 	if err == nil {
 		t.Errorf("UpdateRoutine failed, expected routine not found error")
 	}
 
-	updatedRoutine.Name = name
-	err = UpdateRoutine(config, updatedRoutine)
+	err = UpdateRoutine(config, name, updatedRoutine)
 	if err != nil {
 		t.Errorf("UpdateRoutine failed, expected nil error, got %v", err)
 	}
 
-	if config.BackupRoutines[name].Name != updatedRoutine.Name {
-		t.Errorf("UpdateRoutine failed, expected routine name to be updated, got %v",
-			config.BackupRoutines[name].Name)
+	if config.BackupRoutines[name].IntervalMillis != updatedRoutine.IntervalMillis {
+		t.Errorf("UpdateRoutine failed, expected routine to be updated")
 	}
 }
 
 func TestRoutine_Delete(t *testing.T) {
 	name := "routine1"
 	config := &model.Config{
-		BackupRoutines: map[string]*model.BackupRoutine{name: {Name: name}},
+		BackupRoutines: map[string]*model.BackupRoutine{name: {}},
 	}
 
-	err := DeleteRoutine(config, ptr.String("routine2"))
+	err := DeleteRoutine(config, "routine2")
 	if err == nil {
 		t.Errorf("DeleteRoutine failed, expected nil error, got %v", err)
 	}
 
-	err = DeleteRoutine(config, &name)
+	err = DeleteRoutine(config, name)
 	if err != nil {
 		t.Errorf("DeleteRoutine failed, expected nil error, got %v", err)
 	}

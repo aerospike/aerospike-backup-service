@@ -8,36 +8,36 @@ import (
 
 // AddPolicy
 // adds a new BackupPolicy to the configuration if a policy with the same name doesn't already exist.
-func AddPolicy(config *model.Config, newPolicy *model.BackupPolicy) error {
-	_, found := config.BackupPolicies[*newPolicy.Name]
+func AddPolicy(config *model.Config, name string, newPolicy *model.BackupPolicy) error {
+	_, found := config.BackupPolicies[name]
 	if found {
-		return fmt.Errorf("backup policy with the same name %s already exists", *newPolicy.Name)
+		return fmt.Errorf("backup policy with the same name %s already exists", name)
 	}
 
-	config.BackupPolicies[*newPolicy.Name] = newPolicy
+	config.BackupPolicies[name] = newPolicy
 	return nil
 }
 
 // UpdatePolicy
 // updates an existing BackupPolicy in the configuration.
-func UpdatePolicy(config *model.Config, updatedPolicy *model.BackupPolicy) error {
-	_, found := config.BackupPolicies[*updatedPolicy.Name]
+func UpdatePolicy(config *model.Config, name string, updatedPolicy *model.BackupPolicy) error {
+	_, found := config.BackupPolicies[name]
 	if !found {
-		return fmt.Errorf("backup policy %s not found", *updatedPolicy.Name)
+		return fmt.Errorf("backup policy %s not found", name)
 	}
 
-	config.BackupPolicies[*updatedPolicy.Name] = updatedPolicy
+	config.BackupPolicies[name] = updatedPolicy
 	return nil
 }
 
 // DeletePolicy
 // deletes a BackupPolicy from the configuration.
-func DeletePolicy(config *model.Config, policyToDeleteName *string) error {
-	_, found := config.BackupPolicies[*policyToDeleteName]
+func DeletePolicy(config *model.Config, name string) error {
+	_, found := config.BackupPolicies[name]
 	if !found {
-		return fmt.Errorf("backup policy %s not found", *policyToDeleteName)
+		return fmt.Errorf("backup policy %s not found", name)
 	}
 
-	delete(config.BackupPolicies, *policyToDeleteName)
+	delete(config.BackupPolicies, name)
 	return nil
 }

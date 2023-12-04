@@ -13,20 +13,20 @@ func TestStorage_Add(t *testing.T) {
 		Storage: map[string]*model.Storage{},
 	}
 
+	name := "storage"
 	newStorage := &model.Storage{
-		Name: ptr.String("storage"),
 		Type: util.Ptr(model.Local),
 		Path: ptr.String("path"),
 	}
 
-	err := AddStorage(config, newStorage)
+	err := AddStorage(config, name, newStorage)
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
 
 	// Adding a storage with the same name as an existing one
 	// should result in an error
-	err = AddStorage(config, newStorage)
+	err = AddStorage(config, name, newStorage)
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
 	}
@@ -37,40 +37,34 @@ func TestStorage_AddFailure(t *testing.T) {
 		Storage: map[string]*model.Storage{},
 	}
 
-	newStorage := &model.Storage{
-		Name: ptr.String("storage"),
-	}
-
-	err := AddStorage(config, newStorage)
+	err := AddStorage(config, "storage", &model.Storage{})
 	if err == nil {
 		t.Errorf("Expected validation error")
 	}
 }
 
 func TestStorage_Update(t *testing.T) {
-	storage := "storage"
+	name := "name"
 	config := &model.Config{
-		Storage: map[string]*model.Storage{storage: {Name: &storage}},
+		Storage: map[string]*model.Storage{name: {}},
 	}
 
 	newStorage := &model.Storage{
-		Name: ptr.String(storage),
 		Path: ptr.String("path"),
 		Type: util.Ptr(model.Local),
 	}
 
-	err := UpdateStorage(config, newStorage)
+	err := UpdateStorage(config, name, newStorage)
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
 
-	if *config.Storage[storage].Path != "path" {
-		t.Errorf("Value in storage is not updated")
+	if *config.Storage[name].Path != "path" {
+		t.Errorf("Value in name is not updated")
 	}
 
-	// Updating a non-existent storage should result in an error
-	newStorage = &model.Storage{Name: ptr.String("newStorage")}
-	err = UpdateStorage(config, newStorage)
+	// Updating a non-existent name should result in an error
+	err = UpdateStorage(config, "newStorage", &model.Storage{})
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
 	}
@@ -79,14 +73,10 @@ func TestStorage_Update(t *testing.T) {
 func TestStorage_UpdateFailure(t *testing.T) {
 	storage := "storage"
 	config := &model.Config{
-		Storage: map[string]*model.Storage{storage: {Name: &storage}},
+		Storage: map[string]*model.Storage{storage: {}},
 	}
 
-	newStorage := &model.Storage{
-		Name: ptr.String(storage),
-	}
-
-	err := UpdateStorage(config, newStorage)
+	err := UpdateStorage(config, storage, &model.Storage{})
 	if err == nil {
 		t.Errorf("Expected validation error")
 	}
@@ -98,18 +88,18 @@ func TestStorage_Delete(t *testing.T) {
 	policy := "policy"
 	routine := "routine"
 	config := &model.Config{
-		BackupPolicies: map[string]*model.BackupPolicy{policy: {Name: &policy}},
-		Storage:        map[string]*model.Storage{storage: {Name: &storage}, storage2: {Name: &storage2}},
-		BackupRoutines: map[string]*model.BackupRoutine{routine: {Name: routine, Storage: storage}},
+		BackupPolicies: map[string]*model.BackupPolicy{policy: {}},
+		Storage:        map[string]*model.Storage{storage: {}, storage2: {}},
+		BackupRoutines: map[string]*model.BackupRoutine{routine: {Storage: storage}},
 	}
 
 	// Deleting a storage that is being used by a policy should result in an error
-	err := DeleteStorage(config, &storage)
+	err := DeleteStorage(config, storage)
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
 	}
 
-	err = DeleteStorage(config, &storage2)
+	err = DeleteStorage(config, storage2)
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
@@ -118,7 +108,7 @@ func TestStorage_Delete(t *testing.T) {
 	}
 
 	// Deleting a non-existent storage should result in an error
-	err = DeleteStorage(config, &storage2)
+	err = DeleteStorage(config, storage2)
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
 	}

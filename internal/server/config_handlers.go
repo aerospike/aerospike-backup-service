@@ -21,7 +21,7 @@ var ConfigurationManager service.ConfigurationManager
 func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 	configuration, err := json.MarshalIndent(ws.config, "", "    ") // pretty print
 	if err != nil {
-		http.Error(w, "Failed to parse service configuration", http.StatusInternalServerError)
+		http.Error(w, "failed to parse service configuration", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -35,7 +35,7 @@ func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 // @Tags        Configuration
 // @Router      /config [post]
 // @Accept      json
-// @Param       storage body model.Config true "config"
+// @Param       config body model.Config true "config"
 // @Success     200
 // @Failure     400 {string} string
 func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
@@ -61,6 +61,7 @@ func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /config/cluster [post]
 // @Accept      json
+// @Param       name query string true "cluster name"
 // @Param       cluster body model.AerospikeCluster true "cluster info"
 // @Success     201
 // @Failure     400 {string} string
@@ -71,7 +72,12 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = service.AddCluster(ws.config, &newCluster)
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "cluster name is required", http.StatusBadRequest)
+		return
+	}
+	err = service.AddCluster(ws.config, name, &newCluster)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -109,7 +115,8 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 // @Tags        Configuration
 // @Router      /config/cluster [put]
 // @Accept      json
-// @Param       storage body model.AerospikeCluster true "aerospike cluster"
+// @Param       name query string true "cluster name"
+// @Param       cluster body model.AerospikeCluster true "aerospike cluster"
 // @Success     200
 // @Failure     400 {string} string
 func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
@@ -119,7 +126,12 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateCluster(ws.config, &updatedCluster)
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "cluster name is required", http.StatusBadRequest)
+		return
+	}
+	err = service.UpdateCluster(ws.config, name, &updatedCluster)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -136,17 +148,17 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 // @ID          deleteCluster
 // @Tags        Configuration
 // @Router      /config/cluster [delete]
-// @Param       name query string true "Cluster Name"
+// @Param       name query string true "cluster Name"
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	clusterName := r.URL.Query().Get("name")
 	if clusterName == "" {
-		http.Error(w, "Cluster name is required", http.StatusBadRequest)
+		http.Error(w, "cluster name is required", http.StatusBadRequest)
 		return
 	}
 
-	err := service.DeleteCluster(ws.config, &clusterName)
+	err := service.DeleteCluster(ws.config, clusterName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -166,6 +178,7 @@ func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Requ
 // @Tags        Configuration
 // @Router      /config/storage [post]
 // @Accept      json
+// @Param       name query string true "storage name"
 // @Param       storage body model.Storage true "backup storage"
 // @Success     201
 // @Failure     400 {string} string
@@ -176,7 +189,12 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = service.AddStorage(ws.config, &newStorage)
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "storage name is required", http.StatusBadRequest)
+		return
+	}
+	err = service.AddStorage(ws.config, name, &newStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -215,6 +233,7 @@ func (ws *HTTPServer) readStorage(w http.ResponseWriter) {
 // @Tags        Configuration
 // @Router      /config/storage [put]
 // @Accept      json
+// @Param       name query string true "storage name"
 // @Param       storage body model.Storage true "backup storage"
 // @Success     200
 // @Failure     400 {string} string
@@ -225,7 +244,12 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateStorage(ws.config, &updatedStorage)
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "storage name is required", http.StatusBadRequest)
+		return
+	}
+	err = service.UpdateStorage(ws.config, name, &updatedStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -243,17 +267,17 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 // @ID	        deleteStorage
 // @Tags        Configuration
 // @Router      /config/storage [delete]
-// @Param       name query string true "Storage Name"
+// @Param       name query string true "storage name"
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
 	storageName := r.URL.Query().Get("name")
 	if storageName == "" {
-		http.Error(w, "Storage name is required", http.StatusBadRequest)
+		http.Error(w, "storage name is required", http.StatusBadRequest)
 		return
 	}
 
-	err := service.DeleteStorage(ws.config, &storageName)
+	err := service.DeleteStorage(ws.config, storageName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -273,6 +297,7 @@ func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /config/policy [post]
 // @Accept      json
+// @Param       name query string true "policy name"
 // @Param       storage body model.BackupPolicy true "backup policy"
 // @Success     201
 // @Failure     400 {string} string
@@ -283,7 +308,12 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = service.AddPolicy(ws.config, &newPolicy)
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "policy name is required", http.StatusBadRequest)
+		return
+	}
+	err = service.AddPolicy(ws.config, name, &newPolicy)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -321,6 +351,7 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
 // @Tags        Configuration
 // @Router      /config/policy [put]
 // @Accept      json
+// @Param       name query string true "policy name"
 // @Param       storage body model.BackupPolicy true "backup policy"
 // @Success     200
 // @Failure     400 {string} string
@@ -331,7 +362,12 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = service.UpdatePolicy(ws.config, &updatedPolicy)
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "policy name is required", http.StatusBadRequest)
+		return
+	}
+	err = service.UpdatePolicy(ws.config, name, &updatedPolicy)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -359,7 +395,7 @@ func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := service.DeletePolicy(ws.config, &policyName)
+	err := service.DeletePolicy(ws.config, policyName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -379,6 +415,7 @@ func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /config/routine [post]
 // @Accept      json
+// @Param       name query string true "routine name"
 // @Param       storage body model.BackupRoutine true "backup routine"
 // @Success     201
 // @Failure     400 {string} string
@@ -389,7 +426,12 @@ func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = service.AddRoutine(ws.config, &newRoutine)
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "routine name is required", http.StatusBadRequest)
+		return
+	}
+	err = service.AddRoutine(ws.config, name, &newRoutine)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -427,6 +469,7 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter) {
 // @Tags         Configuration
 // @Router       /config/routine [put]
 // @Accept       json
+// @Param        name query string true "routine name"
 // @Param        storage body model.BackupRoutine true "backup routine"
 // @Success      200
 // @Failure      400 {string} string
@@ -437,7 +480,12 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateRoutine(ws.config, &updatedRoutine)
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "routine name is required", http.StatusBadRequest)
+		return
+	}
+	err = service.UpdateRoutine(ws.config, name, &updatedRoutine)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -455,17 +503,17 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @ID          deleteRoutine
 // @Tags        Configuration
 // @Router      /config/routine [delete]
-// @Param       name query string true "Routine Name"
+// @Param       name query string true "routine name"
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 	routineName := r.URL.Query().Get("name")
 	if routineName == "" {
-		http.Error(w, "Routine name is required", http.StatusBadRequest)
+		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return
 	}
 
-	err := service.DeleteRoutine(ws.config, &routineName)
+	err := service.DeleteRoutine(ws.config, routineName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

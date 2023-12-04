@@ -41,8 +41,7 @@
                         "type": "string",
                         "description": "Backup routine name",
                         "name": "name",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -82,8 +81,7 @@
                         "type": "string",
                         "description": "Backup routine name",
                         "name": "name",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -145,7 +143,7 @@
                 "parameters": [
                     {
                         "description": "config",
-                        "name": "storage",
+                        "name": "config",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -205,8 +203,15 @@
                 "operationId": "updateCluster",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "cluster name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
                         "description": "aerospike cluster",
-                        "name": "storage",
+                        "name": "cluster",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -236,6 +241,13 @@
                 "summary": "Adds an Aerospike cluster to the config.",
                 "operationId": "addCluster",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "cluster name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
                     {
                         "description": "cluster info",
                         "name": "cluster",
@@ -267,7 +279,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Cluster Name",
+                        "description": "cluster Name",
                         "name": "name",
                         "in": "query",
                         "required": true
@@ -325,6 +337,13 @@
                 "operationId": "updatePolicy",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "policy name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
                         "description": "backup policy",
                         "name": "storage",
                         "in": "body",
@@ -356,6 +375,13 @@
                 "summary": "Adds a policy to the config.",
                 "operationId": "addPolicy",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "policy name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
                     {
                         "description": "backup policy",
                         "name": "storage",
@@ -445,6 +471,13 @@
                 "operationId": "updateRoutine",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "routine name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
                         "description": "backup routine",
                         "name": "storage",
                         "in": "body",
@@ -477,6 +510,13 @@
                 "operationId": "addRoutine",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "routine name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
                         "description": "backup routine",
                         "name": "storage",
                         "in": "body",
@@ -507,7 +547,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Routine Name",
+                        "description": "routine name",
                         "name": "name",
                         "in": "query",
                         "required": true
@@ -565,6 +605,13 @@
                 "operationId": "updateStorage",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "storage name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
                         "description": "backup storage",
                         "name": "storage",
                         "in": "body",
@@ -597,6 +644,13 @@
                 "operationId": "addStorage",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "storage name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
                         "description": "backup storage",
                         "name": "storage",
                         "in": "body",
@@ -627,7 +681,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Storage Name",
+                        "description": "storage name",
                         "name": "name",
                         "in": "query",
                         "required": true
@@ -692,7 +746,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.RestoreFullRequest"
+                            "$ref": "#/definitions/model.RestoreRequest"
                         }
                     }
                 ],
@@ -730,7 +784,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.RestoreIncrementalRequest"
+                            "$ref": "#/definitions/model.RestoreRequest"
                         }
                     }
                 ],
@@ -851,9 +905,6 @@
                 "host": {
                     "type": "string"
                 },
-                "name": {
-                    "type": "string"
-                },
                 "password": {
                     "type": "string"
                 },
@@ -903,9 +954,6 @@
                 "max-retries": {
                     "type": "integer"
                 },
-                "name": {
-                    "type": "string"
-                },
                 "no-bins": {
                     "type": "boolean"
                 },
@@ -938,9 +986,6 @@
                 },
                 "total-timeout": {
                     "type": "integer"
-                },
-                "type": {
-                    "$ref": "#/definitions/model.BackupType"
                 }
             }
         },
@@ -964,9 +1009,6 @@
                 },
                 "interval": {
                     "type": "integer"
-                },
-                "name": {
-                    "type": "string"
                 },
                 "namespace": {
                     "type": "string"
@@ -993,17 +1035,6 @@
                     "type": "string"
                 }
             }
-        },
-        "model.BackupType": {
-            "type": "integer",
-            "enum": [
-                0,
-                1
-            ],
-            "x-enum-varnames": [
-                "Full",
-                "Incremental"
-            ]
         },
         "model.Config": {
             "type": "object",
@@ -1079,40 +1110,6 @@
                 }
             }
         },
-        "model.RestoreFullRequest": {
-            "type": "object",
-            "properties": {
-                "destination": {
-                    "$ref": "#/definitions/model.AerospikeCluster"
-                },
-                "directory": {
-                    "type": "string"
-                },
-                "policy": {
-                    "$ref": "#/definitions/model.RestorePolicy"
-                },
-                "source": {
-                    "$ref": "#/definitions/model.Storage"
-                }
-            }
-        },
-        "model.RestoreIncrementalRequest": {
-            "type": "object",
-            "properties": {
-                "destination": {
-                    "$ref": "#/definitions/model.AerospikeCluster"
-                },
-                "file": {
-                    "type": "string"
-                },
-                "policy": {
-                    "$ref": "#/definitions/model.RestorePolicy"
-                },
-                "source": {
-                    "$ref": "#/definitions/model.Storage"
-                }
-            }
-        },
         "model.RestorePolicy": {
             "type": "object",
             "properties": {
@@ -1175,6 +1172,20 @@
                 }
             }
         },
+        "model.RestoreRequest": {
+            "type": "object",
+            "properties": {
+                "destination": {
+                    "$ref": "#/definitions/model.AerospikeCluster"
+                },
+                "policy": {
+                    "$ref": "#/definitions/model.RestorePolicy"
+                },
+                "source": {
+                    "$ref": "#/definitions/model.Storage"
+                }
+            }
+        },
         "model.RestoreTimestampRequest": {
             "type": "object",
             "properties": {
@@ -1187,9 +1198,6 @@
                 "routine": {
                     "type": "string"
                 },
-                "source": {
-                    "$ref": "#/definitions/model.Storage"
-                },
                 "time": {
                     "type": "integer",
                     "format": "int64"
@@ -1199,9 +1207,6 @@
         "model.Storage": {
             "type": "object",
             "properties": {
-                "name": {
-                    "type": "string"
-                },
                 "path": {
                     "type": "string"
                 },

@@ -27,8 +27,9 @@ type BackupBackendLocal struct {
 var _ BackupBackend = (*BackupBackendLocal)(nil)
 
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
-func NewBackupBackendLocal(path string, backupPolicy *model.BackupPolicy,
+func NewBackupBackendLocal(storage *model.Storage, backupPolicy *model.BackupPolicy,
 	fullBackupInProgress *atomic.Bool) *BackupBackendLocal {
+	path := *storage.Path
 	prepareDirectory(path)
 	prepareDirectory(path + "/" + model.IncrementalBackupDirectory)
 	prepareDirectory(path + "/" + model.FullBackupDirectory)

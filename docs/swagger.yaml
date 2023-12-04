@@ -5,8 +5,6 @@ definitions:
         type: string
       host:
         type: string
-      name:
-        type: string
       password:
         type: string
       password-path:
@@ -39,8 +37,6 @@ definitions:
         type: integer
       max-retries:
         type: integer
-      name:
-        type: string
       no-bins:
         type: boolean
       no-indexes:
@@ -63,8 +59,6 @@ definitions:
         type: integer
       total-timeout:
         type: integer
-      type:
-        $ref: '#/definitions/model.BackupType'
     type: object
   model.BackupRoutine:
     properties:
@@ -80,8 +74,6 @@ definitions:
         type: integer
       interval:
         type: integer
-      name:
-        type: string
       namespace:
         type: string
       node-list:
@@ -99,14 +91,6 @@ definitions:
       storage:
         type: string
     type: object
-  model.BackupType:
-    enum:
-    - 0
-    - 1
-    type: integer
-    x-enum-varnames:
-    - Full
-    - Incremental
   model.Config:
     properties:
       aerospike-clusters:
@@ -155,28 +139,6 @@ definitions:
           type: string
         type: array
     type: object
-  model.RestoreFullRequest:
-    properties:
-      destination:
-        $ref: '#/definitions/model.AerospikeCluster'
-      directory:
-        type: string
-      policy:
-        $ref: '#/definitions/model.RestorePolicy'
-      source:
-        $ref: '#/definitions/model.Storage'
-    type: object
-  model.RestoreIncrementalRequest:
-    properties:
-      destination:
-        $ref: '#/definitions/model.AerospikeCluster'
-      file:
-        type: string
-      policy:
-        $ref: '#/definitions/model.RestorePolicy'
-      source:
-        $ref: '#/definitions/model.Storage'
-    type: object
   model.RestorePolicy:
     properties:
       bandwidth:
@@ -218,6 +180,15 @@ definitions:
       unique:
         type: boolean
     type: object
+  model.RestoreRequest:
+    properties:
+      destination:
+        $ref: '#/definitions/model.AerospikeCluster'
+      policy:
+        $ref: '#/definitions/model.RestorePolicy'
+      source:
+        $ref: '#/definitions/model.Storage'
+    type: object
   model.RestoreTimestampRequest:
     properties:
       destination:
@@ -226,16 +197,12 @@ definitions:
         $ref: '#/definitions/model.RestorePolicy'
       routine:
         type: string
-      source:
-        $ref: '#/definitions/model.Storage'
       time:
         format: int64
         type: integer
     type: object
   model.Storage:
     properties:
-      name:
-        type: string
       path:
         type: string
       s3-endpoint-override:
@@ -286,7 +253,6 @@ paths:
       - description: Backup routine name
         in: query
         name: name
-        required: true
         type: string
       produces:
       - application/json
@@ -313,7 +279,6 @@ paths:
       - description: Backup routine name
         in: query
         name: name
-        required: true
         type: string
       produces:
       - application/json
@@ -357,7 +322,7 @@ paths:
       parameters:
       - description: config
         in: body
-        name: storage
+        name: config
         required: true
         schema:
           $ref: '#/definitions/model.Config'
@@ -375,7 +340,7 @@ paths:
     delete:
       operationId: deleteCluster
       parameters:
-      - description: Cluster Name
+      - description: cluster Name
         in: query
         name: name
         required: true
@@ -413,6 +378,11 @@ paths:
       - application/json
       operationId: addCluster
       parameters:
+      - description: cluster name
+        in: query
+        name: name
+        required: true
+        type: string
       - description: cluster info
         in: body
         name: cluster
@@ -434,9 +404,14 @@ paths:
       - application/json
       operationId: updateCluster
       parameters:
+      - description: cluster name
+        in: query
+        name: name
+        required: true
+        type: string
       - description: aerospike cluster
         in: body
-        name: storage
+        name: cluster
         required: true
         schema:
           $ref: '#/definitions/model.AerospikeCluster'
@@ -492,6 +467,11 @@ paths:
       - application/json
       operationId: addPolicy
       parameters:
+      - description: policy name
+        in: query
+        name: name
+        required: true
+        type: string
       - description: backup policy
         in: body
         name: storage
@@ -513,6 +493,11 @@ paths:
       - application/json
       operationId: updatePolicy
       parameters:
+      - description: policy name
+        in: query
+        name: name
+        required: true
+        type: string
       - description: backup policy
         in: body
         name: storage
@@ -533,7 +518,7 @@ paths:
     delete:
       operationId: deleteRoutine
       parameters:
-      - description: Routine Name
+      - description: routine name
         in: query
         name: name
         required: true
@@ -571,6 +556,11 @@ paths:
       - application/json
       operationId: addRoutine
       parameters:
+      - description: routine name
+        in: query
+        name: name
+        required: true
+        type: string
       - description: backup routine
         in: body
         name: storage
@@ -592,6 +582,11 @@ paths:
       - application/json
       operationId: updateRoutine
       parameters:
+      - description: routine name
+        in: query
+        name: name
+        required: true
+        type: string
       - description: backup routine
         in: body
         name: storage
@@ -612,7 +607,7 @@ paths:
     delete:
       operationId: deleteStorage
       parameters:
-      - description: Storage Name
+      - description: storage name
         in: query
         name: name
         required: true
@@ -650,6 +645,11 @@ paths:
       - application/json
       operationId: addStorage
       parameters:
+      - description: storage name
+        in: query
+        name: name
+        required: true
+        type: string
       - description: backup storage
         in: body
         name: storage
@@ -671,6 +671,11 @@ paths:
       - application/json
       operationId: updateStorage
       parameters:
+      - description: storage name
+        in: query
+        name: name
+        required: true
+        type: string
       - description: backup storage
         in: body
         name: storage
@@ -717,7 +722,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.RestoreFullRequest'
+          $ref: '#/definitions/model.RestoreRequest'
       responses:
         "202":
           description: Job ID (int64)
@@ -743,7 +748,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.RestoreIncrementalRequest'
+          $ref: '#/definitions/model.RestoreRequest'
       responses:
         "202":
           description: Job ID (int64)

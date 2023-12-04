@@ -14,12 +14,12 @@ func TestPtr(t *testing.T) {
 
 func TestFind(t *testing.T) {
 	elements := map[string]int{"a": 1}
-	_, found := Find(elements, func(i int) bool { return i == 1 })
-	if !found {
+	found := Find(elements, func(i int) bool { return i == 1 })
+	if found == nil {
 		t.Error("Expected to be found")
 	}
-	_, found = Find(elements, func(i int) bool { return i == 2 })
-	if found {
+	found = Find(elements, func(i int) bool { return i == 2 })
+	if found != nil {
 		t.Error("Expected not to be found")
 	}
 }

@@ -20,23 +20,25 @@ const (
 // RestoreMemory implements the RestoreService interface.
 // Stores job information locally within a map.
 type RestoreMemory struct {
+	config         *model.Config
 	restoreJobs    *JobsHolder
 	restoreService shared.Restore
 	backends       map[string]BackupBackend
 }
 
+var _ RestoreService = (*RestoreMemory)(nil)
+
 // NewRestoreMemory returns a new RestoreMemory instance.
-func NewRestoreMemory(backends map[string]BackupBackend) *RestoreMemory {
+func NewRestoreMemory(backends map[string]BackupBackend, config *model.Config) *RestoreMemory {
 	return &RestoreMemory{
 		restoreJobs:    NewJobsHolder(),
 		restoreService: shared.NewRestore(),
 		backends:       backends,
+		config:         config,
 	}
 }
 
-// Restore starts the backup for a given request asynchronously and
-// returns the id of the backup job.
-func (r *RestoreMemory) Restore(request *model.RestoreRequest) int {
+func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) int {
 	jobID := r.restoreJobs.newJob()
 	go func() {
 		restoreResult := r.doRestore(request)
@@ -49,7 +51,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequest) int {
 	return jobID
 }
 
-func (r *RestoreMemory) doRestore(request *model.RestoreRequest) bool {
+func (r *RestoreMemory) doRestore(request *model.RestoreRequestInternal) bool {
 	var success bool
 	restoreRunFunc := func() {
 		success = r.restoreService.RestoreRun(request)
@@ -124,13 +126,13 @@ func latestFullBackupBeforeTime(list []model.BackupDetails, time time.Time) *mod
 }
 
 func (r *RestoreMemory) restoreFullBackup(request *model.RestoreTimestampRequest, key *string) bool {
-	return r.doRestore(&model.RestoreRequest{
-		DestinationCuster: request.DestinationCuster,
-		SourceStorage:     request.SourceStorage,
-		Policy:            request.Policy,
-		Directory:         key,
-		File:              nil,
-	})
+	return r.doRestore(&model.RestoreRequestInternal{
+		RestoreRequest: model.RestoreRequest{
+			DestinationCuster: request.DestinationCuster,
+			SourceStorage:     r.config.Storage[request.Routine],
+			Policy:            request.Policy,
+		},
+		Dir: key})
 }
 
 func (r *RestoreMemory) findIncrementalBackups(backend BackupBackend, u time.Time) ([]model.BackupDetails, error) {
@@ -150,14 +152,14 @@ func (r *RestoreMemory) findIncrementalBackups(backend BackupBackend, u time.Tim
 func (r *RestoreMemory) restoreIncrementalBackups(
 	incrementalBackups []model.BackupDetails, request *model.RestoreTimestampRequest) error {
 	for _, b := range incrementalBackups {
-		incrRestoreOK := r.doRestore(&model.RestoreRequest{
-			DestinationCuster: request.DestinationCuster,
-			SourceStorage:     request.SourceStorage,
-			Policy:            request.Policy,
-			Directory:         nil,
-			File:              b.Key,
+		incrRestoreOK := r.doRestore(&model.RestoreRequestInternal{
+			RestoreRequest: model.RestoreRequest{
+				DestinationCuster: request.DestinationCuster,
+				SourceStorage:     r.config.Storage[request.Routine],
+				Policy:            request.Policy,
+			},
+			File: b.Key,
 		})
-
 		if !incrRestoreOK {
 			return fmt.Errorf("could not restore incremental backup %s at %s", request.Routine, *b.Key)
 		}

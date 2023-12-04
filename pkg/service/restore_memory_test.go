@@ -8,7 +8,7 @@ import (
 )
 
 func TestRestoreMemory(t *testing.T) {
-	restoreService := NewRestoreMemory(nil)
+	restoreService := NewRestoreMemory(nil, nil)
 	restoreRequest := &model.RestoreRequest{
 		DestinationCuster: &model.AerospikeCluster{
 			Host: util.Ptr("localhost"),
@@ -17,9 +17,12 @@ func TestRestoreMemory(t *testing.T) {
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
-		Directory: util.Ptr("./testout/backup"),
 	}
-	jobID := restoreService.Restore(restoreRequest)
+	requestInternal := &model.RestoreRequestInternal{
+		RestoreRequest: *restoreRequest,
+		Dir:            util.Ptr("./testout/backup"),
+	}
+	jobID := restoreService.Restore(requestInternal)
 
 	jobStatus := restoreService.JobStatus(jobID)
 	if jobStatus != jobStatusRunning {

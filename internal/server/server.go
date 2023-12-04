@@ -111,7 +111,7 @@ func NewHTTPServer(handlers []service.BackupScheduler, config *model.Config) *HT
 		},
 		rateLimiter:    rateLimiter,
 		whiteList:      newIPWhiteList(config.HTTPServer.Rate.WhiteList),
-		restoreService: service.NewRestoreMemory(backendMap),
+		restoreService: service.NewRestoreMemory(backendMap, config),
 		backupBackends: backendMap,
 	}
 }
@@ -210,7 +210,7 @@ func (ws *HTTPServer) configActionHandler(w http.ResponseWriter, r *http.Request
 	case http.MethodPut:
 		ws.updateConfig(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -225,7 +225,7 @@ func (ws *HTTPServer) configClusterActionHandler(w http.ResponseWriter, r *http.
 	case http.MethodDelete:
 		ws.deleteAerospikeCluster(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -240,7 +240,7 @@ func (ws *HTTPServer) configStorageActionHandler(w http.ResponseWriter, r *http.
 	case http.MethodDelete:
 		ws.deleteStorage(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -255,7 +255,7 @@ func (ws *HTTPServer) configPolicyActionHandler(w http.ResponseWriter, r *http.R
 	case http.MethodDelete:
 		ws.deletePolicy(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -270,6 +270,6 @@ func (ws *HTTPServer) configRoutineActionHandler(w http.ResponseWriter, r *http.
 	case http.MethodDelete:
 		ws.deleteRoutine(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }

@@ -33,5 +33,5 @@ type Backup interface {
 }
 
 type Restore interface {
-	RestoreRun(restoreRequest *model.RestoreRequest) bool
+	RestoreRun(restoreRequest *model.RestoreRequestInternal) bool
 }

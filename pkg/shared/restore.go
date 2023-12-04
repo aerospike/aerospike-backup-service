@@ -38,7 +38,7 @@ func NewRestore() *RestoreShared {
 // RestoreRun calls the restore_run function from the asrestore shared library.
 //
 //nolint:funlen
-func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
+func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal) bool {
 	// lock to restrict parallel execution (shared library limitation)
 	r.Lock()
 	defer r.Unlock()
@@ -81,14 +81,12 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequest) bool {
 	}
 
 	// S3 configuration
-	if restoreRequest.SourceStorage != nil {
-		setCString(&restoreConfig.s3_endpoint_override, restoreRequest.SourceStorage.S3EndpointOverride)
-		setCString(&restoreConfig.s3_region, restoreRequest.SourceStorage.S3Region)
-		setCString(&restoreConfig.s3_profile, restoreRequest.SourceStorage.S3Profile)
-	}
+	setCString(&restoreConfig.s3_endpoint_override, restoreRequest.SourceStorage.S3EndpointOverride)
+	setCString(&restoreConfig.s3_region, restoreRequest.SourceStorage.S3Region)
+	setCString(&restoreConfig.s3_profile, restoreRequest.SourceStorage.S3Profile)
 
 	// restore source configuration
-	setCString(&restoreConfig.directory, restoreRequest.Directory)
+	setCString(&restoreConfig.directory, restoreRequest.Dir)
 	setCString(&restoreConfig.input_file, restoreRequest.File)
 
 	setCBool(&restoreConfig.replace, restoreRequest.Policy.Replace)
