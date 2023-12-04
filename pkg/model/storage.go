@@ -12,6 +12,7 @@ type Storage struct {
 	S3LogLevel         *string      `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty"`
 }
 
+// StorageType represents the type of the backup storage.
 type StorageType int
 
 const (

@@ -47,6 +47,7 @@ func routineValidationError(field string) error {
 	return fmt.Errorf("%s specification for backup routine is required", field)
 }
 
+// Node represents an Aerospike node details.
 type Node struct {
 	IP   string `yaml:"ip" json:"ip"`
 	Port int    `yaml:"port" json:"port"`

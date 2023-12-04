@@ -22,6 +22,7 @@ type RestorePolicy struct {
 	Tps                *uint32  `json:"tps,omitempty"`
 }
 
+// Validate validates the restore policy.
 func (p *RestorePolicy) Validate() error {
 	if p == nil {
 		return errors.New("restore policy is not specified")
