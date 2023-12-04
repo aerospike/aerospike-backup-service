@@ -77,7 +77,7 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 		http.Error(w, "cluster name is required", http.StatusBadRequest)
 		return
 	}
-	err = service.AddCluster(ws.config, &name, &newCluster)
+	err = service.AddCluster(ws.config, name, &newCluster)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -131,7 +131,7 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 		http.Error(w, "cluster name is required", http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateCluster(ws.config, &name, &updatedCluster)
+	err = service.UpdateCluster(ws.config, name, &updatedCluster)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -158,7 +158,7 @@ func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	err := service.DeleteCluster(ws.config, &clusterName)
+	err := service.DeleteCluster(ws.config, clusterName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -194,7 +194,7 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "storage name is required", http.StatusBadRequest)
 		return
 	}
-	err = service.AddStorage(ws.config, &name, &newStorage)
+	err = service.AddStorage(ws.config, name, &newStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -249,7 +249,7 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "storage name is required", http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateStorage(ws.config, &name, &updatedStorage)
+	err = service.UpdateStorage(ws.config, name, &updatedStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -277,7 +277,7 @@ func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := service.DeleteStorage(ws.config, &storageName)
+	err := service.DeleteStorage(ws.config, storageName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -313,7 +313,7 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "policy name is required", http.StatusBadRequest)
 		return
 	}
-	err = service.AddPolicy(ws.config, &name, &newPolicy)
+	err = service.AddPolicy(ws.config, name, &newPolicy)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -367,7 +367,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "policy name is required", http.StatusBadRequest)
 		return
 	}
-	err = service.UpdatePolicy(ws.config, &name, &updatedPolicy)
+	err = service.UpdatePolicy(ws.config, name, &updatedPolicy)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -395,7 +395,7 @@ func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := service.DeletePolicy(ws.config, &policyName)
+	err := service.DeletePolicy(ws.config, policyName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -431,7 +431,7 @@ func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return
 	}
-	err = service.AddRoutine(ws.config, &name, &newRoutine)
+	err = service.AddRoutine(ws.config, name, &newRoutine)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -485,7 +485,7 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateRoutine(ws.config, &name, &updatedRoutine)
+	err = service.UpdateRoutine(ws.config, name, &updatedRoutine)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -513,7 +513,7 @@ func (ws *HTTPServer) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := service.DeleteRoutine(ws.config, &routineName)
+	err := service.DeleteRoutine(ws.config, routineName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

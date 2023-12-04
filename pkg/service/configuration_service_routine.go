@@ -8,7 +8,7 @@ import (
 
 // AddRoutine
 // adds a new BackupRoutine to the configuration if a routine with the same name doesn't already exist.
-func AddRoutine(config *model.Config, name *string, newRoutine *model.BackupRoutine) error {
+func AddRoutine(config *model.Config, name string, newRoutine *model.BackupRoutine) error {
 	_, found := config.Storage[newRoutine.Storage]
 	if !found {
 		return fmt.Errorf("storage %s not found", newRoutine.Storage)
@@ -17,35 +17,35 @@ func AddRoutine(config *model.Config, name *string, newRoutine *model.BackupRout
 	if !found {
 		return fmt.Errorf("cluster %s not found", newRoutine.SourceCluster)
 	}
-	_, found = config.BackupRoutines[*name]
+	_, found = config.BackupRoutines[name]
 	if found {
-		return fmt.Errorf("aerospike routine with the same name %s already exists", *name)
+		return fmt.Errorf("aerospike routine with the same name %s already exists", name)
 	}
 
-	config.BackupRoutines[*name] = newRoutine
+	config.BackupRoutines[name] = newRoutine
 	return nil
 }
 
 // UpdateRoutine
 // updates an existing BackupRoutine in the configuration.
-func UpdateRoutine(config *model.Config, name *string, updatedRoutine *model.BackupRoutine) error {
-	_, found := config.BackupRoutines[*name]
+func UpdateRoutine(config *model.Config, name string, updatedRoutine *model.BackupRoutine) error {
+	_, found := config.BackupRoutines[name]
 	if !found {
-		return fmt.Errorf("backup routine %s not found", *name)
+		return fmt.Errorf("backup routine %s not found", name)
 	}
 
-	config.BackupRoutines[*name] = updatedRoutine
+	config.BackupRoutines[name] = updatedRoutine
 	return nil
 }
 
 // DeleteRoutine
 // deletes a BackupRoutine from the configuration.
-func DeleteRoutine(config *model.Config, name *string) error {
-	_, found := config.BackupRoutines[*name]
+func DeleteRoutine(config *model.Config, name string) error {
+	_, found := config.BackupRoutines[name]
 	if !found {
-		return fmt.Errorf("backup routine %s not found", *name)
+		return fmt.Errorf("backup routine %s not found", name)
 	}
 
-	delete(config.BackupRoutines, *name)
+	delete(config.BackupRoutines, name)
 	return nil
 }
