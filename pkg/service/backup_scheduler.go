@@ -218,7 +218,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		slog.Debug("Starting incremental backup", "name", h.routineName)
 		stats := backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, opts)
 		if stats == nil {
-			slog.Warn("Failed incremental backup", "policy", h.routineName)
+			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()
 			return
 		}
