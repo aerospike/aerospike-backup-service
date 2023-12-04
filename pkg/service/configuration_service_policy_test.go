@@ -63,7 +63,7 @@ func TestPolicy_Update(t *testing.T) {
 		t.Errorf("UpdatePolicy failed, expected nil error, got %v", err)
 	}
 
-	if *config.BackupPolicies[name] != *(&model.BackupPolicy{}) {
+	if *config.BackupPolicies[name] != (model.BackupPolicy{}) {
 		t.Errorf("UpdatePolicy failed, expected policy name to be updated, got %v",
 			*config.BackupPolicies[name])
 	}
