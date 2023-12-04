@@ -364,7 +364,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	}
 	name := r.URL.Query().Get("name")
 	if name == "" {
-		http.Error(w, "storage name is required", http.StatusBadRequest)
+		http.Error(w, "policy name is required", http.StatusBadRequest)
 		return
 	}
 	err = service.UpdatePolicy(ws.config, &name, &updatedPolicy)
