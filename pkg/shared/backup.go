@@ -72,7 +72,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCUint(&backupConfig.retry_delay, backupPolicy.RetryDelay)
 
 	// namespace list configuration
-	nsCharArray := C.CString(*backupRoutine.Namespace)
+	nsCharArray := C.CString(backupRoutine.Namespace)
 	C.strcpy((*C.char)(unsafe.Pointer(&backupConfig.ns)), nsCharArray)
 
 	setCInt(&backupConfig.parallel, backupPolicy.Parallel)

@@ -83,7 +83,6 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
-
 }
 
 // @Summary     Trigger an asynchronous restore operation to specific point in time.

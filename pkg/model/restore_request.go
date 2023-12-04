@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 // RestoreRequest represents a restore operation request.
@@ -26,26 +27,6 @@ type RestoreTimestampRequest struct {
 	Routine           string            `json:"routine,omitempty"`
 }
 
-// RestorePolicy represents a policy for restore operation.
-type RestorePolicy struct {
-	Parallel           *uint32  `json:"parallel,omitempty"`
-	NoRecords          *bool    `json:"no-records,omitempty"`
-	NoIndexes          *bool    `json:"no-indexes,omitempty"`
-	NoUdfs             *bool    `json:"no-udfs,omitempty"`
-	Timeout            *uint32  `json:"timeout,omitempty"`
-	DisableBatchWrites *bool    `json:"disable-batch-writes,omitempty"`
-	MaxAsyncBatches    *uint32  `json:"max-async-batches,omitempty"`
-	BatchSize          *uint32  `json:"batch-size,omitempty"`
-	NsList             []string `json:"ns-list,omitempty"`
-	SetList            []string `json:"set-list,omitempty"`
-	BinList            []string `json:"bin-list,omitempty"`
-	Replace            *bool    `json:"replace,omitempty"`
-	Unique             *bool    `json:"unique,omitempty"`
-	NoGeneration       *bool    `json:"no-generation,omitempty"`
-	Bandwidth          *uint64  `json:"bandwidth,omitempty"`
-	Tps                *uint32  `json:"tps,omitempty"`
-}
-
 // String satisfies the fmt.Stringer interface.
 func (r RestoreRequest) String() string {
 	request, err := json.Marshal(r)
@@ -62,4 +43,47 @@ func (r RestoreTimestampRequest) String() string {
 		return err.Error()
 	}
 	return string(request)
+}
+
+// Validate validates the restore operation request.
+func (r *RestoreRequest) Validate() error {
+	if err := r.DestinationCuster.Validate(); err != nil {
+		return err
+	}
+	if err := r.Policy.Validate(); err != nil {
+		return err
+	}
+	if r.DestinationCuster == nil {
+		return errors.New("destination cluster is not specified")
+	}
+	if err := r.SourceStorage.Validate(); err != nil {
+		return err
+	}
+	if r.Policy == nil {
+		return errors.New("restore policy is not specified")
+	}
+	if err := r.Policy.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Validate validates the restore operation request.
+func (r *RestoreTimestampRequest) Validate() error {
+	if err := r.DestinationCuster.Validate(); err != nil {
+		return err
+	}
+	if r.Policy == nil {
+		return errors.New("restore policy is not specified")
+	}
+	if err := r.Policy.Validate(); err != nil {
+		return err
+	}
+	if r.Time <= 0 {
+		return errors.New("restore point in time should be positive")
+	}
+	if r.Routine == "" {
+		return errors.New("routine to restore is not specified")
+	}
+	return nil
 }
