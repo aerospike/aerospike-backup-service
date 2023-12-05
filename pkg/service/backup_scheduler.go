@@ -192,7 +192,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	if isStaleTick(now) {
-		slog.Error("Skipped incremental backup", "name", h.routineName)
+		slog.Debug("Skipped incremental backup", "name", h.routineName)
 		incrBackupSkippedCounter.Inc()
 		return
 	}
