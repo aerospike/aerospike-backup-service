@@ -91,10 +91,9 @@ install-jansson:
 .PHONY: install-go
 install-go:
 ifdef GOBIN_VERSION
-else
 	curl -L "https://go.dev/dl/go$(GO_VERSION).$(OS)-$(ARCH).tar.gz" > "go$(GO_VERSION).$(OS)-$(ARCH).tar.gz"; \
 	sudo tar -C /usr/local -xzf "go$(GO_VERSION).$(OS)-$(ARCH).tar.gz" && rm "go$(GO_VERSION).$(OS)-$(ARCH).tar.gz"; \
-	echo export PATH="\$PATH:/usr/local/go/bin" >> $(HOME)/.profile
+	echo export PATH="$PATH:/usr/local/go/bin" >> $(HOME)/.profile
 endif
 
 .PHONY: install-deb-build-deps
@@ -152,7 +151,7 @@ rpm: tarball
 	--define "pkg_version $(VERSION)" \
 	--define "pkg_name $(BINARY_NAME)" \
 	--define "build_arch $(shell uname -m)" \
-	-ba $(WORKSPACE)/packages/rpm/SPECS/$(BINARY_NAME).spec
+	-ba $(WORKSPACE)/packages/rpm/$(BINARY_NAME).spec
 
 .PHONY: clean-rpm
 clean-rpm:
