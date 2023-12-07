@@ -95,7 +95,6 @@ func (s *S3Context) readFile(filePath string, v any) {
 	if err = yaml.Unmarshal(content, v); err != nil {
 		slog.Warn("Failed unmarshal state file for backup",
 			"path", filePath, "err", err, "content", string(content))
-
 	}
 }
 
