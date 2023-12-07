@@ -14,6 +14,7 @@ RUN go mod download
 
 RUN export ARCH=`uname -m` && \
     CGO_CFLAGS="-I/app/modules/aerospike-tools-backup/modules/c-client/target/Linux-$ARCH/include \
+    -I/app/modules/aerospike-tools-backup/modules/secret-agent-client/target/Linux-$ARCH/include \
     -I/app/modules/aerospike-tools-backup/include" \
     GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=1 go build  \
     -ldflags " -X main.commit=$(git rev-parse --short HEAD) -X main.buildTime=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \
@@ -22,7 +23,7 @@ RUN export ARCH=`uname -m` && \
 FROM ubuntu:22.04
 
 RUN apt-get update \
-    && apt-get install -y libssl-dev libuv1-dev libcurl4-openssl-dev libzstd-dev
+    && apt-get install -y libssl-dev libuv1-dev libcurl4-openssl-dev libzstd-dev libjansson-dev
 
 WORKDIR /app
 ENV LD_LIBRARY_PATH /app
