@@ -117,8 +117,7 @@ install-deb-build-deps:
 
 .PHONY: prep-submodules
 prep-submodules:
-	cd $(TOOLS_DIR) && git submodule update --init --recursive --remote
-	#cd $(TOOLS_DIR) && git submodule update --init --recursive
+	cd $(TOOLS_DIR) && git submodule update --init --recursive
 
 .PHONY: build-submodules
 build-submodules:
