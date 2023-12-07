@@ -98,7 +98,11 @@ func newBackupHandler(config *model.Config, routineName string) (*BackupHandler,
 	}, nil
 }
 
-func newBackend(storage *model.Storage, backupPolicy *model.BackupPolicy, fullBackupInProgress *atomic.Bool) (BackupBackend, error) {
+func newBackend(
+	storage *model.Storage,
+	backupPolicy *model.BackupPolicy,
+	fullBackupInProgress *atomic.Bool,
+) (BackupBackend, error) {
 	switch *storage.Type {
 	case model.Local:
 		return NewBackupBackendLocal(storage, backupPolicy, fullBackupInProgress), nil
@@ -156,7 +160,8 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	}
 
 	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
-		slog.Debug("Full backup is currently in progress, skipping full backup", "name", h.routineName)
+		slog.Debug("Full backup is currently in progress, skipping full backup",
+			"name", h.routineName)
 		return
 	}
 	slog.Debug("Acquire fullBackupInProgress lock", "name", h.routineName)
@@ -169,7 +174,8 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupRunFunc := func() {
 		started := time.Now()
 		slog.Debug("Starting full backup", "name", h.routineName)
-		stats := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster, h.storage, shared.BackupOptions{})
+		stats := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
+			h.storage, shared.BackupOptions{})
 		if stats == nil {
 			slog.Warn("Failed full backup", "name", h.routineName)
 			backupFailureCounter.Inc()
@@ -201,7 +207,8 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	// read the state first and check
 	state := h.backend.readState()
 	if state.LastRun == (time.Time{}) {
-		slog.Debug("Skip incremental backup until initial full backup is done", "name", h.routineName)
+		slog.Debug("Skip incremental backup until initial full backup is done",
+			"name", h.routineName)
 		return
 	}
 	if !h.isIncrementalEligible(now, state.LastIncrRun) {
@@ -209,16 +216,18 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		return
 	}
 	if h.fullBackupInProgress.Load() {
-		slog.Debug("Full backup is currently in progress, skipping incremental backup", "name", h.routineName)
+		slog.Debug("Full backup is currently in progress, skipping incremental backup",
+			"name", h.routineName)
 		return
 	}
+	var stats *shared.BackupStat
 	backupRunFunc := func() {
 		opts := shared.BackupOptions{}
 		lastIncrRunEpoch := state.LastIncrRun.UnixNano()
 		opts.ModAfter = &lastIncrRunEpoch
 		started := time.Now()
 		slog.Debug("Starting incremental backup", "name", h.routineName)
-		stats := backupService.BackupRun(h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, opts)
+		stats = backupService.BackupRun(h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, opts)
 		if stats == nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()
@@ -226,11 +235,12 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		}
 		elapsed := time.Since(started)
 		incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
-		h.deleteEmptyBackup(stats)
 	}
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
 	slog.Debug("Completed incremental backup", "name", h.routineName)
+	// delete if the backup file is empty
+	h.deleteEmptyBackup(stats, h.routineName)
 
 	// increment incrBackupCounter metric
 	incrBackupCounter.Inc()
@@ -239,12 +249,17 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	h.updateIncrementalBackupState()
 }
 
-func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat) {
+func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat, routineName string) {
 	if stats == nil || !stats.HasStats {
 		return
 	}
 	if stats.IsEmpty() {
-		h.backend.DeleteFile(stats.Path)
+		if err := h.backend.DeleteFile(stats.Path); err != nil {
+			slog.Error("Failed to delete empty backup file", "name", routineName,
+				"path", stats.Path, "err", err)
+		} else {
+			slog.Debug("Deleted empty backup file", "name", routineName, "path", stats.Path)
+		}
 	}
 }
 
