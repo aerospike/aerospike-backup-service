@@ -99,10 +99,10 @@ func newBackupHandler(config *model.Config, routineName string) (*BackupHandler,
 }
 
 func policyWithNoSMD(policy *model.BackupPolicy) *model.BackupPolicy {
-	incrementalPolicy := policy.Copy()
-	incrementalPolicy.NoIndexes = util.Ptr(true)
-	incrementalPolicy.NoUdfs = util.Ptr(true)
-	return incrementalPolicy
+	policyWithNoSMD := policy.Copy()
+	policyWithNoSMD.NoIndexes = util.Ptr(true)
+	policyWithNoSMD.NoUdfs = util.Ptr(true)
+	return policyWithNoSMD
 }
 
 func newBackend(storage *model.Storage, backupPolicy *model.BackupPolicy, fullBackupInProgress *atomic.Bool) (BackupBackend, error) {
