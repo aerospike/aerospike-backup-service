@@ -20,6 +20,7 @@ type BackupPolicy struct {
 	FilterExp        *string `yaml:"filter-exp,omitempty" json:"filter-exp,omitempty"`
 }
 
+// Copy creates a new instance of the BackupPolicy struct with identical field values.
 func (p *BackupPolicy) Copy() *BackupPolicy {
 	return &BackupPolicy{
 		Parallel:         p.Parallel,
