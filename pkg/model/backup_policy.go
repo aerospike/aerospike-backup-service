@@ -19,3 +19,24 @@ type BackupPolicy struct {
 	FileLimit        *uint64 `yaml:"file-limit,omitempty" json:"file-limit,omitempty"`
 	FilterExp        *string `yaml:"filter-exp,omitempty" json:"filter-exp,omitempty"`
 }
+
+func (p *BackupPolicy) Copy() *BackupPolicy {
+	return &BackupPolicy{
+		Parallel:         p.Parallel,
+		SocketTimeout:    p.SocketTimeout,
+		TotalTimeout:     p.TotalTimeout,
+		MaxRetries:       p.MaxRetries,
+		RetryDelay:       p.RetryDelay,
+		RemoveFiles:      p.RemoveFiles,
+		RemoveArtifacts:  p.RemoveArtifacts,
+		NoBins:           p.NoBins,
+		NoRecords:        p.NoRecords,
+		NoIndexes:        p.NoIndexes,
+		NoUdfs:           p.NoUdfs,
+		Bandwidth:        p.Bandwidth,
+		MaxRecords:       p.MaxRecords,
+		RecordsPerSecond: p.RecordsPerSecond,
+		FileLimit:        p.FileLimit,
+		FilterExp:        p.FilterExp,
+	}
+}
