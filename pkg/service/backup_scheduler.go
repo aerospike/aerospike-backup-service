@@ -89,20 +89,13 @@ func newBackupHandler(config *model.Config, routineName string) (*BackupHandler,
 		backend:              backupBackend,
 		backupRoutine:        backupRoutine,
 		backupFullPolicy:     backupPolicy,
-		backupIncrPolicy:     policyWithNoSMD(backupPolicy),
+		backupIncrPolicy:     backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
 		cluster:              cluster,
 		storage:              storage,
 		state:                backupBackend.readState(),
 		fullBackupInProgress: fullBackupInProgress,
 		routineName:          routineName,
 	}, nil
-}
-
-func policyWithNoSMD(policy *model.BackupPolicy) *model.BackupPolicy {
-	policyWithNoSMD := policy.Copy()
-	policyWithNoSMD.NoIndexes = util.Ptr(true)
-	policyWithNoSMD.NoUdfs = util.Ptr(true)
-	return policyWithNoSMD
 }
 
 func newBackend(storage *model.Storage, backupPolicy *model.BackupPolicy, fullBackupInProgress *atomic.Bool) (BackupBackend, error) {
