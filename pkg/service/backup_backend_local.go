@@ -62,7 +62,7 @@ func (local *BackupBackendLocal) readState() *model.BackupState {
 	}
 	if err = yaml.Unmarshal(bytes, state); err != nil {
 		slog.Warn("Failed unmarshal state file for backup", "path",
-			local.stateFilePath, "err", err)
+			local.stateFilePath, "err", err, "content", string(bytes))
 	}
 	return state
 }

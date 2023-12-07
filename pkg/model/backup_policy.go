@@ -1,5 +1,7 @@
 package model
 
+import "github.com/aerospike/backup/pkg/util"
+
 // BackupPolicy represents a scheduled backup policy.
 type BackupPolicy struct {
 	Parallel         *int32  `yaml:"parallel,omitempty" json:"parallel,omitempty"`
@@ -18,4 +20,27 @@ type BackupPolicy struct {
 	RecordsPerSecond *uint32 `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty"`
 	FileLimit        *uint64 `yaml:"file-limit,omitempty" json:"file-limit,omitempty"`
 	FilterExp        *string `yaml:"filter-exp,omitempty" json:"filter-exp,omitempty"`
+}
+
+// CopySMDDisabled creates a new instance of the BackupPolicy struct with identical field values.
+// New instance has NoIndexes and NoUdfs set to true.
+func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
+	return &BackupPolicy{
+		Parallel:         p.Parallel,
+		SocketTimeout:    p.SocketTimeout,
+		TotalTimeout:     p.TotalTimeout,
+		MaxRetries:       p.MaxRetries,
+		RetryDelay:       p.RetryDelay,
+		RemoveFiles:      p.RemoveFiles,
+		RemoveArtifacts:  p.RemoveArtifacts,
+		NoBins:           p.NoBins,
+		NoRecords:        p.NoRecords,
+		NoIndexes:        util.Ptr(true),
+		NoUdfs:           util.Ptr(true),
+		Bandwidth:        p.Bandwidth,
+		MaxRecords:       p.MaxRecords,
+		RecordsPerSecond: p.RecordsPerSecond,
+		FileLimit:        p.FileLimit,
+		FilterExp:        p.FilterExp,
+	}
 }

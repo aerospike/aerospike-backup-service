@@ -23,7 +23,8 @@ type BackupScheduler interface {
 // BackupHandler handles a configured backup policy.
 type BackupHandler struct {
 	backend              BackupBackend
-	backupPolicy         *model.BackupPolicy
+	backupFullPolicy     *model.BackupPolicy
+	backupIncrPolicy     *model.BackupPolicy
 	backupRoutine        *model.BackupRoutine
 	routineName          string
 	cluster              *model.AerospikeCluster
@@ -87,7 +88,8 @@ func newBackupHandler(config *model.Config, routineName string) (*BackupHandler,
 	return &BackupHandler{
 		backend:              backupBackend,
 		backupRoutine:        backupRoutine,
-		backupPolicy:         backupPolicy,
+		backupFullPolicy:     backupPolicy,
+		backupIncrPolicy:     backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
 		cluster:              cluster,
 		storage:              storage,
 		state:                backupBackend.readState(),
@@ -172,7 +174,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupRunFunc := func() {
 		started := time.Now()
 		slog.Debug("Starting full backup", "name", h.routineName)
-		stats := backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster,
+		stats := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
 			h.storage, shared.BackupOptions{})
 		if stats == nil {
 			slog.Warn("Failed full backup", "name", h.routineName)
@@ -225,7 +227,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		opts.ModAfter = &lastIncrRunEpoch
 		started := time.Now()
 		slog.Debug("Starting incremental backup", "name", h.routineName)
-		stats = backupService.BackupRun(h.backupRoutine, h.backupPolicy, h.cluster, h.storage, opts)
+		stats = backupService.BackupRun(h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, opts)
 		if stats == nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()
