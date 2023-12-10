@@ -203,14 +203,24 @@ func (s *S3Context) getCreationTime(path string) (*time.Time, error) {
 	return creationResult.Contents[0].LastModified, nil
 }
 
+// DeleteFile deletes a file using the specified full s3 protocol path.
 func (s *S3Context) DeleteFile(path string) error {
+	parsed, err := url.Parse(path)
+	if err != nil {
+		return err
+	}
+	if parsed.Host != s.bucket {
+		return fmt.Errorf("wrong bucket name for context: %s, expected: %s",
+			parsed.Host, s.bucket)
+	}
+
 	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(path),
+		Key:    aws.String(parsed.Path),
 	}
 
 	// Execute the delete operation
-	_, err := s.client.DeleteObject(s.ctx, input)
+	_, err = s.client.DeleteObject(s.ctx, input)
 	if err != nil {
 		return fmt.Errorf("failed to delete object from S3: %v", err)
 	}
