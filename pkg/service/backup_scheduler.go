@@ -103,7 +103,7 @@ func newBackend(
 	backupPolicy *model.BackupPolicy,
 	fullBackupInProgress *atomic.Bool,
 ) (BackupBackend, error) {
-	switch *storage.Type {
+	switch storage.Type {
 	case model.Local:
 		return NewBackupBackendLocal(storage, backupPolicy, fullBackupInProgress), nil
 	case model.S3:
@@ -111,7 +111,7 @@ func newBackend(
 	default:
 		return nil, fmt.Errorf("unsupported storage type: %d. Should be one of:\n"+
 			"\t%d for local storage\n"+
-			"\t%d for AWS s3 compatible", *storage.Type, model.Local, model.S3)
+			"\t%d for AWS s3 compatible", storage.Type, model.Local, model.S3)
 	}
 }
 
