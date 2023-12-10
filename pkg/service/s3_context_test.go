@@ -17,16 +17,16 @@ func TestS3Context_DeleteFile(t *testing.T) {
 		S3EndpointOverride: ptr.String("http://localhost:9000"),
 	})
 
-	context.writeFile("incremental/file.txt", "data")
-	context.writeFile("incremental/file2.txt", "data")
+	context.writeFile("storage1/incremental/file.txt", "data")
+	context.writeFile("storage1/incremental/file2.txt", "data")
 
-	if files, _ := context.listFiles("incremental"); len(files) != 2 {
+	if files, _ := context.listFiles("storage1/incremental"); len(files) != 2 {
 		t.Error("files not created")
 	}
 
-	context.CleanDir("incremental")
+	context.CleanDir("incremental") // clean is public function, so "storage1" is appended inside
 
-	if files, _ := context.listFiles("incremental"); len(files) > 0 {
+	if files, _ := context.listFiles("storage1/incremental"); len(files) > 0 {
 		t.Error("files not deleted")
 	}
 }
