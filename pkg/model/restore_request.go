@@ -62,7 +62,7 @@ func (r *RestoreRequest) Validate() error {
 	if r.Policy == nil {
 		return errors.New("restore policy is not specified")
 	}
-	if err := r.Policy.Validate(); err != nil {
+	if err := r.Policy.Validate(); err != nil { //nolint:revive
 		return err
 	}
 	return nil

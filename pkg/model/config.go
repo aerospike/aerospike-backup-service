@@ -19,7 +19,7 @@ type Config struct {
 // NewConfigWithDefaultValues returns a new Config with default values.
 func NewConfigWithDefaultValues() *Config {
 	return &Config{
-		HTTPServer: NewHttpServerWithDefaultValues(),
+		HTTPServer: NewHTTPServerWithDefaultValues(),
 	}
 }
 

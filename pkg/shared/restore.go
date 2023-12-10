@@ -3,7 +3,11 @@
 package shared
 
 /*
-#cgo CFLAGS: -I../../modules/aerospike-tools-backup/include -I../../modules/aerospike-tools-backup/modules/c-client/target/Darwin-x86_64/include
+#cgo CFLAGS: -I../../modules/aerospike-tools-backup/include
+#cgo darwin CFLAGS: -I../../modules/aerospike-tools-backup/modules/c-client/target/Darwin-x86_64/include
+#cgo darwin CFLAGS: -I../../modules/aerospike-tools-backup/modules/secret-agent-client/target/Darwin-x86_64/include
+#cgo linux CFLAGS: -I../../modules/aerospike-tools-backup/modules/c-client/target/Linux-x86_64/include
+#cgo linux CFLAGS: -I../../modules/aerospike-tools-backup/modules/secret-agent-client/target/Linux-x86_64/include
 #cgo LDFLAGS: -L${SRCDIR}/../../lib -lasrestore
 
 #include <stddef.h>

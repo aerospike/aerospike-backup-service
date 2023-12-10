@@ -14,8 +14,8 @@ type RateLimiterConfig struct {
 	WhiteList []string `yaml:"white-list,omitempty" json:"white-list,omitempty"`
 }
 
-// NewHttpServerWithDefaultValues returns a new HTTPServerConfig with default values.
-func NewHttpServerWithDefaultValues() *HTTPServerConfig {
+// NewHTTPServerWithDefaultValues returns a new HTTPServerConfig with default values.
+func NewHTTPServerWithDefaultValues() *HTTPServerConfig {
 	return &HTTPServerConfig{
 		Address: "0.0.0.0",
 		Port:    8080,

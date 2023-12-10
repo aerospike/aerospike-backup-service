@@ -1,8 +1,9 @@
 package model
 
 import (
-	"github.com/aws/smithy-go/ptr"
 	"testing"
+
+	"github.com/aws/smithy-go/ptr"
 )
 
 func validConfig() *Config {
