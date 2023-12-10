@@ -131,7 +131,7 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 }
 
 // CleanDir cleans the directory with the given name.
-func (local *BackupBackendLocal) CleanDir(name string) {
+func (local *BackupBackendLocal) CleanDir(name string) error {
 	path := fmt.Sprintf("%s/%s/", local.path, name)
 	dir, err := os.ReadDir(path)
 	if err != nil {
@@ -140,11 +140,12 @@ func (local *BackupBackendLocal) CleanDir(name string) {
 	for _, e := range dir {
 		if !e.IsDir() {
 			filePath := path + "/" + e.Name()
-			if err = os.Remove(filePath); err != nil {
-				slog.Debug("Failed to delete file", "path", filePath, "err", err)
+			if err = local.DeleteFile(filePath); err != nil {
+				return err
 			}
 		}
 	}
+	return nil
 }
 
 func (local *BackupBackendLocal) DeleteFile(path string) error {

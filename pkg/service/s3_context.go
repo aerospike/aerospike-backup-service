@@ -159,8 +159,8 @@ func removeLeadingSlash(s string) string {
 }
 
 // CleanDir cleans the directory with the given name.
-func (s *S3Context) CleanDir(name string) {
-	path := s.Path + "/" + name
+func (s *S3Context) CleanDir(name string) error {
+	path := removeLeadingSlash(s.Path + "/" + name)
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
 		Prefix:    aws.String(path),
@@ -168,17 +168,24 @@ func (s *S3Context) CleanDir(name string) {
 	})
 	if err != nil {
 		slog.Warn("Couldn't list files in directory", "path", path, "err", err)
-	} else {
-		for _, file := range result.Contents {
-			_, err := s.client.DeleteObject(s.ctx, &s3.DeleteObjectInput{
-				Bucket: aws.String(s.bucket),
-				Key:    file.Key,
-			})
-			if err != nil {
-				slog.Debug("Couldn't delete file", "path", *file.Key, "err", err)
-			}
+		return err
+	}
+
+	if len(result.Contents) == 0 {
+		slog.Debug("No files to delete")
+		return nil
+	}
+
+	for _, file := range result.Contents {
+		_, err := s.client.DeleteObject(s.ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(s.bucket),
+			Key:    file.Key,
+		})
+		if err != nil {
+			slog.Debug("Couldn't delete file", "path", *file.Key, "err", err)
 		}
 	}
+	return nil
 }
 
 func (s *S3Context) GetTime(l types.CommonPrefix) *time.Time {
