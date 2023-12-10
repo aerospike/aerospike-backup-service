@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/util"
 	"github.com/aws/smithy-go/ptr"
 )
 
@@ -15,7 +14,7 @@ func TestStorage_Add(t *testing.T) {
 
 	name := "storage"
 	newStorage := &model.Storage{
-		Type: util.Ptr(model.Local),
+		Type: model.Local,
 		Path: ptr.String("path"),
 	}
 
@@ -51,7 +50,7 @@ func TestStorage_Update(t *testing.T) {
 
 	newStorage := &model.Storage{
 		Path: ptr.String("path"),
-		Type: util.Ptr(model.Local),
+		Type: model.Local,
 	}
 
 	err := UpdateStorage(config, name, newStorage)
