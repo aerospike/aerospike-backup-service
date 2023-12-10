@@ -12,7 +12,7 @@ type BackupBackend interface {
 	writeState(*model.BackupState) error
 
 	// CleanDir cleans the directory with the given name.
-	CleanDir(name string)
+	CleanDir(name string) error
 
 	// FullBackupList returns a list of available full backups.
 	FullBackupList() ([]model.BackupDetails, error)

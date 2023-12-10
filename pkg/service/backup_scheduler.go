@@ -195,7 +195,9 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	h.updateBackupState()
 
 	// clean incremental backups
-	h.backend.CleanDir(model.IncrementalBackupDirectory)
+	if err := h.backend.CleanDir(model.IncrementalBackupDirectory); err != nil {
+		slog.Error("could not clean incremental backups", err)
+	}
 }
 
 func (h *BackupHandler) runIncrementalBackup(now time.Time) {
