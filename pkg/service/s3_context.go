@@ -212,7 +212,6 @@ func (s *S3Context) getCreationTime(path string) (*time.Time, error) {
 
 // DeleteFile deletes a file using the specified full s3 protocol path.
 func (s *S3Context) DeleteFile(path string) error {
-	slog.Info("Delete file " + path)
 	parsed, err := url.Parse(path)
 	if err != nil {
 		return err
