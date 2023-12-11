@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync/atomic"
+	"time"
 
 	"log/slog"
 
@@ -158,15 +159,16 @@ func (local *BackupBackendLocal) DeleteFile(path string) error {
 }
 
 func toBackupDetails(e fs.DirEntry, prefix string) model.BackupDetails {
-	details := model.BackupDetails{
-		Key: util.Ptr(filepath.Join(prefix, e.Name())),
-	}
+	var lastModified *time.Time
 	dirInfo, err := e.Info()
 	if err == nil {
-		details.LastModified = util.Ptr(dirInfo.ModTime())
-		details.Size = folderSize(prefix)
+		lastModified = util.Ptr(dirInfo.ModTime())
 	}
-	return details
+	return model.BackupDetails{
+		Key:          util.Ptr(filepath.Join(prefix, e.Name())),
+		LastModified: lastModified,
+		Size:         folderSize(prefix),
+	}
 }
 
 func folderSize(path string) *int64 {
@@ -187,7 +189,7 @@ func folderSize(path string) *int64 {
 	})
 
 	if err != nil {
-		slog.Error("failed to calculate size", "path", path)
+		slog.Error("failed to calculate size", "path", path, "err", err)
 		return nil
 	}
 
