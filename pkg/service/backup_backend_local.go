@@ -172,8 +172,15 @@ func toBackupDetails(e fs.DirEntry, prefix string) model.BackupDetails {
 func folderSize(path string) *int64 {
 	var size int64
 
-	err := filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
+	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
 			size += info.Size()
 		}
 		return nil
