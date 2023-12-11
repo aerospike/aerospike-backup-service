@@ -23,7 +23,7 @@ RUN export ARCH=`uname -m` && \
 FROM ubuntu:22.04
 
 RUN apt-get update \
-    && apt-get install -y libssl-dev libuv1-dev libcurl4-openssl-dev libzstd-dev libjansson-dev
+    && apt-get install -y libssl-dev libuv1-dev libcurl4-openssl-dev libzstd-dev libjansson-dev libjansson4
 
 WORKDIR /app
 ENV LD_LIBRARY_PATH /app
