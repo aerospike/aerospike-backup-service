@@ -128,7 +128,7 @@ func latestFullBackupBeforeTime(list []model.BackupDetails, time time.Time) *mod
 	var result *model.BackupDetails
 	for i := range list {
 		current := &list[i]
-		if !current.LastModified.Before(time) {
+		if current.LastModified.After(time) {
 			continue
 		}
 		if result == nil || result.LastModified.Before(*current.LastModified) {
