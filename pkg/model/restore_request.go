@@ -24,6 +24,7 @@ type RestoreRequestInternal struct {
 type RestoreTimestampRequest struct {
 	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
 	Policy            *RestorePolicy    `json:"policy,omitempty"`
+	SecretAgent       *SecretAgent      `json:"secret-agent,omitempty"`
 	Time              int64             `json:"time,omitempty" format:"int64"`
 	Routine           string            `json:"routine,omitempty"`
 }
@@ -47,11 +48,17 @@ func (r RestoreTimestampRequest) String() string {
 }
 
 // NewRestoreRequest creates and validates a new RestoreRequest.
-func NewRestoreRequest(destinationCluster *AerospikeCluster, policy *RestorePolicy, sourceStorage *Storage) (*RestoreRequest, error) {
+func NewRestoreRequest(
+	destinationCluster *AerospikeCluster,
+	policy *RestorePolicy,
+	sourceStorage *Storage,
+	secretAgent *SecretAgent,
+) (*RestoreRequest, error) {
 	request := &RestoreRequest{
 		DestinationCuster: destinationCluster,
 		Policy:            policy,
 		SourceStorage:     sourceStorage,
+		SecretAgent:       secretAgent,
 	}
 	if err := request.Validate(); err != nil {
 		return nil, err
