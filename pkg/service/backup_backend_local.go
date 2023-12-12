@@ -200,6 +200,5 @@ func folderSize(path string) *int64 {
 		return nil
 	}
 
-	slog.Debug("Calculated size", "path", path, "size", size)
 	return &size
 }
