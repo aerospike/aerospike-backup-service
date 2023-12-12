@@ -10,6 +10,7 @@ type RestoreRequest struct {
 	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
 	Policy            *RestorePolicy    `json:"policy,omitempty"`
 	SourceStorage     *Storage          `json:"source,omitempty"`
+	SecretAgent       *SecretAgent      `json:"secret-agent,omitempty"`
 }
 
 // RestoreRequestInternal is used internally to prepopulate data for the restore operation.

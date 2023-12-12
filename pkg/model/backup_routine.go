@@ -7,9 +7,10 @@ import (
 
 // BackupRoutine represents a scheduled backup operation routine.
 type BackupRoutine struct {
-	BackupPolicy  string `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty"`
-	SourceCluster string `yaml:"source-cluster,omitempty" json:"source-cluster,omitempty"`
-	Storage       string `yaml:"storage,omitempty" json:"storage,omitempty"`
+	BackupPolicy  string  `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty"`
+	SourceCluster string  `yaml:"source-cluster,omitempty" json:"source-cluster,omitempty"`
+	Storage       string  `yaml:"storage,omitempty" json:"storage,omitempty"`
+	SecretAgent   *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 
 	IntervalMillis     *int64 `yaml:"interval,omitempty" json:"interval,omitempty"`
 	IncrIntervalMillis *int64 `yaml:"incr-interval,omitempty" json:"incr-interval,omitempty"`

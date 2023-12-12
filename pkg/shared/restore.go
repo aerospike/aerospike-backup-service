@@ -89,6 +89,9 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	setCString(&restoreConfig.s3_region, restoreRequest.SourceStorage.S3Region)
 	setCString(&restoreConfig.s3_profile, restoreRequest.SourceStorage.S3Profile)
 
+	// Secret Agent configuration
+	restoreSecretAgent(&restoreConfig, restoreRequest.SecretAgent)
+
 	// restore source configuration
 	setCString(&restoreConfig.directory, restoreRequest.Dir)
 	setCString(&restoreConfig.input_file, restoreRequest.File)
@@ -114,4 +117,14 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	// destroy the restore_config
 	C.restore_config_destroy(&restoreConfig)
 	return success
+}
+
+func restoreSecretAgent(config *C.restore_config_t, secretsAgent *model.SecretAgent) {
+	if secretsAgent != nil {
+		config.secret_cfg.addr = C.CString(secretsAgent.Address)
+		config.secret_cfg.port = C.CString(secretsAgent.Port)
+		config.secret_cfg.timeout = C.int(secretsAgent.Timeout)
+		config.secret_cfg.tls.ca_string = C.CString(secretsAgent.SecretAgentFile)
+		setCBool(&config.secret_cfg.tls.enabled, &secretsAgent.TLSEnabled)
+	}
 }

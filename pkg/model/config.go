@@ -14,6 +14,7 @@ type Config struct {
 	Storage           map[string]*Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
 	BackupPolicies    map[string]*BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
 	BackupRoutines    map[string]*BackupRoutine    `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
+	SecretAgents      map[string]*SecretAgent      `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 }
 
 // NewConfigWithDefaultValues returns a new Config with default values.
@@ -39,13 +40,22 @@ func (c *Config) Validate() error {
 			return err
 		}
 		if _, exists := c.AerospikeClusters[routine.SourceCluster]; !exists {
-			return fmt.Errorf("BackupRoutine '%s' references a non-existent AerospikeCluster '%s'", name, routine.SourceCluster)
+			return fmt.Errorf("BackupRoutine '%s' references a non-existent AerospikeCluster '%s'",
+				name, routine.SourceCluster)
 		}
 		if _, exists := c.BackupPolicies[routine.BackupPolicy]; !exists {
-			return fmt.Errorf("BackupRoutine '%s' references a non-existent BackupPolicy '%s'", name, routine.BackupPolicy)
+			return fmt.Errorf("BackupRoutine '%s' references a non-existent BackupPolicy '%s'",
+				name, routine.BackupPolicy)
 		}
 		if _, exists := c.Storage[routine.Storage]; !exists {
-			return fmt.Errorf("BackupRoutine '%s' references a non-existent Storage '%s'", name, routine.Storage)
+			return fmt.Errorf("BackupRoutine '%s' references a non-existent Storage '%s'",
+				name, routine.Storage)
+		}
+		if routine.SecretAgent != nil {
+			if _, exists := c.SecretAgents[*routine.SecretAgent]; !exists {
+				return fmt.Errorf("BackupRoutine '%s' references a non-existent SecretAgent '%s'",
+					name, *routine.SecretAgent)
+			}
 		}
 	}
 

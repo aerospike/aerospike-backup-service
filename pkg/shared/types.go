@@ -28,6 +28,7 @@ type Backup interface {
 		backupPolicy *model.BackupPolicy,
 		cluster *model.AerospikeCluster,
 		storage *model.Storage,
+		secretAgent *model.SecretAgent,
 		opts BackupOptions,
 	) *BackupStat
 }
