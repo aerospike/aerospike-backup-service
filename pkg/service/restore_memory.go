@@ -115,11 +115,12 @@ func (r *RestoreMemory) findLastFullBackup(backend BackupBackend,
 func latestFullBackupBeforeTime(list []model.BackupDetails, time time.Time) *model.BackupDetails {
 	var latestFullBackup *model.BackupDetails
 	for i := range list {
-		b := &list[i]
-		if b.LastModified.Before(time) {
-			if latestFullBackup == nil || latestFullBackup.LastModified.After(*b.LastModified) {
-				latestFullBackup = b
-			}
+		current := &list[i]
+		if current.LastModified.After(time) {
+			continue
+		}
+		if latestFullBackup == nil || latestFullBackup.LastModified.Before(*current.LastModified) {
+			latestFullBackup = current
 		}
 	}
 	return latestFullBackup
