@@ -24,7 +24,7 @@ type BackupBackendLocal struct {
 	stateFilePath        string
 	backupPolicy         *model.BackupPolicy
 	fullBackupInProgress *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
-	statFileMutex        sync.RWMutex
+	stateFileMutex       sync.RWMutex
 }
 
 var _ BackupBackend = (*BackupBackendLocal)(nil)
@@ -57,9 +57,10 @@ func prepareDirectory(path string) {
 }
 
 func (local *BackupBackendLocal) readState() *model.BackupState {
-	local.statFileMutex.RLock()
-	defer local.statFileMutex.RUnlock()
+	local.stateFileMutex.RLock()
 	bytes, err := os.ReadFile(local.stateFilePath)
+	local.stateFileMutex.RUnlock()
+
 	state := model.NewBackupState()
 	if err != nil {
 		slog.Warn("Failed to read state file for backup", "err", err)
@@ -77,8 +78,8 @@ func (local *BackupBackendLocal) writeState(state *model.BackupState) error {
 	if err != nil {
 		return err
 	}
-	local.statFileMutex.Lock()
-	defer local.statFileMutex.Unlock()
+	local.stateFileMutex.Lock()
+	defer local.stateFileMutex.Unlock()
 	return os.WriteFile(local.stateFilePath, backupState, 0644)
 }
 

@@ -16,7 +16,7 @@ type BackupBackendS3 struct {
 	stateFilePath        string
 	backupPolicy         *model.BackupPolicy
 	fullBackupInProgress *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
-	statFileMutex        sync.RWMutex
+	stateFileMutex       sync.RWMutex
 }
 
 var _ BackupBackend = (*BackupBackendS3)(nil)
@@ -34,8 +34,8 @@ func NewBackupBackendS3(storage *model.Storage, backupPolicy *model.BackupPolicy
 }
 
 func (s *BackupBackendS3) readState() *model.BackupState {
-	s.statFileMutex.RLock()
-	defer s.statFileMutex.RUnlock()
+	s.stateFileMutex.RLock()
+	defer s.stateFileMutex.RUnlock()
 
 	state := model.NewBackupState()
 	s.readFile(s.stateFilePath, state)
@@ -43,8 +43,8 @@ func (s *BackupBackendS3) readState() *model.BackupState {
 }
 
 func (s *BackupBackendS3) writeState(state *model.BackupState) error {
-	s.statFileMutex.Lock()
-	defer s.statFileMutex.Unlock()
+	s.stateFileMutex.Lock()
+	defer s.stateFileMutex.Unlock()
 
 	return s.writeFile(s.stateFilePath, state)
 }
