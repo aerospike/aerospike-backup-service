@@ -170,10 +170,11 @@ func toBackupDetails(e fs.DirEntry, prefix string) model.BackupDetails {
 	if err == nil {
 		lastModified = util.Ptr(dirInfo.ModTime())
 	}
+	path := filepath.Join(prefix, e.Name())
 	return model.BackupDetails{
-		Key:          util.Ptr(filepath.Join(prefix, e.Name())),
+		Key:          util.Ptr(path),
 		LastModified: lastModified,
-		Size:         folderSize(prefix),
+		Size:         folderSize(path),
 	}
 }
 
@@ -199,5 +200,6 @@ func folderSize(path string) *int64 {
 		return nil
 	}
 
+	slog.Debug("Calculated size", "path", path, "size", size)
 	return &size
 }
