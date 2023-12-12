@@ -37,7 +37,6 @@ func TestRestoreMemory(t *testing.T) {
 }
 
 func TestLatestFullBackupBeforeTime(t *testing.T) {
-	// Create a sample list of BackupDetails
 	backupList := []model.BackupDetails{
 		{LastModified: util.Ptr(time.UnixMilli(10))},
 		{LastModified: util.Ptr(time.UnixMilli(20))}, // Should be the latest full backup
@@ -46,13 +45,25 @@ func TestLatestFullBackupBeforeTime(t *testing.T) {
 
 	result := latestFullBackupBeforeTime(backupList, time.UnixMilli(25))
 
-	// Check if the result is not nil (i.e., a backup was found)
 	if result == nil {
 		t.Error("Expected a non-nil result, but got nil")
 	}
 
-	// Check if the result is the expected backup
 	if result != &backupList[1] {
 		t.Errorf("Expected the latest backup, but got %+v", result)
+	}
+}
+
+func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
+	backupList := []model.BackupDetails{
+		{LastModified: util.Ptr(time.UnixMilli(10))},
+		{LastModified: util.Ptr(time.UnixMilli(20))},
+		{LastModified: util.Ptr(time.UnixMilli(30))},
+	}
+
+	result := latestFullBackupBeforeTime(backupList, time.UnixMilli(5))
+
+	if result != nil {
+		t.Errorf("Expected a non result, but got %+v", result)
 	}
 }
