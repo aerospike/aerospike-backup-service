@@ -57,7 +57,7 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	setCBool(&restoreConfig.use_services_alternate, restoreRequest.DestinationCuster.UseServicesAlternate)
 
 	setCString(&restoreConfig.user, restoreRequest.DestinationCuster.User)
-	setCString(&restoreConfig.password, restoreRequest.DestinationCuster.Password)
+	setCString(&restoreConfig.password, restoreRequest.DestinationCuster.GetPassword())
 	setCString(&restoreConfig.auth_mode, restoreRequest.DestinationCuster.AuthMode)
 
 	setCUint(&restoreConfig.parallel, restoreRequest.Policy.Parallel)

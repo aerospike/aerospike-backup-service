@@ -2,6 +2,7 @@ package service
 
 import (
 	"log/slog"
+	"sync"
 	"sync/atomic"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -15,6 +16,7 @@ type BackupBackendS3 struct {
 	stateFilePath        string
 	backupPolicy         *model.BackupPolicy
 	fullBackupInProgress *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
+	stateFileMutex       sync.RWMutex
 }
 
 var _ BackupBackend = (*BackupBackendS3)(nil)
@@ -32,12 +34,18 @@ func NewBackupBackendS3(storage *model.Storage, backupPolicy *model.BackupPolicy
 }
 
 func (s *BackupBackendS3) readState() *model.BackupState {
+	s.stateFileMutex.RLock()
+	defer s.stateFileMutex.RUnlock()
+
 	state := model.NewBackupState()
 	s.readFile(s.stateFilePath, state)
 	return state
 }
 
 func (s *BackupBackendS3) writeState(state *model.BackupState) error {
+	s.stateFileMutex.Lock()
+	defer s.stateFileMutex.Unlock()
+
 	return s.writeFile(s.stateFilePath, state)
 }
 
