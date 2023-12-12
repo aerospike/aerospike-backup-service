@@ -135,7 +135,7 @@ func (r *RestoreMemory) restoreFullBackup(request *model.RestoreTimestampRequest
 		Dir:            key,
 	})
 	if !fullRestoreOK {
-		return fmt.Errorf("could not restore full backup %s at %s", request.Routine, key)
+		return fmt.Errorf("could not restore full backup %s at %s", request.Routine, *key)
 	}
 
 	return nil
