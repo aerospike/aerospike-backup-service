@@ -2,6 +2,7 @@ package service
 
 import (
 	"testing"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -32,5 +33,26 @@ func TestRestoreMemory(t *testing.T) {
 	wrongJobStatus := restoreService.JobStatus(1111)
 	if wrongJobStatus != jobStatusNA {
 		t.Errorf("Expected jobStatus to be %s", jobStatusNA)
+	}
+}
+
+func TestLatestFullBackupBeforeTime(t *testing.T) {
+	// Create a sample list of BackupDetails
+	backupList := []model.BackupDetails{
+		{LastModified: util.Ptr(time.UnixMilli(10))},
+		{LastModified: util.Ptr(time.UnixMilli(20))}, // Should be the latest full backup
+		{LastModified: util.Ptr(time.UnixMilli(30))},
+	}
+
+	result := latestFullBackupBeforeTime(backupList, time.UnixMilli(25))
+
+	// Check if the result is not nil (i.e., a backup was found)
+	if result == nil {
+		t.Error("Expected a non-nil result, but got nil")
+	}
+
+	// Check if the result is the expected backup
+	if result != &backupList[1] {
+		t.Errorf("Expected the latest backup, but got %+v", result)
 	}
 }
