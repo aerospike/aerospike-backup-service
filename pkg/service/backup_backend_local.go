@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync/atomic"
+	"time"
 
 	"log/slog"
 
@@ -95,6 +96,7 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 		return []model.BackupDetails{{
 			Key:          ptr.String(backupFolder),
 			LastModified: &lastRun,
+			Size:         folderSize(backupFolder),
 		}}, nil
 	}
 
@@ -157,35 +159,39 @@ func (local *BackupBackendLocal) DeleteFile(path string) error {
 }
 
 func toBackupDetails(e fs.DirEntry, prefix string) model.BackupDetails {
-	details := model.BackupDetails{
-		Key: util.Ptr(filepath.Join(prefix, e.Name())),
-	}
+	var lastModified *time.Time
 	dirInfo, err := e.Info()
 	if err == nil {
-		details.LastModified = util.Ptr(dirInfo.ModTime())
-		details.Size = util.Ptr(dirEntrySize(prefix, e, dirInfo))
+		lastModified = util.Ptr(dirInfo.ModTime())
 	}
-	return details
+	return model.BackupDetails{
+		Key:          util.Ptr(filepath.Join(prefix, e.Name())),
+		LastModified: lastModified,
+		Size:         folderSize(prefix),
+	}
 }
 
-func dirEntrySize(path string, e fs.DirEntry, info fs.FileInfo) int64 {
-	if e.IsDir() {
-		var totalSize int64
-		path = filepath.Join(path, e.Name())
-		entries, err := os.ReadDir(path)
-		if err == nil {
-			for _, dirEntry := range entries {
-				dirInfo, err := dirEntry.Info()
-				if err == nil {
-					if dirEntry.IsDir() {
-						totalSize += dirEntrySize(path, dirEntry, dirInfo)
-					} else {
-						totalSize += dirInfo.Size()
-					}
-				}
-			}
+func folderSize(path string) *int64 {
+	var size int64
+
+	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
-		return totalSize
+		if !d.IsDir() {
+			info, err := d.Info()
+			if err != nil {
+				return err
+			}
+			size += info.Size()
+		}
+		return nil
+	})
+
+	if err != nil {
+		slog.Error("failed to calculate size", "path", path, "err", err)
+		return nil
 	}
-	return info.Size()
+
+	return &size
 }
