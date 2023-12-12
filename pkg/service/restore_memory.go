@@ -72,7 +72,7 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) in
 			return
 		}
 
-		if !r.restoreFullBackup(request, fullBackup.Key) {
+		if err = r.restoreFullBackup(request, fullBackup.Key); err != nil {
 			slog.Error("Could not restore full backup", "routine", request.Routine)
 			r.restoreJobs.setFailed(jobID)
 			return
@@ -125,14 +125,20 @@ func latestFullBackupBeforeTime(list []model.BackupDetails, time time.Time) *mod
 	return latestFullBackup
 }
 
-func (r *RestoreMemory) restoreFullBackup(request *model.RestoreTimestampRequest, key *string) bool {
-	return r.doRestore(&model.RestoreRequestInternal{
-		RestoreRequest: model.RestoreRequest{
-			DestinationCuster: request.DestinationCuster,
-			SourceStorage:     r.findStorage(request),
-			Policy:            request.Policy,
-		},
-		Dir: key})
+func (r *RestoreMemory) restoreFullBackup(request *model.RestoreTimestampRequest, key *string) error {
+	restoreRequest, err := r.toRestoreRequest(request)
+	if err != nil {
+		return err
+	}
+	fullRestoreOK := r.doRestore(&model.RestoreRequestInternal{
+		RestoreRequest: *restoreRequest,
+		Dir:            key,
+	})
+	if !fullRestoreOK {
+		return fmt.Errorf("could not restore full backup %s at %s", request.Routine, key)
+	}
+
+	return nil
 }
 
 func (r *RestoreMemory) findIncrementalBackups(backend BackupBackend, u time.Time) ([]model.BackupDetails, error) {
@@ -152,13 +158,13 @@ func (r *RestoreMemory) findIncrementalBackups(backend BackupBackend, u time.Tim
 func (r *RestoreMemory) restoreIncrementalBackups(
 	incrementalBackups []model.BackupDetails, request *model.RestoreTimestampRequest) error {
 	for _, b := range incrementalBackups {
+		restoreRequest, err := r.toRestoreRequest(request)
+		if err != nil {
+			return err
+		}
 		incrRestoreOK := r.doRestore(&model.RestoreRequestInternal{
-			RestoreRequest: model.RestoreRequest{
-				DestinationCuster: request.DestinationCuster,
-				SourceStorage:     r.findStorage(request),
-				Policy:            request.Policy,
-			},
-			File: b.Key,
+			RestoreRequest: *restoreRequest,
+			File:           b.Key,
 		})
 		if !incrRestoreOK {
 			return fmt.Errorf("could not restore incremental backup %s at %s", request.Routine, *b.Key)
@@ -167,9 +173,10 @@ func (r *RestoreMemory) restoreIncrementalBackups(
 	return nil
 }
 
-func (r *RestoreMemory) findStorage(request *model.RestoreTimestampRequest) *model.Storage {
+func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) (*model.RestoreRequest, error) {
 	routine := r.config.BackupRoutines[request.Routine]
-	return r.config.Storage[routine.Storage]
+	storage := r.config.Storage[routine.Storage]
+	return model.NewRestoreRequest(request.DestinationCuster, request.Policy, storage)
 }
 
 // JobStatus returns the status of the job with the given id.
