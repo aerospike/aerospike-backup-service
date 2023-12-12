@@ -129,7 +129,7 @@ func (r *RestoreMemory) restoreFullBackup(request *model.RestoreTimestampRequest
 	return r.doRestore(&model.RestoreRequestInternal{
 		RestoreRequest: model.RestoreRequest{
 			DestinationCuster: request.DestinationCuster,
-			SourceStorage:     r.config.Storage[request.Routine],
+			SourceStorage:     r.findStorage(request),
 			Policy:            request.Policy,
 		},
 		Dir: key})
@@ -155,7 +155,7 @@ func (r *RestoreMemory) restoreIncrementalBackups(
 		incrRestoreOK := r.doRestore(&model.RestoreRequestInternal{
 			RestoreRequest: model.RestoreRequest{
 				DestinationCuster: request.DestinationCuster,
-				SourceStorage:     r.config.Storage[request.Routine],
+				SourceStorage:     r.findStorage(request),
 				Policy:            request.Policy,
 			},
 			File: b.Key,
@@ -165,6 +165,11 @@ func (r *RestoreMemory) restoreIncrementalBackups(
 		}
 	}
 	return nil
+}
+
+func (r *RestoreMemory) findStorage(request *model.RestoreTimestampRequest) *model.Storage {
+	routine := r.config.BackupRoutines[request.Routine]
+	return r.config.Storage[routine.Storage]
 }
 
 // JobStatus returns the status of the job with the given id.
