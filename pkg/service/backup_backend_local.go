@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -23,6 +24,7 @@ type BackupBackendLocal struct {
 	stateFilePath        string
 	backupPolicy         *model.BackupPolicy
 	fullBackupInProgress *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
+	stateFileMutex       sync.RWMutex
 }
 
 var _ BackupBackend = (*BackupBackendLocal)(nil)
@@ -55,7 +57,10 @@ func prepareDirectory(path string) {
 }
 
 func (local *BackupBackendLocal) readState() *model.BackupState {
+	local.stateFileMutex.RLock()
 	bytes, err := os.ReadFile(local.stateFilePath)
+	local.stateFileMutex.RUnlock()
+
 	state := model.NewBackupState()
 	if err != nil {
 		slog.Warn("Failed to read state file for backup", "err", err)
@@ -73,6 +78,8 @@ func (local *BackupBackendLocal) writeState(state *model.BackupState) error {
 	if err != nil {
 		return err
 	}
+	local.stateFileMutex.Lock()
+	defer local.stateFileMutex.Unlock()
 	return os.WriteFile(local.stateFilePath, backupState, 0644)
 }
 
@@ -164,10 +171,11 @@ func toBackupDetails(e fs.DirEntry, prefix string) model.BackupDetails {
 	if err == nil {
 		lastModified = util.Ptr(dirInfo.ModTime())
 	}
+	path := filepath.Join(prefix, e.Name())
 	return model.BackupDetails{
-		Key:          util.Ptr(filepath.Join(prefix, e.Name())),
+		Key:          util.Ptr(path),
 		LastModified: lastModified,
-		Size:         folderSize(prefix),
+		Size:         folderSize(path),
 	}
 }
 
