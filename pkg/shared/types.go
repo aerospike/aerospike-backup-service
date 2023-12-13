@@ -16,12 +16,15 @@ type BackupStat struct {
 	Path                string
 }
 
-func (stats BackupStat) IsEmpty() bool {
+// IsEmpty indicates whether the backup operation represented by the
+// BackupStat completed with an empty data set.
+func (stats *BackupStat) IsEmpty() bool {
 	return stats.RecordCount == 0 &&
 		stats.UDFFileCount == 0 &&
 		stats.SecondaryIndexCount == 0
 }
 
+// Backup represents a backup service.
 type Backup interface {
 	BackupRun(
 		backupRoutine *model.BackupRoutine,
@@ -33,6 +36,7 @@ type Backup interface {
 	) *BackupStat
 }
 
+// Restore represents a restore service.
 type Restore interface {
 	RestoreRun(restoreRequest *model.RestoreRequestInternal) bool
 }

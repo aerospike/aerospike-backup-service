@@ -1022,6 +1022,9 @@
                 "partition-list": {
                     "type": "string"
                 },
+                "secret-agent": {
+                    "type": "string"
+                },
                 "set-list": {
                     "type": "array",
                     "items": {
@@ -1055,6 +1058,12 @@
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/model.BackupRoutine"
+                    }
+                },
+                "secret-agent": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/model.SecretAgent"
                     }
                 },
                 "service": {
@@ -1181,6 +1190,9 @@
                 "policy": {
                     "$ref": "#/definitions/model.RestorePolicy"
                 },
+                "secret-agent": {
+                    "$ref": "#/definitions/model.SecretAgent"
+                },
                 "source": {
                     "$ref": "#/definitions/model.Storage"
                 }
@@ -1198,9 +1210,33 @@
                 "routine": {
                     "type": "string"
                 },
+                "secret-agent": {
+                    "$ref": "#/definitions/model.SecretAgent"
+                },
                 "time": {
                     "type": "integer",
                     "format": "int64"
+                }
+            }
+        },
+        "model.SecretAgent": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "string"
+                },
+                "timeout": {
+                    "description": "timeout in milliseconds",
+                    "type": "integer"
+                },
+                "tls-ca": {
+                    "type": "string"
+                },
+                "tls-enabled": {
+                    "type": "boolean"
                 }
             }
         },

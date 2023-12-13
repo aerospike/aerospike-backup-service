@@ -148,7 +148,7 @@ func backupSecretAgent(config *C.backup_config_t, secretsAgent *model.SecretAgen
 		config.secret_cfg.addr = C.CString(secretsAgent.Address)
 		config.secret_cfg.port = C.CString(secretsAgent.Port)
 		config.secret_cfg.timeout = C.int(secretsAgent.Timeout)
-		config.secret_cfg.tls.ca_string = C.CString(secretsAgent.SecretAgentFile)
+		config.secret_cfg.tls.ca_string = C.CString(secretsAgent.TLSCAString)
 		setCBool(&config.secret_cfg.tls.enabled, &secretsAgent.TLSEnabled)
 	}
 }
