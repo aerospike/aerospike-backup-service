@@ -29,6 +29,7 @@ type BackupHandler struct {
 	routineName          string
 	cluster              *model.AerospikeCluster
 	storage              *model.Storage
+	secretAgent          *model.SecretAgent
 	state                *model.BackupState
 	fullBackupInProgress *atomic.Bool
 }
@@ -78,6 +79,10 @@ func newBackupHandler(config *model.Config, routineName string) (*BackupHandler,
 	if !found {
 		return nil, fmt.Errorf("backupPolicy not found for %s", backupRoutine.BackupPolicy)
 	}
+	var secretAgent *model.SecretAgent
+	if backupRoutine.SecretAgent != nil {
+		secretAgent = config.SecretAgents[*backupRoutine.SecretAgent]
+	}
 
 	fullBackupInProgress := &atomic.Bool{}
 	backupBackend, err := newBackend(storage, backupPolicy, fullBackupInProgress)
@@ -92,6 +97,7 @@ func newBackupHandler(config *model.Config, routineName string) (*BackupHandler,
 		backupIncrPolicy:     backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
 		cluster:              cluster,
 		storage:              storage,
+		secretAgent:          secretAgent,
 		state:                backupBackend.readState(),
 		fullBackupInProgress: fullBackupInProgress,
 		routineName:          routineName,
@@ -175,7 +181,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		started := time.Now()
 		slog.Debug("Starting full backup", "name", h.routineName)
 		stats := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
-			h.storage, shared.BackupOptions{})
+			h.storage, h.secretAgent, shared.BackupOptions{})
 		if stats == nil {
 			slog.Warn("Failed full backup", "name", h.routineName)
 			backupFailureCounter.Inc()
@@ -229,7 +235,8 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		opts.ModAfter = &lastIncrRunEpoch
 		started := time.Now()
 		slog.Debug("Starting incremental backup", "name", h.routineName)
-		stats = backupService.BackupRun(h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, opts)
+		stats = backupService.BackupRun(h.backupRoutine, h.backupIncrPolicy, h.cluster,
+			h.storage, h.secretAgent, opts)
 		if stats == nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()

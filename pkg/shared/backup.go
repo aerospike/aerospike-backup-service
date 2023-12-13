@@ -46,7 +46,8 @@ func NewBackup() *BackupShared {
 //
 //nolint:funlen
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
-	cluster *model.AerospikeCluster, storage *model.Storage, opts BackupOptions) *BackupStat {
+	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
+	opts BackupOptions) *BackupStat {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -100,6 +101,9 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCString(&backupConfig.s3_region, storage.S3Region)
 	setCString(&backupConfig.s3_profile, storage.S3Profile)
 
+	// Secret Agent configuration
+	backupSecretAgent(&backupConfig, secretAgent)
+
 	result := &BackupStat{}
 	if isIncremental {
 		setCLong(&backupConfig.mod_after, opts.ModAfter)
@@ -137,6 +141,16 @@ func setStatistics(result *BackupStat, status *C.backup_status_t) {
 	result.RecordCount = int(status.rec_count_total)
 	result.SecondaryIndexCount = int(status.index_count)
 	result.UDFFileCount = int(status.udf_count)
+}
+
+func backupSecretAgent(config *C.backup_config_t, secretsAgent *model.SecretAgent) {
+	if secretsAgent != nil {
+		config.secret_cfg.addr = C.CString(secretsAgent.Address)
+		config.secret_cfg.port = C.CString(secretsAgent.Port)
+		config.secret_cfg.timeout = C.int(secretsAgent.Timeout)
+		config.secret_cfg.tls.ca_string = C.CString(secretsAgent.TLSCAString)
+		setCBool(&config.secret_cfg.tls.enabled, &secretsAgent.TLSEnabled)
+	}
 }
 
 // parseSetList parses the configured set list for backup

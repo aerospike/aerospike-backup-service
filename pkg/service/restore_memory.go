@@ -207,6 +207,7 @@ func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest)
 		request.DestinationCuster,
 		request.Policy,
 		storage,
+		request.SecretAgent,
 	)
 }
 

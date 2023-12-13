@@ -82,6 +82,8 @@ definitions:
         type: array
       partition-list:
         type: string
+      secret-agent:
+        type: string
       set-list:
         items:
           type: string
@@ -104,6 +106,10 @@ definitions:
       backup-routines:
         additionalProperties:
           $ref: '#/definitions/model.BackupRoutine'
+        type: object
+      secret-agent:
+        additionalProperties:
+          $ref: '#/definitions/model.SecretAgent'
         type: object
       service:
         $ref: '#/definitions/model.HTTPServerConfig'
@@ -186,6 +192,8 @@ definitions:
         $ref: '#/definitions/model.AerospikeCluster'
       policy:
         $ref: '#/definitions/model.RestorePolicy'
+      secret-agent:
+        $ref: '#/definitions/model.SecretAgent'
       source:
         $ref: '#/definitions/model.Storage'
     type: object
@@ -197,9 +205,25 @@ definitions:
         $ref: '#/definitions/model.RestorePolicy'
       routine:
         type: string
+      secret-agent:
+        $ref: '#/definitions/model.SecretAgent'
       time:
         format: int64
         type: integer
+    type: object
+  model.SecretAgent:
+    properties:
+      address:
+        type: string
+      port:
+        type: string
+      timeout:
+        description: timeout in milliseconds
+        type: integer
+      tls-ca:
+        type: string
+      tls-enabled:
+        type: boolean
     type: object
   model.Storage:
     properties:
