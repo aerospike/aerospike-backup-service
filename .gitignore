@@ -19,6 +19,7 @@
 
 .idea
 .vscode
+.DS_Store
 
 lib/
 target/
