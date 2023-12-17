@@ -71,8 +71,8 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	setCUint(&restoreConfig.max_async_batches, restoreRequest.Policy.MaxAsyncBatches)
 	setCUint(&restoreConfig.batch_size, restoreRequest.Policy.BatchSize)
 
-	if len(restoreRequest.Policy.NsList) > 0 {
-		nsList := strings.Join(restoreRequest.Policy.NsList, ",")
+	if restoreRequest.Policy.Namespace != nil {
+		nsList := *restoreRequest.Policy.Namespace.Source + "," + *restoreRequest.Policy.Namespace.Destination
 		setCString(&restoreConfig.ns_list, &nsList)
 	}
 	if len(restoreRequest.Policy.SetList) > 0 {

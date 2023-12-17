@@ -1119,6 +1119,17 @@
                 }
             }
         },
+        "model.RestoreNamespace": {
+            "type": "object",
+            "properties": {
+                "destination": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                }
+            }
+        },
         "model.RestorePolicy": {
             "type": "object",
             "properties": {
@@ -1140,6 +1151,9 @@
                 "max-async-batches": {
                     "type": "integer"
                 },
+                "namespace": {
+                    "$ref": "#/definitions/model.RestoreNamespace"
+                },
                 "no-generation": {
                     "type": "boolean"
                 },
@@ -1151,12 +1165,6 @@
                 },
                 "no-udfs": {
                     "type": "boolean"
-                },
-                "ns-list": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 },
                 "parallel": {
                     "type": "integer"
