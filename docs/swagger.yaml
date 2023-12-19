@@ -145,6 +145,13 @@ definitions:
           type: string
         type: array
     type: object
+  model.RestoreNamespace:
+    properties:
+      destination:
+        type: string
+      source:
+        type: string
+    type: object
   model.RestorePolicy:
     properties:
       bandwidth:
@@ -159,6 +166,8 @@ definitions:
         type: boolean
       max-async-batches:
         type: integer
+      namespace:
+        $ref: '#/definitions/model.RestoreNamespace'
       no-generation:
         type: boolean
       no-indexes:
@@ -167,10 +176,6 @@ definitions:
         type: boolean
       no-udfs:
         type: boolean
-      ns-list:
-        items:
-          type: string
-        type: array
       parallel:
         type: integer
       replace:

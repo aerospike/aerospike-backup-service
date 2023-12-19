@@ -1,6 +1,9 @@
 package model
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Storage represents the configuration for a backup storage details.
 type Storage struct {
@@ -28,5 +31,22 @@ func (s *Storage) Validate() error {
 	if s.Path == nil {
 		return errors.New("storage path is not specified")
 	}
+	if s.Type == S3 {
+		if s.S3Region == nil {
+			return errors.New("s3 region is not specified")
+		}
+	}
+	if err := s.validateType(); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (s *Storage) validateType() error {
+	switch s.Type {
+	case Local, S3:
+		return nil
+	default:
+		return fmt.Errorf("invalid storage type: %v", s.Type)
+	}
 }

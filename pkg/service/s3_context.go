@@ -33,11 +33,7 @@ func NewS3Context(storage *model.Storage) *S3Context {
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
 	ctx := context.TODO()
-	cfg, err := config.LoadDefaultConfig(
-		ctx,
-		config.WithSharedConfigProfile(*storage.S3Profile),
-		config.WithRegion(*storage.S3Region),
-	)
+	cfg, err := createConfig(ctx, storage)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to load S3 SDK configuration: %v", err))
 	}
@@ -74,6 +70,16 @@ func NewS3Context(storage *model.Storage) *S3Context {
 		return s.getCreationTime(path)
 	})
 	return s
+}
+
+func createConfig(ctx context.Context, storage *model.Storage) (aws.Config, error) {
+	cfgOptions := []func(*config.LoadOptions) error{
+		config.WithRegion(*storage.S3Region),
+	}
+	if storage.S3Profile != nil {
+		cfgOptions = append(cfgOptions, config.WithSharedConfigProfile(*storage.S3Profile))
+	}
+	return config.LoadDefaultConfig(ctx, cfgOptions...)
 }
 
 // readFile reads and decodes the YAML content from the given filePath into v.
@@ -223,7 +229,7 @@ func (s *S3Context) DeleteFile(path string) error {
 
 	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(parsed.Path),
+		Key:    aws.String(removeLeadingSlash(parsed.Path)),
 	}
 
 	// Execute the delete operation
