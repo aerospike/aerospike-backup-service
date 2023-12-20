@@ -1,14 +1,18 @@
-# Installation
-## Install `*.deb` package:
-Installation:
+# DEB package
+
+## Install
+
+### Installation
 ```shell
 cd target && sudo dpkg -i aerospike-backup-service_0.1.0-1_amd64.deb
 ```
-Verify Installation:
+
+### Verify Installation
 ```shell
 sudo systemctl status aerospike-backup-service
 ```
-Should get following output:
+
+Should get the following output
 ```
 ● aerospike-backup-service.service - Aerospike Backup Service
      Loaded: loaded (/lib/systemd/system/aerospike-backup-service.service; enabled; vendor preset: enabled)
@@ -20,34 +24,41 @@ Should get following output:
      CGroup: /system.slice/aerospike-backup-service.service
              └─229439 /usr/bin/aerospike-backup-service --config /etc/aerospike-backup-service/aerospike-backup-service.yml
 ```
-Modify service configuration:
+
+### Modify service configuration
 ```shell
 sudo vi /etc/aerospike-backup-service/aerospike-backup-service.yml
 ```
+
 Restart service
 ```shell
 sudo systemctl restart aerospike-backup-service
 ```
-Check service logs:
+
+### Check service logs
 ```shell
 sudo journalctl -u aerospike-backup-service -n 100 --no-page -f
 ```
 
-## Uninstallation:
-Stop the service:
+## Uninstall
+
+Stop the service
 ```shell
 sudo systemctl stop aerospike-backup-service
 ```
-To uninstall the service but keep the config files:
-```shell
-sudo dpkg -r aerospike-backup-service
-```
-To completely uninstall the service run:
-```shell
-sudo dpkg -P aerospike-backup-service
-```
-To remove the backups run:
+
+### Remove service
+* keeping the configuration
+   ```shell
+   sudo dpkg -r aerospike-backup-service
+   ```
+
+* completely
+   ```shell
+   sudo dpkg -P aerospike-backup-service
+   ```
+
+To remove the backup files run
 ```shell
 sudo rm -rf /var/lib/aerospike-backup-service
 ```
-
