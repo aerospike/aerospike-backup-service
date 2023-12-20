@@ -2,11 +2,14 @@ package util
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strings"
+)
 
-	"log/slog"
+const (
+	LevelTrace slog.Level = -8
 )
 
 var libLogRegex = regexp.MustCompile(`^(.+)\s\[(\D+)\]\s\[\s*(\d+)\]\s(.*)$`)

@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 
-	"log/slog"
+	pkgutil "github.com/aerospike/backup/pkg/util"
 )
 
 // LogHandler returns the application log handler with the
@@ -23,6 +24,8 @@ func LogHandler(level string) slog.Handler {
 // Panics on an invalid argument.
 func logLevel(level string) slog.Level {
 	switch strings.ToUpper(level) {
+	case "TRACE":
+		return pkgutil.LevelTrace
 	case "DEBUG":
 		return slog.LevelDebug
 	case "INFO":
