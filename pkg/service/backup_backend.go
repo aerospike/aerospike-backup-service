@@ -15,7 +15,9 @@ type BackupBackend interface {
 	CleanDir(name string) error
 
 	// FullBackupList returns a list of available full backups.
-	FullBackupList() ([]model.BackupDetails, error)
+	// The parameters are timestamp filters by creation time, where from is inclusive
+	// and to is exclusive.
+	FullBackupList(from, to int64) ([]model.BackupDetails, error)
 
 	// IncrementalBackupList returns a list of available incremental backups.
 	IncrementalBackupList() ([]model.BackupDetails, error)

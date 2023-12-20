@@ -2,7 +2,9 @@ package server
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
+	"strconv"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
@@ -13,12 +15,22 @@ import (
 // @Tags     Backup
 // @Produce  json
 // @Param    name query string false "Backup routine name"
+// @Param    from query int false "Lower bound timestamp filter"
+// @Param    to query int false "Upper bound timestamp filter"
 // @Router   /backup/full/list [get]
 // @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Request) {
 	ws.getAvailableBackups(w, r, func(backend service.BackupBackend) ([]model.BackupDetails, error) {
-		return backend.FullBackupList()
+		fromTime, err := parseTimestamp(r.URL.Query().Get("from"), 0)
+		if err != nil {
+			return nil, err
+		}
+		toTime, err := parseTimestamp(r.URL.Query().Get("to"), math.MaxInt64)
+		if err != nil {
+			return nil, err
+		}
+		return backend.FullBackupList(fromTime, toTime)
 	})
 }
 
@@ -78,4 +90,11 @@ func (ws *HTTPServer) requestedRoutines(r *http.Request) []string {
 		routines = append(routines, name)
 	}
 	return routines
+}
+
+func parseTimestamp(value string, defaultValue int64) (int64, error) {
+	if value == "" {
+		return defaultValue, nil
+	}
+	return strconv.ParseInt(value, 10, 64)
 }

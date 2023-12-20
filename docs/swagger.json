@@ -42,6 +42,18 @@
                         "description": "Backup routine name",
                         "name": "name",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Lower bound timestamp filter",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Upper bound timestamp filter",
+                        "name": "to",
+                        "in": "query"
                     }
                 ],
                 "responses": {

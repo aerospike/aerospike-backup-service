@@ -127,27 +127,50 @@ func (s *S3Context) writeFile(filePath string, v any) error {
 
 // listFiles returns all files in the given s3 prefix path.
 func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
-	result, err := s.list(prefix, "")
-	if err != nil {
-		return nil, err
+	var nextContinuationToken *string
+	result := make([]types.Object, 0)
+	for {
+		// By default, the action returns up to 1,000 key names.
+		// It is necessary to repeat to collect all the items, if there are more.
+		listOuptput, err := s.list(nextContinuationToken, prefix, "")
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, listOuptput.Contents...)
+		nextContinuationToken = listOuptput.NextContinuationToken
+		if nextContinuationToken == nil {
+			break
+		}
 	}
-	return result.Contents, nil
+	return result, nil
 }
 
 // listFolders returns all subfolders in the given s3 prefix path.
 func (s *S3Context) listFolders(prefix string) ([]types.CommonPrefix, error) {
-	result, err := s.list(prefix, "/")
-	if err != nil {
-		return nil, err
+	var nextContinuationToken *string
+	result := make([]types.CommonPrefix, 0)
+	for {
+		// By default, the action returns up to 1,000 key names.
+		// It is necessary to repeat to collect all the items, if there are more.
+		listOuptput, err := s.list(nextContinuationToken, prefix, "/")
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, listOuptput.CommonPrefixes...)
+		nextContinuationToken = listOuptput.NextContinuationToken
+		if nextContinuationToken == nil {
+			break
+		}
 	}
-	return result.CommonPrefixes, nil
+	return result, nil
 }
 
-func (s *S3Context) list(prefix string, v string) (*s3.ListObjectsV2Output, error) {
+func (s *S3Context) list(continuationToken *string, prefix, v string) (*s3.ListObjectsV2Output, error) {
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
-		Bucket:    aws.String(s.bucket),
-		Prefix:    aws.String(removeLeadingSlash(prefix)),
-		Delimiter: aws.String(v),
+		Bucket:            aws.String(s.bucket),
+		Prefix:            aws.String(removeLeadingSlash(prefix)),
+		Delimiter:         aws.String(v),
+		ContinuationToken: continuationToken,
 	})
 
 	if err != nil {

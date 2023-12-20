@@ -283,6 +283,14 @@ paths:
         in: query
         name: name
         type: string
+      - description: Lower bound timestamp filter
+        in: query
+        name: from
+        type: integer
+      - description: Upper bound timestamp filter
+        in: query
+        name: to
+        type: integer
       produces:
       - application/json
       responses:
