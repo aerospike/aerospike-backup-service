@@ -1,3 +1,3 @@
 ../target/aerospike-backup-service /usr/bin
 ../lib/* /usr/lib
-../config/config.yml /etc/aerospike-backup-service
+config/aerospike-backup-service.yml /etc/aerospike-backup-service
