@@ -161,12 +161,14 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		return
 	}
 	if !h.isFullEligible(now, h.state.LastRun) {
-		slog.Debug("The full backup is not due to run yet", "name", h.routineName)
+		slog.Log(context.Background(), util.LevelTrace,
+			"The full backup is not due to run yet", "name", h.routineName)
 		return
 	}
 
 	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
-		slog.Debug("Full backup is currently in progress, skipping full backup",
+		slog.Log(context.Background(), util.LevelTrace,
+			"Full backup is currently in progress, skipping full backup",
 			"name", h.routineName)
 		return
 	}
@@ -215,16 +217,19 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	// read the state first and check
 	state := h.backend.readState()
 	if state.LastRun == (time.Time{}) {
-		slog.Debug("Skip incremental backup until initial full backup is done",
+		slog.Log(context.Background(), util.LevelTrace,
+			"Skip incremental backup until initial full backup is done",
 			"name", h.routineName)
 		return
 	}
 	if !h.isIncrementalEligible(now, state.LastIncrRun) {
-		slog.Debug("The incremental backup is not due to run yet", "name", h.routineName)
+		slog.Log(context.Background(), util.LevelTrace,
+			"The incremental backup is not due to run yet", "name", h.routineName)
 		return
 	}
 	if h.fullBackupInProgress.Load() {
-		slog.Debug("Full backup is currently in progress, skipping incremental backup",
+		slog.Log(context.Background(), util.LevelTrace,
+			"Full backup is currently in progress, skipping incremental backup",
 			"name", h.routineName)
 		return
 	}
