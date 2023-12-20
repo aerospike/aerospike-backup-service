@@ -1,0 +1,11 @@
+[Unit]
+Description=Aerospike Backup Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/aerospike-backup-service --config /etc/aerospike-backup-service/aerospike-backup-service.yml
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

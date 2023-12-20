@@ -90,30 +90,30 @@ install-jansson:
 
 .PHONY: install-go
 install-go:
-ifdef GOBIN_VERSION
-else
 	curl -L "https://go.dev/dl/go$(GO_VERSION).$(OS)-$(ARCH).tar.gz" > "go$(GO_VERSION).$(OS)-$(ARCH).tar.gz"; \
 	sudo tar -C /usr/local -xzf "go$(GO_VERSION).$(OS)-$(ARCH).tar.gz" && rm "go$(GO_VERSION).$(OS)-$(ARCH).tar.gz"; \
-	echo export PATH="\$PATH:/usr/local/go/bin" >> $(HOME)/.profile
-endif
+#	echo "export PATH=$PATH:/usr/local/go/bin" >> ~/.bashrc
 
 .PHONY: install-deb-build-deps
 install-deb-build-deps:
 	sudo apt-get update
-	sudo sh -c 'curl -OL https://go.dev/dl/go1.21.4.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.21.4.linux-amd64.tar.gz && rm go1.21.4.linux-amd64.tar.gz && echo "export PATH=\$PATH:/usr/local/go/bin" >> /etc/profile.d/go.sh'
 	sudo apt-get install -y \
 	build-essential \
 	libssl-dev \
 	libuv1-dev \
 	libcurl4-openssl-dev \
 	libzstd-dev \
+    make \
 	cmake \
+    sudo \
 	pkg-config \
 	zlib1g-dev \
 	debhelper \
 	lintian \
 	patchelf \
-	devscripts
+	devscripts \
+    alien \
+	libjansson-dev
 
 .PHONY: prep-submodules
 prep-submodules:
@@ -160,6 +160,7 @@ clean-rpm:
 
 .PHONY: deb
 deb:
+	echo "abs:version=$(VERSION)" > packages/debian/substvars
 	cd $(WORKSPACE)/packages && dpkg-buildpackage
 	mv $(WORKSPACE)/$(BINARY_NAME)_* $(WORKSPACE)/target
 	mv $(WORKSPACE)/$(BINARY_NAME)-* $(WORKSPACE)/target
