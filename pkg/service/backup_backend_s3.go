@@ -66,6 +66,9 @@ func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails,
 		if s.fullBackupInProgress.Load() {
 			return []model.BackupDetails{}, nil
 		}
+		if lastRun.UnixMilli() < from || lastRun.UnixMilli() >= to {
+			return []model.BackupDetails{}, nil
+		}
 		return []model.BackupDetails{{
 			Key:          ptr.String(s3prefix + backupFolder),
 			LastModified: &lastRun,
