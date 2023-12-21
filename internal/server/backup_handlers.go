@@ -15,8 +15,8 @@ import (
 // @Tags     Backup
 // @Produce  json
 // @Param    name query string false "Backup routine name"
-// @Param    from query int false "Lower bound timestamp filter"
-// @Param    to query int false "Upper bound timestamp filter"
+// @Param    from query int false "Lower bound timestamp filter" format(int64)
+// @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /backup/full/list [get]
 // @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
 // @Failure  404 {string} string ""

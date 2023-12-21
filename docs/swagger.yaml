@@ -284,10 +284,12 @@ paths:
         name: name
         type: string
       - description: Lower bound timestamp filter
+        format: int64
         in: query
         name: from
         type: integer
       - description: Upper bound timestamp filter
+        format: int64
         in: query
         name: to
         type: integer

@@ -45,12 +45,14 @@
                     },
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "Lower bound timestamp filter",
                         "name": "from",
                         "in": "query"
                     },
                     {
                         "type": "integer",
+                        "format": "int64",
                         "description": "Upper bound timestamp filter",
                         "name": "to",
                         "in": "query"
