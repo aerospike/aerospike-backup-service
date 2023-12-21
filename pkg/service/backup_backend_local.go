@@ -84,7 +84,7 @@ func (local *BackupBackendLocal) writeState(state *model.BackupState) error {
 }
 
 // FullBackupList returns a list of available full backups.
-func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error) {
+func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupDetails, error) {
 	backupFolder := local.path + "/" + model.FullBackupDirectory
 	entries, err := os.ReadDir(backupFolder)
 	if err != nil {
@@ -100,6 +100,10 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 		if local.fullBackupInProgress.Load() {
 			return []model.BackupDetails{}, nil
 		}
+		// check request time boundaries
+		if lastRun.UnixMilli() < from || lastRun.UnixMilli() >= to {
+			return []model.BackupDetails{}, nil
+		}
 		return []model.BackupDetails{{
 			Key:          ptr.String(backupFolder),
 			LastModified: &lastRun,
@@ -111,7 +115,9 @@ func (local *BackupBackendLocal) FullBackupList() ([]model.BackupDetails, error)
 	for _, e := range entries {
 		if e.IsDir() {
 			details := toBackupDetails(e, backupFolder)
-			if details.LastModified.Before(lastRun) {
+			if details.LastModified.Before(lastRun) &&
+				details.LastModified.UnixMilli() >= from &&
+				details.LastModified.UnixMilli() < to {
 				backupDetails = append(backupDetails, details)
 			}
 		}

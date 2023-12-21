@@ -2,10 +2,13 @@ package service
 
 import (
 	"log/slog"
+	"path/filepath"
+	"strconv"
 	"sync"
 	"sync/atomic"
 
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/ptr"
 )
 
@@ -50,7 +53,7 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 }
 
 // FullBackupList returns a list of available full backups.
-func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
+func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails, error) {
 	backupFolder := s.Path + "/" + model.FullBackupDirectory + "/"
 	s3prefix := "s3://" + s.bucket
 	lastRun := s.readState().LastRun
@@ -63,6 +66,9 @@ func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 		if s.fullBackupInProgress.Load() {
 			return []model.BackupDetails{}, nil
 		}
+		if lastRun.UnixMilli() < from || lastRun.UnixMilli() >= to {
+			return []model.BackupDetails{}, nil
+		}
 		return []model.BackupDetails{{
 			Key:          ptr.String(s3prefix + backupFolder),
 			LastModified: &lastRun,
@@ -71,6 +77,10 @@ func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 	}
 
 	subfolders, err := s.listFolders(backupFolder)
+	if err != nil {
+		return nil, err
+	}
+	subfolders, err = filterFolders(subfolders, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +96,21 @@ func (s *BackupBackendS3) FullBackupList() ([]model.BackupDetails, error) {
 		}
 	}
 	return result, err
+}
+
+// filterFolders returns backup folders that were created in the specified time range.
+func filterFolders(folders []types.CommonPrefix, from, to int64) ([]types.CommonPrefix, error) {
+	result := make([]types.CommonPrefix, 0)
+	for _, folder := range folders {
+		created, err := strconv.ParseInt(filepath.Base(*folder.Prefix), 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		if created >= from && created < to {
+			result = append(result, folder)
+		}
+	}
+	return result, nil
 }
 
 func (s *BackupBackendS3) dirSize(path string) int64 {
