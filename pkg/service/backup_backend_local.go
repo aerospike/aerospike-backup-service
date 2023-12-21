@@ -100,6 +100,10 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 		if local.fullBackupInProgress.Load() {
 			return []model.BackupDetails{}, nil
 		}
+		// check request time boundaries
+		if lastRun.UnixMilli() < from || lastRun.UnixMilli() >= to {
+			return []model.BackupDetails{}, nil
+		}
 		return []model.BackupDetails{{
 			Key:          ptr.String(backupFolder),
 			LastModified: &lastRun,
