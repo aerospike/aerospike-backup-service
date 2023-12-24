@@ -50,7 +50,7 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	slog.Debug("Starting restore operation")
 
 	restoreConfig := C.restore_config_t{}
-	C.restore_config_default(&restoreConfig)
+	C.restore_config_init(&restoreConfig)
 
 	setCString(&restoreConfig.host, restoreRequest.DestinationCuster.Host)
 	setCInt(&restoreConfig.port, restoreRequest.DestinationCuster.Port)
