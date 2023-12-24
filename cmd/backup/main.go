@@ -29,7 +29,7 @@ var (
 // run parses the CLI parameters and executes backup.
 func run() int {
 	var (
-		configFile, logLevel string
+		configFile, logLevel, logFormat string
 	)
 
 	validateFlags := func(cmd *cobra.Command, args []string) error {
@@ -47,12 +47,13 @@ func run() int {
 	}
 
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path/URL")
-	rootCmd.Flags().StringVarP(&logLevel, "log", "l", "DEBUG", "log level")
+	rootCmd.Flags().StringVarP(&logLevel, "log-level", "l", "DEBUG", "log level")
+	rootCmd.Flags().StringVarP(&logFormat, "log-format", "f", "PLAIN", "log format (PLAIN, JSON)")
 
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
-		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// set default logger
-		slog.SetDefault(slog.New(util.LogHandler(logLevel)))
+		slog.SetDefault(slog.New(util.LogHandler(logLevel, logFormat)))
+		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		setConfigurationManager(configFile)
 		// read configuration file
 		config, err := readConfiguration()
@@ -65,15 +66,16 @@ func run() int {
 		schedulers := service.BuildBackupSchedulers(config)
 		service.ScheduleHandlers(ctx, schedulers)
 		// run HTTP server
-		return runHTTPServer(ctx, schedulers, config)
+		err = runHTTPServer(ctx, schedulers, config)
+		// shutdown shared resources
+		shared.Shutdown()
+		return err
 	}
 
 	err := rootCmd.Execute()
 	if err != nil {
 		slog.Error("Error in rootCmd.Execute", "err", err)
 	}
-	// shutdown shared resources
-	shared.Shutdown()
 
 	return util.ToExitVal(err)
 }
