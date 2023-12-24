@@ -54,7 +54,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	isIncremental := opts.ModAfter != nil
 
 	backupConfig := C.backup_config_t{}
-	C.backup_config_default(&backupConfig)
+	C.backup_config_init(&backupConfig)
 
 	setCString(&backupConfig.host, cluster.Host)
 	setCInt(&backupConfig.port, cluster.Port)
