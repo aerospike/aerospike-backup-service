@@ -91,7 +91,7 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 		return nil, err
 	}
 
-	lastRun := local.readState().LastRun
+	lastRun := local.readState().LastFullRun
 	if local.backupPolicy.RemoveFiles != nil && *local.backupPolicy.RemoveFiles {
 		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 		if len(entries) == 0 {
