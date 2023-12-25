@@ -13,26 +13,15 @@ A pre-built OpenAPI Specification is available [here](https://aerospike.github.i
 
 - [Getting Started](#getting-started)
 - [User Guide](#user-guide)
-- [Build From Source](#build=from-source)
+- [Build From Source](#build-from-source)
 - [Usage](#usage)
 - [Monitoring](#monitoring)
 - [FAQ](#faq)
 
 ## Getting Started
 
-An example configuration file, and docker-compose script will get your up and running to test the service.
-To try this do the following:
-
-```bash
-cd docker
-docker-compose up
-```
-
-This will set up the following:
-
-- A local Aerospike cluster and connection to that cluster
-- A local minio server for storing backup data
-- A policy and routine to daily full backups and hourly incremental
+A sample configuration file and docker-compose script will help you get started testing the service.
+Follow the [instructions](./docker-compose) to set up your test environment using docker-compose.
 
 ## User Guide
 
@@ -141,7 +130,7 @@ The service exposes a wide variety of system metrics that [Prometheus](https://p
 | backup_duration_millis | Full backup duration in milliseconds |
 | backup_incremental_duration_millis | Incremental backup duration in milliseconds |
 
-The HTTP metrics endpoint can be found on the [OpenAPI specification]((https://aerospike.github.io/aerospike-backup-service/)) page.
+The HTTP metrics endpoint can be found on the [OpenAPI specification](https://aerospike.github.io/aerospike-backup-service/) page.
 
 ## FAQ
 

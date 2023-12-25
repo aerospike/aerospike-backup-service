@@ -47,9 +47,9 @@ services:
       timeout: 20s
       retries: 3
 
-  backup-service:
+  aerospike-backup-service:
     image: aerospike.jfrog.io/ecosystem-container-dev-local/aerospike-backup-service:latest
-    container_name: "aero-backup-service"
+    container_name: "aerospike-backup-service"
     ports:
       - "8080:8080"
     depends_on:
