@@ -18,13 +18,12 @@ then
     fi
 fi
 
-
 ROOT_PATH=$(cd `dirname $0` && pwd)/..
 swag init -d $ROOT_PATH/internal/server,$ROOT_PATH/pkg/model \
     -g server.go \
     -o $ROOT_PATH/docs
 
 # swag codegen cannot handle int64 format for return values
-sed -i '' 's/"type": "int64"/"type": "integer","format": "int64"/g' $ROOT_PATH/docs/swagger.json
+sed -i '' 's/"type": "int64"/"type": "integer",\n                            "format": "int64"/g' $ROOT_PATH/docs/swagger.json
 sed -i '' 's/type: int64/type: integer\n            format: int64/g' $ROOT_PATH/docs/swagger.yaml
 
