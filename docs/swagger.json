@@ -766,9 +766,9 @@
                 ],
                 "responses": {
                     "202": {
-                        "description": "Job ID (int64)",
+                        "description": "Job ID",
                         "schema": {
-                            "type": "string"
+                            "type": "integer","format": "int64"
                         }
                     },
                     "400": {
@@ -804,9 +804,9 @@
                 ],
                 "responses": {
                     "202": {
-                        "description": "Job ID (int64)",
+                        "description": "Job ID",
                         "schema": {
-                            "type": "string"
+                            "type": "integer","format": "int64"
                         }
                     },
                     "400": {
@@ -830,7 +830,8 @@
                 "operationId": "restoreStatus",
                 "parameters": [
                     {
-                        "type": "string",
+                        "type": "integer",
+                        "format": "int64",
                         "description": "Job ID to retrieve the status",
                         "name": "jobId",
                         "in": "query",
@@ -877,9 +878,9 @@
                 ],
                 "responses": {
                     "202": {
-                        "description": "Job ID (int64)",
+                        "description": "Job ID",
                         "schema": {
-                            "type": "string"
+                            "type": "integer","format": "int64"
                         }
                     },
                     "400": {

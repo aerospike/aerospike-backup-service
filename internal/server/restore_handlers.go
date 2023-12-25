@@ -19,7 +19,7 @@ import (
 // @Router      /restore/full [post]
 // @Accept      json
 // @Param       request body model.RestoreRequest true "query params"
-// @Success     202 {string}  "Job ID (int64)"
+// @Success     202 {int64}  "Job ID"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -43,7 +43,7 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 		slog.Info("Restore full", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, strconv.Itoa(jobID))
+		fmt.Fprint(w, jobID)
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
@@ -56,7 +56,7 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 // @Router      /restore/incremental [post]
 // @Accept      json
 // @Param       request body model.RestoreRequest true "query params"
-// @Success     202 {string}  "Job ID (int64)"
+// @Success     202 {int64}  "Job ID"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -80,7 +80,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 		slog.Info("RestoreByPath action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, strconv.Itoa(jobID))
+		fmt.Fprint(w, jobID)
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
@@ -93,7 +93,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 // @Router      /restore/timestamp [post]
 // @Accept      json
 // @Param       request body model.RestoreTimestampRequest true "query params"
-// @Success     202 {string}  "Job ID (int64)"
+// @Success     202 {int64}  "Job ID"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -112,7 +112,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 		slog.Info("Restore action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, strconv.Itoa(jobID))
+		fmt.Fprint(w, jobID)
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
@@ -122,7 +122,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 // @ID	        restoreStatus
 // @Tags        Restore
 // @Produce     json
-// @Param       jobId query string true "Job ID to retrieve the status"
+// @Param       jobId query int true "Job ID to retrieve the status" format(int64)
 // @Router      /restore/status [get]
 // @Success     200 {string} string "Job status"
 // @Failure     400 {string} string

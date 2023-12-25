@@ -764,9 +764,10 @@ paths:
           $ref: '#/definitions/model.RestoreRequest'
       responses:
         "202":
-          description: Job ID (int64)
+          description: Job ID
           schema:
-            type: string
+            type: integer
+            format: int64
         "400":
           description: Bad Request
           schema:
@@ -790,9 +791,10 @@ paths:
           $ref: '#/definitions/model.RestoreRequest'
       responses:
         "202":
-          description: Job ID (int64)
+          description: Job ID
           schema:
-            type: string
+            type: integer
+            format: int64
         "400":
           description: Bad Request
           schema:
@@ -805,10 +807,11 @@ paths:
       operationId: restoreStatus
       parameters:
       - description: Job ID to retrieve the status
+        format: int64
         in: query
         name: jobId
         required: true
-        type: string
+        type: integer
       produces:
       - application/json
       responses:
@@ -838,9 +841,10 @@ paths:
           $ref: '#/definitions/model.RestoreTimestampRequest'
       responses:
         "202":
-          description: Job ID (int64)
+          description: Job ID
           schema:
-            type: string
+            type: integer
+            format: int64
         "400":
           description: Bad Request
           schema:
