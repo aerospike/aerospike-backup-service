@@ -4,6 +4,9 @@
  docker compose up -d 
 ```
 ## Verify Installation:
+```shell
+docker ps
+```
 ```
 CONTAINER ID   IMAGE                                                                              COMMAND                  CREATED              STATUS                             PORTS                              NAMES
 05e7e6247776   aerospike.jfrog.io/ecosystem-container-dev-local/aerospike-backup-service:latest   "./backup -c config.…"   About a minute ago   Up 53 seconds (health: starting)   0.0.0.0:8080->8080/tcp             aero-backup-service
