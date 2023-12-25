@@ -1,9 +1,9 @@
 aerospike-clusters:
   absCluster1:
-    host: "localhost"
+    host: "aero-cluster"
     port: 3000
-    user: tester
-    password: psw
+    user: admin
+    password: admin
 storage:
   minioStorage:
     # Use 1 for S3 or compatible and 0 for local storage.
@@ -12,7 +12,7 @@ storage:
     path: s3://as-backup-bucket/minioStorage
     s3-region: eu-central-1
     s3-profile: minio
-    s3-endpoint-override: http://localhost:9000
+    s3-endpoint-override: http://minio:9000
 backup-policies:
   keepFilesPolicy:
     # Run backup operations in a single thread.
@@ -27,5 +27,5 @@ backup-routines:
     incr-interval: 3600000
     source-cluster: absCluster1
     storage: minioStorage
-    namespace: source-ns1
+    namespace: test
     backup-policy: keepFilesPolicy
