@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/backup/internal/util"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // @Summary     Root endpoint.
@@ -44,4 +45,13 @@ func readyActionHandler(w http.ResponseWriter, _ *http.Request) {
 // @Success 	200 {string} string "version"
 func versionActionHandler(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprint(w, util.Version)
+}
+
+// @Summary     Prometheus metrics endpoint.
+// @ID          metrics
+// @Tags        System
+// @Router      /metrics [get]
+// @Success 	200
+func metricsActionHandler() http.Handler {
+	return promhttp.Handler()
 }

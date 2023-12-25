@@ -11,7 +11,6 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/time/rate"
 )
 
@@ -168,7 +167,7 @@ func (ws *HTTPServer) Start() {
 	mux.HandleFunc("/version", versionActionHandler)
 
 	// Prometheus endpoint
-	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/metrics", metricsActionHandler())
 
 	// Restore job endpoints
 	// Restore from full backup (by folder)
