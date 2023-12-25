@@ -32,16 +32,16 @@ services:
       /usr/bin/mc anonymous set public myminio/as-backup-bucket;
       exit 0;
       "
-  aero-cluster:
-    image: aerospike/aerospike-server-enterprise:6.2.0.7
-    container_name: "aero-cluster"
+
+  aerospike-cluster:
+    image: aerospike/aerospike-server-enterprise:6.4.0.10
+    container_name: "aerospike-cluster"
     ports:
       - "3000:3000"
       - "3001:3001"
       - "3002:3002"
       - "3003:3003"
     healthcheck:
-#      test: [ "CMD", "asinfo", "-U", "admin", "-P", "admin", "-p", "3000", "-v", "build" ]
       test: [ "CMD", "asinfo", "-p", "3000", "-v", "build" ]
       interval: 30s
       timeout: 20s
