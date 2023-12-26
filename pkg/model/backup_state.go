@@ -7,7 +7,7 @@ import (
 
 // BackupState represents the state of a backup.
 type BackupState struct {
-	LastRun     time.Time `yaml:"last-run,omitempty" json:"last-run,omitempty"`
+	LastFullRun time.Time `yaml:"last-run,omitempty" json:"last-run,omitempty"`
 	LastIncrRun time.Time `yaml:"last-incr-run,omitempty" json:"last-incr-run,omitempty"`
 	Performed   int       `yaml:"performed,omitempty" json:"performed,omitempty"`
 }

@@ -160,12 +160,11 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		backupSkippedCounter.Inc()
 		return
 	}
-	if !h.isFullEligible(now, h.state.LastRun) {
+	if !h.isFullEligible(now, h.state.LastFullRun) {
 		slog.Log(context.Background(), util.LevelTrace,
 			"The full backup is not due to run yet", "name", h.routineName)
 		return
 	}
-
 	if !h.fullBackupInProgress.CompareAndSwap(false, true) {
 		slog.Log(context.Background(), util.LevelTrace,
 			"Full backup is currently in progress, skipping full backup",
@@ -181,7 +180,6 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 	backupRunFunc := func() {
 		started := time.Now()
-		slog.Debug("Starting full backup", "name", h.routineName)
 		stats := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
 			h.storage, h.secretAgent, shared.BackupOptions{})
 		if stats == nil {
@@ -192,6 +190,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		elapsed := time.Since(started)
 		backupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
+	slog.Debug("Starting full backup", "name", h.routineName)
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
 	slog.Debug("Completed full backup", "name", h.routineName)
@@ -204,7 +203,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 	// clean incremental backups
 	if err := h.backend.CleanDir(model.IncrementalBackupDirectory); err != nil {
-		slog.Error("could not clean incremental backups", err)
+		slog.Error("could not clean incremental backups", "err", err)
 	}
 }
 
@@ -216,13 +215,13 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	}
 	// read the state first and check
 	state := h.backend.readState()
-	if state.LastRun == (time.Time{}) {
+	if state.LastFullRun == (time.Time{}) {
 		slog.Log(context.Background(), util.LevelTrace,
 			"Skip incremental backup until initial full backup is done",
 			"name", h.routineName)
 		return
 	}
-	if !h.isIncrementalEligible(now, state.LastIncrRun) {
+	if !h.isIncrementalEligible(now, state.LastIncrRun, state.LastFullRun) {
 		slog.Log(context.Background(), util.LevelTrace,
 			"The incremental backup is not due to run yet", "name", h.routineName)
 		return
@@ -236,10 +235,9 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	var stats *shared.BackupStat
 	backupRunFunc := func() {
 		opts := shared.BackupOptions{}
-		lastIncrRunEpoch := state.LastIncrRun.UnixNano()
-		opts.ModAfter = &lastIncrRunEpoch
+		lastRunEpoch := max(state.LastIncrRun.UnixNano(), state.LastFullRun.UnixNano())
+		opts.ModAfter = &lastRunEpoch
 		started := time.Now()
-		slog.Debug("Starting incremental backup", "name", h.routineName)
 		stats = backupService.BackupRun(h.backupRoutine, h.backupIncrPolicy, h.cluster,
 			h.storage, h.secretAgent, opts)
 		if stats == nil {
@@ -250,6 +248,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		elapsed := time.Since(started)
 		incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
+	slog.Debug("Starting incremental backup", "name", h.routineName)
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
 	slog.Debug("Completed incremental backup", "name", h.routineName)
@@ -277,16 +276,20 @@ func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat, routineName 
 	}
 }
 
-func (h *BackupHandler) isFullEligible(n time.Time, t time.Time) bool {
-	return n.UnixMilli()-t.UnixMilli() >= *h.backupRoutine.IntervalMillis
+func (h *BackupHandler) isFullEligible(now time.Time, lastFullRun time.Time) bool {
+	return now.UnixMilli()-lastFullRun.UnixMilli() >= *h.backupRoutine.IntervalMillis
 }
 
-func (h *BackupHandler) isIncrementalEligible(n time.Time, t time.Time) bool {
-	return n.UnixMilli()-t.UnixMilli() >= *h.backupRoutine.IncrIntervalMillis
+func (h *BackupHandler) isIncrementalEligible(now time.Time, lastIncrRun time.Time, lastFullRun time.Time) bool {
+	if now.UnixMilli()-lastFullRun.UnixMilli() < *h.backupRoutine.IncrIntervalMillis {
+		return false // Full backup happened recently
+	}
+
+	return now.UnixMilli()-lastIncrRun.UnixMilli() >= *h.backupRoutine.IncrIntervalMillis
 }
 
 func (h *BackupHandler) updateBackupState() {
-	h.state.LastRun = time.Now()
+	h.state.LastFullRun = time.Now()
 	h.state.Performed++
 	h.writeState()
 }
