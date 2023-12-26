@@ -121,7 +121,7 @@ func (s *BackupBackendS3) dirSize(path string) int64 {
 	}
 	var totalSize int64
 	for _, file := range files {
-		totalSize += file.Size
+		totalSize += *file.Size
 	}
 	return totalSize
 }
@@ -139,7 +139,7 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 		details := model.BackupDetails{
 			Key:          ptr.String(s3prefix + "/" + *object.Key),
 			LastModified: object.LastModified,
-			Size:         &object.Size,
+			Size:         object.Size,
 		}
 		if details.LastModified.Before(lastIncrRun) {
 			result = append(result, details)
