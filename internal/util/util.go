@@ -13,11 +13,22 @@ import (
 
 // LogHandler returns the application log handler with the
 // configured level.
-func LogHandler(level string) slog.Handler {
-	return slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level:     logLevel(level),
-		AddSource: true,
-	})
+func LogHandler(level, format string) slog.Handler {
+	addSource := true
+	switch strings.ToUpper(format) {
+	case "PLAIN":
+		return slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level:     logLevel(level),
+			AddSource: addSource,
+		})
+	case "JSON":
+		return slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level:     logLevel(level),
+			AddSource: addSource,
+		})
+	default:
+		panic(fmt.Sprintf("unsupported log format: %s", format))
+	}
 }
 
 // logLevel returns a level for the given string name.
@@ -35,7 +46,7 @@ func logLevel(level string) slog.Level {
 	case "ERROR":
 		return slog.LevelError
 	default:
-		panic(fmt.Sprintf("invalid log level configuration: %s", level))
+		panic(fmt.Sprintf("invalid log level: %s", level))
 	}
 }
 

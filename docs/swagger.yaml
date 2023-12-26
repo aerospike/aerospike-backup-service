@@ -283,6 +283,16 @@ paths:
         in: query
         name: name
         type: string
+      - description: Lower bound timestamp filter
+        format: int64
+        in: query
+        name: from
+        type: integer
+      - description: Upper bound timestamp filter
+        format: int64
+        in: query
+        name: to
+        type: integer
       produces:
       - application/json
       responses:
@@ -754,9 +764,10 @@ paths:
           $ref: '#/definitions/model.RestoreRequest'
       responses:
         "202":
-          description: Job ID (int64)
+          description: Job ID
           schema:
-            type: string
+            type: integer
+            format: int64
         "400":
           description: Bad Request
           schema:
@@ -780,9 +791,10 @@ paths:
           $ref: '#/definitions/model.RestoreRequest'
       responses:
         "202":
-          description: Job ID (int64)
+          description: Job ID
           schema:
-            type: string
+            type: integer
+            format: int64
         "400":
           description: Bad Request
           schema:
@@ -795,10 +807,11 @@ paths:
       operationId: restoreStatus
       parameters:
       - description: Job ID to retrieve the status
+        format: int64
         in: query
         name: jobId
         required: true
-        type: string
+        type: integer
       produces:
       - application/json
       responses:
@@ -828,9 +841,10 @@ paths:
           $ref: '#/definitions/model.RestoreTimestampRequest'
       responses:
         "202":
-          description: Job ID (int64)
+          description: Job ID
           schema:
-            type: string
+            type: integer
+            format: int64
         "400":
           description: Bad Request
           schema:

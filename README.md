@@ -57,10 +57,11 @@ Usage:
   Use the following properties for service configuration [flags]
 
 Flags:
-  -c, --config string   configuration file path/URL
-  -h, --help            help for Use
-  -l, --log string      log level (default "DEBUG")
-  -v, --version         version for Use
+  -c, --config string       configuration file path/URL
+  -h, --help                help for Use
+  -f, --log-format string   log format (PLAIN, JSON) (default "PLAIN")
+  -l, --log-level string    log level (default "DEBUG")
+  -v, --version             version for Use
 ```
 
 ### Run

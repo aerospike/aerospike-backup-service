@@ -36,7 +36,7 @@ func (s *Storage) Validate() error {
 			return errors.New("s3 region is not specified")
 		}
 	}
-	if err := s.validateType(); err != nil {
+	if err := s.validateType(); err != nil { //nolint:revive
 		return err
 	}
 	return nil
