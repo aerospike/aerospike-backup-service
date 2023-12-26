@@ -180,7 +180,6 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 	backupRunFunc := func() {
 		started := time.Now()
-		slog.Debug("Starting full backup", "name", h.routineName)
 		stats := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
 			h.storage, h.secretAgent, shared.BackupOptions{})
 		if stats == nil {
@@ -191,6 +190,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		elapsed := time.Since(started)
 		backupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
+	slog.Debug("Starting full backup", "name", h.routineName)
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
 	slog.Debug("Completed full backup", "name", h.routineName)
@@ -238,7 +238,6 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		lastRunEpoch := max(state.LastIncrRun.UnixNano(), state.LastFullRun.UnixNano())
 		opts.ModAfter = &lastRunEpoch
 		started := time.Now()
-		slog.Debug("Starting incremental backup", "name", h.routineName)
 		stats = backupService.BackupRun(h.backupRoutine, h.backupIncrPolicy, h.cluster,
 			h.storage, h.secretAgent, opts)
 		if stats == nil {
@@ -249,6 +248,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		elapsed := time.Since(started)
 		incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
+	slog.Debug("Starting incremental backup", "name", h.routineName)
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
 	slog.Debug("Completed incremental backup", "name", h.routineName)

@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"log/slog"
 	"math"
 	"net/http"
 	"strconv"
@@ -76,7 +77,10 @@ func (ws *HTTPServer) getAvailableBackups(
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(response)
+	_, err = w.Write(response)
+	if err != nil {
+		slog.Error("failed to write response", err)
+	}
 }
 
 // return an array containing single routine from request (if present), or all routines

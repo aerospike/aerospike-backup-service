@@ -3,6 +3,7 @@ package server
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -343,7 +344,10 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(jsonResponse)
+	_, err = w.Write(jsonResponse)
+	if err != nil {
+		slog.Error("failed to write response", err)
+	}
 }
 
 // updatePolicy updates an existing policy in the configuration.
@@ -461,7 +465,11 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(jsonResponse)
+	_, err = w.Write(jsonResponse)
+	if err != nil {
+		slog.Error("failed to write response", err)
+	}
+
 }
 
 // updateRoutine updates an existing backup routine in the configuration.
