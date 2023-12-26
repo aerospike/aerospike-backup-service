@@ -64,6 +64,7 @@ sudo rm -rf /var/lib/aerospike-backup-service
 ```
 
 # RPM Package
+
 ## Install
 
 ### Installation

@@ -1,6 +1,6 @@
 aerospike-clusters:
   absCluster1:
-    host: "aero-cluster"
+    host: "aerospike-cluster"
     port: 3000
     user: admin
     password: admin

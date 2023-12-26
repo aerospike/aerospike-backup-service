@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/backup/internal/util"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // @Summary     Root endpoint.
@@ -57,4 +58,13 @@ func versionActionHandler(w http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		slog.Error("failed to write response", "err", err)
 	}
+}
+
+// @Summary     Prometheus metrics endpoint.
+// @ID          metrics
+// @Tags        System
+// @Router      /metrics [get]
+// @Success 	200
+func metricsActionHandler() http.Handler {
+	return promhttp.Handler()
 }

@@ -728,6 +728,20 @@
                 }
             }
         },
+        "/metrics": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Prometheus metrics endpoint.",
+                "operationId": "metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
         "/ready": {
             "get": {
                 "tags": [

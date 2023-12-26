@@ -740,6 +740,15 @@ paths:
       summary: Health endpoint.
       tags:
       - System
+  /metrics:
+    get:
+      operationId: metrics
+      responses:
+        "200":
+          description: OK
+      summary: Prometheus metrics endpoint.
+      tags:
+      - System
   /ready:
     get:
       operationId: ready
