@@ -73,13 +73,12 @@ func NewS3Context(storage *model.Storage) *S3Context {
 }
 
 func createConfig(ctx context.Context, storage *model.Storage) (aws.Config, error) {
-	cfgOptions := []func(*config.LoadOptions) error{
+	storage.SetDefaultProfile()
+	return config.LoadDefaultConfig(
+		ctx,
+		config.WithSharedConfigProfile(*storage.S3Profile),
 		config.WithRegion(*storage.S3Region),
-	}
-	if storage.S3Profile != nil {
-		cfgOptions = append(cfgOptions, config.WithSharedConfigProfile(*storage.S3Profile))
-	}
-	return config.LoadDefaultConfig(ctx, cfgOptions...)
+	)
 }
 
 // readFile reads and decodes the YAML content from the given filePath into v.

@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"github.com/aws/smithy-go/ptr"
 )
 
 // Storage represents the configuration for a backup storage details.
@@ -48,5 +49,11 @@ func (s *Storage) validateType() error {
 		return nil
 	default:
 		return fmt.Errorf("invalid storage type: %v", s.Type)
+	}
+}
+
+func (s *Storage) SetDefaultProfile() {
+	if s.Type == S3 && s.S3Profile == nil {
+		s.S3Profile = ptr.String("default")
 	}
 }

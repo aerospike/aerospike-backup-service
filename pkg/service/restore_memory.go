@@ -55,6 +55,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) int {
 func (r *RestoreMemory) doRestore(request *model.RestoreRequestInternal) bool {
 	var success bool
 	restoreRunFunc := func() {
+		request.SourceStorage.SetDefaultProfile()
 		success = r.restoreService.RestoreRun(request)
 	}
 	out := stdIO.Capture(restoreRunFunc)
