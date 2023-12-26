@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/aerospike/backup/internal/util"
@@ -16,7 +17,10 @@ func rootActionHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		w.WriteHeader(http.StatusNotFound)
 	}
-	fmt.Fprintf(w, "")
+	_, err := fmt.Fprintf(w, "")
+	if err != nil {
+		slog.Error("failed to write response", err)
+	}
 }
 
 // @Summary     Health endpoint.
@@ -25,7 +29,10 @@ func rootActionHandler(w http.ResponseWriter, r *http.Request) {
 // @Router      /health [get]
 // @Success 	200
 func healthActionHandler(w http.ResponseWriter, _ *http.Request) {
-	fmt.Fprintf(w, "Ok")
+	_, err := fmt.Fprintf(w, "Ok")
+	if err != nil {
+		slog.Error("failed to write response", err)
+	}
 }
 
 // @Summary     Readiness endpoint.
@@ -34,7 +41,10 @@ func healthActionHandler(w http.ResponseWriter, _ *http.Request) {
 // @Router      /ready [get]
 // @Success 	200
 func readyActionHandler(w http.ResponseWriter, _ *http.Request) {
-	fmt.Fprintf(w, "Ok")
+	_, err := fmt.Fprintf(w, "Ok")
+	if err != nil {
+		slog.Error("failed to write response", err)
+	}
 }
 
 // @Summary     Returns application version.
@@ -43,5 +53,8 @@ func readyActionHandler(w http.ResponseWriter, _ *http.Request) {
 // @Router      /version [get]
 // @Success 	200 {string} string "version"
 func versionActionHandler(w http.ResponseWriter, _ *http.Request) {
-	fmt.Fprint(w, util.Version)
+	_, err := fmt.Fprint(w, util.Version)
+	if err != nil {
+		slog.Error("failed to write response", err)
+	}
 }
