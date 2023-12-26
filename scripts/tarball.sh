@@ -7,7 +7,7 @@ VERSION="$(cat $WORKSPACE/VERSION)"
 cd "$WORKSPACE" && git archive \
 --format=tar \
 --prefix="$BINARY_NAME-$VERSION/" \
---output="/tmp/$BINARY_NAME-$VERSION.tar" create-rpm-package
+--output="/tmp/$BINARY_NAME-$VERSION.tar" HEAD
 
 cd - || exit
 
@@ -16,8 +16,8 @@ git submodule foreach --recursive | while read -r submodule_path; do
     name="$(basename $path)"
     cd "$WORKSPACE/$path" && git archive \
     --prefix="$BINARY_NAME-$VERSION/$path/" \
-    --format=tar HEAD \
-    --output="$WORKSPACE/$name.tar"
+    --output="$WORKSPACE/$name.tar" \
+    --format=tar HEAD
 
     tar --concatenate --file="/tmp/$BINARY_NAME-$VERSION.tar" "$WORKSPACE/$name.tar"
     rm -rf "$WORKSPACE/$name.tar"
