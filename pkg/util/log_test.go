@@ -19,3 +19,13 @@ func Test_libLogRegex(t *testing.T) {
 	}
 	LogCaptured(strings.Join(tests, "\n"))
 }
+
+func Test_ignoreLinesRegex(t *testing.T) {
+	testString :=
+		"time=2023-12-18T09:39:31.311Z level=ERROR source=/app/pkg/util/log.go:25 msg=\"" +
+			"[src/main/aerospike/as_pipe.c:210][read_file] Failed to open /proc/sys/net/core/rmem_max for reading\""
+	matches := matchesAnyPattern(testString, ignoredLinesInDocker)
+	if !matches {
+		t.Error("test string expected to match", "string", testString)
+	}
+}

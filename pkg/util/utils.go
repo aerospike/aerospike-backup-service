@@ -1,6 +1,10 @@
 //nolint:typecheck
 package util
 
+import (
+	"os"
+)
+
 // Ptr returns a pointer to the given object.
 func Ptr[T any](obj T) *T {
 	return &obj
@@ -15,4 +19,9 @@ func Find[T any](items map[string]T, f func(T) bool) *string {
 		}
 	}
 	return nil
+}
+
+func isRunningInDockerContainer() bool {
+	_, found := os.LookupEnv("DOCKER_CONTAINER")
+	return found
 }
