@@ -37,4 +37,5 @@ COPY --from=build /app/cmd/backup/backup /app/backup
 COPY --from=build /app/config/config.yml /app/config.yml
 
 EXPOSE 8080
+ENV DOCKER_CONTAINER=true
 ENTRYPOINT ["./backup", "-c", "config.yml"]

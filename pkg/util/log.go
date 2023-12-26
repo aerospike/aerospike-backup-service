@@ -14,6 +14,15 @@ const (
 
 var libLogRegex = regexp.MustCompile(`^(.+)\s\[(\D+)\]\s\[\s*(\d+)\]\s(.*)$`)
 
+var ignoredLinesInDocker = []*regexp.Regexp{
+	regexp.MustCompile("Failed to open /proc/sys/net/core/rmem_max"),
+	regexp.MustCompile("Failed to read /proc/sys/net/core/rmem_max"),
+}
+
+var ignoredLines []*regexp.Regexp
+
+var isDocker = isRunningInDockerContainer()
+
 // LogCaptured logs the captured std output from the shared libraries.
 func LogCaptured(out string) {
 	if out == "" {
@@ -22,6 +31,10 @@ func LogCaptured(out string) {
 	}
 	entries := strings.Split(strings.ReplaceAll(out, "\r\n", "\n"), "\n")
 	for _, entry := range entries {
+		if shouldSkip(entry) {
+			continue
+		}
+
 		if groups := libLogRegex.FindStringSubmatch(entry); len(groups) == 5 {
 			switch groups[2] {
 			case "ERR":
@@ -35,4 +48,18 @@ func LogCaptured(out string) {
 			fmt.Fprintln(os.Stderr, entry)
 		}
 	}
+}
+
+func shouldSkip(line string) bool {
+	return isDocker && matchesAnyPattern(line, ignoredLinesInDocker) ||
+		matchesAnyPattern(line, ignoredLines)
+}
+
+func matchesAnyPattern(entry string, regexArray []*regexp.Regexp) bool {
+	for _, regex := range regexArray {
+		if regex.MatchString(entry) {
+			return true
+		}
+	}
+	return false
 }
