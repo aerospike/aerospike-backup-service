@@ -110,7 +110,7 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(jsonResponse)
 	if err != nil {
-		slog.Error("failed to write response", err)
+		slog.Error("failed to write response", "err", err)
 	}
 }
 
@@ -349,7 +349,7 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
-		slog.Error("failed to write response", err)
+		slog.Error("failed to write response", "err", err)
 	}
 }
 
@@ -470,7 +470,7 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
-		slog.Error("failed to write response", err)
+		slog.Error("failed to write response", "err", err)
 	}
 }
 

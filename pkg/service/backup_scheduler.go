@@ -203,7 +203,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 	// clean incremental backups
 	if err := h.backend.CleanDir(model.IncrementalBackupDirectory); err != nil {
-		slog.Error("could not clean incremental backups", err)
+		slog.Error("could not clean incremental backups", "err", err)
 	}
 }
 

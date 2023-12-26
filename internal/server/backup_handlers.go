@@ -79,7 +79,7 @@ func (ws *HTTPServer) getAvailableBackups(
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(response)
 	if err != nil {
-		slog.Error("failed to write response", err)
+		slog.Error("failed to write response", "err", err)
 	}
 }
 
