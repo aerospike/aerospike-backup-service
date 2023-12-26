@@ -458,6 +458,7 @@ func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success  	200 {object} map[string]model.BackupRoutine
 // @Failure     400 {string} string
 func (ws *HTTPServer) readRoutines(w http.ResponseWriter) {
+	slog.Info("Got request readRoutines")
 	jsonResponse, err := json.Marshal(ws.config.BackupRoutines)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
