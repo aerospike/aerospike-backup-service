@@ -112,7 +112,6 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 	if err != nil {
 		slog.Error("failed to write response", err)
 	}
-
 }
 
 // updateAerospikeCluster updates an existing Aerospike cluster in the configuration.
@@ -473,7 +472,6 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter) {
 	if err != nil {
 		slog.Error("failed to write response", err)
 	}
-
 }
 
 // updateRoutine updates an existing backup routine in the configuration.
