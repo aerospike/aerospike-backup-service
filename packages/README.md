@@ -112,9 +112,9 @@ sudo systemctl stop aerospike-backup-service
 ```
 
 ### Remove service
-   ```shell
-   sudo rpm -e aerospike-backup-service
-   ```
+```shell
+sudo rpm -e aerospike-backup-service
+```
 
 To remove the backup files run
 ```shell
