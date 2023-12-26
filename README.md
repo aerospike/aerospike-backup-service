@@ -76,10 +76,11 @@ docker build --build-arg GOARCH=amd64 -t backup-service .
 docker build --build-arg GOARCH=arm64 -t backup-service .
 ```
 
-### Build installation package
+### Build Linux package
 
 Run `make deb` or `make rpm` based on the desired package manager.
 This will generate a package in the `target` directory.
+See the quick [guide](./packages/) on how to get started with the Linux packages.
 
 ## Usage
 
