@@ -31,7 +31,7 @@ func Test_ignoreLinesRegex(t *testing.T) {
 	for _, testString := range testStrings {
 		matches := matchesAnyPattern(testString, ignoredLinesInDocker)
 		if !matches {
-			t.Error("test string expected to match", "string", testString)
+			t.Errorf("expected to match: %s", testString)
 		}
 	}
 }
