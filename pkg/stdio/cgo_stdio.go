@@ -32,22 +32,24 @@ func (c *CgoStdio) Capture(f func()) string {
 
 	originalFd, err := syscall.Dup(sourceFd)
 	if err != nil {
-		logError(err)
+		slog.Warn("error in syscall.Dup", "err", err)
 		goto executeF
 	}
 
 	r, w, err = os.Pipe()
 	if err != nil {
-		logError(err)
+		slog.Warn("error in os.Pipe", "err", err)
 		goto executeF
 	}
 
 	if err = dup2(int(w.Fd()), sourceFd); err != nil {
-		logError(err)
+		slog.Warn("error in dup2", "err", err)
 		goto executeF
 	}
 	defer func() {
-		logError(dup2(originalFd, sourceFd))
+		if err = dup2(originalFd, sourceFd); err != nil {
+			slog.Warn("error in dup2", "err", err)
+		}
 	}()
 
 executeF:
@@ -59,8 +61,12 @@ executeF:
 	C.fflush(C.stderr)
 	C.fflush(C.stdout)
 
-	logError(w.Close())
-	logError(syscall.Close(sourceFd))
+	if err = w.Close(); err != nil {
+		slog.Warn("error in w.Close", "err", err)
+	}
+	if err = syscall.Close(sourceFd); err != nil {
+		slog.Warn("error in syscall.Close", "err", err)
+	}
 
 	out := copyCaptured(r)
 
@@ -73,17 +79,14 @@ func copyCaptured(r *os.File) <-chan string {
 		var b bytes.Buffer
 		_, err := io.Copy(&b, r)
 		if err != nil {
-			logError(err)
+			slog.Warn("error in io.Copy", "err", err)
 			out <- ""
 		} else {
 			out <- b.String()
 		}
+		if err = r.Close(); err != nil {
+			slog.Warn("error in r.Close", "err", err)
+		}
 	}()
 	return out
-}
-
-func logError(err error) {
-	if err != nil {
-		slog.Warn("error in stdio capture", "err", err)
-	}
 }
