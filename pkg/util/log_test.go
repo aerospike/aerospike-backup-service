@@ -21,11 +21,17 @@ func Test_libLogRegex(t *testing.T) {
 }
 
 func Test_ignoreLinesRegex(t *testing.T) {
-	testString :=
-		"time=2023-12-18T09:39:31.311Z level=ERROR source=/app/pkg/util/log.go:25 msg=\"" +
-			"[src/main/aerospike/as_pipe.c:210][read_file] Failed to open /proc/sys/net/core/rmem_max for reading\""
-	matches := matchesAnyPattern(testString, ignoredLinesInDocker)
-	if !matches {
-		t.Error("test string expected to match", "string", testString)
+	testStrings := []string{
+		"time=2023-12-18T09:39:31.311Z level=ERROR source=/app/pkg/util/log.go:25 msg=\"[src/main/aerospike/as_pipe.c:210][read_file] Failed to open /proc/sys/net/core/rmem_max for reading\"",
+		"[src/main/aerospike/as_pipe.c:269][get_buffer_size] Failed to read /proc/sys/net/core/rmem_max; should be at least 15728640. Please verify.",
+		"Failed to open /proc/sys/net/core/wmem_max for reading",
+		"Failed to read /proc/sys/net/core/wmem_max",
+	}
+
+	for _, testString := range testStrings {
+		matches := matchesAnyPattern(testString, ignoredLinesInDocker)
+		if !matches {
+			t.Error("test string expected to match", "string", testString)
+		}
 	}
 }
