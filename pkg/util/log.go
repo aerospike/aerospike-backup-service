@@ -15,8 +15,7 @@ const (
 var libLogRegex = regexp.MustCompile(`^(.+)\s\[(\D+)\]\s\[\s*(\d+)\]\s(.*)$`)
 
 var ignoredLinesInDocker = []*regexp.Regexp{
-	regexp.MustCompile("Failed to open /proc/sys/net/core/rmem_max"),
-	regexp.MustCompile("Failed to read /proc/sys/net/core/rmem_max"),
+	regexp.MustCompile("Failed to (open|read) /proc/sys/net/core/[rw]mem_max"),
 }
 
 var ignoredLines []*regexp.Regexp
