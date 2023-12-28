@@ -11,10 +11,10 @@ func TestCluster_Add(t *testing.T) {
 	name := "cluster1"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{
-			name: {Host: ptr.String(""), Port: ptr.Int32(0)}},
+			name: {Host: ptr.String("host"), Port: ptr.Int32(0)}},
 	}
 	newCluster := &model.AerospikeCluster{
-		Host: ptr.String(""), Port: ptr.Int32(0)}
+		Host: ptr.String("host"), Port: ptr.Int32(0)}
 	err := AddCluster(config, "cluster2", newCluster)
 	if err != nil {
 		t.Errorf("Error in adding cluster: %s", err.Error())
@@ -31,10 +31,10 @@ func TestCluster_Update(t *testing.T) {
 	name := "cluster1"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{
-			name: {Host: ptr.String(""), Port: ptr.Int32(0)}},
+			name: {Host: ptr.String("host"), Port: ptr.Int32(0)}},
 	}
 	updatedCluster := &model.AerospikeCluster{
-		Host: ptr.String(""), Port: ptr.Int32(0), User: ptr.String("user")}
+		Host: ptr.String("host"), Port: ptr.Int32(0), User: ptr.String("user")}
 	err := UpdateCluster(config, name, updatedCluster)
 	if err != nil {
 		t.Errorf("Error in updating cluster: %s", err.Error())
