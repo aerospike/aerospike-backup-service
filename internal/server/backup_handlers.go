@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"math"
 	"net/http"
@@ -31,6 +32,9 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 		if err != nil {
 			return nil, err
 		}
+		if toTime <= fromTime {
+			return nil, errors.New("invalid time range: toTime should be greater than fromTime")
+		}
 		return backend.FullBackupList(fromTime, toTime)
 	})
 }
@@ -59,12 +63,12 @@ func (ws *HTTPServer) getAvailableBackups(
 	for _, routine := range routines {
 		backend, exists := ws.backupBackends[routine]
 		if !exists {
-			http.Error(w, "backup backend does not exist for "+routine, http.StatusNotFound)
+			http.Error(w, "routine does not exist for "+routine, http.StatusNotFound)
 			return
 		}
 		list, err := backupListFunc(backend)
 		if err != nil {
-			http.Error(w, "failed to retrieve backup list", http.StatusInternalServerError)
+			http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		routineToBackups[routine] = list

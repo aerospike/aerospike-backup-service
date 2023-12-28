@@ -37,23 +37,23 @@ func (c Config) String() string {
 func (c *Config) Validate() error {
 	for name, routine := range c.BackupRoutines {
 		if err := routine.Validate(); err != nil {
-			return err
+			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
 		}
 		if _, exists := c.AerospikeClusters[routine.SourceCluster]; !exists {
-			return fmt.Errorf("BackupRoutine '%s' references a non-existent AerospikeCluster '%s'",
+			return fmt.Errorf("backup routine '%s' references a non-existent AerospikeCluster '%s'",
 				name, routine.SourceCluster)
 		}
 		if _, exists := c.BackupPolicies[routine.BackupPolicy]; !exists {
-			return fmt.Errorf("BackupRoutine '%s' references a non-existent BackupPolicy '%s'",
+			return fmt.Errorf("backup routine '%s' references a non-existent BackupPolicy '%s'",
 				name, routine.BackupPolicy)
 		}
 		if _, exists := c.Storage[routine.Storage]; !exists {
-			return fmt.Errorf("BackupRoutine '%s' references a non-existent Storage '%s'",
+			return fmt.Errorf("backup routine '%s' references a non-existent Storage '%s'",
 				name, routine.Storage)
 		}
 		if routine.SecretAgent != nil {
 			if _, exists := c.SecretAgents[*routine.SecretAgent]; !exists {
-				return fmt.Errorf("BackupRoutine '%s' references a non-existent SecretAgent '%s'",
+				return fmt.Errorf("backup routine '%s' references a non-existent SecretAgent '%s'",
 					name, *routine.SecretAgent)
 			}
 		}

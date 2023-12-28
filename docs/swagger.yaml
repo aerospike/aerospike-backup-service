@@ -354,7 +354,7 @@ paths:
       summary: Returns the configuration for the service.
       tags:
       - Configuration
-    post:
+    put:
       consumes:
       - application/json
       operationId: updateConfig
