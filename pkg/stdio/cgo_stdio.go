@@ -50,6 +50,9 @@ func (c *CgoStdio) Capture(f func()) string {
 		if err = dup2(originalFd, sourceFd); err != nil {
 			slog.Warn("error in dup2", "err", err)
 		}
+		if err = syscall.Close(originalFd); err != nil {
+			slog.Warn("error in syscall.Close", "err", err)
+		}
 	}()
 
 executeF:
