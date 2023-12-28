@@ -35,6 +35,9 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 		if toTime <= fromTime {
 			return nil, errors.New("invalid time range: toTime should be greater than fromTime")
 		}
+		if toTime <= 0 || fromTime <= 0 {
+			return nil, errors.New("requested time should be positive")
+		}
 		return backend.FullBackupList(fromTime, toTime)
 	})
 }
