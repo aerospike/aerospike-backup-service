@@ -9,9 +9,15 @@ else
   if [ "$DISTRO" == "debian" ]; then
     ZSTD_STATIC_PATH="/usr/local/lib"
     OPENSSL_STATIC_PATH="/usr/local/lib64"
+    if [ "$(uname -m)" == "aarch64" ]; then
+      OPENSSL_STATIC_PATH="/usr/local/lib"
+    fi
   else
     ZSTD_STATIC_PATH="/usr/local/lib64"
     OPENSSL_STATIC_PATH="/usr/local/lib64"
+    if [ "$(uname -m)" == "aarch64" ]; then
+      OPENSSL_STATIC_PATH="/usr/local/lib"
+    fi
   fi
 fi
 
