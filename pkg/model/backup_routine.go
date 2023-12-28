@@ -1,8 +1,12 @@
 package model
 
 import (
-	"errors"
 	"fmt"
+)
+
+const (
+	MIN_FULL_BACKUP_INTERVAL_MILLIS int64 = 10000
+	MIN_INCR_BACKUP_INTERVAL_MILLIS int64 = 1000
 )
 
 // BackupRoutine represents a scheduled backup operation routine.
@@ -38,8 +42,14 @@ func (r *BackupRoutine) Validate() error {
 	if r.Namespace == "" {
 		return routineValidationError("namespace")
 	}
-	if r.IntervalMillis == nil && r.IncrIntervalMillis == nil {
-		return errors.New("interval or incr-interval must be specified for backup routine")
+	if r.IntervalMillis == nil {
+		return routineValidationError("IntervalMillis")
+	}
+	if *r.IntervalMillis < MIN_FULL_BACKUP_INTERVAL_MILLIS {
+		return fmt.Errorf("minimum backup interval is %d", MIN_FULL_BACKUP_INTERVAL_MILLIS)
+	}
+	if r.IncrIntervalMillis != nil && *r.IncrIntervalMillis < MIN_INCR_BACKUP_INTERVAL_MILLIS {
+		return fmt.Errorf("minimum incremental backup interval is %d", MIN_INCR_BACKUP_INTERVAL_MILLIS)
 	}
 	return nil
 }

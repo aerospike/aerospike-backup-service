@@ -35,7 +35,7 @@ func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 // @Summary     Updates the configuration for the service.
 // @ID 	        updateConfig
 // @Tags        Configuration
-// @Router      /config [post]
+// @Router      /config [put]
 // @Accept      json
 // @Param       config body model.Config true "config"
 // @Success     200
@@ -46,6 +46,10 @@ func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&newConfig)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err = newConfig.Validate(); err != nil {
+		http.Error(w, "invalid configuration: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ws.config = &newConfig

@@ -13,13 +13,14 @@ func validConfig() *Config {
 				SourceCluster: "cluster1",
 				BackupPolicy:  "policy1",
 				Storage:       "storage1", Namespace: "ns1",
-				IntervalMillis: ptr.Int64(1)},
+				IntervalMillis: ptr.Int64(10000)},
 			"routine2": {
 				SourceCluster:      "cluster2",
 				BackupPolicy:       "policy2",
 				Storage:            "storage2",
 				Namespace:          "ns2",
-				IncrIntervalMillis: ptr.Int64(1)},
+				IntervalMillis:     ptr.Int64(10000),
+				IncrIntervalMillis: ptr.Int64(1000)},
 		},
 		AerospikeClusters: map[string]*AerospikeCluster{
 			"cluster1": {Host: ptr.String("localhost"), Port: ptr.Int32(3000)},
@@ -52,7 +53,7 @@ func TestInvalidClusterReference(t *testing.T) {
 	if err == nil {
 		t.Error("Expected validation error, but got none.")
 	}
-	expectedError := "BackupRoutine 'routine1' references a non-existent AerospikeCluster 'nonExistentCluster'"
+	expectedError := "backup routine 'routine1' references a non-existent AerospikeCluster 'nonExistentCluster'"
 	if err.Error() != expectedError {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
@@ -66,7 +67,7 @@ func TestInvalidBackupPolicyReference(t *testing.T) {
 	if err == nil {
 		t.Error("Expected validation error, but got none.")
 	}
-	expectedError := "BackupRoutine 'routine1' references a non-existent BackupPolicy 'nonExistentPolicy'"
+	expectedError := "backup routine 'routine1' references a non-existent BackupPolicy 'nonExistentPolicy'"
 	if err.Error() != expectedError {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
@@ -80,7 +81,7 @@ func TestInvalidStorageReference(t *testing.T) {
 	if err == nil {
 		t.Error("Expected validation error, but got none.")
 	}
-	expectedError := "BackupRoutine 'routine1' references a non-existent Storage 'nonExistentStorage'"
+	expectedError := "backup routine 'routine1' references a non-existent Storage 'nonExistentStorage'"
 	if err.Error() != expectedError {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}

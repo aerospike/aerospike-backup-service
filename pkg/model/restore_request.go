@@ -74,14 +74,8 @@ func (r *RestoreRequest) Validate() error {
 	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
-	if r.DestinationCuster == nil {
-		return errors.New("destination cluster is not specified")
-	}
 	if err := r.SourceStorage.Validate(); err != nil {
 		return err
-	}
-	if r.Policy == nil {
-		return errors.New("restore policy is not specified")
 	}
 	if err := r.Policy.Validate(); err != nil { //nolint:revive
 		return err
@@ -93,9 +87,6 @@ func (r *RestoreRequest) Validate() error {
 func (r *RestoreTimestampRequest) Validate() error {
 	if err := r.DestinationCuster.Validate(); err != nil {
 		return err
-	}
-	if r.Policy == nil {
-		return errors.New("restore policy is not specified")
 	}
 	if err := r.Policy.Validate(); err != nil {
 		return err

@@ -45,7 +45,7 @@ func (c *AerospikeCluster) Validate() error {
 	if c == nil {
 		return errors.New("cluster is not specified")
 	}
-	if c.Host == nil {
+	if c.Host == nil || len(*c.Host) == 0 {
 		return errors.New("host is not specified")
 	}
 	if c.Port == nil {
