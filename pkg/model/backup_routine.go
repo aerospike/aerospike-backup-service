@@ -46,10 +46,10 @@ func (r *BackupRoutine) Validate() error {
 		return routineValidationError("IntervalMillis")
 	}
 	if *r.IntervalMillis < MIN_FULL_BACKUP_INTERVAL {
-		return fmt.Errorf("minimal backup interval is %d", MIN_FULL_BACKUP_INTERVAL)
+		return fmt.Errorf("minimum backup interval is %d", MIN_FULL_BACKUP_INTERVAL)
 	}
 	if r.IncrIntervalMillis != nil && *r.IncrIntervalMillis < MIN_INCR_BACKUP_INTERVAL {
-		return fmt.Errorf("minimal incremental backup interval is %d", MIN_INCR_BACKUP_INTERVAL)
+		return fmt.Errorf("minimum incremental backup interval is %d", MIN_INCR_BACKUP_INTERVAL)
 	}
 	return nil
 }

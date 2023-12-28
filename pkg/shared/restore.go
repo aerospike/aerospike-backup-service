@@ -88,7 +88,6 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	setCString(&restoreConfig.s3_endpoint_override, restoreRequest.SourceStorage.S3EndpointOverride)
 	setCString(&restoreConfig.s3_region, restoreRequest.SourceStorage.S3Region)
 	setCString(&restoreConfig.s3_profile, restoreRequest.SourceStorage.S3Profile)
-	setCString(&restoreConfig.s3_log_level, restoreRequest.SourceStorage.S3LogLevel)
 
 	// Secret Agent configuration
 	restoreSecretAgent(&restoreConfig, restoreRequest.SecretAgent)

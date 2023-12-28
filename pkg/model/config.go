@@ -37,7 +37,7 @@ func (c Config) String() string {
 func (c *Config) Validate() error {
 	for name, routine := range c.BackupRoutines {
 		if name == "" {
-			return fmt.Errorf("every backup routine should have a name")
+			return fmt.Errorf("empty routine name is not allowed")
 		}
 		if err := routine.Validate(); err != nil {
 			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
@@ -64,7 +64,7 @@ func (c *Config) Validate() error {
 
 	for name, storage := range c.Storage {
 		if name == "" {
-			return fmt.Errorf("every storage should have a name")
+			return fmt.Errorf("empty storage name is not allowed")
 		}
 		if err := storage.Validate(); err != nil {
 			return err
@@ -73,7 +73,7 @@ func (c *Config) Validate() error {
 
 	for name, cluster := range c.AerospikeClusters {
 		if name == "" {
-			return fmt.Errorf("every cluster should have a name")
+			return fmt.Errorf("empty cluster name is not allowed")
 		}
 		if err := cluster.Validate(); err != nil {
 			return err
