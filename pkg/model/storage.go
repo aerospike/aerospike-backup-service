@@ -29,11 +29,11 @@ func (s *Storage) Validate() error {
 	if s == nil {
 		return errors.New("source storage is not specified")
 	}
-	if s.Path == nil {
+	if s.Path == nil || len(*s.Path) == 0 {
 		return errors.New("storage path is not specified")
 	}
 	if s.Type == S3 {
-		if s.S3Region == nil {
+		if s.S3Region == nil || len(*s.S3Region) == 0 {
 			return errors.New("s3 region is not specified")
 		}
 	}
