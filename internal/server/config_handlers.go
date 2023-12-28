@@ -50,6 +50,7 @@ func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	if err = newConfig.Validate(); err != nil {
 		http.Error(w, "invalid configuration: "+err.Error(), http.StatusBadRequest)
+		return
 	}
 	ws.config = &newConfig
 	err = ConfigurationManager.WriteConfiguration(&newConfig)

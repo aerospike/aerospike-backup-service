@@ -62,13 +62,19 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	for _, storage := range c.Storage {
+	for name, storage := range c.Storage {
+		if name == "" {
+			return fmt.Errorf("every storage should have a name")
+		}
 		if err := storage.Validate(); err != nil {
 			return err
 		}
 	}
 
-	for _, cluster := range c.AerospikeClusters {
+	for name, cluster := range c.AerospikeClusters {
+		if name == "" {
+			return fmt.Errorf("every cluster should have a name")
+		}
 		if err := cluster.Validate(); err != nil {
 			return err
 		}
