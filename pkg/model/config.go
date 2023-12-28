@@ -36,6 +36,9 @@ func (c Config) String() string {
 // Validate validates the configuration.
 func (c *Config) Validate() error {
 	for name, routine := range c.BackupRoutines {
+		if name == "" {
+			return fmt.Errorf("every backup routine should have a name")
+		}
 		if err := routine.Validate(); err != nil {
 			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
 		}

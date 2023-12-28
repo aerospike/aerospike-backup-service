@@ -126,7 +126,7 @@ func (h *BackupHandler) Schedule(ctx context.Context) {
 	slog.Info("Scheduling full backup", "name", h.routineName)
 	h.scheduleBackupPeriodically(ctx, h.runFullBackup)
 
-	if h.backupRoutine.IncrIntervalMillis != nil && *h.backupRoutine.IncrIntervalMillis > 0 {
+	if h.backupRoutine.IncrIntervalMillis != nil {
 		slog.Info("Scheduling incremental backup", "name", h.routineName)
 		h.scheduleBackupPeriodically(ctx, h.runIncrementalBackup)
 	}
