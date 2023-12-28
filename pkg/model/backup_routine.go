@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	MIN_FULL_BACKUP_INTERVAL_MILLIS int64 = 10000
-	MIN_INCR_BACKUP_INTERVAL_MILLIS int64 = 1000
+	minimumFullBackupIntervalMillis int64 = 10000
+	minimumIncrBackupIntervalMillis int64 = 1000
 )
 
 // BackupRoutine represents a scheduled backup operation routine.
@@ -43,13 +43,13 @@ func (r *BackupRoutine) Validate() error {
 		return routineValidationError("namespace")
 	}
 	if r.IntervalMillis == nil {
-		return routineValidationError("IntervalMillis")
+		return routineValidationError("interval")
 	}
-	if *r.IntervalMillis < MIN_FULL_BACKUP_INTERVAL_MILLIS {
-		return fmt.Errorf("minimum backup interval is %d", MIN_FULL_BACKUP_INTERVAL_MILLIS)
+	if *r.IntervalMillis < minimumFullBackupIntervalMillis {
+		return fmt.Errorf("minimum full backup interval is %d", minimumFullBackupIntervalMillis)
 	}
-	if r.IncrIntervalMillis != nil && *r.IncrIntervalMillis < MIN_INCR_BACKUP_INTERVAL_MILLIS {
-		return fmt.Errorf("minimum incremental backup interval is %d", MIN_INCR_BACKUP_INTERVAL_MILLIS)
+	if r.IncrIntervalMillis != nil && *r.IncrIntervalMillis < minimumIncrBackupIntervalMillis {
+		return fmt.Errorf("minimum incremental backup interval is %d", minimumIncrBackupIntervalMillis)
 	}
 	return nil
 }

@@ -2,7 +2,7 @@ package model
 
 import "errors"
 
-// RestorePolicy represents a policy for restore operation.
+// RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
 	Parallel           *uint32           `json:"parallel,omitempty"`
 	NoRecords          *bool             `json:"no-records,omitempty"`
@@ -22,6 +22,9 @@ type RestorePolicy struct {
 	Tps                *uint32           `json:"tps,omitempty"`
 }
 
+// RestoreNamespace specifies an alternative namespace name for the restore
+// operation, where Source is the original namespace name and Destination is
+// the namespace name to which the backup data is to be restored.
 type RestoreNamespace struct {
 	Source      *string `json:"source,omitempty"`
 	Destination *string `json:"destination,omitempty"`
@@ -40,7 +43,7 @@ func (p *RestorePolicy) Validate() error {
 	return nil
 }
 
-// Validate validates restore namespace.
+// Validate validates the restore namespace.
 func (n *RestoreNamespace) Validate() error {
 	if n.Source == nil {
 		return errors.New("source namespace is not specified")

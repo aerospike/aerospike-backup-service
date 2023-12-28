@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+
 	"github.com/aws/smithy-go/ptr"
 )
 
