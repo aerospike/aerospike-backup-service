@@ -1,6 +1,7 @@
 package model
 
 // HTTPServerConfig represents the service's HTTP server configuration.
+// @Description HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
 	Address string            `yaml:"address,omitempty" json:"address,omitempty"`
 	Port    int               `yaml:"port,omitempty" json:"port,omitempty"`

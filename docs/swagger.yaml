@@ -1,99 +1,153 @@
 definitions:
   model.AerospikeCluster:
+    description: AerospikeCluster represents the configuration for an Aerospike cluster
+      for backup.
     properties:
       auth-mode:
+        description: The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE,
+          PKI).
         type: string
       host:
+        description: The host that acts as the entry point to the cluster.
         type: string
       password:
+        description: The password for the cluster authentication.
         type: string
       password-path:
+        description: The file path with the password string, will take precedence
+          over the password field.
         type: string
       port:
+        description: The port to connect to.
         type: integer
       use-services-alternate:
+        description: Whether should use "services-alternate" instead of "services"
+          in info request during cluster tending.
         type: boolean
       user:
+        description: The usename for the cluster authentication.
         type: string
     type: object
   model.BackupDetails:
+    description: BackupDetails contains information about a backup.
     properties:
       key:
+        description: The path to the backup files.
         type: string
       last-modified:
+        description: The backup time in the ISO 8601 format.
         type: string
       size:
+        description: The size of the backup in bytes.
         type: integer
     type: object
   model.BackupPolicy:
+    description: BackupPolicy represents a scheduled backup policy.
     properties:
       bandwidth:
+        description: |-
+          Throttles backup write operations to the backup file(s) to not exceed the given
+          bandwidth in MiB/s.
         type: integer
       file-limit:
+        description: |-
+          File size limit (in MB) for --directory. If an .asb backup file crosses this size threshold,
+          a new backup file will be created.
         type: integer
       filter-exp:
         type: string
       max-records:
+        description: An approximate limit for the number of records to process. Available
+          in server 4.9 and above.
         type: integer
       max-retries:
+        description: Maximum number of retries before aborting the current transaction.
         type: integer
       no-bins:
+        description: Only backup record metadata (digest, TTL, generation count, key).
         type: boolean
       no-indexes:
+        description: Do not back up any secondary index definitions.
         type: boolean
       no-records:
+        description: Do not back up any record data (metadata or bin data).
         type: boolean
       no-udfs:
+        description: Do not back up any UDF modules.
         type: boolean
       parallel:
+        description: Maximum number of scan calls to run in parallel.
         type: integer
       records-per-second:
+        description: |-
+          Limit total returned records per second (RPS). If RPS is zero (the default),
+          the records-per-second limit is not applied.
         type: integer
       remove-artifacts:
+        description: Clear directory or remove output file.
         type: boolean
       remove-files:
+        description: Whether to clear the output directory.
         type: boolean
       retry-delay:
         type: integer
       socket-timeout:
+        description: |-
+          Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
+          If both are 0, there is no socket idle time limit.
         type: integer
       total-timeout:
+        description: Total socket timeout in milliseconds. Default is 0, that is,
+          no timeout.
         type: integer
     type: object
   model.BackupRoutine:
+    description: BackupRoutine represents a scheduled backup operation routine.
     properties:
       after-digest:
         type: string
       backup-policy:
+        description: The name of the corresponding bakup policy.
         type: string
       bin-list:
+        description: The list of backup bin names.
         items:
           type: string
         type: array
       incr-interval:
+        description: The interval for incremental backup in milliseconds.
         type: integer
       interval:
+        description: The interval for full backup in milliseconds.
         type: integer
       namespace:
+        description: The name of the namespace to back up.
         type: string
       node-list:
+        description: The list of nodes in the Aerospike cluster to run the backup
+          for.
         items:
           $ref: '#/definitions/model.Node'
         type: array
       partition-list:
         type: string
       secret-agent:
+        description: The Secret Agent configuration for the routine (optional).
         type: string
       set-list:
+        description: The list of backup set names.
         items:
           type: string
         type: array
       source-cluster:
+        description: The name of the corresponding source cluster.
         type: string
       storage:
+        description: The name of the corresponding storage provider configuration.
         type: string
     type: object
   model.Config:
+    description: Config represents the service configuration file.
     properties:
       aerospike-clusters:
         additionalProperties:
@@ -119,6 +173,7 @@ definitions:
         type: object
     type: object
   model.HTTPServerConfig:
+    description: HTTPServerConfig represents the service's HTTP server configuration.
     properties:
       address:
         type: string
@@ -128,6 +183,7 @@ definitions:
         $ref: '#/definitions/model.RateLimiterConfig'
     type: object
   model.Node:
+    description: Node represents the Aerospike node details.
     properties:
       ip:
         type: string
@@ -146,52 +202,101 @@ definitions:
         type: array
     type: object
   model.RestoreNamespace:
+    description: RestoreNamespace specifies an alternative namespace name for the
+      restore operation.
     properties:
       destination:
+        description: Destination namespace name.
         type: string
       source:
+        description: Original namespace name.
         type: string
     type: object
   model.RestorePolicy:
+    description: RestorePolicy represents a policy for the restore operation.
     properties:
       bandwidth:
+        description: |-
+          Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
+          in MiB/s and its database write operations to not exceed the given number of transactions
+          per second.
         type: integer
       batch-size:
+        description: |-
+          The max allowed number of records per an async batch write call.
+          Default is 128 with batch writes enabled, or 16 without batch writes.
         type: integer
       bin-list:
+        description: The bins to restore.
         items:
           type: string
         type: array
       disable-batch-writes:
+        description: |-
+          Disables the use of batch writes when restoring records to the Aerospike cluster.
+          By default, the cluster is checked for batch write support.
         type: boolean
       max-async-batches:
+        description: The max number of outstanding async record batch write calls
+          at a time.
         type: integer
       namespace:
-        $ref: '#/definitions/model.RestoreNamespace'
+        allOf:
+        - $ref: '#/definitions/model.RestoreNamespace'
+        description: |-
+          Namespace details for the restore operation.
+          By default, the data is restored to the namespace from which it was taken.
       no-generation:
+        description: |-
+          Records from backups take precedence. This option disables the generation check.
+          With this option, records from the backup always overwrite records that already exist in
+          the namespace, regardless of generation numbers.
         type: boolean
       no-indexes:
+        description: Do not restore any secondary index definitions.
         type: boolean
       no-records:
+        description: |-
+          Do not restore any record data (metadata or bin data).
+          By default, record data, secondary index definitions, and UDF modules
+          will be restored.
         type: boolean
       no-udfs:
+        description: Do not restore any UDF modules.
         type: boolean
       parallel:
+        description: The number of client threads to spawn for writing to the cluster.
         type: integer
       replace:
+        description: |-
+          Replace records. This controls how records from the backup overwrite existing records in
+          the namespace. By default, restoring a record from a backup only replaces the bins
+          contained in the backup; all other bins of an existing record remain untouched.
         type: boolean
       set-list:
+        description: The sets to restore.
         items:
           type: string
         type: array
       timeout:
+        description: Timeout (ms) for Aerospike commands to write records, create
+          indexes and create UDFs.
         type: integer
       tps:
+        description: |-
+          Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
+          in MiB/s and its database write operations to not exceed the given number of transactions
+          per second.
         type: integer
       unique:
+        description: |-
+          Existing records take precedence. With this option, only records that do not exist in
+          the namespace are restored, regardless of generation numbers. If a record exists in
+          the namespace, the record from the backup is ignored.
         type: boolean
     type: object
   model.RestoreRequest:
+    description: RestoreRequest represents a restore operation request.
     properties:
       destination:
         $ref: '#/definitions/model.AerospikeCluster'
@@ -203,6 +308,8 @@ definitions:
         $ref: '#/definitions/model.Storage'
     type: object
   model.RestoreTimestampRequest:
+    description: RestoreTimestampRequest represents a restore by timestamp operation
+      request.
     properties:
       destination:
         $ref: '#/definitions/model.AerospikeCluster'
@@ -217,13 +324,15 @@ definitions:
         type: integer
     type: object
   model.SecretAgent:
+    description: SecretAgent represents the configuration of an Aerospike Secret Agent
+      for a backup/restore operation.
     properties:
       address:
         type: string
       port:
         type: string
       timeout:
-        description: timeout in milliseconds
+        description: Timeout in milliseconds.
         type: integer
       tls-ca:
         type: string
@@ -231,21 +340,30 @@ definitions:
         type: boolean
     type: object
   model.Storage:
+    description: Storage represents the configuration for a backup storage details.
     properties:
       path:
+        description: The root path for the backup repository.
         type: string
       s3-endpoint-override:
+        description: An alternative endpoint for the S3 SDK to communicate (AWS S3
+          optional).
         type: string
       s3-log-level:
         type: string
       s3-profile:
+        description: The S3 profile name (AWS S3 optional).
         type: string
       s3-region:
+        description: The S3 region string (AWS S3 optional).
         type: string
       type:
-        $ref: '#/definitions/model.StorageType'
+        allOf:
+        - $ref: '#/definitions/model.StorageType'
+        description: The type of the storage provider (0 - Local, 1 - AWS S3).
     type: object
   model.StorageType:
+    description: StorageType represents the type of the backup storage.
     enum:
     - 0
     - 1

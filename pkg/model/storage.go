@@ -8,16 +8,23 @@ import (
 )
 
 // Storage represents the configuration for a backup storage details.
+// @Description Storage represents the configuration for a backup storage details.
 type Storage struct {
-	Type               StorageType `yaml:"type,omitempty" json:"type,omitempty"`
-	Path               *string     `yaml:"path,omitempty" json:"path,omitempty"`
-	S3Region           *string     `yaml:"s3-region,omitempty" json:"s3-region,omitempty"`
-	S3Profile          *string     `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty"`
-	S3EndpointOverride *string     `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty"`
-	S3LogLevel         *string     `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty"`
+	// The type of the storage provider (0 - Local, 1 - AWS S3).
+	Type StorageType `yaml:"type,omitempty" json:"type,omitempty"`
+	// The root path for the backup repository.
+	Path *string `yaml:"path,omitempty" json:"path,omitempty"`
+	// The S3 region string (AWS S3 optional).
+	S3Region *string `yaml:"s3-region,omitempty" json:"s3-region,omitempty"`
+	// The S3 profile name (AWS S3 optional).
+	S3Profile *string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty"`
+	// An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).
+	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty"`
+	S3LogLevel         *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty"`
 }
 
 // StorageType represents the type of the backup storage.
+// @Description StorageType represents the type of the backup storage.
 type StorageType int
 
 const (
@@ -44,6 +51,7 @@ func (s *Storage) Validate() error {
 	return nil
 }
 
+// validateType validates the storage provider type.
 func (s *Storage) validateType() error {
 	switch s.Type {
 	case Local, S3:
@@ -53,6 +61,7 @@ func (s *Storage) validateType() error {
 	}
 }
 
+// SetDefaultProfile sets the "default" profile if not set.
 func (s *Storage) SetDefaultProfile() {
 	if s.Type == S3 && s.S3Profile == nil {
 		s.S3Profile = ptr.String("default")

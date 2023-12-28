@@ -6,6 +6,7 @@ import (
 )
 
 // Config represents the service configuration file.
+// @Description Config represents the service configuration file.
 //
 //nolint:lll
 type Config struct {
