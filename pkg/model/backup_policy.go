@@ -14,6 +14,7 @@ type BackupPolicy struct {
 	TotalTimeout *uint32 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty"`
 	// Maximum number of retries before aborting the current transaction.
 	MaxRetries *uint32 `yaml:"max-retries,omitempty" json:"max-retries,omitempty"`
+        // RetryDelay defines the delay in milliseconds before retrying a failed operation.
 	RetryDelay *uint32 `yaml:"retry-delay,omitempty" json:"retry-delay,omitempty"`
 	// Whether to clear the output directory.
 	RemoveFiles *bool `yaml:"remove-files,omitempty" json:"remove-files,omitempty"`

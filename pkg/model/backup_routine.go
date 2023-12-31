@@ -23,14 +23,14 @@ type BackupRoutine struct {
 
 	// The interval for full backup in milliseconds.
 	IntervalMillis *int64 `yaml:"interval,omitempty" json:"interval,omitempty"`
-	// The interval for incremental backup in milliseconds.
+	// The interval for incremental backup in milliseconds (optional).
 	IncrIntervalMillis *int64 `yaml:"incr-interval,omitempty" json:"incr-interval,omitempty"`
 
 	// The name of the namespace to back up.
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	// The list of backup set names.
+	// The list of backup set names (optional, an empty list implies backing up all sets).
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty"`
-	// The list of backup bin names.
+	// The list of backup bin names (optional, an empty list implies backing up all bins).
 	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty"`
 	// The list of nodes in the Aerospike cluster to run the backup for.
 	NodeList []Node `yaml:"node-list,omitempty" json:"node-list,omitempty"`

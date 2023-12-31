@@ -18,7 +18,7 @@ type AerospikeCluster struct {
 	Port *int32 `yaml:"port,omitempty" json:"port,omitempty"`
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
 	UseServicesAlternate *bool `yaml:"use-services-alternate,omitempty" json:"use-services-alternate,omitempty"`
-	// The usename for the cluster authentication.
+	// The username for the cluster authentication.
 	User *string `yaml:"user,omitempty" json:"user,omitempty"`
 	// The password for the cluster authentication.
 	Password *string `yaml:"password,omitempty" json:"password,omitempty"`
