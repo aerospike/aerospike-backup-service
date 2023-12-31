@@ -23,6 +23,8 @@ A pre-built OpenAPI Specification is available [here](https://aerospike.github.i
 A sample configuration file and docker-compose script will help you get started testing the service.
 Follow the [instructions](./docker-compose) to set up your test environment using docker-compose.
 
+Linux installation packages are available under the [releases](https://github.com/aerospike/aerospike-backup-service/releases).
+
 ## User Guide
 
 ### Entities
