@@ -5,25 +5,39 @@ import (
 )
 
 const (
-	MIN_FULL_BACKUP_INTERVAL_MILLIS int64 = 10000
-	MIN_INCR_BACKUP_INTERVAL_MILLIS int64 = 1000
+	minimumFullBackupIntervalMillis int64 = 10000
+	minimumIncrBackupIntervalMillis int64 = 1000
 )
 
 // BackupRoutine represents a scheduled backup operation routine.
+// @Description BackupRoutine represents a scheduled backup operation routine.
 type BackupRoutine struct {
-	BackupPolicy  string  `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty"`
-	SourceCluster string  `yaml:"source-cluster,omitempty" json:"source-cluster,omitempty"`
-	Storage       string  `yaml:"storage,omitempty" json:"storage,omitempty"`
-	SecretAgent   *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
+	// The name of the corresponding bakup policy.
+	BackupPolicy string `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty"`
+	// The name of the corresponding source cluster.
+	SourceCluster string `yaml:"source-cluster,omitempty" json:"source-cluster,omitempty"`
+	// The name of the corresponding storage provider configuration.
+	Storage string `yaml:"storage,omitempty" json:"storage,omitempty"`
+	// The Secret Agent configuration for the routine (optional).
+	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 
-	IntervalMillis     *int64 `yaml:"interval,omitempty" json:"interval,omitempty"`
+	// The interval for full backup in milliseconds.
+	IntervalMillis *int64 `yaml:"interval,omitempty" json:"interval,omitempty"`
+	// The interval for incremental backup in milliseconds (optional).
 	IncrIntervalMillis *int64 `yaml:"incr-interval,omitempty" json:"incr-interval,omitempty"`
 
-	Namespace string   `yaml:"namespace,omitempty" json:"namespace,omitempty"`
-	SetList   []string `yaml:"set-list,omitempty" json:"set-list,omitempty"`
-	BinList   []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty"`
-	NodeList  []Node   `yaml:"node-list,omitempty" json:"node-list,omitempty"`
+	// The name of the namespace to back up.
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	// The list of backup set names (optional, an empty list implies backing up all sets).
+	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty"`
+	// The list of backup bin names (optional, an empty list implies backing up all bins).
+	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty"`
+	// The list of nodes in the Aerospike cluster to run the backup for.
+	NodeList []Node `yaml:"node-list,omitempty" json:"node-list,omitempty"`
 
+	// Back up list of partition filters. Partition filters can be ranges, individual partitions,
+	// or records after a specific digest within a single partition.
+	// Default number of partitions to back up: 0 to 4095: all partitions.
 	PartitionList *string `yaml:"partition-list,omitempty" json:"partition-list,omitempty"`
 	AfterDigest   *string `yaml:"after-digest,omitempty" json:"after-digest,omitempty"`
 }
@@ -43,13 +57,13 @@ func (r *BackupRoutine) Validate() error {
 		return routineValidationError("namespace")
 	}
 	if r.IntervalMillis == nil {
-		return routineValidationError("IntervalMillis")
+		return routineValidationError("interval")
 	}
-	if *r.IntervalMillis < MIN_FULL_BACKUP_INTERVAL_MILLIS {
-		return fmt.Errorf("minimum backup interval is %d", MIN_FULL_BACKUP_INTERVAL_MILLIS)
+	if *r.IntervalMillis < minimumFullBackupIntervalMillis {
+		return fmt.Errorf("minimum full backup interval is %d", minimumFullBackupIntervalMillis)
 	}
-	if r.IncrIntervalMillis != nil && *r.IncrIntervalMillis < MIN_INCR_BACKUP_INTERVAL_MILLIS {
-		return fmt.Errorf("minimum incremental backup interval is %d", MIN_INCR_BACKUP_INTERVAL_MILLIS)
+	if r.IncrIntervalMillis != nil && *r.IncrIntervalMillis < minimumIncrBackupIntervalMillis {
+		return fmt.Errorf("minimum incremental backup interval is %d", minimumIncrBackupIntervalMillis)
 	}
 	return nil
 }
@@ -58,7 +72,8 @@ func routineValidationError(field string) error {
 	return fmt.Errorf("%s specification for backup routine is required", field)
 }
 
-// Node represents an Aerospike node details.
+// Node represents the Aerospike node details.
+// @Description Node represents the Aerospike node details.
 type Node struct {
 	IP   string `yaml:"ip" json:"ip"`
 	Port int    `yaml:"port" json:"port"`

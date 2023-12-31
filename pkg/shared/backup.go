@@ -44,7 +44,7 @@ func NewBackup() *BackupShared {
 
 // BackupRun calls the backup_run function from the asbackup shared library.
 //
-//nolint:funlen
+//nolint:funlen,gocritic
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
 	opts BackupOptions) *BackupStat {

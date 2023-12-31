@@ -2,29 +2,67 @@ package model
 
 import "errors"
 
-// RestorePolicy represents a policy for restore operation.
+// RestorePolicy represents a policy for the restore operation.
+// @Description RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
-	Parallel           *uint32           `json:"parallel,omitempty"`
-	NoRecords          *bool             `json:"no-records,omitempty"`
-	NoIndexes          *bool             `json:"no-indexes,omitempty"`
-	NoUdfs             *bool             `json:"no-udfs,omitempty"`
-	Timeout            *uint32           `json:"timeout,omitempty"`
-	DisableBatchWrites *bool             `json:"disable-batch-writes,omitempty"`
-	MaxAsyncBatches    *uint32           `json:"max-async-batches,omitempty"`
-	BatchSize          *uint32           `json:"batch-size,omitempty"`
-	Namespace          *RestoreNamespace `json:"namespace,omitempty"`
-	SetList            []string          `json:"set-list,omitempty"`
-	BinList            []string          `json:"bin-list,omitempty"`
-	Replace            *bool             `json:"replace,omitempty"`
-	Unique             *bool             `json:"unique,omitempty"`
-	NoGeneration       *bool             `json:"no-generation,omitempty"`
-	Bandwidth          *uint64           `json:"bandwidth,omitempty"`
-	Tps                *uint32           `json:"tps,omitempty"`
+	// The number of client threads to spawn for writing to the cluster.
+	Parallel *uint32 `json:"parallel,omitempty"`
+	// Do not restore any record data (metadata or bin data).
+	// By default, record data, secondary index definitions, and UDF modules
+	// will be restored.
+	NoRecords *bool `json:"no-records,omitempty"`
+	// Do not restore any secondary index definitions.
+	NoIndexes *bool `json:"no-indexes,omitempty"`
+	// Do not restore any UDF modules.
+	NoUdfs *bool `json:"no-udfs,omitempty"`
+	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
+	Timeout *uint32 `json:"timeout,omitempty"`
+	// Disables the use of batch writes when restoring records to the Aerospike cluster.
+	// By default, the cluster is checked for batch write support.
+	DisableBatchWrites *bool `json:"disable-batch-writes,omitempty"`
+	// The max number of outstanding async record batch write calls at a time.
+	MaxAsyncBatches *uint32 `json:"max-async-batches,omitempty"`
+	// The max allowed number of records per an async batch write call.
+	// Default is 128 with batch writes enabled, or 16 without batch writes.
+	BatchSize *uint32 `json:"batch-size,omitempty"`
+	// Namespace details for the restore operation.
+	// By default, the data is restored to the namespace from which it was taken.
+	Namespace *RestoreNamespace `json:"namespace,omitempty"`
+	// The sets to restore (optional, an empty list implies restoring all sets).
+	SetList []string `json:"set-list,omitempty"`
+	// The bins to restore (optional, an empty list implies restoring all bins).
+	BinList []string `json:"bin-list,omitempty"`
+	// Replace records. This controls how records from the backup overwrite existing records in
+	// the namespace. By default, restoring a record from a backup only replaces the bins
+	// contained in the backup; all other bins of an existing record remain untouched.
+	Replace *bool `json:"replace,omitempty"`
+	// Existing records take precedence. With this option, only records that do not exist in
+	// the namespace are restored, regardless of generation numbers. If a record exists in
+	// the namespace, the record from the backup is ignored.
+	Unique *bool `json:"unique,omitempty"`
+	// Records from backups take precedence. This option disables the generation check.
+	// With this option, records from the backup always overwrite records that already exist in
+	// the namespace, regardless of generation numbers.
+	NoGeneration *bool `json:"no-generation,omitempty"`
+	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
+	// in MiB/s and its database write operations to not exceed the given number of transactions
+	// per second.
+	Bandwidth *uint64 `json:"bandwidth,omitempty"`
+	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
+	// in MiB/s and its database write operations to not exceed the given number of transactions
+	// per second.
+	Tps *uint32 `json:"tps,omitempty"`
 }
 
+// RestoreNamespace specifies an alternative namespace name for the restore
+// operation, where Source is the original namespace name and Destination is
+// the namespace name to which the backup data is to be restored.
+//
+// @Description RestoreNamespace specifies an alternative namespace name for the restore
+// @Description operation.
 type RestoreNamespace struct {
-	Source      *string `json:"source,omitempty"`
-	Destination *string `json:"destination,omitempty"`
+	Source      *string `json:"source,omitempty"`      // Original namespace name.
+	Destination *string `json:"destination,omitempty"` // Destination namespace name.
 }
 
 // Validate validates the restore policy.
@@ -40,7 +78,7 @@ func (p *RestorePolicy) Validate() error {
 	return nil
 }
 
-// Validate validates restore namespace.
+// Validate validates the restore namespace.
 func (n *RestoreNamespace) Validate() error {
 	if n.Source == nil {
 		return errors.New("source namespace is not specified")

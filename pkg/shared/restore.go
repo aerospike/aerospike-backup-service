@@ -41,7 +41,7 @@ func NewRestore() *RestoreShared {
 
 // RestoreRun calls the restore_run function from the asrestore shared library.
 //
-//nolint:funlen
+//nolint:funlen,gocritic
 func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal) bool {
 	// lock to restrict parallel execution (shared library limitation)
 	r.Lock()
