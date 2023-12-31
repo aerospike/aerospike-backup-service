@@ -957,7 +957,7 @@
                     "type": "boolean"
                 },
                 "user": {
-                    "description": "The usename for the cluster authentication.",
+                    "description": "The username for the cluster authentication.",
                     "type": "string"
                 }
             }
@@ -1036,6 +1036,7 @@
                     "type": "boolean"
                 },
                 "retry-delay": {
+                    "description": "RetryDelay defines the delay in milliseconds before retrying a failed operation.",
                     "type": "integer"
                 },
                 "socket-timeout": {
@@ -1060,14 +1061,14 @@
                     "type": "string"
                 },
                 "bin-list": {
-                    "description": "The list of backup bin names.",
+                    "description": "The list of backup bin names (optional, an empty list implies backing up all bins).",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "incr-interval": {
-                    "description": "The interval for incremental backup in milliseconds.",
+                    "description": "The interval for incremental backup in milliseconds (optional).",
                     "type": "integer"
                 },
                 "interval": {
@@ -1086,6 +1087,7 @@
                     }
                 },
                 "partition-list": {
+                    "description": "Back up list of partition filters. Partition filters can be ranges, individual partitions,\nor records after a specific digest within a single partition.\nDefault number of partitions to back up: 0 to 4095: all partitions.",
                     "type": "string"
                 },
                 "secret-agent": {
@@ -1093,7 +1095,7 @@
                     "type": "string"
                 },
                 "set-list": {
-                    "description": "The list of backup set names.",
+                    "description": "The list of backup set names (optional, an empty list implies backing up all sets).",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -1219,7 +1221,7 @@
                     "type": "integer"
                 },
                 "bin-list": {
-                    "description": "The bins to restore.",
+                    "description": "The bins to restore (optional, an empty list implies restoring all bins).",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -1266,7 +1268,7 @@
                     "type": "boolean"
                 },
                 "set-list": {
-                    "description": "The sets to restore.",
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -1331,9 +1333,11 @@
             "type": "object",
             "properties": {
                 "address": {
+                    "description": "Address of the Secret Agent.",
                     "type": "string"
                 },
                 "port": {
+                    "description": "Port the Secret Agent is running on.",
                     "type": "string"
                 },
                 "timeout": {

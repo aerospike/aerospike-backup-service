@@ -8,8 +8,8 @@ package model
 // @Description SecretAgent represents the configuration of an Aerospike Secret Agent
 // @Description for a backup/restore operation.
 type SecretAgent struct {
-	Address     string `yaml:"address,omitempty" json:"address,omitempty"`
-	Port        string `yaml:"port,omitempty" json:"port,omitempty"`
+	Address     string `yaml:"address,omitempty" json:"address,omitempty"` // Address of the Secret Agent.
+	Port        string `yaml:"port,omitempty" json:"port,omitempty"`       // Port the Secret Agent is running on.
 	Timeout     int32  `yaml:"timeout,omitempty" json:"timeout,omitempty"` // Timeout in milliseconds.
 	TLSCAString string `yaml:"tls-ca,omitempty" json:"tls-ca,omitempty"`
 	TLSEnabled  bool   `yaml:"tls-enabled,omitempty" json:"tls-enabled,omitempty"`

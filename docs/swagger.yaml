@@ -25,7 +25,7 @@ definitions:
           in info request during cluster tending.
         type: boolean
       user:
-        description: The usename for the cluster authentication.
+        description: The username for the cluster authentication.
         type: string
     type: object
   model.BackupDetails:
@@ -90,6 +90,8 @@ definitions:
         description: Whether to clear the output directory.
         type: boolean
       retry-delay:
+        description: RetryDelay defines the delay in milliseconds before retrying
+          a failed operation.
         type: integer
       socket-timeout:
         description: |-
@@ -110,12 +112,13 @@ definitions:
         description: The name of the corresponding bakup policy.
         type: string
       bin-list:
-        description: The list of backup bin names.
+        description: The list of backup bin names (optional, an empty list implies
+          backing up all bins).
         items:
           type: string
         type: array
       incr-interval:
-        description: The interval for incremental backup in milliseconds.
+        description: The interval for incremental backup in milliseconds (optional).
         type: integer
       interval:
         description: The interval for full backup in milliseconds.
@@ -130,12 +133,17 @@ definitions:
           $ref: '#/definitions/model.Node'
         type: array
       partition-list:
+        description: |-
+          Back up list of partition filters. Partition filters can be ranges, individual partitions,
+          or records after a specific digest within a single partition.
+          Default number of partitions to back up: 0 to 4095: all partitions.
         type: string
       secret-agent:
         description: The Secret Agent configuration for the routine (optional).
         type: string
       set-list:
-        description: The list of backup set names.
+        description: The list of backup set names (optional, an empty list implies
+          backing up all sets).
         items:
           type: string
         type: array
@@ -227,7 +235,8 @@ definitions:
           Default is 128 with batch writes enabled, or 16 without batch writes.
         type: integer
       bin-list:
-        description: The bins to restore.
+        description: The bins to restore (optional, an empty list implies restoring
+          all bins).
         items:
           type: string
         type: array
@@ -274,7 +283,8 @@ definitions:
           contained in the backup; all other bins of an existing record remain untouched.
         type: boolean
       set-list:
-        description: The sets to restore.
+        description: The sets to restore (optional, an empty list implies restoring
+          all sets).
         items:
           type: string
         type: array
@@ -328,8 +338,10 @@ definitions:
       for a backup/restore operation.
     properties:
       address:
+        description: Address of the Secret Agent.
         type: string
       port:
+        description: Port the Secret Agent is running on.
         type: string
       timeout:
         description: Timeout in milliseconds.

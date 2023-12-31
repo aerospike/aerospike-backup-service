@@ -28,9 +28,9 @@ type RestorePolicy struct {
 	// Namespace details for the restore operation.
 	// By default, the data is restored to the namespace from which it was taken.
 	Namespace *RestoreNamespace `json:"namespace,omitempty"`
-	// The sets to restore.
+	// The sets to restore (optional, an empty list implies restoring all sets).
 	SetList []string `json:"set-list,omitempty"`
-	// The bins to restore.
+	// The bins to restore (optional, an empty list implies restoring all bins).
 	BinList []string `json:"bin-list,omitempty"`
 	// Replace records. This controls how records from the backup overwrite existing records in
 	// the namespace. By default, restoring a record from a backup only replaces the bins

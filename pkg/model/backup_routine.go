@@ -35,6 +35,9 @@ type BackupRoutine struct {
 	// The list of nodes in the Aerospike cluster to run the backup for.
 	NodeList []Node `yaml:"node-list,omitempty" json:"node-list,omitempty"`
 
+	// Back up list of partition filters. Partition filters can be ranges, individual partitions,
+	// or records after a specific digest within a single partition.
+	// Default number of partitions to back up: 0 to 4095: all partitions.
 	PartitionList *string `yaml:"partition-list,omitempty" json:"partition-list,omitempty"`
 	AfterDigest   *string `yaml:"after-digest,omitempty" json:"after-digest,omitempty"`
 }
