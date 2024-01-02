@@ -38,5 +38,5 @@ type Backup interface {
 
 // Restore represents a restore service.
 type Restore interface {
-	RestoreRun(restoreRequest *model.RestoreRequestInternal) bool
+	RestoreRun(restoreRequest *model.RestoreRequestInternal) *model.RestoreResult
 }

@@ -108,7 +108,11 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		jobID := ws.restoreService.RestoreByTime(&request)
+		jobID, err := ws.restoreService.RestoreByTime(&request)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		slog.Info("Restore action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
@@ -134,6 +138,11 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, ws.restoreService.JobStatus(jobID))
+	status := ws.restoreService.JobStatus(jobID)
+	if status != nil {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, *status)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
+	}
 }

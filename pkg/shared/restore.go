@@ -42,7 +42,7 @@ func NewRestore() *RestoreShared {
 // RestoreRun calls the restore_run function from the asrestore shared library.
 //
 //nolint:funlen,gocritic
-func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal) bool {
+func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal) *model.RestoreResult {
 	// lock to restrict parallel execution (shared library limitation)
 	r.Lock()
 	defer r.Unlock()
@@ -104,19 +104,18 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	setCUint(&restoreConfig.tps, restoreRequest.Policy.Tps)
 
 	restoreStatus := C.restore_run(&restoreConfig)
+	// destroy the restore_config
+	defer C.restore_config_destroy(&restoreConfig)
 
-	var success bool
-	if unsafe.Pointer(restoreStatus) != C.RUN_RESTORE_FAILURE {
-		C.restore_status_destroy(restoreStatus)
-		C.cf_free(unsafe.Pointer(restoreStatus))
-		success = true
-	} else {
+	if unsafe.Pointer(restoreStatus) == C.RUN_RESTORE_FAILURE {
 		slog.Warn("Failed restore operation", "request", restoreRequest)
+		return nil
 	}
 
-	// destroy the restore_config
-	C.restore_config_destroy(&restoreConfig)
-	return success
+	C.restore_status_destroy(restoreStatus)
+	C.cf_free(unsafe.Pointer(restoreStatus))
+
+	return model.NewRestoreResult()
 }
 
 func restoreSecretAgent(config *C.restore_config_t, secretsAgent *model.SecretAgent) {
