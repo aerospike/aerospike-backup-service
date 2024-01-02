@@ -17,13 +17,13 @@ type RestoreMemory struct {
 	config         *model.Config
 	restoreJobs    *JobsHolder
 	restoreService shared.Restore
-	backends       map[string]BackupBackend
+	backends       map[string]BackupList
 }
 
 var _ RestoreService = (*RestoreMemory)(nil)
 
 // NewRestoreMemory returns a new RestoreMemory instance.
-func NewRestoreMemory(backends map[string]BackupBackend, config *model.Config) *RestoreMemory {
+func NewRestoreMemory(backends map[string]BackupList, config *model.Config) *RestoreMemory {
 	return &RestoreMemory{
 		restoreJobs:    NewJobsHolder(),
 		restoreService: shared.NewRestore(),
@@ -65,7 +65,7 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 	}
 
 	jobID := r.restoreJobs.newJob()
-	func() {
+	go func() {
 		fullBackup, err := r.findLastFullBackup(backend, request)
 		if err != nil {
 			slog.Error("Could not find last full backup", "JobId", jobID, "routine", request.Routine,
@@ -108,7 +108,7 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 }
 
 func (r *RestoreMemory) findLastFullBackup(
-	backend BackupBackend,
+	backend BackupList,
 	request *model.RestoreTimestampRequest,
 ) (*model.BackupDetails, error) {
 	fullBackupList, err := backend.FullBackupList(0, request.Time)
@@ -158,7 +158,7 @@ func (r *RestoreMemory) restoreFullBackup(
 }
 
 func (r *RestoreMemory) findIncrementalBackups(
-	backend BackupBackend,
+	backend BackupList,
 	since time.Time,
 ) ([]model.BackupDetails, error) {
 	allIncrementalBackupList, err := backend.IncrementalBackupList()
@@ -186,7 +186,7 @@ func (r *RestoreMemory) restoreIncrementalBackup(request *model.RestoreTimestamp
 	if restoreResult == nil {
 		return nil, fmt.Errorf("could not restore incremental backup at %s", *b.Key)
 	}
-	return nil, nil
+	return restoreResult, nil
 }
 
 func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) (*model.RestoreRequest, error) {

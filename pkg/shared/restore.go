@@ -115,7 +115,7 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	C.restore_status_destroy(restoreStatus)
 	C.cf_free(unsafe.Pointer(restoreStatus))
 
-	return model.NewRestoreResult()
+	return model.NewRestoreResult(), nil
 }
 
 func restoreSecretAgent(config *C.restore_config_t, secretsAgent *model.SecretAgent) {
