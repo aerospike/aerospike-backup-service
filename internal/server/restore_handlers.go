@@ -138,12 +138,12 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	status := ws.restoreService.JobStatus(jobID)
-	if status != nil {
+	status, err := ws.restoreService.JobStatus(jobID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+	} else {
 		w.WriteHeader(http.StatusOK)
 		asJson, _ := json.MarshalIndent(status, "", "    ") // pretty print
 		_, _ = w.Write(asJson)
-	} else {
-		w.WriteHeader(http.StatusNotFound)
 	}
 }

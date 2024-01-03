@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"github.com/aerospike/backup/pkg/model"
 	"math/rand"
 	"sync"
@@ -25,10 +26,14 @@ func (h *JobsHolder) newJob() int {
 	return jobID
 }
 
-func (h *JobsHolder) getStatus(jobID int) *model.RestoreJobStatus {
+func (h *JobsHolder) getStatus(jobID int) (*model.RestoreJobStatus, error) {
 	h.Lock()
 	defer h.Unlock()
-	return h.restoreJobs[jobID]
+	status, exists := h.restoreJobs[jobID]
+	if !exists {
+		return nil, fmt.Errorf("job with ID %d not found", jobID)
+	}
+	return status, nil
 }
 
 func (h *JobsHolder) increaseStats(jobID int, new *model.RestoreResult) {

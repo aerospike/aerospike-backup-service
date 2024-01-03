@@ -27,19 +27,19 @@ func TestRestoreMemory(t *testing.T) {
 	}
 	jobID := restoreService.Restore(requestInternal)
 
-	jobStatus := restoreService.JobStatus(jobID)
+	jobStatus, _ := restoreService.JobStatus(jobID)
 	if jobStatus.Status != model.JobStatusRunning {
 		t.Errorf("Expected jobStatus to be %s", model.JobStatusRunning)
 	}
 
 	time.Sleep(1 * time.Second)
-	jobStatus = restoreService.JobStatus(jobID)
+	jobStatus, _ = restoreService.JobStatus(jobID)
 	if jobStatus.Status != model.JobStatusDone {
 		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
 
-	wrongJobStatus := restoreService.JobStatus(1111)
-	if wrongJobStatus != nil {
+	wrongJobStatus, err := restoreService.JobStatus(1111)
+	if err == nil {
 		t.Errorf("Expected not found, but go %v", wrongJobStatus)
 	}
 }
@@ -127,7 +127,7 @@ func TestRestoreTimestamp(t *testing.T) {
 	}
 
 	time.Sleep(1 * time.Second)
-	jobStatus := restoreService.JobStatus(jobID)
+	jobStatus, _ := restoreService.JobStatus(jobID)
 	if jobStatus.Status != model.JobStatusDone {
 		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}

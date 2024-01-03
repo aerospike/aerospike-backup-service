@@ -14,5 +14,5 @@ type RestoreService interface {
 	RestoreByTime(request *model.RestoreTimestampRequest) (int, error)
 
 	// JobStatus returns status for the given job id.
-	JobStatus(jobID int) *model.RestoreJobStatus
+	JobStatus(jobID int) (*model.RestoreJobStatus, error)
 }

@@ -207,6 +207,6 @@ func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest)
 }
 
 // JobStatus returns the status of the job with the given id.
-func (r *RestoreMemory) JobStatus(jobID int) *model.RestoreJobStatus {
+func (r *RestoreMemory) JobStatus(jobID int) (*model.RestoreJobStatus, error) {
 	return r.restoreJobs.getStatus(jobID)
 }
