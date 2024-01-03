@@ -1,6 +1,8 @@
 package service
 
-import "github.com/aerospike/backup/pkg/model"
+import (
+	"github.com/aerospike/backup/pkg/model"
+)
 
 type RestoreService interface {
 	// Restore starts a restore process using the given request.
@@ -9,8 +11,8 @@ type RestoreService interface {
 
 	// RestoreByTime starts a restore by time process using the given request.
 	// Returns the job id as a unique identifier.
-	RestoreByTime(request *model.RestoreTimestampRequest) int
+	RestoreByTime(request *model.RestoreTimestampRequest) (int, error)
 
 	// JobStatus returns status for the given job id.
-	JobStatus(jobID int) string
+	JobStatus(jobID int) (*model.RestoreJobStatus, error)
 }

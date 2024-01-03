@@ -77,7 +77,7 @@ type HTTPServer struct {
 	rateLimiter    *IPRateLimiter
 	whiteList      *ipWhiteList
 	restoreService service.RestoreService
-	backupBackends map[string]service.BackupBackend
+	backupBackends map[string]service.BackupListReader
 }
 
 // Annotations to generate OpenAPI description (https://github.com/swaggo/swag)
@@ -95,7 +95,7 @@ type HTTPServer struct {
 func NewHTTPServer(handlers []service.BackupScheduler, config *model.Config) *HTTPServer {
 	addr := fmt.Sprintf("%s:%d", config.HTTPServer.Address, config.HTTPServer.Port)
 
-	backendMap := make(map[string]service.BackupBackend, len(handlers))
+	backendMap := make(map[string]service.BackupListReader, len(handlers))
 	for _, backend := range handlers {
 		backendMap[backend.BackupRoutineName()] = backend.GetBackend()
 	}

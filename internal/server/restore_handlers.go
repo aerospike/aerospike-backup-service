@@ -108,7 +108,11 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		jobID := ws.restoreService.RestoreByTime(&request)
+		jobID, err := ws.restoreService.RestoreByTime(&request)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		slog.Info("Restore action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
@@ -124,7 +128,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 // @Produce     json
 // @Param       jobId query int true "Job ID to retrieve the status" format(int64)
 // @Router      /restore/status [get]
-// @Success     200 {string} string "Job status"
+// @Success     200 {object} model.RestoreJobStatus "Job status"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	jobIDParam := r.URL.Query().Get("jobId")
@@ -134,6 +138,19 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, ws.restoreService.JobStatus(jobID))
+	status, err := ws.restoreService.JobStatus(jobID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+	} else {
+		w.WriteHeader(http.StatusOK)
+		jsonResponse, err := json.MarshalIndent(status, "", "    ") // pretty print
+		if err != nil {
+			http.Error(w, "failed to parse restore status", http.StatusInternalServerError)
+			return
+		}
+		_, err = w.Write(jsonResponse)
+		if err != nil {
+			slog.Error("failed to write response", "err", err)
+		}
+	}
 }

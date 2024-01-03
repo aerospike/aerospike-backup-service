@@ -6,16 +6,10 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/aerospike/backup/pkg/util"
+
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
-	"github.com/aerospike/backup/pkg/util"
-)
-
-const (
-	jobStatusNA      = "NA"
-	jobStatusRunning = "RUNNING"
-	jobStatusDone    = "DONE"
-	jobStatusFailed  = "FAILED"
 )
 
 // RestoreMemory implements the RestoreService interface.
@@ -24,13 +18,13 @@ type RestoreMemory struct {
 	config         *model.Config
 	restoreJobs    *JobsHolder
 	restoreService shared.Restore
-	backends       map[string]BackupBackend
+	backends       map[string]BackupListReader
 }
 
 var _ RestoreService = (*RestoreMemory)(nil)
 
 // NewRestoreMemory returns a new RestoreMemory instance.
-func NewRestoreMemory(backends map[string]BackupBackend, config *model.Config) *RestoreMemory {
+func NewRestoreMemory(backends map[string]BackupListReader, config *model.Config) *RestoreMemory {
 	return &RestoreMemory{
 		restoreJobs:    NewJobsHolder(),
 		restoreService: shared.NewRestore(),
@@ -43,73 +37,79 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) int {
 	jobID := r.restoreJobs.newJob()
 	go func() {
 		restoreResult := r.doRestore(request)
-		if restoreResult {
-			r.restoreJobs.setDone(jobID)
-		} else {
-			r.restoreJobs.setFailed(jobID)
-		}
-	}()
-	return jobID
-}
-
-func (r *RestoreMemory) doRestore(request *model.RestoreRequestInternal) bool {
-	var success bool
-	restoreRunFunc := func() {
-		request.SourceStorage.SetDefaultProfile()
-		success = r.restoreService.RestoreRun(request)
-	}
-	out := stdIO.Capture(restoreRunFunc)
-	util.LogCaptured(out)
-	return success
-}
-
-func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) int {
-	jobID := r.restoreJobs.newJob()
-	go func() {
-		backend, found := r.backends[request.Routine]
-		if !found {
-			slog.Error("Backend not found for restore", "JobId", jobID, "routine", request.Routine)
-			r.restoreJobs.setFailed(jobID)
+		if restoreResult == nil {
+			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation"))
 			return
 		}
-
-		fullBackup, err := r.findLastFullBackup(backend, request)
-		if err != nil {
-			slog.Error("Could not find last full backup", "JobId", jobID, "routine", request.Routine,
-				"err", err)
-			r.restoreJobs.setFailed(jobID)
-			return
-		}
-
-		if err = r.restoreFullBackup(request, fullBackup.Key); err != nil {
-			slog.Error("Could not restore full backup", "JobId", jobID, "routine", request.Routine,
-				"err", err)
-			r.restoreJobs.setFailed(jobID)
-			return
-		}
-
-		incrementalBackups, err := r.findIncrementalBackups(backend, *fullBackup.LastModified)
-		if err != nil {
-			slog.Error("Could not find incremental backups", "JobId", jobID, "routine", request.Routine,
-				"err", err)
-			r.restoreJobs.setFailed(jobID)
-			return
-		}
-
-		if err = r.restoreIncrementalBackups(request, incrementalBackups); err != nil {
-			slog.Error("Could not restore incremental backups", "JobId", jobID, "routine", request.Routine,
-				"err", err)
-			r.restoreJobs.setFailed(jobID)
-			return
-		}
-
+		r.restoreJobs.increaseStats(jobID, restoreResult)
 		r.restoreJobs.setDone(jobID)
 	}()
 	return jobID
 }
 
+func (r *RestoreMemory) doRestore(request *model.RestoreRequestInternal) *model.RestoreResult {
+	var result *model.RestoreResult
+	restoreRunFunc := func() {
+		request.SourceStorage.SetDefaultProfile()
+		result = r.restoreService.RestoreRun(request)
+	}
+	out := stdIO.Capture(restoreRunFunc)
+	util.LogCaptured(out)
+	return result
+}
+
+func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (int, error) {
+	backend, found := r.backends[request.Routine]
+	if !found {
+		slog.Error("Backend not found for restore", "routine", request.Routine)
+		return 0, fmt.Errorf("backend %s not found for restore", request.Routine)
+	}
+
+	jobID := r.restoreJobs.newJob()
+	go func() {
+		fullBackup, err := r.findLastFullBackup(backend, request)
+		if err != nil {
+			slog.Error("Could not find last full backup", "JobId", jobID, "routine", request.Routine,
+				"err", err)
+			r.restoreJobs.setFailed(jobID, err)
+			return
+		}
+		result, err := r.restoreFullBackup(request, fullBackup.Key)
+		if err != nil {
+			slog.Error("Could not restore full backup", "JobId", jobID, "routine", request.Routine,
+				"err", err)
+			r.restoreJobs.setFailed(jobID, err)
+			return
+		}
+
+		r.restoreJobs.increaseStats(jobID, result)
+
+		incrementalBackups, err := r.findIncrementalBackups(backend, *fullBackup.LastModified)
+		if err != nil {
+			slog.Error("Could not find incremental backups", "JobId", jobID, "routine", request.Routine,
+				"err", err)
+			r.restoreJobs.setFailed(jobID, err)
+			return
+		}
+
+		for _, b := range incrementalBackups {
+			result, err := r.restoreIncrementalBackup(request, b)
+			if err != nil {
+				slog.Error("Could not restore incremental backups", "JobId", jobID, "routine", request.Routine,
+					"err", err)
+				r.restoreJobs.setFailed(jobID, err)
+				return
+			}
+			r.restoreJobs.increaseStats(jobID, result)
+		}
+
+		r.restoreJobs.setDone(jobID)
+	}()
+	return jobID, nil
+}
+
 func (r *RestoreMemory) findLastFullBackup(
-	backend BackupBackend,
+	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 ) (*model.BackupDetails, error) {
 	fullBackupList, err := backend.FullBackupList(0, request.Time)
@@ -142,24 +142,24 @@ func latestFullBackupBeforeTime(list []model.BackupDetails, time time.Time) *mod
 func (r *RestoreMemory) restoreFullBackup(
 	request *model.RestoreTimestampRequest,
 	key *string,
-) error {
+) (*model.RestoreResult, error) {
 	restoreRequest, err := r.toRestoreRequest(request)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	fullRestoreOK := r.doRestore(&model.RestoreRequestInternal{
+	restoreResult := r.doRestore(&model.RestoreRequestInternal{
 		RestoreRequest: *restoreRequest,
 		Dir:            key,
 	})
-	if !fullRestoreOK {
-		return fmt.Errorf("could not restore full backup at %s", *key)
+	if restoreResult == nil {
+		return nil, fmt.Errorf("could not restore full backup at %s", *key)
 	}
 
-	return nil
+	return restoreResult, nil
 }
 
 func (r *RestoreMemory) findIncrementalBackups(
-	backend BackupBackend,
+	backend BackupListReader,
 	since time.Time,
 ) ([]model.BackupDetails, error) {
 	allIncrementalBackupList, err := backend.IncrementalBackupList()
@@ -175,24 +175,19 @@ func (r *RestoreMemory) findIncrementalBackups(
 	return filteredIncrementalBackups, nil
 }
 
-func (r *RestoreMemory) restoreIncrementalBackups(
-	request *model.RestoreTimestampRequest,
-	incrementalBackups []model.BackupDetails,
-) error {
-	for _, b := range incrementalBackups {
-		restoreRequest, err := r.toRestoreRequest(request)
-		if err != nil {
-			return err
-		}
-		incrRestoreOK := r.doRestore(&model.RestoreRequestInternal{
-			RestoreRequest: *restoreRequest,
-			File:           b.Key,
-		})
-		if !incrRestoreOK {
-			return fmt.Errorf("could not restore incremental backup at %s", *b.Key)
-		}
+func (r *RestoreMemory) restoreIncrementalBackup(request *model.RestoreTimestampRequest, b model.BackupDetails) (*model.RestoreResult, error) {
+	restoreRequest, err := r.toRestoreRequest(request)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	restoreResult := r.doRestore(&model.RestoreRequestInternal{
+		RestoreRequest: *restoreRequest,
+		File:           b.Key,
+	})
+	if restoreResult == nil {
+		return nil, fmt.Errorf("could not restore incremental backup at %s", *b.Key)
+	}
+	return restoreResult, nil
 }
 
 func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) (*model.RestoreRequest, error) {
@@ -213,6 +208,6 @@ func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest)
 }
 
 // JobStatus returns the status of the job with the given id.
-func (r *RestoreMemory) JobStatus(jobID int) string {
+func (r *RestoreMemory) JobStatus(jobID int) (*model.RestoreJobStatus, error) {
 	return r.restoreJobs.getStatus(jobID)
 }

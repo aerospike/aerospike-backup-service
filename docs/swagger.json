@@ -858,7 +858,7 @@
                     "200": {
                         "description": "Job status",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/model.RestoreJobStatus"
                         }
                     },
                     "400": {
@@ -1165,6 +1165,19 @@
                 }
             }
         },
+        "model.JobStatus": {
+            "type": "string",
+            "enum": [
+                "Running",
+                "Done",
+                "Failed"
+            ],
+            "x-enum-varnames": [
+                "JobStatusRunning",
+                "JobStatusDone",
+                "JobStatusFailed"
+            ]
+        },
         "model.Node": {
             "description": "Node represents the Aerospike node details.",
             "type": "object",
@@ -1191,6 +1204,55 @@
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "model.RestoreJobStatus": {
+            "description": "RestoreJobStatus represents a restore job status.",
+            "type": "object",
+            "properties": {
+                "error": {},
+                "existed-records": {
+                    "type": "integer"
+                },
+                "expired-records": {
+                    "type": "integer"
+                },
+                "fresher-records": {
+                    "type": "integer"
+                },
+                "ignored-records": {
+                    "type": "integer"
+                },
+                "index-count": {
+                    "type": "integer"
+                },
+                "inserted-records": {
+                    "type": "integer"
+                },
+                "skipped-records": {
+                    "type": "integer"
+                },
+                "status": {
+                    "enum": [
+                        "Running",
+                        "Done",
+                        "Failed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.JobStatus"
+                        }
+                    ]
+                },
+                "total-bytes": {
+                    "type": "integer"
+                },
+                "total-records": {
+                    "type": "integer"
+                },
+                "udf-count": {
+                    "type": "integer"
                 }
             }
         },

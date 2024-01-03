@@ -23,7 +23,7 @@ import (
 // @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Request) {
-	ws.getAvailableBackups(w, r, func(backend service.BackupBackend) ([]model.BackupDetails, error) {
+	ws.getAvailableBackups(w, r, func(backend service.BackupListReader) ([]model.BackupDetails, error) {
 		fromTime, err := parseTimestamp(r.URL.Query().Get("from"), 0)
 		if err != nil {
 			return nil, err
@@ -51,7 +51,7 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 // @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *http.Request) {
-	ws.getAvailableBackups(w, r, func(backend service.BackupBackend) ([]model.BackupDetails, error) {
+	ws.getAvailableBackups(w, r, func(backend service.BackupListReader) ([]model.BackupDetails, error) {
 		return backend.IncrementalBackupList()
 	})
 }
@@ -59,7 +59,7 @@ func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *h
 func (ws *HTTPServer) getAvailableBackups(
 	w http.ResponseWriter,
 	r *http.Request,
-	backupListFunc func(service.BackupBackend) ([]model.BackupDetails, error)) {
+	backupListFunc func(service.BackupListReader) ([]model.BackupDetails, error)) {
 
 	routines := ws.requestedRoutines(r)
 	routineToBackups := make(map[string][]model.BackupDetails)

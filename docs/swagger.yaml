@@ -190,6 +190,16 @@ definitions:
       rate:
         $ref: '#/definitions/model.RateLimiterConfig'
     type: object
+  model.JobStatus:
+    enum:
+    - Running
+    - Done
+    - Failed
+    type: string
+    x-enum-varnames:
+    - JobStatusRunning
+    - JobStatusDone
+    - JobStatusFailed
   model.Node:
     description: Node represents the Aerospike node details.
     properties:
@@ -208,6 +218,38 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  model.RestoreJobStatus:
+    description: RestoreJobStatus represents a restore job status.
+    properties:
+      error: {}
+      existed-records:
+        type: integer
+      expired-records:
+        type: integer
+      fresher-records:
+        type: integer
+      ignored-records:
+        type: integer
+      index-count:
+        type: integer
+      inserted-records:
+        type: integer
+      skipped-records:
+        type: integer
+      status:
+        allOf:
+        - $ref: '#/definitions/model.JobStatus'
+        enum:
+        - Running
+        - Done
+        - Failed
+      total-bytes:
+        type: integer
+      total-records:
+        type: integer
+      udf-count:
+        type: integer
     type: object
   model.RestoreNamespace:
     description: RestoreNamespace specifies an alternative namespace name for the
@@ -957,7 +999,7 @@ paths:
         "200":
           description: Job status
           schema:
-            type: string
+            $ref: '#/definitions/model.RestoreJobStatus'
         "400":
           description: Bad Request
           schema:
