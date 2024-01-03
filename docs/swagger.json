@@ -1197,15 +1197,24 @@
         "model.RestoreJobStatus": {
             "type": "object",
             "properties": {
-                "bytes": {
-                    "type": "integer"
-                },
                 "error": {},
-                "number": {
+                "status": {
+                    "enum": [
+                        "Running",
+                        "Done",
+                        "Failed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.Status"
+                        }
+                    ]
+                },
+                "total-bytes": {
                     "type": "integer"
                 },
-                "status": {
-                    "type": "string"
+                "total-records": {
+                    "type": "integer"
                 }
             }
         },
@@ -1366,6 +1375,19 @@
                     "type": "boolean"
                 }
             }
+        },
+        "model.Status": {
+            "type": "string",
+            "enum": [
+                "Running",
+                "Done",
+                "Failed"
+            ],
+            "x-enum-varnames": [
+                "JobStatusRunning",
+                "JobStatusDone",
+                "JobStatusFailed"
+            ]
         },
         "model.Storage": {
             "description": "Storage represents the configuration for a backup storage details.",

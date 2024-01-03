@@ -211,13 +211,18 @@ definitions:
     type: object
   model.RestoreJobStatus:
     properties:
-      bytes:
-        type: integer
       error: {}
-      number:
-        type: integer
       status:
-        type: string
+        allOf:
+        - $ref: '#/definitions/model.Status'
+        enum:
+        - Running
+        - Done
+        - Failed
+      total-bytes:
+        type: integer
+      total-records:
+        type: integer
     type: object
   model.RestoreNamespace:
     description: RestoreNamespace specifies an alternative namespace name for the
@@ -361,6 +366,16 @@ definitions:
       tls-enabled:
         type: boolean
     type: object
+  model.Status:
+    enum:
+    - Running
+    - Done
+    - Failed
+    type: string
+    x-enum-varnames:
+    - JobStatusRunning
+    - JobStatusDone
+    - JobStatusFailed
   model.Storage:
     description: Storage represents the configuration for a backup storage details.
     properties:

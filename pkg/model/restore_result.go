@@ -1,20 +1,22 @@
 package model
 
-const (
-	JobStatusRunning = "RUNNING"
-	JobStatusDone    = "DONE"
-	JobStatusFailed  = "FAILED"
-)
+type Status string
 
-type RestoreResult struct {
-	Number int
-	Bytes  int
-}
+const (
+	JobStatusRunning Status = "Running"
+	JobStatusDone    Status = "Done"
+	JobStatusFailed  Status = "Failed"
+)
 
 type RestoreJobStatus struct {
 	RestoreResult
-	Status string
-	Error  error
+	Status Status `yaml:"status,omitempty" json:"status,omitempty" enums:"Running,Done,Failed"`
+	Error  error  `yaml:"error,omitempty" json:"error,omitempty"`
+}
+
+type RestoreResult struct {
+	Number int `yaml:"total-records,omitempty" json:"total-records,omitempty"`
+	Bytes  int `yaml:"total-bytes,omitempty" json:"total-bytes,omitempty"`
 }
 
 func NewRestoreResult() *RestoreResult {
