@@ -45,6 +45,14 @@ func (h *JobsHolder) increaseStats(jobID int, new *model.RestoreResult) {
 	if found {
 		current.TotalBytes += new.TotalBytes
 		current.TotalRecords += new.TotalRecords
+		current.ExpiredRecords += new.ExpiredRecords
+		current.SkippedRecords += new.SkippedRecords
+		current.IgnoredRecords += new.IgnoredRecords
+		current.InsertedRecords += new.InsertedRecords
+		current.ExistedRecords += new.ExistedRecords
+		current.FresherRecords += new.FresherRecords
+		current.IndexCount += new.IndexCount
+		current.UDFCount += new.UDFCount
 	}
 }
 
