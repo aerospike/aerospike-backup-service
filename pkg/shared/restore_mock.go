@@ -24,6 +24,6 @@ func NewRestore() *RestoreShared {
 func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal) *model.RestoreResult {
 	slog.Info("RestoreRun mock call")
 	result := model.NewRestoreResult()
-	result.Number = 1
+	result.TotalRecords = 1
 	return result
 }

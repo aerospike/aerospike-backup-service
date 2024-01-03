@@ -1165,6 +1165,19 @@
                 }
             }
         },
+        "model.JobStatus": {
+            "type": "string",
+            "enum": [
+                "Running",
+                "Done",
+                "Failed"
+            ],
+            "x-enum-varnames": [
+                "JobStatusRunning",
+                "JobStatusDone",
+                "JobStatusFailed"
+            ]
+        },
         "model.Node": {
             "description": "Node represents the Aerospike node details.",
             "type": "object",
@@ -1195,9 +1208,31 @@
             }
         },
         "model.RestoreJobStatus": {
+            "description": "RestoreJobStatus represents a restore job status.",
             "type": "object",
             "properties": {
                 "error": {},
+                "existed-records": {
+                    "type": "integer"
+                },
+                "expired-records": {
+                    "type": "integer"
+                },
+                "fresher-records": {
+                    "type": "integer"
+                },
+                "ignored-records": {
+                    "type": "integer"
+                },
+                "index-count": {
+                    "type": "integer"
+                },
+                "inserted-records": {
+                    "type": "integer"
+                },
+                "skipped-records": {
+                    "type": "integer"
+                },
                 "status": {
                     "enum": [
                         "Running",
@@ -1206,7 +1241,7 @@
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.Status"
+                            "$ref": "#/definitions/model.JobStatus"
                         }
                     ]
                 },
@@ -1214,6 +1249,9 @@
                     "type": "integer"
                 },
                 "total-records": {
+                    "type": "integer"
+                },
+                "udf-count": {
                     "type": "integer"
                 }
             }
@@ -1375,19 +1413,6 @@
                     "type": "boolean"
                 }
             }
-        },
-        "model.Status": {
-            "type": "string",
-            "enum": [
-                "Running",
-                "Done",
-                "Failed"
-            ],
-            "x-enum-varnames": [
-                "JobStatusRunning",
-                "JobStatusDone",
-                "JobStatusFailed"
-            ]
         },
         "model.Storage": {
             "description": "Storage represents the configuration for a backup storage details.",

@@ -143,7 +143,14 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusNotFound)
 	} else {
 		w.WriteHeader(http.StatusOK)
-		asJson, _ := json.MarshalIndent(status, "", "    ") // pretty print
-		_, _ = w.Write(asJson)
+		jsonResponse, err := json.MarshalIndent(status, "", "    ") // pretty print
+		if err != nil {
+			http.Error(w, "failed to parse restore status", http.StatusInternalServerError)
+			return
+		}
+		_, err = w.Write(jsonResponse)
+		if err != nil {
+			slog.Error("failed to write response", "err", err)
+		}
 	}
 }

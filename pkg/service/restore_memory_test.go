@@ -1,9 +1,10 @@
 package service
 
 import (
-	"github.com/aws/smithy-go/ptr"
 	"testing"
 	"time"
+
+	"github.com/aws/smithy-go/ptr"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -131,7 +132,7 @@ func TestRestoreTimestamp(t *testing.T) {
 	if jobStatus.Status != model.JobStatusDone {
 		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
-	if jobStatus.Number != 3 {
+	if jobStatus.TotalRecords != 3 {
 		t.Errorf("Expected 3 (one full and 2 incremental backups")
 	}
 }

@@ -2,9 +2,10 @@ package service
 
 import (
 	"fmt"
-	"github.com/aerospike/backup/pkg/model"
 	"math/rand"
 	"sync"
+
+	"github.com/aerospike/backup/pkg/model"
 )
 
 type JobsHolder struct {
@@ -42,10 +43,11 @@ func (h *JobsHolder) increaseStats(jobID int, new *model.RestoreResult) {
 	defer h.Unlock()
 	current, found := h.restoreJobs[jobID]
 	if found {
-		current.Bytes += new.Bytes
-		current.Number += new.Number
+		current.TotalBytes += new.TotalBytes
+		current.TotalRecords += new.TotalRecords
 	}
 }
+
 func (h *JobsHolder) setDone(jobID int) {
 	h.Lock()
 	defer h.Unlock()

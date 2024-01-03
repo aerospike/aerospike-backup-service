@@ -3,9 +3,10 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/aerospike/backup/pkg/util"
 	"log/slog"
 	"time"
+
+	"github.com/aerospike/backup/pkg/util"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"

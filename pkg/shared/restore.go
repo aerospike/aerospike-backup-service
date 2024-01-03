@@ -122,8 +122,16 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 
 func getRestoreResult(status *C.restore_status_t) *model.RestoreResult {
 	result := &model.RestoreResult{
-		Number: int(status.total_records),
-		Bytes:  int(status.total_bytes),
+		TotalRecords:    int(status.total_records),
+		TotalBytes:      int(status.total_bytes),
+		ExpiredRecords:  int(status.expired_records),
+		SkippedRecords:  int(status.skipped_records),
+		IgnoredRecords:  int(status.ignored_records),
+		InsertedRecords: int(status.inserted_records),
+		ExistedRecords:  int(status.existed_records),
+		FresherRecords:  int(status.fresher_records),
+		IndexCount:      int(status.index_count),
+		UDFCount:        int(status.udf_count),
 	}
 
 	return result
