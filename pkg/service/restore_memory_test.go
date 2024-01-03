@@ -104,7 +104,7 @@ func TestRestoreTimestamp(t *testing.T) {
 	config.BackupRoutines["routine"] = &model.BackupRoutine{
 		Storage: "s",
 	}
-	backends := map[string]BackupList{
+	backends := map[string]BackupListReader{
 		"routine": &BackendMock{},
 	}
 	restoreService := NewRestoreMemory(backends, config)

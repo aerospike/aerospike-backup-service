@@ -4,7 +4,7 @@ import "github.com/aerospike/backup/pkg/model"
 
 // BackupBackend represents a backup backend handler.
 type BackupBackend interface {
-	BackupList
+	BackupListReader
 
 	// readState reads and returns the state for the backup.
 	readState() *model.BackupState
@@ -19,7 +19,7 @@ type BackupBackend interface {
 	DeleteFile(path string) error
 }
 
-type BackupList interface {
+type BackupListReader interface {
 	// FullBackupList returns a list of available full backups.
 	// The parameters are timestamp filters by creation time, where from is inclusive
 	// and to is exclusive.

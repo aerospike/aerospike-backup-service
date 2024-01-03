@@ -17,13 +17,13 @@ type RestoreMemory struct {
 	config         *model.Config
 	restoreJobs    *JobsHolder
 	restoreService shared.Restore
-	backends       map[string]BackupList
+	backends       map[string]BackupListReader
 }
 
 var _ RestoreService = (*RestoreMemory)(nil)
 
 // NewRestoreMemory returns a new RestoreMemory instance.
-func NewRestoreMemory(backends map[string]BackupList, config *model.Config) *RestoreMemory {
+func NewRestoreMemory(backends map[string]BackupListReader, config *model.Config) *RestoreMemory {
 	return &RestoreMemory{
 		restoreJobs:    NewJobsHolder(),
 		restoreService: shared.NewRestore(),
@@ -108,7 +108,7 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 }
 
 func (r *RestoreMemory) findLastFullBackup(
-	backend BackupList,
+	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 ) (*model.BackupDetails, error) {
 	fullBackupList, err := backend.FullBackupList(0, request.Time)
@@ -158,7 +158,7 @@ func (r *RestoreMemory) restoreFullBackup(
 }
 
 func (r *RestoreMemory) findIncrementalBackups(
-	backend BackupList,
+	backend BackupListReader,
 	since time.Time,
 ) ([]model.BackupDetails, error) {
 	allIncrementalBackupList, err := backend.IncrementalBackupList()
