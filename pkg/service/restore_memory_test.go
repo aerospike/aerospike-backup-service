@@ -134,5 +134,4 @@ func TestRestoreTimestamp(t *testing.T) {
 	if jobStatus.Number != 3 {
 		t.Errorf("Expected 3 (one full and 2 incremental backups")
 	}
-
 }
