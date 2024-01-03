@@ -112,10 +112,21 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 		return nil
 	}
 
+	result := getRestoreResult(restoreStatus)
+
 	C.restore_status_destroy(restoreStatus)
 	C.cf_free(unsafe.Pointer(restoreStatus))
 
-	return model.NewRestoreResult(), nil
+	return result
+}
+
+func getRestoreResult(status *C.restore_status_t) *model.RestoreResult {
+	result := &model.RestoreResult{
+		Number: int(status.total_records),
+		Bytes:  int(status.total_bytes),
+	}
+
+	return result
 }
 
 func restoreSecretAgent(config *C.restore_config_t, secretsAgent *model.SecretAgent) {
