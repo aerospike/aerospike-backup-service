@@ -209,6 +209,16 @@ definitions:
           type: string
         type: array
     type: object
+  model.RestoreJobStatus:
+    properties:
+      bytes:
+        type: integer
+      error: {}
+      number:
+        type: integer
+      status:
+        type: string
+    type: object
   model.RestoreNamespace:
     description: RestoreNamespace specifies an alternative namespace name for the
       restore operation.
@@ -957,7 +967,7 @@ paths:
         "200":
           description: Job status
           schema:
-            type: string
+            $ref: '#/definitions/model.RestoreJobStatus'
         "400":
           description: Bad Request
           schema:

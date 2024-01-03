@@ -128,7 +128,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 // @Produce     json
 // @Param       jobId query int true "Job ID to retrieve the status" format(int64)
 // @Router      /restore/status [get]
-// @Success     200 {string} string "Job status"
+// @Success     200 {object} model.RestoreJobStatus "Job status"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	jobIDParam := r.URL.Query().Get("jobId")

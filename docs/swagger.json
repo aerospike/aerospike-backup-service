@@ -858,7 +858,7 @@
                     "200": {
                         "description": "Job status",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/model.RestoreJobStatus"
                         }
                     },
                     "400": {
@@ -1191,6 +1191,21 @@
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "model.RestoreJobStatus": {
+            "type": "object",
+            "properties": {
+                "bytes": {
+                    "type": "integer"
+                },
+                "error": {},
+                "number": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
