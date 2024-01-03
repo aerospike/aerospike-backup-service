@@ -29,11 +29,12 @@ func (h *JobsHolder) newJob() int {
 func (h *JobsHolder) getStatus(jobID int) (*model.RestoreJobStatus, error) {
 	h.Lock()
 	defer h.Unlock()
-	status, exists := h.restoreJobs[jobID]
+	jobStatus, exists := h.restoreJobs[jobID]
 	if !exists {
 		return nil, fmt.Errorf("job with ID %d not found", jobID)
 	}
-	return status, nil
+	copyJob := *jobStatus
+	return &copyJob, nil
 }
 
 func (h *JobsHolder) increaseStats(jobID int, new *model.RestoreResult) {
