@@ -160,6 +160,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		backupSkippedCounter.Inc()
 		return
 	}
+	now = time.Now()
 	if !h.isFullEligible(now, h.state.LastFullRun) {
 		slog.Log(context.Background(), util.LevelTrace,
 			"The full backup is not due to run yet", "name", h.routineName)
