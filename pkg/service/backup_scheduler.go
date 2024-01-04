@@ -181,7 +181,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupRunFunc := func() {
 		started := time.Now()
 		stats := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
-			h.storage, h.secretAgent, shared.BackupOptions{})
+			h.storage, h.secretAgent, shared.BackupOptions{}, now)
 		if stats == nil {
 			slog.Warn("Failed full backup", "name", h.routineName)
 			backupFailureCounter.Inc()
@@ -239,7 +239,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		opts.ModAfter = &lastRunEpoch
 		started := time.Now()
 		stats = backupService.BackupRun(h.backupRoutine, h.backupIncrPolicy, h.cluster,
-			h.storage, h.secretAgent, opts)
+			h.storage, h.secretAgent, opts, now)
 		if stats == nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()

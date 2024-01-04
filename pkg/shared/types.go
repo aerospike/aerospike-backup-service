@@ -1,6 +1,9 @@
 package shared
 
-import "github.com/aerospike/backup/pkg/model"
+import (
+	"github.com/aerospike/backup/pkg/model"
+	"time"
+)
 
 // BackupOptions provides additional properties for running a backup.
 type BackupOptions struct {
@@ -33,6 +36,7 @@ type Backup interface {
 		storage *model.Storage,
 		secretAgent *model.SecretAgent,
 		opts BackupOptions,
+		now time.Time,
 	) *BackupStat
 }
 

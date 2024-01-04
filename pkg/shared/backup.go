@@ -47,7 +47,7 @@ func NewBackup() *BackupShared {
 //nolint:funlen,gocritic
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
-	opts BackupOptions) *BackupStat {
+	opts BackupOptions, now time.Time) *BackupStat {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -107,11 +107,11 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	result := &BackupStat{}
 	if isIncremental {
 		setCLong(&backupConfig.mod_after, opts.ModAfter)
-		path := getIncrementalPath(storage)
+		path := getIncrementalPath(storage, now)
 		result.Path = *path
 		setCString(&backupConfig.output_file, path)
 	} else {
-		path := getPath(storage, backupPolicy)
+		path := getPath(storage, backupPolicy, now)
 		result.Path = *path
 		setCString(&backupConfig.directory, path)
 	}
@@ -161,22 +161,22 @@ func parseSetList(setVector *C.as_vector, setList *[]string) {
 	}
 }
 
-func getPath(storage *model.Storage, backupPolicy *model.BackupPolicy) *string {
+func getPath(storage *model.Storage, backupPolicy *model.BackupPolicy, now time.Time) *string {
 	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
-		path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.FullBackupDirectory, timeSuffix())
+		path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.FullBackupDirectory, timeSuffix(now))
 		return &path
 	}
 	path := fmt.Sprintf("%s/%s", *storage.Path, model.FullBackupDirectory)
 	return &path
 }
 
-func getIncrementalPath(storage *model.Storage) *string {
-	path := fmt.Sprintf("%s/%s/%s.asb", *storage.Path, model.IncrementalBackupDirectory, timeSuffix())
+func getIncrementalPath(storage *model.Storage, now time.Time) *string {
+	path := fmt.Sprintf("%s/%s/%s.asb", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now))
 	return &path
 }
 
-func timeSuffix() string {
-	return strconv.FormatInt(time.Now().UnixMilli(), 10)
+func timeSuffix(now time.Time) string {
+	return strconv.FormatInt(now.UnixMilli(), 10)
 }
 
 func printNodes(nodes []model.Node) *string {
