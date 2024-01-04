@@ -160,7 +160,6 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		backupSkippedCounter.Inc()
 		return
 	}
-	now = time.Now()
 	if !h.isFullEligible(now, h.state.LastFullRun) {
 		slog.Log(context.Background(), util.LevelTrace,
 			"The full backup is not due to run yet", "name", h.routineName)
@@ -179,10 +178,12 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		slog.Debug("Release fullBackupInProgress lock", "name", h.routineName)
 	}()
 
+	realNow := time.Now()
+	slog.Info("RealNow " + realNow.String())
 	backupRunFunc := func() {
 		started := time.Now()
 		stats := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
-			h.storage, h.secretAgent, shared.BackupOptions{}, now)
+			h.storage, h.secretAgent, shared.BackupOptions{}, realNow)
 		if stats == nil {
 			slog.Warn("Failed full backup", "name", h.routineName)
 			backupFailureCounter.Inc()
@@ -200,7 +201,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupCounter.Inc()
 
 	// update the state
-	h.updateBackupState(now)
+	h.updateBackupState(realNow)
 
 	// clean incremental backups
 	if err := h.backend.CleanDir(model.IncrementalBackupDirectory); err != nil {
@@ -234,13 +235,15 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		return
 	}
 	var stats *shared.BackupStat
+	realNow := time.Now()
+	slog.Info("RealNow " + realNow.String())
 	backupRunFunc := func() {
 		opts := shared.BackupOptions{}
 		lastRunEpoch := max(state.LastIncrRun.UnixNano(), state.LastFullRun.UnixNano())
 		opts.ModAfter = &lastRunEpoch
 		started := time.Now()
 		stats = backupService.BackupRun(h.backupRoutine, h.backupIncrPolicy, h.cluster,
-			h.storage, h.secretAgent, opts, now)
+			h.storage, h.secretAgent, opts, realNow)
 		if stats == nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()
@@ -260,7 +263,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	incrBackupCounter.Inc()
 
 	// update the state
-	h.updateIncrementalBackupState(now)
+	h.updateIncrementalBackupState(realNow)
 }
 
 func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat, routineName string) {
