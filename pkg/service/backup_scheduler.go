@@ -199,7 +199,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupCounter.Inc()
 
 	// update the state
-	h.updateBackupState()
+	h.updateBackupState(now)
 
 	// clean incremental backups
 	if err := h.backend.CleanDir(model.IncrementalBackupDirectory); err != nil {
@@ -259,7 +259,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	incrBackupCounter.Inc()
 
 	// update the state
-	h.updateIncrementalBackupState()
+	h.updateIncrementalBackupState(now)
 }
 
 func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat, routineName string) {
@@ -288,14 +288,14 @@ func (h *BackupHandler) isIncrementalEligible(now time.Time, lastIncrRun time.Ti
 	return now.UnixMilli()-lastIncrRun.UnixMilli() >= *h.backupRoutine.IncrIntervalMillis
 }
 
-func (h *BackupHandler) updateBackupState() {
-	h.state.LastFullRun = time.Now()
+func (h *BackupHandler) updateBackupState(now time.Time) {
+	h.state.LastFullRun = now
 	h.state.Performed++
 	h.writeState()
 }
 
-func (h *BackupHandler) updateIncrementalBackupState() {
-	h.state.LastIncrRun = time.Now()
+func (h *BackupHandler) updateIncrementalBackupState(now time.Time) {
+	h.state.LastIncrRun = now
 	h.writeState()
 }
 
