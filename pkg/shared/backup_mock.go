@@ -4,6 +4,7 @@ package shared
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 )
@@ -23,7 +24,7 @@ func NewBackup() *BackupShared {
 // BackupRun mocks the interface method.
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
-	opts BackupOptions) *BackupStat {
+	opts BackupOptions, now time.Time) *BackupStat {
 	slog.Info("BackupRun mock call")
 	return &BackupStat{}
 }
