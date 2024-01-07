@@ -172,6 +172,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 			"name", h.routineName)
 		return
 	}
+	slog.Info("Run full backup", "name", h.routineName, "delta", time.Now().UnixMilli()-now.UnixMilli())
 	slog.Debug("Acquire fullBackupInProgress lock", "name", h.routineName)
 	// release the lock
 	defer func() {
