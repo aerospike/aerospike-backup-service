@@ -37,7 +37,7 @@ install-deps:
 
 .PHONY: prep-submodules
 prep-submodules:
-	cd $(TOOLS_DIR) && git submodule update --init --recursive
+	git submodule update --init --recursive
 
 .PHONY: build-submodules
 build-submodules:
