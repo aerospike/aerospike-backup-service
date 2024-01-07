@@ -30,17 +30,15 @@ type BackupBackendLocal struct {
 var _ BackupBackend = (*BackupBackendLocal)(nil)
 
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
-func NewBackupBackendLocal(storage *model.Storage, backupPolicy *model.BackupPolicy,
-	fullBackupInProgress *atomic.Bool) *BackupBackendLocal {
+func NewBackupBackendLocal(storage *model.Storage, backupPolicy *model.BackupPolicy) *BackupBackendLocal {
 	path := *storage.Path
 	prepareDirectory(path)
 	prepareDirectory(path + "/" + model.IncrementalBackupDirectory)
 	prepareDirectory(path + "/" + model.FullBackupDirectory)
 	return &BackupBackendLocal{
-		path:                 path,
-		stateFilePath:        path + "/" + model.StateFileName,
-		backupPolicy:         backupPolicy,
-		fullBackupInProgress: fullBackupInProgress,
+		path:          path,
+		stateFilePath: path + "/" + model.StateFileName,
+		backupPolicy:  backupPolicy,
 	}
 }
 
@@ -208,4 +206,8 @@ func folderSize(path string) *int64 {
 	}
 
 	return &size
+}
+
+func (local *BackupBackendLocal) FullBackupInProgress() *atomic.Bool {
+	return local.fullBackupInProgress
 }

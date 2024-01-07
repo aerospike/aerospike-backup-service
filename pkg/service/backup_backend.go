@@ -1,6 +1,9 @@
 package service
 
-import "github.com/aerospike/backup/pkg/model"
+import (
+	"github.com/aerospike/backup/pkg/model"
+	"sync/atomic"
+)
 
 // BackupBackend represents a backup backend handler.
 type BackupBackend interface {
@@ -17,6 +20,8 @@ type BackupBackend interface {
 
 	// DeleteFile removes file with a given path.
 	DeleteFile(path string) error
+
+	FullBackupInProgress() *atomic.Bool
 }
 
 // BackupListReader allows to read list of existing backups
@@ -28,4 +33,26 @@ type BackupListReader interface {
 
 	// IncrementalBackupList returns a list of available incremental backups.
 	IncrementalBackupList() ([]model.BackupDetails, error)
+}
+
+func BuildBackupBackends(config *model.Config) map[string]BackupBackend {
+	backends := map[string]BackupBackend{}
+	for routineName := range config.BackupRoutines {
+		backends[routineName] = newBackend(config, routineName)
+	}
+	return backends
+}
+
+func newBackend(config *model.Config, routineName string) BackupBackend {
+	backupRoutine := config.BackupRoutines[routineName]
+	storage := config.Storage[backupRoutine.Storage]
+	backupPolicy := config.BackupPolicies[backupRoutine.BackupPolicy]
+	var backend BackupBackend
+	switch storage.Type {
+	case model.Local:
+		backend = NewBackupBackendLocal(storage, backupPolicy)
+	case model.S3:
+		backend = NewBackupBackendS3(storage, backupPolicy)
+	}
+	return backend
 }

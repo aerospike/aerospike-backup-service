@@ -92,13 +92,9 @@ type HTTPServer struct {
 // @externalDocs.url          https://swagger.io/resources/open-api/
 //
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(handlers []service.BackupScheduler, config *model.Config) *HTTPServer {
+func NewHTTPServer(backendMap map[string]service.BackupListReader, config *model.Config) *HTTPServer {
 	addr := fmt.Sprintf("%s:%d", config.HTTPServer.Address, config.HTTPServer.Port)
 
-	backendMap := make(map[string]service.BackupListReader, len(handlers))
-	for _, backend := range handlers {
-		backendMap[backend.BackupRoutineName()] = backend.GetBackend()
-	}
 	rateLimiter := NewIPRateLimiter(
 		rate.Limit(config.HTTPServer.Rate.Tps),
 		config.HTTPServer.Rate.Size,
