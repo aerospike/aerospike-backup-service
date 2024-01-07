@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -178,12 +179,15 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		slog.Debug("Release fullBackupInProgress lock", "name", h.routineName)
 	}()
 
-	realNow := time.Now()
-	slog.Info("RealNow " + realNow.String())
+	path := getPath(h.storage, h.backupFullPolicy, now)
+
 	backupRunFunc := func() {
 		started := time.Now()
+		before := now.UnixNano()
 		stats := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
-			h.storage, h.secretAgent, shared.BackupOptions{}, realNow)
+			h.storage, h.secretAgent, shared.BackupOptions{
+				ModBefore: &before,
+			}, path, false)
 		if stats == nil {
 			slog.Warn("Failed full backup", "name", h.routineName)
 			backupFailureCounter.Inc()
@@ -201,7 +205,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupCounter.Inc()
 
 	// update the state
-	h.updateBackupState(realNow)
+	h.updateBackupState(now)
 
 	// clean incremental backups
 	if err := h.backend.CleanDir(model.IncrementalBackupDirectory); err != nil {
@@ -234,16 +238,18 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 			"name", h.routineName)
 		return
 	}
+	path := getIncrementalPath(h.storage, now)
 	var stats *shared.BackupStat
-	realNow := time.Now()
-	slog.Info("RealNow " + realNow.String())
 	backupRunFunc := func() {
-		opts := shared.BackupOptions{}
 		lastRunEpoch := max(state.LastIncrRun.UnixNano(), state.LastFullRun.UnixNano())
-		opts.ModAfter = &lastRunEpoch
+		before := now.UnixNano()
+		opts := shared.BackupOptions{
+			ModBefore: &before,
+			ModAfter:  &lastRunEpoch,
+		}
 		started := time.Now()
 		stats = backupService.BackupRun(h.backupRoutine, h.backupIncrPolicy, h.cluster,
-			h.storage, h.secretAgent, opts, realNow)
+			h.storage, h.secretAgent, opts, path, true)
 		if stats == nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()
@@ -263,7 +269,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	incrBackupCounter.Inc()
 
 	// update the state
-	h.updateIncrementalBackupState(realNow)
+	h.updateIncrementalBackupState(now)
 }
 
 func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat, routineName string) {
@@ -321,4 +327,21 @@ func (h *BackupHandler) BackupRoutineName() string {
 
 func isStaleTick(t time.Time) bool {
 	return time.Since(t) > time.Second
+}
+func getPath(storage *model.Storage, backupPolicy *model.BackupPolicy, now time.Time) *string {
+	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
+		path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.FullBackupDirectory, timeSuffix(now))
+		return &path
+	}
+	path := fmt.Sprintf("%s/%s", *storage.Path, model.FullBackupDirectory)
+	return &path
+}
+
+func getIncrementalPath(storage *model.Storage, now time.Time) *string {
+	path := fmt.Sprintf("%s/%s/%s.asb", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now))
+	return &path
+}
+
+func timeSuffix(now time.Time) string {
+	return strconv.FormatInt(now.UnixMilli(), 10)
 }

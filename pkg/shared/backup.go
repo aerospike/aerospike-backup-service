@@ -20,10 +20,8 @@ package shared
 import "C"
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
-	"time"
 	"unsafe"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -47,11 +45,10 @@ func NewBackup() *BackupShared {
 //nolint:funlen,gocritic
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
-	opts BackupOptions, now time.Time) *BackupStat {
+	opts BackupOptions, path *string, isIncremental bool) *BackupStat {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
-	isIncremental := opts.ModAfter != nil
 
 	backupConfig := C.backup_config_t{}
 	C.backup_config_init(&backupConfig)
@@ -104,17 +101,13 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	// Secret Agent configuration
 	backupSecretAgent(&backupConfig, secretAgent)
 
-	result := &BackupStat{}
 	if isIncremental {
 		setCLong(&backupConfig.mod_after, opts.ModAfter)
-		path := getIncrementalPath(storage, now)
-		result.Path = *path
 		setCString(&backupConfig.output_file, path)
 	} else {
-		path := getPath(storage, backupPolicy, now)
-		result.Path = *path
 		setCString(&backupConfig.directory, path)
 	}
+	setCLong(&backupConfig.mod_before, opts.ModBefore)
 
 	backupStatus := C.backup_run(&backupConfig)
 	// destroy the backup_config
@@ -124,6 +117,9 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 		return nil
 	}
 
+	result := &BackupStat{
+		Path: *path,
+	}
 	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS {
 		return result
 	}
@@ -159,24 +155,6 @@ func parseSetList(setVector *C.as_vector, setList *[]string) {
 		concatenatedSetList := strings.Join(*setList, ",")
 		C.parse_set_list(setVector, C.CString(concatenatedSetList))
 	}
-}
-
-func getPath(storage *model.Storage, backupPolicy *model.BackupPolicy, now time.Time) *string {
-	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
-		path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.FullBackupDirectory, timeSuffix(now))
-		return &path
-	}
-	path := fmt.Sprintf("%s/%s", *storage.Path, model.FullBackupDirectory)
-	return &path
-}
-
-func getIncrementalPath(storage *model.Storage, now time.Time) *string {
-	path := fmt.Sprintf("%s/%s/%s.asb", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now))
-	return &path
-}
-
-func timeSuffix(now time.Time) string {
-	return strconv.FormatInt(now.UnixMilli(), 10)
 }
 
 func printNodes(nodes []model.Node) *string {
