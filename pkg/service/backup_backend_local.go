@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -115,7 +114,7 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 	backupDetails := make([]model.BackupDetails, 0, len(entries))
 	for _, e := range entries {
 		if e.IsDir() {
-			details := local.toFullBackupDetails(e, backupFolder)
+			details := local.toBackupDetails(e, backupFolder)
 			if details.LastModified.Before(lastRun) &&
 				details.LastModified.UnixMilli() >= from &&
 				details.LastModified.UnixMilli() < to {
@@ -136,8 +135,8 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 	lastIncrRun := local.readState().LastIncrRun
 	backupDetails := make([]model.BackupDetails, 0, len(entries))
 	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".asb") {
-			details := local.toIncrementalBackupDetails(e, backupFolder)
+		if e.IsDir() {
+			details := local.toBackupDetails(e, backupFolder)
 			if details.LastModified.Before(lastIncrRun) {
 				backupDetails = append(backupDetails, details)
 			}
@@ -147,44 +146,17 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 }
 
 // CleanDir cleans the directory with the given name.
-func (local *BackupBackendLocal) CleanDir(name string) error {
-	path := fmt.Sprintf("%s/%s/", local.path, name)
-	dir, err := os.ReadDir(path)
+func (local *BackupBackendLocal) CleanDir(path string) error {
+	err := os.RemoveAll(path)
 	if err != nil {
-		slog.Warn("Failed to read directory", "path", path, "err", err)
-	}
-	for _, e := range dir {
-		if !e.IsDir() {
-			filePath := path + "/" + e.Name()
-			if err = local.DeleteFile(filePath); err != nil {
-				return err
-			}
-		}
+		return fmt.Errorf("failed to delete path: %v", err)
 	}
 	return nil
 }
 
-func (local *BackupBackendLocal) DeleteFile(path string) error {
-	err := os.Remove(path)
-	if err != nil {
-		return fmt.Errorf("failed to delete file: %v", err)
-	}
-	return nil
-}
-
-func (local *BackupBackendLocal) toFullBackupDetails(e fs.DirEntry, backupFolder string) model.BackupDetails {
+func (local *BackupBackendLocal) toBackupDetails(e fs.DirEntry, backupFolder string) model.BackupDetails {
 	path := filepath.Join(backupFolder, e.Name())
-	creationTime, _ := local.readFullBackupCreationTime(path)
-	return model.BackupDetails{
-		Key:          util.Ptr(path),
-		LastModified: &creationTime,
-		Size:         folderSize(path),
-	}
-}
-
-func (local *BackupBackendLocal) toIncrementalBackupDetails(e fs.DirEntry, backupFolder string) model.BackupDetails {
-	path := filepath.Join(backupFolder, e.Name())
-	creationTime, _ := local.readIncrementalBackupCreationTime(path)
+	creationTime, _ := local.readBackupCreationTime(path)
 	return model.BackupDetails{
 		Key:          util.Ptr(path),
 		LastModified: &creationTime,
@@ -217,9 +189,8 @@ func folderSize(path string) *int64 {
 	return &size
 }
 
-func (local *BackupBackendLocal) writeFullBackupCreationTime(path string, timestamp time.Time) error {
+func (local *BackupBackendLocal) writeBackupCreationTime(path string, timestamp time.Time) error {
 	timeString := timestamp.Format(time.RFC3339)
-
 	err := os.WriteFile(path+"/created.txt", []byte(timeString), 0644)
 	if err != nil {
 		slog.Error("Could not write file ", "path", path+"/created.txt")
@@ -229,19 +200,7 @@ func (local *BackupBackendLocal) writeFullBackupCreationTime(path string, timest
 	return nil
 }
 
-func (local *BackupBackendLocal) writeIncrementalBackupCreationTime(filename string, timestamp time.Time) error {
-	metadataFile := filename + ".created.txt"
-	timeString := timestamp.Format(time.RFC3339)
-
-	err := os.WriteFile(metadataFile, []byte(timeString), 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (local *BackupBackendLocal) readFullBackupCreationTime(path string) (time.Time, error) {
+func (local *BackupBackendLocal) readBackupCreationTime(path string) (time.Time, error) {
 	// Read the content of the text file
 	fileContent, err := os.ReadFile(path + "/created.txt")
 	if err != nil {
@@ -249,22 +208,6 @@ func (local *BackupBackendLocal) readFullBackupCreationTime(path string) (time.T
 	}
 
 	// Parse the time value from the string
-	createdTime, err := time.Parse(time.RFC3339, string(fileContent))
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	return createdTime, nil
-}
-
-func (local *BackupBackendLocal) readIncrementalBackupCreationTime(filename string) (time.Time, error) {
-	metadataFile := filename + ".created.txt"
-
-	fileContent, err := os.ReadFile(metadataFile)
-	if err != nil {
-		return time.Time{}, err
-	}
-
 	createdTime, err := time.Parse(time.RFC3339, string(fileContent))
 	if err != nil {
 		return time.Time{}, err

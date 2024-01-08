@@ -15,19 +15,12 @@ type BackupBackend interface {
 	// writeState writes the state object for the backup.
 	writeState(*model.BackupState) error
 
-	writeFullBackupCreationTime(path string, timestamp time.Time) error
+	writeBackupCreationTime(path string, timestamp time.Time) error
 
-	writeIncrementalBackupCreationTime(path string, timestamp time.Time) error
-
-	readFullBackupCreationTime(path string) (time.Time, error)
-
-	readIncrementalBackupCreationTime(path string) (time.Time, error)
+	readBackupCreationTime(path string) (time.Time, error)
 
 	// CleanDir cleans the directory with the given name.
 	CleanDir(name string) error
-
-	// DeleteFile removes file with a given path.
-	DeleteFile(path string) error
 }
 
 // BackupListReader allows to read list of existing backups

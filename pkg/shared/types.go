@@ -37,7 +37,6 @@ type Backup interface {
 		secretAgent *model.SecretAgent,
 		opts BackupOptions,
 		path *string,
-		isIncremental bool,
 	) *BackupStat
 }
 

@@ -189,7 +189,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 			ModBefore: &before,
 		}
 		stats := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
-			h.storage, h.secretAgent, options, backupFolder, false)
+			h.storage, h.secretAgent, options, backupFolder)
 		if stats == nil {
 			slog.Warn("Failed full backup", "name", h.routineName)
 			backupFailureCounter.Inc()
@@ -209,7 +209,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	// update the state
 	h.updateBackupState(now)
 
-	h.backend.writeFullBackupCreationTime(*backupFolder, now)
+	h.backend.writeBackupCreationTime(*backupFolder, now)
 
 	// clean incremental backups
 	if err := h.backend.CleanDir(model.IncrementalBackupDirectory); err != nil {
@@ -242,7 +242,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 			"name", h.routineName)
 		return
 	}
-	backupFile := getIncrementalPath(h.storage, now)
+	backupPath := getIncrementalPath(h.storage, now)
 	var stats *shared.BackupStat
 	backupRunFunc := func() {
 		lastRunEpoch := max(state.LastIncrRun.UnixNano(), state.LastFullRun.UnixNano())
@@ -252,8 +252,8 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 			ModAfter:  &lastRunEpoch,
 		}
 		started := time.Now()
-		stats = backupService.BackupRun(h.backupRoutine, h.backupIncrPolicy, h.cluster,
-			h.storage, h.secretAgent, options, backupFile, true)
+		stats = backupService.BackupRun(
+			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, backupPath)
 		if stats == nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()
@@ -270,7 +270,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	if h.isBackupEmpty(stats) {
 		h.deleteEmptyBackup(stats, h.routineName)
 	} else {
-		h.backend.writeIncrementalBackupCreationTime(*backupFile, now)
+		h.backend.writeBackupCreationTime(*backupPath, now)
 	}
 
 	// increment incrBackupCounter metric
@@ -288,7 +288,7 @@ func (h *BackupHandler) isBackupEmpty(stats *shared.BackupStat) bool {
 }
 
 func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat, routineName string) {
-	if err := h.backend.DeleteFile(stats.Path); err != nil {
+	if err := h.backend.CleanDir(stats.Path); err != nil {
 		slog.Error("Failed to delete empty backup file", "name", routineName,
 			"path", stats.Path, "err", err)
 	} else {
@@ -348,7 +348,7 @@ func getPath(storage *model.Storage, backupPolicy *model.BackupPolicy, now time.
 }
 
 func getIncrementalPath(storage *model.Storage, now time.Time) *string {
-	path := fmt.Sprintf("%s/%s/%s.asb", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now))
+	path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now))
 	return &path
 }
 

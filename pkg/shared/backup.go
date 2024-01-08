@@ -45,7 +45,7 @@ func NewBackup() *BackupShared {
 //nolint:funlen,gocritic
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
-	opts BackupOptions, path *string, isIncremental bool) *BackupStat {
+	opts BackupOptions, path *string) *BackupStat {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -101,12 +101,8 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	// Secret Agent configuration
 	backupSecretAgent(&backupConfig, secretAgent)
 
-	if isIncremental {
-		setCLong(&backupConfig.mod_after, opts.ModAfter)
-		setCString(&backupConfig.output_file, path)
-	} else {
-		setCString(&backupConfig.directory, path)
-	}
+	setCString(&backupConfig.directory, path)
+	setCLong(&backupConfig.mod_after, opts.ModAfter)
 	setCLong(&backupConfig.mod_before, opts.ModBefore)
 
 	backupStatus := C.backup_run(&backupConfig)
