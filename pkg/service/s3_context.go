@@ -109,14 +109,16 @@ func (s *S3Context) writeFile(filePath string, v any) error {
 	if err != nil {
 		return err
 	}
+	slog.Info("try to save ", "data", backupState)
 	reader := bytes.NewReader(backupState)
+	s3path := removeLeadingSlash(filePath)
 	_, err = s.client.PutObject(s.ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(removeLeadingSlash(filePath)),
+		Key:    aws.String(s3path),
 		Body:   reader,
 	})
 	if err != nil {
-		slog.Warn("Couldn't upload file", "path", filePath,
+		slog.Warn("Couldn't upload file", "s3path", s3path,
 			"bucket", s.bucket, "err", err)
 		return err
 	}

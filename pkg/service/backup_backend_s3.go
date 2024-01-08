@@ -4,8 +4,10 @@ import (
 	"log/slog"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -146,4 +148,44 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 		}
 	}
 	return result, err
+}
+
+func (s *BackupBackendS3) writeFullBackupCreationTime(path string, timestamp time.Time) error {
+	s3prefix := "s3://" + s.bucket
+	metadataFile := strings.TrimPrefix(path, s3prefix) + "/created.txt"
+	err := s.writeFile(metadataFile, timestamp)
+	if err != nil {
+		slog.Error("Could not write file ", "path", metadataFile)
+		return err
+	}
+
+	return nil
+}
+
+func (s *BackupBackendS3) readFullBackupCreationTime(path string) (time.Time, error) {
+	s3prefix := "s3://" + s.bucket
+	metadataFile := strings.TrimPrefix(path, s3prefix) + "/created.txt"
+	t := time.Time{}
+	s.readFile(metadataFile, &t)
+	return t, nil
+}
+
+func (s *BackupBackendS3) writeIncrementalBackupCreationTime(filename string, timestamp time.Time) error {
+	s3prefix := "s3://" + s.bucket
+	metadataFile := strings.TrimPrefix(filename, s3prefix) + ".created.txt"
+	err := s.writeFile(metadataFile, timestamp)
+	if err != nil {
+		slog.Error("Could not write file", "path", metadataFile)
+		return err
+	}
+
+	return nil
+}
+
+func (s *BackupBackendS3) readIncrementalBackupCreationTime(filename string) (time.Time, error) {
+	s3prefix := "s3://" + s.bucket
+	metadataFile := strings.TrimPrefix(filename, s3prefix) + ".created.txt"
+	t := time.Time{}
+	s.readFile(metadataFile, &t)
+	return t, nil
 }

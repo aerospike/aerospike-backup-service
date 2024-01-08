@@ -1,6 +1,9 @@
 package service
 
-import "github.com/aerospike/backup/pkg/model"
+import (
+	"github.com/aerospike/backup/pkg/model"
+	"time"
+)
 
 // BackupBackend represents a backup backend handler.
 type BackupBackend interface {
@@ -11,6 +14,14 @@ type BackupBackend interface {
 
 	// writeState writes the state object for the backup.
 	writeState(*model.BackupState) error
+
+	writeFullBackupCreationTime(path string, timestamp time.Time) error
+
+	writeIncrementalBackupCreationTime(path string, timestamp time.Time) error
+
+	readFullBackupCreationTime(path string) (time.Time, error)
+
+	readIncrementalBackupCreationTime(path string) (time.Time, error)
 
 	// CleanDir cleans the directory with the given name.
 	CleanDir(name string) error
