@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -135,7 +136,7 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 	lastIncrRun := local.readState().LastIncrRun
 	backupDetails := make([]model.BackupDetails, 0, len(entries))
 	for _, e := range entries {
-		if !e.IsDir() {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".asb") {
 			details := local.toIncrementalBackupDetails(e, backupFolder)
 			if details.LastModified.Before(lastIncrRun) {
 				backupDetails = append(backupDetails, details)
