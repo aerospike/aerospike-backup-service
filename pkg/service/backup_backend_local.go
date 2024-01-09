@@ -204,7 +204,7 @@ func (local *BackupBackendLocal) writeBackupCreationTime(path string, timestamp 
 	timeString := timestamp.Format(time.RFC3339)
 	err := os.WriteFile(path+"/created.txt", []byte(timeString), 0644)
 	if err != nil {
-		slog.Error("Could not write file ", "path", path+"/created.txt")
+		slog.Error("Could not write file", "path", path, "err", err)
 		return err
 	}
 

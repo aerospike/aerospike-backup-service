@@ -67,7 +67,7 @@ func NewS3Context(storage *model.Storage) *S3Context {
 		Path:   parsed.Path,
 	}
 
-	s.timestamps = util.NewLoadingCache(ctx, func(path string) (any, error) {
+	s.timestamps = util.NewLoadingCache(ctx, func(path string) any {
 		return s.getCreationTime(path)
 	})
 	return s
@@ -201,22 +201,12 @@ func (s *S3Context) GetTime(l types.CommonPrefix) *time.Time {
 	return nil
 }
 
-func (s *S3Context) getCreationTime(path string) (*time.Time, error) {
-	creationTime, err := s.readBackupCreationTime(path)
-
-	if err != nil {
-		return nil, fmt.Errorf("could not fetch timestamp %s", path)
-	}
-
-	return &creationTime, nil
-}
-
-func (s *S3Context) readBackupCreationTime(path string) (time.Time, error) {
+func (s *S3Context) getCreationTime(path string) *time.Time {
 	s3prefix := "s3://" + s.bucket
 	metadataFile := strings.TrimPrefix(path, s3prefix) + "created.txt"
 	t := time.Time{}
 	s.readFile(metadataFile, &t)
-	return t, nil
+	return &t
 }
 
 func (s *S3Context) DeleteFolder(path string) error {
