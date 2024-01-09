@@ -148,14 +148,12 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 // CleanDir cleans the directory with the given name.
 func (local *BackupBackendLocal) CleanDir(name string) error {
 	path := fmt.Sprintf("%s/%s/", local.path, name)
-	slog.Info("Delete incr backups in: " + path)
 	dir, err := os.ReadDir(path)
 	if err != nil {
 		slog.Warn("Failed to read directory", "path", path, "err", err)
 	}
 	for _, e := range dir {
 		filePath := path + "/" + e.Name()
-		slog.Info("Delete file" + filePath)
 		if err = local.DeleteFolder(filePath); err != nil {
 			return err
 		}
@@ -218,13 +216,11 @@ func (local *BackupBackendLocal) writeBackupCreationTime(path string, timestamp 
 }
 
 func (local *BackupBackendLocal) readBackupCreationTime(path string) (time.Time, error) {
-	// Read the content of the text file
 	fileContent, err := os.ReadFile(path + "/created.txt")
 	if err != nil {
 		return time.Time{}, err
 	}
 
-	// Parse the time value from the string
 	createdTime, err := time.Parse(time.RFC3339, string(fileContent))
 	if err != nil {
 		return time.Time{}, err

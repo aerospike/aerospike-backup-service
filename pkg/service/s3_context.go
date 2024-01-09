@@ -110,16 +110,14 @@ func (s *S3Context) writeFile(filePath string, v any) error {
 	if err != nil {
 		return err
 	}
-	slog.Info("try to save ", "data", backupState)
 	reader := bytes.NewReader(backupState)
-	s3path := removeLeadingSlash(filePath)
 	_, err = s.client.PutObject(s.ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(s3path),
+		Key:    aws.String(removeLeadingSlash(filePath)),
 		Body:   reader,
 	})
 	if err != nil {
-		slog.Warn("Couldn't upload file", "s3path", s3path,
+		slog.Warn("Couldn't upload file", "path", filePath,
 			"bucket", s.bucket, "err", err)
 		return err
 	}
@@ -223,10 +221,8 @@ func (s *S3Context) readBackupCreationTime(path string) (time.Time, error) {
 }
 
 func (s *S3Context) DeleteFolder(path string) error {
-	slog.Info("Try to delete " + path)
 	parsed, err := url.Parse(path)
 	if err != nil {
-		slog.Error("Cannot parse", "err", err)
 		return err
 	}
 	if parsed.Host != s.bucket {
@@ -234,7 +230,6 @@ func (s *S3Context) DeleteFolder(path string) error {
 			parsed.Host, s.bucket)
 	}
 
-	slog.Info("parsed path " + parsed.Path)
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
 		Prefix:    aws.String(removeLeadingSlash(parsed.Path)),

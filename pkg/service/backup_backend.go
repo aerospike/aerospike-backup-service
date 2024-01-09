@@ -15,6 +15,7 @@ type BackupBackend interface {
 	// writeState writes the state object for the backup.
 	writeState(*model.BackupState) error
 
+	// writeBackupCreationTime writes creation time in metadata file.
 	writeBackupCreationTime(path string, timestamp time.Time) error
 
 	// CleanDir cleans the directory with the given name.
