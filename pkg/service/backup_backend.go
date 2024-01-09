@@ -17,10 +17,11 @@ type BackupBackend interface {
 
 	writeBackupCreationTime(path string, timestamp time.Time) error
 
-	readBackupCreationTime(path string) (time.Time, error)
-
 	// CleanDir cleans the directory with the given name.
 	CleanDir(name string) error
+
+	// DeleteFolder removes file with a given path.
+	DeleteFolder(path string) error
 }
 
 // BackupListReader allows to read list of existing backups

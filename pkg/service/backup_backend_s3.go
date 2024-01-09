@@ -131,17 +131,18 @@ func (s *BackupBackendS3) dirSize(path string) int64 {
 // IncrementalBackupList returns a list of available incremental backups.
 func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error) {
 	s3prefix := "s3://" + s.bucket
-	list, err := s.listFiles(s.Path + "/" + model.IncrementalBackupDirectory)
+	backupFolder := s.Path + "/" + model.IncrementalBackupDirectory + "/"
+	subfolders, err := s.listFolders(backupFolder)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]model.BackupDetails, 0, len(list))
 	lastIncrRun := s.readState().LastIncrRun
-	for _, object := range list {
+	result := make([]model.BackupDetails, 0, len(subfolders))
+	for _, subfolder := range subfolders {
 		details := model.BackupDetails{
-			Key:          ptr.String(s3prefix + "/" + *object.Key),
-			LastModified: object.LastModified,
-			Size:         object.Size,
+			Key:          ptr.String(s3prefix + "/" + *subfolder.Prefix),
+			LastModified: s.GetTime(subfolder),
+			Size:         ptr.Int64(s.dirSize(*subfolder.Prefix)),
 		}
 		if details.LastModified.Before(lastIncrRun) {
 			result = append(result, details)
@@ -160,12 +161,4 @@ func (s *BackupBackendS3) writeBackupCreationTime(path string, timestamp time.Ti
 	}
 
 	return nil
-}
-
-func (s *BackupBackendS3) readBackupCreationTime(path string) (time.Time, error) {
-	s3prefix := "s3://" + s.bucket
-	metadataFile := strings.TrimPrefix(path, s3prefix) + "/created.txt"
-	t := time.Time{}
-	s.readFile(metadataFile, &t)
-	return t, nil
 }

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -191,9 +192,52 @@ func removeLeadingSlash(s string) string {
 // CleanDir cleans the directory with the given name.
 func (s *S3Context) CleanDir(name string) error {
 	path := removeLeadingSlash(s.Path + "/" + name)
+	return s.DeleteFolder(path)
+}
+
+func (s *S3Context) GetTime(l types.CommonPrefix) *time.Time {
+	createTime, err := s.timestamps.Get(*l.Prefix)
+	if err == nil {
+		return createTime.(*time.Time)
+	}
+	return nil
+}
+
+func (s *S3Context) getCreationTime(path string) (*time.Time, error) {
+	creationTime, err := s.readBackupCreationTime(path)
+
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch timestamp %s", path)
+	}
+
+	return &creationTime, nil
+}
+
+func (s *S3Context) readBackupCreationTime(path string) (time.Time, error) {
+	s3prefix := "s3://" + s.bucket
+	metadataFile := strings.TrimPrefix(path, s3prefix) + "created.txt"
+	slog.Info("Try to read " + metadataFile)
+	t := time.Time{}
+	s.readFile(metadataFile, &t)
+	return t, nil
+}
+
+func (s *S3Context) DeleteFolder(path string) error {
+	slog.Info("Try to delete " + path)
+	parsed, err := url.Parse(path)
+	if err != nil {
+		slog.Error("Cannot parse", "err", err)
+		return err
+	}
+	if parsed.Host != s.bucket {
+		return fmt.Errorf("wrong bucket name for context: %s, expected: %s",
+			parsed.Host, s.bucket)
+	}
+
+	slog.Info("parsed path " + parsed.Path)
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
-		Prefix:    aws.String(path),
+		Prefix:    aws.String(removeLeadingSlash(parsed.Path)),
 		Delimiter: aws.String(""),
 	})
 	if err != nil {
@@ -214,52 +258,6 @@ func (s *S3Context) CleanDir(name string) error {
 		if err != nil {
 			slog.Debug("Couldn't delete file", "path", *file.Key, "err", err)
 		}
-	}
-	return nil
-}
-
-func (s *S3Context) GetTime(l types.CommonPrefix) *time.Time {
-	createTime, err := s.timestamps.Get(*l.Prefix)
-	if err == nil {
-		return createTime.(*time.Time)
-	}
-	return nil
-}
-
-func (s *S3Context) getCreationTime(path string) (*time.Time, error) {
-	creationResult, err := s.client.ListObjects(s.ctx, &s3.ListObjectsInput{
-		Bucket: aws.String(s.bucket),
-		Prefix: aws.String(path),
-	})
-
-	if err != nil || len(creationResult.Contents) == 0 {
-		return nil, fmt.Errorf("could not fetch timestamp %s", path)
-	}
-
-	// The creation date for the subfolder is same as of any file in it
-	return creationResult.Contents[0].LastModified, nil
-}
-
-// DeleteFile deletes a file using the specified full s3 protocol path.
-func (s *S3Context) DeleteFile(path string) error {
-	parsed, err := url.Parse(path)
-	if err != nil {
-		return err
-	}
-	if parsed.Host != s.bucket {
-		return fmt.Errorf("wrong bucket name for context: %s, expected: %s",
-			parsed.Host, s.bucket)
-	}
-
-	input := &s3.DeleteObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(removeLeadingSlash(parsed.Path)),
-	}
-
-	// Execute the delete operation
-	_, err = s.client.DeleteObject(s.ctx, input)
-	if err != nil {
-		return fmt.Errorf("failed to delete object from S3: %v", err)
 	}
 	return nil
 }

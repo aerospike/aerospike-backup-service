@@ -268,7 +268,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	slog.Debug("Completed incremental backup", "name", h.routineName)
 	// delete if the backup file is empty
 	if h.isBackupEmpty(stats) {
-		h.deleteEmptyBackup(stats, h.routineName)
+		h.deleteEmptyBackup(*backupPath, h.routineName)
 	} else {
 		h.backend.writeBackupCreationTime(*backupPath, now)
 	}
@@ -287,12 +287,12 @@ func (h *BackupHandler) isBackupEmpty(stats *shared.BackupStat) bool {
 	return stats.IsEmpty()
 }
 
-func (h *BackupHandler) deleteEmptyBackup(stats *shared.BackupStat, routineName string) {
-	if err := h.backend.CleanDir(stats.Path); err != nil {
+func (h *BackupHandler) deleteEmptyBackup(path string, routineName string) {
+	if err := h.backend.DeleteFolder(path); err != nil {
 		slog.Error("Failed to delete empty backup file", "name", routineName,
-			"path", stats.Path, "err", err)
+			"path", path, "err", err)
 	} else {
-		slog.Debug("Deleted empty backup file", "name", routineName, "path", stats.Path)
+		slog.Debug("Deleted empty backup file", "name", routineName, "path", path)
 	}
 }
 
