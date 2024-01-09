@@ -189,7 +189,7 @@ func removeLeadingSlash(s string) string {
 
 // CleanDir cleans the directory with the given name.
 func (s *S3Context) CleanDir(name string) error {
-	path := removeLeadingSlash(s.Path + "/" + name)
+	path := "s3://" + s.bucket + s.Path + "/" + name
 	return s.DeleteFolder(path)
 }
 
