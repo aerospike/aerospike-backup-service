@@ -22,7 +22,7 @@ func NewBackup() *BackupShared {
 // BackupRun mocks the interface method.
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
-	opts BackupOptions, path *string, isIncremental bool) *BackupStat {
+	opts BackupOptions, path *string) *BackupStat {
 	slog.Info("BackupRun mock call")
 	return &BackupStat{}
 }
