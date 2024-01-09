@@ -208,7 +208,9 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	// update the state
 	h.updateBackupState(now)
 
-	h.backend.writeBackupCreationTime(*backupFolder, now)
+	if err := h.backend.writeBackupCreationTime(*backupFolder, now); err != nil {
+		slog.Error("could not write creation time", "folder", *backupFolder, "err", err)
+	}
 
 	// clean incremental backups
 	if err := h.backend.CleanDir(model.IncrementalBackupDirectory); err != nil {
@@ -241,7 +243,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 			"name", h.routineName)
 		return
 	}
-	backupPath := getIncrementalPath(h.storage, now)
+	backupFolder := getIncrementalPath(h.storage, now)
 	var stats *shared.BackupStat
 	backupRunFunc := func() {
 		lastRunEpoch := max(state.LastIncrRun.UnixNano(), state.LastFullRun.UnixNano())
@@ -252,7 +254,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		}
 		started := time.Now()
 		stats = backupService.BackupRun(
-			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, backupPath)
+			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, backupFolder)
 		if stats == nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()
@@ -267,9 +269,11 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	slog.Debug("Completed incremental backup", "name", h.routineName)
 	// delete if the backup file is empty
 	if h.isBackupEmpty(stats) {
-		h.deleteEmptyBackup(*backupPath, h.routineName)
+		h.deleteEmptyBackup(*backupFolder, h.routineName)
 	} else {
-		h.backend.writeBackupCreationTime(*backupPath, now)
+		if err := h.backend.writeBackupCreationTime(*backupFolder, now); err != nil {
+			slog.Error("could not write creation time", "folder", *backupFolder, "err", err)
+		}
 	}
 
 	// increment incrBackupCounter metric

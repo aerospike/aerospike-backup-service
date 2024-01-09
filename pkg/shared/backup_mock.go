@@ -3,8 +3,9 @@
 package shared
 
 import (
-	"github.com/aerospike/backup/pkg/model"
 	"log/slog"
+
+	"github.com/aerospike/backup/pkg/model"
 )
 
 // BackupShared mocks the Backup interface.

@@ -162,11 +162,7 @@ func (local *BackupBackendLocal) CleanDir(name string) error {
 }
 
 func (local *BackupBackendLocal) DeleteFolder(path string) error {
-	err := os.RemoveAll(path)
-	if err != nil {
-		return fmt.Errorf("failed to delete path: %v", err)
-	}
-	return nil
+	return os.RemoveAll(path)
 }
 
 func (local *BackupBackendLocal) toBackupDetails(e fs.DirEntry, backupFolder string) model.BackupDetails {

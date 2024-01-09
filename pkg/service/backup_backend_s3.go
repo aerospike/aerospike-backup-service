@@ -154,11 +154,5 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 func (s *BackupBackendS3) writeBackupCreationTime(path string, timestamp time.Time) error {
 	s3prefix := "s3://" + s.bucket
 	metadataFile := strings.TrimPrefix(path, s3prefix) + "/created.txt"
-	err := s.writeFile(metadataFile, timestamp)
-	if err != nil {
-		slog.Error("Could not write file ", "path", metadataFile)
-		return err
-	}
-
-	return nil
+	return s.writeFile(metadataFile, timestamp)
 }

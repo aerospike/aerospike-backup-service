@@ -214,7 +214,6 @@ func (s *S3Context) getCreationTime(path string) (*time.Time, error) {
 func (s *S3Context) readBackupCreationTime(path string) (time.Time, error) {
 	s3prefix := "s3://" + s.bucket
 	metadataFile := strings.TrimPrefix(path, s3prefix) + "created.txt"
-	slog.Info("Try to read " + metadataFile)
 	t := time.Time{}
 	s.readFile(metadataFile, &t)
 	return t, nil
