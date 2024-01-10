@@ -93,7 +93,7 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 	}
 
 	lastRun := local.readState().LastFullRun
-	slog.Info("Get full backups", "backupFolder", backupFolder, "lastRun", lastRun)
+	slog.Info("get full backups", "backupFolder", backupFolder, "lastRun", lastRun, "from", from, "to", to)
 	if local.backupPolicy.RemoveFiles != nil && *local.backupPolicy.RemoveFiles {
 		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 		if len(entries) == 0 {
@@ -122,7 +122,7 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 				details.LastModified.UnixMilli() < to {
 				backupDetails = append(backupDetails, details)
 			} else {
-				slog.Info("filtered out", "backup", details)
+				slog.Debug("filtered out", "backup", details)
 			}
 		}
 	}
