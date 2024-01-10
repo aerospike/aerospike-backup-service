@@ -10,7 +10,7 @@ import (
 //
 //nolint:lll
 type Config struct {
-	HTTPServer        *HTTPServerConfig            `yaml:"service,omitempty" json:"service,omitempty"`
+	ServiceConfig     *BackupServiceConfig         `yaml:"service,omitempty" json:"service,omitempty"`
 	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
 	Storage           map[string]*Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
 	BackupPolicies    map[string]*BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
@@ -21,7 +21,7 @@ type Config struct {
 // NewConfigWithDefaultValues returns a new Config with default values.
 func NewConfigWithDefaultValues() *Config {
 	return &Config{
-		HTTPServer:        NewHTTPServerWithDefaultValues(),
+		ServiceConfig:     NewBackupServiceConfigWithDefaultValues(),
 		Storage:           map[string]*Storage{},
 		BackupRoutines:    map[string]*BackupRoutine{},
 		BackupPolicies:    map[string]*BackupPolicy{},
@@ -83,6 +83,10 @@ func (c *Config) Validate() error {
 		if err := cluster.Validate(); err != nil {
 			return err
 		}
+	}
+
+	if err := c.ServiceConfig.Logger.Validate(); err != nil { //nolint:revive
+		return err
 	}
 
 	return nil

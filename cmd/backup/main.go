@@ -29,7 +29,7 @@ var (
 // run parses the CLI parameters and executes backup.
 func run() int {
 	var (
-		configFile, logLevel, logFormat string
+		configFile string
 	)
 
 	validateFlags := func(cmd *cobra.Command, args []string) error {
@@ -47,19 +47,19 @@ func run() int {
 	}
 
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path/URL")
-	rootCmd.Flags().StringVarP(&logLevel, "log-level", "l", "DEBUG", "log level")
-	rootCmd.Flags().StringVarP(&logFormat, "log-format", "f", "PLAIN", "log format (PLAIN, JSON)")
 
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
-		// set default logger
-		slog.SetDefault(slog.New(util.LogHandler(logLevel, logFormat)))
-		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		setConfigurationManager(configFile)
 		// read configuration file
 		config, err := readConfiguration()
 		if err != nil {
-			return err
+			// panic if failed to parse the configuration file
+			panic(err)
 		}
+		// set default logger
+		loggerConfig := config.ServiceConfig.Logger
+		slog.SetDefault(slog.New(util.LogHandler(loggerConfig.Level, loggerConfig.Format)))
+		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// get system ctx
 		ctx := systemCtx()
 		// schedule all configured backups

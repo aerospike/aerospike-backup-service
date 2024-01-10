@@ -93,15 +93,16 @@ type HTTPServer struct {
 //
 // NewHTTPServer returns a new instance of HTTPServer.
 func NewHTTPServer(handlers []service.BackupScheduler, config *model.Config) *HTTPServer {
-	addr := fmt.Sprintf("%s:%d", config.HTTPServer.Address, config.HTTPServer.Port)
+	serverConfig := config.ServiceConfig.HTTPServer
+	addr := fmt.Sprintf("%s:%d", serverConfig.Address, serverConfig.Port)
 
 	backendMap := make(map[string]service.BackupListReader, len(handlers))
 	for _, backend := range handlers {
 		backendMap[backend.BackupRoutineName()] = backend.GetBackend()
 	}
 	rateLimiter := NewIPRateLimiter(
-		rate.Limit(config.HTTPServer.Rate.Tps),
-		config.HTTPServer.Rate.Size,
+		rate.Limit(serverConfig.Rate.Tps),
+		serverConfig.Rate.Size,
 	)
 	return &HTTPServer{
 		config: config,
@@ -109,7 +110,7 @@ func NewHTTPServer(handlers []service.BackupScheduler, config *model.Config) *HT
 			Addr: addr,
 		},
 		rateLimiter:    rateLimiter,
-		whiteList:      newIPWhiteList(config.HTTPServer.Rate.WhiteList),
+		whiteList:      newIPWhiteList(serverConfig.Rate.WhiteList),
 		restoreService: service.NewRestoreMemory(backendMap, config),
 		backupBackends: backendMap,
 	}
