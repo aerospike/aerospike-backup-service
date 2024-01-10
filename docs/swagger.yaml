@@ -154,6 +154,18 @@ definitions:
         description: The name of the corresponding storage provider configuration.
         type: string
     type: object
+  model.BackupServiceConfig:
+    description: BackupServiceConfig represents the backup service configuration properties.
+    properties:
+      http:
+        allOf:
+        - $ref: '#/definitions/model.HTTPServerConfig'
+        description: HTTPServer is the backup service HTTP server configuration.
+      logger:
+        allOf:
+        - $ref: '#/definitions/model.LoggerConfig'
+        description: Logger is the backup service logger configuration.
+    type: object
   model.Config:
     description: Config represents the service configuration file.
     properties:
@@ -174,7 +186,7 @@ definitions:
           $ref: '#/definitions/model.SecretAgent'
         type: object
       service:
-        $ref: '#/definitions/model.HTTPServerConfig'
+        $ref: '#/definitions/model.BackupServiceConfig'
       storage:
         additionalProperties:
           $ref: '#/definitions/model.Storage'
@@ -184,8 +196,10 @@ definitions:
     description: HTTPServerConfig represents the service's HTTP server configuration.
     properties:
       address:
+        default: 0.0.0.0
         type: string
       port:
+        default: 8080
         type: integer
       rate:
         $ref: '#/definitions/model.RateLimiterConfig'
@@ -200,6 +214,18 @@ definitions:
     - JobStatusRunning
     - JobStatusDone
     - JobStatusFailed
+  model.LoggerConfig:
+    description: LoggerConfig represents the backup service logger configuration.
+    properties:
+      format:
+        default: PLAIN
+        description: Format is the logger format (PLAIN, JSON).
+        type: string
+      level:
+        default: DEBUG
+        description: Level is the logger level.
+        type: string
+    type: object
   model.Node:
     description: Node represents the Aerospike node details.
     properties:
@@ -209,10 +235,13 @@ definitions:
         type: integer
     type: object
   model.RateLimiterConfig:
+    description: RateLimiterConfig is the HTTP server rate limiter configuration.
     properties:
       size:
+        default: 1024
         type: integer
       tps:
+        default: 1024
         type: integer
       white-list:
         items:

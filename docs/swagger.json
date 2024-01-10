@@ -1111,6 +1111,28 @@
                 }
             }
         },
+        "model.BackupServiceConfig": {
+            "description": "BackupServiceConfig represents the backup service configuration properties.",
+            "type": "object",
+            "properties": {
+                "http": {
+                    "description": "HTTPServer is the backup service HTTP server configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.HTTPServerConfig"
+                        }
+                    ]
+                },
+                "logger": {
+                    "description": "Logger is the backup service logger configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.LoggerConfig"
+                        }
+                    ]
+                }
+            }
+        },
         "model.Config": {
             "description": "Config represents the service configuration file.",
             "type": "object",
@@ -1140,7 +1162,7 @@
                     }
                 },
                 "service": {
-                    "$ref": "#/definitions/model.HTTPServerConfig"
+                    "$ref": "#/definitions/model.BackupServiceConfig"
                 },
                 "storage": {
                     "type": "object",
@@ -1155,10 +1177,12 @@
             "type": "object",
             "properties": {
                 "address": {
-                    "type": "string"
+                    "type": "string",
+                    "default": "0.0.0.0"
                 },
                 "port": {
-                    "type": "integer"
+                    "type": "integer",
+                    "default": 8080
                 },
                 "rate": {
                     "$ref": "#/definitions/model.RateLimiterConfig"
@@ -1178,6 +1202,22 @@
                 "JobStatusFailed"
             ]
         },
+        "model.LoggerConfig": {
+            "description": "LoggerConfig represents the backup service logger configuration.",
+            "type": "object",
+            "properties": {
+                "format": {
+                    "description": "Format is the logger format (PLAIN, JSON).",
+                    "type": "string",
+                    "default": "PLAIN"
+                },
+                "level": {
+                    "description": "Level is the logger level.",
+                    "type": "string",
+                    "default": "DEBUG"
+                }
+            }
+        },
         "model.Node": {
             "description": "Node represents the Aerospike node details.",
             "type": "object",
@@ -1191,13 +1231,16 @@
             }
         },
         "model.RateLimiterConfig": {
+            "description": "RateLimiterConfig is the HTTP server rate limiter configuration.",
             "type": "object",
             "properties": {
                 "size": {
-                    "type": "integer"
+                    "type": "integer",
+                    "default": 1024
                 },
                 "tps": {
-                    "type": "integer"
+                    "type": "integer",
+                    "default": 1024
                 },
                 "white-list": {
                     "type": "array",

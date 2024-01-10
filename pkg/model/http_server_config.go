@@ -3,16 +3,17 @@ package model
 // HTTPServerConfig represents the service's HTTP server configuration.
 // @Description HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
-	Address string            `yaml:"address,omitempty" json:"address,omitempty"`
-	Port    int               `yaml:"port,omitempty" json:"port,omitempty"`
+	Address string            `yaml:"address,omitempty" json:"address,omitempty" default:"0.0.0.0"`
+	Port    int               `yaml:"port,omitempty" json:"port,omitempty" default:"8080"`
 	Rate    RateLimiterConfig `yaml:"rate,omitempty" json:"rate,omitempty"`
 }
 
 // RateLimiterConfig represents the service's HTTP server rate limiter configuration.
+// @Description RateLimiterConfig is the HTTP server rate limiter configuration.
 type RateLimiterConfig struct {
-	Tps       int      `yaml:"tps,omitempty" json:"tps,omitempty"`
-	Size      int      `yaml:"size,omitempty" json:"size,omitempty"`
-	WhiteList []string `yaml:"white-list,omitempty" json:"white-list,omitempty"`
+	Tps       int      `yaml:"tps,omitempty" json:"tps,omitempty" default:"1024"`
+	Size      int      `yaml:"size,omitempty" json:"size,omitempty" default:"1024"`
+	WhiteList []string `yaml:"white-list,omitempty" json:"white-list,omitempty" default:""`
 }
 
 // NewHTTPServerWithDefaultValues returns a new HTTPServerConfig with default values.
