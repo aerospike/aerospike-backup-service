@@ -7,7 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
-	"time"
+	"strings"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -20,11 +20,11 @@ import (
 
 // S3Context is responsible for performing basic operations on S3.
 type S3Context struct {
-	ctx        context.Context
-	client     *s3.Client
-	bucket     string
-	Path       string
-	timestamps *util.LoadingCache
+	ctx           context.Context
+	client        *s3.Client
+	bucket        string
+	Path          string
+	metadataCache *util.LoadingCache
 }
 
 // NewS3Context returns a new S3Context.
@@ -66,8 +66,8 @@ func NewS3Context(storage *model.Storage) *S3Context {
 		Path:   parsed.Path,
 	}
 
-	s.timestamps = util.NewLoadingCache(ctx, func(path string) (any, error) {
-		return s.getCreationTime(path)
+	s.metadataCache = util.NewLoadingCache(ctx, func(path string) any {
+		return s.readMetadata(path)
 	})
 	return s
 }
@@ -188,10 +188,40 @@ func removeLeadingSlash(s string) string {
 
 // CleanDir cleans the directory with the given name.
 func (s *S3Context) CleanDir(name string) error {
-	path := removeLeadingSlash(s.Path + "/" + name)
+	path := "s3://" + s.bucket + s.Path + "/" + name
+	return s.DeleteFolder(path)
+}
+
+func (s *S3Context) GetMetadata(l types.CommonPrefix) *model.BackupMetadata {
+	metadata, err := s.metadataCache.Get(*l.Prefix)
+	if err == nil {
+		return metadata.(*model.BackupMetadata)
+	}
+	return &model.BackupMetadata{}
+}
+
+func (s *S3Context) readMetadata(path string) *model.BackupMetadata {
+	s3prefix := "s3://" + s.bucket
+	metadataFilePath := strings.TrimPrefix(path, s3prefix) + metadataFile
+	metadata := &model.BackupMetadata{}
+	s.readFile(metadataFilePath, metadata)
+	slog.Info("Read md", "path", path, "data", metadata)
+	return metadata
+}
+
+func (s *S3Context) DeleteFolder(path string) error {
+	parsed, err := url.Parse(path)
+	if err != nil {
+		return err
+	}
+	if parsed.Host != s.bucket {
+		return fmt.Errorf("wrong bucket name for context: %s, expected: %s",
+			parsed.Host, s.bucket)
+	}
+
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
-		Prefix:    aws.String(path),
+		Prefix:    aws.String(removeLeadingSlash(parsed.Path)),
 		Delimiter: aws.String(""),
 	})
 	if err != nil {
@@ -212,52 +242,6 @@ func (s *S3Context) CleanDir(name string) error {
 		if err != nil {
 			slog.Debug("Couldn't delete file", "path", *file.Key, "err", err)
 		}
-	}
-	return nil
-}
-
-func (s *S3Context) GetTime(l types.CommonPrefix) *time.Time {
-	createTime, err := s.timestamps.Get(*l.Prefix)
-	if err == nil {
-		return createTime.(*time.Time)
-	}
-	return nil
-}
-
-func (s *S3Context) getCreationTime(path string) (*time.Time, error) {
-	creationResult, err := s.client.ListObjects(s.ctx, &s3.ListObjectsInput{
-		Bucket: aws.String(s.bucket),
-		Prefix: aws.String(path),
-	})
-
-	if err != nil || len(creationResult.Contents) == 0 {
-		return nil, fmt.Errorf("could not fetch timestamp %s", path)
-	}
-
-	// The creation date for the subfolder is same as of any file in it
-	return creationResult.Contents[0].LastModified, nil
-}
-
-// DeleteFile deletes a file using the specified full s3 protocol path.
-func (s *S3Context) DeleteFile(path string) error {
-	parsed, err := url.Parse(path)
-	if err != nil {
-		return err
-	}
-	if parsed.Host != s.bucket {
-		return fmt.Errorf("wrong bucket name for context: %s, expected: %s",
-			parsed.Host, s.bucket)
-	}
-
-	input := &s3.DeleteObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(removeLeadingSlash(parsed.Path)),
-	}
-
-	// Execute the delete operation
-	_, err = s.client.DeleteObject(s.ctx, input)
-	if err != nil {
-		return fmt.Errorf("failed to delete object from S3: %v", err)
 	}
 	return nil
 }

@@ -74,7 +74,7 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 			r.restoreJobs.setFailed(jobID, err)
 			return
 		}
-		result, err := r.restoreFullBackup(request, fullBackup.Key)
+		result, err := r.restore(request, fullBackup.Key)
 		if err != nil {
 			slog.Error("Could not restore full backup", "JobId", jobID, "routine", request.Routine,
 				"err", err)
@@ -92,8 +92,8 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 			return
 		}
 
-		for _, b := range incrementalBackups {
-			result, err := r.restoreIncrementalBackup(request, b)
+		for _, incrBackup := range incrementalBackups {
+			result, err := r.restore(request, incrBackup.Key)
 			if err != nil {
 				slog.Error("Could not restore incremental backups", "JobId", jobID, "routine", request.Routine,
 					"err", err)
@@ -139,7 +139,7 @@ func latestFullBackupBeforeTime(list []model.BackupDetails, time time.Time) *mod
 	return result
 }
 
-func (r *RestoreMemory) restoreFullBackup(
+func (r *RestoreMemory) restore(
 	request *model.RestoreTimestampRequest,
 	key *string,
 ) (*model.RestoreResult, error) {
@@ -152,7 +152,7 @@ func (r *RestoreMemory) restoreFullBackup(
 		Dir:            key,
 	})
 	if restoreResult == nil {
-		return nil, fmt.Errorf("could not restore full backup at %s", *key)
+		return nil, fmt.Errorf("could not restore backup at %s", *key)
 	}
 
 	return restoreResult, nil
@@ -173,21 +173,6 @@ func (r *RestoreMemory) findIncrementalBackups(
 		}
 	}
 	return filteredIncrementalBackups, nil
-}
-
-func (r *RestoreMemory) restoreIncrementalBackup(request *model.RestoreTimestampRequest, b model.BackupDetails) (*model.RestoreResult, error) {
-	restoreRequest, err := r.toRestoreRequest(request)
-	if err != nil {
-		return nil, err
-	}
-	restoreResult := r.doRestore(&model.RestoreRequestInternal{
-		RestoreRequest: *restoreRequest,
-		File:           b.Key,
-	})
-	if restoreResult == nil {
-		return nil, fmt.Errorf("could not restore incremental backup at %s", *b.Key)
-	}
-	return restoreResult, nil
 }
 
 func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) (*model.RestoreRequest, error) {

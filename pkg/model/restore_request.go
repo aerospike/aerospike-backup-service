@@ -17,8 +17,7 @@ type RestoreRequest struct {
 // RestoreRequestInternal is used internally to prepopulate data for the restore operation.
 type RestoreRequestInternal struct {
 	RestoreRequest
-	File *string
-	Dir  *string
+	Dir *string
 }
 
 // RestoreTimestampRequest represents a restore by timestamp operation request.

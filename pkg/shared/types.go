@@ -1,10 +1,13 @@
 package shared
 
-import "github.com/aerospike/backup/pkg/model"
+import (
+	"github.com/aerospike/backup/pkg/model"
+)
 
 // BackupOptions provides additional properties for running a backup.
 type BackupOptions struct {
-	ModAfter *int64
+	ModBefore *int64
+	ModAfter  *int64
 }
 
 // BackupStat represents partial backup result statistics.
@@ -33,6 +36,7 @@ type Backup interface {
 		storage *model.Storage,
 		secretAgent *model.SecretAgent,
 		opts BackupOptions,
+		path *string,
 	) *BackupStat
 }
 

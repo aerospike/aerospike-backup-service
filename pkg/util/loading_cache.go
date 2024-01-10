@@ -7,7 +7,7 @@ import (
 )
 
 // LoadFunc is the LoadingCache value loader.
-type LoadFunc func(string) (any, error)
+type LoadFunc func(string) any
 
 // LoadingCache maps keys to values where values are automatically
 // loaded by the cache.
@@ -41,10 +41,7 @@ func (c *LoadingCache) Get(key string) (any, error) {
 		return val, nil
 	}
 
-	loadedValue, err := c.loadFunc(key)
-	if err != nil {
-		return nil, err
-	}
+	loadedValue := c.loadFunc(key)
 
 	c.data[key] = loadedValue
 	return loadedValue, nil

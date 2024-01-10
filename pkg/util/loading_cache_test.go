@@ -2,15 +2,15 @@ package util
 
 import (
 	"context"
-	"errors"
 	"strconv"
 	"testing"
 )
 
 func TestLoadingCache(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	cache := NewLoadingCache(ctx, func(s string) (any, error) {
-		return strconv.Atoi(s)
+	cache := NewLoadingCache(ctx, func(s string) any {
+		atoi, _ := strconv.Atoi(s)
+		return atoi
 	})
 	value, _ := cache.Get("1")
 	if value != 1 {
@@ -26,15 +26,5 @@ func TestLoadingCache(t *testing.T) {
 	value, _ = cache.Get("2")
 	if value != 2 {
 		t.Error("The value is expected to be 2")
-	}
-}
-
-func TestLoadingCache_Error(t *testing.T) {
-	cache := NewLoadingCache(context.Background(), func(s string) (any, error) {
-		return nil, errors.New("error")
-	})
-	_, err := cache.Get("1")
-	if err == nil {
-		t.Error("Error must not be nil")
 	}
 }
