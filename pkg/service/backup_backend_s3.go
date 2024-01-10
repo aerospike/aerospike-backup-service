@@ -94,7 +94,7 @@ func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails,
 			LastModified: &metadata.Created,
 			Size:         ptr.Int64(s.dirSize(*subfolder.Prefix)),
 		}
-		if details.LastModified.Before(lastRun) {
+		if !details.LastModified.After(lastRun) {
 			result = append(result, details)
 		}
 	}
@@ -146,7 +146,7 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 			LastModified: &metadata.Created,
 			Size:         ptr.Int64(s.dirSize(*subfolder.Prefix)),
 		}
-		if details.LastModified.Before(lastIncrRun) {
+		if !details.LastModified.After(lastIncrRun) {
 			result = append(result, details)
 		}
 	}

@@ -117,7 +117,7 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 	for _, e := range entries {
 		if e.IsDir() {
 			details := local.toBackupDetails(e, backupFolder)
-			if details.LastModified.Before(lastRun) &&
+			if !details.LastModified.After(lastRun) &&
 				details.LastModified.UnixMilli() >= from &&
 				details.LastModified.UnixMilli() < to {
 				backupDetails = append(backupDetails, details)
@@ -141,7 +141,7 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 	for _, e := range entries {
 		if e.IsDir() {
 			details := local.toBackupDetails(e, backupFolder)
-			if details.LastModified.Before(lastIncrRun) {
+			if !details.LastModified.After(lastIncrRun) {
 				backupDetails = append(backupDetails, details)
 			}
 		}
