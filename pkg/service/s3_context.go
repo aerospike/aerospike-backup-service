@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -21,11 +20,11 @@ import (
 
 // S3Context is responsible for performing basic operations on S3.
 type S3Context struct {
-	ctx        context.Context
-	client     *s3.Client
-	bucket     string
-	Path       string
-	timestamps *util.LoadingCache
+	ctx           context.Context
+	client        *s3.Client
+	bucket        string
+	Path          string
+	metadataCache *util.LoadingCache
 }
 
 // NewS3Context returns a new S3Context.
@@ -67,8 +66,8 @@ func NewS3Context(storage *model.Storage) *S3Context {
 		Path:   parsed.Path,
 	}
 
-	s.timestamps = util.NewLoadingCache(ctx, func(path string) any {
-		return s.getCreationTime(path)
+	s.metadataCache = util.NewLoadingCache(ctx, func(path string) any {
+		return s.readMetadata(path)
 	})
 	return s
 }
@@ -193,20 +192,21 @@ func (s *S3Context) CleanDir(name string) error {
 	return s.DeleteFolder(path)
 }
 
-func (s *S3Context) GetTime(l types.CommonPrefix) *time.Time {
-	createTime, err := s.timestamps.Get(*l.Prefix)
+func (s *S3Context) GetMetadata(l types.CommonPrefix) *model.BackupMetadata {
+	metadata, err := s.metadataCache.Get(*l.Prefix)
 	if err == nil {
-		return createTime.(*time.Time)
+		return metadata.(*model.BackupMetadata)
 	}
-	return nil
+	return &model.BackupMetadata{}
 }
 
-func (s *S3Context) getCreationTime(path string) *time.Time {
+func (s *S3Context) readMetadata(path string) *model.BackupMetadata {
 	s3prefix := "s3://" + s.bucket
-	metadataFile := strings.TrimPrefix(path, s3prefix) + "created.txt"
-	t := time.Time{}
-	s.readFile(metadataFile, &t)
-	return &t
+	metadataFilePath := strings.TrimPrefix(path, s3prefix) + metadataFile
+	metadata := &model.BackupMetadata{}
+	s.readFile(metadataFilePath, metadata)
+	slog.Info("Read md", "path", path, "data", metadata)
+	return metadata
 }
 
 func (s *S3Context) DeleteFolder(path string) error {

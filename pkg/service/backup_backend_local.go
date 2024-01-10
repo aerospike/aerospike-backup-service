@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"log/slog"
 
@@ -28,6 +27,8 @@ type BackupBackendLocal struct {
 }
 
 var _ BackupBackend = (*BackupBackendLocal)(nil)
+
+const metadataFile = "metadata.yaml"
 
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
 func NewBackupBackendLocal(storage *model.Storage, backupPolicy *model.BackupPolicy,
@@ -167,10 +168,10 @@ func (local *BackupBackendLocal) DeleteFolder(path string) error {
 
 func (local *BackupBackendLocal) toBackupDetails(e fs.DirEntry, backupFolder string) model.BackupDetails {
 	path := filepath.Join(backupFolder, e.Name())
-	creationTime, _ := local.readBackupCreationTime(path)
+	metadata, _ := local.readBackupMetadata(path)
 	return model.BackupDetails{
 		Key:          util.Ptr(path),
-		LastModified: &creationTime,
+		LastModified: &metadata.Created,
 		Size:         folderSize(path),
 	}
 }
@@ -200,27 +201,27 @@ func folderSize(path string) *int64 {
 	return &size
 }
 
-func (local *BackupBackendLocal) writeBackupCreationTime(path string, timestamp time.Time) error {
-	timeString := timestamp.Format(time.RFC3339)
-	err := os.WriteFile(path+"/created.txt", []byte(timeString), 0644)
+func (local *BackupBackendLocal) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
+	metadataBytes, err := yaml.Marshal(metadata)
 	if err != nil {
-		slog.Error("Could not write file", "path", path, "err", err)
 		return err
 	}
-
-	return nil
+	return os.WriteFile(path+"/"+metadataFile, metadataBytes, 0644)
 }
 
-func (local *BackupBackendLocal) readBackupCreationTime(path string) (time.Time, error) {
-	fileContent, err := os.ReadFile(path + "/created.txt")
+func (local *BackupBackendLocal) readBackupMetadata(path string) (*model.BackupMetadata, error) {
+	metadata := &model.BackupMetadata{}
+	filePath := path + "/" + metadataFile
+	bytes, err := os.ReadFile(filePath)
 	if err != nil {
-		return time.Time{}, err
+		return metadata, err
 	}
 
-	createdTime, err := time.Parse(time.RFC3339, string(fileContent))
-	if err != nil {
-		return time.Time{}, err
+	if err = yaml.Unmarshal(bytes, metadata); err != nil {
+		slog.Warn("Failed unmarshal metadata file", "path",
+			filePath, "err", err, "content", string(bytes))
+		return metadata, err
 	}
 
-	return createdTime, nil
+	return metadata, nil
 }

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -88,9 +87,10 @@ func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails,
 	}
 	result := make([]model.BackupDetails, 0, len(subfolders))
 	for _, subfolder := range subfolders {
+		metadata := s.GetMetadata(subfolder)
 		details := model.BackupDetails{
 			Key:          ptr.String(s3prefix + "/" + *subfolder.Prefix),
-			LastModified: s.GetTime(subfolder),
+			LastModified: &metadata.Created,
 			Size:         ptr.Int64(s.dirSize(*subfolder.Prefix)),
 		}
 		if details.LastModified.Before(lastRun) {
@@ -139,9 +139,10 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 	lastIncrRun := s.readState().LastIncrRun
 	result := make([]model.BackupDetails, 0, len(subfolders))
 	for _, subfolder := range subfolders {
+		metadata := s.GetMetadata(subfolder)
 		details := model.BackupDetails{
 			Key:          ptr.String(s3prefix + "/" + *subfolder.Prefix),
-			LastModified: s.GetTime(subfolder),
+			LastModified: &metadata.Created,
 			Size:         ptr.Int64(s.dirSize(*subfolder.Prefix)),
 		}
 		if details.LastModified.Before(lastIncrRun) {
@@ -151,8 +152,8 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 	return result, err
 }
 
-func (s *BackupBackendS3) writeBackupCreationTime(path string, timestamp time.Time) error {
+func (s *BackupBackendS3) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
 	s3prefix := "s3://" + s.bucket
-	metadataFile := strings.TrimPrefix(path, s3prefix) + "/created.txt"
-	return s.writeFile(metadataFile, timestamp)
+	metadataFilePath := strings.TrimPrefix(path, s3prefix) + "/" + metadataFile
+	return s.writeFile(metadataFilePath, metadata)
 }

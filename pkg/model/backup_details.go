@@ -24,3 +24,8 @@ func (details BackupDetails) String() string {
 	}
 	return string(backupDetails)
 }
+
+// BackupMetadata internal container for backup metadata
+type BackupMetadata struct {
+	Created time.Time `yaml:"created,omitempty" json:"created,omitempty"`
+}
