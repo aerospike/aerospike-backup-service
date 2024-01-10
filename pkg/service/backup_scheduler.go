@@ -197,7 +197,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		elapsed := time.Since(started)
 		backupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
-	slog.Debug("Starting full backup", "name", h.routineName)
+	slog.Debug("Starting full backup", "up to", now, "name", h.routineName)
 	out := stdIO.Capture(backupRunFunc)
 	util.LogCaptured(out)
 	slog.Debug("Completed full backup", "name", h.routineName)
