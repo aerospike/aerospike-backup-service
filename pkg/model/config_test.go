@@ -8,6 +8,7 @@ import (
 
 func validConfig() *Config {
 	return &Config{
+		ServiceConfig: NewBackupServiceConfigWithDefaultValues(),
 		BackupRoutines: map[string]*BackupRoutine{
 			"routine1": {
 				SourceCluster: "cluster1",
