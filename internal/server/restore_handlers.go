@@ -73,7 +73,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 		}
 		requestInternal := &model.RestoreRequestInternal{
 			RestoreRequest: request,
-			File:           request.SourceStorage.Path,
+			Dir:            request.SourceStorage.Path,
 		}
 
 		jobID := ws.restoreService.Restore(requestInternal)

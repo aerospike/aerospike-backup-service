@@ -24,3 +24,8 @@ func (details BackupDetails) String() string {
 	}
 	return string(backupDetails)
 }
+
+// BackupMetadata is an internal container for storing backup metadata.
+type BackupMetadata struct {
+	Created time.Time `yaml:"created,omitempty" json:"created,omitempty"`
+}

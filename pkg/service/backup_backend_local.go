@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"log/slog"
 
@@ -28,6 +27,8 @@ type BackupBackendLocal struct {
 }
 
 var _ BackupBackend = (*BackupBackendLocal)(nil)
+
+const metadataFile = "metadata.yaml"
 
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
 func NewBackupBackendLocal(storage *model.Storage, backupPolicy *model.BackupPolicy,
@@ -92,6 +93,7 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 	}
 
 	lastRun := local.readState().LastFullRun
+	slog.Info("get full backups", "backupFolder", backupFolder, "lastRun", lastRun, "from", from, "to", to)
 	if local.backupPolicy.RemoveFiles != nil && *local.backupPolicy.RemoveFiles {
 		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 		if len(entries) == 0 {
@@ -114,11 +116,13 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 	backupDetails := make([]model.BackupDetails, 0, len(entries))
 	for _, e := range entries {
 		if e.IsDir() {
-			details := toBackupDetails(e, backupFolder)
-			if details.LastModified.Before(lastRun) &&
+			details := local.toBackupDetails(e, backupFolder)
+			if !details.LastModified.After(lastRun) &&
 				details.LastModified.UnixMilli() >= from &&
 				details.LastModified.UnixMilli() < to {
 				backupDetails = append(backupDetails, details)
+			} else {
+				slog.Debug("filtered out", "backup", details)
 			}
 		}
 	}
@@ -135,9 +139,9 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 	lastIncrRun := local.readState().LastIncrRun
 	backupDetails := make([]model.BackupDetails, 0, len(entries))
 	for _, e := range entries {
-		if !e.IsDir() {
-			details := toBackupDetails(e, backupFolder)
-			if details.LastModified.Before(lastIncrRun) {
+		if e.IsDir() {
+			details := local.toBackupDetails(e, backupFolder)
+			if !details.LastModified.After(lastIncrRun) {
 				backupDetails = append(backupDetails, details)
 			}
 		}
@@ -153,34 +157,24 @@ func (local *BackupBackendLocal) CleanDir(name string) error {
 		slog.Warn("Failed to read directory", "path", path, "err", err)
 	}
 	for _, e := range dir {
-		if !e.IsDir() {
-			filePath := path + "/" + e.Name()
-			if err = local.DeleteFile(filePath); err != nil {
-				return err
-			}
+		filePath := path + "/" + e.Name()
+		if err = local.DeleteFolder(filePath); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (local *BackupBackendLocal) DeleteFile(path string) error {
-	err := os.Remove(path)
-	if err != nil {
-		return fmt.Errorf("failed to delete file: %v", err)
-	}
-	return nil
+func (local *BackupBackendLocal) DeleteFolder(path string) error {
+	return os.RemoveAll(path)
 }
 
-func toBackupDetails(e fs.DirEntry, prefix string) model.BackupDetails {
-	var lastModified *time.Time
-	dirInfo, err := e.Info()
-	if err == nil {
-		lastModified = util.Ptr(dirInfo.ModTime())
-	}
-	path := filepath.Join(prefix, e.Name())
+func (local *BackupBackendLocal) toBackupDetails(e fs.DirEntry, backupFolder string) model.BackupDetails {
+	path := filepath.Join(backupFolder, e.Name())
+	metadata, _ := local.readBackupMetadata(path)
 	return model.BackupDetails{
 		Key:          util.Ptr(path),
-		LastModified: lastModified,
+		LastModified: &metadata.Created,
 		Size:         folderSize(path),
 	}
 }
@@ -208,4 +202,29 @@ func folderSize(path string) *int64 {
 	}
 
 	return &size
+}
+
+func (local *BackupBackendLocal) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
+	metadataBytes, err := yaml.Marshal(metadata)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path+"/"+metadataFile, metadataBytes, 0644)
+}
+
+func (local *BackupBackendLocal) readBackupMetadata(path string) (*model.BackupMetadata, error) {
+	metadata := &model.BackupMetadata{}
+	filePath := path + "/" + metadataFile
+	bytes, err := os.ReadFile(filePath)
+	if err != nil {
+		return metadata, err
+	}
+
+	if err = yaml.Unmarshal(bytes, metadata); err != nil {
+		slog.Warn("Failed unmarshal metadata file", "path",
+			filePath, "err", err, "content", string(bytes))
+		return metadata, err
+	}
+
+	return metadata, nil
 }

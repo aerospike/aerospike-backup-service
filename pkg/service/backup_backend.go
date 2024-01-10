@@ -1,6 +1,8 @@
 package service
 
-import "github.com/aerospike/backup/pkg/model"
+import (
+	"github.com/aerospike/backup/pkg/model"
+)
 
 // BackupBackend represents a backup backend handler.
 type BackupBackend interface {
@@ -12,11 +14,14 @@ type BackupBackend interface {
 	// writeState writes the state object for the backup.
 	writeState(*model.BackupState) error
 
+	// writeBackupCreationTime writes creation time in the metadata file under the backup folder.
+	writeBackupMetadata(path string, metadata model.BackupMetadata) error
+
 	// CleanDir cleans the directory with the given name.
 	CleanDir(name string) error
 
-	// DeleteFile removes file with a given path.
-	DeleteFile(path string) error
+	// DeleteFolder removes file with a given path.
+	DeleteFolder(path string) error
 }
 
 // BackupListReader allows to read list of existing backups

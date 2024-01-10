@@ -94,7 +94,6 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 
 	// restore source configuration
 	setCString(&restoreConfig.directory, restoreRequest.Dir)
-	setCString(&restoreConfig.input_file, restoreRequest.File)
 
 	setCBool(&restoreConfig.replace, restoreRequest.Policy.Replace)
 	setCBool(&restoreConfig.unique, restoreRequest.Policy.Unique)
