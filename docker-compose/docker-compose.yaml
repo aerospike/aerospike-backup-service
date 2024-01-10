@@ -60,6 +60,7 @@ services:
     volumes:
       - ./aerospike-backup-service.yml:/app/config.yml
       - ./credentials:/root/.aws/credentials
+    #      - ./aerospike-backup-service.yml:/etc/aerospike-backup-service/aerospike-backup-service.yml uncomment this in the next release
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
