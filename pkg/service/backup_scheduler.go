@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
