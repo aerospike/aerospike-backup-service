@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 )
 
-// BackupBackend represents a backup backend handler.
+// BackupBackend allows access to back up storage
 type BackupBackend interface {
 	BackupListReader
 

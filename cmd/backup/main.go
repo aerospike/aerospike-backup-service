@@ -64,7 +64,7 @@ func run() int {
 		ctx := systemCtx()
 		backends := service.BuildBackupBackends(config)
 		// schedule all configured backups
-		service.BuildBackupSchedulers(ctx, config, backends)
+		service.RunSchedule(ctx, config, backends)
 		// run HTTP server
 		err = runHTTPServer(ctx, backendsToReaders(backends), config)
 		// shutdown shared resources
@@ -137,4 +137,12 @@ func runHTTPServer(ctx context.Context, backendMap map[string]service.BackupList
 func main() {
 	// start the application
 	os.Exit(run())
+}
+
+func backendsToReaders(backends map[string]service.BackupBackend) map[string]service.BackupListReader {
+	result := make(map[string]service.BackupListReader)
+	for key, value := range backends {
+		result[key] = value
+	}
+	return result
 }
