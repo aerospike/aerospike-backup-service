@@ -31,17 +31,15 @@ var _ BackupBackend = (*BackupBackendLocal)(nil)
 const metadataFile = "metadata.yaml"
 
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
-func NewBackupBackendLocal(storage *model.Storage, backupPolicy *model.BackupPolicy,
-	fullBackupInProgress *atomic.Bool) *BackupBackendLocal {
+func NewBackupBackendLocal(storage *model.Storage, backupPolicy *model.BackupPolicy) *BackupBackendLocal {
 	path := *storage.Path
 	prepareDirectory(path)
 	prepareDirectory(path + "/" + model.IncrementalBackupDirectory)
 	prepareDirectory(path + "/" + model.FullBackupDirectory)
 	return &BackupBackendLocal{
-		path:                 path,
-		stateFilePath:        path + "/" + model.StateFileName,
-		backupPolicy:         backupPolicy,
-		fullBackupInProgress: fullBackupInProgress,
+		path:          path,
+		stateFilePath: path + "/" + model.StateFileName,
+		backupPolicy:  backupPolicy,
 	}
 }
 
@@ -227,4 +225,8 @@ func (local *BackupBackendLocal) readBackupMetadata(path string) (*model.BackupM
 	}
 
 	return metadata, nil
+}
+
+func (local *BackupBackendLocal) FullBackupInProgress() *atomic.Bool {
+	return local.fullBackupInProgress
 }

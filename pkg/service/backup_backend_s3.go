@@ -26,14 +26,12 @@ type BackupBackendS3 struct {
 var _ BackupBackend = (*BackupBackendS3)(nil)
 
 // NewBackupBackendS3 returns a new BackupBackendS3 instance.
-func NewBackupBackendS3(storage *model.Storage, backupPolicy *model.BackupPolicy,
-	fullBackupInProgress *atomic.Bool) *BackupBackendS3 {
+func NewBackupBackendS3(storage *model.Storage, backupPolicy *model.BackupPolicy) *BackupBackendS3 {
 	s3Context := NewS3Context(storage)
 	return &BackupBackendS3{
-		S3Context:            s3Context,
-		stateFilePath:        s3Context.Path + "/" + model.StateFileName,
-		backupPolicy:         backupPolicy,
-		fullBackupInProgress: fullBackupInProgress,
+		S3Context:     s3Context,
+		stateFilePath: s3Context.Path + "/" + model.StateFileName,
+		backupPolicy:  backupPolicy,
 	}
 }
 
@@ -151,6 +149,10 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 		}
 	}
 	return result, err
+}
+
+func (s *BackupBackendS3) FullBackupInProgress() *atomic.Bool {
+	return s.fullBackupInProgress
 }
 
 func (s *BackupBackendS3) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
