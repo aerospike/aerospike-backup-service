@@ -4,7 +4,7 @@ WORKSPACE = $(shell pwd)
 UNAME = $(shell uname -sm | tr ' ' '-')
 
 # Go parameters
-GO = /usr/local/go/bin/go
+GO ?= go
 CGO_CFLAGS=-I $(WORKSPACE)/modules/aerospike-tools-backup/modules/c-client/target/$(UNAME)/include \
 -I $(WORKSPACE)/modules/aerospike-tools-backup/modules/secret-agent-client/target/$(UNAME)/include \
 -I $(WORKSPACE)/modules/aerospike-tools-backup/include
@@ -39,6 +39,11 @@ install-deps:
 prep-submodules:
 	git submodule update --init --recursive
 
+.PHONY: remove-submodules
+deprep-submodules:
+	git submodule foreach --recursive git clean -fd
+	git submodule deinit --all -f
+
 .PHONY: build-submodules
 build-submodules:
 	./scripts/build-submodules.sh
@@ -47,8 +52,6 @@ build-submodules:
 .PHONY: clean-submodules
 clean-submodules:
 	$(MAKE) -C $(TOOLS_DIR) clean
-	git submodule foreach --recursive git clean -fd
-	git submodule deinit --all -f
 
 .PHONY: build
 build:
@@ -78,6 +81,15 @@ deb:
 	cd $(WORKSPACE)/packages && dpkg-buildpackage
 	mv $(WORKSPACE)/$(BINARY_NAME)_* $(WORKSPACE)/target
 	mv $(WORKSPACE)/$(BINARY_NAME)-* $(WORKSPACE)/target
+
+.PHONY: install
+install:
+	@if [ "$$(uname)" == "Darwin" ]; then \
+		echo "Running macOS specific commands"; \
+	else \
+		echo "Running Linux specific commands"; \
+		# Add Linux specific commands here
+	fi
 
 .PHONY: prep
 prep:
