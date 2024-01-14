@@ -2,7 +2,7 @@ WORKSPACE="$(pwd)"
 ZSTD_STATIC_PATH=""
 OPENSSL_STATIC_PATH=""
 
-if [ "$(uname -o)" == "Darwin" ]; then
+if [ "$(uname -s)" == "Darwin" ]; then
   if [ "$(uname -m)" == "x86_64" ]; then
     make -C "$WORKSPACE/modules/aerospike-tools-backup" shared \
     EVENT_LIB=libuv \

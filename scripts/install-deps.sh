@@ -16,7 +16,7 @@ LIBZSTD_VERSION="v1.5.5"
 OPENSSL_VERSION="openssl-3.0.8"
 
 
-if [ "$(uname -o)" == "Darwin" ]; then
+if [ "$(uname -s)" == "Darwin" ]; then
   brew install go libtool make cmake automake git openssl@1.1 libuv curl zstd libssh2 aws-sdk-cpp jansson
 else
   DISTRO="$(cat /etc/os-release | grep ^ID_LIKE= /etc/os-release | cut -d'=' -f2)"
