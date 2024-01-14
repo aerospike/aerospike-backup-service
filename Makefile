@@ -40,7 +40,7 @@ prep-submodules:
 	git submodule update --init --recursive
 
 .PHONY: remove-submodules
-deprep-submodules:
+remove-submodules:
 	git submodule foreach --recursive git clean -fd
 	git submodule deinit --all -f
 
