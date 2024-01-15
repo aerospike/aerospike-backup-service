@@ -146,8 +146,8 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	}
 	slog.Debug("Starting incremental backup", "name", h.routineName)
 	out := stdIO.Capture(backupRunFunc)
-	util.LogCaptured(out)
 	slog.Debug("Completed incremental backup", "name", h.routineName)
+	util.LogCaptured(out)
 	// delete if the backup file is empty
 	if h.isBackupEmpty(stats) {
 		h.deleteEmptyBackup(*backupFolder, h.routineName)

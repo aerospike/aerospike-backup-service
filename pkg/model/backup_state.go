@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -49,10 +50,12 @@ func (state *BackupState) SetLastIncrRun(time time.Time) {
 	state.Lock()
 	defer state.Unlock()
 	state.LastIncrRun = time
+	slog.Debug("set incremental last run", "timestamp", time)
 }
 
 func (state *BackupState) LastRunEpoch() int64 {
 	state.Lock()
 	defer state.Unlock()
+	slog.Debug("read last run", "incr", state.LastIncrRun, "full", state.LastFullRun.UnixNano())
 	return max(state.LastIncrRun.UnixNano(), state.LastFullRun.UnixNano())
 }
