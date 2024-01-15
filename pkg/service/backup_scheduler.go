@@ -44,6 +44,7 @@ func RunSchedule(ctx context.Context, config *model.Config, backends map[string]
 		// schedule incrmental backup job for the routine
 		if routine.IncrIntervalCron == "" {
 			logger.Debugf("No incremental backup configured", "routine", routineName)
+			return nil
 		}
 		incrCronTrigger, err := quartz.NewCronTrigger(routine.IncrIntervalCron)
 		if err != nil {
