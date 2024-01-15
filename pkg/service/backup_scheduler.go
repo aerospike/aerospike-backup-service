@@ -26,40 +26,21 @@ func RunSchedule(ctx context.Context, config *model.Config, backends map[string]
 			return 0, nil
 		})
 		fullJobDetail := quartz.NewJobDetail(fullJob, quartz.NewJobKeyWithGroup(routineName, "full"))
-		sched.ScheduleJob(fullJobDetail, fullCronTrigger)
+		err = sched.ScheduleJob(fullJobDetail, fullCronTrigger)
+		if err != nil {
+			return err
+		}
 		incrCronTrigger, _ := quartz.NewCronTrigger(routine.IncrIntervalCron) // every 2 sec
 		incJob := job.NewFunctionJob(func(ctx context.Context) (int, error) {
 			handler.runIncrementalBackup(time.Now())
 			return 0, nil
 		})
 		incrJobDetail := quartz.NewJobDetail(incJob, quartz.NewJobKeyWithGroup(routineName, "inc"))
-		sched.ScheduleJob(incrJobDetail, incrCronTrigger)
+		err = sched.ScheduleJob(incrJobDetail, incrCronTrigger)
+		if err != nil {
+			return err
+		}
+
 	}
 	return nil
 }
-
-/*
-func RunSchedule(ctx context.Context, config *model.Config, backends map[string]BackupBackend) {
-	sched := quartz.NewStdScheduler()
-	sched.Start(ctx)
-
-	for routineName := range config.BackupRoutines {
-		handler := newBackupHandler(config, routineName, backends[routineName])
-		fullCronTrigger, _ := quartz.NewCronTrigger("1/10 * * * * *") // every 10 sec
-		fullJob := job.NewFunctionJob(func(ctx context.Context) (int, error) {
-			handler.runFullBackup(time.Now())
-			return 0, nil
-		})
-		fullJobDetail := quartz.NewJobDetail(fullJob, quartz.NewJobKeyWithGroup(routineName, "full"))
-		sched.ScheduleJob(fullJobDetail, fullCronTrigger)
-		incrCronTrigger, _ := quartz.NewCronTrigger("1/2 * * * * *") // every 2 sec
-		incJob := job.NewFunctionJob(func(ctx context.Context) (int, error) {
-			handler.runIncrementalBackup(time.Now())
-			return 0, nil
-		})
-		incJobDetail := quartz.NewJobDetail(incJob, quartz.NewJobKeyWithGroup(routineName, "inc"))
-		sched.ScheduleJob(incJobDetail, incrCronTrigger)
-	}
-}
-
-*/
