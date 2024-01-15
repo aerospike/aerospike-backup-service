@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aws/smithy-go/ptr"
 )
 
 func TestRoutine_Add(t *testing.T) {
@@ -68,7 +67,7 @@ func TestRoutine_Update(t *testing.T) {
 	}
 
 	updatedRoutine := &model.BackupRoutine{
-		IntervalMillis: ptr.Int64(1000),
+		IntervalCron: "* * * * *",
 	}
 
 	err := UpdateRoutine(config, name2, updatedRoutine)
@@ -81,7 +80,7 @@ func TestRoutine_Update(t *testing.T) {
 		t.Errorf("UpdateRoutine failed, expected nil error, got %v", err)
 	}
 
-	if config.BackupRoutines[name].IntervalMillis != updatedRoutine.IntervalMillis {
+	if config.BackupRoutines[name].IntervalCron != updatedRoutine.IntervalCron {
 		t.Errorf("UpdateRoutine failed, expected routine to be updated")
 	}
 }

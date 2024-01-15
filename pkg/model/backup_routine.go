@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/reugn/go-quartz/quartz"
 )
 
 const (
@@ -20,10 +21,10 @@ type BackupRoutine struct {
 	Storage string `yaml:"storage,omitempty" json:"storage,omitempty"`
 	// The Secret Agent configuration for the routine (optional).
 	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
-
-	IntervalCron     string `yaml:"interval-cron"`
-	IncrIntervalCron string `yaml:"incr-interval-cron"`
-
+	// Full backup interval as cron string
+	IntervalCron string `yaml:"interval-cron" json:"interval-cron"`
+	// Incremental backup interval as cron string
+	IncrIntervalCron string `yaml:"incr-interval-cron" json:"incr-interval-cron"`
 	// The name of the namespace to back up.
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
 	// The list of backup set names (optional, an empty list implies backing up all sets).
@@ -53,6 +54,14 @@ func (r *BackupRoutine) Validate() error {
 	}
 	if r.Namespace == "" {
 		return routineValidationError("namespace")
+	}
+	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
+		return err
+	}
+	if r.IncrIntervalCron != "" { // incremental interval is optional
+		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
+			return err
+		}
 	}
 	return nil
 }
