@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/reugn/go-quartz/job"
-	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -22,7 +22,9 @@ func RunSchedule(ctx context.Context, config *model.Config, backends map[string]
 	scheduler.Start(ctx)
 
 	for routineName, routine := range config.BackupRoutines {
-		handler := newBackupHandler(config, routineName, backends[routineName])
+		backend := backends[routineName]
+
+		handler := newBackupHandler(config, routineName, backend)
 		// schedule full backup job for the routine
 		fullCronTrigger, err := quartz.NewCronTrigger(routine.IntervalCron)
 		if err != nil {
@@ -40,10 +42,22 @@ func RunSchedule(ctx context.Context, config *model.Config, backends map[string]
 		if err != nil {
 			return err
 		}
+		if needToRunFullBackupNow(backend) {
+			slog.Debug("Schedule full backup once", "name", routineName)
+			fullJobDetail := quartz.NewJobDetail(
+				fullJob,
+				quartz.NewJobKey(routineName),
+			)
 
-		// schedule incrmental backup job for the routine
+			err = scheduler.ScheduleJob(fullJobDetail, quartz.NewRunOnceTrigger(0))
+			if err != nil {
+				return err
+			}
+		}
+
+		// schedule incremental backup job for the routine
 		if routine.IncrIntervalCron == "" {
-			logger.Debugf("No incremental backup configured", "routine", routineName)
+			slog.Debug("No incremental backup configured", "routine", routineName)
 			continue
 		}
 		incrCronTrigger, err := quartz.NewCronTrigger(routine.IncrIntervalCron)
@@ -64,4 +78,8 @@ func RunSchedule(ctx context.Context, config *model.Config, backends map[string]
 		}
 	}
 	return nil
+}
+
+func needToRunFullBackupNow(backend BackupBackend) bool {
+	return backend.readState().LastFullRun == (time.Time{})
 }
