@@ -36,7 +36,7 @@ func ScheduleBackup(ctx context.Context, config *model.Config, backends map[stri
 				return nil, err
 			}
 		} else {
-			slog.Debug("No incremental backup configured", "routine", routineName)
+			slog.Debug("No incremental backup configured", "name", routineName)
 		}
 	}
 	return scheduler, nil
@@ -57,7 +57,7 @@ func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
 		return err
 	}
 	if needToRunFullBackupNow(handler.backend) {
-		slog.Debug("Schedule initial full backup", "routine", routineName)
+		slog.Debug("Schedule initial full backup", "name", routineName)
 		fullJobDetail := quartz.NewJobDetail(
 			fullJob,
 			quartz.NewJobKey(routineName),

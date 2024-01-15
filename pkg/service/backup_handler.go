@@ -99,14 +99,15 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	h.updateBackupState(now)
 
 	if err := h.backend.writeBackupMetadata(*backupFolder, model.BackupMetadata{Created: now}); err != nil {
-		slog.Error("could not write metadata", "folder", *backupFolder, "err", err)
+		slog.Error("Could not write backup metadata", "name", h.routineName,
+			"folder", *backupFolder, "err", err)
 	}
 
 	// clean incremental backups
 	if err := h.backend.CleanDir(model.IncrementalBackupDirectory); err != nil {
-		slog.Error("could not clean incremental backups", "err", err)
+		slog.Error("Could not clean incremental backups", "name", h.routineName, "err", err)
 	} else {
-		slog.Info("cleaned incr backups", "name", h.routineName)
+		slog.Info("Cleaned incremental backups", "name", h.routineName)
 	}
 }
 
@@ -153,7 +154,8 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		h.deleteEmptyBackup(*backupFolder, h.routineName)
 	} else {
 		if err := h.backend.writeBackupMetadata(*backupFolder, model.BackupMetadata{Created: now}); err != nil {
-			slog.Error("could not write metadata", "folder", *backupFolder, "err", err)
+			slog.Error("Could not write backup metadata", "name", h.routineName,
+				"folder", *backupFolder, "err", err)
 		}
 	}
 
