@@ -21,9 +21,9 @@ type BackupRoutine struct {
 	Storage string `yaml:"storage,omitempty" json:"storage,omitempty"`
 	// The Secret Agent configuration for the routine (optional).
 	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
-	// Full backup interval as cron string
+	// The interval for full backup as cron string
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron"`
-	// Incremental backup interval as cron string
+	// The interval for incremental backup as cron string
 	IncrIntervalCron string `yaml:"incr-interval-cron" json:"incr-interval-cron"`
 	// The name of the namespace to back up.
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
