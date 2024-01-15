@@ -56,7 +56,7 @@ func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
 	if err = scheduler.ScheduleJob(fullJobDetail, fullCronTrigger); err != nil {
 		return err
 	}
-	if needToRunFullBackupNow(handler.backend) {
+	if needToRunFullBackupNow(handler) {
 		slog.Debug("Schedule initial full backup", "name", routineName)
 		fullJobDetail := quartz.NewJobDetail(
 			fullJob,
@@ -83,6 +83,6 @@ func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupHandle
 	return scheduler.ScheduleJob(incrJobDetail, incrCronTrigger)
 }
 
-func needToRunFullBackupNow(backend BackupBackend) bool {
-	return backend.readState().LastFullRun == (time.Time{})
+func needToRunFullBackupNow(backupHandler *BackupHandler) bool {
+	return backupHandler.state.LastFullRun == (time.Time{})
 }

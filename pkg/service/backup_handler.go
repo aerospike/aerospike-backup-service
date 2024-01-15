@@ -112,8 +112,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 }
 
 func (h *BackupHandler) runIncrementalBackup(now time.Time) {
-	state := h.backend.readState()
-	if state.LastFullRun == (time.Time{}) {
+	if h.state.LastFullRun == (time.Time{}) {
 		slog.Log(context.Background(), util.LevelTrace,
 			"Skip incremental backup until initial full backup is done",
 			"name", h.routineName)
@@ -128,7 +127,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	backupFolder := getIncrementalPath(h.storage, now)
 	var stats *shared.BackupStat
 	backupRunFunc := func() {
-		lastRunEpoch := max(state.LastIncrRun.UnixNano(), state.LastFullRun.UnixNano())
+		lastRunEpoch := max(h.state.LastIncrRun.UnixNano(), h.state.LastFullRun.UnixNano())
 		before := now.UnixNano()
 		options := shared.BackupOptions{
 			ModBefore: &before,
