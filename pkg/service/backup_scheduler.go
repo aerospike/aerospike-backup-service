@@ -84,5 +84,5 @@ func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupHandle
 }
 
 func needToRunFullBackupNow(backupHandler *BackupHandler) bool {
-	return backupHandler.state.LastFullRun == (time.Time{})
+	return backupHandler.state.LastFullRun.Equal(time.Time{})
 }

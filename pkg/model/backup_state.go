@@ -35,7 +35,7 @@ func NewBackupState() *BackupState {
 func (state *BackupState) LastFullRunIsEmpty() bool {
 	state.Lock()
 	defer state.Unlock()
-	return state.LastFullRun == time.Time{}
+	return state.LastFullRun.Equal(time.Time{})
 }
 
 func (state *BackupState) SetLastFullRun(time time.Time) {
