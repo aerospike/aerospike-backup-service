@@ -68,8 +68,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		h.backend.FullBackupInProgress().Store(false)
 		slog.Debug("Release fullBackupInProgress lock", "name", h.routineName)
 	}()
-
-	backupFolder := getPath(h.storage, h.backupFullPolicy, now)
+	backupFolder := getFullPath(h.storage, h.backupFullPolicy, now)
 
 	backupRunFunc := func() {
 		started := time.Now()
@@ -96,7 +95,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupCounter.Inc()
 
 	// update the state
-	h.updateBackupState(now)
+	h.updateFullBackupState(now)
 
 	if err := h.backend.writeBackupMetadata(*backupFolder, model.BackupMetadata{Created: now}); err != nil {
 		slog.Error("Could not write backup metadata", "name", h.routineName,
@@ -112,7 +111,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 }
 
 func (h *BackupHandler) runIncrementalBackup(now time.Time) {
-	if h.state.LastFullRun == (time.Time{}) {
+	if h.state.LastFullRunIsEmpty() {
 		slog.Log(context.Background(), util.LevelTrace,
 			"Skip incremental backup until initial full backup is done",
 			"name", h.routineName)
@@ -125,9 +124,10 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		return
 	}
 	backupFolder := getIncrementalPath(h.storage, now)
+
 	var stats *shared.BackupStat
 	backupRunFunc := func() {
-		lastRunEpoch := max(h.state.LastIncrRun.UnixNano(), h.state.LastFullRun.UnixNano())
+		lastRunEpoch := h.state.LastRunEpoch()
 		before := now.UnixNano()
 		options := shared.BackupOptions{
 			ModBefore: &before,
@@ -181,14 +181,13 @@ func (h *BackupHandler) deleteEmptyBackup(path string, routineName string) {
 	}
 }
 
-func (h *BackupHandler) updateBackupState(now time.Time) {
-	h.state.LastFullRun = now
-	h.state.Performed++
+func (h *BackupHandler) updateFullBackupState(now time.Time) {
+	h.state.SetLastFullRun(now)
 	h.writeState()
 }
 
 func (h *BackupHandler) updateIncrementalBackupState(now time.Time) {
-	h.state.LastIncrRun = now
+	h.state.SetLastIncrRun(now)
 	h.writeState()
 }
 
@@ -198,7 +197,7 @@ func (h *BackupHandler) writeState() {
 	}
 }
 
-func getPath(storage *model.Storage, backupPolicy *model.BackupPolicy, now time.Time) *string {
+func getFullPath(storage *model.Storage, backupPolicy *model.BackupPolicy, now time.Time) *string {
 	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
 		path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.FullBackupDirectory, timeSuffix(now))
 		return &path
