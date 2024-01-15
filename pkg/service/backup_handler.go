@@ -88,8 +88,8 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	}
 	slog.Debug("Starting full backup", "up to", now, "name", h.routineName)
 	out := stdIO.Capture(backupRunFunc)
-	util.LogCaptured(out)
 	slog.Debug("Completed full backup", "name", h.routineName)
+	util.LogCaptured(out)
 
 	// increment backupCounter metric
 	backupCounter.Inc()
