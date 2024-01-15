@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/reugn/go-quartz/job"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -49,10 +48,7 @@ func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
 	if err != nil {
 		return err
 	}
-	fullJob := job.NewFunctionJob(func(_ context.Context) (int, error) {
-		handler.runFullBackup(time.Now())
-		return 0, nil
-	})
+	fullJob := newBackupJob(handler, quartzGroupBackupFull)
 	fullJobDetail := quartz.NewJobDetail(
 		fullJob,
 		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupFull),
@@ -79,12 +75,9 @@ func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupHandle
 	if err != nil {
 		return err
 	}
-	incJob := job.NewFunctionJob(func(_ context.Context) (int, error) {
-		handler.runIncrementalBackup(time.Now())
-		return 0, nil
-	})
+	incrementalJob := newBackupJob(handler, quartzGroupBackupIncremental)
 	incrJobDetail := quartz.NewJobDetail(
-		incJob,
+		incrementalJob,
 		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupIncremental),
 	)
 	return scheduler.ScheduleJob(incrJobDetail, incrCronTrigger)
