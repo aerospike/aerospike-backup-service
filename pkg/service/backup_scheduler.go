@@ -39,7 +39,6 @@ func ScheduleBackup(ctx context.Context, config *model.Config, backends map[stri
 		} else {
 			slog.Debug("No incremental backup configured", "routine", routineName)
 		}
-
 	}
 	return scheduler, nil
 }
