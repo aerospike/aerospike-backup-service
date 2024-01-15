@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/aerospike/backup/pkg/model"
 	"sync/atomic"
+
+	"github.com/aerospike/backup/pkg/model"
 )
 
 // BackupBackend allows access to back up storage

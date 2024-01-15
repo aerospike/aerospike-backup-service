@@ -16,7 +16,6 @@ import (
 // BackupHandler implements backup logic for single routine.
 type BackupHandler struct {
 	backend          BackupBackend
-	backupListReader BackupListReader
 	backupFullPolicy *model.BackupPolicy
 	backupIncrPolicy *model.BackupPolicy
 	backupRoutine    *model.BackupRoutine

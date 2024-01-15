@@ -27,13 +27,13 @@ func ScheduleBackup(ctx context.Context, config *model.Config, backends map[stri
 		handler := newBackupHandler(config, routineName, backend)
 
 		// schedule full backup job for the routine
-		if err := scheduleFullBackup(ctx, scheduler, handler, routine, routineName); err != nil {
+		if err := scheduleFullBackup(scheduler, handler, routine, routineName); err != nil {
 			return nil, err
 		}
 
 		if routine.IncrIntervalCron != "" {
 			// schedule incremental backup job for the routine
-			if err := scheduleIncrementalBackup(ctx, scheduler, handler, routine, routineName); err != nil {
+			if err := scheduleIncrementalBackup(scheduler, handler, routine, routineName); err != nil {
 				return nil, err
 			}
 		} else {
@@ -44,13 +44,13 @@ func ScheduleBackup(ctx context.Context, config *model.Config, backends map[stri
 	return scheduler, nil
 }
 
-func scheduleFullBackup(ctx context.Context, scheduler quartz.Scheduler, handler *BackupHandler,
+func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
 	routine *model.BackupRoutine, routineName string) error {
 	fullCronTrigger, err := quartz.NewCronTrigger(routine.IntervalCron)
 	if err != nil {
 		return err
 	}
-	fullJob := job.NewFunctionJob(func(ctx context.Context) (int, error) {
+	fullJob := job.NewFunctionJob(func(_ context.Context) (int, error) {
 		handler.runFullBackup(time.Now())
 		return 0, nil
 	})
@@ -74,13 +74,13 @@ func scheduleFullBackup(ctx context.Context, scheduler quartz.Scheduler, handler
 	return nil
 }
 
-func scheduleIncrementalBackup(ctx context.Context, scheduler quartz.Scheduler, handler *BackupHandler,
+func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupHandler,
 	routine *model.BackupRoutine, routineName string) error {
 	incrCronTrigger, err := quartz.NewCronTrigger(routine.IncrIntervalCron)
 	if err != nil {
 		return err
 	}
-	incJob := job.NewFunctionJob(func(ctx context.Context) (int, error) {
+	incJob := job.NewFunctionJob(func(_ context.Context) (int, error) {
 		handler.runIncrementalBackup(time.Now())
 		return 0, nil
 	})
@@ -88,10 +88,7 @@ func scheduleIncrementalBackup(ctx context.Context, scheduler quartz.Scheduler, 
 		incJob,
 		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupIncremental),
 	)
-	if err = scheduler.ScheduleJob(incrJobDetail, incrCronTrigger); err != nil {
-		return err
-	}
-	return nil
+	return scheduler.ScheduleJob(incrJobDetail, incrCronTrigger)
 }
 
 func needToRunFullBackupNow(backend BackupBackend) bool {
