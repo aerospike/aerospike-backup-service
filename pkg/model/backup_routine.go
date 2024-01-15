@@ -2,12 +2,8 @@ package model
 
 import (
 	"fmt"
-	"github.com/reugn/go-quartz/quartz"
-)
 
-const (
-	minimumFullBackupIntervalMillis int64 = 10000
-	minimumIncrBackupIntervalMillis int64 = 1000
+	"github.com/reugn/go-quartz/quartz"
 )
 
 // BackupRoutine represents a scheduled backup operation routine.
@@ -21,9 +17,9 @@ type BackupRoutine struct {
 	Storage string `yaml:"storage,omitempty" json:"storage,omitempty"`
 	// The Secret Agent configuration for the routine (optional).
 	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
-	// The interval for full backup as cron string
+	// The interval for full backup as a cron expression string.
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron"`
-	// The interval for incremental backup as cron string
+	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string `yaml:"incr-interval-cron" json:"incr-interval-cron"`
 	// The name of the namespace to back up.
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
