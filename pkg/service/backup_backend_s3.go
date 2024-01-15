@@ -29,9 +29,10 @@ var _ BackupBackend = (*BackupBackendS3)(nil)
 func NewBackupBackendS3(storage *model.Storage, backupPolicy *model.BackupPolicy) *BackupBackendS3 {
 	s3Context := NewS3Context(storage)
 	return &BackupBackendS3{
-		S3Context:     s3Context,
-		stateFilePath: s3Context.Path + "/" + model.StateFileName,
-		backupPolicy:  backupPolicy,
+		S3Context:            s3Context,
+		stateFilePath:        s3Context.Path + "/" + model.StateFileName,
+		backupPolicy:         backupPolicy,
+		fullBackupInProgress: &atomic.Bool{},
 	}
 }
 

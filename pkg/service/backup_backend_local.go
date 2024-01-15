@@ -37,9 +37,10 @@ func NewBackupBackendLocal(storage *model.Storage, backupPolicy *model.BackupPol
 	prepareDirectory(path + "/" + model.IncrementalBackupDirectory)
 	prepareDirectory(path + "/" + model.FullBackupDirectory)
 	return &BackupBackendLocal{
-		path:          path,
-		stateFilePath: path + "/" + model.StateFileName,
-		backupPolicy:  backupPolicy,
+		path:                 path,
+		stateFilePath:        path + "/" + model.StateFileName,
+		backupPolicy:         backupPolicy,
+		fullBackupInProgress: &atomic.Bool{},
 	}
 }
 

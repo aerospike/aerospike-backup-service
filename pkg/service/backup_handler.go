@@ -181,14 +181,6 @@ func (h *BackupHandler) deleteEmptyBackup(path string, routineName string) {
 	}
 }
 
-func (h *BackupHandler) isIncrementalEligible(now time.Time, lastIncrRun time.Time, lastFullRun time.Time) bool {
-	if now.UnixMilli()-lastFullRun.UnixMilli() < *h.backupRoutine.IncrIntervalMillis {
-		return false // Full backup happened recently
-	}
-
-	return now.UnixMilli()-lastIncrRun.UnixMilli() >= *h.backupRoutine.IncrIntervalMillis
-}
-
 func (h *BackupHandler) updateBackupState(now time.Time) {
 	h.state.LastFullRun = now
 	h.state.Performed++

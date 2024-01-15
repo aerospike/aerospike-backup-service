@@ -21,10 +21,8 @@ type BackupRoutine struct {
 	// The Secret Agent configuration for the routine (optional).
 	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 
-	// The interval for full backup in milliseconds.
-	IntervalMillis *int64 `yaml:"interval,omitempty" json:"interval,omitempty"`
-	// The interval for incremental backup in milliseconds (optional).
-	IncrIntervalMillis *int64 `yaml:"incr-interval,omitempty" json:"incr-interval,omitempty"`
+	IntervalCron     string `yaml:"interval-cron"`
+	IncrIntervalCron string `yaml:"incr-interval-cron"`
 
 	// The name of the namespace to back up.
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -55,15 +53,6 @@ func (r *BackupRoutine) Validate() error {
 	}
 	if r.Namespace == "" {
 		return routineValidationError("namespace")
-	}
-	if r.IntervalMillis == nil {
-		return routineValidationError("interval")
-	}
-	if *r.IntervalMillis < minimumFullBackupIntervalMillis {
-		return fmt.Errorf("minimum full backup interval is %d", minimumFullBackupIntervalMillis)
-	}
-	if r.IncrIntervalMillis != nil && *r.IncrIntervalMillis < minimumIncrBackupIntervalMillis {
-		return fmt.Errorf("minimum incremental backup interval is %d", minimumIncrBackupIntervalMillis)
 	}
 	return nil
 }

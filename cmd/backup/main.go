@@ -64,7 +64,10 @@ func run() int {
 		ctx := systemCtx()
 		backends := service.BuildBackupBackends(config)
 		// schedule all configured backups
-		service.RunSchedule(ctx, config, backends)
+		err = service.RunSchedule(ctx, config, backends)
+		if err != nil {
+			panic(err)
+		}
 		// run HTTP server
 		err = runHTTPServer(ctx, backendsToReaders(backends), config)
 		// shutdown shared resources
