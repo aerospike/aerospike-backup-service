@@ -22,9 +22,9 @@ backup-policies:
 backup-routines:
   minioKeepFilesRoutine:
     # 24 hours interval for full backups.
-    interval: 86400000
+    interval-cron: "@daily"
     # 1 hour interval for incremental backups.
-    incr-interval: 3600000
+    incr-interval-cron: "@hourly"
     source-cluster: absCluster1
     storage: minioStorage
     namespace: source-ns1

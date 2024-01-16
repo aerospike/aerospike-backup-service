@@ -62,13 +62,18 @@ func run() int {
 		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// get system ctx
 		ctx := systemCtx()
+		backends := service.BuildBackupBackends(config)
 		// schedule all configured backups
-		schedulers := service.BuildBackupSchedulers(config)
-		service.ScheduleHandlers(ctx, schedulers)
+		scheduler, err := service.ScheduleBackup(ctx, config, backends)
+		if err != nil {
+			panic(err)
+		}
 		// run HTTP server
-		err = runHTTPServer(ctx, schedulers, config)
+		err = runHTTPServer(ctx, backendsToReaders(backends), config)
 		// shutdown shared resources
 		shared.Shutdown()
+		// stop the scheduler
+		scheduler.Stop()
 		return err
 	}
 
@@ -108,13 +113,16 @@ func readConfiguration() (*model.Config, error) {
 		slog.Error("failed to read configuration file", "error", err)
 		return nil, err
 	}
+	if err = config.Validate(); err != nil {
+		return nil, err
+	}
 	slog.Info(fmt.Sprintf("Configuration: %v", *config))
 	return config, nil
 }
 
-func runHTTPServer(ctx context.Context, handlers []service.BackupScheduler,
+func runHTTPServer(ctx context.Context, backendMap map[string]service.BackupListReader,
 	config *model.Config) error {
-	server := server.NewHTTPServer(handlers, config)
+	server := server.NewHTTPServer(backendMap, config)
 	go func() {
 		server.Start()
 	}()
@@ -134,4 +142,12 @@ func runHTTPServer(ctx context.Context, handlers []service.BackupScheduler,
 func main() {
 	// start the application
 	os.Exit(run())
+}
+
+func backendsToReaders(backends map[string]service.BackupBackend) map[string]service.BackupListReader {
+	result := make(map[string]service.BackupListReader)
+	for key, value := range backends {
+		result[key] = value
+	}
+	return result
 }

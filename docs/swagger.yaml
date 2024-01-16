@@ -117,12 +117,12 @@ definitions:
         items:
           type: string
         type: array
-      incr-interval:
-        description: The interval for incremental backup in milliseconds (optional).
-        type: integer
-      interval:
-        description: The interval for full backup in milliseconds.
-        type: integer
+      incr-interval-cron:
+        description: The interval for incremental backup as cron string
+        type: string
+      interval-cron:
+        description: The interval for full backup as cron string
+        type: string
       namespace:
         description: The name of the namespace to back up.
         type: string

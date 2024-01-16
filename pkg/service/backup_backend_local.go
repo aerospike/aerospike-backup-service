@@ -31,8 +31,7 @@ var _ BackupBackend = (*BackupBackendLocal)(nil)
 const metadataFile = "metadata.yaml"
 
 // NewBackupBackendLocal returns a new BackupBackendLocal instance.
-func NewBackupBackendLocal(storage *model.Storage, backupPolicy *model.BackupPolicy,
-	fullBackupInProgress *atomic.Bool) *BackupBackendLocal {
+func NewBackupBackendLocal(storage *model.Storage, backupPolicy *model.BackupPolicy) *BackupBackendLocal {
 	path := *storage.Path
 	prepareDirectory(path)
 	prepareDirectory(path + "/" + model.IncrementalBackupDirectory)
@@ -41,7 +40,7 @@ func NewBackupBackendLocal(storage *model.Storage, backupPolicy *model.BackupPol
 		path:                 path,
 		stateFilePath:        path + "/" + model.StateFileName,
 		backupPolicy:         backupPolicy,
-		fullBackupInProgress: fullBackupInProgress,
+		fullBackupInProgress: &atomic.Bool{},
 	}
 }
 
@@ -87,13 +86,14 @@ func (local *BackupBackendLocal) writeState(state *model.BackupState) error {
 // FullBackupList returns a list of available full backups.
 func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupDetails, error) {
 	backupFolder := local.path + "/" + model.FullBackupDirectory
+	lastRun := local.readState().LastFullRun
+	slog.Info("get full backups", "backupFolder", backupFolder, "lastRun", lastRun, "from", from, "to", to)
+
 	entries, err := os.ReadDir(backupFolder)
 	if err != nil {
 		return nil, err
 	}
 
-	lastRun := local.readState().LastFullRun
-	slog.Info("get full backups", "backupFolder", backupFolder, "lastRun", lastRun, "from", from, "to", to)
 	if local.backupPolicy.RemoveFiles != nil && *local.backupPolicy.RemoveFiles {
 		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 		if len(entries) == 0 {
@@ -121,8 +121,6 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 				details.LastModified.UnixMilli() >= from &&
 				details.LastModified.UnixMilli() < to {
 				backupDetails = append(backupDetails, details)
-			} else {
-				slog.Debug("filtered out", "backup", details)
 			}
 		}
 	}
@@ -227,4 +225,8 @@ func (local *BackupBackendLocal) readBackupMetadata(path string) (*model.BackupM
 	}
 
 	return metadata, nil
+}
+
+func (local *BackupBackendLocal) FullBackupInProgress() *atomic.Bool {
+	return local.fullBackupInProgress
 }

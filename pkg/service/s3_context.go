@@ -88,7 +88,7 @@ func (s *S3Context) readFile(filePath string, v any) {
 		Key:    aws.String(removeLeadingSlash(filePath)),
 	})
 	if err != nil {
-		slog.Warn("Failed to read file", "path", filePath)
+		slog.Warn("Failed to read file", "path", filePath, "err", err)
 		return
 	}
 	defer result.Body.Close()
