@@ -25,6 +25,7 @@ type BackupBackend interface {
 	// DeleteFolder removes file with a given path.
 	DeleteFolder(path string) error
 
+	// FullBackupInProgress indicates whether a full backup is in progress.
 	FullBackupInProgress() *atomic.Bool
 }
 
