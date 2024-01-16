@@ -19,8 +19,8 @@ backup-policies:
 
 backup-routines:
   routine1:
-    interval-cron: "1/10 * * * * *"
-    incr-interval-cron: "1/2 * * * * *"
+    interval-cron: "1/30 * * * * *" # every 30 seconds
+    incr-interval-cron: "1/5 * * * * *" # every 5 secons
     backup-policy: "policy1"
     source-cluster: "cluster1"
     storage: "local1"
