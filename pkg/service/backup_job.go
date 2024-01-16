@@ -39,8 +39,18 @@ func (j *backupJob) Execute(ctx context.Context) error {
 			"Backup is currently in progress, skipping it",
 			"type", j.jobType,
 			"name", j.handler.routineName)
+		incrementSkippedCounters(j.jobType)
 	}
 	return nil
+}
+
+func incrementSkippedCounters(jobType string) {
+	switch jobType {
+	case quartzGroupBackupFull:
+		backupSkippedCounter.Inc()
+	case quartzGroupBackupIncremental:
+		incrBackupSkippedCounter.Inc()
+	}
 }
 
 // Description returns the description of the backup job.
