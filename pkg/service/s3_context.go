@@ -192,12 +192,12 @@ func (s *S3Context) CleanDir(name string) error {
 	return s.DeleteFolder(path)
 }
 
-func (s *S3Context) GetMetadata(l types.CommonPrefix) *model.BackupMetadata {
+func (s *S3Context) GetMetadata(l types.CommonPrefix) (*model.BackupMetadata, error) {
 	metadata, err := s.metadataCache.Get(*l.Prefix)
-	if err == nil {
-		return metadata.(*model.BackupMetadata)
+	if err != nil {
+		return nil, err
 	}
-	return &model.BackupMetadata{}
+	return metadata.(*model.BackupMetadata), nil
 }
 
 func (s *S3Context) readMetadata(path string) *model.BackupMetadata {
