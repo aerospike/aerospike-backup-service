@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"os/signal"
@@ -11,15 +12,13 @@ import (
 	"syscall"
 	"time"
 
-	"log/slog"
-
 	"github.com/aerospike/backup/internal/server"
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/aerospike/backup/pkg/shared"
-	"github.com/reugn/go-quartz/quartz"
 	"github.com/reugn/go-quartz/logger"
+	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
 
