@@ -81,15 +81,6 @@ func createConfig(ctx context.Context, storage *model.Storage) (aws.Config, erro
 	)
 }
 
-// fileExists checks if a file exists in the given S3 bucket and key.
-func (s *S3Context) fileExists(filePath string) bool {
-	_, err := s.client.HeadObject(s.ctx, &s3.HeadObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(removeLeadingSlash(filePath)),
-	})
-	return err == nil
-}
-
 // readFile reads and decodes the YAML content from the given filePath into v.
 func (s *S3Context) readFile(filePath string, v any) {
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
