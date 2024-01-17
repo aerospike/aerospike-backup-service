@@ -7,9 +7,11 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/reugn/go-quartz/quartz"
 )
 
 // @Summary  Get available full backups.
@@ -108,4 +110,42 @@ func parseTimestamp(value string, defaultValue int64) (int64, error) {
 		return defaultValue, nil
 	}
 	return strconv.ParseInt(value, 10, 64)
+}
+
+// @Summary  Schedule a full backup once per routine name.
+// @ID       scheduleFullBackup
+// @Tags     Backup
+// @Param    name query string true "Backup routine name"
+// @Param    delay query int false "Delay interval in milliseconds"
+// @Router   /backup/schedule [post]
+// @Success  202
+// @Failure  404 {string} string ""
+func (ws *HTTPServer) scheduleFullBackup(w http.ResponseWriter, r *http.Request) {
+	routineName := r.URL.Query().Get("name")
+	delayParameter := r.URL.Query().Get("delay")
+	var delayMillis int
+	if delayParameter != "" {
+		var err error
+		delayMillis, err = strconv.Atoi(delayParameter)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if delayMillis < 0 {
+		http.Error(w, "nonpositive delay query parameter", http.StatusBadRequest)
+		return
+	}
+	fullBackupjobDetail := service.NewAdHocFullBackupJobForRoutine(routineName)
+	if fullBackupjobDetail == nil {
+		http.Error(w, "unknown routine name", http.StatusNotFound)
+		return
+	}
+	trigger := quartz.NewRunOnceTrigger(time.Duration(delayMillis) * time.Millisecond)
+	// schedule using the quartz scheduler
+	if err := ws.scheduler.ScheduleJob(fullBackupjobDetail, trigger); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
 }

@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -13,6 +15,33 @@ const (
 	quartzGroupBackupFull        = "full"
 	quartzGroupBackupIncremental = "incremental"
 )
+
+var jobStore = &backupJobs{jobs: make(map[string]*quartz.JobDetail)}
+
+type backupJobs struct {
+	sync.Mutex
+	jobs map[string]*quartz.JobDetail
+}
+
+func (b *backupJobs) put(key string, value *quartz.JobDetail) {
+	b.Lock()
+	defer b.Unlock()
+	b.jobs[key] = value
+}
+
+// NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
+func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
+	jobStore.Lock()
+	jobStore.Unlock()
+	key := quartz.NewJobKeyWithGroup(name, quartzGroupBackupFull).String()
+	job := jobStore.jobs[key]
+	if job == nil {
+		return nil
+	}
+	jobKey := quartz.NewJobKeyWithGroup(fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli()),
+		quartzGroupBackupFull)
+	return quartz.NewJobDetail(job.Job(), jobKey)
+}
 
 // ScheduleBackup creates a new quartz.Scheduler, schedules all the configured backup jobs,
 // starts and returns the scheduler.
@@ -54,6 +83,7 @@ func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
 	if err = scheduler.ScheduleJob(fullJobDetail, fullCronTrigger); err != nil {
 		return err
 	}
+	jobStore.put(fullJobDetail.JobKey().String(), fullJobDetail)
 	if needToRunFullBackupNow(handler) {
 		slog.Debug("Schedule initial full backup", "name", routineName)
 		fullJobDetail := quartz.NewJobDetail(
@@ -78,7 +108,11 @@ func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupHandle
 		incrementalJob,
 		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupIncremental),
 	)
-	return scheduler.ScheduleJob(incrJobDetail, incrCronTrigger)
+	if err = scheduler.ScheduleJob(incrJobDetail, incrCronTrigger); err != nil {
+		return err
+	}
+	jobStore.put(incrJobDetail.JobKey().String(), incrJobDetail)
+	return nil
 }
 
 func needToRunFullBackupNow(backupHandler *BackupHandler) bool {
