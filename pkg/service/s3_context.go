@@ -195,7 +195,7 @@ func (s *S3Context) CleanDir(name string) error {
 func (s *S3Context) GetMetadata(l types.CommonPrefix) (*model.BackupMetadata, error) {
 	metadata, err := s.metadataCache.Get(*l.Prefix)
 	if err != nil {
-		return &model.BackupMetadata{}, err
+		return nil, err
 	}
 	return metadata.(*model.BackupMetadata), nil
 }
