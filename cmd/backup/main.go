@@ -18,6 +18,7 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/reugn/go-quartz/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -56,14 +57,15 @@ func run() int {
 			// panic if failed to parse the configuration file
 			panic(err)
 		}
-		// set default logger
-		loggerConfig := config.ServiceConfig.Logger
-		slog.SetDefault(slog.New(util.LogHandler(loggerConfig.Level, loggerConfig.Format)))
-		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// get system ctx
 		ctx := systemCtx()
-		backends := service.BuildBackupBackends(config)
+		// set default loggers
+		loggerConfig := config.ServiceConfig.Logger
+		slog.SetDefault(slog.New(util.LogHandler(loggerConfig.Level, loggerConfig.Format)))
+		logger.SetDefault(util.NewQuartzLogger(ctx))
+		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// schedule all configured backups
+		backends := service.BuildBackupBackends(config)
 		scheduler, err := service.ScheduleBackup(ctx, config, backends)
 		if err != nil {
 			panic(err)
