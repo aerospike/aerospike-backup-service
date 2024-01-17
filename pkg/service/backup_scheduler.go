@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -11,8 +12,8 @@ import (
 )
 
 const (
-	QuartzGroupBackupFull        = "full"
-	QuartzGroupBackupIncremental = "incremental"
+	quartzGroupBackupFull        = "full"
+	quartzGroupBackupIncremental = "incremental"
 )
 
 var jobStore = &backupJobs{jobs: make(map[string]*quartz.JobDetail)}
@@ -28,12 +29,18 @@ func (b *backupJobs) put(key string, value *quartz.JobDetail) {
 	b.jobs[key] = value
 }
 
-// GetFullBackupJobByRoutineName returns the scheduled full backup job by routine name.
-func GetFullBackupJobByRoutineName(name string) *quartz.JobDetail {
+// NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
+func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
 	jobStore.Lock()
 	jobStore.Unlock()
-	key := quartz.NewJobKeyWithGroup(name, QuartzGroupBackupFull).String()
-	return jobStore.jobs[key]
+	key := quartz.NewJobKeyWithGroup(name, quartzGroupBackupFull).String()
+	job := jobStore.jobs[key]
+	if job == nil {
+		return nil
+	}
+	jobKey := quartz.NewJobKeyWithGroup(fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli()),
+		quartzGroupBackupFull)
+	return quartz.NewJobDetail(job.Job(), jobKey)
 }
 
 // ScheduleBackup creates a new quartz.Scheduler, schedules all the configured backup jobs,
@@ -68,10 +75,10 @@ func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
 	if err != nil {
 		return err
 	}
-	fullJob := newBackupJob(handler, QuartzGroupBackupFull)
+	fullJob := newBackupJob(handler, quartzGroupBackupFull)
 	fullJobDetail := quartz.NewJobDetail(
 		fullJob,
-		quartz.NewJobKeyWithGroup(routineName, QuartzGroupBackupFull),
+		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupFull),
 	)
 	if err = scheduler.ScheduleJob(fullJobDetail, fullCronTrigger); err != nil {
 		return err
@@ -96,10 +103,10 @@ func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupHandle
 	if err != nil {
 		return err
 	}
-	incrementalJob := newBackupJob(handler, QuartzGroupBackupIncremental)
+	incrementalJob := newBackupJob(handler, quartzGroupBackupIncremental)
 	incrJobDetail := quartz.NewJobDetail(
 		incrementalJob,
-		quartz.NewJobKeyWithGroup(routineName, QuartzGroupBackupIncremental),
+		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupIncremental),
 	)
 	if err = scheduler.ScheduleJob(incrJobDetail, incrCronTrigger); err != nil {
 		return err

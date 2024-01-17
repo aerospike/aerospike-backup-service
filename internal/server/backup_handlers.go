@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"math"
 	"net/http"
@@ -137,17 +136,14 @@ func (ws *HTTPServer) scheduleFullBackup(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "nonpositive delay query parameter", http.StatusBadRequest)
 		return
 	}
-	job := service.GetFullBackupJobByRoutineName(routineName)
-	if job == nil {
+	fullBackupjobDetail := service.NewAdHocFullBackupJobForRoutine(routineName)
+	if fullBackupjobDetail == nil {
 		http.Error(w, "unknown routine name", http.StatusNotFound)
 		return
 	}
 	trigger := quartz.NewRunOnceTrigger(time.Duration(delayMillis) * time.Millisecond)
-	jobKey := quartz.NewJobKeyWithGroup(fmt.Sprintf("%s-adhoc-%d", routineName, time.Now().UnixMilli()),
-		service.QuartzGroupBackupFull)
-	jobDetail := quartz.NewJobDetail(job.Job(), jobKey)
 	// schedule using the quartz scheduler
-	if err := ws.scheduler.ScheduleJob(jobDetail, trigger); err != nil {
+	if err := ws.scheduler.ScheduleJob(fullBackupjobDetail, trigger); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
