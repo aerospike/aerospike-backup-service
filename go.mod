@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.47.5
 	github.com/aws/smithy-go v1.19.0
 	github.com/prometheus/client_golang v1.18.0
-	github.com/reugn/go-quartz v0.9.1-0.20240115070903-b51533b9ddac
+	github.com/reugn/go-quartz v0.10.0
 	github.com/spf13/cobra v1.8.0
 	golang.org/x/time v0.5.0
 	gopkg.in/yaml.v3 v3.0.1

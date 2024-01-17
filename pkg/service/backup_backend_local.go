@@ -116,9 +116,11 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 	backupDetails := make([]model.BackupDetails, 0, len(entries))
 	for _, e := range entries {
 		if e.IsDir() {
-			details := local.toBackupDetails(e, backupFolder)
-			if !details.LastModified.After(lastRun) &&
-				details.LastModified.UnixMilli() >= from &&
+			details, err := local.toBackupDetails(e, backupFolder)
+			if err != nil { // no backup metadata file
+				continue
+			}
+			if details.LastModified.UnixMilli() >= from &&
 				details.LastModified.UnixMilli() < to {
 				backupDetails = append(backupDetails, details)
 			}
@@ -138,7 +140,10 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 	backupDetails := make([]model.BackupDetails, 0, len(entries))
 	for _, e := range entries {
 		if e.IsDir() {
-			details := local.toBackupDetails(e, backupFolder)
+			details, err := local.toBackupDetails(e, backupFolder)
+			if err != nil { // no backup metadata file
+				continue
+			}
 			if !details.LastModified.After(lastIncrRun) {
 				backupDetails = append(backupDetails, details)
 			}
@@ -167,14 +172,17 @@ func (local *BackupBackendLocal) DeleteFolder(path string) error {
 	return os.RemoveAll(path)
 }
 
-func (local *BackupBackendLocal) toBackupDetails(e fs.DirEntry, backupFolder string) model.BackupDetails {
+func (local *BackupBackendLocal) toBackupDetails(e fs.DirEntry, backupFolder string) (model.BackupDetails, error) {
 	path := filepath.Join(backupFolder, e.Name())
-	metadata, _ := local.readBackupMetadata(path)
+	metadata, err := local.readBackupMetadata(path)
+	if err != nil {
+		return model.BackupDetails{}, err
+	}
 	return model.BackupDetails{
 		Key:          util.Ptr(path),
 		LastModified: &metadata.Created,
 		Size:         folderSize(path),
-	}
+	}, nil
 }
 
 func folderSize(path string) *int64 {
