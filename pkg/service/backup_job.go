@@ -25,9 +25,9 @@ func (j *backupJob) Execute(ctx context.Context) error {
 	if j.isRunning.CompareAndSwap(false, true) {
 		defer j.isRunning.Store(false)
 		switch j.jobType {
-		case quartzGroupBackupFull:
+		case QuartzGroupBackupFull:
 			j.handler.runFullBackup(time.Now())
-		case quartzGroupBackupIncremental:
+		case QuartzGroupBackupIncremental:
 			j.handler.runIncrementalBackup(time.Now())
 		default:
 			slog.Error("Unsupported backup type",
@@ -46,9 +46,9 @@ func (j *backupJob) Execute(ctx context.Context) error {
 
 func incrementSkippedCounters(jobType string) {
 	switch jobType {
-	case quartzGroupBackupFull:
+	case QuartzGroupBackupFull:
 		backupSkippedCounter.Inc()
-	case quartzGroupBackupIncremental:
+	case QuartzGroupBackupIncremental:
 		incrBackupSkippedCounter.Inc()
 	}
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/reugn/go-quartz/quartz"
 	"golang.org/x/time/rate"
 )
 
@@ -76,6 +77,7 @@ type HTTPServer struct {
 	server         *http.Server
 	rateLimiter    *IPRateLimiter
 	whiteList      *ipWhiteList
+	scheduler      quartz.Scheduler
 	restoreService service.RestoreService
 	backupBackends map[string]service.BackupListReader
 }
@@ -92,7 +94,8 @@ type HTTPServer struct {
 // @externalDocs.url          https://swagger.io/resources/open-api/
 //
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(backendMap map[string]service.BackupListReader, config *model.Config) *HTTPServer {
+func NewHTTPServer(backendMap map[string]service.BackupListReader, config *model.Config,
+	scheduler quartz.Scheduler) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer
 	addr := fmt.Sprintf("%s:%d", serverConfig.Address, serverConfig.Port)
 
@@ -107,6 +110,7 @@ func NewHTTPServer(backendMap map[string]service.BackupListReader, config *model
 		},
 		rateLimiter:    rateLimiter,
 		whiteList:      newIPWhiteList(serverConfig.Rate.WhiteList),
+		scheduler:      scheduler,
 		restoreService: service.NewRestoreMemory(backendMap, config),
 		backupBackends: backendMap,
 	}
@@ -184,6 +188,9 @@ func (ws *HTTPServer) Start() {
 
 	// Returns a list of available incremental backups for the given policy name
 	mux.HandleFunc("/backup/incremental/list", ws.getAvailableIncrementalBackups)
+
+	// Schedules a full backup operation
+	mux.HandleFunc("/backup/schedule", ws.scheduleFullBackup)
 
 	ws.server.Handler = ws.rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()

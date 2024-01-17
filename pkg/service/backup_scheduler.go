@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -10,9 +11,30 @@ import (
 )
 
 const (
-	quartzGroupBackupFull        = "full"
-	quartzGroupBackupIncremental = "incremental"
+	QuartzGroupBackupFull        = "full"
+	QuartzGroupBackupIncremental = "incremental"
 )
+
+var jobStore = &backupJobs{jobs: make(map[string]*quartz.JobDetail)}
+
+type backupJobs struct {
+	sync.Mutex
+	jobs map[string]*quartz.JobDetail
+}
+
+func (b *backupJobs) put(key string, value *quartz.JobDetail) {
+	b.Lock()
+	defer b.Unlock()
+	b.jobs[key] = value
+}
+
+// GetFullBackupJobByRoutineName returns the scheduled full backup job by routine name.
+func GetFullBackupJobByRoutineName(name string) *quartz.JobDetail {
+	jobStore.Lock()
+	jobStore.Unlock()
+	key := quartz.NewJobKeyWithGroup(name, QuartzGroupBackupFull).String()
+	return jobStore.jobs[key]
+}
 
 // ScheduleBackup creates a new quartz.Scheduler, schedules all the configured backup jobs,
 // starts and returns the scheduler.
@@ -46,14 +68,15 @@ func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
 	if err != nil {
 		return err
 	}
-	fullJob := newBackupJob(handler, quartzGroupBackupFull)
+	fullJob := newBackupJob(handler, QuartzGroupBackupFull)
 	fullJobDetail := quartz.NewJobDetail(
 		fullJob,
-		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupFull),
+		quartz.NewJobKeyWithGroup(routineName, QuartzGroupBackupFull),
 	)
 	if err = scheduler.ScheduleJob(fullJobDetail, fullCronTrigger); err != nil {
 		return err
 	}
+	jobStore.put(fullJobDetail.JobKey().String(), fullJobDetail)
 	if needToRunFullBackupNow(handler) {
 		slog.Debug("Schedule initial full backup", "name", routineName)
 		fullJobDetail := quartz.NewJobDetail(
@@ -73,12 +96,16 @@ func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupHandle
 	if err != nil {
 		return err
 	}
-	incrementalJob := newBackupJob(handler, quartzGroupBackupIncremental)
+	incrementalJob := newBackupJob(handler, QuartzGroupBackupIncremental)
 	incrJobDetail := quartz.NewJobDetail(
 		incrementalJob,
-		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupIncremental),
+		quartz.NewJobKeyWithGroup(routineName, QuartzGroupBackupIncremental),
 	)
-	return scheduler.ScheduleJob(incrJobDetail, incrCronTrigger)
+	if err = scheduler.ScheduleJob(incrJobDetail, incrCronTrigger); err != nil {
+		return err
+	}
+	jobStore.put(incrJobDetail.JobKey().String(), incrJobDetail)
+	return nil
 }
 
 func needToRunFullBackupNow(backupHandler *BackupHandler) bool {

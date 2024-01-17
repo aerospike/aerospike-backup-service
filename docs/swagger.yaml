@@ -118,10 +118,11 @@ definitions:
           type: string
         type: array
       incr-interval-cron:
-        description: The interval for incremental backup as cron string
+        description: The interval for incremental backup as a cron expression string
+          (optional).
         type: string
       interval-cron:
-        description: The interval for full backup as cron string
+        description: The interval for full backup as a cron expression string.
         type: string
       namespace:
         description: The name of the namespace to back up.
@@ -536,6 +537,29 @@ paths:
           schema:
             type: string
       summary: Get available incremental backups.
+      tags:
+      - Backup
+  /backup/schedule:
+    post:
+      operationId: scheduleFullBackup
+      parameters:
+      - description: Backup routine name
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Delay interval in milliseconds
+        in: query
+        name: delay
+        type: integer
+      responses:
+        "202":
+          description: Accepted
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Schedule a full backup once per routine name.
       tags:
       - Backup
   /config:

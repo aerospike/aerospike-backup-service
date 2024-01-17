@@ -18,6 +18,7 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
 
@@ -69,7 +70,7 @@ func run() int {
 			panic(err)
 		}
 		// run HTTP server
-		err = runHTTPServer(ctx, backendsToReaders(backends), config)
+		err = runHTTPServer(ctx, backendsToReaders(backends), config, scheduler)
 		// shutdown shared resources
 		shared.Shutdown()
 		// stop the scheduler
@@ -121,8 +122,8 @@ func readConfiguration() (*model.Config, error) {
 }
 
 func runHTTPServer(ctx context.Context, backendMap map[string]service.BackupListReader,
-	config *model.Config) error {
-	server := server.NewHTTPServer(backendMap, config)
+	config *model.Config, scheduler quartz.Scheduler) error {
+	server := server.NewHTTPServer(backendMap, config, scheduler)
 	go func() {
 		server.Start()
 	}()
