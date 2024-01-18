@@ -3,9 +3,10 @@
 package service
 
 import (
+	"testing"
+
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/smithy-go/ptr"
-	"testing"
 )
 
 var contexts []S3Context
