@@ -1,10 +1,12 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -63,12 +65,20 @@ func (local *BackupBackendLocal) readState() *model.BackupState {
 
 	state := model.NewBackupState()
 	if err != nil {
-		slog.Warn("Failed to read state file for backup", "err", err)
+		var pathErr *fs.PathError
+		if errors.As(err, &pathErr) &&
+			strings.Contains(pathErr.Error(), "no such file or directory") {
+			slog.Debug("State file does not exist for backup", "path", local.stateFilePath,
+				"err", err)
+		} else {
+			slog.Warn("Failed to read state file for backup", "path", local.stateFilePath,
+				"err", err)
+		}
 		return state
 	}
 	if err = yaml.Unmarshal(bytes, state); err != nil {
-		slog.Warn("Failed unmarshal state file for backup", "path",
-			local.stateFilePath, "err", err, "content", string(bytes))
+		slog.Warn("Failed unmarshal state file for backup", "path", local.stateFilePath,
+			"err", err, "content", string(bytes))
 	}
 	return state
 }
