@@ -239,7 +239,7 @@ func validatePathContainsBackup(path string) error {
 		return err
 	}
 
-	absFiles, err := filepath.Glob(filepath.Join(path, "*.abs"))
+	absFiles, err := filepath.Glob(filepath.Join(path, "*.asb"))
 	if err != nil {
 		return err
 	}
