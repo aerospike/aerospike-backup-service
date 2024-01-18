@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -15,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
 	"gopkg.in/yaml.v3"
 )
 
@@ -88,7 +90,14 @@ func (s *S3Context) readFile(filePath string, v any) {
 		Key:    aws.String(removeLeadingSlash(filePath)),
 	})
 	if err != nil {
-		slog.Warn("Failed to read file", "path", filePath, "err", err)
+		var opErr *smithy.OperationError
+		if errors.As(err, &opErr) &&
+			strings.Contains(filePath, model.StateFileName) &&
+			strings.Contains(opErr.Unwrap().Error(), "StatusCode: 404") {
+			slog.Debug("File does not exist", "path", filePath, "err", err)
+		} else {
+			slog.Warn("Failed to read file", "path", filePath, "err", err)
+		}
 		return
 	}
 	defer result.Body.Close()
@@ -205,7 +214,7 @@ func (s *S3Context) readMetadata(path string) *model.BackupMetadata {
 	metadataFilePath := strings.TrimPrefix(path, s3prefix) + metadataFile
 	metadata := &model.BackupMetadata{}
 	s.readFile(metadataFilePath, metadata)
-	slog.Info("Read md", "path", path, "data", metadata)
+	slog.Debug("Read metadata file", "path", path, "data", metadata)
 	return metadata
 }
 
