@@ -7,7 +7,7 @@ import (
 type RestoreService interface {
 	// Restore starts a restore process using the given request.
 	// Returns the job id as a unique identifier.
-	Restore(request *model.RestoreRequestInternal) int
+	Restore(request *model.RestoreRequestInternal) (int, error)
 
 	// RestoreByTime starts a restore by time process using the given request.
 	// Returns the job id as a unique identifier.

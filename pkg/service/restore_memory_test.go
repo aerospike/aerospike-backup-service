@@ -26,7 +26,7 @@ func TestRestoreMemory(t *testing.T) {
 		RestoreRequest: *restoreRequest,
 		Dir:            util.Ptr("./testout/backup"),
 	}
-	jobID := restoreService.Restore(requestInternal)
+	jobID, err := restoreService.Restore(requestInternal)
 
 	jobStatus, _ := restoreService.JobStatus(jobID)
 	if jobStatus.Status != model.JobStatusRunning {

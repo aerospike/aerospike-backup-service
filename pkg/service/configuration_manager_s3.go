@@ -14,7 +14,7 @@ var _ ConfigurationManager = (*S3ConfigurationManager)(nil)
 
 // NewS3ConfigurationManager returns a new S3ConfigurationManager.
 func NewS3ConfigurationManager(configStorage *model.Storage) ConfigurationManager {
-	s3Context := NewS3Context(configStorage)
+	s3Context, _ := NewS3Context(configStorage)
 	return &S3ConfigurationManager{s3Context}
 }
 

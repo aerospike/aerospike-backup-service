@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/aerospike/backup/pkg/util"
@@ -33,8 +36,11 @@ func NewRestoreMemory(backends map[string]BackupListReader, config *model.Config
 	}
 }
 
-func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) int {
+func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, error) {
 	jobID := r.restoreJobs.newJob()
+	if err := validate(request.Dir, request.SourceStorage); err != nil {
+		return 0, err
+	}
 	go func() {
 		restoreResult := r.doRestore(request)
 		if restoreResult == nil {
@@ -44,7 +50,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) int {
 		r.restoreJobs.increaseStats(jobID, restoreResult)
 		r.restoreJobs.setDone(jobID)
 	}()
-	return jobID
+	return jobID, nil
 }
 
 func (r *RestoreMemory) doRestore(request *model.RestoreRequestInternal) *model.RestoreResult {
@@ -195,4 +201,50 @@ func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest)
 // JobStatus returns the status of the job with the given id.
 func (r *RestoreMemory) JobStatus(jobID int) (*model.RestoreJobStatus, error) {
 	return r.restoreJobs.getStatus(jobID)
+}
+
+func validate(path *string, storage *model.Storage) error {
+	switch storage.Type {
+	case model.Local:
+		return validatePathContainsBackup(*path)
+	case model.S3:
+		return validateStorageContainsBackup(*path, storage)
+	}
+	return nil
+}
+
+func validateStorageContainsBackup(path string, storage *model.Storage) error {
+	context, err := NewS3Context(storage)
+	if err != nil {
+		return err
+	}
+	files, err := context.listFiles(path)
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		return fmt.Errorf("given path %s not exist", path)
+	}
+	for _, file := range files {
+		if strings.HasSuffix(*file.Key, ".asb") {
+			return nil
+		}
+	}
+	return fmt.Errorf("no backup files found in %s", path)
+}
+
+func validatePathContainsBackup(path string) error {
+	_, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	absFiles, err := filepath.Glob(filepath.Join(path, "*.abs"))
+	if err != nil {
+		return err
+	}
+	if len(absFiles) == 0 {
+		return fmt.Errorf("no backup files found in %s", path)
+	}
+	return nil
 }
