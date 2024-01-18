@@ -1,6 +1,7 @@
 package service
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -22,11 +23,13 @@ func TestRestoreMemory(t *testing.T) {
 		},
 		SourceStorage: &model.Storage{},
 	}
+	path := "./testout/backup"
 	requestInternal := &model.RestoreRequestInternal{
 		RestoreRequest: *restoreRequest,
-		Dir:            util.Ptr("./testout/backup"),
+		Dir:            util.Ptr(path),
 	}
-	jobID := restoreService.Restore(requestInternal)
+	err := createMockBackupFile(path)
+	jobID, err := restoreService.Restore(requestInternal)
 
 	jobStatus, _ := restoreService.JobStatus(jobID)
 	if jobStatus.Status != model.JobStatusRunning {
@@ -43,6 +46,13 @@ func TestRestoreMemory(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected not found, but go %v", wrongJobStatus)
 	}
+}
+
+func createMockBackupFile(path string) error {
+	os.MkdirAll(path, os.ModePerm)
+	create, err := os.Create(path + "/backup.asb")
+	create.Close()
+	return err
 }
 
 func TestLatestFullBackupBeforeTime(t *testing.T) {

@@ -24,7 +24,10 @@ var _ BackupBackend = (*BackupBackendS3)(nil)
 
 // NewBackupBackendS3 returns a new BackupBackendS3 instance.
 func NewBackupBackendS3(storage *model.Storage, backupPolicy *model.BackupPolicy) *BackupBackendS3 {
-	s3Context := NewS3Context(storage)
+	s3Context, err := NewS3Context(storage)
+	if err != nil {
+		panic(err)
+	}
 	return &BackupBackendS3{
 		S3Context:            s3Context,
 		stateFilePath:        s3Context.Path + "/" + model.StateFileName,

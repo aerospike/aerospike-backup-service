@@ -31,13 +31,13 @@ type S3Context struct {
 
 // NewS3Context returns a new S3Context.
 // Panics on any error during initialization.
-func NewS3Context(storage *model.Storage) *S3Context {
+func NewS3Context(storage *model.Storage) (*S3Context, error) {
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
 	ctx := context.TODO()
 	cfg, err := createConfig(ctx, storage)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to load S3 SDK configuration: %v", err))
+		return nil, fmt.Errorf("failed to load S3 SDK configuration: %v", err)
 	}
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
@@ -49,7 +49,7 @@ func NewS3Context(storage *model.Storage) *S3Context {
 
 	parsed, err := url.Parse(*storage.Path)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to parse S3 storage path: %v", err))
+		return nil, fmt.Errorf("failed to parse S3 storage path: %v", err)
 	}
 
 	bucketName := parsed.Host
@@ -58,7 +58,7 @@ func NewS3Context(storage *model.Storage) *S3Context {
 		Bucket: aws.String(bucketName),
 	})
 	if err != nil {
-		panic(fmt.Sprintf("Error checking S3 bucket %s existence: %v", bucketName, err))
+		return nil, fmt.Errorf("error checking S3 bucket %s existence: %v", bucketName, err)
 	}
 
 	s := &S3Context{
@@ -71,7 +71,7 @@ func NewS3Context(storage *model.Storage) *S3Context {
 	s.metadataCache = util.NewLoadingCache(ctx, func(path string) any {
 		return s.readMetadata(path)
 	})
-	return s
+	return s, nil
 }
 
 func createConfig(ctx context.Context, storage *model.Storage) (aws.Config, error) {
@@ -140,12 +140,12 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 	for {
 		// By default, the action returns up to 1,000 key names.
 		// It is necessary to repeat to collect all the items, if there are more.
-		listOuptput, err := s.list(nextContinuationToken, prefix, "")
+		listOutput, err := s.list(nextContinuationToken, prefix, "")
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, listOuptput.Contents...)
-		nextContinuationToken = listOuptput.NextContinuationToken
+		result = append(result, listOutput.Contents...)
+		nextContinuationToken = listOutput.NextContinuationToken
 		if nextContinuationToken == nil {
 			break
 		}
