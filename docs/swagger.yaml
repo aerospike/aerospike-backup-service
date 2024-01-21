@@ -434,6 +434,8 @@ definitions:
           optional).
         type: string
       s3-log-level:
+        default: Fatal
+        description: The log level of the AWS S3 SDK (AWS S3 optional).
         type: string
       s3-profile:
         description: The S3 profile name (AWS S3 optional).

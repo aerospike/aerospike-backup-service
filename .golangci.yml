@@ -47,10 +47,3 @@ issues:
     - path: pkg/stdio
       linters:
         - typecheck
-    - path: pkg/shared
-      text: "dupSubExpr"
-      linters:
-        - gocritic
-    - path: pkg/shared
-      linters:
-        - lll
