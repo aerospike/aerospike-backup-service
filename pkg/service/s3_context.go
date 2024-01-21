@@ -84,7 +84,7 @@ func createConfig(ctx context.Context, storage *model.Storage) (aws.Config, erro
 }
 
 // readFile reads and decodes the YAML content from the given filePath into v.
-func (s *S3Context) readFile(filePath string, v any) {
+func (s *S3Context) readFile(filePath string, v any) error {
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(removeLeadingSlash(filePath)),
@@ -98,18 +98,21 @@ func (s *S3Context) readFile(filePath string, v any) {
 		} else {
 			slog.Warn("Failed to read file", "path", filePath, "err", err)
 		}
-		return
+		return err
 	}
 	defer result.Body.Close()
 	content, err := io.ReadAll(result.Body)
 	if err != nil {
 		slog.Warn("Couldn't read object body of a file",
 			"path", filePath, "err", err)
+		return err
 	}
 	if err = yaml.Unmarshal(content, v); err != nil {
 		slog.Warn("Failed unmarshal state file for backup",
 			"path", filePath, "err", err, "content", string(content))
+		return err
 	}
+	return nil
 }
 
 // writeFile writes v into filepath using the YAML format.
@@ -213,7 +216,10 @@ func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 	s3prefix := "s3://" + s.bucket
 	metadataFilePath := strings.TrimPrefix(path, s3prefix) + metadataFile
 	metadata := &model.BackupMetadata{}
-	s.readFile(metadataFilePath, metadata)
+	err := s.readFile(metadataFilePath, metadata)
+	if err != nil {
+		return nil, err
+	}
 	slog.Debug("Read metadata file", "path", path, "data", metadata)
 	return metadata, nil
 }
