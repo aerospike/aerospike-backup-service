@@ -1001,16 +1001,32 @@
             "description": "BackupDetails contains information about a backup.",
             "type": "object",
             "properties": {
+                "byte-count": {
+                    "description": "The size of the backup in bytes.",
+                    "type": "integer"
+                },
+                "created": {
+                    "description": "The backup time in the ISO 8601 format.",
+                    "type": "string"
+                },
+                "file-count": {
+                    "description": "The number of backup files created.",
+                    "type": "integer"
+                },
                 "key": {
                     "description": "The path to the backup files.",
                     "type": "string"
                 },
-                "last-modified": {
-                    "description": "The backup time in the ISO 8601 format.",
-                    "type": "string"
+                "record-count": {
+                    "description": "The total number of records backed up.",
+                    "type": "integer"
                 },
-                "size": {
-                    "description": "The size of the backup in bytes.",
+                "secondary-index-count": {
+                    "description": "The number of secondary indexes backed up.",
+                    "type": "integer"
+                },
+                "udf-count": {
+                    "description": "The number of UDF files backed up.",
                     "type": "integer"
                 }
             }
