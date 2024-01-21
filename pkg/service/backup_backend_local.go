@@ -194,31 +194,6 @@ func (local *BackupBackendLocal) toBackupDetails(path string) (model.BackupDetai
 	}, nil
 }
 
-func folderSize(path string) *int64 {
-	var size int64
-
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() {
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			size += info.Size()
-		}
-		return nil
-	})
-
-	if err != nil {
-		slog.Error("failed to calculate size", "path", path, "err", err)
-		return nil
-	}
-
-	return &size
-}
-
 func (local *BackupBackendLocal) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
 	metadataBytes, err := yaml.Marshal(metadata)
 	if err != nil {

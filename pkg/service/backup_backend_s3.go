@@ -103,19 +103,6 @@ func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails,
 	return backupDetails, nil
 }
 
-func (s *BackupBackendS3) dirSize(path string) int64 {
-	files, err := s.listFiles(path)
-	if err != nil {
-		slog.Warn("Failed to list files", "path", path)
-		return 0
-	}
-	var totalSize int64
-	for _, file := range files {
-		totalSize += *file.Size
-	}
-	return totalSize
-}
-
 // IncrementalBackupList returns a list of available incremental backups.
 func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error) {
 	s3prefix := "s3://" + s.bucket
