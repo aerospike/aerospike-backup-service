@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"log/slog"
 	"strings"
 	"sync"
@@ -70,10 +71,13 @@ func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails,
 		if lastRun.UnixMilli() < from || lastRun.UnixMilli() >= to {
 			return []model.BackupDetails{}, nil
 		}
+		metadata, err := s.GetMetadata(types.CommonPrefix{Prefix: &backupFolder})
+		if err != nil {
+			return []model.BackupDetails{}, err
+		}
 		return []model.BackupDetails{{
-			Key:          ptr.String(s3prefix + backupFolder),
-			LastModified: &lastRun,
-			Size:         ptr.Int64(s.dirSize(backupFolder)),
+			BackupMetadata: *metadata,
+			Key:            ptr.String(s3prefix + backupFolder),
 		}}, nil
 	}
 
@@ -88,12 +92,11 @@ func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails,
 			continue
 		}
 		details := model.BackupDetails{
-			Key:          ptr.String(s3prefix + "/" + *subfolder.Prefix),
-			LastModified: &metadata.Created,
-			Size:         ptr.Int64(s.dirSize(*subfolder.Prefix)),
+			BackupMetadata: *metadata,
+			Key:            ptr.String(s3prefix + "/" + *subfolder.Prefix),
 		}
-		if details.LastModified.UnixMilli() >= from &&
-			details.LastModified.UnixMilli() < to {
+		if details.Created.UnixMilli() >= from &&
+			details.Created.UnixMilli() < to {
 			backupDetails = append(backupDetails, details)
 		}
 	}
@@ -129,11 +132,10 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 			continue
 		}
 		details := model.BackupDetails{
-			Key:          ptr.String(s3prefix + "/" + *subfolder.Prefix),
-			LastModified: &metadata.Created,
-			Size:         ptr.Int64(s.dirSize(*subfolder.Prefix)),
+			BackupMetadata: *metadata,
+			Key:            ptr.String(s3prefix + "/" + *subfolder.Prefix),
 		}
-		if !details.LastModified.After(lastIncrRun) {
+		if !details.Created.After(lastIncrRun) {
 			backupDetails = append(backupDetails, details)
 		}
 	}
