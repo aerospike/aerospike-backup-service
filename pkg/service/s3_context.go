@@ -26,7 +26,7 @@ type S3Context struct {
 	client        *s3.Client
 	bucket        string
 	Path          string
-	metadataCache *util.LoadingCache
+	metadataCache *util.LoadingCache[*model.BackupMetadata]
 }
 
 // NewS3Context returns a new S3Context.
@@ -68,7 +68,7 @@ func NewS3Context(storage *model.Storage) (*S3Context, error) {
 		Path:   parsed.Path,
 	}
 
-	s.metadataCache = util.NewLoadingCache(ctx, func(path string) any {
+	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*model.BackupMetadata, error) {
 		return s.readMetadata(path)
 	})
 	return s, nil
@@ -160,12 +160,12 @@ func (s *S3Context) listFolders(prefix string) ([]types.CommonPrefix, error) {
 	for {
 		// By default, the action returns up to 1,000 key names.
 		// It is necessary to repeat to collect all the items, if there are more.
-		listOuptput, err := s.list(nextContinuationToken, prefix, "/")
+		listOutput, err := s.list(nextContinuationToken, prefix, "/")
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, listOuptput.CommonPrefixes...)
-		nextContinuationToken = listOuptput.NextContinuationToken
+		result = append(result, listOutput.CommonPrefixes...)
+		nextContinuationToken = listOutput.NextContinuationToken
 		if nextContinuationToken == nil {
 			break
 		}
@@ -206,16 +206,16 @@ func (s *S3Context) GetMetadata(l types.CommonPrefix) (*model.BackupMetadata, er
 	if err != nil {
 		return nil, err
 	}
-	return metadata.(*model.BackupMetadata), nil
+	return metadata, nil
 }
 
-func (s *S3Context) readMetadata(path string) *model.BackupMetadata {
+func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 	s3prefix := "s3://" + s.bucket
 	metadataFilePath := strings.TrimPrefix(path, s3prefix) + metadataFile
 	metadata := &model.BackupMetadata{}
 	s.readFile(metadataFilePath, metadata)
 	slog.Debug("Read metadata file", "path", path, "data", metadata)
-	return metadata
+	return metadata, nil
 }
 
 func (s *S3Context) DeleteFolder(path string) error {
