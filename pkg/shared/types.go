@@ -11,7 +11,7 @@ type BackupOptions struct {
 	ModAfter  *int64
 }
 
-// BackupStat represents partial backup result statistics returned from asbackup library
+// BackupStat represents partial backup result statistics returned from asbackup library.
 type BackupStat struct {
 	RecordCount int
 	ByteCount   int

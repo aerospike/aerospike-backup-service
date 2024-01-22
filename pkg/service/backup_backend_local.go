@@ -95,7 +95,7 @@ func (local *BackupBackendLocal) writeState(state *model.BackupState) error {
 // FullBackupList returns a list of available full backups.
 func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupDetails, error) {
 	backupFolder := local.path + "/" + model.FullBackupDirectory
-	slog.Info("get full backups", "backupFolder", backupFolder, "from", from, "to", to)
+	slog.Info("Get full backups", "backupFolder", backupFolder, "from", from, "to", to)
 
 	subfolders, err := listDir(backupFolder)
 	if err != nil {
@@ -111,8 +111,7 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 		if err != nil {
 			return nil, err
 		}
-		if details.Created.UnixMilli() < from ||
-			details.Created.UnixMilli() > to {
+		if details.Created.UnixMilli() < from || details.Created.UnixMilli() >= to {
 			return []model.BackupDetails{}, nil
 		}
 		return []model.BackupDetails{details}, nil
@@ -204,7 +203,6 @@ func (local *BackupBackendLocal) toBackupDetails(path string) (model.BackupDetai
 }
 
 func (local *BackupBackendLocal) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
-	slog.Info("Write backup metadata", "data", metadata)
 	metadataBytes, err := yaml.Marshal(metadata)
 	if err != nil {
 		return err

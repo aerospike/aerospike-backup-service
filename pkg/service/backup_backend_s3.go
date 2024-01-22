@@ -56,7 +56,7 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails, error) {
 	backupFolder := s.Path + "/" + model.FullBackupDirectory + "/"
 	s3prefix := "s3://" + s.bucket
-	slog.Info("get full backups", "backupFolder", backupFolder, "from", from, "to", to)
+	slog.Info("Get full backups", "backupFolder", backupFolder, "from", from, "to", to)
 	if s.backupPolicy.RemoveFiles != nil && *s.backupPolicy.RemoveFiles {
 		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 		if s.fullBackupInProgress.Load() {
@@ -66,8 +66,7 @@ func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails,
 		if err != nil {
 			return []model.BackupDetails{}, err
 		}
-		if metadata.Created.UnixMilli() < from ||
-			metadata.Created.UnixMilli() > to {
+		if metadata.Created.UnixMilli() < from || metadata.Created.UnixMilli() >= to {
 			return []model.BackupDetails{}, nil
 		}
 		return []model.BackupDetails{{
