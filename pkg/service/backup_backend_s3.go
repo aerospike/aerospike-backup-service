@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"log/slog"
 	"strings"
 	"sync"
@@ -63,7 +62,7 @@ func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails,
 		if s.fullBackupInProgress.Load() {
 			return []model.BackupDetails{}, nil
 		}
-		metadata, err := s.GetMetadata(types.CommonPrefix{Prefix: &backupFolder})
+		metadata, err := s.readMetadata(backupFolder)
 		if err != nil {
 			return []model.BackupDetails{}, err
 		}
