@@ -3,6 +3,8 @@ package model
 import (
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/aws/smithy-go/ptr"
 )
@@ -20,7 +22,8 @@ type Storage struct {
 	S3Profile *string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty"`
 	// An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).
 	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty"`
-	S3LogLevel         *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty"`
+	// The log level of the AWS S3 SDK (AWS S3 optional).
+	S3LogLevel *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"Fatal"`
 }
 
 // StorageType represents the type of the backup storage.
@@ -31,6 +34,8 @@ const (
 	Local StorageType = iota
 	S3
 )
+
+var validS3LogLevels = []string{"OFF", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"}
 
 // Validate validates the storage configuration.
 func (s *Storage) Validate() error {
@@ -45,8 +50,12 @@ func (s *Storage) Validate() error {
 			return errors.New("s3 region is not specified")
 		}
 	}
-	if err := s.validateType(); err != nil { //nolint:revive
+	if err := s.validateType(); err != nil {
 		return err
+	}
+	if s.S3LogLevel != nil &&
+		!slices.Contains(validS3LogLevels, strings.ToUpper(*s.S3LogLevel)) {
+		return errors.New("invalid s3 log level")
 	}
 	return nil
 }

@@ -1505,7 +1505,9 @@
                     "type": "string"
                 },
                 "s3-log-level": {
-                    "type": "string"
+                    "description": "The log level of the AWS S3 SDK (AWS S3 optional).",
+                    "type": "string",
+                    "default": "Fatal"
                 },
                 "s3-profile": {
                     "description": "The S3 profile name (AWS S3 optional).",

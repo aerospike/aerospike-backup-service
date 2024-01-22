@@ -97,6 +97,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCString(&backupConfig.s3_endpoint_override, storage.S3EndpointOverride)
 	setCString(&backupConfig.s3_region, storage.S3Region)
 	setCString(&backupConfig.s3_profile, storage.S3Profile)
+	setS3LogLevel(&backupConfig.s3_log_level, storage.S3LogLevel)
 
 	// Secret Agent configuration
 	backupSecretAgent(&backupConfig, secretAgent)

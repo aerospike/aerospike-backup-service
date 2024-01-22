@@ -137,6 +137,8 @@ func (ws *HTTPServer) rateLimiterMiddleware(next http.Handler) http.Handler {
 }
 
 // Start starts the HTTP server.
+//
+//nolint:funlen
 func (ws *HTTPServer) Start() {
 	mux := http.NewServeMux()
 

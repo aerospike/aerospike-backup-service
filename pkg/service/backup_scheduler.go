@@ -32,7 +32,7 @@ func (b *backupJobs) put(key string, value *quartz.JobDetail) {
 // NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
 func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
 	jobStore.Lock()
-	jobStore.Unlock()
+	defer jobStore.Unlock()
 	key := quartz.NewJobKeyWithGroup(name, quartzGroupBackupFull).String()
 	job := jobStore.jobs[key]
 	if job == nil {
