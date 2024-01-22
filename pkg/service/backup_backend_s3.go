@@ -60,10 +60,6 @@ func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails,
 	slog.Info("get full backups", "backupFolder", backupFolder, "from", from, "to", to)
 	if s.backupPolicy.RemoveFiles != nil && *s.backupPolicy.RemoveFiles {
 		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
-		files, _ := s.listFiles(backupFolder)
-		if len(files) == 0 {
-			return []model.BackupDetails{}, nil
-		}
 		if s.fullBackupInProgress.Load() {
 			return []model.BackupDetails{}, nil
 		}
