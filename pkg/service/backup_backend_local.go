@@ -98,14 +98,14 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 	lastRun := local.readState().LastFullRun
 	slog.Info("get full backups", "backupFolder", backupFolder, "lastRun", lastRun, "from", from, "to", to)
 
-	entries, err := os.ReadDir(backupFolder)
+	subfolders, err := listDir(backupFolder)
 	if err != nil {
 		return nil, err
 	}
 
+	// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 	if local.backupPolicy.RemoveFiles != nil && *local.backupPolicy.RemoveFiles {
-		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
-		if len(entries) == 0 {
+		if len(subfolders) == 0 {
 			return []model.BackupDetails{}, nil
 		}
 		if local.fullBackupInProgress.Load() {
@@ -122,21 +122,33 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 		return []model.BackupDetails{details}, nil
 	}
 
-	backupDetails := make([]model.BackupDetails, 0, len(entries))
-	for _, e := range entries {
-		if e.IsDir() {
-			path := filepath.Join(backupFolder, e.Name())
-			details, err := local.toBackupDetails(path)
-			if err != nil { // no backup metadata file
-				continue
-			}
-			if details.Created.UnixMilli() >= from &&
-				details.Created.UnixMilli() < to {
-				backupDetails = append(backupDetails, details)
-			}
+	backupDetails := make([]model.BackupDetails, 0, len(subfolders))
+	for _, e := range subfolders {
+		path := filepath.Join(backupFolder, e.Name())
+		details, err := local.toBackupDetails(path)
+		if err != nil { // no backup metadata file
+			continue
+		}
+		if details.Created.UnixMilli() >= from &&
+			details.Created.UnixMilli() < to {
+			backupDetails = append(backupDetails, details)
 		}
 	}
 	return backupDetails, nil
+}
+
+func listDir(backupFolder string) ([]os.DirEntry, error) {
+	content, err := os.ReadDir(backupFolder)
+	if err != nil {
+		return nil, err
+	}
+	var onlyDirs []os.DirEntry
+	for _, c := range content {
+		if c.IsDir() {
+			onlyDirs = append(onlyDirs, c)
+		}
+	}
+	return onlyDirs, err
 }
 
 // IncrementalBackupList returns a list of available incremental backups.
