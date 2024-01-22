@@ -104,9 +104,6 @@ func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupD
 
 	// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 	if local.backupPolicy.RemoveFiles != nil && *local.backupPolicy.RemoveFiles {
-		if len(subfolders) == 0 {
-			return []model.BackupDetails{}, nil
-		}
 		if local.fullBackupInProgress.Load() {
 			return []model.BackupDetails{}, nil
 		}
@@ -207,6 +204,7 @@ func (local *BackupBackendLocal) toBackupDetails(path string) (model.BackupDetai
 }
 
 func (local *BackupBackendLocal) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
+	slog.Info("Write backup metadata", "data", metadata)
 	metadataBytes, err := yaml.Marshal(metadata)
 	if err != nil {
 		return err
