@@ -57,9 +57,9 @@ func createMockBackupFile(path string) error {
 
 func TestLatestFullBackupBeforeTime(t *testing.T) {
 	backupList := []model.BackupDetails{
-		{LastModified: util.Ptr(time.UnixMilli(10))},
-		{LastModified: util.Ptr(time.UnixMilli(20))}, // Should be the latest full backup
-		{LastModified: util.Ptr(time.UnixMilli(30))},
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)}},
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}}, // Should be the latest full backup
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(30)}},
 	}
 
 	result := latestFullBackupBeforeTime(backupList, time.UnixMilli(25))
@@ -75,9 +75,9 @@ func TestLatestFullBackupBeforeTime(t *testing.T) {
 
 func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
 	backupList := []model.BackupDetails{
-		{LastModified: util.Ptr(time.UnixMilli(10))},
-		{LastModified: util.Ptr(time.UnixMilli(20))},
-		{LastModified: util.Ptr(time.UnixMilli(30))},
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)}},
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}},
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(30)}},
 	}
 
 	result := latestFullBackupBeforeTime(backupList, time.UnixMilli(5))
@@ -92,18 +92,18 @@ type BackendMock struct {
 
 func (*BackendMock) FullBackupList(_ int64, _ int64) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
-		LastModified: ptr.Time(time.UnixMilli(5)),
-		Key:          ptr.String("key"),
+		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(5)},
+		Key:            ptr.String("key"),
 	}}, nil
 }
 
 func (*BackendMock) IncrementalBackupList() ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
-		LastModified: ptr.Time(time.UnixMilli(10)),
-		Key:          ptr.String("key"),
+		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)},
+		Key:            ptr.String("key"),
 	}, {
-		LastModified: ptr.Time(time.UnixMilli(20)),
-		Key:          ptr.String("key2"),
+		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)},
+		Key:            ptr.String("key2"),
 	}}, nil
 }
 

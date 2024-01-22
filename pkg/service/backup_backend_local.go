@@ -14,7 +14,6 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
-	"github.com/aws/smithy-go/ptr"
 	"gopkg.in/yaml.v3"
 )
 
@@ -96,47 +95,56 @@ func (local *BackupBackendLocal) writeState(state *model.BackupState) error {
 // FullBackupList returns a list of available full backups.
 func (local *BackupBackendLocal) FullBackupList(from, to int64) ([]model.BackupDetails, error) {
 	backupFolder := local.path + "/" + model.FullBackupDirectory
-	lastRun := local.readState().LastFullRun
-	slog.Info("get full backups", "backupFolder", backupFolder, "lastRun", lastRun, "from", from, "to", to)
+	slog.Info("Get full backups", "backupFolder", backupFolder, "from", from, "to", to)
 
-	entries, err := os.ReadDir(backupFolder)
+	subfolders, err := listDir(backupFolder)
 	if err != nil {
 		return nil, err
 	}
 
+	// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 	if local.backupPolicy.RemoveFiles != nil && *local.backupPolicy.RemoveFiles {
-		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
-		if len(entries) == 0 {
-			return []model.BackupDetails{}, nil
-		}
 		if local.fullBackupInProgress.Load() {
 			return []model.BackupDetails{}, nil
 		}
-		// check request time boundaries
-		if lastRun.UnixMilli() < from || lastRun.UnixMilli() >= to {
+		details, err := local.toBackupDetails(backupFolder)
+		if err != nil {
+			return nil, err
+		}
+		if details.Created.UnixMilli() < from || details.Created.UnixMilli() >= to {
 			return []model.BackupDetails{}, nil
 		}
-		return []model.BackupDetails{{
-			Key:          ptr.String(backupFolder),
-			LastModified: &lastRun,
-			Size:         folderSize(backupFolder),
-		}}, nil
+		return []model.BackupDetails{details}, nil
 	}
 
-	backupDetails := make([]model.BackupDetails, 0, len(entries))
-	for _, e := range entries {
-		if e.IsDir() {
-			details, err := local.toBackupDetails(e, backupFolder)
-			if err != nil { // no backup metadata file
-				continue
-			}
-			if details.LastModified.UnixMilli() >= from &&
-				details.LastModified.UnixMilli() < to {
-				backupDetails = append(backupDetails, details)
-			}
+	backupDetails := make([]model.BackupDetails, 0, len(subfolders))
+	for _, e := range subfolders {
+		path := filepath.Join(backupFolder, e.Name())
+		details, err := local.toBackupDetails(path)
+		if err != nil { // no backup metadata file
+			slog.Warn("cannot read details", "err", err)
+			continue
+		}
+		if details.Created.UnixMilli() >= from &&
+			details.Created.UnixMilli() < to {
+			backupDetails = append(backupDetails, details)
 		}
 	}
 	return backupDetails, nil
+}
+
+func listDir(backupFolder string) ([]os.DirEntry, error) {
+	content, err := os.ReadDir(backupFolder)
+	if err != nil {
+		return nil, err
+	}
+	var onlyDirs []os.DirEntry
+	for _, c := range content {
+		if c.IsDir() {
+			onlyDirs = append(onlyDirs, c)
+		}
+	}
+	return onlyDirs, err
 }
 
 // IncrementalBackupList returns a list of available incremental backups.
@@ -150,11 +158,12 @@ func (local *BackupBackendLocal) IncrementalBackupList() ([]model.BackupDetails,
 	backupDetails := make([]model.BackupDetails, 0, len(entries))
 	for _, e := range entries {
 		if e.IsDir() {
-			details, err := local.toBackupDetails(e, backupFolder)
+			path := filepath.Join(backupFolder, e.Name())
+			details, err := local.toBackupDetails(path)
 			if err != nil { // no backup metadata file
 				continue
 			}
-			if !details.LastModified.After(lastIncrRun) {
+			if !details.Created.After(lastIncrRun) {
 				backupDetails = append(backupDetails, details)
 			}
 		}
@@ -182,42 +191,15 @@ func (local *BackupBackendLocal) DeleteFolder(path string) error {
 	return os.RemoveAll(path)
 }
 
-func (local *BackupBackendLocal) toBackupDetails(e fs.DirEntry, backupFolder string) (model.BackupDetails, error) {
-	path := filepath.Join(backupFolder, e.Name())
+func (local *BackupBackendLocal) toBackupDetails(path string) (model.BackupDetails, error) {
 	metadata, err := local.readBackupMetadata(path)
 	if err != nil {
 		return model.BackupDetails{}, err
 	}
 	return model.BackupDetails{
-		Key:          util.Ptr(path),
-		LastModified: &metadata.Created,
-		Size:         folderSize(path),
+		BackupMetadata: *metadata,
+		Key:            util.Ptr(path),
 	}, nil
-}
-
-func folderSize(path string) *int64 {
-	var size int64
-
-	err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() {
-			info, err := d.Info()
-			if err != nil {
-				return err
-			}
-			size += info.Size()
-		}
-		return nil
-	})
-
-	if err != nil {
-		slog.Error("failed to calculate size", "path", path, "err", err)
-		return nil
-	}
-
-	return &size
 }
 
 func (local *BackupBackendLocal) writeBackupMetadata(path string, metadata model.BackupMetadata) error {

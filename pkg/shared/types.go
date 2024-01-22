@@ -2,6 +2,7 @@ package shared
 
 import (
 	"github.com/aerospike/backup/pkg/model"
+	"time"
 )
 
 // BackupOptions provides additional properties for running a backup.
@@ -10,21 +11,21 @@ type BackupOptions struct {
 	ModAfter  *int64
 }
 
-// BackupStat represents partial backup result statistics.
+// BackupStat represents partial backup result statistics returned from asbackup library.
 type BackupStat struct {
-	RecordCount         int
-	SecondaryIndexCount int
-	UDFFileCount        int
-	HasStats            bool
-	Path                string
+	RecordCount int
+	ByteCount   int
+	FileCount   int
+	IndexCount  int
+	UDFCount    int
 }
 
 // IsEmpty indicates whether the backup operation represented by the
 // BackupStat completed with an empty data set.
 func (stats *BackupStat) IsEmpty() bool {
 	return stats.RecordCount == 0 &&
-		stats.UDFFileCount == 0 &&
-		stats.SecondaryIndexCount == 0
+		stats.UDFCount == 0 &&
+		stats.IndexCount == 0
 }
 
 // Backup represents a backup service.
@@ -43,4 +44,15 @@ type Backup interface {
 // Restore represents a restore service.
 type Restore interface {
 	RestoreRun(restoreRequest *model.RestoreRequestInternal) *model.RestoreResult
+}
+
+func (stats *BackupStat) ToModel(created time.Time) model.BackupMetadata {
+	return model.BackupMetadata{
+		Created:             created,
+		RecordCount:         stats.RecordCount,
+		FileCount:           stats.FileCount,
+		ByteCount:           stats.ByteCount,
+		SecondaryIndexCount: stats.IndexCount,
+		UDFCount:            stats.UDFCount,
+	}
 }

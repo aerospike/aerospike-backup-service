@@ -136,14 +136,14 @@ func (ws *HTTPServer) scheduleFullBackup(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "nonpositive delay query parameter", http.StatusBadRequest)
 		return
 	}
-	fullBackupjobDetail := service.NewAdHocFullBackupJobForRoutine(routineName)
-	if fullBackupjobDetail == nil {
+	fullBackupJobDetail := service.NewAdHocFullBackupJobForRoutine(routineName)
+	if fullBackupJobDetail == nil {
 		http.Error(w, "unknown routine name", http.StatusNotFound)
 		return
 	}
 	trigger := quartz.NewRunOnceTrigger(time.Duration(delayMillis) * time.Millisecond)
 	// schedule using the quartz scheduler
-	if err := ws.scheduler.ScheduleJob(fullBackupjobDetail, trigger); err != nil {
+	if err := ws.scheduler.ScheduleJob(fullBackupJobDetail, trigger); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

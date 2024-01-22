@@ -90,7 +90,7 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 
 		r.restoreJobs.increaseStats(jobID, result)
 
-		incrementalBackups, err := r.findIncrementalBackups(backend, *fullBackup.LastModified)
+		incrementalBackups, err := r.findIncrementalBackups(backend, fullBackup.Created)
 		if err != nil {
 			slog.Error("Could not find incremental backups", "JobId", jobID, "routine", request.Routine,
 				"err", err)
@@ -135,10 +135,10 @@ func latestFullBackupBeforeTime(list []model.BackupDetails, time time.Time) *mod
 	var result *model.BackupDetails
 	for i := range list {
 		current := &list[i]
-		if current.LastModified.After(time) {
+		if current.Created.After(time) {
 			continue
 		}
-		if result == nil || result.LastModified.Before(*current.LastModified) {
+		if result == nil || result.Created.Before(current.Created) {
 			result = current
 		}
 	}
@@ -174,7 +174,7 @@ func (r *RestoreMemory) findIncrementalBackups(
 	}
 	var filteredIncrementalBackups []model.BackupDetails
 	for _, b := range allIncrementalBackupList {
-		if b.LastModified.After(since) {
+		if b.Created.After(since) {
 			filteredIncrementalBackups = append(filteredIncrementalBackups, b)
 		}
 	}

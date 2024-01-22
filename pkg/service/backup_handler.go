@@ -70,13 +70,13 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	}()
 	backupFolder := getFullPath(h.storage, h.backupFullPolicy, now)
 
+	var stats *shared.BackupStat
+	options := shared.BackupOptions{
+		ModBefore: util.Ptr(now.UnixNano()),
+	}
 	backupRunFunc := func() {
 		started := time.Now()
-		before := now.UnixNano()
-		options := shared.BackupOptions{
-			ModBefore: &before,
-		}
-		stats := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
+		stats = backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
 			h.storage, h.secretAgent, options, backupFolder)
 		if stats == nil {
 			slog.Warn("Failed full backup", "name", h.routineName)
@@ -91,13 +91,17 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	slog.Debug("Completed full backup", "name", h.routineName)
 	util.LogCaptured(out)
 
+	if stats == nil {
+		return
+	}
+
 	// increment backupCounter metric
 	backupCounter.Inc()
 
 	// update the state
 	h.updateFullBackupState(now)
 
-	if err := h.backend.writeBackupMetadata(*backupFolder, model.BackupMetadata{Created: now}); err != nil {
+	if err := h.backend.writeBackupMetadata(*backupFolder, stats.ToModel(now)); err != nil {
 		slog.Error("Could not write backup metadata", "name", h.routineName,
 			"folder", *backupFolder, "err", err)
 	}
@@ -126,13 +130,11 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	backupFolder := getIncrementalPath(h.storage, now)
 
 	var stats *shared.BackupStat
+	options := shared.BackupOptions{
+		ModBefore: util.Ptr(now.UnixNano()),
+		ModAfter:  util.Ptr(h.state.LastRunEpoch()),
+	}
 	backupRunFunc := func() {
-		lastRunEpoch := h.state.LastRunEpoch()
-		before := now.UnixNano()
-		options := shared.BackupOptions{
-			ModBefore: &before,
-			ModAfter:  &lastRunEpoch,
-		}
 		started := time.Now()
 		stats = backupService.BackupRun(
 			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, backupFolder)
@@ -152,7 +154,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	if h.isBackupEmpty(stats) {
 		h.deleteEmptyBackup(*backupFolder, h.routineName)
 	} else {
-		if err := h.backend.writeBackupMetadata(*backupFolder, model.BackupMetadata{Created: now}); err != nil {
+		if err := h.backend.writeBackupMetadata(*backupFolder, stats.ToModel(now)); err != nil {
 			slog.Error("Could not write backup metadata", "name", h.routineName,
 				"folder", *backupFolder, "err", err)
 		}
@@ -166,8 +168,8 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 }
 
 func (h *BackupHandler) isBackupEmpty(stats *shared.BackupStat) bool {
-	if stats == nil || !stats.HasStats {
-		return false
+	if stats == nil {
+		return true
 	}
 	return stats.IsEmpty()
 }

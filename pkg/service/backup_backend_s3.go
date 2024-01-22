@@ -56,24 +56,22 @@ func (s *BackupBackendS3) writeState(state *model.BackupState) error {
 func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails, error) {
 	backupFolder := s.Path + "/" + model.FullBackupDirectory + "/"
 	s3prefix := "s3://" + s.bucket
-	lastRun := s.readState().LastFullRun
-	slog.Info("get full backups", "backupFolder", backupFolder, "lastRun", lastRun, "from", from, "to", to)
+	slog.Info("Get full backups", "backupFolder", backupFolder, "from", from, "to", to)
 	if s.backupPolicy.RemoveFiles != nil && *s.backupPolicy.RemoveFiles {
 		// when use RemoveFiles = true, backup data is located in backupFolder folder itself
-		files, _ := s.listFiles(backupFolder)
-		if len(files) == 0 {
-			return []model.BackupDetails{}, nil
-		}
 		if s.fullBackupInProgress.Load() {
 			return []model.BackupDetails{}, nil
 		}
-		if lastRun.UnixMilli() < from || lastRun.UnixMilli() >= to {
+		metadata, err := s.readMetadata(backupFolder)
+		if err != nil {
+			return []model.BackupDetails{}, err
+		}
+		if metadata.Created.UnixMilli() < from || metadata.Created.UnixMilli() >= to {
 			return []model.BackupDetails{}, nil
 		}
 		return []model.BackupDetails{{
-			Key:          ptr.String(s3prefix + backupFolder),
-			LastModified: &lastRun,
-			Size:         ptr.Int64(s.dirSize(backupFolder)),
+			BackupMetadata: *metadata,
+			Key:            ptr.String(s3prefix + backupFolder),
 		}}, nil
 	}
 
@@ -88,29 +86,15 @@ func (s *BackupBackendS3) FullBackupList(from, to int64) ([]model.BackupDetails,
 			continue
 		}
 		details := model.BackupDetails{
-			Key:          ptr.String(s3prefix + "/" + *subfolder.Prefix),
-			LastModified: &metadata.Created,
-			Size:         ptr.Int64(s.dirSize(*subfolder.Prefix)),
+			BackupMetadata: *metadata,
+			Key:            ptr.String(s3prefix + "/" + *subfolder.Prefix),
 		}
-		if details.LastModified.UnixMilli() >= from &&
-			details.LastModified.UnixMilli() < to {
+		if details.Created.UnixMilli() >= from &&
+			details.Created.UnixMilli() < to {
 			backupDetails = append(backupDetails, details)
 		}
 	}
 	return backupDetails, nil
-}
-
-func (s *BackupBackendS3) dirSize(path string) int64 {
-	files, err := s.listFiles(path)
-	if err != nil {
-		slog.Warn("Failed to list files", "path", path)
-		return 0
-	}
-	var totalSize int64
-	for _, file := range files {
-		totalSize += *file.Size
-	}
-	return totalSize
 }
 
 // IncrementalBackupList returns a list of available incremental backups.
@@ -129,11 +113,10 @@ func (s *BackupBackendS3) IncrementalBackupList() ([]model.BackupDetails, error)
 			continue
 		}
 		details := model.BackupDetails{
-			Key:          ptr.String(s3prefix + "/" + *subfolder.Prefix),
-			LastModified: &metadata.Created,
-			Size:         ptr.Int64(s.dirSize(*subfolder.Prefix)),
+			BackupMetadata: *metadata,
+			Key:            ptr.String(s3prefix + "/" + *subfolder.Prefix),
 		}
-		if !details.LastModified.After(lastIncrRun) {
+		if !details.Created.After(lastIncrRun) {
 			backupDetails = append(backupDetails, details)
 		}
 	}

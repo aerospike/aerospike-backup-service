@@ -114,9 +114,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 		return nil
 	}
 
-	result := &BackupStat{
-		Path: *path,
-	}
+	result := &BackupStat{}
 	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS {
 		return result
 	}
@@ -130,10 +128,11 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 }
 
 func setStatistics(result *BackupStat, status *C.backup_status_t) {
-	result.HasStats = true
 	result.RecordCount = int(status.rec_count_total)
-	result.SecondaryIndexCount = int(status.index_count)
-	result.UDFFileCount = int(status.udf_count)
+	result.ByteCount = int(status.byte_count_total)
+	result.FileCount = int(status.file_count)
+	result.IndexCount = int(status.index_count)
+	result.UDFCount = int(status.udf_count)
 }
 
 func backupSecretAgent(config *C.backup_config_t, secretsAgent *model.SecretAgent) {
