@@ -40,6 +40,15 @@ type BackupListReader interface {
 	IncrementalBackupList() ([]model.BackupDetails, error)
 }
 
+type StorageAccessor interface {
+	ReadBackupStateYaml(path string, state *model.BackupState) error
+	WriteYaml(filePath string, v any) error
+	ReadBackupDetails(path string) (model.BackupDetails, error)
+	ReadDir(path string) ([]string, error)
+	DeleteFolder(path string) error
+	CreateFolder(path string)
+}
+
 func BuildBackupBackends(config *model.Config) map[string]BackupBackend {
 	backends := map[string]BackupBackend{}
 	for routineName := range config.BackupRoutines {
