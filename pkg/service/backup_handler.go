@@ -69,6 +69,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		slog.Debug("Release fullBackupInProgress lock", "name", h.routineName)
 	}()
 	backupFolder := getFullPath(h.storage, h.backupFullPolicy, now)
+	h.backend.CreateFolder(*backupFolder)
 
 	var stats *shared.BackupStat
 	options := shared.BackupOptions{
@@ -107,7 +108,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	}
 
 	// clean incremental backups
-	if err := h.backend.CleanDir(model.IncrementalBackupDirectory); err != nil {
+	if err := h.backend.DeleteFolder(model.IncrementalBackupDirectory); err != nil {
 		slog.Error("Could not clean incremental backups", "name", h.routineName, "err", err)
 	} else {
 		slog.Info("Cleaned incremental backups", "name", h.routineName)
@@ -128,6 +129,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 		return
 	}
 	backupFolder := getIncrementalPath(h.storage, now)
+	h.backend.CreateFolder(*backupFolder)
 
 	var stats *shared.BackupStat
 	options := shared.BackupOptions{

@@ -19,10 +19,10 @@ type BackupBackend interface {
 	// writeBackupCreationTime writes creation time in the metadata file under the backup folder.
 	writeBackupMetadata(path string, metadata model.BackupMetadata) error
 
-	// CleanDir cleans the directory with the given name.
-	CleanDir(name string) error
+	// CreateFolder creates folder with given path.
+	CreateFolder(path string)
 
-	// DeleteFolder removes file with a given path.
+	// DeleteFolder removes file with a given basePath.
 	DeleteFolder(path string) error
 
 	// FullBackupInProgress indicates whether a full backup is in progress.
