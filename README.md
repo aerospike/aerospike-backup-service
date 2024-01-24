@@ -1,7 +1,7 @@
 # Aerospike Backup Service
 
 ```
-Aerospike Backup Service is currently in Alpha. Production usage is not reccomended and changes may occur.
+Aerospike Backup Service is currently pre Alpha. Production usage is not reccomended and changes may occur.
 Enterprise customers, please contact support to sign an Alpha agreement. 
 ```
 
