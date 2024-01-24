@@ -1,5 +1,10 @@
 # Aerospike Backup Service
 
+```
+Aerospike Backup Service is currently in Alpha. Production usage is not reccomended and changes may occur.
+Enterprise customers, please contact support to sign an Alpha agreement. 
+```
+
 [![Build](https://github.com/aerospike/aerospike-backup-service/actions/workflows/build.yml/badge.svg)](https://github.com/aerospike/aerospike-backup-service/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/aerospike/aerospike-backup-service/branch/main/graph/badge.svg)](https://codecov.io/gh/aerospike/aerospike-backup-service)
 
