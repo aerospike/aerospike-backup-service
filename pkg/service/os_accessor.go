@@ -12,8 +12,13 @@ import (
 	"strings"
 )
 
+// OSDiskAccessor is responsible for IO operation on local disk.
 type OSDiskAccessor struct {
 	basePath string
+}
+
+func NewOS(path string) OSDiskAccessor {
+	return OSDiskAccessor{basePath: path}
 }
 
 func (_ *OSDiskAccessor) readBackupState(filepath string, state *model.BackupState) error {
@@ -86,10 +91,6 @@ func (_ *OSDiskAccessor) lsDir(path string) ([]string, error) {
 		}
 	}
 	return onlyDirs, nil
-}
-
-func NewOS(path string) OSDiskAccessor {
-	return OSDiskAccessor{basePath: path}
 }
 func (_ *OSDiskAccessor) CreateFolder(path string) {
 	_, err := os.Stat(path)
