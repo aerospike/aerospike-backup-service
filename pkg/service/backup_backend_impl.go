@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 )
 
-func (b *BackupBackendImpl) readState() *model.BackupState {
+func (b *BackupBackend) readState() *model.BackupState {
 	b.stateFileMutex.RLock()
 	defer b.stateFileMutex.RUnlock()
 	state := model.NewBackupState()
@@ -18,14 +18,14 @@ func (b *BackupBackendImpl) readState() *model.BackupState {
 	return state
 }
 
-func (b *BackupBackendImpl) writeState(state *model.BackupState) error {
+func (b *BackupBackend) writeState(state *model.BackupState) error {
 	b.stateFileMutex.Lock()
 	defer b.stateFileMutex.Unlock()
 	return b.writeYaml(b.stateFilePath, state)
 }
 
 // FullBackupList returns a list of available full backups.
-func (b *BackupBackendImpl) FullBackupList(from, to int64) ([]model.BackupDetails, error) {
+func (b *BackupBackend) FullBackupList(from, to int64) ([]model.BackupDetails, error) {
 	backupFolder := b.path + "/" + model.FullBackupDirectory + "/"
 	slog.Info("Get full backups", "backupFolder", backupFolder, "from", from, "to", to)
 
@@ -37,7 +37,7 @@ func (b *BackupBackendImpl) FullBackupList(from, to int64) ([]model.BackupDetail
 	return b.fromSubfolders(from, to, backupFolder)
 }
 
-func (b *BackupBackendImpl) detailsFromPaths(from, to int64, paths ...string) []model.BackupDetails {
+func (b *BackupBackend) detailsFromPaths(from, to int64, paths ...string) []model.BackupDetails {
 	slog.Info("detailsFromPaths", "from", from, "to", to, "paths", paths)
 	backupDetails := []model.BackupDetails{}
 	for _, path := range paths {
@@ -56,7 +56,7 @@ func (b *BackupBackendImpl) detailsFromPaths(from, to int64, paths ...string) []
 	return backupDetails
 }
 
-func (b *BackupBackendImpl) fromSubfolders(from, to int64, backupFolder string) ([]model.BackupDetails, error) {
+func (b *BackupBackend) fromSubfolders(from, to int64, backupFolder string) ([]model.BackupDetails, error) {
 	subfolders, err := b.lsDir(backupFolder)
 	if err != nil {
 		return nil, err
@@ -66,15 +66,15 @@ func (b *BackupBackendImpl) fromSubfolders(from, to int64, backupFolder string) 
 }
 
 // IncrementalBackupList returns a list of available incremental backups.
-func (b *BackupBackendImpl) IncrementalBackupList() ([]model.BackupDetails, error) {
+func (b *BackupBackend) IncrementalBackupList() ([]model.BackupDetails, error) {
 	backupFolder := b.path + "/" + model.IncrementalBackupDirectory
 	return b.fromSubfolders(0, math.MaxInt64, backupFolder)
 }
 
-func (b *BackupBackendImpl) FullBackupInProgress() *atomic.Bool {
+func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {
 	return b.fullBackupInProgress
 }
 
-func (b *BackupBackendImpl) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
+func (b *BackupBackend) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
 	return b.writeYaml(path+"/"+metadataFile, metadata)
 }

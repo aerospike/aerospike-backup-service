@@ -6,24 +6,6 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// BackupBackend allows access to back up storage
-type BackupBackend interface {
-	BackupListReader
-	StorageAccessor
-
-	// readState reads and returns the state for the backup.
-	readState() *model.BackupState
-
-	// writeState writes the state object for the backup.
-	writeState(*model.BackupState) error
-
-	// writeBackupCreationTime writes creation time in the metadata file under the backup folder.
-	writeBackupMetadata(path string, metadata model.BackupMetadata) error
-
-	// FullBackupInProgress indicates whether a full backup is in progress.
-	FullBackupInProgress() *atomic.Bool
-}
-
 // BackupListReader allows to read list of existing backups
 type BackupListReader interface {
 	// FullBackupList returns a list of available full backups.
@@ -46,15 +28,15 @@ type StorageAccessor interface {
 	CreateFolder(path string)
 }
 
-func BuildBackupBackends(config *model.Config) map[string]BackupBackend {
-	backends := map[string]BackupBackend{}
+func BuildBackupBackends(config *model.Config) map[string]*BackupBackend {
+	backends := map[string]*BackupBackend{}
 	for routineName := range config.BackupRoutines {
 		backends[routineName] = newBackend(config, routineName)
 	}
 	return backends
 }
 
-func newBackend(config *model.Config, routineName string) BackupBackend {
+func newBackend(config *model.Config, routineName string) *BackupBackend {
 	backupRoutine := config.BackupRoutines[routineName]
 	storage := config.Storage[backupRoutine.Storage]
 	backupPolicy := config.BackupPolicies[backupRoutine.BackupPolicy]
@@ -64,7 +46,7 @@ func newBackend(config *model.Config, routineName string) BackupBackend {
 		path := *storage.Path
 		diskAccessor := NewOS(path)
 
-		return &BackupBackendImpl{
+		return &BackupBackend{
 			StorageAccessor:      &diskAccessor,
 			path:                 path,
 			stateFilePath:        path + "/" + model.StateFileName,
@@ -77,7 +59,7 @@ func newBackend(config *model.Config, routineName string) BackupBackend {
 			panic(err)
 		}
 
-		return &BackupBackendImpl{
+		return &BackupBackend{
 			StorageAccessor:      s3Context,
 			path:                 s3Context.path,
 			stateFilePath:        s3Context.path + "/" + model.StateFileName,
@@ -85,5 +67,5 @@ func newBackend(config *model.Config, routineName string) BackupBackend {
 			fullBackupInProgress: &atomic.Bool{},
 		}
 	}
-	return nil
+	panic("")
 }

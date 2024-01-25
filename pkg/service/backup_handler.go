@@ -15,7 +15,7 @@ import (
 
 // BackupHandler implements backup logic for single routine.
 type BackupHandler struct {
-	backend          BackupBackend
+	backend          *BackupBackend
 	backupFullPolicy *model.BackupPolicy
 	backupIncrPolicy *model.BackupPolicy
 	backupRoutine    *model.BackupRoutine
@@ -32,7 +32,7 @@ var stdIO = &stdio.CgoStdio{}
 var backupService shared.Backup = shared.NewBackup()
 
 // newBackupHandler returns a new BackupHandler instance.
-func newBackupHandler(config *model.Config, routineName string, backupBackend BackupBackend) *BackupHandler {
+func newBackupHandler(config *model.Config, routineName string, backupBackend *BackupBackend) *BackupHandler {
 	backupRoutine := config.BackupRoutines[routineName]
 	cluster := config.AerospikeClusters[backupRoutine.SourceCluster]
 	storage := config.Storage[backupRoutine.Storage]
