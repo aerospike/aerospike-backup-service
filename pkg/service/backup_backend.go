@@ -1,11 +1,12 @@
 package service
 
 import (
-	"github.com/aerospike/backup/pkg/model"
 	"log/slog"
 	"math"
 	"sync"
 	"sync/atomic"
+
+	"github.com/aerospike/backup/pkg/model"
 )
 
 // BackupBackend implements the BackupBackend interface by
@@ -69,7 +70,7 @@ func (b *BackupBackend) readState() *model.BackupState {
 	state := model.NewBackupState()
 	err := b.readBackupState(b.stateFilePath, state)
 	if err != nil {
-		slog.Warn("failed to read state " + b.stateFilePath)
+		slog.Warn("Failed to read state " + b.stateFilePath)
 	}
 	return state
 }

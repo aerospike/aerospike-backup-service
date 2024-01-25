@@ -112,9 +112,9 @@ func (s *S3Context) readFile(filePath string, v any) error {
 			strings.Contains(filePath, model.StateFileName) &&
 			strings.Contains(opErr.Unwrap().Error(), "StatusCode: 404") {
 			slog.Debug("File does not exist", "basePath", filePath, "err", err)
-		} else {
-			slog.Warn("Failed to read file", "basePath", filePath, "err", err)
+			return nil
 		}
+		slog.Warn("Failed to read file", "basePath", filePath, "err", err)
 		return err
 	}
 	defer result.Body.Close()

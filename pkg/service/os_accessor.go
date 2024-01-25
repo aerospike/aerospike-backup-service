@@ -27,16 +27,16 @@ func (_ *OSDiskAccessor) readBackupState(filepath string, state *model.BackupSta
 		var pathErr *fs.PathError
 		if errors.As(err, &pathErr) &&
 			strings.Contains(pathErr.Error(), "no such file or directory") {
-			slog.Debug("State file does not exist for backup", "basePath", filepath,
+			slog.Debug("State file does not exist for backup", "path", filepath,
 				"err", err)
-		} else {
-			slog.Warn("Failed to read state file for backup", "basePath", filepath,
-				"err", err)
+			return nil
 		}
+		slog.Warn("Failed to read state file for backup", "path", filepath,
+			"err", err)
 		return err
 	}
 	if err = yaml.Unmarshal(bytes, state); err != nil {
-		slog.Warn("Failed unmarshal state file for backup", "basePath", filepath,
+		slog.Warn("Failed unmarshal state file for backup", "path", filepath,
 			"err", err, "content", string(bytes))
 	}
 	return nil
