@@ -9,6 +9,7 @@ import (
 // BackupBackend allows access to back up storage
 type BackupBackend interface {
 	BackupListReader
+	StorageAccessor
 
 	// readState reads and returns the state for the backup.
 	readState() *model.BackupState
@@ -18,12 +19,6 @@ type BackupBackend interface {
 
 	// writeBackupCreationTime writes creation time in the metadata file under the backup folder.
 	writeBackupMetadata(path string, metadata model.BackupMetadata) error
-
-	// CreateFolder creates folder with given path.
-	CreateFolder(path string)
-
-	// DeleteFolder removes file with a given basePath.
-	DeleteFolder(path string) error
 
 	// FullBackupInProgress indicates whether a full backup is in progress.
 	FullBackupInProgress() *atomic.Bool
@@ -45,7 +40,9 @@ type StorageAccessor interface {
 	readBackupDetails(path string) (model.BackupDetails, error)
 	writeYaml(filePath string, v any) error
 	lsDir(path string) ([]string, error)
+	// DeleteFolder removes file with a given basePath.
 	DeleteFolder(path string) error
+	// CreateFolder creates folder with given path.
 	CreateFolder(path string)
 }
 
@@ -61,12 +58,32 @@ func newBackend(config *model.Config, routineName string) BackupBackend {
 	backupRoutine := config.BackupRoutines[routineName]
 	storage := config.Storage[backupRoutine.Storage]
 	backupPolicy := config.BackupPolicies[backupRoutine.BackupPolicy]
-	var backend BackupBackend
+	removeFiles := backupPolicy.RemoveFiles != nil && *backupPolicy.RemoveFiles
 	switch storage.Type {
 	case model.Local:
-		backend = NewBackupBackendLocal(storage, backupPolicy)
+		path := *storage.Path
+		diskAccessor := NewOS(path)
+
+		return &BackupBackendImpl{
+			StorageAccessor:      &diskAccessor,
+			path:                 path,
+			stateFilePath:        path + "/" + model.StateFileName,
+			removeFiles:          removeFiles,
+			fullBackupInProgress: &atomic.Bool{},
+		}
 	case model.S3:
-		backend = NewBackupBackendS3(storage, backupPolicy)
+		s3Context, err := NewS3Context(storage)
+		if err != nil {
+			panic(err)
+		}
+
+		return &BackupBackendImpl{
+			StorageAccessor:      s3Context,
+			path:                 s3Context.path,
+			stateFilePath:        s3Context.path + "/" + model.StateFileName,
+			removeFiles:          removeFiles,
+			fullBackupInProgress: &atomic.Bool{},
+		}
 	}
-	return backend
+	return nil
 }

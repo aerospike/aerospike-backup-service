@@ -1,11 +1,9 @@
 package service
 
 import (
-	"fmt"
 	"github.com/aerospike/backup/pkg/model"
 	"log/slog"
 	"math"
-	"os"
 	"sync/atomic"
 )
 
@@ -32,7 +30,7 @@ func (b *BackupBackendImpl) FullBackupList(from, to int64) ([]model.BackupDetail
 	slog.Info("Get full backups", "backupFolder", backupFolder, "from", from, "to", to)
 
 	// when use RemoveFiles = true, backup data is located in backupFolder folder itself
-	if b.backupPolicy.RemoveFiles != nil && *b.backupPolicy.RemoveFiles {
+	if b.removeFiles {
 		return b.detailsFromPaths(from, to, removeLeadingSlash(backupFolder)), nil
 	}
 
@@ -45,7 +43,7 @@ func (b *BackupBackendImpl) detailsFromPaths(from, to int64, paths ...string) []
 	for _, path := range paths {
 		details, err := b.readBackupDetails(path)
 		if err != nil {
-			slog.Warn("cannot read details", "basePath", path, "err", err)
+			slog.Info("Cannot read details", "path", path, "err", err)
 			continue
 		}
 		if details.Created.UnixMilli() >= from &&
@@ -79,19 +77,4 @@ func (b *BackupBackendImpl) FullBackupInProgress() *atomic.Bool {
 
 func (b *BackupBackendImpl) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
 	return b.writeYaml(path+"/"+metadataFile, metadata)
-}
-
-func (b *BackupBackendImpl) CleanDir(name string) error {
-	path := fmt.Sprintf("%s/%s/", b.path, name)
-	dir, err := os.ReadDir(path)
-	if err != nil {
-		slog.Warn("Failed to read directory", "basePath", path, "err", err)
-	}
-	for _, e := range dir {
-		filePath := path + "/" + e.Name()
-		if err = b.DeleteFolder(filePath); err != nil {
-			return err
-		}
-	}
-	return nil
 }

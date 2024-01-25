@@ -16,7 +16,7 @@ type OSDiskAccessor struct {
 	basePath string
 }
 
-func (O OSDiskAccessor) readBackupState(filepath string, state *model.BackupState) error {
+func (_ *OSDiskAccessor) readBackupState(filepath string, state *model.BackupState) error {
 	bytes, err := os.ReadFile(filepath)
 	if err != nil {
 		var pathErr *fs.PathError
@@ -37,7 +37,7 @@ func (O OSDiskAccessor) readBackupState(filepath string, state *model.BackupStat
 	return nil
 }
 
-func (O OSDiskAccessor) readBackupDetails(path string) (model.BackupDetails, error) {
+func (_ *OSDiskAccessor) readBackupDetails(path string) (model.BackupDetails, error) {
 	metadata := &model.BackupMetadata{}
 	filePath := path + metadataFile
 	bytes, err := os.ReadFile(filePath)
@@ -60,7 +60,7 @@ func (O OSDiskAccessor) readBackupDetails(path string) (model.BackupDetails, err
 	}, nil
 }
 
-func (O OSDiskAccessor) writeYaml(filePath string, v any) error {
+func (_ *OSDiskAccessor) writeYaml(filePath string, v any) error {
 	backupState, err := yaml.Marshal(v)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func (O OSDiskAccessor) writeYaml(filePath string, v any) error {
 	return os.WriteFile(filePath, backupState, 0644)
 }
 
-func (O OSDiskAccessor) lsDir(path string) ([]string, error) {
+func (_ *OSDiskAccessor) lsDir(path string) ([]string, error) {
 	content, err := os.ReadDir(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -91,7 +91,7 @@ func (O OSDiskAccessor) lsDir(path string) ([]string, error) {
 func NewOS(path string) OSDiskAccessor {
 	return OSDiskAccessor{basePath: path}
 }
-func (O OSDiskAccessor) CreateFolder(path string) {
+func (_ *OSDiskAccessor) CreateFolder(path string) {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		if err = os.MkdirAll(path, 0744); err != nil {
@@ -103,7 +103,7 @@ func (O OSDiskAccessor) CreateFolder(path string) {
 	}
 }
 
-func (O OSDiskAccessor) DeleteFolder(pathToDelete string) error {
+func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
 	slog.Info("Delete all " + pathToDelete)
-	return os.RemoveAll(O.basePath + "/" + pathToDelete)
+	return os.RemoveAll(o.basePath + "/" + pathToDelete)
 }
