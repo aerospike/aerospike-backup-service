@@ -3,16 +3,16 @@ package service
 import "github.com/aerospike/backup/pkg/model"
 
 type StorageAccessor interface {
-	// readBackupState reads backup state by given file path.
+	// readBackupState reads backup state for a backup.
 	readBackupState(stateFilePath string, state *model.BackupState) error
-	// readBackupDetails read specific backup details by backup folder path.
+	// readBackupDetails returns backup details for a backup.
 	readBackupDetails(path string) (model.BackupDetails, error)
-	// writeYaml writes given object to file as YAML.
+	// writeYaml writes the given object to a file in the YAML format.
 	writeYaml(filePath string, v any) error
-	// lists all subdirectories of given path.
+	// lsDir lists all subdirectories in the given path.
 	lsDir(path string) ([]string, error)
-	// DeleteFolder removes file with a given path.
+	// DeleteFolder removes the folder and all its contents at the specified path.
 	DeleteFolder(path string) error
-	// CreateFolder creates folder with given path.
+	// CreateFolder creates a folder at the specified path.
 	CreateFolder(path string)
 }

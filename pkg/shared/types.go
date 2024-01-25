@@ -1,8 +1,9 @@
 package shared
 
 import (
-	"github.com/aerospike/backup/pkg/model"
 	"time"
+
+	"github.com/aerospike/backup/pkg/model"
 )
 
 // BackupOptions provides additional properties for running a backup.

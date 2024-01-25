@@ -30,6 +30,8 @@ type S3Context struct {
 	metadataCache *util.LoadingCache[*model.BackupMetadata]
 }
 
+var _ StorageAccessor = (*S3Context)(nil)
+
 // NewS3Context returns a new S3Context.
 // Panics on any error during initialization.
 func NewS3Context(storage *model.Storage) (*S3Context, error) {
@@ -223,7 +225,7 @@ func (s *S3Context) list(continuationToken *string, prefix, v string) (*s3.ListO
 	return result, nil
 }
 
-func (s *S3Context) CreateFolder(path string) {
+func (s *S3Context) CreateFolder(_ string) {
 	// S3 doesn't require to create folders.
 }
 

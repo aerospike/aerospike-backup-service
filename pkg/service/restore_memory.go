@@ -9,10 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aerospike/backup/pkg/util"
-
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 // RestoreMemory implements the RestoreService interface.

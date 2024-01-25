@@ -18,13 +18,16 @@ type OSDiskAccessor struct {
 	basePath string
 }
 
+var _ StorageAccessor = (*OSDiskAccessor)(nil)
+
+// NewOSDiskAccessor returns a new OSDiskAccessor.
 func NewOSDiskAccessor(path string) *OSDiskAccessor {
 	return &OSDiskAccessor{
 		basePath: path,
 	}
 }
 
-func (_ *OSDiskAccessor) readBackupState(filepath string, state *model.BackupState) error {
+func (o *OSDiskAccessor) readBackupState(filepath string, state *model.BackupState) error {
 	bytes, err := os.ReadFile(filepath)
 	if err != nil {
 		var pathErr *fs.PathError
@@ -45,21 +48,17 @@ func (_ *OSDiskAccessor) readBackupState(filepath string, state *model.BackupSta
 	return nil
 }
 
-func (_ *OSDiskAccessor) readBackupDetails(path string) (model.BackupDetails, error) {
-	metadata := &model.BackupMetadata{}
+func (o *OSDiskAccessor) readBackupDetails(path string) (model.BackupDetails, error) {
 	filePath := filepath.Join(path, metadataFile)
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return model.BackupDetails{}, err
 	}
 
+	metadata := &model.BackupMetadata{}
 	if err = yaml.Unmarshal(bytes, metadata); err != nil {
-		slog.Warn("Failed unmarshal metadata file", "path",
-			filePath, "err", err, "content", string(bytes))
-		return model.BackupDetails{}, err
-	}
-
-	if err != nil {
+		slog.Warn("Failed unmarshal metadata file", "path", filePath, "err", err,
+			"content", string(bytes))
 		return model.BackupDetails{}, err
 	}
 	return model.BackupDetails{
@@ -68,7 +67,7 @@ func (_ *OSDiskAccessor) readBackupDetails(path string) (model.BackupDetails, er
 	}, nil
 }
 
-func (_ *OSDiskAccessor) writeYaml(filePath string, v any) error {
+func (o *OSDiskAccessor) writeYaml(filePath string, v any) error {
 	backupState, err := yaml.Marshal(v)
 	if err != nil {
 		return err
@@ -76,7 +75,7 @@ func (_ *OSDiskAccessor) writeYaml(filePath string, v any) error {
 	return os.WriteFile(filePath, backupState, 0644)
 }
 
-func (_ *OSDiskAccessor) lsDir(path string) ([]string, error) {
+func (o *OSDiskAccessor) lsDir(path string) ([]string, error) {
 	content, err := os.ReadDir(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -94,7 +93,8 @@ func (_ *OSDiskAccessor) lsDir(path string) ([]string, error) {
 	}
 	return onlyDirs, nil
 }
-func (_ *OSDiskAccessor) CreateFolder(path string) {
+
+func (o *OSDiskAccessor) CreateFolder(path string) {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		if err = os.MkdirAll(path, 0744); err != nil {
