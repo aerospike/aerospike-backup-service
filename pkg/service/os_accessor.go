@@ -44,7 +44,7 @@ func (_ *OSDiskAccessor) readBackupState(filepath string, state *model.BackupSta
 
 func (_ *OSDiskAccessor) readBackupDetails(path string) (model.BackupDetails, error) {
 	metadata := &model.BackupMetadata{}
-	filePath := path + metadataFile
+	filePath := filepath.Join(path, metadataFile)
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return model.BackupDetails{}, err
@@ -77,7 +77,6 @@ func (_ *OSDiskAccessor) lsDir(path string) ([]string, error) {
 	content, err := os.ReadDir(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			slog.Info("basePath not found " + path)
 			return []string{}, nil
 		}
 		return nil, err
@@ -87,7 +86,7 @@ func (_ *OSDiskAccessor) lsDir(path string) ([]string, error) {
 	for _, c := range content {
 		if c.IsDir() {
 			fullPath := filepath.Join(path, c.Name())
-			onlyDirs = append(onlyDirs, fullPath+"/")
+			onlyDirs = append(onlyDirs, fullPath)
 		}
 	}
 	return onlyDirs, nil
@@ -106,5 +105,5 @@ func (_ *OSDiskAccessor) CreateFolder(path string) {
 
 func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
 	slog.Info("Delete all " + pathToDelete)
-	return os.RemoveAll(o.basePath + "/" + pathToDelete)
+	return os.RemoveAll(filepath.Join(o.basePath, pathToDelete))
 }

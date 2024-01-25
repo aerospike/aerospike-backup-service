@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -250,7 +251,7 @@ func (s *S3Context) GetMetadata(prefix string) (*model.BackupMetadata, error) {
 
 func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 	s3prefix := "s3://" + s.bucket
-	metadataFilePath := strings.TrimPrefix(path, s3prefix) + metadataFile
+	metadataFilePath := filepath.Join(strings.TrimPrefix(path, s3prefix), metadataFile)
 	metadata := &model.BackupMetadata{}
 	err := s.readFile(metadataFilePath, metadata)
 	if err != nil {
