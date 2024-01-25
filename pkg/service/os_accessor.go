@@ -95,7 +95,7 @@ func (_ *OSDiskAccessor) CreateFolder(path string) {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		if err = os.MkdirAll(path, 0744); err != nil {
-			slog.Warn("Error creating backup directory", "basePath", path, "err", err)
+			slog.Warn("Error creating backup directory", "path", path, "err", err)
 		}
 	}
 	if err = os.Chmod(path, 0744); err != nil {
