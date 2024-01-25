@@ -136,7 +136,6 @@ func (s *S3Context) readFile(filePath string, v any) error {
 func (s *S3Context) writeYaml(filePath string, v any) error {
 	s3prefix := "s3://" + s.bucket
 	filePath = strings.TrimPrefix(filePath, s3prefix)
-	slog.Info("write yaml to " + filePath)
 	backupState, err := yaml.Marshal(v)
 	if err != nil {
 		return err
