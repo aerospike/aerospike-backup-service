@@ -9,9 +9,7 @@ import (
 
 func TestLoadingCache(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	cache := NewLoadingCache(ctx, func(s string) (int, error) {
-		return strconv.Atoi(s)
-	})
+	cache := NewLoadingCache(ctx, strconv.Atoi)
 	value, _ := cache.Get("1")
 	if value != 1 {
 		t.Error("The value is expected to be 1")

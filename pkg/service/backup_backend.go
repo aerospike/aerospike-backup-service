@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"log/slog"
 	"math"
 	"sync"
@@ -9,7 +10,8 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// BackupBackend represents backups management logic independent of storage
+// BackupBackend handles the backup management logic, employing a StorageAccessor implementation
+// for I/O operations.
 type BackupBackend struct {
 	StorageAccessor
 	path                 string
@@ -59,8 +61,9 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			removeFiles:          removeFiles,
 			fullBackupInProgress: &atomic.Bool{},
 		}
+	default:
+		panic(fmt.Sprintf("Unsupported storage type: %v", storage.Type))
 	}
-	panic("")
 }
 
 func (b *BackupBackend) readState() *model.BackupState {
@@ -69,7 +72,7 @@ func (b *BackupBackend) readState() *model.BackupState {
 	state := model.NewBackupState()
 	err := b.readBackupState(b.stateFilePath, state)
 	if err != nil {
-		slog.Warn("Failed to read state " + b.stateFilePath)
+		slog.Warn("Failed to read backup state", "path", b.stateFilePath, "err", err)
 	}
 	return state
 }
