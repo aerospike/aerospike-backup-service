@@ -146,7 +146,7 @@ func main() {
 	os.Exit(run())
 }
 
-func backendsToReaders(backends map[string]service.BackupBackend) map[string]service.BackupListReader {
+func backendsToReaders(backends map[string]*service.BackupBackend) map[string]service.BackupListReader {
 	result := make(map[string]service.BackupListReader)
 	for key, value := range backends {
 		result[key] = value

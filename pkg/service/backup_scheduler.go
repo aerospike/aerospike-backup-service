@@ -45,7 +45,7 @@ func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
 
 // ScheduleBackup creates a new quartz.Scheduler, schedules all the configured backup jobs,
 // starts and returns the scheduler.
-func ScheduleBackup(ctx context.Context, config *model.Config, backends map[string]BackupBackend,
+func ScheduleBackup(ctx context.Context, config *model.Config, backends map[string]*BackupBackend,
 ) (quartz.Scheduler, error) {
 	scheduler := quartz.NewStdScheduler()
 	scheduler.Start(ctx)
