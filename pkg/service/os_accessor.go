@@ -2,14 +2,15 @@ package service
 
 import (
 	"errors"
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/util"
-	"gopkg.in/yaml.v3"
 	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
+	"gopkg.in/yaml.v3"
 )
 
 // OSDiskAccessor is responsible for IO operation on local disk.
@@ -17,8 +18,10 @@ type OSDiskAccessor struct {
 	basePath string
 }
 
-func NewOS(path string) OSDiskAccessor {
-	return OSDiskAccessor{basePath: path}
+func NewOSDiskAccessor(path string) *OSDiskAccessor {
+	return &OSDiskAccessor{
+		basePath: path,
+	}
 }
 
 func (_ *OSDiskAccessor) readBackupState(filepath string, state *model.BackupState) error {

@@ -9,8 +9,7 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// BackupBackend implements the BackupBackend interface by
-// saving state to the local file system.
+// BackupBackend represents backups management logic independent of storage
 type BackupBackend struct {
 	StorageAccessor
 	path                 string
@@ -38,10 +37,10 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 	switch storage.Type {
 	case model.Local:
 		path := *storage.Path
-		diskAccessor := NewOS(path)
+		diskAccessor := NewOSDiskAccessor(path)
 
 		return &BackupBackend{
-			StorageAccessor:      &diskAccessor,
+			StorageAccessor:      diskAccessor,
 			path:                 path,
 			stateFilePath:        path + "/" + model.StateFileName,
 			removeFiles:          removeFiles,
@@ -95,19 +94,16 @@ func (b *BackupBackend) FullBackupList(from, to int64) ([]model.BackupDetails, e
 }
 
 func (b *BackupBackend) detailsFromPaths(from, to int64, paths ...string) []model.BackupDetails {
-	slog.Info("detailsFromPaths", "from", from, "to", to, "paths", paths)
+	slog.Debug("detailsFromPaths", "from", from, "to", to, "paths", paths)
 	backupDetails := []model.BackupDetails{}
 	for _, path := range paths {
 		details, err := b.readBackupDetails(path)
 		if err != nil {
-			slog.Info("Cannot read details", "path", path, "err", err)
 			continue
 		}
 		if details.Created.UnixMilli() >= from &&
 			details.Created.UnixMilli() < to {
 			backupDetails = append(backupDetails, details)
-		} else {
-			slog.Info("Skipped " + details.String())
 		}
 	}
 	return backupDetails
