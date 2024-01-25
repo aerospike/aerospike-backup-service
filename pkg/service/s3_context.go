@@ -176,7 +176,7 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 	return result, nil
 }
 
-// ReadDir returns all subfolders in the given s3 prefix path.
+// lsDir returns all subfolders in the given s3 prefix path.
 func (s *S3Context) lsDir(prefix string) ([]string, error) {
 	var nextContinuationToken *string
 	if !strings.HasSuffix(prefix, "/") {
