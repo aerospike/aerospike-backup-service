@@ -39,8 +39,8 @@ func TestS3Context_CleanDir(t *testing.T) {
 }
 
 func runCleanDirTest(t *testing.T, context S3Context) {
-	context.WriteYaml(context.path+"/incremental/file.txt", "data")
-	context.WriteYaml(context.path+"/incremental/file2.txt", "data")
+	context.writeYaml(context.path+"/incremental/file.txt", "data")
+	context.writeYaml(context.path+"/incremental/file2.txt", "data")
 
 	if files, _ := context.listFiles(context.path + "/incremental"); len(files) != 2 {
 		t.Error("files not created")
@@ -62,8 +62,8 @@ func TestS3Context_DeleteFile(t *testing.T) {
 }
 
 func runDeleteFileTest(t *testing.T, context S3Context) {
-	context.WriteYaml(context.path+"/incremental/file.txt", "data")
-	context.WriteYaml(context.path+"/incremental/file2.txt", "data")
+	context.writeYaml(context.path+"/incremental/file.txt", "data")
+	context.writeYaml(context.path+"/incremental/file2.txt", "data")
 
 	if files, _ := context.listFiles(context.path + "/incremental"); len(files) != 2 {
 		t.Error("files not created")

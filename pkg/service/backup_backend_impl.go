@@ -13,7 +13,7 @@ func (b *BackupBackendImpl) readState() *model.BackupState {
 	b.stateFileMutex.RLock()
 	defer b.stateFileMutex.RUnlock()
 	state := model.NewBackupState()
-	err := b.ReadBackupStateYaml(b.stateFilePath, state)
+	err := b.readBackupState(b.stateFilePath, state)
 	if err != nil {
 		slog.Warn("failed to read state " + b.stateFilePath)
 	}
@@ -23,7 +23,7 @@ func (b *BackupBackendImpl) readState() *model.BackupState {
 func (b *BackupBackendImpl) writeState(state *model.BackupState) error {
 	b.stateFileMutex.Lock()
 	defer b.stateFileMutex.Unlock()
-	return b.WriteYaml(b.stateFilePath, state)
+	return b.writeYaml(b.stateFilePath, state)
 }
 
 // FullBackupList returns a list of available full backups.
@@ -43,7 +43,7 @@ func (b *BackupBackendImpl) detailsFromPaths(from, to int64, paths ...string) []
 	slog.Info("detailsFromPaths", "from", from, "to", to, "paths", paths)
 	backupDetails := []model.BackupDetails{}
 	for _, path := range paths {
-		details, err := b.ReadBackupDetails(path)
+		details, err := b.readBackupDetails(path)
 		if err != nil {
 			slog.Warn("cannot read details", "basePath", path, "err", err)
 			continue
@@ -59,7 +59,7 @@ func (b *BackupBackendImpl) detailsFromPaths(from, to int64, paths ...string) []
 }
 
 func (b *BackupBackendImpl) fromSubfolders(from, to int64, backupFolder string) ([]model.BackupDetails, error) {
-	subfolders, err := b.ReadDir(backupFolder)
+	subfolders, err := b.lsDir(backupFolder)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (b *BackupBackendImpl) FullBackupInProgress() *atomic.Bool {
 }
 
 func (b *BackupBackendImpl) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
-	return b.WriteYaml(path+"/"+metadataFile, metadata)
+	return b.writeYaml(path+"/"+metadataFile, metadata)
 }
 
 func (b *BackupBackendImpl) CleanDir(name string) error {

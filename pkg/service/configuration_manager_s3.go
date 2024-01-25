@@ -28,5 +28,5 @@ func (s *S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
 
 // WriteConfiguration writes the configuration to S3.
 func (s *S3ConfigurationManager) WriteConfiguration(config *model.Config) error {
-	return s.WriteYaml(s.path, config)
+	return s.writeYaml(s.path, config)
 }

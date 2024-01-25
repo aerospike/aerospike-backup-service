@@ -16,7 +16,7 @@ type OSDiskAccessor struct {
 	basePath string
 }
 
-func (O OSDiskAccessor) ReadBackupStateYaml(filepath string, state *model.BackupState) error {
+func (O OSDiskAccessor) readBackupState(filepath string, state *model.BackupState) error {
 	bytes, err := os.ReadFile(filepath)
 	if err != nil {
 		var pathErr *fs.PathError
@@ -37,7 +37,7 @@ func (O OSDiskAccessor) ReadBackupStateYaml(filepath string, state *model.Backup
 	return nil
 }
 
-func (O OSDiskAccessor) ReadBackupDetails(path string) (model.BackupDetails, error) {
+func (O OSDiskAccessor) readBackupDetails(path string) (model.BackupDetails, error) {
 	metadata := &model.BackupMetadata{}
 	filePath := path + metadataFile
 	bytes, err := os.ReadFile(filePath)
@@ -60,7 +60,7 @@ func (O OSDiskAccessor) ReadBackupDetails(path string) (model.BackupDetails, err
 	}, nil
 }
 
-func (O OSDiskAccessor) WriteYaml(filePath string, v any) error {
+func (O OSDiskAccessor) writeYaml(filePath string, v any) error {
 	backupState, err := yaml.Marshal(v)
 	if err != nil {
 		return err
@@ -68,7 +68,7 @@ func (O OSDiskAccessor) WriteYaml(filePath string, v any) error {
 	return os.WriteFile(filePath, backupState, 0644)
 }
 
-func (O OSDiskAccessor) ReadDir(path string) ([]string, error) {
+func (O OSDiskAccessor) lsDir(path string) ([]string, error) {
 	content, err := os.ReadDir(path)
 	if err != nil {
 		if os.IsNotExist(err) {

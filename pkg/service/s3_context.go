@@ -83,11 +83,11 @@ func createConfig(ctx context.Context, storage *model.Storage) (aws.Config, erro
 	)
 }
 
-func (s *S3Context) ReadBackupStateYaml(path string, state *model.BackupState) error {
+func (s *S3Context) readBackupState(path string, state *model.BackupState) error {
 	return s.readFile(path, state)
 }
 
-func (s *S3Context) ReadBackupDetails(path string) (model.BackupDetails, error) {
+func (s *S3Context) readBackupDetails(path string) (model.BackupDetails, error) {
 	metadata, err := s.readMetadata(path)
 	if err != nil {
 		return model.BackupDetails{}, err
@@ -132,7 +132,7 @@ func (s *S3Context) readFile(filePath string, v any) error {
 }
 
 // WriteYaml writes v into filepath using the YAML format.
-func (s *S3Context) WriteYaml(filePath string, v any) error {
+func (s *S3Context) writeYaml(filePath string, v any) error {
 	s3prefix := "s3://" + s.bucket
 	filePath = strings.TrimPrefix(filePath, s3prefix)
 	slog.Info("write yaml to " + filePath)
@@ -176,7 +176,7 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 }
 
 // ReadDir returns all subfolders in the given s3 prefix basePath.
-func (s *S3Context) ReadDir(prefix string) ([]string, error) {
+func (s *S3Context) lsDir(prefix string) ([]string, error) {
 	var nextContinuationToken *string
 	if !strings.HasSuffix(prefix, "/") {
 		prefix += "/"

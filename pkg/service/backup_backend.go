@@ -41,10 +41,10 @@ type BackupListReader interface {
 }
 
 type StorageAccessor interface {
-	ReadBackupStateYaml(path string, state *model.BackupState) error
-	WriteYaml(filePath string, v any) error
-	ReadBackupDetails(path string) (model.BackupDetails, error)
-	ReadDir(path string) ([]string, error)
+	readBackupState(path string, state *model.BackupState) error
+	readBackupDetails(path string) (model.BackupDetails, error)
+	writeYaml(filePath string, v any) error
+	lsDir(path string) ([]string, error)
 	DeleteFolder(path string) error
 	CreateFolder(path string)
 }
