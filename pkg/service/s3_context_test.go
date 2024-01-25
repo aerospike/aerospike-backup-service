@@ -69,7 +69,7 @@ func runDeleteFileTest(t *testing.T, context S3Context) {
 		t.Error("files not created")
 	}
 
-	// DeleteFolder require full basePath
+	// DeleteFolder require full path
 	context.DeleteFolder("s3://" + context.bucket + context.path + "/incremental")
 
 	if files, _ := context.listFiles(context.path + "/incremental"); len(files) > 0 {

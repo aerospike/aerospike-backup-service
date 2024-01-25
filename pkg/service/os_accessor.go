@@ -54,7 +54,7 @@ func (_ *OSDiskAccessor) readBackupDetails(path string) (model.BackupDetails, er
 	}
 
 	if err = yaml.Unmarshal(bytes, metadata); err != nil {
-		slog.Warn("Failed unmarshal metadata file", "basePath",
+		slog.Warn("Failed unmarshal metadata file", "path",
 			filePath, "err", err, "content", string(bytes))
 		return model.BackupDetails{}, err
 	}
@@ -102,7 +102,7 @@ func (_ *OSDiskAccessor) CreateFolder(path string) {
 		}
 	}
 	if err = os.Chmod(path, 0744); err != nil {
-		slog.Warn("Failed to Chmod backup directory", "basePath", path, "err", err)
+		slog.Warn("Failed to Chmod backup directory", "path", path, "err", err)
 	}
 }
 

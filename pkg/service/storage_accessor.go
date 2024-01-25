@@ -11,7 +11,7 @@ type StorageAccessor interface {
 	writeYaml(filePath string, v any) error
 	// lists all subdirectories of given path.
 	lsDir(path string) ([]string, error)
-	// DeleteFolder removes file with a given basePath.
+	// DeleteFolder removes file with a given path.
 	DeleteFolder(path string) error
 	// CreateFolder creates folder with given path.
 	CreateFolder(path string)

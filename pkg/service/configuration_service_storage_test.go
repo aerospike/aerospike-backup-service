@@ -15,7 +15,7 @@ func TestStorage_Add(t *testing.T) {
 	name := "storage"
 	newStorage := &model.Storage{
 		Type: model.Local,
-		Path: ptr.String("basePath"),
+		Path: ptr.String("path"),
 	}
 
 	err := AddStorage(config, name, newStorage)
@@ -49,7 +49,7 @@ func TestStorage_Update(t *testing.T) {
 	}
 
 	newStorage := &model.Storage{
-		Path: ptr.String("basePath"),
+		Path: ptr.String("path"),
 		Type: model.Local,
 	}
 
@@ -58,7 +58,7 @@ func TestStorage_Update(t *testing.T) {
 		t.Errorf("Expected nil error, got %v", err)
 	}
 
-	if *config.Storage[name].Path != "basePath" {
+	if *config.Storage[name].Path != "path" {
 		t.Errorf("Value in name is not updated")
 	}
 
