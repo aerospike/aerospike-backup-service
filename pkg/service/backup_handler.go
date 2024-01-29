@@ -114,7 +114,7 @@ func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) 
 	}
 
 	// clean incremental backups
-	if err := h.backend.DeleteFolder(model.IncrementalBackupDirectory); err != nil {
+	if err := h.backend.DeleteFolder(*h.storage.Path + "/" + model.IncrementalBackupDirectory); err != nil {
 		slog.Error("Could not clean incremental backups", "name", h.routineName, "err", err)
 	} else {
 		slog.Info("Cleaned incremental backups", "name", h.routineName)
