@@ -68,7 +68,19 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		h.backend.FullBackupInProgress().Store(false)
 		slog.Debug("Release fullBackupInProgress lock", "name", h.routineName)
 	}()
-	backupFolder := getFullPath(h.storage, h.backupFullPolicy, now)
+	for _, namespace := range h.backupRoutine.Namespaces {
+		h.fullBackupForNamespace(now, namespace)
+	}
+
+	// increment backupCounter metric
+	backupCounter.Inc()
+
+	// update the state
+	h.updateFullBackupState(now)
+}
+
+func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) {
+	backupFolder := getFullPath(h.storage, h.backupFullPolicy, namespace, now)
 	h.backend.CreateFolder(*backupFolder)
 
 	var stats *shared.BackupStat
@@ -78,7 +90,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	backupRunFunc := func() {
 		started := time.Now()
 		stats = backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
-			h.storage, h.secretAgent, options, backupFolder)
+			h.storage, h.secretAgent, options, &namespace, backupFolder)
 		if stats == nil {
 			slog.Warn("Failed full backup", "name", h.routineName)
 			backupFailureCounter.Inc()
@@ -96,13 +108,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		return
 	}
 
-	// increment backupCounter metric
-	backupCounter.Inc()
-
-	// update the state
-	h.updateFullBackupState(now)
-
-	if err := h.backend.writeBackupMetadata(*backupFolder, stats.ToModel(now)); err != nil {
+	if err := h.backend.writeBackupMetadata(*backupFolder, stats.ToModel(options, namespace)); err != nil {
 		slog.Error("Could not write backup metadata", "name", h.routineName,
 			"folder", *backupFolder, "err", err)
 	}
@@ -128,7 +134,19 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 			"name", h.routineName)
 		return
 	}
-	backupFolder := getIncrementalPath(h.storage, now)
+	for _, namespace := range h.backupRoutine.Namespaces {
+		h.runIncrBackupForNamespace(now, namespace)
+	}
+
+	// increment incrBackupCounter metric
+	incrBackupCounter.Inc()
+
+	// update the state
+	h.updateIncrementalBackupState(now)
+}
+
+func (h *BackupHandler) runIncrBackupForNamespace(now time.Time, namespace string) {
+	backupFolder := getIncrementalPath(h.storage, namespace, now)
 	h.backend.CreateFolder(*backupFolder)
 
 	var stats *shared.BackupStat
@@ -139,7 +157,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	backupRunFunc := func() {
 		started := time.Now()
 		stats = backupService.BackupRun(
-			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, backupFolder)
+			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, &namespace, backupFolder)
 		if stats == nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()
@@ -156,17 +174,11 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	if h.isBackupEmpty(stats) {
 		h.deleteEmptyBackup(*backupFolder, h.routineName)
 	} else {
-		if err := h.backend.writeBackupMetadata(*backupFolder, stats.ToModel(now)); err != nil {
+		if err := h.backend.writeBackupMetadata(*backupFolder, stats.ToModel(options, namespace)); err != nil {
 			slog.Error("Could not write backup metadata", "name", h.routineName,
 				"folder", *backupFolder, "err", err)
 		}
 	}
-
-	// increment incrBackupCounter metric
-	incrBackupCounter.Inc()
-
-	// update the state
-	h.updateIncrementalBackupState(now)
 }
 
 func (h *BackupHandler) isBackupEmpty(stats *shared.BackupStat) bool {
@@ -201,17 +213,17 @@ func (h *BackupHandler) writeState() {
 	}
 }
 
-func getFullPath(storage *model.Storage, backupPolicy *model.BackupPolicy, now time.Time) *string {
+func getFullPath(storage *model.Storage, backupPolicy *model.BackupPolicy, namespace string, now time.Time) *string {
 	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
-		path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.FullBackupDirectory, timeSuffix(now))
+		path := fmt.Sprintf("%s/%s/%s/%s", *storage.Path, model.FullBackupDirectory, timeSuffix(now), namespace)
 		return &path
 	}
-	path := fmt.Sprintf("%s/%s", *storage.Path, model.FullBackupDirectory)
+	path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.FullBackupDirectory, namespace)
 	return &path
 }
 
-func getIncrementalPath(storage *model.Storage, now time.Time) *string {
-	path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now))
+func getIncrementalPath(storage *model.Storage, namespace string, now time.Time) *string {
+	path := fmt.Sprintf("%s/%s/%s/%s", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now), namespace)
 	return &path
 }
 

@@ -100,13 +100,21 @@ func (b *BackupBackend) detailsFromPaths(from, to int64, paths ...string) []mode
 	slog.Debug("detailsFromPaths", "from", from, "to", to, "paths", paths)
 	backupDetails := []model.BackupDetails{}
 	for _, path := range paths {
-		details, err := b.readBackupDetails(path)
+		namespaces, err := b.lsDir(path)
 		if err != nil {
-			continue
+			slog.Error("cannot read backup", "path", path, "err", err)
+			return backupDetails
 		}
-		if details.Created.UnixMilli() >= from &&
-			details.Created.UnixMilli() < to {
-			backupDetails = append(backupDetails, details)
+		for _, namespace := range namespaces {
+			details, err := b.readBackupDetails(namespace)
+			if err != nil {
+				slog.Info(err.Error())
+				continue
+			}
+			if details.Created.UnixMilli() >= from &&
+				details.Created.UnixMilli() < to {
+				backupDetails = append(backupDetails, details)
+			}
 		}
 	}
 	return backupDetails
