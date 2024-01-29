@@ -68,7 +68,7 @@ func TestLatestFullBackupBeforeTime(t *testing.T) {
 		t.Error("Expected a non-nil result, but got nil")
 	}
 
-	if result != &backupList[1] {
+	if result[0] != backupList[1] {
 		t.Errorf("Expected the latest backup, but got %+v", result)
 	}
 }
