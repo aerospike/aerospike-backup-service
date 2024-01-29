@@ -37,7 +37,7 @@ func (c *AerospikeCluster) GetPassword() *string {
 			if err != nil {
 				slog.Error("Failed to read password", "path", *c.PasswordPath)
 			} else {
-				slog.Info("test")
+				slog.Warn("test")
 				slog.Debug("Successfully read password", "path", *c.PasswordPath)
 				password := string(data)
 				c.pwd = &password
