@@ -40,8 +40,14 @@ definitions:
       file-count:
         description: The number of backup files created.
         type: integer
+      from:
+        description: The lower time bound of backup entities (for incremental backups)
+        type: string
       key:
         description: The path to the backup files.
+        type: string
+      namespace:
+        description: The namespace of a backup
         type: string
       record-count:
         description: The total number of records backed up.
@@ -136,9 +142,11 @@ definitions:
       interval-cron:
         description: The interval for full backup as a cron expression string.
         type: string
-      namespace:
+      namespaces:
         description: The name of the namespace to back up.
-        type: string
+        items:
+          type: string
+        type: array
       node-list:
         description: The list of nodes in the Aerospike cluster to run the backup
           for.
