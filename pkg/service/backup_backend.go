@@ -39,10 +39,8 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 	switch storage.Type {
 	case model.Local:
 		path := *storage.Path
-		diskAccessor := NewOSDiskAccessor(path)
-
 		return &BackupBackend{
-			StorageAccessor:      diskAccessor,
+			StorageAccessor:      NewOSDiskAccessor(),
 			path:                 path,
 			stateFilePath:        path + "/" + model.StateFileName,
 			removeFiles:          removeFiles,
