@@ -16,7 +16,7 @@ func Test(t *testing.T) {
 		Host:     ptr.String("localhost"),
 		Port:     ptr.Int32(3000),
 	}
-	namespaces, err := getNamespaces(&cluster)
+	namespaces, err := getAllNamespacesOfCluster(&cluster)
 	if err != nil {
 		t.Fatalf("Expected error nil, got %v", err)
 	}

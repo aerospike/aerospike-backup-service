@@ -1135,7 +1135,7 @@
                     "type": "string"
                 },
                 "namespaces": {
-                    "description": "The name of the namespace to back up.",
+                    "description": "The list of the namespaces to back up (optional, empty list implies backup up whole cluster).",
                     "type": "array",
                     "items": {
                         "type": "string"

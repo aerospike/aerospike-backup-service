@@ -32,7 +32,7 @@ var stdIO = &stdio.CgoStdio{}
 var backupService shared.Backup = shared.NewBackup()
 
 // newBackupHandler returns a new BackupHandler instance.
-func newBackupHandler(config *model.Config, routineName string, backupBackend *BackupBackend) *BackupHandler {
+func newBackupHandler(config *model.Config, routineName string, backupBackend *BackupBackend) (*BackupHandler, error) {
 	backupRoutine := config.BackupRoutines[routineName]
 	cluster := config.AerospikeClusters[backupRoutine.SourceCluster]
 	storage := config.Storage[backupRoutine.Storage]
@@ -43,9 +43,9 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 	}
 
 	if len(backupRoutine.Namespaces) == 0 {
-		namespaces, err := getNamespaces(cluster)
+		namespaces, err := getAllNamespacesOfCluster(cluster)
 		if err != nil {
-			slog.Error("failed to get namespaces", "err", err)
+			return nil, fmt.Errorf("failed to get namespaces: %v", err)
 		}
 		backupRoutine.Namespaces = namespaces
 	}
@@ -60,7 +60,7 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 		secretAgent:      secretAgent,
 		state:            backupBackend.readState(),
 		routineName:      routineName,
-	}
+	}, nil
 }
 
 func (h *BackupHandler) runFullBackup(now time.Time) {
