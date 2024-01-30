@@ -10,38 +10,40 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
+const tempFolder = "./tmp"
+
 func TestFullBackupRemoveFiles(t *testing.T) {
 	backend := &BackupBackend{
 		StorageAccessor:      &OSDiskAccessor{},
-		path:                 "./tmp/testStorage",
+		path:                 tempFolder + "/testStorage",
 		removeFiles:          true,
 		fullBackupInProgress: &atomic.Bool{},
 	}
 
-	os.MkdirAll("./tmp/testStorage/backup/source-ns1/", 0744)
-	backend.writeBackupMetadata("./tmp/testStorage/backup/source-ns1/", model.BackupMetadata{Created: time.UnixMilli(10)})
+	_ = os.MkdirAll(tempFolder+"/testStorage/backup/source-ns1/", 0744)
+	_ = backend.writeBackupMetadata(tempFolder+"/testStorage/backup/source-ns1/", model.BackupMetadata{Created: time.UnixMilli(10)})
 
 	list, _ := backend.FullBackupList(0, 1000)
 	if len(list) != 1 {
 		t.Errorf("Expected list size 1, got %v", list)
 	}
 	t.Cleanup(func() {
-		os.RemoveAll("./tmp")
+		_ = os.RemoveAll(tempFolder)
 	})
 }
 
 func TestFullBackupKeepFiles(t *testing.T) {
 	backend := &BackupBackend{
 		StorageAccessor:      &OSDiskAccessor{},
-		path:                 "./tmp/testStorage",
+		path:                 tempFolder + "/testStorage",
 		removeFiles:          false,
 		fullBackupInProgress: &atomic.Bool{},
 	}
 
 	for _, t := range []int64{10, 20, 30} {
-		path := "./tmp/testStorage/backup/source-ns1/" + strconv.FormatInt(t, 10)
-		os.MkdirAll(path, 0744)
-		backend.writeBackupMetadata(path, model.BackupMetadata{Created: time.UnixMilli(t)})
+		path := tempFolder + "/testStorage/backup/source-ns1/" + strconv.FormatInt(t, 10)
+		_ = os.MkdirAll(path, 0744)
+		_ = backend.writeBackupMetadata(path, model.BackupMetadata{Created: time.UnixMilli(t)})
 	}
 
 	list, _ := backend.FullBackupList(0, 25)
@@ -49,6 +51,6 @@ func TestFullBackupKeepFiles(t *testing.T) {
 		t.Errorf("Expected list size 2, got %v", list)
 	}
 	t.Cleanup(func() {
-		os.RemoveAll("./tmp")
+		_ = os.RemoveAll(tempFolder)
 	})
 }
