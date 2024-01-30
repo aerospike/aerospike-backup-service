@@ -13,6 +13,8 @@ func Test(t *testing.T) {
 	cluster := model.AerospikeCluster{
 		User:     ptr.String("tester"),
 		Password: ptr.String("psw"),
+		Host:     ptr.String("localhost"),
+		Port:     ptr.Int32(3000),
 	}
 	namespaces, err := getNamespaces(&cluster)
 	if err != nil {

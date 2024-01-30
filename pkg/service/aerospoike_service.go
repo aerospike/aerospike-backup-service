@@ -16,7 +16,7 @@ func getNamespaces(cluster *model.AerospikeCluster) ([]string, error) {
 	policy.Password = *cluster.Password
 
 	// Use the client policy when connecting to Aerospike
-	client, err := as.NewClientWithPolicyAndHost(policy, as.NewHost("localhost", 3000))
+	client, err := as.NewClientWithPolicy(policy, *cluster.Host, int(*cluster.Port))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Aerospike server: %s", err)
 	}
