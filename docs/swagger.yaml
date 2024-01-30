@@ -41,13 +41,14 @@ definitions:
         description: The number of backup files created.
         type: integer
       from:
-        description: The lower time bound of backup entities (for incremental backups)
+        description: The lower time bound of backup entities in the ISO 8601 format
+          (for incremental backups).
         type: string
       key:
         description: The path to the backup files.
         type: string
       namespace:
-        description: The namespace of a backup
+        description: The namespace of a backup.
         type: string
       record-count:
         description: The total number of records backed up.
