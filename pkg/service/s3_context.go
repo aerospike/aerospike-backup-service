@@ -263,7 +263,7 @@ func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 }
 
 func (s *S3Context) DeleteFolder(path string) error {
-	slog.Info("Delete folder", "path", path)
+	slog.Debug("Delete folder", "path", path)
 	parsed, err := url.Parse(path)
 	if err != nil {
 		return err

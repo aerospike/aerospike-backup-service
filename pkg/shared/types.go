@@ -58,7 +58,7 @@ func (stats *BackupStat) ToModel(backupOptions BackupOptions, namespace string) 
 		SecondaryIndexCount: stats.IndexCount,
 		UDFCount:            stats.UDFCount,
 	}
-	if backupOptions.ModAfter != nil && *backupOptions.ModAfter != 0 {
+	if backupOptions.ModAfter != nil {
 		metadata.From = time.Unix(0, *backupOptions.ModAfter)
 	}
 	return metadata

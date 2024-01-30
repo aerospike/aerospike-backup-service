@@ -107,6 +107,6 @@ func (o *OSDiskAccessor) CreateFolder(path string) {
 }
 
 func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
-	slog.Info("Delete folder", "path", pathToDelete)
+	slog.Debug("Delete folder", "path", pathToDelete)
 	return os.RemoveAll(pathToDelete)
 }
