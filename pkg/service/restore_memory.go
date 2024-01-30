@@ -136,11 +136,12 @@ func (r *RestoreMemory) findLastFullBackup(
 	return fullBackup, nil
 }
 
-func latestFullBackupBeforeTime(list []model.BackupDetails, upperBound time.Time) []model.BackupDetails {
+// latestFullBackupBeforeTime returns list of backups with same creation time, latest before upperBound.
+func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound time.Time) []model.BackupDetails {
 	var result []model.BackupDetails
 	var latestTime time.Time
-	for i := range list {
-		current := &list[i]
+	for i := range allBackups {
+		current := &allBackups[i]
 		if current.Created.After(upperBound) {
 			continue
 		}

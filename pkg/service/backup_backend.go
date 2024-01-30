@@ -97,18 +97,17 @@ func (b *BackupBackend) FullBackupList(from, to int64) ([]model.BackupDetails, e
 }
 
 func (b *BackupBackend) detailsFromPaths(from, to int64, paths ...string) []model.BackupDetails {
-	slog.Debug("detailsFromPaths", "from", from, "to", to, "paths", paths)
 	backupDetails := []model.BackupDetails{}
 	for _, path := range paths {
 		namespaces, err := b.lsDir(path)
 		if err != nil {
-			slog.Error("cannot read backup", "path", path, "err", err)
-			return backupDetails
+			slog.Warn("Cannot list backup dir", "path", path, "err", err)
+			continue
 		}
 		for _, namespace := range namespaces {
 			details, err := b.readBackupDetails(namespace)
 			if err != nil {
-				slog.Info(err.Error())
+				slog.Warn("Cannot read backup details", "err", err)
 				continue
 			}
 			if details.Created.UnixMilli() >= from &&
