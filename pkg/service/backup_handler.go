@@ -42,6 +42,14 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 		secretAgent = config.SecretAgents[*backupRoutine.SecretAgent]
 	}
 
+	if len(backupRoutine.Namespaces) == 0 {
+		namespaces, err := getNamespaces(cluster)
+		if err != nil {
+			slog.Error("failed to get namespaces", "err", err)
+		}
+		backupRoutine.Namespaces = namespaces
+	}
+
 	return &BackupHandler{
 		backend:          backupBackend,
 		backupRoutine:    backupRoutine,

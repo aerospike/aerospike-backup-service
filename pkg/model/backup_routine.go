@@ -48,9 +48,6 @@ func (r *BackupRoutine) Validate() error {
 	if r.Storage == "" {
 		return routineValidationError("storage")
 	}
-	if len(r.Namespaces) == 0 {
-		return routineValidationError("namespaces")
-	}
 	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
 		return fmt.Errorf("backup interval string %s invalid: %v", r.IntervalCron, err)
 	}
