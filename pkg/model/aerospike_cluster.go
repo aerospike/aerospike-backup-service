@@ -67,7 +67,16 @@ func (c *AerospikeCluster) Validate() error {
 func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	policy := as.NewClientPolicy()
 	policy.User = *c.User
-	policy.Password = *c.Password
+	policy.Password = *c.GetPassword()
+	switch *c.AuthMode {
+	case "INTERNAL":
+		policy.AuthMode = as.AuthModeInternal
+	case "EXTERNAL":
+		policy.AuthMode = as.AuthModeExternal
+	case "PKI":
+		policy.AuthMode = as.AuthModePKI
+	}
+	policy.UseServicesAlternate = *c.UseServicesAlternate
 	return policy
 }
 
