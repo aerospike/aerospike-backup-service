@@ -20,8 +20,9 @@ func TestFullBackupRemoveFiles(t *testing.T) {
 		fullBackupInProgress: &atomic.Bool{},
 	}
 
-	_ = os.MkdirAll(tempFolder+"/testStorage/backup/source-ns1/", 0744)
-	_ = backend.writeBackupMetadata(tempFolder+"/testStorage/backup/source-ns1/", model.BackupMetadata{Created: time.UnixMilli(10)})
+	path := tempFolder + "/testStorage/backup/source-ns1/"
+	_ = os.MkdirAll(path, 0744)
+	_ = backend.writeBackupMetadata(path, model.BackupMetadata{Created: time.UnixMilli(10)})
 
 	list, _ := backend.FullBackupList(0, 1000)
 	if len(list) != 1 {

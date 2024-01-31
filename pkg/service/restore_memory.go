@@ -120,7 +120,8 @@ func (r *RestoreMemory) restoreNamespace(
 	incrementalBackups, err := r.findIncrementalBackupsForNamespace(
 		backend, fullBackup.Created.UnixMilli(), request.Time, fullBackup.Namespace)
 	if err != nil {
-		slog.Error("Could not find incremental backups", "JobId", jobID, "routine", request.Routine, "err", err)
+		slog.Error("Could not find incremental backups",
+			"JobId", jobID, "routine", request.Routine, "err", err)
 		r.restoreJobs.setFailed(jobID, err)
 		return
 	}
@@ -176,7 +177,8 @@ func (r *RestoreMemory) restore(
 	return restoreResult, nil
 }
 
-func (r *RestoreMemory) findIncrementalBackupsForNamespace(backend BackupListReader, from, to int64, namespace string) ([]model.BackupDetails, error) {
+func (r *RestoreMemory) findIncrementalBackupsForNamespace(
+	backend BackupListReader, from, to int64, namespace string) ([]model.BackupDetails, error) {
 	allIncrementalBackupList, err := backend.IncrementalBackupList(from, to)
 	if err != nil {
 		return nil, err
