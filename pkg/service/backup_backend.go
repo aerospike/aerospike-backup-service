@@ -104,7 +104,7 @@ func (b *BackupBackend) detailsFromPaths(from, to int64, useCache bool, paths ..
 		for _, namespacePath := range namespaces {
 			details, err := b.readBackupDetails(namespacePath, useCache)
 			if err != nil {
-				slog.Warn("Cannot read backup details", "err", err)
+				slog.Debug("Cannot read backup details", "err", err)
 				continue
 			}
 			if details.Created.UnixMilli() >= from &&
