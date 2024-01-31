@@ -68,15 +68,19 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	policy := as.NewClientPolicy()
 	policy.User = *c.User
 	policy.Password = *c.GetPassword()
-	switch *c.AuthMode {
-	case "INTERNAL":
-		policy.AuthMode = as.AuthModeInternal
-	case "EXTERNAL":
-		policy.AuthMode = as.AuthModeExternal
-	case "PKI":
-		policy.AuthMode = as.AuthModePKI
+	if c.AuthMode != nil {
+		switch *c.AuthMode {
+		case "INTERNAL":
+			policy.AuthMode = as.AuthModeInternal
+		case "EXTERNAL":
+			policy.AuthMode = as.AuthModeExternal
+		case "PKI":
+			policy.AuthMode = as.AuthModePKI
+		}
 	}
-	policy.UseServicesAlternate = *c.UseServicesAlternate
+	if c.UseServicesAlternate != nil {
+		policy.UseServicesAlternate = *c.UseServicesAlternate
+	}
 	return policy
 }
 
