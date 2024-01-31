@@ -11,14 +11,11 @@ import (
 const namespaceInfo = "namespaces"
 
 func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error) {
-	policy := as.NewClientPolicy()
-	policy.User = *cluster.User
-	policy.Password = *cluster.Password
-
-	client, err := as.NewClientWithPolicy(policy, *cluster.Host, int(*cluster.Port))
+	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHost())
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Aerospike server: %s", err)
 	}
+	defer client.Close()
 
 	node, err := client.Cluster().GetRandomNode()
 	if err != nil {
