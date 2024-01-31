@@ -1013,8 +1013,16 @@
                     "description": "The number of backup files created.",
                     "type": "integer"
                 },
+                "from": {
+                    "description": "The lower time bound of backup entities in the ISO 8601 format (for incremental backups).",
+                    "type": "string"
+                },
                 "key": {
                     "description": "The path to the backup files.",
+                    "type": "string"
+                },
+                "namespace": {
+                    "description": "The namespace of a backup.",
                     "type": "string"
                 },
                 "record-count": {
@@ -1126,9 +1134,12 @@
                     "description": "The interval for full backup as a cron expression string.",
                     "type": "string"
                 },
-                "namespace": {
-                    "description": "The name of the namespace to back up.",
-                    "type": "string"
+                "namespaces": {
+                    "description": "The list of the namespaces to back up (optional, empty list implies backup up whole cluster).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "node-list": {
                     "description": "The list of nodes in the Aerospike cluster to run the backup for.",

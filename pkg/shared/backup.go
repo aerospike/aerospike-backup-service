@@ -45,7 +45,7 @@ func NewBackup() *BackupShared {
 //nolint:funlen,gocritic
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
-	opts BackupOptions, path *string) *BackupStat {
+	opts BackupOptions, namespace *string, path *string) *BackupStat {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -74,7 +74,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCUint(&backupConfig.retry_delay, backupPolicy.RetryDelay)
 
 	// namespace list configuration
-	nsCharArray := C.CString(backupRoutine.Namespace)
+	nsCharArray := C.CString(*namespace)
 	C.strcpy((*C.char)(unsafe.Pointer(&backupConfig.ns)), nsCharArray)
 
 	setCInt(&backupConfig.parallel, backupPolicy.Parallel)

@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"os"
 	"sync"
+
+	as "github.com/aerospike/aerospike-client-go/v7"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -60,4 +62,28 @@ func (c *AerospikeCluster) Validate() error {
 		return errors.New("port is not specified")
 	}
 	return nil
+}
+
+func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
+	policy := as.NewClientPolicy()
+	policy.User = *c.User
+	policy.Password = *c.GetPassword()
+	if c.AuthMode != nil {
+		switch *c.AuthMode {
+		case "INTERNAL":
+			policy.AuthMode = as.AuthModeInternal
+		case "EXTERNAL":
+			policy.AuthMode = as.AuthModeExternal
+		case "PKI":
+			policy.AuthMode = as.AuthModePKI
+		}
+	}
+	if c.UseServicesAlternate != nil {
+		policy.UseServicesAlternate = *c.UseServicesAlternate
+	}
+	return policy
+}
+
+func (c *AerospikeCluster) ASClientHost() *as.Host {
+	return as.NewHost(*c.Host, int(*c.Port))
 }

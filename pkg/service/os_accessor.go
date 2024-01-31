@@ -15,16 +15,13 @@ import (
 
 // OSDiskAccessor is responsible for IO operation on local disk.
 type OSDiskAccessor struct {
-	basePath string
 }
 
 var _ StorageAccessor = (*OSDiskAccessor)(nil)
 
 // NewOSDiskAccessor returns a new OSDiskAccessor.
-func NewOSDiskAccessor(path string) *OSDiskAccessor {
-	return &OSDiskAccessor{
-		basePath: path,
-	}
+func NewOSDiskAccessor() *OSDiskAccessor {
+	return &OSDiskAccessor{}
 }
 
 func (o *OSDiskAccessor) readBackupState(filepath string, state *model.BackupState) error {
@@ -48,7 +45,7 @@ func (o *OSDiskAccessor) readBackupState(filepath string, state *model.BackupSta
 	return nil
 }
 
-func (o *OSDiskAccessor) readBackupDetails(path string) (model.BackupDetails, error) {
+func (o *OSDiskAccessor) readBackupDetails(path string, _ bool) (model.BackupDetails, error) {
 	filePath := filepath.Join(path, metadataFile)
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
@@ -107,6 +104,6 @@ func (o *OSDiskAccessor) CreateFolder(path string) {
 }
 
 func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
-	slog.Info("Delete folder", "path", pathToDelete)
-	return os.RemoveAll(filepath.Join(o.basePath, pathToDelete))
+	slog.Debug("Delete folder", "path", pathToDelete)
+	return os.RemoveAll(pathToDelete)
 }

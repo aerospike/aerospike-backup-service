@@ -27,5 +27,5 @@ backup-routines:
     incr-interval-cron: "@hourly"
     source-cluster: absCluster1
     storage: minioStorage
-    namespace: source-ns1
+    namespaces: ["source-ns1"]
     backup-policy: keepFilesPolicy

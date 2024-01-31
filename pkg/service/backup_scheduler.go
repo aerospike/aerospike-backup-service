@@ -52,7 +52,11 @@ func ScheduleBackup(ctx context.Context, config *model.Config, backends map[stri
 
 	for routineName, routine := range config.BackupRoutines {
 		backend := backends[routineName]
-		handler := newBackupHandler(config, routineName, backend)
+		handler, err := newBackupHandler(config, routineName, backend)
+		if err != nil {
+			slog.Error("failed to create backup handler", "routine", routineName, "err", err)
+			continue
+		}
 
 		// schedule full backup job for the routine
 		if err := scheduleFullBackup(scheduler, handler, routine, routineName); err != nil {

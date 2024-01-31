@@ -54,7 +54,7 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *http.Request) {
 	ws.getAvailableBackups(w, r, func(backend service.BackupListReader) ([]model.BackupDetails, error) {
-		return backend.IncrementalBackupList()
+		return backend.IncrementalBackupList(0, math.MaxInt64)
 	})
 }
 

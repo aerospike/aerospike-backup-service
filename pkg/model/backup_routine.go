@@ -21,8 +21,8 @@ type BackupRoutine struct {
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron"`
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string `yaml:"incr-interval-cron" json:"incr-interval-cron"`
-	// The name of the namespace to back up.
-	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	// The list of the namespaces to back up (optional, empty list implies backup up whole cluster).
+	Namespaces []string `yaml:"namespaces,omitempty" json:"namespaces,omitempty"`
 	// The list of backup set names (optional, an empty list implies backing up all sets).
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty"`
 	// The list of backup bin names (optional, an empty list implies backing up all bins).
@@ -47,9 +47,6 @@ func (r *BackupRoutine) Validate() error {
 	}
 	if r.Storage == "" {
 		return routineValidationError("storage")
-	}
-	if r.Namespace == "" {
-		return routineValidationError("namespace")
 	}
 	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
 		return fmt.Errorf("backup interval string %s invalid: %v", r.IntervalCron, err)

@@ -68,7 +68,7 @@ func TestLatestFullBackupBeforeTime(t *testing.T) {
 		t.Error("Expected a non-nil result, but got nil")
 	}
 
-	if result != &backupList[1] {
+	if result[0] != backupList[1] {
 		t.Errorf("Expected the latest backup, but got %+v", result)
 	}
 }
@@ -97,7 +97,7 @@ func (*BackendMock) FullBackupList(_ int64, _ int64) ([]model.BackupDetails, err
 	}}, nil
 }
 
-func (*BackendMock) IncrementalBackupList() ([]model.BackupDetails, error) {
+func (*BackendMock) IncrementalBackupList(_ int64, _ int64) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
 		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)},
 		Key:            ptr.String("key"),
