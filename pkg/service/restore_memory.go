@@ -84,43 +84,11 @@ func (r *RestoreMemory) restoreByTimeSync(backend BackupListReader, request *mod
 		r.restoreJobs.setFailed(jobID, err)
 		return
 	}
-	slog.Info("all backups", "backups", fullBackups)
 	for _, nsBackup := range fullBackups {
 		r.restoreNamespace(backend, request, jobID, nsBackup)
 	}
 
 	r.restoreJobs.setDone(jobID)
-}
-
-func (r *RestoreMemory) restoreNamespace(
-	backend BackupListReader, request *model.RestoreTimestampRequest, jobID int, fullBackup model.BackupDetails) {
-	slog.Info("Restore", "backup", fullBackup)
-	result, err := r.restore(request, fullBackup.Key)
-	if err != nil {
-		slog.Error("Could not restore full backup", "JobId", jobID, "routine", request.Routine, "err", err)
-		r.restoreJobs.setFailed(jobID, err)
-		return
-	}
-
-	r.restoreJobs.increaseStats(jobID, result)
-	incrementalBackups, err := r.findIncrementalBackupsForNamespace(backend, fullBackup.Created.UnixMilli(), request.Time, fullBackup.Namespace)
-	if err != nil {
-		slog.Error("Could not find incremental backups", "JobId", jobID, "routine", request.Routine, "err", err)
-		r.restoreJobs.setFailed(jobID, err)
-		return
-	}
-
-	for _, incrBackup := range incrementalBackups {
-		result, err := r.restore(request, incrBackup.Key)
-		if err != nil {
-			slog.Error("Could not restore incremental backups", "JobId", jobID, "routine", request.Routine,
-				"err", err)
-			r.restoreJobs.setFailed(jobID, err)
-			return
-		}
-		r.restoreJobs.increaseStats(jobID, result)
-	}
-	return
 }
 
 func (r *RestoreMemory) findLastFullBackup(
@@ -137,6 +105,36 @@ func (r *RestoreMemory) findLastFullBackup(
 		return nil, fmt.Errorf("no full backup found at %d", request.Time)
 	}
 	return fullBackup, nil
+}
+
+func (r *RestoreMemory) restoreNamespace(
+	backend BackupListReader, request *model.RestoreTimestampRequest, jobID int, fullBackup model.BackupDetails) {
+	result, err := r.restore(request, fullBackup.Key)
+	if err != nil {
+		slog.Error("Could not restore full backup", "JobId", jobID, "routine", request.Routine, "err", err)
+		r.restoreJobs.setFailed(jobID, err)
+		return
+	}
+	r.restoreJobs.increaseStats(jobID, result)
+
+	incrementalBackups, err := r.findIncrementalBackupsForNamespace(
+		backend, fullBackup.Created.UnixMilli(), request.Time, fullBackup.Namespace)
+	if err != nil {
+		slog.Error("Could not find incremental backups", "JobId", jobID, "routine", request.Routine, "err", err)
+		r.restoreJobs.setFailed(jobID, err)
+		return
+	}
+	slog.Info("Apply incremental backups", "size", len(incrementalBackups))
+	for _, incrBackup := range incrementalBackups {
+		result, err := r.restore(request, incrBackup.Key)
+		if err != nil {
+			slog.Error("Could not restore incremental backups", "JobId", jobID, "routine", request.Routine,
+				"err", err)
+			r.restoreJobs.setFailed(jobID, err)
+			return
+		}
+		r.restoreJobs.increaseStats(jobID, result)
+	}
 }
 
 // latestFullBackupBeforeTime returns list of backups with same creation time, latest before upperBound.
