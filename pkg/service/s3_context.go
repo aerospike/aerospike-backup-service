@@ -94,7 +94,7 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupD
 	var metadata *model.BackupMetadata
 	var err error
 	if useCache {
-		metadata, err = s.GetMetadataFromCache(path)
+		metadata, err = s.getMetadataFromCache(path)
 	} else {
 		metadata, err = s.readMetadata(path)
 	}
@@ -248,7 +248,7 @@ func (s *S3Context) CleanDir(name string) error {
 	return s.DeleteFolder(path)
 }
 
-func (s *S3Context) GetMetadataFromCache(prefix string) (*model.BackupMetadata, error) {
+func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, error) {
 	metadata, err := s.metadataCache.Get(prefix)
 	if err != nil {
 		return nil, err
