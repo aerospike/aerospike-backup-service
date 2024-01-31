@@ -10,5 +10,5 @@ type BackupListReader interface {
 	FullBackupList(from, to int64) ([]model.BackupDetails, error)
 
 	// IncrementalBackupList returns a list of available incremental backups.
-	IncrementalBackupList() ([]model.BackupDetails, error)
+	IncrementalBackupList(from, to int64) ([]model.BackupDetails, error)
 }

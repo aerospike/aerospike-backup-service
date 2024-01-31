@@ -97,7 +97,7 @@ func (*BackendMock) FullBackupList(_ int64, _ int64) ([]model.BackupDetails, err
 	}}, nil
 }
 
-func (*BackendMock) IncrementalBackupList() ([]model.BackupDetails, error) {
+func (*BackendMock) IncrementalBackupList(_ int64, _ int64) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
 		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)},
 		Key:            ptr.String("key"),

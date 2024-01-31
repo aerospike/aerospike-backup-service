@@ -3,7 +3,6 @@ package service
 import (
 	"fmt"
 	"log/slog"
-	"math"
 	"sync"
 	"sync/atomic"
 
@@ -88,13 +87,13 @@ func (b *BackupBackend) FullBackupList(from, to int64) ([]model.BackupDetails, e
 
 	// when use RemoveFiles = true, backup data is located in backupFolder folder itself
 	if b.removeFiles {
-		return b.detailsFromPaths(from, to, removeLeadingSlash(backupFolder)), nil
+		return b.detailsFromPaths(from, to, false, removeLeadingSlash(backupFolder)), nil
 	}
 
 	return b.fromSubfolders(from, to, backupFolder)
 }
 
-func (b *BackupBackend) detailsFromPaths(from, to int64, paths ...string) []model.BackupDetails {
+func (b *BackupBackend) detailsFromPaths(from, to int64, useCache bool, paths ...string) []model.BackupDetails {
 	backupDetails := []model.BackupDetails{}
 	for _, path := range paths {
 		namespaces, err := b.lsDir(path)
@@ -102,8 +101,8 @@ func (b *BackupBackend) detailsFromPaths(from, to int64, paths ...string) []mode
 			slog.Warn("Cannot list backup dir", "path", path, "err", err)
 			continue
 		}
-		for _, namespace := range namespaces {
-			details, err := b.readBackupDetails(namespace)
+		for _, namespacePath := range namespaces {
+			details, err := b.readBackupDetails(namespacePath, useCache)
 			if err != nil {
 				slog.Warn("Cannot read backup details", "err", err)
 				continue
@@ -123,13 +122,13 @@ func (b *BackupBackend) fromSubfolders(from, to int64, backupFolder string) ([]m
 		return nil, err
 	}
 
-	return b.detailsFromPaths(from, to, subfolders...), nil
+	return b.detailsFromPaths(from, to, true, subfolders...), nil
 }
 
 // IncrementalBackupList returns a list of available incremental backups.
-func (b *BackupBackend) IncrementalBackupList() ([]model.BackupDetails, error) {
+func (b *BackupBackend) IncrementalBackupList(from, to int64) ([]model.BackupDetails, error) {
 	backupFolder := b.path + "/" + model.IncrementalBackupDirectory
-	return b.fromSubfolders(0, math.MaxInt64, backupFolder)
+	return b.fromSubfolders(from, to, backupFolder)
 }
 
 func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {

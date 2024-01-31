@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -83,6 +84,7 @@ func (r *RestoreMemory) restoreByTimeSync(backend BackupListReader, request *mod
 		r.restoreJobs.setFailed(jobID, err)
 		return
 	}
+	slog.Info("all backups", "backups", fullBackups)
 	for _, nsBackup := range fullBackups {
 		r.restoreNamespace(backend, request, jobID, nsBackup)
 	}
@@ -90,8 +92,9 @@ func (r *RestoreMemory) restoreByTimeSync(backend BackupListReader, request *mod
 	r.restoreJobs.setDone(jobID)
 }
 
-func (r *RestoreMemory) restoreNamespace(backend BackupListReader, request *model.RestoreTimestampRequest, jobID int,
-	fullBackup model.BackupDetails) {
+func (r *RestoreMemory) restoreNamespace(
+	backend BackupListReader, request *model.RestoreTimestampRequest, jobID int, fullBackup model.BackupDetails) {
+	slog.Info("Restore", "backup", fullBackup)
 	result, err := r.restore(request, fullBackup.Key)
 	if err != nil {
 		slog.Error("Could not restore full backup", "JobId", jobID, "routine", request.Routine, "err", err)
@@ -100,7 +103,7 @@ func (r *RestoreMemory) restoreNamespace(backend BackupListReader, request *mode
 	}
 
 	r.restoreJobs.increaseStats(jobID, result)
-	incrementalBackups, err := r.findIncrementalBackupsForNamespace(backend, fullBackup.Created, fullBackup.Namespace)
+	incrementalBackups, err := r.findIncrementalBackupsForNamespace(backend, fullBackup.Created.UnixMilli(), request.Time, fullBackup.Namespace)
 	if err != nil {
 		slog.Error("Could not find incremental backups", "JobId", jobID, "routine", request.Routine, "err", err)
 		r.restoreJobs.setFailed(jobID, err)
@@ -175,17 +178,22 @@ func (r *RestoreMemory) restore(
 	return restoreResult, nil
 }
 
-func (r *RestoreMemory) findIncrementalBackupsForNamespace(backend BackupListReader, since time.Time, namespace string) ([]model.BackupDetails, error) {
-	allIncrementalBackupList, err := backend.IncrementalBackupList()
+func (r *RestoreMemory) findIncrementalBackupsForNamespace(backend BackupListReader, from, to int64, namespace string) ([]model.BackupDetails, error) {
+	allIncrementalBackupList, err := backend.IncrementalBackupList(from, to)
 	if err != nil {
 		return nil, err
 	}
 	var filteredIncrementalBackups []model.BackupDetails
 	for _, b := range allIncrementalBackupList {
-		if b.Created.After(since) && b.Namespace == namespace {
+		if b.Namespace == namespace {
 			filteredIncrementalBackups = append(filteredIncrementalBackups, b)
 		}
 	}
+	// Sort in place
+	sort.Slice(filteredIncrementalBackups, func(i, j int) bool {
+		return filteredIncrementalBackups[i].Created.Before(filteredIncrementalBackups[j].Created)
+	})
+
 	return filteredIncrementalBackups, nil
 }
 

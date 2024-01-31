@@ -45,7 +45,7 @@ func (o *OSDiskAccessor) readBackupState(filepath string, state *model.BackupSta
 	return nil
 }
 
-func (o *OSDiskAccessor) readBackupDetails(path string) (model.BackupDetails, error) {
+func (o *OSDiskAccessor) readBackupDetails(path string, _ bool) (model.BackupDetails, error) {
 	filePath := filepath.Join(path, metadataFile)
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
