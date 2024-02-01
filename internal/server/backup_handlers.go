@@ -25,23 +25,10 @@ import (
 // @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Request) {
-	ws.getAvailableBackups(w, r, func(backend service.BackupListReader) ([]model.BackupDetails, error) {
-		fromTime, err := parseTimestamp(r.URL.Query().Get("from"), 0)
-		if err != nil {
-			return nil, err
-		}
-		toTime, err := parseTimestamp(r.URL.Query().Get("to"), math.MaxInt64)
-		if err != nil {
-			return nil, err
-		}
-		if toTime <= fromTime {
-			return nil, errors.New("invalid time range: toTime should be greater than fromTime")
-		}
-		if toTime <= 0 || fromTime < 0 {
-			return nil, errors.New("requested time filters must be positive")
-		}
+	listFunc := func(fromTime, toTime int64, backend service.BackupListReader) ([]model.BackupDetails, error) {
 		return backend.FullBackupList(fromTime, toTime)
-	})
+	}
+	ws.getAvailableBackups(w, r, listFunc)
 }
 
 // @Summary  Get available incremental backups.
@@ -53,7 +40,7 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 // @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *http.Request) {
-	ws.getAvailableBackups(w, r, func(backend service.BackupListReader) ([]model.BackupDetails, error) {
+	ws.getAvailableBackups(w, r, func(fromTime, toTime int64, backend service.BackupListReader) ([]model.BackupDetails, error) {
 		return backend.IncrementalBackupList(0, math.MaxInt64)
 	})
 }
@@ -61,9 +48,14 @@ func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *h
 func (ws *HTTPServer) getAvailableBackups(
 	w http.ResponseWriter,
 	r *http.Request,
-	backupListFunc func(service.BackupListReader) ([]model.BackupDetails, error)) {
+	backupListFunc func(fromTime, toTime int64, backend service.BackupListReader) ([]model.BackupDetails, error)) {
 
 	routines := ws.requestedRoutines(r)
+	fromTime, toTime, err := parseTimebounds(r)
+	if err != nil {
+		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	routineToBackups := make(map[string][]model.BackupDetails)
 	for _, routine := range routines {
 		backend, exists := ws.backupBackends[routine]
@@ -71,7 +63,7 @@ func (ws *HTTPServer) getAvailableBackups(
 			http.Error(w, "routine does not exist for "+routine, http.StatusNotFound)
 			return
 		}
-		list, err := backupListFunc(backend)
+		list, err := backupListFunc(fromTime, toTime, backend)
 		if err != nil {
 			http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -90,6 +82,24 @@ func (ws *HTTPServer) getAvailableBackups(
 	if err != nil {
 		slog.Error("failed to write response", "err", err)
 	}
+}
+
+func parseTimebounds(r *http.Request) (int64, int64, error) {
+	fromTime, err := parseTimestamp(r.URL.Query().Get("from"), 0)
+	if err != nil {
+		return 0, 0, err
+	}
+	toTime, err := parseTimestamp(r.URL.Query().Get("to"), math.MaxInt64)
+	if err != nil {
+		return 0, 0, err
+	}
+	if toTime <= fromTime {
+		return 0, 0, errors.New("invalid time range: toTime should be greater than fromTime")
+	}
+	if toTime <= 0 || fromTime < 0 {
+		return 0, 0, errors.New("requested time filters must be positive")
+	}
+	return fromTime, toTime, nil
 }
 
 // return an array containing single routine from request (if present), or all routines

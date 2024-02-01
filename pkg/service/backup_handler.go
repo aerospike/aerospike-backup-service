@@ -121,11 +121,16 @@ func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) 
 			"folder", *backupFolder, "err", err)
 	}
 
-	// clean incremental backups
-	if err := h.backend.DeleteFolder(*h.storage.Path + "/" + model.IncrementalBackupDirectory); err != nil {
-		slog.Error("Could not clean incremental backups", "name", h.routineName, "err", err)
-	} else {
-		slog.Info("Cleaned incremental backups", "name", h.routineName)
+	h.cleanIncrementalBackups()
+}
+
+func (h *BackupHandler) cleanIncrementalBackups() {
+	if h.backupFullPolicy.RemoveIncremental != nil && *h.backupFullPolicy.RemoveIncremental {
+		if err := h.backend.DeleteFolder(*h.storage.Path + "/" + model.IncrementalBackupDirectory); err != nil {
+			slog.Error("Could not clean incremental backups", "name", h.routineName, "err", err)
+		} else {
+			slog.Info("Cleaned incremental backups", "name", h.routineName)
+		}
 	}
 }
 

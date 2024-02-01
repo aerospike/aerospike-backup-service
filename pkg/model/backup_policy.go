@@ -18,6 +18,8 @@ type BackupPolicy struct {
 	RetryDelay *uint32 `yaml:"retry-delay,omitempty" json:"retry-delay,omitempty"`
 	// Whether to clear the output directory.
 	RemoveFiles *bool `yaml:"remove-files,omitempty" json:"remove-files,omitempty"`
+	// Whether to clear incremental backups after full backup.
+	RemoveIncremental *bool `yaml:"remove-incr,omitempty" json:"remove-incr,omitempty"`
 	// Clear directory or remove output file.
 	RemoveArtifacts *bool `yaml:"remove-artifacts,omitempty" json:"remove-artifacts,omitempty"`
 	// Only backup record metadata (digest, TTL, generation count, key).
