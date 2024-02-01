@@ -228,15 +228,15 @@ func (h *BackupHandler) writeState() {
 
 func getFullPath(storage *model.Storage, backupPolicy *model.BackupPolicy, namespace string, now time.Time) *string {
 	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
-		path := fmt.Sprintf("%s/%s/%s/%s", *storage.Path, model.FullBackupDirectory, timeSuffix(now), namespace)
+		path := fmt.Sprintf("%s/%s/%s/%s/", *storage.Path, model.FullBackupDirectory, timeSuffix(now), namespace)
 		return &path
 	}
-	path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.FullBackupDirectory, namespace)
+	path := fmt.Sprintf("%s/%s/%s/", *storage.Path, model.FullBackupDirectory, namespace)
 	return &path
 }
 
 func getIncrementalPath(storage *model.Storage, namespace string, now time.Time) *string {
-	path := fmt.Sprintf("%s/%s/%s/%s", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now), namespace)
+	path := fmt.Sprintf("%s/%s/%s/%s/", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now), namespace)
 	return &path
 }
 
