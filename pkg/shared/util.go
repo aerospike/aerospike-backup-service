@@ -7,9 +7,14 @@ package shared
 #include <stdint.h>
 
 #include <file_proxy.h>
+#include <aerospike/as_config.h>
 */
 import "C"
-import "strings"
+import (
+	"strings"
+
+	"github.com/aerospike/backup/pkg/model"
+)
 
 func setCString(cchar **C.char, str *string) {
 	if str != nil {
@@ -66,5 +71,19 @@ func setS3LogLevel(logLevel *C.s3_log_level_t, value *string) {
 		*logLevel = C.Debug
 	case "TRACE":
 		*logLevel = C.Trace
+	}
+}
+
+func setTLSOptions(tlsName **C.char, tlsConfig *C.as_config_tls, tls *model.TLS) {
+	if tls != nil {
+		*tlsName = C.CString(*tls.Name)
+		tlsConfig.cafile = C.CString(*tls.CAFile)
+		tlsConfig.capath = C.CString(*tls.CAPath)
+		tlsConfig.protocols = C.CString(*tls.Protocols)
+		tlsConfig.cipher_suite = C.CString(*tls.CipherSuite)
+		tlsConfig.keyfile = C.CString(*tls.Keyfile)
+		tlsConfig.keyfile_pw = C.CString(*tls.KeyfilePassword)
+		tlsConfig.certfile = C.CString(*tls.Certfile)
+		tlsConfig.cert_blacklist = C.CString(*tls.CertBlacklist)
 	}
 }
