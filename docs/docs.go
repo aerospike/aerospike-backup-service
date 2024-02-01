@@ -117,6 +117,20 @@ const docTemplate = `{
                         "description": "Backup routine name",
                         "name": "name",
                         "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Lower bound timestamp filter",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Upper bound timestamp filter",
+                        "name": "to",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1118,6 +1132,10 @@ const docTemplate = `{
                 },
                 "remove-files": {
                     "description": "Whether to clear the output directory.",
+                    "type": "boolean"
+                },
+                "remove-incr": {
+                    "description": "Whether to clear incremental backups after full backup.",
                     "type": "boolean"
                 },
                 "retry-delay": {
