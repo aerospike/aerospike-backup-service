@@ -42,7 +42,7 @@ func TestFullBackupKeepFiles(t *testing.T) {
 	}
 
 	for _, t := range []int64{10, 20, 30} {
-		path := tempFolder + "/testStorage/backup/source-ns1/" + strconv.FormatInt(t, 10)
+		path := tempFolder + "/testStorage/backup/source-ns1/" + strconv.FormatInt(t, 10) + "/"
 		_ = os.MkdirAll(path, 0744)
 		_ = backend.writeBackupMetadata(path, model.BackupMetadata{Created: time.UnixMilli(t)})
 	}
