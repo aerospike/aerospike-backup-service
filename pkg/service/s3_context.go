@@ -117,7 +117,7 @@ func (s *S3Context) readFile(filePath string, v any) error {
 	if err != nil {
 		var opErr *smithy.OperationError
 		if errors.As(err, &opErr) &&
-			strings.Contains(filePath, model.StateFileName) &&
+			(strings.Contains(filePath, model.StateFileName) || strings.Contains(filePath, metadataFile)) &&
 			strings.Contains(opErr.Unwrap().Error(), "StatusCode: 404") {
 			slog.Debug("File does not exist", "path", filePath, "err", err)
 			return nil
