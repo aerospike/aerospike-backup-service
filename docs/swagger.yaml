@@ -546,6 +546,15 @@ paths:
       summary: Root endpoint.
       tags:
       - System
+  /api-docs/:
+    get:
+      operationId: api-docs
+      responses:
+        "200":
+          description: OK
+      summary: OpenAPI specification endpoint.
+      tags:
+      - System
   /backup/full/list:
     get:
       operationId: getAvailableFullBackups
