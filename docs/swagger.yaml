@@ -112,6 +112,9 @@ definitions:
       remove-files:
         description: Whether to clear the output directory.
         type: boolean
+      remove-incr:
+        description: Whether to clear incremental backups after full backup.
+        type: boolean
       retry-delay:
         description: RetryDelay defines the delay in milliseconds before retrying
           a failed operation.
@@ -587,6 +590,16 @@ paths:
         in: query
         name: name
         type: string
+      - description: Lower bound timestamp filter
+        format: int64
+        in: query
+        name: from
+        type: integer
+      - description: Upper bound timestamp filter
+        format: int64
+        in: query
+        name: to
+        type: integer
       produces:
       - application/json
       responses:
