@@ -93,6 +93,9 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	// Secret Agent configuration
 	restoreSecretAgent(&restoreConfig, restoreRequest.SecretAgent)
 
+	// TLS configuration
+	setTLSOptions(&restoreConfig.tls_name, &restoreConfig.tls, restoreRequest.DestinationCuster.TLS)
+
 	// restore source configuration
 	setCString(&restoreConfig.directory, restoreRequest.Dir)
 

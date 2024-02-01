@@ -987,6 +987,14 @@
                     "description": "The port to connect to.",
                     "type": "integer"
                 },
+                "tls": {
+                    "description": "The cluster TLS configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.TLS"
+                        }
+                    ]
+                },
                 "use-services-alternate": {
                     "description": "Whether should use \"services-alternate\" instead of \"services\" in info request during cluster tending.",
                     "type": "boolean"
@@ -1512,9 +1520,11 @@
                     "type": "integer"
                 },
                 "tls-ca": {
+                    "description": "The path to a trusted CA certificate file in PEM format.",
                     "type": "string"
                 },
                 "tls-enabled": {
+                    "description": "Indicates whether TLS is enabled.",
                     "type": "boolean"
                 }
             }
@@ -1565,6 +1575,48 @@
                 "Local",
                 "S3"
             ]
+        },
+        "model.TLS": {
+            "description": "TLS represents the Aerospike cluster TLS configuration options.",
+            "type": "object",
+            "properties": {
+                "cafile": {
+                    "description": "Path to a trusted CA certificate file.",
+                    "type": "string"
+                },
+                "capath": {
+                    "description": "Path to a directory of trusted CA certificates.",
+                    "type": "string"
+                },
+                "cert-blacklist": {
+                    "description": "Path to a certificate blocklist file. The file should contain one line for each blocklisted certificate.",
+                    "type": "string"
+                },
+                "certfile": {
+                    "description": "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
+                    "type": "string"
+                },
+                "cipher-suite": {
+                    "description": "TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.",
+                    "type": "string"
+                },
+                "keyfile": {
+                    "description": "Path to the key for mutual authentication (if Aerospike cluster supports it).",
+                    "type": "string"
+                },
+                "keyfile-password": {
+                    "description": "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "The default TLS name used to authenticate each TLS socket connection.",
+                    "type": "string"
+                },
+                "protocols": {
+                    "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
+                    "type": "string"
+                }
+            }
         }
     },
     "externalDocs": {
