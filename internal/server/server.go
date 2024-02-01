@@ -172,6 +172,9 @@ func (ws *HTTPServer) Start() {
 	// Prometheus endpoint
 	mux.Handle("/metrics", metricsActionHandler())
 
+	// OpenAPI specification endpoint
+	mux.Handle("/api-docs/", apiDocsActionHandler())
+
 	// Restore job endpoints
 	// Restore from full backup (by folder)
 	mux.HandleFunc("/restore/full", ws.restoreFullHandler)
