@@ -24,13 +24,18 @@ func init() {
 		Path:     ptr.String("s3://as-backup-integration-test/storageAws"),
 		S3Region: ptr.String("eu-central-1"),
 	})
-	contexts = []S3Context{
-		*minioContext,
-		*s3Context,
+	if minioContext != nil && s3Context != nil {
+		contexts = []S3Context{
+			*minioContext,
+			*s3Context,
+		}
 	}
 }
 
 func TestS3Context_CleanDir(t *testing.T) {
+	if contexts == nil {
+		t.Skip("contexts is nil")
+	}
 	for _, context := range contexts {
 		t.Run(context.path, func(t *testing.T) {
 			runCleanDirTest(t, context)
@@ -54,6 +59,9 @@ func runCleanDirTest(t *testing.T, context S3Context) {
 }
 
 func TestS3Context_DeleteFile(t *testing.T) {
+	if contexts == nil {
+		t.Skip("contexts is nil")
+	}
 	for _, context := range contexts {
 		t.Run(context.path, func(t *testing.T) {
 			runDeleteFileTest(t, context)
@@ -69,7 +77,7 @@ func runDeleteFileTest(t *testing.T, context S3Context) {
 		t.Error("files not created")
 	}
 
-	// DeleteFolder require full path
+	// DeleteFolder requires full path
 	context.DeleteFolder("s3://" + context.bucket + context.path + "/incremental")
 
 	if files, _ := context.listFiles(context.path + "/incremental"); len(files) > 0 {

@@ -3,23 +3,21 @@ definitions:
     description: AerospikeCluster represents the configuration for an Aerospike cluster
       for backup.
     properties:
-      auth-mode:
-        description: The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE,
-          PKI).
-        type: string
-      host:
-        description: The host that acts as the entry point to the cluster.
-        type: string
-      password:
-        description: The password for the cluster authentication.
-        type: string
-      password-path:
-        description: The file path with the password string, will take precedence
-          over the password field.
-        type: string
-      port:
-        description: The port to connect to.
+      conn-timeout:
+        description: The connection timeout in milliseconds.
         type: integer
+      credentials:
+        allOf:
+        - $ref: '#/definitions/model.Credentials'
+        description: The authentication details to the Aerospike cluster.
+      label:
+        description: The cluster name.
+        type: string
+      seed-nodes:
+        description: The seed nodes details.
+        items:
+          $ref: '#/definitions/model.SeedNode'
+        type: array
       tls:
         allOf:
         - $ref: '#/definitions/model.TLS'
@@ -28,9 +26,6 @@ definitions:
         description: Whether should use "services-alternate" instead of "services"
           in info request during cluster tending.
         type: boolean
-      user:
-        description: The username for the cluster authentication.
-        type: string
     type: object
   model.BackupDetails:
     description: BackupDetails contains information about a backup.
@@ -218,6 +213,24 @@ definitions:
         additionalProperties:
           $ref: '#/definitions/model.Storage'
         type: object
+    type: object
+  model.Credentials:
+    description: Credentials represents authentication details to the Aerospike cluster.
+    properties:
+      auth-mode:
+        description: The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE,
+          PKI).
+        type: string
+      password:
+        description: The password for the cluster authentication.
+        type: string
+      password-path:
+        description: The file path with the password string, will take precedence
+          over the password field.
+        type: string
+      user:
+        description: The username for the cluster authentication.
+        type: string
     type: object
   model.HTTPServerConfig:
     description: HTTPServerConfig represents the service's HTTP server configuration.
@@ -450,6 +463,19 @@ definitions:
       tls-enabled:
         description: Indicates whether TLS is enabled.
         type: boolean
+    type: object
+  model.SeedNode:
+    description: SeedNode represents details of a node in the Aerospike cluster.
+    properties:
+      host-name:
+        description: The host name of the node.
+        type: string
+      port:
+        description: The port of the node.
+        type: integer
+      tls-name:
+        description: TLS certificate name used for secure connections (if enabled).
+        type: string
     type: object
   model.Storage:
     description: Storage represents the configuration for a backup storage details.

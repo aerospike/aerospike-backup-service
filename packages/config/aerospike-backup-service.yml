@@ -2,10 +2,12 @@
 aerospike-clusters:
   cluster1:
     use-services-alternate: false
-    host: "127.0.0.1"
-    port: 3000
-    user: "admin"
-    password: "admin"
+    seed-nodes:
+      - host-name: "127.0.0.1"
+        port: 3000
+    credentials:
+      user: "admin"
+      password: "admin"
 
 storage:
   local1:
