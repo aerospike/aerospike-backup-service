@@ -20,6 +20,8 @@ type BackupBackend struct {
 	stateFileMutex       sync.RWMutex
 }
 
+var _ BackupListReader = (*BackupBackend)(nil)
+
 const metadataFile = "metadata.yaml"
 
 func BuildBackupBackends(config *model.Config) map[string]*BackupBackend {
@@ -80,19 +82,19 @@ func (b *BackupBackend) writeState(state *model.BackupState) error {
 }
 
 // FullBackupList returns a list of available full backups.
-func (b *BackupBackend) FullBackupList(from, to int64) ([]model.BackupDetails, error) {
+func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
 	backupFolder := b.path + "/" + model.FullBackupDirectory + "/"
-	slog.Info("Get full backups", "backupFolder", backupFolder, "from", from, "to", to)
+	slog.Info("Get full backups", "backupFolder", backupFolder, "timebounds", timebounds)
 
 	// when use RemoveFiles.RemoveFullBackup() = true, backup data is located in backupFolder folder itself
 	if b.removeFullBackup {
-		return b.detailsFromPaths(from, to, false, removeLeadingSlash(backupFolder)), nil
+		return b.detailsFromPaths(timebounds, false, removeLeadingSlash(backupFolder)), nil
 	}
 
-	return b.fromSubfolders(from, to, backupFolder)
+	return b.fromSubfolders(timebounds, backupFolder)
 }
 
-func (b *BackupBackend) detailsFromPaths(from, to int64, useCache bool, paths ...string) []model.BackupDetails {
+func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache bool, paths ...string) []model.BackupDetails {
 	backupDetails := []model.BackupDetails{}
 	for _, path := range paths {
 		namespaces, err := b.lsDir(path)
@@ -106,8 +108,7 @@ func (b *BackupBackend) detailsFromPaths(from, to int64, useCache bool, paths ..
 				slog.Debug("Cannot read backup details", "err", err)
 				continue
 			}
-			if details.Created.UnixMilli() >= from &&
-				details.Created.UnixMilli() < to {
+			if timebounds.Contains(details.Created.UnixMilli()) {
 				backupDetails = append(backupDetails, details)
 			}
 		}
@@ -115,19 +116,19 @@ func (b *BackupBackend) detailsFromPaths(from, to int64, useCache bool, paths ..
 	return backupDetails
 }
 
-func (b *BackupBackend) fromSubfolders(from, to int64, backupFolder string) ([]model.BackupDetails, error) {
+func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds, backupFolder string) ([]model.BackupDetails, error) {
 	subfolders, err := b.lsDir(backupFolder)
 	if err != nil {
 		return nil, err
 	}
 
-	return b.detailsFromPaths(from, to, true, subfolders...), nil
+	return b.detailsFromPaths(timebounds, true, subfolders...), nil
 }
 
 // IncrementalBackupList returns a list of available incremental backups.
-func (b *BackupBackend) IncrementalBackupList(from, to int64) ([]model.BackupDetails, error) {
+func (b *BackupBackend) IncrementalBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
 	backupFolder := b.path + "/" + model.IncrementalBackupDirectory
-	return b.fromSubfolders(from, to, backupFolder)
+	return b.fromSubfolders(timebounds, backupFolder)
 }
 
 func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {

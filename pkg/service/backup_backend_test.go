@@ -24,7 +24,7 @@ func TestFullBackupRemoveFiles(t *testing.T) {
 	_ = os.MkdirAll(path, 0744)
 	_ = backend.writeBackupMetadata(path, model.BackupMetadata{Created: time.UnixMilli(10)})
 
-	list, _ := backend.FullBackupList(0, 1000)
+	list, _ := backend.FullBackupList(model.NewTimeBoundsTo(1000))
 	if len(list) != 1 {
 		t.Errorf("Expected list size 1, got %v", list)
 	}
@@ -47,7 +47,7 @@ func TestFullBackupKeepFiles(t *testing.T) {
 		_ = backend.writeBackupMetadata(path, model.BackupMetadata{Created: time.UnixMilli(t)})
 	}
 
-	list, _ := backend.FullBackupList(0, 25)
+	list, _ := backend.FullBackupList(model.NewTimeBounds(0, 25))
 	if len(list) != 2 {
 		t.Errorf("Expected list size 2, got %v", list)
 	}

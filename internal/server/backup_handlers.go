@@ -2,9 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"log/slog"
-	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -25,8 +23,8 @@ import (
 // @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Request) {
-	listFunc := func(fromTime, toTime int64, backend service.BackupListReader) ([]model.BackupDetails, error) {
-		return backend.FullBackupList(fromTime, toTime)
+	listFunc := func(timeBounds *model.TimeBounds, backend service.BackupListReader) ([]model.BackupDetails, error) {
+		return backend.FullBackupList(timeBounds)
 	}
 	ws.getAvailableBackups(w, r, listFunc)
 }
@@ -42,18 +40,18 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 // @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *http.Request) {
-	ws.getAvailableBackups(w, r, func(fromTime, toTime int64, backend service.BackupListReader) ([]model.BackupDetails, error) {
-		return backend.IncrementalBackupList(0, math.MaxInt64)
+	ws.getAvailableBackups(w, r, func(timeBounds *model.TimeBounds, backend service.BackupListReader) ([]model.BackupDetails, error) {
+		return backend.IncrementalBackupList(timeBounds)
 	})
 }
 
 func (ws *HTTPServer) getAvailableBackups(
 	w http.ResponseWriter,
 	r *http.Request,
-	backupListFunc func(fromTime, toTime int64, backend service.BackupListReader) ([]model.BackupDetails, error)) {
+	backupListFunc func(timebound *model.TimeBounds, backend service.BackupListReader) ([]model.BackupDetails, error)) {
 
 	routines := ws.requestedRoutines(r)
-	fromTime, toTime, err := parseTimebounds(r)
+	timeBounds, err := model.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
 		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -65,7 +63,7 @@ func (ws *HTTPServer) getAvailableBackups(
 			http.Error(w, "routine does not exist for "+routine, http.StatusNotFound)
 			return
 		}
-		list, err := backupListFunc(fromTime, toTime, backend)
+		list, err := backupListFunc(timeBounds, backend)
 		if err != nil {
 			http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -86,24 +84,6 @@ func (ws *HTTPServer) getAvailableBackups(
 	}
 }
 
-func parseTimebounds(r *http.Request) (int64, int64, error) {
-	fromTime, err := parseTimestamp(r.URL.Query().Get("from"), 0)
-	if err != nil {
-		return 0, 0, err
-	}
-	toTime, err := parseTimestamp(r.URL.Query().Get("to"), math.MaxInt64)
-	if err != nil {
-		return 0, 0, err
-	}
-	if toTime <= fromTime {
-		return 0, 0, errors.New("invalid time range: toTime should be greater than fromTime")
-	}
-	if toTime <= 0 || fromTime < 0 {
-		return 0, 0, errors.New("requested time filters must be positive")
-	}
-	return fromTime, toTime, nil
-}
-
 // return an array containing single routine from request (if present), or all routines
 func (ws *HTTPServer) requestedRoutines(r *http.Request) []string {
 	queryRoutineName := r.URL.Query().Get("name")
@@ -115,13 +95,6 @@ func (ws *HTTPServer) requestedRoutines(r *http.Request) []string {
 		routines = append(routines, name)
 	}
 	return routines
-}
-
-func parseTimestamp(value string, defaultValue int64) (int64, error) {
-	if value == "" {
-		return defaultValue, nil
-	}
-	return strconv.ParseInt(value, 10, 64)
 }
 
 // @Summary  Schedule a full backup once per routine name.
