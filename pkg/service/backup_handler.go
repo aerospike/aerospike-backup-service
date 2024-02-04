@@ -89,13 +89,6 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) {
 	backupFolder := getFullPath(h.storage, h.backupFullPolicy, namespace, now)
-	if h.backupFullPolicy.RemoveFiles.RemoveFullBackup() {
-		if err := h.backend.DeleteFolder(*backupFolder); err != nil {
-			slog.Error("Could not delete full backup folder", "name", h.routineName,
-				"folder", *backupFolder, "err", err)
-			return
-		}
-	}
 	h.backend.CreateFolder(*backupFolder)
 
 	var stats *shared.BackupStat

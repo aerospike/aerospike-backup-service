@@ -53,7 +53,7 @@ func (ws *HTTPServer) getAvailableBackups(
 	routines := ws.requestedRoutines(r)
 	timeBounds, err := model.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
-		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	routineToBackups := make(map[string][]model.BackupDetails)
