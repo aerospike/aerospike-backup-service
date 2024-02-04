@@ -1131,12 +1131,17 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "remove-files": {
-                    "description": "Whether to clear the output directory.",
-                    "type": "boolean"
-                },
-                "remove-incr": {
-                    "description": "Whether to clear incremental backups after full backup.",
-                    "type": "boolean"
+                    "description": "Whether to clear the output directory (default: KeepAll).",
+                    "enum": [
+                        "KeepAll",
+                        "RemoveAll",
+                        "RemoveIncremental"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.RemoveFilesType"
+                        }
+                    ]
                 },
                 "retry-delay": {
                     "description": "RetryDelay defines the delay in milliseconds before retrying a failed operation.",
@@ -1355,6 +1360,20 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "model.RemoveFilesType": {
+            "description": "RemoveFilesType represents the type of the backup storage.",
+            "type": "string",
+            "enum": [
+                "KeepAll",
+                "RemoveAll",
+                "RemoveIncremental"
+            ],
+            "x-enum-varnames": [
+                "KeepAll",
+                "RemoveAll",
+                "RemoveIncremental"
+            ]
         },
         "model.RestoreJobStatus": {
             "description": "RestoreJobStatus represents a restore job status.",

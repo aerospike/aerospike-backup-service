@@ -15,7 +15,7 @@ type BackupBackend struct {
 	StorageAccessor
 	path                 string
 	stateFilePath        string
-	removeFiles          bool
+	removeFullBackup     bool
 	fullBackupInProgress *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
 	stateFileMutex       sync.RWMutex
 }
@@ -34,7 +34,6 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 	backupRoutine := config.BackupRoutines[routineName]
 	storage := config.Storage[backupRoutine.Storage]
 	backupPolicy := config.BackupPolicies[backupRoutine.BackupPolicy]
-	removeFiles := backupPolicy.RemoveFiles != nil && *backupPolicy.RemoveFiles
 	switch storage.Type {
 	case model.Local:
 		path := *storage.Path
@@ -42,7 +41,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			StorageAccessor:      NewOSDiskAccessor(),
 			path:                 path,
 			stateFilePath:        path + "/" + model.StateFileName,
-			removeFiles:          removeFiles,
+			removeFullBackup:     backupPolicy.RemoveFiles.RemoveFullBackup(),
 			fullBackupInProgress: &atomic.Bool{},
 		}
 	case model.S3:
@@ -55,7 +54,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			StorageAccessor:      s3Context,
 			path:                 s3Context.path,
 			stateFilePath:        s3Context.path + "/" + model.StateFileName,
-			removeFiles:          removeFiles,
+			removeFullBackup:     backupPolicy.RemoveFiles.RemoveFullBackup(),
 			fullBackupInProgress: &atomic.Bool{},
 		}
 	default:
@@ -85,8 +84,8 @@ func (b *BackupBackend) FullBackupList(from, to int64) ([]model.BackupDetails, e
 	backupFolder := b.path + "/" + model.FullBackupDirectory + "/"
 	slog.Info("Get full backups", "backupFolder", backupFolder, "from", from, "to", to)
 
-	// when use RemoveFiles = true, backup data is located in backupFolder folder itself
-	if b.removeFiles {
+	// when use RemoveFiles.RemoveFullBackup() = true, backup data is located in backupFolder folder itself
+	if b.removeFullBackup {
 		return b.detailsFromPaths(from, to, false, removeLeadingSlash(backupFolder)), nil
 	}
 

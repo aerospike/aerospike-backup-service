@@ -89,6 +89,13 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) {
 	backupFolder := getFullPath(h.storage, h.backupFullPolicy, namespace, now)
+	if h.backupFullPolicy.RemoveFiles.RemoveFullBackup() {
+		if err := h.backend.DeleteFolder(*backupFolder); err != nil {
+			slog.Error("Could not delete full backup folder", "name", h.routineName,
+				"folder", *backupFolder, "err", err)
+			return
+		}
+	}
 	h.backend.CreateFolder(*backupFolder)
 
 	var stats *shared.BackupStat
@@ -125,7 +132,7 @@ func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) 
 }
 
 func (h *BackupHandler) cleanIncrementalBackups() {
-	if h.backupFullPolicy.RemoveIncremental != nil && *h.backupFullPolicy.RemoveIncremental {
+	if h.backupIncrPolicy.RemoveFiles.RemoveIncrementalBackup() {
 		if err := h.backend.DeleteFolder(*h.storage.Path + "/" + model.IncrementalBackupDirectory); err != nil {
 			slog.Error("Could not clean incremental backups", "name", h.routineName, "err", err)
 		} else {
@@ -227,7 +234,7 @@ func (h *BackupHandler) writeState() {
 }
 
 func getFullPath(storage *model.Storage, backupPolicy *model.BackupPolicy, namespace string, now time.Time) *string {
-	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
+	if backupPolicy.RemoveFiles.RemoveFullBackup() {
 		path := fmt.Sprintf("%s/%s/%s/%s/", *storage.Path, model.FullBackupDirectory, timeSuffix(now), namespace)
 		return &path
 	}

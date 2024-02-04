@@ -110,11 +110,13 @@ definitions:
         description: Clear directory or remove output file.
         type: boolean
       remove-files:
-        description: Whether to clear the output directory.
-        type: boolean
-      remove-incr:
-        description: Whether to clear incremental backups after full backup.
-        type: boolean
+        allOf:
+        - $ref: '#/definitions/model.RemoveFilesType'
+        description: 'Whether to clear the output directory (default: KeepAll).'
+        enum:
+        - KeepAll
+        - RemoveAll
+        - RemoveIncremental
       retry-delay:
         description: RetryDelay defines the delay in milliseconds before retrying
           a failed operation.
@@ -278,6 +280,17 @@ definitions:
           type: string
         type: array
     type: object
+  model.RemoveFilesType:
+    description: RemoveFilesType represents the type of the backup storage.
+    enum:
+    - KeepAll
+    - RemoveAll
+    - RemoveIncremental
+    type: string
+    x-enum-varnames:
+    - KeepAll
+    - RemoveAll
+    - RemoveIncremental
   model.RestoreJobStatus:
     description: RestoreJobStatus represents a restore job status.
     properties:
