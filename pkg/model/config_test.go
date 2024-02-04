@@ -26,8 +26,8 @@ func validConfig() *Config {
 			},
 		},
 		AerospikeClusters: map[string]*AerospikeCluster{
-			"cluster1": {Host: ptr.String("localhost"), Port: ptr.Int32(3000)},
-			"cluster2": {Host: ptr.String("localhost"), Port: ptr.Int32(3000)},
+			"cluster1": NewLocalAerospikeCluster(),
+			"cluster2": NewLocalAerospikeCluster(),
 		},
 		BackupPolicies: map[string]*BackupPolicy{
 			"policy1": {},

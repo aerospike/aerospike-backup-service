@@ -5,19 +5,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/smithy-go/ptr"
-
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
+	"github.com/aws/smithy-go/ptr"
 )
 
 func TestRestoreMemory(t *testing.T) {
 	restoreService := NewRestoreMemory(nil, nil)
 	restoreRequest := &model.RestoreRequest{
-		DestinationCuster: &model.AerospikeCluster{
-			Host: util.Ptr("localhost"),
-			Port: util.Ptr(int32(3000)),
-		},
+		DestinationCuster: model.NewLocalAerospikeCluster(),
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
@@ -121,10 +117,7 @@ func TestRestoreTimestamp(t *testing.T) {
 	restoreService := NewRestoreMemory(backends, config)
 
 	request := model.RestoreTimestampRequest{
-		DestinationCuster: &model.AerospikeCluster{
-			Host: util.Ptr("localhost"),
-			Port: util.Ptr(int32(3000)),
-		},
+		DestinationCuster: model.NewLocalAerospikeCluster(),
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},

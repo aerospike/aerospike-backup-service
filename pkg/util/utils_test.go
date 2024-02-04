@@ -23,3 +23,14 @@ func TestFind(t *testing.T) {
 		t.Error("Expected not to be found")
 	}
 }
+
+func TestValueOrZero(t *testing.T) {
+	i1 := 1
+	if ValueOrZero(&i1) != 1 {
+		t.Error("Expected 1")
+	}
+	var i2 *int
+	if ValueOrZero(i2) != 0 {
+		t.Error("Expected 0")
+	}
+}

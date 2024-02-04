@@ -4,17 +4,17 @@ import (
 	"testing"
 
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aws/smithy-go/ptr"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 func TestCluster_Add(t *testing.T) {
 	name := "cluster1"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{
-			name: {Host: ptr.String("host"), Port: ptr.Int32(0)}},
+			name: model.NewLocalAerospikeCluster(),
+		},
 	}
-	newCluster := &model.AerospikeCluster{
-		Host: ptr.String("host"), Port: ptr.Int32(0)}
+	newCluster := model.NewLocalAerospikeCluster()
 	err := AddCluster(config, "cluster2", newCluster)
 	if err != nil {
 		t.Errorf("Error in adding cluster: %s", err.Error())
@@ -31,15 +31,19 @@ func TestCluster_Update(t *testing.T) {
 	name := "cluster1"
 	config := &model.Config{
 		AerospikeClusters: map[string]*model.AerospikeCluster{
-			name: {Host: ptr.String("host"), Port: ptr.Int32(0)}},
+			name: model.NewLocalAerospikeCluster(),
+		},
 	}
-	updatedCluster := &model.AerospikeCluster{
-		Host: ptr.String("host"), Port: ptr.Int32(0), User: ptr.String("user")}
+	updatedCluster := model.NewLocalAerospikeCluster()
+	if updatedCluster.Credentials == nil {
+		updatedCluster.Credentials = &model.Credentials{}
+	}
+	updatedCluster.Credentials.User = util.Ptr("user")
 	err := UpdateCluster(config, name, updatedCluster)
 	if err != nil {
 		t.Errorf("Error in updating cluster: %s", err.Error())
 	}
-	if *config.AerospikeClusters[name].User != "user" {
+	if *config.AerospikeClusters[name].Credentials.User != "user" {
 		t.Errorf("Value in cluster is not updated")
 	}
 

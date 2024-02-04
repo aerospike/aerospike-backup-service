@@ -54,8 +54,7 @@ func run() int {
 		// read configuration file
 		config, err := readConfiguration()
 		if err != nil {
-			// panic if failed to parse the configuration file
-			panic(err)
+			return err
 		}
 		// get system ctx
 		ctx := systemCtx()
@@ -68,7 +67,7 @@ func run() int {
 		backends := service.BuildBackupBackends(config)
 		scheduler, err := service.ScheduleBackup(ctx, config, backends)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		// run HTTP server
 		err = runHTTPServer(ctx, backendsToReaders(backends), config, scheduler)

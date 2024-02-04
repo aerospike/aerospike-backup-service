@@ -13,6 +13,7 @@ linters:
     - errcheck
     - exportloopref
     - funlen
+    - gci
     - goconst
     - gocritic
     - gocyclo
@@ -24,7 +25,9 @@ linters:
     - lll
     - misspell
     - prealloc
+    - promlinter
     - revive
+    - sloglint
     - staticcheck
     - stylecheck
     - typecheck
@@ -44,6 +47,7 @@ issues:
     - path: pkg/shared
       linters:
         - typecheck
+        - gci
     - path: pkg/stdio
       linters:
         - typecheck

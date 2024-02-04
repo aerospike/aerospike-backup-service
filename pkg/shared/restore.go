@@ -52,13 +52,12 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	restoreConfig := C.restore_config_t{}
 	C.restore_config_init(&restoreConfig)
 
-	setCString(&restoreConfig.host, restoreRequest.DestinationCuster.Host)
-	setCInt(&restoreConfig.port, restoreRequest.DestinationCuster.Port)
+	setCString(&restoreConfig.host, restoreRequest.DestinationCuster.SeedNodesAsString())
 	setCBool(&restoreConfig.use_services_alternate, restoreRequest.DestinationCuster.UseServicesAlternate)
 
-	setCString(&restoreConfig.user, restoreRequest.DestinationCuster.User)
+	setCString(&restoreConfig.user, restoreRequest.DestinationCuster.GetUser())
 	setCString(&restoreConfig.password, restoreRequest.DestinationCuster.GetPassword())
-	setCString(&restoreConfig.auth_mode, restoreRequest.DestinationCuster.AuthMode)
+	setCString(&restoreConfig.auth_mode, restoreRequest.DestinationCuster.GetAuthMode())
 
 	setCUint(&restoreConfig.parallel, restoreRequest.Policy.Parallel)
 	setCBool(&restoreConfig.no_records, restoreRequest.Policy.NoRecords)

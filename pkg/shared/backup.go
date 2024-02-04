@@ -53,13 +53,12 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	backupConfig := C.backup_config_t{}
 	C.backup_config_init(&backupConfig)
 
-	setCString(&backupConfig.host, cluster.Host)
-	setCInt(&backupConfig.port, cluster.Port)
+	setCString(&backupConfig.host, cluster.SeedNodesAsString())
 	setCBool(&backupConfig.use_services_alternate, cluster.UseServicesAlternate)
 
-	setCString(&backupConfig.user, cluster.User)
+	setCString(&backupConfig.user, cluster.GetUser())
 	setCString(&backupConfig.password, cluster.GetPassword())
-	setCString(&backupConfig.auth_mode, cluster.AuthMode)
+	setCString(&backupConfig.auth_mode, cluster.GetAuthMode())
 
 	parseSetList(&backupConfig.set_list, &backupRoutine.SetList)
 	if backupRoutine.BinList != nil {

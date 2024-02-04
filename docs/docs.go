@@ -999,25 +999,28 @@ const docTemplate = `{
             "description": "AerospikeCluster represents the configuration for an Aerospike cluster for backup.",
             "type": "object",
             "properties": {
-                "auth-mode": {
-                    "description": "The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).",
-                    "type": "string"
-                },
-                "host": {
-                    "description": "The host that acts as the entry point to the cluster.",
-                    "type": "string"
-                },
-                "password": {
-                    "description": "The password for the cluster authentication.",
-                    "type": "string"
-                },
-                "password-path": {
-                    "description": "The file path with the password string, will take precedence over the password field.",
-                    "type": "string"
-                },
-                "port": {
-                    "description": "The port to connect to.",
+                "conn-timeout": {
+                    "description": "The connection timeout in milliseconds.",
                     "type": "integer"
+                },
+                "credentials": {
+                    "description": "The authentication details to the Aerospike cluster.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.Credentials"
+                        }
+                    ]
+                },
+                "label": {
+                    "description": "The cluster name.",
+                    "type": "string"
+                },
+                "seed-nodes": {
+                    "description": "The seed nodes details.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.SeedNode"
+                    }
                 },
                 "tls": {
                     "description": "The cluster TLS configuration.",
@@ -1030,10 +1033,6 @@ const docTemplate = `{
                 "use-services-alternate": {
                     "description": "Whether should use \"services-alternate\" instead of \"services\" in info request during cluster tending.",
                     "type": "boolean"
-                },
-                "user": {
-                    "description": "The username for the cluster authentication.",
-                    "type": "string"
                 }
             }
         },
@@ -1280,6 +1279,28 @@ const docTemplate = `{
                     "additionalProperties": {
                         "$ref": "#/definitions/model.Storage"
                     }
+                }
+            }
+        },
+        "model.Credentials": {
+            "description": "Credentials represents authentication details to the Aerospike cluster.",
+            "type": "object",
+            "properties": {
+                "auth-mode": {
+                    "description": "The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "The password for the cluster authentication.",
+                    "type": "string"
+                },
+                "password-path": {
+                    "description": "The file path with the password string, will take precedence over the password field.",
+                    "type": "string"
+                },
+                "user": {
+                    "description": "The username for the cluster authentication.",
+                    "type": "string"
                 }
             }
         },
@@ -1581,6 +1602,24 @@ const docTemplate = `{
                 "tls-enabled": {
                     "description": "Indicates whether TLS is enabled.",
                     "type": "boolean"
+                }
+            }
+        },
+        "model.SeedNode": {
+            "description": "SeedNode represents details of a node in the Aerospike cluster.",
+            "type": "object",
+            "properties": {
+                "host-name": {
+                    "description": "The host name of the node.",
+                    "type": "string"
+                },
+                "port": {
+                    "description": "The port of the node.",
+                    "type": "integer"
+                },
+                "tls-name": {
+                    "description": "TLS certificate name used for secure connections (if enabled).",
+                    "type": "string"
                 }
             }
         },
