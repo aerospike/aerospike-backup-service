@@ -234,7 +234,7 @@ func validateStorageContainsBackup(path string, storage *model.Storage) error {
 	if err != nil {
 		return err
 	}
-	s3prefix := "s3://" + context.bucket
+	s3prefix := s3Protocol + context.bucket
 	files, err := context.listFiles(strings.TrimPrefix(path, s3prefix))
 	if err != nil {
 		return err

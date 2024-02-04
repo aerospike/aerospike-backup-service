@@ -34,9 +34,8 @@ func newIPWhiteList(ipList []string) *ipWhiteList {
 			ipAddr, err := netip.ParseAddr(ip)
 			if err != nil {
 				panic(fmt.Sprintf("invalid ip configuration: %s", ip))
-			} else {
-				addresses[ip] = &ipAddr
 			}
+			addresses[ip] = &ipAddr
 		} else {
 			networks = append(networks, &network)
 		}
