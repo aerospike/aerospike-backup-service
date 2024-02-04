@@ -21,6 +21,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const s3Protocol = "s3://"
+
 // S3Context is responsible for performing basic operations on S3.
 type S3Context struct {
 	ctx           context.Context
@@ -101,7 +103,7 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupD
 	if err != nil {
 		return model.BackupDetails{}, err
 	}
-	s3prefix := "s3://" + s.bucket
+	s3prefix := s3Protocol + s.bucket
 	return model.BackupDetails{
 		BackupMetadata: *metadata,
 		Key:            util.Ptr(s3prefix + "/" + path),
@@ -142,7 +144,7 @@ func (s *S3Context) readFile(filePath string, v any) error {
 
 // WriteYaml writes v into filepath using the YAML format.
 func (s *S3Context) writeYaml(filePath string, v any) error {
-	s3prefix := "s3://" + s.bucket
+	s3prefix := s3Protocol + s.bucket
 	filePath = strings.TrimPrefix(filePath, s3prefix)
 	backupState, err := yaml.Marshal(v)
 	if err != nil {
@@ -244,7 +246,7 @@ func removeLeadingSlash(s string) string {
 
 // CleanDir cleans the directory with the given name.
 func (s *S3Context) CleanDir(name string) error {
-	path := "s3://" + s.bucket + s.path + "/" + name
+	path := s3Protocol + s.bucket + s.path + "/" + name
 	return s.DeleteFolder(path)
 }
 
@@ -257,7 +259,7 @@ func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, 
 }
 
 func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
-	s3prefix := "s3://" + s.bucket
+	s3prefix := s3Protocol + s.bucket
 	metadataFilePath := filepath.Join(strings.TrimPrefix(path, s3prefix), metadataFile)
 	metadata := &model.BackupMetadata{}
 	err := s.readFile(metadataFilePath, metadata)

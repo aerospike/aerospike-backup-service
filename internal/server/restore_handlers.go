@@ -4,10 +4,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
-
-	"log/slog"
 
 	"github.com/aerospike/backup/pkg/model"
 )
