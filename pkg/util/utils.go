@@ -29,9 +29,9 @@ func isRunningInDockerContainer() bool {
 // ValueOrZero dereferences a pointer and returns the value.
 // Zero value is returned if the pointer is nil.
 func ValueOrZero[T any](p *T) T {
-	var zero T
 	if p != nil {
 		return *p
 	}
+	var zero T
 	return zero
 }
