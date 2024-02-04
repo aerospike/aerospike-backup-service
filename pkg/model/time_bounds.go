@@ -11,12 +11,14 @@ type TimeBounds struct {
 	ToTime   int64
 }
 
+// NewTimeBounds creates new TimeBounds using provided fromTime and toTime values.
 func NewTimeBounds(fromTime, toTime int64) *TimeBounds {
 	return &TimeBounds{FromTime: fromTime, ToTime: toTime}
 }
 
+// NewTimeBoundsTo creates new TimeBounds from epoch 0 until provided toTime.
 func NewTimeBoundsTo(toTime int64) *TimeBounds {
-	return &TimeBounds{FromTime: 0, ToTime: toTime}
+	return NewTimeBounds(0, toTime)
 }
 
 func NewTimeBoundsFromString(from, to string) (*TimeBounds, error) {
@@ -34,7 +36,7 @@ func NewTimeBoundsFromString(from, to string) (*TimeBounds, error) {
 	if toTime <= 0 || fromTime < 0 {
 		return nil, errors.New("requested time filters must be positive")
 	}
-	return &TimeBounds{FromTime: fromTime, ToTime: toTime}, nil
+	return NewTimeBounds(fromTime, toTime), nil
 }
 
 func parseTimestamp(value string, defaultValue int64) (int64, error) {
@@ -44,6 +46,7 @@ func parseTimestamp(value string, defaultValue int64) (int64, error) {
 	return strconv.ParseInt(value, 10, 64)
 }
 
+// Contains verifies if given value lies within FromTime (inclusive) and ToTime (exclusive).
 func (tb *TimeBounds) Contains(value int64) bool {
 	return tb.FromTime <= value && value < tb.ToTime
 }

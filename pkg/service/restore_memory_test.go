@@ -86,14 +86,14 @@ func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
 type BackendMock struct {
 }
 
-func (*BackendMock) FullBackupList(_ int64, _ int64) ([]model.BackupDetails, error) {
+func (*BackendMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
 		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(5)},
 		Key:            ptr.String("key"),
 	}}, nil
 }
 
-func (*BackendMock) IncrementalBackupList(_ int64, _ int64) ([]model.BackupDetails, error) {
+func (*BackendMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
 		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)},
 		Key:            ptr.String("key"),
