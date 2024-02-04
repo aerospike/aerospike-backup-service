@@ -76,14 +76,15 @@ func setS3LogLevel(logLevel *C.s3_log_level_t, value *string) {
 
 func setTLSOptions(tlsName **C.char, tlsConfig *C.as_config_tls, tls *model.TLS) {
 	if tls != nil {
-		*tlsName = C.CString(*tls.Name)
-		tlsConfig.cafile = C.CString(*tls.CAFile)
-		tlsConfig.capath = C.CString(*tls.CAPath)
-		tlsConfig.protocols = C.CString(*tls.Protocols)
-		tlsConfig.cipher_suite = C.CString(*tls.CipherSuite)
-		tlsConfig.keyfile = C.CString(*tls.Keyfile)
-		tlsConfig.keyfile_pw = C.CString(*tls.KeyfilePassword)
-		tlsConfig.certfile = C.CString(*tls.Certfile)
-		tlsConfig.cert_blacklist = C.CString(*tls.CertBlacklist)
+		tlsConfig.enable = true
+		setCString(tlsName, tls.Name)
+		setCString(&tlsConfig.cafile, tls.CAFile)
+		setCString(&tlsConfig.capath, tls.CAPath)
+		setCString(&tlsConfig.protocols, tls.Protocols)
+		setCString(&tlsConfig.cipher_suite, tls.CipherSuite)
+		setCString(&tlsConfig.keyfile, tls.Keyfile)
+		setCString(&tlsConfig.keyfile_pw, tls.KeyfilePassword)
+		setCString(&tlsConfig.certfile, tls.Certfile)
+		setCString(&tlsConfig.cert_blacklist, tls.CertBlacklist)
 	}
 }

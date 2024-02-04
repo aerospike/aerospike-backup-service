@@ -11,7 +11,7 @@ import (
 const namespaceInfo = "namespaces"
 
 func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error) {
-	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHost())
+	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Aerospike server: %s", err)
 	}

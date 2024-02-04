@@ -1,9 +1,11 @@
 aerospike-clusters:
   absCluster1:
-    host: "localhost"
-    port: 3000
-    user: tester
-    password: psw
+    seed-nodes:
+      - host-name: "localhost"
+        port: 3000
+    credentials:    
+      user: tester
+      password: psw
 storage:
   minioStorage:
     # Use 1 for S3 or compatible and 0 for local storage.
