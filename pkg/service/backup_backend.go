@@ -98,7 +98,7 @@ func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.Ba
 
 func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache bool, paths ...string) []model.BackupDetails {
 	// each path contains a backup of specific time
-	backupDetails := []model.BackupDetails(nil)
+	backupDetails := []model.BackupDetails{}
 	slog.Debug("backups", "paths", paths)
 	for _, path := range paths {
 		namespaces, err := b.lsDir(path)
