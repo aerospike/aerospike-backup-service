@@ -95,7 +95,7 @@ func (r *RestoreMemory) findLastFullBackup(
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 ) ([]model.BackupDetails, error) {
-	to, err := model.NewTimeBoundsTo(&request.Time)
+	to, err := model.NewTimeBoundsTo(request.Time)
 	if err != nil {
 		return nil, err
 	}

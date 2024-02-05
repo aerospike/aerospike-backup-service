@@ -26,13 +26,13 @@ func NewTimeBounds(fromTime, toTime *int64) (*TimeBounds, error) {
 }
 
 // NewTimeBoundsTo creates new TimeBounds until provided toTime.
-func NewTimeBoundsTo(toTime *int64) (*TimeBounds, error) {
-	return NewTimeBounds(nil, toTime)
+func NewTimeBoundsTo(toTime int64) (*TimeBounds, error) {
+	return NewTimeBounds(nil, &toTime)
 }
 
 // NewTimeBoundsFrom creates new TimeBounds from provided fromTime.
-func NewTimeBoundsFrom(toTime *int64) (*TimeBounds, error) {
-	return NewTimeBounds(nil, toTime)
+func NewTimeBoundsFrom(toTime int64) (*TimeBounds, error) {
+	return NewTimeBounds(nil, &toTime)
 }
 
 func NewTimeBoundsFromString(from, to string) (*TimeBounds, error) {
