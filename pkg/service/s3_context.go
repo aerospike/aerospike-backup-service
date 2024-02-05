@@ -80,7 +80,6 @@ func NewS3Context(storage *model.Storage) (*S3Context, error) {
 }
 
 func createConfig(ctx context.Context, storage *model.Storage) (aws.Config, error) {
-	storage.SetDefaultProfile()
 	return config.LoadDefaultConfig(
 		ctx,
 		config.WithSharedConfigProfile(*storage.S3Profile),
