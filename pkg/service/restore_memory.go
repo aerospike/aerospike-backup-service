@@ -95,7 +95,11 @@ func (r *RestoreMemory) findLastFullBackup(
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 ) ([]model.BackupDetails, error) {
-	fullBackupList, err := backend.FullBackupList(model.NewTimeBoundsTo(request.Time))
+	to, err := model.NewTimeBoundsTo(&request.Time)
+	if err != nil {
+		return nil, err
+	}
+	fullBackupList, err := backend.FullBackupList(to)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read full backup list")
 	}
@@ -179,7 +183,11 @@ func (r *RestoreMemory) restore(
 
 func (r *RestoreMemory) findIncrementalBackupsForNamespace(
 	backend BackupListReader, from, to int64, namespace string) ([]model.BackupDetails, error) {
-	allIncrementalBackupList, err := backend.IncrementalBackupList(model.NewTimeBounds(from, to))
+	bounds, err := model.NewTimeBounds(&from, &to)
+	if err != nil {
+		return nil, err
+	}
+	allIncrementalBackupList, err := backend.IncrementalBackupList(bounds)
 	if err != nil {
 		return nil, err
 	}
