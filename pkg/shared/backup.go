@@ -78,7 +78,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 
 	setCInt(&backupConfig.parallel, backupPolicy.Parallel)
 
-	setCBool(&backupConfig.remove_files, backupPolicy.RemoveFiles)
+	setCBool(&backupConfig.remove_files, ptr.Bool(true))
 	setCBool(&backupConfig.no_bins, backupPolicy.NoBins)
 	setCBool(&backupConfig.no_records, backupPolicy.NoRecords)
 	setCBool(&backupConfig.no_indexes, backupPolicy.NoIndexes)

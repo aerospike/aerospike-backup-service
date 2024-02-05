@@ -2,6 +2,16 @@ package model
 
 import "github.com/aerospike/backup/pkg/util"
 
+const (
+	KeepAll           RemoveFilesType = "KeepAll"
+	RemoveAll         RemoveFilesType = "RemoveAll"
+	RemoveIncremental RemoveFilesType = "RemoveIncremental"
+)
+
+// RemoveFilesType represents the type of the backup storage.
+// @Description RemoveFilesType represents the type of the backup storage.
+type RemoveFilesType string
+
 // BackupPolicy represents a scheduled backup policy.
 // @Description BackupPolicy represents a scheduled backup policy.
 type BackupPolicy struct {
@@ -16,8 +26,8 @@ type BackupPolicy struct {
 	MaxRetries *uint32 `yaml:"max-retries,omitempty" json:"max-retries,omitempty"`
 	// RetryDelay defines the delay in milliseconds before retrying a failed operation.
 	RetryDelay *uint32 `yaml:"retry-delay,omitempty" json:"retry-delay,omitempty"`
-	// Whether to clear the output directory.
-	RemoveFiles *bool `yaml:"remove-files,omitempty" json:"remove-files,omitempty"`
+	// Whether to clear the output directory (default: KeepAll).
+	RemoveFiles *RemoveFilesType `yaml:"remove-files,omitempty" json:"remove-files,omitempty" enums:"KeepAll,RemoveAll,RemoveIncremental"`
 	// Clear directory or remove output file.
 	RemoveArtifacts *bool `yaml:"remove-artifacts,omitempty" json:"remove-artifacts,omitempty"`
 	// Only backup record metadata (digest, TTL, generation count, key).
@@ -63,4 +73,14 @@ func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
 		FileLimit:        p.FileLimit,
 		FilterExp:        p.FilterExp,
 	}
+}
+
+func (r *RemoveFilesType) RemoveFullBackup() bool {
+	// Full backups are deleted only if RemoveFiles is explicitly set to RemoveAll
+	return r != nil && *r == RemoveAll
+}
+
+func (r *RemoveFilesType) RemoveIncrementalBackup() bool {
+	// Incremental backups are deleted only if RemoveFiles is explicitly set to RemoveAll or RemoveIncremental
+	return r != nil && (*r == RemoveIncremental || *r == RemoveAll)
 }

@@ -85,6 +85,8 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 	// update the state
 	h.updateFullBackupState(now)
+
+	h.cleanIncrementalBackups()
 }
 
 func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) {
@@ -120,12 +122,15 @@ func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) 
 		slog.Error("Could not write backup metadata", "name", h.routineName,
 			"folder", *backupFolder, "err", err)
 	}
+}
 
-	// clean incremental backups
-	if err := h.backend.DeleteFolder(*h.storage.Path + "/" + model.IncrementalBackupDirectory); err != nil {
-		slog.Error("Could not clean incremental backups", "name", h.routineName, "err", err)
-	} else {
-		slog.Info("Cleaned incremental backups", "name", h.routineName)
+func (h *BackupHandler) cleanIncrementalBackups() {
+	if h.backupIncrPolicy.RemoveFiles.RemoveIncrementalBackup() {
+		if err := h.backend.DeleteFolder(*h.storage.Path + "/" + model.IncrementalBackupDirectory); err != nil {
+			slog.Error("Could not clean incremental backups", "name", h.routineName, "err", err)
+		} else {
+			slog.Info("Cleaned incremental backups", "name", h.routineName)
+		}
 	}
 }
 
@@ -222,16 +227,16 @@ func (h *BackupHandler) writeState() {
 }
 
 func getFullPath(storage *model.Storage, backupPolicy *model.BackupPolicy, namespace string, now time.Time) *string {
-	if backupPolicy.RemoveFiles != nil && !*backupPolicy.RemoveFiles {
-		path := fmt.Sprintf("%s/%s/%s/%s", *storage.Path, model.FullBackupDirectory, timeSuffix(now), namespace)
+	if backupPolicy.RemoveFiles.RemoveFullBackup() {
+		path := fmt.Sprintf("%s/%s/%s/", *storage.Path, model.FullBackupDirectory, namespace)
 		return &path
 	}
-	path := fmt.Sprintf("%s/%s/%s", *storage.Path, model.FullBackupDirectory, namespace)
+	path := fmt.Sprintf("%s/%s/%s/%s/", *storage.Path, model.FullBackupDirectory, timeSuffix(now), namespace)
 	return &path
 }
 
 func getIncrementalPath(storage *model.Storage, namespace string, now time.Time) *string {
-	path := fmt.Sprintf("%s/%s/%s/%s", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now), namespace)
+	path := fmt.Sprintf("%s/%s/%s/%s/", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now), namespace)
 	return &path
 }
 

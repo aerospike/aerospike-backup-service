@@ -7,10 +7,10 @@ type BackupListReader interface {
 	// FullBackupList returns a list of available full backups.
 	// The parameters are timestamp filters by creation time (epoch millis),
 	// where from is inclusive and to is exclusive.
-	FullBackupList(from, to int64) ([]model.BackupDetails, error)
+	FullBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error)
 
 	// IncrementalBackupList returns a list of available incremental backups.
 	// The parameters are timestamp filters by creation time (epoch millis),
 	// where from is inclusive and to is exclusive.
-	IncrementalBackupList(from, to int64) ([]model.BackupDetails, error)
+	IncrementalBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error)
 }
