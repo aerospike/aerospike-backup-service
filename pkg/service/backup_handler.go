@@ -85,6 +85,8 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 
 	// update the state
 	h.updateFullBackupState(now)
+
+	h.cleanIncrementalBackups()
 }
 
 func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) {
@@ -120,8 +122,6 @@ func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) 
 		slog.Error("Could not write backup metadata", "name", h.routineName,
 			"folder", *backupFolder, "err", err)
 	}
-
-	h.cleanIncrementalBackups()
 }
 
 func (h *BackupHandler) cleanIncrementalBackups() {
