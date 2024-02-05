@@ -124,7 +124,10 @@ func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds, backupFolde
 	if err != nil {
 		return nil, err
 	}
-
+	if len(subfolders) == 0 {
+		slog.Info("No subfolders found in backup folder", "backupFolder", backupFolder)
+		return []model.BackupDetails{}, nil
+	}
 	return b.detailsFromPaths(timebounds, true, subfolders...), nil
 }
 
