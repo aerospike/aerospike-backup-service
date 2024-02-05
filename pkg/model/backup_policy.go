@@ -9,7 +9,7 @@ const (
 )
 
 // RemoveFilesType represents the type of the backup storage.
-// @Description RemoveFilesType represents the type of the backup storage.
+// @Description RemoveFilesType represents the type of the backup storage.a
 type RemoveFilesType string
 
 // BackupPolicy represents a scheduled backup policy.

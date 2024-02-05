@@ -27,7 +27,9 @@ const metadataFile = "metadata.yaml"
 func BuildBackupBackends(config *model.Config) map[string]*BackupBackend {
 	backends := map[string]*BackupBackend{}
 	for routineName := range config.BackupRoutines {
-		backends[routineName] = newBackend(config, routineName)
+		backend := newBackend(config, routineName)
+		slog.Debug("New backup backend created", "backend", backend)
+		backends[routineName] = backend
 	}
 	return backends
 }
@@ -36,6 +38,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 	backupRoutine := config.BackupRoutines[routineName]
 	storage := config.Storage[backupRoutine.Storage]
 	backupPolicy := config.BackupPolicies[backupRoutine.BackupPolicy]
+	removeFullBackup := backupPolicy.RemoveFiles.RemoveFullBackup()
 	switch storage.Type {
 	case model.Local:
 		path := *storage.Path
@@ -43,7 +46,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			StorageAccessor:      NewOSDiskAccessor(),
 			path:                 path,
 			stateFilePath:        path + "/" + model.StateFileName,
-			removeFullBackup:     backupPolicy.RemoveFiles.RemoveFullBackup(),
+			removeFullBackup:     removeFullBackup,
 			fullBackupInProgress: &atomic.Bool{},
 		}
 	case model.S3:
@@ -56,7 +59,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			StorageAccessor:      s3Context,
 			path:                 s3Context.path,
 			stateFilePath:        s3Context.path + "/" + model.StateFileName,
-			removeFullBackup:     backupPolicy.RemoveFiles.RemoveFullBackup(),
+			removeFullBackup:     removeFullBackup,
 			fullBackupInProgress: &atomic.Bool{},
 		}
 	default:
