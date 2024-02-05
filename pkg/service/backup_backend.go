@@ -27,9 +27,7 @@ const metadataFile = "metadata.yaml"
 func BuildBackupBackends(config *model.Config) map[string]*BackupBackend {
 	backends := map[string]*BackupBackend{}
 	for routineName := range config.BackupRoutines {
-		backend := newBackend(config, routineName)
-		slog.Debug("New backup backend created", "backend", backend)
-		backends[routineName] = backend
+		backends[routineName] = newBackend(config, routineName)
 	}
 	return backends
 }
@@ -87,7 +85,8 @@ func (b *BackupBackend) writeState(state *model.BackupState) error {
 // FullBackupList returns a list of available full backups.
 func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
 	backupFolder := b.path + "/" + model.FullBackupDirectory + "/"
-	slog.Info("Get full backups", "backupFolder", backupFolder, "timebounds", timebounds)
+	slog.Info("Get full backups", "backupFolder", backupFolder,
+		"timebounds", timebounds, "removeFullBackup", b.removeFullBackup)
 
 	// when use RemoveFiles.RemoveFullBackup() = true, backup data is located in backupFolder folder itself
 	if b.removeFullBackup {
@@ -98,13 +97,16 @@ func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.Ba
 }
 
 func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache bool, paths ...string) []model.BackupDetails {
-	backupDetails := []model.BackupDetails{}
+	// each path contains a backup of specific time
+	backupDetails := []model.BackupDetails(nil)
+	slog.Debug("backups", "paths", paths)
 	for _, path := range paths {
 		namespaces, err := b.lsDir(path)
 		if err != nil {
 			slog.Warn("Cannot list backup dir", "path", path, "err", err)
 			continue
 		}
+		slog.Debug("namespaces", "ns", namespaces)
 		for _, namespacePath := range namespaces {
 			details, err := b.readBackupDetails(namespacePath, useCache)
 			if err != nil {
@@ -123,10 +125,6 @@ func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds, backupFolde
 	subfolders, err := b.lsDir(backupFolder)
 	if err != nil {
 		return nil, err
-	}
-	if len(subfolders) == 0 {
-		slog.Info("No subfolders found in backup folder", "backupFolder", backupFolder)
-		return []model.BackupDetails{}, nil
 	}
 	return b.detailsFromPaths(timebounds, true, subfolders...), nil
 }
