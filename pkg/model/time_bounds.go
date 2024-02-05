@@ -2,7 +2,6 @@ package model
 
 import (
 	"errors"
-	"log/slog"
 	"strconv"
 )
 
@@ -61,13 +60,10 @@ func parseTimestamp(value string) (*int64, error) {
 // Contains verifies if given value lies within FromTime (inclusive) and ToTime (exclusive).
 func (tb *TimeBounds) Contains(value int64) bool {
 	if tb.FromTime != nil && value < *tb.FromTime {
-		slog.Debug("contains failed <", "from", *tb.FromTime, "value", value)
 		return false
 	}
 	if tb.ToTime != nil && value >= *tb.ToTime {
-		slog.Debug("contains failed >", "to", *tb.ToTime, "value", value)
 		return false
 	}
-	slog.Debug("contains passed", "to", tb.ToTime, "from", tb.FromTime, "value", value)
 	return true
 }
