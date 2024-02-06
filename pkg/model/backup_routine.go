@@ -59,7 +59,7 @@ func (r *BackupRoutine) Validate() error {
 		}
 	}
 	for _, rack := range r.PreferRacks {
-		if rack >= maxRack {
+		if rack > maxRack {
 			return fmt.Errorf("rack id %d should not exceed %d", rack, maxRack)
 		}
 	}
