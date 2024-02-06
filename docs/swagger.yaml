@@ -165,6 +165,12 @@ definitions:
           or records after a specific digest within a single partition.
           Default number of partitions to back up: 0 to 4095: all partitions.
         type: string
+      prefer-racks:
+        description: A list of Aerospike Server rack IDs to prefer when reading records
+          for a backup.
+        items:
+          type: integer
+        type: array
       secret-agent:
         description: The Secret Agent configuration for the routine (optional).
         type: string

@@ -20,6 +20,7 @@ package shared
 import "C"
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"unsafe"
@@ -66,6 +67,9 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	}
 	if backupRoutine.NodeList != nil {
 		setCString(&backupConfig.node_list, printNodes(backupRoutine.NodeList))
+	}
+	if backupRoutine.PreferRacks != nil {
+		setCString(&backupConfig.prefer_racks, joinInts(backupRoutine.PreferRacks))
 	}
 	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
 	setCUint(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
@@ -162,4 +166,13 @@ func printNodes(nodes []model.Node) *string {
 	}
 	concatenated := strings.Join(nodeStrings, ",")
 	return &concatenated
+}
+
+func joinInts(nums []int) *string {
+	strNums := make([]string, len(nums))
+	for i, num := range nums {
+		strNums[i] = strconv.Itoa(num)
+	}
+	join := strings.Join(strNums, ",")
+	return &join
 }

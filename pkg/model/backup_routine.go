@@ -29,6 +29,8 @@ type BackupRoutine struct {
 	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty"`
 	// The list of nodes in the Aerospike cluster to run the backup for.
 	NodeList []Node `yaml:"node-list,omitempty" json:"node-list,omitempty"`
+	// A list of Aerospike Server rack IDs to prefer when reading records for a backup.
+	PreferRacks []int `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty"`
 
 	// Back up list of partition filters. Partition filters can be ranges, individual partitions,
 	// or records after a specific digest within a single partition.
@@ -54,6 +56,14 @@ func (r *BackupRoutine) Validate() error {
 	if r.IncrIntervalCron != "" { // incremental interval is optional
 		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
 			return fmt.Errorf("incremental backup interval string %s invalid: %v", r.IntervalCron, err)
+		}
+	}
+	for _, rack := range r.PreferRacks {
+		if rack < 0 {
+			return fmt.Errorf("rack id %d invalid, should be positive number", rack)
+		}
+		if rack > maxRack {
+			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)
 		}
 	}
 	return nil
