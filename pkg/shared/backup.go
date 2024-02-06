@@ -169,7 +169,7 @@ func printNodes(nodes []model.Node) *string {
 }
 
 // Convert uint slice to comma-separated string
-func joinInts(nums []uint) *string {
+func joinInts(nums []int32) *string {
 	strNums := make([]string, len(nums))
 	for i, num := range nums {
 		strNums[i] = strconv.FormatUint(uint64(num), 10)
