@@ -67,6 +67,9 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	if backupRoutine.NodeList != nil {
 		setCString(&backupConfig.node_list, printNodes(backupRoutine.NodeList))
 	}
+	if backupRoutine.PreferRacks != nil {
+		setCString(&backupConfig.prefer_racks, ptr.String(strings.Join(backupRoutine.PreferRacks, ",")))
+	}
 	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
 	setCUint(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
 	setCUint(&backupConfig.max_retries, backupPolicy.MaxRetries)
