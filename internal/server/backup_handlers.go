@@ -40,7 +40,8 @@ func (ws *HTTPServer) getAvailableFullBackups(w http.ResponseWriter, r *http.Req
 // @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *http.Request) {
-	ws.getAvailableBackups(w, r, func(timeBounds *model.TimeBounds, backend service.BackupListReader) ([]model.BackupDetails, error) {
+	ws.getAvailableBackups(w, r, func(timeBounds *model.TimeBounds,
+		backend service.BackupListReader) ([]model.BackupDetails, error) {
 		return backend.IncrementalBackupList(timeBounds)
 	})
 }
@@ -48,8 +49,8 @@ func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *h
 func (ws *HTTPServer) getAvailableBackups(
 	w http.ResponseWriter,
 	r *http.Request,
-	backupListFunc func(timebound *model.TimeBounds, backend service.BackupListReader) ([]model.BackupDetails, error)) {
-
+	backupListFunc func(timebound *model.TimeBounds, backend service.BackupListReader) ([]model.BackupDetails, error),
+) {
 	routines := ws.requestedRoutines(r)
 	timeBounds, err := model.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
