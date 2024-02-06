@@ -455,14 +455,23 @@ definitions:
       request.
     properties:
       destination:
-        $ref: '#/definitions/model.AerospikeCluster'
+        allOf:
+        - $ref: '#/definitions/model.AerospikeCluster'
+        description: The details of the Aerospike destination cluster.
       policy:
-        $ref: '#/definitions/model.RestorePolicy'
+        allOf:
+        - $ref: '#/definitions/model.RestorePolicy'
+        description: Restore policy to use in the operation.
       routine:
+        description: The backup routine name.
         type: string
       secret-agent:
-        $ref: '#/definitions/model.SecretAgent'
+        allOf:
+        - $ref: '#/definitions/model.SecretAgent'
+        description: Secret Agent configuration (optional).
       time:
+        description: Required epoch time for recovery. The closest backup before the
+          timestamp will be applied.
         format: int64
         type: integer
     type: object

@@ -1569,18 +1569,35 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "destination": {
-                    "$ref": "#/definitions/model.AerospikeCluster"
+                    "description": "The details of the Aerospike destination cluster.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.AerospikeCluster"
+                        }
+                    ]
                 },
                 "policy": {
-                    "$ref": "#/definitions/model.RestorePolicy"
+                    "description": "Restore policy to use in the operation.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.RestorePolicy"
+                        }
+                    ]
                 },
                 "routine": {
+                    "description": "The backup routine name.",
                     "type": "string"
                 },
                 "secret-agent": {
-                    "$ref": "#/definitions/model.SecretAgent"
+                    "description": "Secret Agent configuration (optional).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.SecretAgent"
+                        }
+                    ]
                 },
                 "time": {
+                    "description": "Required epoch time for recovery. The closest backup before the timestamp will be applied.",
                     "type": "integer",
                     "format": "int64"
                 }
