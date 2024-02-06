@@ -1204,7 +1204,7 @@ const docTemplate = `{
                     "description": "A list of Aerospike Server rack IDs to prefer when reading records for a backup.",
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "type": "integer"
                     }
                 },
                 "secret-agent": {

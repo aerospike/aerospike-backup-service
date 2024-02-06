@@ -169,7 +169,7 @@ definitions:
         description: A list of Aerospike Server rack IDs to prefer when reading records
           for a backup.
         items:
-          type: string
+          type: integer
         type: array
       secret-agent:
         description: The Secret Agent configuration for the routine (optional).
