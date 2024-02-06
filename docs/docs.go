@@ -1200,6 +1200,13 @@ const docTemplate = `{
                     "description": "Back up list of partition filters. Partition filters can be ranges, individual partitions,\nor records after a specific digest within a single partition.\nDefault number of partitions to back up: 0 to 4095: all partitions.",
                     "type": "string"
                 },
+                "prefer-racks": {
+                    "description": "A list of Aerospike Server rack IDs to prefer when reading records for a backup.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "secret-agent": {
                     "description": "The Secret Agent configuration for the routine (optional).",
                     "type": "string"
