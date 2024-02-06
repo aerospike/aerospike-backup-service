@@ -30,7 +30,7 @@ type BackupRoutine struct {
 	// The list of nodes in the Aerospike cluster to run the backup for.
 	NodeList []Node `yaml:"node-list,omitempty" json:"node-list,omitempty"`
 	// A list of Aerospike Server rack IDs to prefer when reading records for a backup.
-	PreferRacks []uint `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty"`
+	PreferRacks []int32 `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty"`
 
 	// Back up list of partition filters. Partition filters can be ranges, individual partitions,
 	// or records after a specific digest within a single partition.
@@ -59,8 +59,11 @@ func (r *BackupRoutine) Validate() error {
 		}
 	}
 	for _, rack := range r.PreferRacks {
+		if rack < 0 {
+			return fmt.Errorf("rack id %d invalid, should be positive number", rack)
+		}
 		if rack > maxRack {
-			return fmt.Errorf("rack id %d should not exceed %d", rack, maxRack)
+			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)
 		}
 	}
 	return nil
