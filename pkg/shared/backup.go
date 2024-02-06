@@ -168,7 +168,6 @@ func printNodes(nodes []model.Node) *string {
 	return &concatenated
 }
 
-// Convert uint slice to comma-separated string
 func joinInts(nums []int) *string {
 	strNums := make([]string, len(nums))
 	for i, num := range nums {
