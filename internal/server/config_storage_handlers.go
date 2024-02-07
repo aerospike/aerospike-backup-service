@@ -13,9 +13,9 @@ import (
 // @Summary     Adds a storage cluster to the config.
 // @ID	        addStorage
 // @Tags        Configuration
-// @Router      /config/storage [post]
+// @Router      /config/storage/{name} [post]
 // @Accept      json
-// @Param       name query string true "storage name"
+// @Param       name path string true "storage name"
 // @Param       storage body model.Storage true "backup storage"
 // @Success     201
 // @Failure     400 {string} string
@@ -26,7 +26,8 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	name := r.URL.Query().Get("name")
+	r.Body.Close()
+	name := getLastUrlSegment(r.URL.Path)
 	if name == "" {
 		http.Error(w, "storage name is required", http.StatusBadRequest)
 		return
@@ -48,7 +49,7 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 // @Summary     Reads all storage from the configuration.
 // @ID 	        readAllStorage
 // @Tags        Configuration
-// @Router      /config/storages [get]
+// @Router      /config/storage [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.Storage
 // @Failure     400 {string} string
@@ -62,34 +63,34 @@ func (ws *HTTPServer) readStorages(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(jsonResponse)
+	if err != nil {
+		slog.Error("failed to write response", "err", err)
+	}
 }
 
 // readAerospikeCluster reads a specific Aerospike cluster from the configuration given its name.
 // @Summary     Reads an Aerospike cluster from the configuration based on its name.
 // @ID	        readStorage
 // @Tags        Configuration
-// @Router      /config/storage [get]
+// @Router      /config/storage/{name} [get]
+// @Param       name path string true "Name of the storage"
 // @Produce     json
 // @Success  	200 {object} model.AerospikeCluster
-// @Failure     404 {string} string "The specified cluster could not be found."
+// @Failure     404 {string} string "The specified storage could not be found."
 func (ws *HTTPServer) readStorage(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Invalid request method, method should be GET", http.StatusMethodNotAllowed)
-		return
-	}
-	clusterName := r.URL.Query().Get("name")
-	if clusterName == "" {
-		http.Error(w, "The 'name' query parameter is required.", http.StatusBadRequest)
+	storageName := getLastUrlSegment(r.URL.Path)
+	if storageName == "" {
+		http.Error(w, "The storage name path parameter is required.", http.StatusBadRequest)
 		return
 	}
 
-	cluster, ok := ws.config.AerospikeClusters[clusterName]
+	storage, ok := ws.config.Storage[storageName]
 	if !ok {
-		http.Error(w, fmt.Sprintf("Cluster %s could not be found.", clusterName), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Storage %s could not be found.", storageName), http.StatusNotFound)
 		return
 	}
 
-	jsonResponse, err := json.Marshal(cluster)
+	jsonResponse, err := json.Marshal(storage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -107,9 +108,9 @@ func (ws *HTTPServer) readStorage(w http.ResponseWriter, r *http.Request) {
 // @Summary     Updates an existing storage in the configuration.
 // @ID	        updateStorage
 // @Tags        Configuration
-// @Router      /config/storage [put]
+// @Router      /config/storage/{name} [put]
 // @Accept      json
-// @Param       name query string true "storage name"
+// @Param       name path string true "storage name"
 // @Param       storage body model.Storage true "backup storage"
 // @Success     200
 // @Failure     400 {string} string
@@ -120,12 +121,12 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	name := r.URL.Query().Get("name")
-	if name == "" {
-		http.Error(w, "storage name is required", http.StatusBadRequest)
+	storageName := getLastUrlSegment(r.URL.Path)
+	if storageName == "" {
+		http.Error(w, "storage is required", http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateStorage(ws.config, name, &updatedStorage)
+	err = service.UpdateStorage(ws.config, storageName, &updatedStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -142,12 +143,12 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 // @Summary     Deletes a storage from the configuration by name.
 // @ID	        deleteStorage
 // @Tags        Configuration
-// @Router      /config/storage [delete]
-// @Param       name query string true "storage name"
+// @Router      /config/storage/{name} [delete]
+// @Param       name path string true "storage name"
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
-	storageName := r.URL.Query().Get("name")
+	storageName := getLastUrlSegment(r.URL.Path)
 	if storageName == "" {
 		http.Error(w, "storage name is required", http.StatusBadRequest)
 		return
