@@ -14,6 +14,8 @@ type RemoveFilesType string
 
 // BackupPolicy represents a scheduled backup policy.
 // @Description BackupPolicy represents a scheduled backup policy.
+//
+//nolint:lll
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel.
 	Parallel *int32 `yaml:"parallel,omitempty" json:"parallel,omitempty"`

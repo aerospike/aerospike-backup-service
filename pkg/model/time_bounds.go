@@ -5,12 +5,13 @@ import (
 	"strconv"
 )
 
+// TimeBounds represents a period of time between two timestamps.
 type TimeBounds struct {
 	FromTime *int64
 	ToTime   *int64
 }
 
-// NewTimeBounds creates new TimeBounds using provided fromTime and toTime values.
+// NewTimeBounds creates a new TimeBounds using provided fromTime and toTime values.
 func NewTimeBounds(fromTime, toTime *int64) (*TimeBounds, error) {
 	if fromTime != nil && *fromTime < 0 {
 		return nil, errors.New("fromTime should be positive or zero")
@@ -24,16 +25,18 @@ func NewTimeBounds(fromTime, toTime *int64) (*TimeBounds, error) {
 	return &TimeBounds{FromTime: fromTime, ToTime: toTime}, nil
 }
 
-// NewTimeBoundsTo creates new TimeBounds until provided toTime.
+// NewTimeBoundsTo creates a new TimeBounds until the provided toTime.
 func NewTimeBoundsTo(toTime int64) (*TimeBounds, error) {
 	return NewTimeBounds(nil, &toTime)
 }
 
-// NewTimeBoundsFrom creates new TimeBounds from provided fromTime.
+// NewTimeBoundsFrom creates a new TimeBounds from the provided fromTime.
 func NewTimeBoundsFrom(toTime int64) (*TimeBounds, error) {
 	return NewTimeBounds(nil, &toTime)
 }
 
+// NewTimeBoundsFromString creates a TimeBounds from the string representation of
+// time boundaries.
 func NewTimeBoundsFromString(from, to string) (*TimeBounds, error) {
 	fromTime, err := parseTimestamp(from)
 	if err != nil {
@@ -57,7 +60,7 @@ func parseTimestamp(value string) (*int64, error) {
 	return &i, nil
 }
 
-// Contains verifies if given value lies within FromTime (inclusive) and ToTime (exclusive).
+// Contains verifies if the given value lies within FromTime (inclusive) and ToTime (exclusive).
 func (tb *TimeBounds) Contains(value int64) bool {
 	if tb.FromTime != nil && value < *tb.FromTime {
 		return false

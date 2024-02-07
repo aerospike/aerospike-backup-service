@@ -96,7 +96,8 @@ func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.Ba
 	return b.fromSubfolders(timebounds, backupFolder)
 }
 
-func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache bool, paths ...string) []model.BackupDetails {
+func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache bool,
+	paths ...string) []model.BackupDetails {
 	// each path contains a backup of specific time
 	backupDetails := []model.BackupDetails{}
 	for _, path := range paths {
@@ -119,7 +120,8 @@ func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache 
 	return backupDetails
 }
 
-func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds, backupFolder string) ([]model.BackupDetails, error) {
+func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds,
+	backupFolder string) ([]model.BackupDetails, error) {
 	subfolders, err := b.lsDir(backupFolder)
 	if err != nil {
 		return nil, err
