@@ -285,9 +285,9 @@ func (ws *HTTPServer) configRoutineActionHandler(w http.ResponseWriter, r *http.
 	}
 }
 
-// getLastUrlSegment extracts the name path parameter for the configuration get endpoints.
+// getLastURLSegment extracts the name path parameter for the configuration get endpoints.
 // TODO: replace with the PathValue accessor after upgrading to go1.22.
-func getLastUrlSegment(urlPath string) string {
+func getLastURLSegment(urlPath string) string {
 	urlParts := strings.SplitAfterN(urlPath, "/", 4)
 	return urlParts[len(urlParts)-1]
 }
