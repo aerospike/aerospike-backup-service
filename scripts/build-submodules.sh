@@ -1,12 +1,33 @@
 WORKSPACE="$(pwd)"
 ZSTD_STATIC_PATH=""
 OPENSSL_STATIC_PATH=""
+DYNAMIC=false
+POSITIONAL_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  --dynamic)
+    DYNAMIC=true
+    shift
+    shift
+    ;;
+  -* | --*)
+    echo "Unknown option $1"
+    exit 1
+    ;;
+  *)
+    POSITIONAL_ARGS+=("$1") # save positional arg
+    shift                   # past argument
+    ;;
+  esac
+done
+
+set -- "${POSITIONAL_ARGS[@]}"
 
 if [ "$(uname -s)" == "Darwin" ]; then
-  if [ "$(uname -m)" == "x86_64" ]; then
+  if [ "$DYNAMIC" == "true" ]; then
     make -C "$WORKSPACE/modules/aerospike-tools-backup" shared \
-    EVENT_LIB=libuv \
-    OPENSSL_STATIC_PATH="$(brew --prefix openssl@1.1)/lib"
+    EVENT_LIB=libuv
   else
     make -C "$WORKSPACE/modules/aerospike-tools-backup" shared \
     EVENT_LIB=libuv \
