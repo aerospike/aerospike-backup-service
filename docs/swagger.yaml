@@ -892,32 +892,6 @@ paths:
       summary: Reads all policies from the configuration.
       tags:
       - Configuration
-    put:
-      consumes:
-      - application/json
-      operationId: updatePolicy
-      parameters:
-      - description: policy name
-        in: path
-        name: name
-        required: true
-        type: string
-      - description: backup policy
-        in: body
-        name: storage
-        required: true
-        schema:
-          $ref: '#/definitions/model.BackupPolicy'
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-      summary: Updates an existing policy in the configuration.
-      tags:
-      - Configuration
   /config/policies/{name}:
     get:
       operationId: readPolicy
@@ -965,6 +939,32 @@ paths:
           schema:
             type: string
       summary: Adds a policy to the config.
+      tags:
+      - Configuration
+    put:
+      consumes:
+      - application/json
+      operationId: updatePolicy
+      parameters:
+      - description: policy name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: backup policy
+        in: body
+        name: storage
+        required: true
+        schema:
+          $ref: '#/definitions/model.BackupPolicy'
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Updates an existing policy in the configuration.
       tags:
       - Configuration
   /config/routines:

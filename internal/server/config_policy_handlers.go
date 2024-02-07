@@ -108,7 +108,7 @@ func (ws *HTTPServer) readPolicy(w http.ResponseWriter, r *http.Request) {
 // @Summary     Updates an existing policy in the configuration.
 // @ID 	        updatePolicy
 // @Tags        Configuration
-// @Router      /config/policies [put]
+// @Router      /config/policies/{name} [put]
 // @Accept      json
 // @Param       name path string true "policy name"
 // @Param       storage body model.BackupPolicy true "backup policy"
