@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"log/slog"
@@ -12,9 +13,9 @@ import (
 // @Summary     Adds a backup routine to the config.
 // @ID          addRoutine
 // @Tags        Configuration
-// @Router      /config/routine [post]
+// @Router      /config/routine/{name} [post]
 // @Accept      json
-// @Param       name query string true "routine name"
+// @Param       name path string true "routine name"
 // @Param       storage body model.BackupRoutine true "backup routine"
 // @Success     201
 // @Failure     400 {string} string
@@ -25,7 +26,8 @@ func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	name := r.URL.Query().Get("name")
+	r.Body.Close()
+	name := getLastUrlSegment(r.URL.Path)
 	if name == "" {
 		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return
@@ -65,13 +67,49 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter) {
 	}
 }
 
+// readRoutine reads a specific routine from the configuration given its name.
+// @Summary     Reads an Aerospike cluster from the configuration based on its name.
+// @ID	        readCluster
+// @Tags        Configuration
+// @Router      /config/clusters/{name} [get]
+// @Param       name path string true "Name of the Aerospike cluster"
+// @Produce     json
+// @Success  	200 {object} model.AerospikeCluster
+// @Failure     404 {string} string "The specified cluster could not be found."
+func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
+	routineName := getLastUrlSegment(r.URL.Path)
+	if routineName == "" {
+		http.Error(w, "The cluster name path parameter is required.", http.StatusBadRequest)
+		return
+	}
+
+	routine, ok := ws.config.AerospikeClusters[routineName]
+	if !ok {
+		http.Error(w, fmt.Sprintf("Cluster %s could not be found.", routineName), http.StatusNotFound)
+		return
+	}
+
+	jsonResponse, err := json.Marshal(routine)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(jsonResponse)
+	if err != nil {
+		slog.Error("failed to write response", "err", err)
+	}
+}
+
 // updateRoutine updates an existing backup routine in the configuration.
 // @Summary      Updates an existing routine in the configuration.
 // @ID 	         updateRoutine
 // @Tags         Configuration
-// @Router       /config/routine [put]
+// @Router       /config/routine/{name} [put]
 // @Accept       json
-// @Param        name query string true "routine name"
+// @Param        name path string true "routine name"
 // @Param        storage body model.BackupRoutine true "backup routine"
 // @Success      200
 // @Failure      400 {string} string
@@ -82,7 +120,8 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	name := r.URL.Query().Get("name")
+	r.Body.Close()
+	name := getLastUrlSegment(r.URL.Path)
 	if name == "" {
 		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return
@@ -104,12 +143,12 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Summary     Deletes a backup routine from the configuration by name.
 // @ID          deleteRoutine
 // @Tags        Configuration
-// @Router      /config/routine [delete]
-// @Param       name query string true "routine name"
+// @Router      /config/routine/{name} [delete]
+// @Param       name path string true "routine name"
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteRoutine(w http.ResponseWriter, r *http.Request) {
-	routineName := r.URL.Query().Get("name")
+	routineName := getLastUrlSegment(r.URL.Path)
 	if routineName == "" {
 		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return
