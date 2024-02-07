@@ -144,7 +144,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Summary     Deletes a policy from the configuration by name.
 // @ID          deletePolicy
 // @Tags        Configuration
-// @Router      /config/policies [delete]
+// @Router      /config/policies/{name} [delete]
 // @Param       name path string true "Policy Name"
 // @Success     204
 // @Failure     400 {string} string

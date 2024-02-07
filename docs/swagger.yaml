@@ -856,24 +856,6 @@ paths:
       tags:
       - Configuration
   /config/policies:
-    delete:
-      operationId: deletePolicy
-      parameters:
-      - description: Policy Name
-        in: path
-        name: name
-        required: true
-        type: string
-      responses:
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-      summary: Deletes a policy from the configuration by name.
-      tags:
-      - Configuration
     get:
       operationId: readPolicies
       produces:
@@ -893,6 +875,24 @@ paths:
       tags:
       - Configuration
   /config/policies/{name}:
+    delete:
+      operationId: deletePolicy
+      parameters:
+      - description: Policy Name
+        in: path
+        name: name
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Deletes a policy from the configuration by name.
+      tags:
+      - Configuration
     get:
       operationId: readPolicy
       parameters:

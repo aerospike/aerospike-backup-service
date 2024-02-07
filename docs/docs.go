@@ -444,33 +444,6 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "delete": {
-                "tags": [
-                    "Configuration"
-                ],
-                "summary": "Deletes a policy from the configuration by name.",
-                "operationId": "deletePolicy",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Policy Name",
-                        "name": "name",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
             }
         },
         "/config/policies/{name}": {
@@ -576,6 +549,33 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Deletes a policy from the configuration by name.",
+                "operationId": "deletePolicy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Policy Name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
                         "description": "Bad Request",
