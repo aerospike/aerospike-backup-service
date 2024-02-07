@@ -147,8 +147,9 @@ func (ws *HTTPServer) Start() {
 	// whole config route
 	mux.HandleFunc("/config", ws.configActionHandler)
 
-	// cluster config route
+	// cluster config routes
 	mux.HandleFunc("/config/cluster", ws.configClusterActionHandler)
+	mux.HandleFunc("/config/clusters", ws.readAerospikeClusters)
 
 	// storage config route
 	mux.HandleFunc("/config/storage", ws.configStorageActionHandler)
@@ -226,7 +227,7 @@ func (ws *HTTPServer) configClusterActionHandler(w http.ResponseWriter, r *http.
 	case http.MethodPost:
 		ws.addAerospikeCluster(w, r)
 	case http.MethodGet:
-		ws.readAerospikeClusters(w)
+		ws.readAerospikeCluster(w, r)
 	case http.MethodPut:
 		ws.updateAerospikeCluster(w, r)
 	case http.MethodDelete:

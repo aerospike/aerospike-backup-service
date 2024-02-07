@@ -3,6 +3,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -99,11 +100,11 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 // @Summary     Reads all Aerospike clusters from the configuration.
 // @ID	        readClusters
 // @Tags        Configuration
-// @Router      /config/cluster [get]
+// @Router      /config/clusters [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.AerospikeCluster
 // @Failure     400 {string} string
-func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
+func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
 	clusters := ws.config.AerospikeClusters
 	jsonResponse, err := json.Marshal(clusters)
 	if err != nil {
@@ -112,7 +113,47 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(jsonResponse)
+	_, err = w.Write(jsonResponse)
+	if err != nil {
+		slog.Error("failed to write response", "err", err)
+	}
+}
+
+// readAerospikeCluster reads a specific Aerospike cluster from the configuration given its name.
+// @Summary     Reads an Aerospike cluster from the configuration based on its name.
+// @ID	        readCluster
+// @Tags        Configuration
+// @Router      /config/cluster [get]
+// @Param       name query string true "Name of the Aerospike cluster"
+// @Produce     json
+// @Success  	200 {object} model.AerospikeCluster
+// @Failure     404 {string} string "The specified cluster could not be found."
+func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method, method should be GET", http.StatusMethodNotAllowed)
+		return
+	}
+	clusterName := r.URL.Query().Get("name")
+	if clusterName == "" {
+		http.Error(w, "The 'name' query parameter is required.", http.StatusBadRequest)
+		return
+	}
+
+	cluster, ok := ws.config.AerospikeClusters[clusterName]
+	if !ok {
+		http.Error(w, fmt.Sprintf("Cluster %s could not be found.", clusterName), http.StatusNotFound)
+		return
+	}
+
+	jsonResponse, err := json.Marshal(cluster)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(jsonResponse)
 	if err != nil {
 		slog.Error("failed to write response", "err", err)
 	}
