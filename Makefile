@@ -4,7 +4,7 @@ WORKSPACE = $(shell pwd)
 UNAME = $(shell uname -sm | tr ' ' '-')
 
 # Go parameters
-GO ?= go
+GO ?= $(shell which go || echo "/usr/local/go/bin/go")
 CGO_CFLAGS=-I $(WORKSPACE)/modules/aerospike-tools-backup/modules/c-client/target/$(UNAME)/include \
 -I $(WORKSPACE)/modules/aerospike-tools-backup/modules/secret-agent-client/target/$(UNAME)/include \
 -I $(WORKSPACE)/modules/aerospike-tools-backup/include

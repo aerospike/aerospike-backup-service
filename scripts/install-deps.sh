@@ -48,8 +48,6 @@ else
     perl \
     openssl-devel \
     libzstd-devel
-#    sudo dnf update && sudo dnf install -y autoconf automake libtool cmake git perl g++
-  fi
 
   # Install golang
   if ! command -v go >/dev/null 2>&1 || [ ! -d /usr/local/go/bin ]; then
@@ -71,6 +69,7 @@ else
         source "$HOME/.bashrc"
       fi
   fi
+fi
 
   if [ -f "$WORKSPACE/ltmain.sh" ]; then
       rm "$WORKSPACE/ltmain.sh"
