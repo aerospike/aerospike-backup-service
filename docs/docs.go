@@ -285,7 +285,7 @@ const docTemplate = `{
                 "tags": [
                     "Configuration"
                 ],
-                "summary": "Reads an Aerospike cluster from the configuration based on its name.",
+                "summary": "Reads an Aerospike cluster from the configuration given its name.",
                 "operationId": "readCluster",
                 "parameters": [
                     {
@@ -417,34 +417,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/policy": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Configuration"
-                ],
-                "summary": "Reads all policies from the configuration.",
-                "operationId": "readPolicies",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/model.BackupPolicy"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
+        "/config/policies": {
             "put": {
                 "consumes": [
                     "application/json"
@@ -459,7 +432,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "policy name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -484,6 +457,68 @@ const docTemplate = `{
                     }
                 }
             },
+            "delete": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Deletes a policy from the configuration by name.",
+                "operationId": "deletePolicy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Policy Name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config/policies/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads a backup policy from the configuration given its name.",
+                "operationId": "readPolicy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the backup policy",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupPolicy"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified policy could not be found.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -498,7 +533,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "policy name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -522,36 +557,9 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "delete": {
-                "tags": [
-                    "Configuration"
-                ],
-                "summary": "Deletes a policy from the configuration by name.",
-                "operationId": "deletePolicy",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Policy Name",
-                        "name": "name",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
             }
         },
-        "/config/routine": {
+        "/config/routines": {
             "get": {
                 "produces": [
                     "application/json"
@@ -578,7 +586,9 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
+            }
+        },
+        "/config/routines/{name}": {
             "put": {
                 "consumes": [
                     "application/json"
@@ -593,7 +603,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "routine name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -632,7 +642,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "routine name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -668,7 +678,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "routine name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -693,17 +703,55 @@ const docTemplate = `{
                 "tags": [
                     "Configuration"
                 ],
-                "summary": "Reads an Aerospike cluster from the configuration based on its name.",
-                "operationId": "readStorage",
+                "summary": "Reads all storage from the configuration.",
+                "operationId": "readAllStorage",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.AerospikeCluster"
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/model.Storage"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config/storage/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads a specific storage from the configuration given its name.",
+                "operationId": "readStorage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the storage",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Storage"
                         }
                     },
                     "404": {
-                        "description": "The specified cluster could not be found.",
+                        "description": "The specified storage could not be found.",
                         "schema": {
                             "type": "string"
                         }
@@ -724,7 +772,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "storage name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -756,14 +804,14 @@ const docTemplate = `{
                 "tags": [
                     "Configuration"
                 ],
-                "summary": "Adds a storage cluster to the config.",
+                "summary": "Adds a storage to the config.",
                 "operationId": "addStorage",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "storage name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -799,42 +847,13 @@ const docTemplate = `{
                         "type": "string",
                         "description": "storage name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
                     "204": {
                         "description": "No Content"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "/config/storages": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Configuration"
-                ],
-                "summary": "Reads all storage from the configuration.",
-                "operationId": "readAllStorage",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/model.Storage"
-                            }
-                        }
                     },
                     "400": {
                         "description": "Bad Request",

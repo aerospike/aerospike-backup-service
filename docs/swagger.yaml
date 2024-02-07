@@ -799,7 +799,7 @@ paths:
           description: The specified cluster could not be found.
           schema:
             type: string
-      summary: Reads an Aerospike cluster from the configuration based on its name.
+      summary: Reads an Aerospike cluster from the configuration given its name.
       tags:
       - Configuration
     post:
@@ -854,12 +854,12 @@ paths:
       summary: Updates an existing Aerospike cluster in the configuration.
       tags:
       - Configuration
-  /config/policy:
+  /config/policies:
     delete:
       operationId: deletePolicy
       parameters:
       - description: Policy Name
-        in: query
+        in: path
         name: name
         required: true
         type: string
@@ -873,57 +873,13 @@ paths:
       summary: Deletes a policy from the configuration by name.
       tags:
       - Configuration
-    get:
-      operationId: readPolicies
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              $ref: '#/definitions/model.BackupPolicy'
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-      summary: Reads all policies from the configuration.
-      tags:
-      - Configuration
-    post:
-      consumes:
-      - application/json
-      operationId: addPolicy
-      parameters:
-      - description: policy name
-        in: query
-        name: name
-        required: true
-        type: string
-      - description: backup policy
-        in: body
-        name: storage
-        required: true
-        schema:
-          $ref: '#/definitions/model.BackupPolicy'
-      responses:
-        "201":
-          description: Created
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-      summary: Adds a policy to the config.
-      tags:
-      - Configuration
     put:
       consumes:
       - application/json
       operationId: updatePolicy
       parameters:
       - description: policy name
-        in: query
+        in: path
         name: name
         required: true
         type: string
@@ -943,25 +899,56 @@ paths:
       summary: Updates an existing policy in the configuration.
       tags:
       - Configuration
-  /config/routine:
-    delete:
-      operationId: deleteRoutine
+  /config/policies/{name}:
+    get:
+      operationId: readPolicy
       parameters:
-      - description: routine name
-        in: query
+      - description: Name of the backup policy
+        in: path
         name: name
         required: true
         type: string
+      produces:
+      - application/json
       responses:
-        "204":
-          description: No Content
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.BackupPolicy'
+        "404":
+          description: The specified policy could not be found.
+          schema:
+            type: string
+      summary: Reads a backup policy from the configuration given its name.
+      tags:
+      - Configuration
+    post:
+      consumes:
+      - application/json
+      operationId: addPolicy
+      parameters:
+      - description: policy name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: backup policy
+        in: body
+        name: storage
+        required: true
+        schema:
+          $ref: '#/definitions/model.BackupPolicy'
+      responses:
+        "201":
+          description: Created
         "400":
           description: Bad Request
           schema:
             type: string
-      summary: Deletes a backup routine from the configuration by name.
+      summary: Adds a policy to the config.
       tags:
       - Configuration
+  /config/routines:
     get:
       operationId: readRoutines
       produces:
@@ -980,13 +967,32 @@ paths:
       summary: Reads all routines from the configuration.
       tags:
       - Configuration
+  /config/routines/{name}:
+    delete:
+      operationId: deleteRoutine
+      parameters:
+      - description: routine name
+        in: path
+        name: name
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Deletes a backup routine from the configuration by name.
+      tags:
+      - Configuration
     post:
       consumes:
       - application/json
       operationId: addRoutine
       parameters:
       - description: routine name
-        in: query
+        in: path
         name: name
         required: true
         type: string
@@ -1012,7 +1018,7 @@ paths:
       operationId: updateRoutine
       parameters:
       - description: routine name
-        in: query
+        in: path
         name: name
         required: true
         type: string
@@ -1033,11 +1039,30 @@ paths:
       tags:
       - Configuration
   /config/storage:
+    get:
+      operationId: readAllStorage
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.Storage'
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Reads all storage from the configuration.
+      tags:
+      - Configuration
+  /config/storage/{name}:
     delete:
       operationId: deleteStorage
       parameters:
       - description: storage name
-        in: query
+        in: path
         name: name
         required: true
         type: string
@@ -1053,18 +1078,24 @@ paths:
       - Configuration
     get:
       operationId: readStorage
+      parameters:
+      - description: Name of the storage
+        in: path
+        name: name
+        required: true
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.AerospikeCluster'
+            $ref: '#/definitions/model.Storage'
         "404":
-          description: The specified cluster could not be found.
+          description: The specified storage could not be found.
           schema:
             type: string
-      summary: Reads an Aerospike cluster from the configuration based on its name.
+      summary: Reads a specific storage from the configuration given its name.
       tags:
       - Configuration
     post:
@@ -1073,7 +1104,7 @@ paths:
       operationId: addStorage
       parameters:
       - description: storage name
-        in: query
+        in: path
         name: name
         required: true
         type: string
@@ -1090,7 +1121,7 @@ paths:
           description: Bad Request
           schema:
             type: string
-      summary: Adds a storage cluster to the config.
+      summary: Adds a storage to the config.
       tags:
       - Configuration
     put:
@@ -1099,7 +1130,7 @@ paths:
       operationId: updateStorage
       parameters:
       - description: storage name
-        in: query
+        in: path
         name: name
         required: true
         type: string
@@ -1117,25 +1148,6 @@ paths:
           schema:
             type: string
       summary: Updates an existing storage in the configuration.
-      tags:
-      - Configuration
-  /config/storages:
-    get:
-      operationId: readAllStorage
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              $ref: '#/definitions/model.Storage'
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            type: string
-      summary: Reads all storage from the configuration.
       tags:
       - Configuration
   /health:

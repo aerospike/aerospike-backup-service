@@ -2,19 +2,21 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/service"
+	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/service"
 )
 
 // addPolicy
 // @Summary     Adds a policy to the config.
 // @ID          addPolicy
 // @Tags        Configuration
-// @Router      /config/policy [post]
+// @Router      /config/policies/{name} [post]
 // @Accept      json
-// @Param       name query string true "policy name"
+// @Param       name path string true "policy name"
 // @Param       storage body model.BackupPolicy true "backup policy"
 // @Success     201
 // @Failure     400 {string} string
@@ -25,7 +27,8 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	name := r.URL.Query().Get("name")
+	r.Body.Close()
+	name := getLastUrlSegment(r.URL.Path)
 	if name == "" {
 		http.Error(w, "policy name is required", http.StatusBadRequest)
 		return
@@ -47,11 +50,11 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Summary     Reads all policies from the configuration.
 // @ID	        readPolicies
 // @Tags        Configuration
-// @Router      /config/policy [get]
+// @Router      /config/policies/{name} [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.BackupPolicy
 // @Failure     400 {string} string
-func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
+func (ws *HTTPServer) readPolicies(w http.ResponseWriter, _ *http.Request) {
 	jsonResponse, err := json.Marshal(ws.config.BackupPolicies)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -65,13 +68,49 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter) {
 	}
 }
 
+// readPolicy reads a specific backup policy from the configuration given its name.
+// @Summary     Reads a backup policy from the configuration given its name.
+// @ID	        readPolicy
+// @Tags        Configuration
+// @Router      /config/policies/{name} [get]
+// @Param       name path string true "Name of the backup policy"
+// @Produce     json
+// @Success  	200 {object} model.BackupPolicy
+// @Failure     404 {string} string "The specified policy could not be found."
+func (ws *HTTPServer) readPolicy(w http.ResponseWriter, r *http.Request) {
+	policyName := getLastUrlSegment(r.URL.Path)
+	if policyName == "" {
+		http.Error(w, "The policy name path parameter is required.", http.StatusBadRequest)
+		return
+	}
+
+	policy, ok := ws.config.BackupPolicies[policyName]
+	if !ok {
+		http.Error(w, fmt.Sprintf("Policy %s could not be found.", policyName), http.StatusNotFound)
+		return
+	}
+
+	jsonResponse, err := json.Marshal(policy)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(jsonResponse)
+	if err != nil {
+		slog.Error("failed to write response", "err", err)
+	}
+}
+
 // updatePolicy updates an existing policy in the configuration.
 // @Summary     Updates an existing policy in the configuration.
 // @ID 	        updatePolicy
 // @Tags        Configuration
-// @Router      /config/policy [put]
+// @Router      /config/policies [put]
 // @Accept      json
-// @Param       name query string true "policy name"
+// @Param       name path string true "policy name"
 // @Param       storage body model.BackupPolicy true "backup policy"
 // @Success     200
 // @Failure     400 {string} string
@@ -82,7 +121,8 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	name := r.URL.Query().Get("name")
+	r.Body.Close()
+	name := getLastUrlSegment(r.URL.Path)
 	if name == "" {
 		http.Error(w, "policy name is required", http.StatusBadRequest)
 		return
@@ -104,12 +144,12 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Summary     Deletes a policy from the configuration by name.
 // @ID          deletePolicy
 // @Tags        Configuration
-// @Router      /config/policy [delete]
-// @Param       name query string true "Policy Name"
+// @Router      /config/policies [delete]
+// @Param       name path string true "Policy Name"
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
-	policyName := r.URL.Query().Get("name")
+	policyName := getLastUrlSegment(r.URL.Path)
 	if policyName == "" {
 		http.Error(w, "Policy name is required", http.StatusBadRequest)
 		return

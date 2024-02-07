@@ -153,13 +153,15 @@ func (ws *HTTPServer) Start() {
 
 	// storage config routes
 	mux.HandleFunc("/config/storage/", ws.configStorageActionHandler)
-	mux.HandleFunc("/config/storage", ws.readStorages)
+	mux.HandleFunc("/config/storage", ws.readAllStorage)
 
-	// policy config route
-	mux.HandleFunc("/config/policy", ws.configPolicyActionHandler)
+	// policy config routes
+	mux.HandleFunc("/config/policies/", ws.configPolicyActionHandler)
+	mux.HandleFunc("/config/policies", ws.readPolicies)
 
-	// routine config route
-	mux.HandleFunc("/config/routine", ws.configRoutineActionHandler)
+	// routine config routes
+	mux.HandleFunc("/config/routines/", ws.configRoutineActionHandler)
+	mux.HandleFunc("/config/routines", ws.readRoutines)
 
 	// health route
 	mux.HandleFunc("/health", healthActionHandler)
@@ -258,7 +260,7 @@ func (ws *HTTPServer) configPolicyActionHandler(w http.ResponseWriter, r *http.R
 	case http.MethodPost:
 		ws.addPolicy(w, r)
 	case http.MethodGet:
-		ws.readPolicies(w)
+		ws.readPolicies(w, r)
 	case http.MethodPut:
 		ws.updatePolicy(w, r)
 	case http.MethodDelete:
@@ -273,7 +275,7 @@ func (ws *HTTPServer) configRoutineActionHandler(w http.ResponseWriter, r *http.
 	case http.MethodPost:
 		ws.addRoutine(w, r)
 	case http.MethodGet:
-		ws.readRoutines(w)
+		ws.readRoutines(w, r)
 	case http.MethodPut:
 		ws.updateRoutine(w, r)
 	case http.MethodDelete:

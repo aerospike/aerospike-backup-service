@@ -3,10 +3,11 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/service"
 	"log/slog"
 	"net/http"
+
+	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/service"
 )
 
 // addAerospikeCluster
@@ -40,6 +41,7 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 	err = ConfigurationManager.WriteConfiguration(ws.config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	w.WriteHeader(http.StatusCreated)
 }
@@ -61,14 +63,14 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter, _ *http.Reque
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(jsonResponse)
+	_, _ = w.Write(jsonResponse)
 	if err != nil {
 		slog.Error("failed to write response", "err", err)
 	}
 }
 
 // readAerospikeCluster reads a specific Aerospike cluster from the configuration given its name.
-// @Summary     Reads an Aerospike cluster from the configuration based on its name.
+// @Summary     Reads a specific Aerospike cluster from the configuration given its name.
 // @ID	        readCluster
 // @Tags        Configuration
 // @Router      /config/clusters/{name} [get]
@@ -123,7 +125,7 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 	r.Body.Close()
 	clusterName := getLastUrlSegment(r.URL.Path)
 	if clusterName == "" {
-		http.Error(w, "cluster clusterName is required", http.StatusBadRequest)
+		http.Error(w, "cluster is required", http.StatusBadRequest)
 		return
 	}
 	err = service.UpdateCluster(ws.config, clusterName, &updatedCluster)

@@ -3,17 +3,18 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/service"
 	"log/slog"
 	"net/http"
+
+	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/service"
 )
 
 // addRoutine
 // @Summary     Adds a backup routine to the config.
 // @ID          addRoutine
 // @Tags        Configuration
-// @Router      /config/routine/{name} [post]
+// @Router      /config/routines/{name} [post]
 // @Accept      json
 // @Param       name path string true "routine name"
 // @Param       storage body model.BackupRoutine true "backup routine"
@@ -49,11 +50,11 @@ func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
 // @Summary     Reads all routines from the configuration.
 // @ID	        readRoutines
 // @Tags        Configuration
-// @Router      /config/routine [get]
+// @Router      /config/routines [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.BackupRoutine
 // @Failure     400 {string} string
-func (ws *HTTPServer) readRoutines(w http.ResponseWriter) {
+func (ws *HTTPServer) readRoutines(w http.ResponseWriter, _ *http.Request) {
 	jsonResponse, err := json.Marshal(ws.config.BackupRoutines)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -68,7 +69,7 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter) {
 }
 
 // readRoutine reads a specific routine from the configuration given its name.
-// @Summary     Reads an Aerospike cluster from the configuration based on its name.
+// @Summary     Reads an Aerospike cluster from the configuration given its name.
 // @ID	        readCluster
 // @Tags        Configuration
 // @Router      /config/clusters/{name} [get]
@@ -107,7 +108,7 @@ func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
 // @Summary      Updates an existing routine in the configuration.
 // @ID 	         updateRoutine
 // @Tags         Configuration
-// @Router       /config/routine/{name} [put]
+// @Router       /config/routines/{name} [put]
 // @Accept       json
 // @Param        name path string true "routine name"
 // @Param        storage body model.BackupRoutine true "backup routine"
@@ -143,7 +144,7 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Summary     Deletes a backup routine from the configuration by name.
 // @ID          deleteRoutine
 // @Tags        Configuration
-// @Router      /config/routine/{name} [delete]
+// @Router      /config/routines/{name} [delete]
 // @Param       name path string true "routine name"
 // @Success     204
 // @Failure     400 {string} string

@@ -3,14 +3,15 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/service"
 	"log/slog"
 	"net/http"
+
+	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/service"
 )
 
 // addStorage
-// @Summary     Adds a storage cluster to the config.
+// @Summary     Adds a storage to the config.
 // @ID	        addStorage
 // @Tags        Configuration
 // @Router      /config/storage/{name} [post]
@@ -45,7 +46,7 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-// readStorage reads all storage from the configuration.
+// readAllStorage reads all storage from the configuration.
 // @Summary     Reads all storage from the configuration.
 // @ID 	        readAllStorage
 // @Tags        Configuration
@@ -53,7 +54,7 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 // @Produce     json
 // @Success  	200 {object} map[string]model.Storage
 // @Failure     400 {string} string
-func (ws *HTTPServer) readStorages(w http.ResponseWriter, _ *http.Request) {
+func (ws *HTTPServer) readAllStorage(w http.ResponseWriter, _ *http.Request) {
 	storage := ws.config.Storage
 	jsonResponse, err := json.Marshal(storage)
 	if err != nil {
@@ -68,14 +69,14 @@ func (ws *HTTPServer) readStorages(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// readAerospikeCluster reads a specific Aerospike cluster from the configuration given its name.
-// @Summary     Reads an Aerospike cluster from the configuration based on its name.
+// readStorage  reads a specific storage from the configuration given its name.
+// @Summary     Reads a specific storage from the configuration given its name.
 // @ID	        readStorage
 // @Tags        Configuration
 // @Router      /config/storage/{name} [get]
 // @Param       name path string true "Name of the storage"
 // @Produce     json
-// @Success  	200 {object} model.AerospikeCluster
+// @Success  	200 {object} model.Storage
 // @Failure     404 {string} string "The specified storage could not be found."
 func (ws *HTTPServer) readStorage(w http.ResponseWriter, r *http.Request) {
 	storageName := getLastUrlSegment(r.URL.Path)
