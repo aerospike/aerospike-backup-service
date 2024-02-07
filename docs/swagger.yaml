@@ -874,6 +874,24 @@ paths:
       summary: Deletes a policy from the configuration by name.
       tags:
       - Configuration
+    get:
+      operationId: readPolicies
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/model.BackupPolicy'
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+      summary: Reads all policies from the configuration.
+      tags:
+      - Configuration
     put:
       consumes:
       - application/json

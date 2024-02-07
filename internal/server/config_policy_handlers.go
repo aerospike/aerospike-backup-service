@@ -50,7 +50,7 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Summary     Reads all policies from the configuration.
 // @ID	        readPolicies
 // @Tags        Configuration
-// @Router      /config/policies/{name} [get]
+// @Router      /config/policies [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.BackupPolicy
 // @Failure     400 {string} string
