@@ -799,7 +799,8 @@ paths:
           description: The specified cluster could not be found.
           schema:
             type: string
-      summary: Reads an Aerospike cluster from the configuration given its name.
+      summary: Reads a specific Aerospike cluster from the configuration given its
+        name.
       tags:
       - Configuration
     post:
@@ -984,6 +985,28 @@ paths:
           schema:
             type: string
       summary: Deletes a backup routine from the configuration by name.
+      tags:
+      - Configuration
+    get:
+      operationId: readRoutine
+      parameters:
+      - description: Name of the routine
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.BackupRoutine'
+        "404":
+          description: The specified cluster could not be found.
+          schema:
+            type: string
+      summary: Reads a specific routine from the configuration given its name.
       tags:
       - Configuration
     post:

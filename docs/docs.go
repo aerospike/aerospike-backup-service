@@ -285,7 +285,7 @@ const docTemplate = `{
                 "tags": [
                     "Configuration"
                 ],
-                "summary": "Reads an Aerospike cluster from the configuration given its name.",
+                "summary": "Reads a specific Aerospike cluster from the configuration given its name.",
                 "operationId": "readCluster",
                 "parameters": [
                     {
@@ -589,6 +589,39 @@ const docTemplate = `{
             }
         },
         "/config/routines/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads a specific routine from the configuration given its name.",
+                "operationId": "readRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the routine",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupRoutine"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified cluster could not be found.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
             "put": {
                 "consumes": [
                     "application/json"

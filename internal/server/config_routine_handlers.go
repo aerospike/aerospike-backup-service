@@ -69,13 +69,13 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter, _ *http.Request) {
 }
 
 // readRoutine reads a specific routine from the configuration given its name.
-// @Summary     Reads an Aerospike cluster from the configuration given its name.
-// @ID	        readCluster
+// @Summary     Reads a specific routine from the configuration given its name.
+// @ID	        readRoutine
 // @Tags        Configuration
-// @Router      /config/clusters/{name} [get]
-// @Param       name path string true "Name of the Aerospike cluster"
+// @Router      /config/routines/{name} [get]
+// @Param       name path string true "Name of the routine"
 // @Produce     json
-// @Success  	200 {object} model.AerospikeCluster
+// @Success  	200 {object} model.BackupRoutine
 // @Failure     404 {string} string "The specified cluster could not be found."
 func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
 	routineName := getLastUrlSegment(r.URL.Path)
@@ -84,9 +84,9 @@ func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	routine, ok := ws.config.AerospikeClusters[routineName]
+	routine, ok := ws.config.BackupRoutines[routineName]
 	if !ok {
-		http.Error(w, fmt.Sprintf("Cluster %s could not be found.", routineName), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Routine %s could not be found.", routineName), http.StatusNotFound)
 		return
 	}
 
