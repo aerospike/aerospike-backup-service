@@ -2,11 +2,8 @@ package model
 
 import (
 	"fmt"
-)
 
-const (
-	minimumFullBackupIntervalMillis int64 = 10000
-	minimumIncrBackupIntervalMillis int64 = 1000
+	"github.com/reugn/go-quartz/quartz"
 )
 
 // BackupRoutine represents a scheduled backup operation routine.
@@ -20,20 +17,20 @@ type BackupRoutine struct {
 	Storage string `yaml:"storage,omitempty" json:"storage,omitempty"`
 	// The Secret Agent configuration for the routine (optional).
 	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
-
-	// The interval for full backup in milliseconds.
-	IntervalMillis *int64 `yaml:"interval,omitempty" json:"interval,omitempty"`
-	// The interval for incremental backup in milliseconds (optional).
-	IncrIntervalMillis *int64 `yaml:"incr-interval,omitempty" json:"incr-interval,omitempty"`
-
-	// The name of the namespace to back up.
-	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	// The interval for full backup as a cron expression string.
+	IntervalCron string `yaml:"interval-cron" json:"interval-cron"`
+	// The interval for incremental backup as a cron expression string (optional).
+	IncrIntervalCron string `yaml:"incr-interval-cron" json:"incr-interval-cron"`
+	// The list of the namespaces to back up (optional, empty list implies backup up whole cluster).
+	Namespaces []string `yaml:"namespaces,omitempty" json:"namespaces,omitempty"`
 	// The list of backup set names (optional, an empty list implies backing up all sets).
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty"`
 	// The list of backup bin names (optional, an empty list implies backing up all bins).
 	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty"`
 	// The list of nodes in the Aerospike cluster to run the backup for.
 	NodeList []Node `yaml:"node-list,omitempty" json:"node-list,omitempty"`
+	// A list of Aerospike Server rack IDs to prefer when reading records for a backup.
+	PreferRacks []int `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty"`
 
 	// Back up list of partition filters. Partition filters can be ranges, individual partitions,
 	// or records after a specific digest within a single partition.
@@ -53,17 +50,21 @@ func (r *BackupRoutine) Validate() error {
 	if r.Storage == "" {
 		return routineValidationError("storage")
 	}
-	if r.Namespace == "" {
-		return routineValidationError("namespace")
+	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
+		return fmt.Errorf("backup interval string %s invalid: %v", r.IntervalCron, err)
 	}
-	if r.IntervalMillis == nil {
-		return routineValidationError("interval")
+	if r.IncrIntervalCron != "" { // incremental interval is optional
+		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
+			return fmt.Errorf("incremental backup interval string %s invalid: %v", r.IntervalCron, err)
+		}
 	}
-	if *r.IntervalMillis < minimumFullBackupIntervalMillis {
-		return fmt.Errorf("minimum full backup interval is %d", minimumFullBackupIntervalMillis)
-	}
-	if r.IncrIntervalMillis != nil && *r.IncrIntervalMillis < minimumIncrBackupIntervalMillis {
-		return fmt.Errorf("minimum incremental backup interval is %d", minimumIncrBackupIntervalMillis)
+	for _, rack := range r.PreferRacks {
+		if rack < 0 {
+			return fmt.Errorf("rack id %d invalid, should be positive number", rack)
+		}
+		if rack > maxRack {
+			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)
+		}
 	}
 	return nil
 }

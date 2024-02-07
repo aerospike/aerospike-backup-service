@@ -5,8 +5,10 @@ import (
 	"log/slog"
 	"net/http"
 
+	_ "github.com/aerospike/backup/docs" // auto-generated Swagger spec
 	"github.com/aerospike/backup/internal/util"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 // @Summary     Root endpoint.
@@ -67,4 +69,13 @@ func versionActionHandler(w http.ResponseWriter, _ *http.Request) {
 // @Success 	200
 func metricsActionHandler() http.Handler {
 	return promhttp.Handler()
+}
+
+// @Summary     OpenAPI specification endpoint.
+// @ID          api-docs
+// @Tags        System
+// @Router      /api-docs/ [get]
+// @Success 	200
+func apiDocsActionHandler() http.Handler {
+	return httpSwagger.Handler()
 }

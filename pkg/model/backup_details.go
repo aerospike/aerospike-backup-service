@@ -8,12 +8,9 @@ import (
 // BackupDetails contains information about a backup.
 // @Description BackupDetails contains information about a backup.
 type BackupDetails struct {
+	BackupMetadata
 	// The path to the backup files.
 	Key *string `yaml:"key,omitempty" json:"key,omitempty"`
-	// The backup time in the ISO 8601 format.
-	LastModified *time.Time `yaml:"last-modified,omitempty" json:"last-modified,omitempty"`
-	// The size of the backup in bytes.
-	Size *int64 `yaml:"size,omitempty" json:"size,omitempty"`
 }
 
 // String satisfies the fmt.Stringer interface.
@@ -27,5 +24,20 @@ func (details BackupDetails) String() string {
 
 // BackupMetadata is an internal container for storing backup metadata.
 type BackupMetadata struct {
+	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created,omitempty" json:"created,omitempty"`
+	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups).
+	From time.Time `yaml:"from,omitempty" json:"from,omitempty"`
+	// The namespace of a backup.
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	// The total number of records backed up.
+	RecordCount int `yaml:"record-count,omitempty" json:"record-count,omitempty"`
+	// The size of the backup in bytes.
+	ByteCount int `yaml:"byte-count,omitempty" json:"byte-count,omitempty"`
+	// The number of backup files created.
+	FileCount int `yaml:"file-count,omitempty" json:"file-count,omitempty"`
+	// The number of secondary indexes backed up.
+	SecondaryIndexCount int `yaml:"secondary-index-count,omitempty" json:"secondary-index-count,omitempty"`
+	// The number of UDF files backed up.
+	UDFCount int `yaml:"udf-count,omitempty" json:"udf-count,omitempty"`
 }

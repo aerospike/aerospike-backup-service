@@ -1,6 +1,8 @@
 package shared
 
 import (
+	"time"
+
 	"github.com/aerospike/backup/pkg/model"
 )
 
@@ -10,21 +12,21 @@ type BackupOptions struct {
 	ModAfter  *int64
 }
 
-// BackupStat represents partial backup result statistics.
+// BackupStat represents partial backup result statistics returned from asbackup library.
 type BackupStat struct {
-	RecordCount         int
-	SecondaryIndexCount int
-	UDFFileCount        int
-	HasStats            bool
-	Path                string
+	RecordCount int
+	ByteCount   int
+	FileCount   int
+	IndexCount  int
+	UDFCount    int
 }
 
 // IsEmpty indicates whether the backup operation represented by the
 // BackupStat completed with an empty data set.
 func (stats *BackupStat) IsEmpty() bool {
 	return stats.RecordCount == 0 &&
-		stats.UDFFileCount == 0 &&
-		stats.SecondaryIndexCount == 0
+		stats.UDFCount == 0 &&
+		stats.IndexCount == 0
 }
 
 // Backup represents a backup service.
@@ -36,6 +38,7 @@ type Backup interface {
 		storage *model.Storage,
 		secretAgent *model.SecretAgent,
 		opts BackupOptions,
+		namespace *string,
 		path *string,
 	) *BackupStat
 }
@@ -43,4 +46,20 @@ type Backup interface {
 // Restore represents a restore service.
 type Restore interface {
 	RestoreRun(restoreRequest *model.RestoreRequestInternal) *model.RestoreResult
+}
+
+func (stats *BackupStat) ToModel(backupOptions BackupOptions, namespace string) model.BackupMetadata {
+	metadata := model.BackupMetadata{
+		Created:             time.Unix(0, *backupOptions.ModBefore),
+		Namespace:           namespace,
+		RecordCount:         stats.RecordCount,
+		FileCount:           stats.FileCount,
+		ByteCount:           stats.ByteCount,
+		SecondaryIndexCount: stats.IndexCount,
+		UDFCount:            stats.UDFCount,
+	}
+	if backupOptions.ModAfter != nil {
+		metadata.From = time.Unix(0, *backupOptions.ModAfter)
+	}
+	return metadata
 }

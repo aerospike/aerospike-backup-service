@@ -11,6 +11,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/reugn/go-quartz/quartz"
 	"golang.org/x/time/rate"
 )
 
@@ -33,9 +34,8 @@ func newIPWhiteList(ipList []string) *ipWhiteList {
 			ipAddr, err := netip.ParseAddr(ip)
 			if err != nil {
 				panic(fmt.Sprintf("invalid ip configuration: %s", ip))
-			} else {
-				addresses[ip] = &ipAddr
 			}
+			addresses[ip] = &ipAddr
 		} else {
 			networks = append(networks, &network)
 		}
@@ -76,6 +76,7 @@ type HTTPServer struct {
 	server         *http.Server
 	rateLimiter    *IPRateLimiter
 	whiteList      *ipWhiteList
+	scheduler      quartz.Scheduler
 	restoreService service.RestoreService
 	backupBackends map[string]service.BackupListReader
 }
@@ -92,14 +93,11 @@ type HTTPServer struct {
 // @externalDocs.url          https://swagger.io/resources/open-api/
 //
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(handlers []service.BackupScheduler, config *model.Config) *HTTPServer {
+func NewHTTPServer(backendMap map[string]service.BackupListReader, config *model.Config,
+	scheduler quartz.Scheduler) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer
 	addr := fmt.Sprintf("%s:%d", serverConfig.Address, serverConfig.Port)
 
-	backendMap := make(map[string]service.BackupListReader, len(handlers))
-	for _, backend := range handlers {
-		backendMap[backend.BackupRoutineName()] = backend.GetBackend()
-	}
 	rateLimiter := NewIPRateLimiter(
 		rate.Limit(serverConfig.Rate.Tps),
 		serverConfig.Rate.Size,
@@ -111,6 +109,7 @@ func NewHTTPServer(handlers []service.BackupScheduler, config *model.Config) *HT
 		},
 		rateLimiter:    rateLimiter,
 		whiteList:      newIPWhiteList(serverConfig.Rate.WhiteList),
+		scheduler:      scheduler,
 		restoreService: service.NewRestoreMemory(backendMap, config),
 		backupBackends: backendMap,
 	}
@@ -137,6 +136,8 @@ func (ws *HTTPServer) rateLimiterMiddleware(next http.Handler) http.Handler {
 }
 
 // Start starts the HTTP server.
+//
+//nolint:funlen
 func (ws *HTTPServer) Start() {
 	mux := http.NewServeMux()
 
@@ -170,6 +171,9 @@ func (ws *HTTPServer) Start() {
 	// Prometheus endpoint
 	mux.Handle("/metrics", metricsActionHandler())
 
+	// OpenAPI specification endpoint
+	mux.Handle("/api-docs/", apiDocsActionHandler())
+
 	// Restore job endpoints
 	// Restore from full backup (by folder)
 	mux.HandleFunc("/restore/full", ws.restoreFullHandler)
@@ -188,6 +192,9 @@ func (ws *HTTPServer) Start() {
 
 	// Returns a list of available incremental backups for the given policy name
 	mux.HandleFunc("/backup/incremental/list", ws.getAvailableIncrementalBackups)
+
+	// Schedules a full backup operation
+	mux.HandleFunc("/backup/schedule", ws.scheduleFullBackup)
 
 	ws.server.Handler = ws.rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()

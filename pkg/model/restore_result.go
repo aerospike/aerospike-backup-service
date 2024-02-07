@@ -30,10 +30,12 @@ type RestoreResult struct {
 	UDFCount        int `yaml:"udf-count,omitempty" json:"udf-count,omitempty"`
 }
 
+// NewRestoreResult returns a new RestoreResult.
 func NewRestoreResult() *RestoreResult {
 	return &RestoreResult{}
 }
 
+// NewRestoreJobStatus returns a new RestoreJobStatus.
 func NewRestoreJobStatus() *RestoreJobStatus {
 	return &RestoreJobStatus{
 		Status: JobStatusRunning,

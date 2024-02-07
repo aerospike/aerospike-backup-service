@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"os"
 	"os/signal"
@@ -11,13 +12,13 @@ import (
 	"syscall"
 	"time"
 
-	"log/slog"
-
 	"github.com/aerospike/backup/internal/server"
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/reugn/go-quartz/logger"
+	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
 
@@ -53,22 +54,27 @@ func run() int {
 		// read configuration file
 		config, err := readConfiguration()
 		if err != nil {
-			// panic if failed to parse the configuration file
-			panic(err)
+			return err
 		}
-		// set default logger
-		loggerConfig := config.ServiceConfig.Logger
-		slog.SetDefault(slog.New(util.LogHandler(loggerConfig.Level, loggerConfig.Format)))
-		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// get system ctx
 		ctx := systemCtx()
+		// set default loggers
+		loggerConfig := config.ServiceConfig.Logger
+		slog.SetDefault(slog.New(util.LogHandler(loggerConfig.Level, loggerConfig.Format)))
+		logger.SetDefault(util.NewQuartzLogger(ctx))
+		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// schedule all configured backups
-		schedulers := service.BuildBackupSchedulers(config)
-		service.ScheduleHandlers(ctx, schedulers)
+		backends := service.BuildBackupBackends(config)
+		scheduler, err := service.ScheduleBackup(ctx, config, backends)
+		if err != nil {
+			return err
+		}
 		// run HTTP server
-		err = runHTTPServer(ctx, schedulers, config)
+		err = runHTTPServer(ctx, backendsToReaders(backends), config, scheduler)
 		// shutdown shared resources
 		shared.Shutdown()
+		// stop the scheduler
+		scheduler.Stop()
 		return err
 	}
 
@@ -108,13 +114,16 @@ func readConfiguration() (*model.Config, error) {
 		slog.Error("failed to read configuration file", "error", err)
 		return nil, err
 	}
+	if err = config.Validate(); err != nil {
+		return nil, err
+	}
 	slog.Info(fmt.Sprintf("Configuration: %v", *config))
 	return config, nil
 }
 
-func runHTTPServer(ctx context.Context, handlers []service.BackupScheduler,
-	config *model.Config) error {
-	server := server.NewHTTPServer(handlers, config)
+func runHTTPServer(ctx context.Context, backendMap map[string]service.BackupListReader,
+	config *model.Config, scheduler quartz.Scheduler) error {
+	server := server.NewHTTPServer(backendMap, config, scheduler)
 	go func() {
 		server.Start()
 	}()
@@ -134,4 +143,12 @@ func runHTTPServer(ctx context.Context, handlers []service.BackupScheduler,
 func main() {
 	// start the application
 	os.Exit(run())
+}
+
+func backendsToReaders(backends map[string]*service.BackupBackend) map[string]service.BackupListReader {
+	result := make(map[string]service.BackupListReader)
+	for key, value := range backends {
+		result[key] = value
+	}
+	return result
 }

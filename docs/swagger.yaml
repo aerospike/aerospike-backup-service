@@ -3,42 +3,60 @@ definitions:
     description: AerospikeCluster represents the configuration for an Aerospike cluster
       for backup.
     properties:
-      auth-mode:
-        description: The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE,
-          PKI).
-        type: string
-      host:
-        description: The host that acts as the entry point to the cluster.
-        type: string
-      password:
-        description: The password for the cluster authentication.
-        type: string
-      password-path:
-        description: The file path with the password string, will take precedence
-          over the password field.
-        type: string
-      port:
-        description: The port to connect to.
+      conn-timeout:
+        description: The connection timeout in milliseconds.
         type: integer
+      credentials:
+        allOf:
+        - $ref: '#/definitions/model.Credentials'
+        description: The authentication details to the Aerospike cluster.
+      label:
+        description: The cluster name.
+        type: string
+      seed-nodes:
+        description: The seed nodes details.
+        items:
+          $ref: '#/definitions/model.SeedNode'
+        type: array
+      tls:
+        allOf:
+        - $ref: '#/definitions/model.TLS'
+        description: The cluster TLS configuration.
       use-services-alternate:
         description: Whether should use "services-alternate" instead of "services"
           in info request during cluster tending.
         type: boolean
-      user:
-        description: The username for the cluster authentication.
-        type: string
     type: object
   model.BackupDetails:
     description: BackupDetails contains information about a backup.
     properties:
+      byte-count:
+        description: The size of the backup in bytes.
+        type: integer
+      created:
+        description: The backup time in the ISO 8601 format.
+        type: string
+      file-count:
+        description: The number of backup files created.
+        type: integer
+      from:
+        description: The lower time bound of backup entities in the ISO 8601 format
+          (for incremental backups).
+        type: string
       key:
         description: The path to the backup files.
         type: string
-      last-modified:
-        description: The backup time in the ISO 8601 format.
+      namespace:
+        description: The namespace of a backup.
         type: string
-      size:
-        description: The size of the backup in bytes.
+      record-count:
+        description: The total number of records backed up.
+        type: integer
+      secondary-index-count:
+        description: The number of secondary indexes backed up.
+        type: integer
+      udf-count:
+        description: The number of UDF files backed up.
         type: integer
     type: object
   model.BackupPolicy:
@@ -87,8 +105,13 @@ definitions:
         description: Clear directory or remove output file.
         type: boolean
       remove-files:
-        description: Whether to clear the output directory.
-        type: boolean
+        allOf:
+        - $ref: '#/definitions/model.RemoveFilesType'
+        description: 'Whether to clear the output directory (default: KeepAll).'
+        enum:
+        - KeepAll
+        - RemoveAll
+        - RemoveIncremental
       retry-delay:
         description: RetryDelay defines the delay in milliseconds before retrying
           a failed operation.
@@ -117,15 +140,19 @@ definitions:
         items:
           type: string
         type: array
-      incr-interval:
-        description: The interval for incremental backup in milliseconds (optional).
-        type: integer
-      interval:
-        description: The interval for full backup in milliseconds.
-        type: integer
-      namespace:
-        description: The name of the namespace to back up.
+      incr-interval-cron:
+        description: The interval for incremental backup as a cron expression string
+          (optional).
         type: string
+      interval-cron:
+        description: The interval for full backup as a cron expression string.
+        type: string
+      namespaces:
+        description: The list of the namespaces to back up (optional, empty list implies
+          backup up whole cluster).
+        items:
+          type: string
+        type: array
       node-list:
         description: The list of nodes in the Aerospike cluster to run the backup
           for.
@@ -138,6 +165,12 @@ definitions:
           or records after a specific digest within a single partition.
           Default number of partitions to back up: 0 to 4095: all partitions.
         type: string
+      prefer-racks:
+        description: A list of Aerospike Server rack IDs to prefer when reading records
+          for a backup.
+        items:
+          type: integer
+        type: array
       secret-agent:
         description: The Secret Agent configuration for the routine (optional).
         type: string
@@ -191,6 +224,24 @@ definitions:
         additionalProperties:
           $ref: '#/definitions/model.Storage'
         type: object
+    type: object
+  model.Credentials:
+    description: Credentials represents authentication details to the Aerospike cluster.
+    properties:
+      auth-mode:
+        description: The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE,
+          PKI).
+        type: string
+      password:
+        description: The password for the cluster authentication.
+        type: string
+      password-path:
+        description: The file path with the password string, will take precedence
+          over the password field.
+        type: string
+      user:
+        description: The username for the cluster authentication.
+        type: string
     type: object
   model.HTTPServerConfig:
     description: HTTPServerConfig represents the service's HTTP server configuration.
@@ -248,6 +299,17 @@ definitions:
           type: string
         type: array
     type: object
+  model.RemoveFilesType:
+    description: RemoveFilesType represents the type of the backup storage.
+    enum:
+    - KeepAll
+    - RemoveAll
+    - RemoveIncremental
+    type: string
+    x-enum-varnames:
+    - KeepAll
+    - RemoveAll
+    - RemoveIncremental
   model.RestoreJobStatus:
     description: RestoreJobStatus represents a restore job status.
     properties:
@@ -393,14 +455,23 @@ definitions:
       request.
     properties:
       destination:
-        $ref: '#/definitions/model.AerospikeCluster'
+        allOf:
+        - $ref: '#/definitions/model.AerospikeCluster'
+        description: The details of the Aerospike destination cluster.
       policy:
-        $ref: '#/definitions/model.RestorePolicy'
+        allOf:
+        - $ref: '#/definitions/model.RestorePolicy'
+        description: Restore policy to use in the operation.
       routine:
+        description: The backup routine name.
         type: string
       secret-agent:
-        $ref: '#/definitions/model.SecretAgent'
+        allOf:
+        - $ref: '#/definitions/model.SecretAgent'
+        description: Secret Agent configuration (optional).
       time:
+        description: Required epoch time for recovery. The closest backup before the
+          timestamp will be applied.
         format: int64
         type: integer
     type: object
@@ -418,9 +489,24 @@ definitions:
         description: Timeout in milliseconds.
         type: integer
       tls-ca:
+        description: The path to a trusted CA certificate file in PEM format.
         type: string
       tls-enabled:
+        description: Indicates whether TLS is enabled.
         type: boolean
+    type: object
+  model.SeedNode:
+    description: SeedNode represents details of a node in the Aerospike cluster.
+    properties:
+      host-name:
+        description: The host name of the node.
+        type: string
+      port:
+        description: The port of the node.
+        type: integer
+      tls-name:
+        description: TLS certificate name used for secure connections (if enabled).
+        type: string
     type: object
   model.Storage:
     description: Storage represents the configuration for a backup storage details.
@@ -433,6 +519,8 @@ definitions:
           optional).
         type: string
       s3-log-level:
+        default: Fatal
+        description: The log level of the AWS S3 SDK (AWS S3 optional).
         type: string
       s3-profile:
         description: The S3 profile name (AWS S3 optional).
@@ -454,6 +542,42 @@ definitions:
     x-enum-varnames:
     - Local
     - S3
+  model.TLS:
+    description: TLS represents the Aerospike cluster TLS configuration options.
+    properties:
+      cafile:
+        description: Path to a trusted CA certificate file.
+        type: string
+      capath:
+        description: Path to a directory of trusted CA certificates.
+        type: string
+      cert-blacklist:
+        description: Path to a certificate blocklist file. The file should contain
+          one line for each blocklisted certificate.
+        type: string
+      certfile:
+        description: Path to the chain file for mutual authentication (if Aerospike
+          Cluster supports it).
+        type: string
+      cipher-suite:
+        description: TLS cipher selection criteria. The format is the same as OpenSSL's
+          Cipher List Format.
+        type: string
+      keyfile:
+        description: Path to the key for mutual authentication (if Aerospike cluster
+          supports it).
+        type: string
+      keyfile-password:
+        description: Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
+        type: string
+      name:
+        description: The default TLS name used to authenticate each TLS socket connection.
+        type: string
+      protocols:
+        description: TLS protocol selection criteria. This format is the same as Apache's
+          SSL Protocol.
+        type: string
+    type: object
 externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
@@ -474,6 +598,15 @@ paths:
         "200":
           description: OK
       summary: Root endpoint.
+      tags:
+      - System
+  /api-docs/:
+    get:
+      operationId: api-docs
+      responses:
+        "200":
+          description: OK
+      summary: OpenAPI specification endpoint.
       tags:
       - System
   /backup/full/list:
@@ -520,6 +653,16 @@ paths:
         in: query
         name: name
         type: string
+      - description: Lower bound timestamp filter
+        format: int64
+        in: query
+        name: from
+        type: integer
+      - description: Upper bound timestamp filter
+        format: int64
+        in: query
+        name: to
+        type: integer
       produces:
       - application/json
       responses:
@@ -536,6 +679,29 @@ paths:
           schema:
             type: string
       summary: Get available incremental backups.
+      tags:
+      - Backup
+  /backup/schedule:
+    post:
+      operationId: scheduleFullBackup
+      parameters:
+      - description: Backup routine name
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Delay interval in milliseconds
+        in: query
+        name: delay
+        type: integer
+      responses:
+        "202":
+          description: Accepted
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Schedule a full backup once per routine name.
       tags:
       - Backup
   /config:

@@ -52,13 +52,12 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	restoreConfig := C.restore_config_t{}
 	C.restore_config_init(&restoreConfig)
 
-	setCString(&restoreConfig.host, restoreRequest.DestinationCuster.Host)
-	setCInt(&restoreConfig.port, restoreRequest.DestinationCuster.Port)
+	setCString(&restoreConfig.host, restoreRequest.DestinationCuster.SeedNodesAsString())
 	setCBool(&restoreConfig.use_services_alternate, restoreRequest.DestinationCuster.UseServicesAlternate)
 
-	setCString(&restoreConfig.user, restoreRequest.DestinationCuster.User)
+	setCString(&restoreConfig.user, restoreRequest.DestinationCuster.GetUser())
 	setCString(&restoreConfig.password, restoreRequest.DestinationCuster.GetPassword())
-	setCString(&restoreConfig.auth_mode, restoreRequest.DestinationCuster.AuthMode)
+	setCString(&restoreConfig.auth_mode, restoreRequest.DestinationCuster.GetAuthMode())
 
 	setCUint(&restoreConfig.parallel, restoreRequest.Policy.Parallel)
 	setCBool(&restoreConfig.no_records, restoreRequest.Policy.NoRecords)
@@ -88,9 +87,13 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	setCString(&restoreConfig.s3_endpoint_override, restoreRequest.SourceStorage.S3EndpointOverride)
 	setCString(&restoreConfig.s3_region, restoreRequest.SourceStorage.S3Region)
 	setCString(&restoreConfig.s3_profile, restoreRequest.SourceStorage.S3Profile)
+	setS3LogLevel(&restoreConfig.s3_log_level, restoreRequest.SourceStorage.S3LogLevel)
 
 	// Secret Agent configuration
 	restoreSecretAgent(&restoreConfig, restoreRequest.SecretAgent)
+
+	// TLS configuration
+	setTLSOptions(&restoreConfig.tls_name, &restoreConfig.tls, restoreRequest.DestinationCuster.TLS)
 
 	// restore source configuration
 	setCString(&restoreConfig.directory, restoreRequest.Dir)

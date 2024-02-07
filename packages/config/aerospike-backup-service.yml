@@ -2,10 +2,12 @@
 aerospike-clusters:
   cluster1:
     use-services-alternate: false
-    host: "127.0.0.1"
-    port: 3000
-    user: "admin"
-    password: "admin"
+    seed-nodes:
+      - host-name: "127.0.0.1"
+        port: 3000
+    credentials:
+      user: "admin"
+      password: "admin"
 
 storage:
   local1:
@@ -20,8 +22,8 @@ backup-policies:
 
 backup-routines:
   routine1:
-    interval: 30000
-    incr-interval: 5000
+    interval-cron: "1/30 * * * * *" # every 30 seconds
+    incr-interval-cron: "1/5 * * * * *" # every 5 seconds
     backup-policy: "policy1"
     source-cluster: "cluster1"
     storage: "local1"

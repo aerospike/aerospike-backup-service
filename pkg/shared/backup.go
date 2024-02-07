@@ -20,6 +20,7 @@ package shared
 import "C"
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"unsafe"
@@ -45,7 +46,7 @@ func NewBackup() *BackupShared {
 //nolint:funlen,gocritic
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
-	opts BackupOptions, path *string) *BackupStat {
+	opts BackupOptions, namespace *string, path *string) *BackupStat {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -53,13 +54,12 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	backupConfig := C.backup_config_t{}
 	C.backup_config_init(&backupConfig)
 
-	setCString(&backupConfig.host, cluster.Host)
-	setCInt(&backupConfig.port, cluster.Port)
+	setCString(&backupConfig.host, cluster.SeedNodesAsString())
 	setCBool(&backupConfig.use_services_alternate, cluster.UseServicesAlternate)
 
-	setCString(&backupConfig.user, cluster.User)
+	setCString(&backupConfig.user, cluster.GetUser())
 	setCString(&backupConfig.password, cluster.GetPassword())
-	setCString(&backupConfig.auth_mode, cluster.AuthMode)
+	setCString(&backupConfig.auth_mode, cluster.GetAuthMode())
 
 	parseSetList(&backupConfig.set_list, &backupRoutine.SetList)
 	if backupRoutine.BinList != nil {
@@ -68,18 +68,21 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	if backupRoutine.NodeList != nil {
 		setCString(&backupConfig.node_list, printNodes(backupRoutine.NodeList))
 	}
+	if backupRoutine.PreferRacks != nil {
+		setCString(&backupConfig.prefer_racks, joinInts(backupRoutine.PreferRacks))
+	}
 	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
 	setCUint(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
 	setCUint(&backupConfig.max_retries, backupPolicy.MaxRetries)
 	setCUint(&backupConfig.retry_delay, backupPolicy.RetryDelay)
 
 	// namespace list configuration
-	nsCharArray := C.CString(backupRoutine.Namespace)
+	nsCharArray := C.CString(*namespace)
 	C.strcpy((*C.char)(unsafe.Pointer(&backupConfig.ns)), nsCharArray)
 
 	setCInt(&backupConfig.parallel, backupPolicy.Parallel)
 
-	setCBool(&backupConfig.remove_files, backupPolicy.RemoveFiles)
+	setCBool(&backupConfig.remove_files, ptr.Bool(true))
 	setCBool(&backupConfig.no_bins, backupPolicy.NoBins)
 	setCBool(&backupConfig.no_records, backupPolicy.NoRecords)
 	setCBool(&backupConfig.no_indexes, backupPolicy.NoIndexes)
@@ -97,9 +100,13 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCString(&backupConfig.s3_endpoint_override, storage.S3EndpointOverride)
 	setCString(&backupConfig.s3_region, storage.S3Region)
 	setCString(&backupConfig.s3_profile, storage.S3Profile)
+	setS3LogLevel(&backupConfig.s3_log_level, storage.S3LogLevel)
 
 	// Secret Agent configuration
 	backupSecretAgent(&backupConfig, secretAgent)
+
+	// TLS configuration
+	setTLSOptions(&backupConfig.tls_name, &backupConfig.tls, cluster.TLS)
 
 	setCString(&backupConfig.directory, path)
 	setCLong(&backupConfig.mod_after, opts.ModAfter)
@@ -113,9 +120,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 		return nil
 	}
 
-	result := &BackupStat{
-		Path: *path,
-	}
+	result := &BackupStat{}
 	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS {
 		return result
 	}
@@ -129,10 +134,11 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 }
 
 func setStatistics(result *BackupStat, status *C.backup_status_t) {
-	result.HasStats = true
 	result.RecordCount = int(status.rec_count_total)
-	result.SecondaryIndexCount = int(status.index_count)
-	result.UDFFileCount = int(status.udf_count)
+	result.ByteCount = int(status.byte_count_total)
+	result.FileCount = int(status.file_count)
+	result.IndexCount = int(status.index_count)
+	result.UDFCount = int(status.udf_count)
 }
 
 func backupSecretAgent(config *C.backup_config_t, secretsAgent *model.SecretAgent) {
@@ -160,4 +166,13 @@ func printNodes(nodes []model.Node) *string {
 	}
 	concatenated := strings.Join(nodeStrings, ",")
 	return &concatenated
+}
+
+func joinInts(nums []int) *string {
+	strNums := make([]string, len(nums))
+	for i, num := range nums {
+		strNums[i] = strconv.Itoa(num)
+	}
+	join := strings.Join(strNums, ",")
+	return &join
 }

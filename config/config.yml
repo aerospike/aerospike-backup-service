@@ -1,10 +1,12 @@
 ---
 aerospike-clusters:
   cluster1:
-    host: "localhost"
-    port: 3000
-    # user: "tester"
-    # password: "psw"
+    seed-nodes:
+      - host-name: "localhost"
+        port: 3000
+    # credentials:
+      # user: "tester"
+      # password: "psw"
 
 storage:
   local1:
@@ -19,11 +21,11 @@ backup-policies:
 
 backup-routines:
   routine1:
-    interval: 30000
-    incr-interval: 5000
+    interval-cron: "1/30 * * * * *" # every 30 seconds
+    incr-interval-cron: "1/5 * * * * *" # every 5 seconds
     backup-policy: "policy1"
     source-cluster: "cluster1"
     storage: "local1"
-    namespace: "test"
+    namespaces: ["test"]
     set-list:
       - set1

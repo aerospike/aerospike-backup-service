@@ -4,10 +4,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
-
-	"log/slog"
 
 	"github.com/aerospike/backup/pkg/model"
 )
@@ -39,7 +38,11 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 			Dir:            request.SourceStorage.Path,
 		}
 
-		jobID := ws.restoreService.Restore(requestInternal)
+		jobID, err := ws.restoreService.Restore(requestInternal)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		slog.Info("Restore full", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
@@ -75,8 +78,11 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 			RestoreRequest: request,
 			Dir:            request.SourceStorage.Path,
 		}
-
-		jobID := ws.restoreService.Restore(requestInternal)
+		jobID, err := ws.restoreService.Restore(requestInternal)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		slog.Info("RestoreByPath action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)

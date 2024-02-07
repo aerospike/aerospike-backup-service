@@ -1,9 +1,11 @@
 aerospike-clusters:
   absCluster1:
-    host: "aerospike-cluster"
-    port: 3000
-    user: admin
-    password: admin
+    seed-nodes:
+      - host-name: "aerospike-cluster"
+        port: 3000
+    credentials: 
+      user: admin
+      password: admin
 storage:
   minioStorage:
     # Use 1 for S3 or compatible and 0 for local storage.
@@ -22,9 +24,9 @@ backup-policies:
 backup-routines:
   minioKeepFilesRoutine:
     # 24 hours interval for full backups.
-    interval: 86400000
+    interval-cron: "@daily"
     # 1 hour interval for incremental backups.
-    incr-interval: 3600000
+    incr-interval-cron: "@hourly"
     source-cluster: absCluster1
     storage: minioStorage
     namespace: test
