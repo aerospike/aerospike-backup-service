@@ -63,7 +63,7 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter, _ *http.Reque
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(jsonResponse)
+	_, err = w.Write(jsonResponse)
 	if err != nil {
 		slog.Error("failed to write response", "err", err)
 	}
