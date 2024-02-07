@@ -285,8 +285,8 @@ func (ws *HTTPServer) configRoutineActionHandler(w http.ResponseWriter, r *http.
 	}
 }
 
-// getLastUrlSegment extracts the last segment (path parameter) from the url path
-func getLastUrlSegment(urlPath string) string {
+// getLastURLSegment extracts the last segment (path parameter) from the url path
+func getLastURLSegment(urlPath string) string {
 	urlParts := strings.Split(urlPath, "/")
 	return urlParts[len(urlParts)-1]
 }

@@ -20,6 +20,8 @@ import (
 // @Param       storage body model.BackupRoutine true "backup routine"
 // @Success     201
 // @Failure     400 {string} string
+//
+//nolint:dupl
 func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
 	var newRoutine model.BackupRoutine
 	err := json.NewDecoder(r.Body).Decode(&newRoutine)
@@ -28,7 +30,7 @@ func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := getLastUrlSegment(r.URL.Path)
+	name := getLastURLSegment(r.URL.Path)
 	if name == "" {
 		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return
@@ -78,7 +80,7 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} model.BackupRoutine
 // @Failure     404 {string} string "The specified cluster could not be found."
 func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
-	routineName := getLastUrlSegment(r.URL.Path)
+	routineName := getLastURLSegment(r.URL.Path)
 	if routineName == "" {
 		http.Error(w, "The cluster name path parameter is required.", http.StatusBadRequest)
 		return
@@ -114,6 +116,8 @@ func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
 // @Param        storage body model.BackupRoutine true "backup routine"
 // @Success      200
 // @Failure      400 {string} string
+//
+//nolint:dupl
 func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 	var updatedRoutine model.BackupRoutine
 	err := json.NewDecoder(r.Body).Decode(&updatedRoutine)
@@ -122,7 +126,7 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := getLastUrlSegment(r.URL.Path)
+	name := getLastURLSegment(r.URL.Path)
 	if name == "" {
 		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return
@@ -149,7 +153,7 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteRoutine(w http.ResponseWriter, r *http.Request) {
-	routineName := getLastUrlSegment(r.URL.Path)
+	routineName := getLastURLSegment(r.URL.Path)
 	if routineName == "" {
 		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return

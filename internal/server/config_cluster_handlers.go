@@ -20,6 +20,8 @@ import (
 // @Param       cluster body model.AerospikeCluster true "cluster info"
 // @Success     201
 // @Failure     400 {string} string
+//
+//nolint:dupl
 func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	var newCluster model.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&newCluster)
@@ -28,7 +30,7 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 		return
 	}
 	r.Body.Close()
-	name := getLastUrlSegment(r.URL.Path)
+	name := getLastURLSegment(r.URL.Path)
 	if name == "" {
 		http.Error(w, "cluster name is required", http.StatusBadRequest)
 		return
@@ -79,7 +81,7 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter, _ *http.Reque
 // @Success  	200 {object} model.AerospikeCluster
 // @Failure     404 {string} string "The specified cluster could not be found."
 func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	clusterName := getLastUrlSegment(r.URL.Path)
+	clusterName := getLastURLSegment(r.URL.Path)
 	if clusterName == "" {
 		http.Error(w, "The cluster name path parameter is required.", http.StatusBadRequest)
 		return
@@ -115,6 +117,8 @@ func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Reques
 // @Param       cluster body model.AerospikeCluster true "aerospike cluster"
 // @Success     200
 // @Failure     400 {string} string
+//
+//nolint:dupl
 func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	var updatedCluster model.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&updatedCluster)
@@ -123,7 +127,7 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	r.Body.Close()
-	clusterName := getLastUrlSegment(r.URL.Path)
+	clusterName := getLastURLSegment(r.URL.Path)
 	if clusterName == "" {
 		http.Error(w, "cluster is required", http.StatusBadRequest)
 		return
@@ -149,7 +153,7 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	clusterName := getLastUrlSegment(r.URL.Path)
+	clusterName := getLastURLSegment(r.URL.Path)
 	if clusterName == "" {
 		http.Error(w, "cluster name is required", http.StatusBadRequest)
 		return

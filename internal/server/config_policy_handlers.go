@@ -20,6 +20,8 @@ import (
 // @Param       storage body model.BackupPolicy true "backup policy"
 // @Success     201
 // @Failure     400 {string} string
+//
+//nolint:dupl
 func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 	var newPolicy model.BackupPolicy
 	err := json.NewDecoder(r.Body).Decode(&newPolicy)
@@ -28,7 +30,7 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := getLastUrlSegment(r.URL.Path)
+	name := getLastURLSegment(r.URL.Path)
 	if name == "" {
 		http.Error(w, "policy name is required", http.StatusBadRequest)
 		return
@@ -78,7 +80,7 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} model.BackupPolicy
 // @Failure     404 {string} string "The specified policy could not be found."
 func (ws *HTTPServer) readPolicy(w http.ResponseWriter, r *http.Request) {
-	policyName := getLastUrlSegment(r.URL.Path)
+	policyName := getLastURLSegment(r.URL.Path)
 	if policyName == "" {
 		http.Error(w, "The policy name path parameter is required.", http.StatusBadRequest)
 		return
@@ -114,6 +116,8 @@ func (ws *HTTPServer) readPolicy(w http.ResponseWriter, r *http.Request) {
 // @Param       storage body model.BackupPolicy true "backup policy"
 // @Success     200
 // @Failure     400 {string} string
+//
+//nolint:dupl
 func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	var updatedPolicy model.BackupPolicy
 	err := json.NewDecoder(r.Body).Decode(&updatedPolicy)
@@ -122,7 +126,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := getLastUrlSegment(r.URL.Path)
+	name := getLastURLSegment(r.URL.Path)
 	if name == "" {
 		http.Error(w, "policy name is required", http.StatusBadRequest)
 		return
@@ -149,7 +153,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
-	policyName := getLastUrlSegment(r.URL.Path)
+	policyName := getLastURLSegment(r.URL.Path)
 	if policyName == "" {
 		http.Error(w, "Policy name is required", http.StatusBadRequest)
 		return
