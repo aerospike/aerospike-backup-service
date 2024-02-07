@@ -148,11 +148,12 @@ func (ws *HTTPServer) Start() {
 	mux.HandleFunc("/config", ws.configActionHandler)
 
 	// cluster config routes
-	mux.HandleFunc("/config/cluster", ws.configClusterActionHandler)
+	mux.HandleFunc("/config/clusters/", ws.configClusterActionHandler)
 	mux.HandleFunc("/config/clusters", ws.readAerospikeClusters)
 
-	// storage config route
-	mux.HandleFunc("/config/storage", ws.configStorageActionHandler)
+	// storage config routes
+	mux.HandleFunc("/config/storage/", ws.configStorageActionHandler)
+	mux.HandleFunc("/config/storage", ws.readStorages)
 
 	// policy config route
 	mux.HandleFunc("/config/policy", ws.configPolicyActionHandler)
@@ -242,7 +243,7 @@ func (ws *HTTPServer) configStorageActionHandler(w http.ResponseWriter, r *http.
 	case http.MethodPost:
 		ws.addStorage(w, r)
 	case http.MethodGet:
-		ws.readStorage(w)
+		ws.readStorage(w, r)
 	case http.MethodPut:
 		ws.updateStorage(w, r)
 	case http.MethodDelete:
@@ -280,4 +281,10 @@ func (ws *HTTPServer) configRoutineActionHandler(w http.ResponseWriter, r *http.
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// getLastUrlSegment extracts the last segment (path parameter) from the url path
+func getLastUrlSegment(urlPath string) string {
+	urlParts := strings.Split(urlPath, "/")
+	return urlParts[len(urlParts)-1]
 }
