@@ -112,6 +112,8 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupD
 
 // readFile reads and decodes the YAML content from the given filePath into v.
 func (s *S3Context) readFile(filePath string, v any) error {
+	s3prefix := s3Protocol + s.bucket
+	filePath = strings.TrimPrefix(filePath, s3prefix)
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(removeLeadingSlash(filePath)),
