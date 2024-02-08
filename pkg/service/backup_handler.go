@@ -90,7 +90,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 }
 
 func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) {
-	backupFolder := getFullPath(h.storage, h.backupFullPolicy, namespace, now)
+	backupFolder := getFullPath(h.backend.path, h.backupFullPolicy, namespace, now)
 	h.backend.CreateFolder(*backupFolder)
 
 	var stats *shared.BackupStat
@@ -159,7 +159,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 }
 
 func (h *BackupHandler) runIncrBackupForNamespace(now time.Time, namespace string) {
-	backupFolder := getIncrementalPath(h.storage, namespace, now)
+	backupFolder := getIncrementalPath(h.backend.path, namespace, now)
 	h.backend.CreateFolder(*backupFolder)
 
 	var stats *shared.BackupStat
@@ -226,17 +226,17 @@ func (h *BackupHandler) writeState() {
 	}
 }
 
-func getFullPath(storage *model.Storage, backupPolicy *model.BackupPolicy, namespace string, now time.Time) *string {
+func getFullPath(storagePath string, backupPolicy *model.BackupPolicy, namespace string, now time.Time) *string {
 	if backupPolicy.RemoveFiles.RemoveFullBackup() {
-		path := fmt.Sprintf("%s/%s/%s/", *storage.Path, model.FullBackupDirectory, namespace)
+		path := fmt.Sprintf("%s/%s/%s/", storagePath, model.FullBackupDirectory, namespace)
 		return &path
 	}
-	path := fmt.Sprintf("%s/%s/%s/%s/", *storage.Path, model.FullBackupDirectory, timeSuffix(now), namespace)
+	path := fmt.Sprintf("%s/%s/%s/%s/", storagePath, model.FullBackupDirectory, timeSuffix(now), namespace)
 	return &path
 }
 
-func getIncrementalPath(storage *model.Storage, namespace string, now time.Time) *string {
-	path := fmt.Sprintf("%s/%s/%s/%s/", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now), namespace)
+func getIncrementalPath(storagePath string, namespace string, now time.Time) *string {
+	path := fmt.Sprintf("%s/%s/%s/%s/", storagePath, model.IncrementalBackupDirectory, timeSuffix(now), namespace)
 	return &path
 }
 
