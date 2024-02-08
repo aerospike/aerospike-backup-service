@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 
@@ -39,11 +40,11 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 	removeFullBackup := backupPolicy.RemoveFiles.RemoveFullBackup()
 	switch storage.Type {
 	case model.Local:
-		path := *storage.Path
+		path := filepath.Join(*storage.Path, routineName)
 		return &BackupBackend{
 			StorageAccessor:      NewOSDiskAccessor(),
 			path:                 path,
-			stateFilePath:        path + "/" + model.StateFileName,
+			stateFilePath:        filepath.Join(path, model.StateFileName),
 			removeFullBackup:     removeFullBackup,
 			fullBackupInProgress: &atomic.Bool{},
 		}
@@ -53,10 +54,11 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			panic(err)
 		}
 
+		path := filepath.Join(s3Context.path, routineName)
 		return &BackupBackend{
 			StorageAccessor:      s3Context,
-			path:                 s3Context.path,
-			stateFilePath:        s3Context.path + "/" + model.StateFileName,
+			path:                 path,
+			stateFilePath:        filepath.Join(path, model.StateFileName),
 			removeFullBackup:     removeFullBackup,
 			fullBackupInProgress: &atomic.Bool{},
 		}
