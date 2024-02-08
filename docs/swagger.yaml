@@ -602,10 +602,15 @@ paths:
       - System
   /api-docs/:
     get:
+      description: Serves the API documentation in Swagger UI format.
       operationId: api-docs
+      produces:
+      - text/html
       responses:
         "200":
           description: OK
+          schema:
+            type: string
       summary: OpenAPI specification endpoint.
       tags:
       - System

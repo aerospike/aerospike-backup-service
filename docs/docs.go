@@ -35,6 +35,10 @@ const docTemplate = `{
         },
         "/api-docs/": {
             "get": {
+                "description": "Serves the API documentation in Swagger UI format.",
+                "produces": [
+                    "text/html"
+                ],
                 "tags": [
                     "System"
                 ],
@@ -42,7 +46,10 @@ const docTemplate = `{
                 "operationId": "api-docs",
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }

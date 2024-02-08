@@ -72,10 +72,12 @@ func metricsActionHandler() http.Handler {
 }
 
 // @Summary     OpenAPI specification endpoint.
+// @Description Serves the API documentation in Swagger UI format.
 // @ID          api-docs
 // @Tags        System
 // @Router      /api-docs/ [get]
-// @Success 	200
+// @Produce     html
+// @Success 	200 {string} string
 func apiDocsActionHandler() http.Handler {
 	return httpSwagger.Handler()
 }
