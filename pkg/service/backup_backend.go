@@ -57,7 +57,6 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 		}
 
 		path := *storage.Path + "/" + routineName
-		slog.Debug("Create backup", "path", path)
 		return &BackupBackend{
 			StorageAccessor:       s3Context,
 			fullBackupPath:        path + "/" + model.FullBackupDirectory,
