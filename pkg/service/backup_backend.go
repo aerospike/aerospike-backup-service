@@ -44,9 +44,9 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 		path := filepath.Join(*storage.Path, routineName)
 		return &BackupBackend{
 			StorageAccessor:       NewOSDiskAccessor(),
-			fullBackupPath:        filepath.Join(path, model.FullBackupDirectory),
-			incrementalBackupPath: filepath.Join(path, model.IncrementalBackupDirectory),
-			stateFilePath:         filepath.Join(path, model.StateFileName),
+			fullBackupPath:        path + "/" + model.FullBackupDirectory,
+			incrementalBackupPath: path + "/" + model.IncrementalBackupDirectory,
+			stateFilePath:         path + "/" + model.StateFileName,
 			removeFullBackup:      removeFullBackup,
 			fullBackupInProgress:  &atomic.Bool{},
 		}
@@ -56,13 +56,13 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			panic(err)
 		}
 
-		path := filepath.Join(s3Context.path, routineName)
+		path := s3Context.path + "/" + routineName
 		slog.Debug("Create backup", "path", path)
 		return &BackupBackend{
 			StorageAccessor:       s3Context,
-			fullBackupPath:        filepath.Join(path, model.FullBackupDirectory),
-			incrementalBackupPath: filepath.Join(path, model.IncrementalBackupDirectory),
-			stateFilePath:         filepath.Join(path, model.StateFileName),
+			fullBackupPath:        path + "/" + model.FullBackupDirectory,
+			incrementalBackupPath: path + "/" + model.IncrementalBackupDirectory,
+			stateFilePath:         path + "/" + model.StateFileName,
 			removeFullBackup:      removeFullBackup,
 			fullBackupInProgress:  &atomic.Bool{},
 		}
