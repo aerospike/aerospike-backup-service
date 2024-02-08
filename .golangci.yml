@@ -46,8 +46,4 @@ issues:
         - goconst
     - path: pkg/shared
       linters:
-        - typecheck
         - gci
-    - path: pkg/stdio
-      linters:
-        - typecheck
