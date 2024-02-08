@@ -148,19 +148,19 @@ func (ws *HTTPServer) Start() {
 	mux.HandleFunc("/config", ws.configActionHandler)
 
 	// cluster config routes
-	mux.HandleFunc("/config/clusters/", ws.configClusterActionHandler)
+	mux.HandleFunc("/config/clusters/{name}", ws.configClusterActionHandler)
 	mux.HandleFunc("/config/clusters", ws.readAerospikeClusters)
 
 	// storage config routes
-	mux.HandleFunc("/config/storage/", ws.configStorageActionHandler)
+	mux.HandleFunc("/config/storage/{name}", ws.configStorageActionHandler)
 	mux.HandleFunc("/config/storage", ws.readAllStorage)
 
 	// policy config routes
-	mux.HandleFunc("/config/policies/", ws.configPolicyActionHandler)
+	mux.HandleFunc("/config/policies/{name}", ws.configPolicyActionHandler)
 	mux.HandleFunc("/config/policies", ws.readPolicies)
 
 	// routine config routes
-	mux.HandleFunc("/config/routines/", ws.configRoutineActionHandler)
+	mux.HandleFunc("/config/routines/{name}", ws.configRoutineActionHandler)
 	mux.HandleFunc("/config/routines", ws.readRoutines)
 
 	// health route
@@ -283,11 +283,4 @@ func (ws *HTTPServer) configRoutineActionHandler(w http.ResponseWriter, r *http.
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
-}
-
-// getLastURLSegment extracts the name path parameter for the configuration get endpoints.
-// TODO: replace with the PathValue accessor after upgrading to go1.22.
-func getLastURLSegment(urlPath string) string {
-	urlParts := strings.SplitAfterN(urlPath, "/", 4)
-	return urlParts[len(urlParts)-1]
 }

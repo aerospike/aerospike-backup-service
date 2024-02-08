@@ -30,7 +30,7 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := getLastURLSegment(r.URL.Path)
+	name := r.PathValue("name")
 	if name == "" {
 		http.Error(w, "policy name is required", http.StatusBadRequest)
 		return
@@ -80,7 +80,7 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} model.BackupPolicy
 // @Failure     404 {string} string "The specified policy could not be found."
 func (ws *HTTPServer) readPolicy(w http.ResponseWriter, r *http.Request) {
-	policyName := getLastURLSegment(r.URL.Path)
+	policyName := r.PathValue("name")
 	if policyName == "" {
 		http.Error(w, "The policy name path parameter is required.", http.StatusBadRequest)
 		return
@@ -126,7 +126,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := getLastURLSegment(r.URL.Path)
+	name := r.PathValue("name")
 	if name == "" {
 		http.Error(w, "policy name is required", http.StatusBadRequest)
 		return
@@ -153,7 +153,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
-	policyName := getLastURLSegment(r.URL.Path)
+	policyName := r.PathValue("name")
 	if policyName == "" {
 		http.Error(w, "Policy name is required", http.StatusBadRequest)
 		return

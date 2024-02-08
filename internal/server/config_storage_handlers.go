@@ -30,7 +30,7 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := getLastURLSegment(r.URL.Path)
+	name := r.PathValue("name")
 	if name == "" {
 		http.Error(w, "storage name is required", http.StatusBadRequest)
 		return
@@ -81,7 +81,7 @@ func (ws *HTTPServer) readAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} model.Storage
 // @Failure     404 {string} string "The specified storage could not be found."
 func (ws *HTTPServer) readStorage(w http.ResponseWriter, r *http.Request) {
-	storageName := getLastURLSegment(r.URL.Path)
+	storageName := r.PathValue("name")
 	if storageName == "" {
 		http.Error(w, "The storage name path parameter is required.", http.StatusBadRequest)
 		return
@@ -124,7 +124,7 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	storageName := getLastURLSegment(r.URL.Path)
+	storageName := r.PathValue("name")
 	if storageName == "" {
 		http.Error(w, "storage is required", http.StatusBadRequest)
 		return
@@ -151,7 +151,7 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
-	storageName := getLastURLSegment(r.URL.Path)
+	storageName := r.PathValue("name")
 	if storageName == "" {
 		http.Error(w, "storage name is required", http.StatusBadRequest)
 		return

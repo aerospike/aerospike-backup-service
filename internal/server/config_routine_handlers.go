@@ -30,7 +30,7 @@ func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := getLastURLSegment(r.URL.Path)
+	name := r.PathValue("name")
 	if name == "" {
 		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return
@@ -80,7 +80,7 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} model.BackupRoutine
 // @Failure     404 {string} string "The specified cluster could not be found."
 func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
-	routineName := getLastURLSegment(r.URL.Path)
+	routineName := r.PathValue("name")
 	if routineName == "" {
 		http.Error(w, "The cluster name path parameter is required.", http.StatusBadRequest)
 		return
@@ -126,7 +126,7 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := getLastURLSegment(r.URL.Path)
+	name := r.PathValue("name")
 	if name == "" {
 		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return
@@ -153,7 +153,7 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteRoutine(w http.ResponseWriter, r *http.Request) {
-	routineName := getLastURLSegment(r.URL.Path)
+	routineName := r.PathValue("name")
 	if routineName == "" {
 		http.Error(w, "routine name is required", http.StatusBadRequest)
 		return

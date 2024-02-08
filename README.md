@@ -50,7 +50,7 @@ A summary of each entity is included. For specifics and example values, see the 
 
 ### Prerequisites
 
-- Go 1.21
+- Go 1.22
 
 ### Build the C shared libraries
 

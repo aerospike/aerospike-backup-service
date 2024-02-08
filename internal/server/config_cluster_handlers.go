@@ -30,7 +30,7 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 		return
 	}
 	r.Body.Close()
-	name := getLastURLSegment(r.URL.Path)
+	name := r.PathValue("name")
 	if name == "" {
 		http.Error(w, "cluster name is required", http.StatusBadRequest)
 		return
@@ -81,7 +81,7 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter, _ *http.Reque
 // @Success  	200 {object} model.AerospikeCluster
 // @Failure     404 {string} string "The specified cluster could not be found."
 func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	clusterName := getLastURLSegment(r.URL.Path)
+	clusterName := r.PathValue("name")
 	if clusterName == "" {
 		http.Error(w, "The cluster name path parameter is required.", http.StatusBadRequest)
 		return
@@ -127,7 +127,7 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	r.Body.Close()
-	clusterName := getLastURLSegment(r.URL.Path)
+	clusterName := r.PathValue("name")
 	if clusterName == "" {
 		http.Error(w, "cluster is required", http.StatusBadRequest)
 		return
@@ -153,7 +153,7 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	clusterName := getLastURLSegment(r.URL.Path)
+	clusterName := r.PathValue("name")
 	if clusterName == "" {
 		http.Error(w, "cluster name is required", http.StatusBadRequest)
 		return
