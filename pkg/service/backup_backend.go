@@ -57,6 +57,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 		}
 
 		path := filepath.Join(s3Context.path, routineName)
+		slog.Debug("Create backup", "path", path)
 		return &BackupBackend{
 			StorageAccessor:       s3Context,
 			fullBackupPath:        filepath.Join(path, model.FullBackupDirectory),
