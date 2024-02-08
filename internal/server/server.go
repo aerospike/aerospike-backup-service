@@ -147,17 +147,21 @@ func (ws *HTTPServer) Start() {
 	// whole config route
 	mux.HandleFunc("/config", ws.configActionHandler)
 
-	// cluster config route
-	mux.HandleFunc("/config/cluster", ws.configClusterActionHandler)
+	// cluster config routes
+	mux.HandleFunc("/config/clusters/", ws.configClusterActionHandler)
+	mux.HandleFunc("/config/clusters", ws.readAerospikeClusters)
 
-	// storage config route
-	mux.HandleFunc("/config/storage", ws.configStorageActionHandler)
+	// storage config routes
+	mux.HandleFunc("/config/storage/", ws.configStorageActionHandler)
+	mux.HandleFunc("/config/storage", ws.readAllStorage)
 
-	// policy config route
-	mux.HandleFunc("/config/policy", ws.configPolicyActionHandler)
+	// policy config routes
+	mux.HandleFunc("/config/policies/", ws.configPolicyActionHandler)
+	mux.HandleFunc("/config/policies", ws.readPolicies)
 
-	// routine config route
-	mux.HandleFunc("/config/routine", ws.configRoutineActionHandler)
+	// routine config routes
+	mux.HandleFunc("/config/routines/", ws.configRoutineActionHandler)
+	mux.HandleFunc("/config/routines", ws.readRoutines)
 
 	// health route
 	mux.HandleFunc("/health", healthActionHandler)
@@ -226,7 +230,7 @@ func (ws *HTTPServer) configClusterActionHandler(w http.ResponseWriter, r *http.
 	case http.MethodPost:
 		ws.addAerospikeCluster(w, r)
 	case http.MethodGet:
-		ws.readAerospikeClusters(w)
+		ws.readAerospikeCluster(w, r)
 	case http.MethodPut:
 		ws.updateAerospikeCluster(w, r)
 	case http.MethodDelete:
@@ -241,7 +245,7 @@ func (ws *HTTPServer) configStorageActionHandler(w http.ResponseWriter, r *http.
 	case http.MethodPost:
 		ws.addStorage(w, r)
 	case http.MethodGet:
-		ws.readStorage(w)
+		ws.readStorage(w, r)
 	case http.MethodPut:
 		ws.updateStorage(w, r)
 	case http.MethodDelete:
@@ -256,7 +260,7 @@ func (ws *HTTPServer) configPolicyActionHandler(w http.ResponseWriter, r *http.R
 	case http.MethodPost:
 		ws.addPolicy(w, r)
 	case http.MethodGet:
-		ws.readPolicies(w)
+		ws.readPolicy(w, r)
 	case http.MethodPut:
 		ws.updatePolicy(w, r)
 	case http.MethodDelete:
@@ -271,7 +275,7 @@ func (ws *HTTPServer) configRoutineActionHandler(w http.ResponseWriter, r *http.
 	case http.MethodPost:
 		ws.addRoutine(w, r)
 	case http.MethodGet:
-		ws.readRoutines(w)
+		ws.readRoutine(w, r)
 	case http.MethodPut:
 		ws.updateRoutine(w, r)
 	case http.MethodDelete:
@@ -279,4 +283,11 @@ func (ws *HTTPServer) configRoutineActionHandler(w http.ResponseWriter, r *http.
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+// getLastURLSegment extracts the name path parameter for the configuration get endpoints.
+// TODO: replace with the PathValue accessor after upgrading to go1.22.
+func getLastURLSegment(urlPath string) string {
+	urlParts := strings.SplitAfterN(urlPath, "/", 4)
+	return urlParts[len(urlParts)-1]
 }

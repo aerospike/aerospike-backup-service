@@ -13,7 +13,7 @@ import (
 // @Description Storage represents the configuration for a backup storage details.
 type Storage struct {
 	// The type of the storage provider (0 - Local, 1 - AWS S3).
-	Type StorageType `yaml:"type,omitempty" json:"type,omitempty"`
+	Type StorageType `yaml:"type" json:"type"`
 	// The root path for the backup repository.
 	Path *string `yaml:"path,omitempty" json:"path,omitempty"`
 	// The S3 region string (AWS S3 optional).

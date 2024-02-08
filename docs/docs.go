@@ -248,7 +248,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/cluster": {
+        "/config/clusters": {
             "get": {
                 "produces": [
                     "application/json"
@@ -257,7 +257,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all Aerospike clusters from the configuration.",
-                "operationId": "readClusters",
+                "operationId": "readAllClusters",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -270,6 +270,41 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config/clusters/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads a specific Aerospike cluster from the configuration given its name.",
+                "operationId": "readCluster",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the Aerospike cluster",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.AerospikeCluster"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified cluster could not be found.",
                         "schema": {
                             "type": "string"
                         }
@@ -290,7 +325,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "cluster name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -329,7 +364,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "cluster name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -365,7 +400,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "cluster Name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -382,7 +417,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/policy": {
+        "/config/policies": {
             "get": {
                 "produces": [
                     "application/json"
@@ -409,6 +444,41 @@ const docTemplate = `{
                         }
                     }
                 }
+            }
+        },
+        "/config/policies/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads a backup policy from the configuration given its name.",
+                "operationId": "readPolicy",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the backup policy",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupPolicy"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified policy could not be found.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
             },
             "put": {
                 "consumes": [
@@ -424,7 +494,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "policy name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -463,7 +533,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "policy name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -499,7 +569,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Policy Name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -516,7 +586,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/routine": {
+        "/config/routines": {
             "get": {
                 "produces": [
                     "application/json"
@@ -543,6 +613,41 @@ const docTemplate = `{
                         }
                     }
                 }
+            }
+        },
+        "/config/routines/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads a specific routine from the configuration given its name.",
+                "operationId": "readRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the routine",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.BackupRoutine"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified cluster could not be found.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
             },
             "put": {
                 "consumes": [
@@ -558,7 +663,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "routine name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -597,7 +702,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "routine name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -633,7 +738,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "routine name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -659,7 +764,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all storage from the configuration.",
-                "operationId": "readStorage",
+                "operationId": "readAllStorage",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -672,6 +777,41 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/config/storage/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads a specific storage from the configuration given its name.",
+                "operationId": "readStorage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the storage",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Storage"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified storage could not be found.",
                         "schema": {
                             "type": "string"
                         }
@@ -692,7 +832,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "storage name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -724,14 +864,14 @@ const docTemplate = `{
                 "tags": [
                     "Configuration"
                 ],
-                "summary": "Adds a storage cluster to the config.",
+                "summary": "Adds a storage to the config.",
                 "operationId": "addStorage",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "storage name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -767,7 +907,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "storage name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],
