@@ -15,7 +15,7 @@ const tempFolder = "./tmp"
 func TestFullBackupRemoveFiles(t *testing.T) {
 	backend := &BackupBackend{
 		StorageAccessor:      &OSDiskAccessor{},
-		path:                 tempFolder + "/testStorage",
+		fullBackupPath:       tempFolder + "/testStorage",
 		removeFullBackup:     true,
 		fullBackupInProgress: &atomic.Bool{},
 	}
@@ -37,7 +37,7 @@ func TestFullBackupRemoveFiles(t *testing.T) {
 func TestFullBackupKeepFiles(t *testing.T) {
 	backend := &BackupBackend{
 		StorageAccessor:      &OSDiskAccessor{},
-		path:                 tempFolder + "/testStorage",
+		fullBackupPath:       tempFolder + "/testStorage",
 		removeFullBackup:     false,
 		fullBackupInProgress: &atomic.Bool{},
 	}

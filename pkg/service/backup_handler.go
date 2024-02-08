@@ -90,7 +90,7 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 }
 
 func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) {
-	backupFolder := getFullPath(h.backend.path, h.backupFullPolicy, namespace, now)
+	backupFolder := getFullPath(h.backend.fullBackupPath, h.backupFullPolicy, namespace, now)
 	h.backend.CreateFolder(*backupFolder)
 
 	var stats *shared.BackupStat
@@ -126,7 +126,7 @@ func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) 
 
 func (h *BackupHandler) cleanIncrementalBackups() {
 	if h.backupIncrPolicy.RemoveFiles.RemoveIncrementalBackup() {
-		if err := h.backend.DeleteFolder(*h.storage.Path + "/" + model.IncrementalBackupDirectory); err != nil {
+		if err := h.backend.DeleteFolder(h.backend.incrementalBackupPath); err != nil {
 			slog.Error("Could not clean incremental backups", "name", h.routineName, "err", err)
 		} else {
 			slog.Info("Cleaned incremental backups", "name", h.routineName)
@@ -159,7 +159,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 }
 
 func (h *BackupHandler) runIncrBackupForNamespace(now time.Time, namespace string) {
-	backupFolder := getIncrementalPath(h.backend.path, namespace, now)
+	backupFolder := getIncrementalPath(h.backend.incrementalBackupPath, namespace, now)
 	h.backend.CreateFolder(*backupFolder)
 
 	var stats *shared.BackupStat
@@ -228,15 +228,15 @@ func (h *BackupHandler) writeState() {
 
 func getFullPath(storagePath string, backupPolicy *model.BackupPolicy, namespace string, now time.Time) *string {
 	if backupPolicy.RemoveFiles.RemoveFullBackup() {
-		path := fmt.Sprintf("%s/%s/%s/", storagePath, model.FullBackupDirectory, namespace)
+		path := fmt.Sprintf("%s/%s/", storagePath, namespace)
 		return &path
 	}
-	path := fmt.Sprintf("%s/%s/%s/%s/", storagePath, model.FullBackupDirectory, timeSuffix(now), namespace)
+	path := fmt.Sprintf("%s/%s/%s/", storagePath, timeSuffix(now), namespace)
 	return &path
 }
 
 func getIncrementalPath(storagePath string, namespace string, now time.Time) *string {
-	path := fmt.Sprintf("%s/%s/%s/%s/", storagePath, model.IncrementalBackupDirectory, timeSuffix(now), namespace)
+	path := fmt.Sprintf("%s/%s/%s/", storagePath, timeSuffix(now), namespace)
 	return &path
 }
 
