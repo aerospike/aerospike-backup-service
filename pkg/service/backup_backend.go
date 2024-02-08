@@ -56,7 +56,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			panic(err)
 		}
 
-		path := s3Context.path + "/" + routineName
+		path := *storage.Path + "/" + routineName
 		slog.Debug("Create backup", "path", path)
 		return &BackupBackend{
 			StorageAccessor:       s3Context,
