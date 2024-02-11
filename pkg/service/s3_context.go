@@ -189,6 +189,7 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 
 // lsDir returns all subfolders in the given s3 prefix path.
 func (s *S3Context) lsDir(prefix string) ([]string, error) {
+	slog.Debug("lsDir", "prefix", prefix)
 	var nextContinuationToken *string
 	if !strings.HasSuffix(prefix, "/") {
 		prefix += "/"
@@ -221,9 +222,11 @@ func (s *S3Context) lsDir(prefix string) ([]string, error) {
 }
 
 func (s *S3Context) list(continuationToken *string, prefix, v string) (*s3.ListObjectsV2Output, error) {
+	join := filepath.Join(s.path, prefix)
+	slog.Info("list from " + join)
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:            aws.String(s.bucket),
-		Prefix:            aws.String(filepath.Join(s.path, prefix)),
+		Prefix:            aws.String(join),
 		Delimiter:         aws.String(v),
 		ContinuationToken: continuationToken,
 	})
