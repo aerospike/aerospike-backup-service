@@ -206,10 +206,10 @@ func (h *BackupHandler) isBackupEmpty(stats *shared.BackupStat) bool {
 
 func (h *BackupHandler) deleteEmptyBackup(path string, routineName string) {
 	if err := h.backend.DeleteFolder(path); err != nil {
-		slog.Error("Failed to delete empty backup file", "name", routineName,
+		slog.Error("Failed to delete empty backup", "name", routineName,
 			"path", path, "err", err)
 	} else {
-		slog.Debug("Deleted empty backup file", "name", routineName, "path", path)
+		slog.Debug("Deleted empty backup", "name", routineName, "path", path)
 	}
 }
 
@@ -239,7 +239,7 @@ func getFullPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, names
 }
 
 func getIncrementalPath(incrBackupsPath string, namespace string, now time.Time) string {
-	path := fmt.Sprintf("%s/%s/%s/", incrBackupsPath, timeSuffix(now), namespace)
+	path := fmt.Sprintf("%s/%s/%s", incrBackupsPath, timeSuffix(now), namespace)
 	return path
 }
 

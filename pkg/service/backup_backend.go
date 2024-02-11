@@ -143,5 +143,5 @@ func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {
 }
 
 func (b *BackupBackend) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
-	return b.writeYaml(path+metadataFile, metadata)
+	return b.writeYaml(filepath.Join(path, metadataFile), metadata)
 }
