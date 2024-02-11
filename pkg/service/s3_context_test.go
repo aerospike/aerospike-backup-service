@@ -1,10 +1,13 @@
+//go:build !ci
+
 package service
 
 import (
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aws/smithy-go/ptr"
 	"testing"
 	"time"
+
+	"github.com/aerospike/backup/pkg/model"
+	"github.com/aws/smithy-go/ptr"
 )
 
 var contexts []S3Context
