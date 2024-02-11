@@ -291,6 +291,6 @@ func (s *S3Context) DeleteFolder(folder string) error {
 }
 
 func (s *S3Context) wrapWithPrefix(path string) *string {
-	result := s3Protocol + s.bucket + s.path + "/" + path + "/"
+	result := s3Protocol + filepath.Join(s.bucket, s.path, path) + "/"
 	return &result
 }
