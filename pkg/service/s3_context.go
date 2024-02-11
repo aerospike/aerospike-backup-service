@@ -157,7 +157,7 @@ func (s *S3Context) writeYaml(filename string, v any) error {
 	}
 	_, err = s.client.PutObject(s.ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(filepath.Join(s.path, filename)),
+		Key:    aws.String(filename),
 		Body:   bytes.NewReader(yamlData),
 	})
 	if err != nil {
@@ -222,11 +222,9 @@ func (s *S3Context) lsDir(prefix string) ([]string, error) {
 }
 
 func (s *S3Context) list(continuationToken *string, prefix, v string) (*s3.ListObjectsV2Output, error) {
-	join := filepath.Join(s.path, prefix) + "/"
-	slog.Info("list from " + join)
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:            aws.String(s.bucket),
-		Prefix:            aws.String(join),
+		Prefix:            aws.String(prefix + "/"),
 		Delimiter:         aws.String(v),
 		ContinuationToken: continuationToken,
 	})
@@ -261,12 +259,11 @@ func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 	return metadata, nil
 }
 
-// path relative to storage path
 func (s *S3Context) DeleteFolder(folder string) error {
 	slog.Debug("Delete folder", "path", folder)
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
-		Prefix:    aws.String(filepath.Join(s.path, folder)),
+		Prefix:    aws.String(folder),
 		Delimiter: aws.String(""),
 	})
 	if err != nil {
@@ -292,6 +289,6 @@ func (s *S3Context) DeleteFolder(folder string) error {
 }
 
 func (s *S3Context) wrapWithPrefix(path string) *string {
-	result := s3Protocol + filepath.Join(s.bucket, s.path, path) + "/"
+	result := s3Protocol + s.bucket + "/" + path + "/"
 	return &result
 }

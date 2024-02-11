@@ -59,9 +59,9 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 		// path is related to storage
 		return &BackupBackend{
 			StorageAccessor:        s3Context,
-			fullBackupsPath:        routineName + "/" + model.FullBackupDirectory,
-			incrementalBackupsPath: routineName + "/" + model.IncrementalBackupDirectory,
-			stateFilePath:          routineName + "/" + model.StateFileName,
+			fullBackupsPath:        s3Context.path + "/" + routineName + "/" + model.FullBackupDirectory,
+			incrementalBackupsPath: s3Context.path + "/" + routineName + "/" + model.IncrementalBackupDirectory,
+			stateFilePath:          s3Context.path + "/" + routineName + "/" + model.StateFileName,
 			removeFullBackup:       removeFullBackup,
 			fullBackupInProgress:   &atomic.Bool{},
 		}
@@ -85,6 +85,10 @@ func (b *BackupBackend) writeState(state *model.BackupState) error {
 	b.stateFileMutex.Lock()
 	defer b.stateFileMutex.Unlock()
 	return b.writeYaml(b.stateFilePath, state)
+}
+
+func (b *BackupBackend) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
+	return b.writeYaml(filepath.Join(path, metadataFile), metadata)
 }
 
 // FullBackupList returns a list of available full backups.
@@ -140,8 +144,4 @@ func (b *BackupBackend) IncrementalBackupList(timebounds *model.TimeBounds) ([]m
 
 func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {
 	return b.fullBackupInProgress
-}
-
-func (b *BackupBackend) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
-	return b.writeYaml(filepath.Join(path, metadataFile), metadata)
 }
