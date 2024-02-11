@@ -28,6 +28,7 @@ type S3Context struct {
 	ctx           context.Context
 	client        *s3.Client
 	bucket        string
+	path          string
 	metadataCache *util.LoadingCache[*model.BackupMetadata]
 }
 
@@ -69,6 +70,7 @@ func NewS3Context(storage *model.Storage) (*S3Context, error) {
 		ctx:    ctx,
 		client: client,
 		bucket: bucketName,
+		path:   strings.TrimPrefix(parsed.Path, "/"),
 	}
 
 	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*model.BackupMetadata, error) {
@@ -84,13 +86,6 @@ func createConfig(ctx context.Context, storage *model.Storage) (aws.Config, erro
 		config.WithSharedConfigProfile(*storage.S3Profile),
 		config.WithRegion(*storage.S3Region),
 	)
-}
-
-func removeLeadingSlash(s string) string {
-	if len(s) > 0 && s[0] == '/' {
-		return s[1:]
-	}
-	return s
 }
 
 func (s *S3Context) readBackupState(stateFilePath string, state *model.BackupState) error {
