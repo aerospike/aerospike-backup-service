@@ -146,6 +146,7 @@ func (s *S3Context) readFile(filename string, v any) error {
 			"path", filename, "err", err, "content", string(content))
 		return err
 	}
+	slog.Debug("Read", "content", string(content), "unmrashall", v)
 	return nil
 }
 
@@ -252,8 +253,8 @@ func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, 
 
 func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 	metadata := &model.BackupMetadata{}
-	meatadaPath := filepath.Join(path, metadataFile)
-	err := s.readFile(meatadaPath, metadata)
+	metadataFilePath := filepath.Join(path, metadataFile)
+	err := s.readFile(metadataFilePath, metadata)
 	if err != nil {
 		return nil, err
 	}
