@@ -205,11 +205,10 @@ func (s *S3Context) lsDir(prefix string) ([]string, error) {
 			if p.Prefix == nil {
 				continue
 			}
-			cleanPrefix := strings.TrimSuffix(*p.Prefix, "/")
-			slog.Debug("clean prefix " + cleanPrefix)
+			subfolder := strings.TrimSuffix(*p.Prefix, "/")
 			// Check to avoid including the prefix itself in the results
-			if cleanPrefix != prefix {
-				result = append(result, *p.Prefix)
+			if subfolder != prefix {
+				result = append(result, subfolder)
 			}
 		}
 		nextContinuationToken = listOutput.NextContinuationToken
