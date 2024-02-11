@@ -191,9 +191,6 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 func (s *S3Context) lsDir(prefix string) ([]string, error) {
 	slog.Debug("lsDir", "prefix", prefix)
 	var nextContinuationToken *string
-	if !strings.HasSuffix(prefix, "/") {
-		prefix += "/"
-	}
 	result := make([]string, 0)
 	for {
 		// By default, the action returns up to 1,000 key names.
@@ -207,6 +204,7 @@ func (s *S3Context) lsDir(prefix string) ([]string, error) {
 				continue
 			}
 			cleanPrefix := strings.TrimSuffix(*p.Prefix, "/")
+			slog.Debug("clean prefix " + cleanPrefix)
 			// Check to avoid including the prefix itself in the results
 			if cleanPrefix != prefix {
 				result = append(result, *p.Prefix)
@@ -222,7 +220,7 @@ func (s *S3Context) lsDir(prefix string) ([]string, error) {
 }
 
 func (s *S3Context) list(continuationToken *string, prefix, v string) (*s3.ListObjectsV2Output, error) {
-	join := filepath.Join(s.path, prefix)
+	join := filepath.Join(s.path, prefix) + "/"
 	slog.Info("list from " + join)
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:            aws.String(s.bucket),
