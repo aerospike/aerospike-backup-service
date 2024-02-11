@@ -132,13 +132,17 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 		policy.UseServicesAlternate = *c.UseServicesAlternate
 	}
 	if c.TLS != nil {
-		policy.TlsConfig = initTLS(c.TLS, *c.ClusterLabel)
+		policy.TlsConfig = initTLS(c.TLS, c.ClusterLabel)
 	}
 	return policy
 }
 
 //nolint:funlen,staticcheck
-func initTLS(t *TLS, clusterName string) *tls.Config {
+func initTLS(t *TLS, clusterLabel *string) *tls.Config {
+	clusterName := "NA"
+	if clusterLabel != nil {
+		clusterName = *clusterLabel
+	}
 	errorLog := func(err error) {
 		slog.Error("Failed to initialize tls.Config", "cluster", clusterName, "err", err)
 	}
