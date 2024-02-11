@@ -120,7 +120,7 @@ func (s *S3Context) readFile(filename string, v any) error {
 		if errors.As(err, &opErr) &&
 			(strings.Contains(filename, model.StateFileName) || strings.Contains(filename, metadataFile)) &&
 			strings.Contains(opErr.Unwrap().Error(), "StatusCode: 404") {
-			return nil // state file and metadata file might not exist yet, not an error.
+			return err // state file and metadata file might not exist yet, not an error.
 		}
 		slog.Warn("Failed to read file", "path", filename, "err", err)
 		return err
