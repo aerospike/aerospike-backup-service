@@ -110,53 +110,53 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupD
 }
 
 // readFile reads and decodes the YAML content from the given filePath into v.
-func (s *S3Context) readFile(filename string, v any) error {
+func (s *S3Context) readFile(filePath string, v any) error {
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(filename),
+		Key:    aws.String(filePath),
 	})
 	if err != nil {
 		var opErr *smithy.OperationError
 		if errors.As(err, &opErr) &&
-			(strings.Contains(filename, model.StateFileName) || strings.Contains(filename, metadataFile)) &&
+			(strings.Contains(filePath, model.StateFileName) || strings.Contains(filePath, metadataFile)) &&
 			strings.Contains(opErr.Unwrap().Error(), "StatusCode: 404") {
-			return err // state file and metadata file might not exist yet, not an error.
+			return err
 		}
-		slog.Warn("Failed to read file", "path", filename, "err", err)
+		slog.Warn("Failed to read file", "path", filePath, "err", err)
 		return err
 	}
 	defer result.Body.Close()
 	content, err := io.ReadAll(result.Body)
 	if err != nil {
 		slog.Warn("Couldn't read object body of a file",
-			"path", filename, "err", err)
+			"path", filePath, "err", err)
 		return err
 	}
 	if err = yaml.Unmarshal(content, v); err != nil {
 		slog.Warn("Failed unmarshal state file for backup",
-			"path", filename, "err", err, "content", string(content))
+			"path", filePath, "err", err, "content", string(content))
 		return err
 	}
 	return nil
 }
 
 // WriteYaml writes v into filepath using the YAML format.
-func (s *S3Context) writeYaml(filename string, v any) error {
+func (s *S3Context) writeYaml(filePath string, v any) error {
 	yamlData, err := yaml.Marshal(v)
 	if err != nil {
 		return err
 	}
 	_, err = s.client.PutObject(s.ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(filename),
+		Key:    aws.String(filePath),
 		Body:   bytes.NewReader(yamlData),
 	})
 	if err != nil {
-		slog.Warn("Couldn't upload file", "path", filename,
+		slog.Warn("Couldn't upload file", "path", filePath,
 			"bucket", s.bucket, "err", err)
 		return err
 	}
-	slog.Debug("File written", "path", filename, "bucket", s.bucket)
+	slog.Debug("File written", "path", filePath, "bucket", s.bucket)
 	return nil
 }
 
@@ -183,7 +183,6 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 
 // lsDir returns all subfolders in the given s3 prefix path.
 func (s *S3Context) lsDir(prefix string) ([]string, error) {
-	slog.Debug("lsDir", "prefix", prefix)
 	var nextContinuationToken *string
 	result := make([]string, 0)
 	for {

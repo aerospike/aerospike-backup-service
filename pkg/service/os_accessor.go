@@ -109,6 +109,5 @@ func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
 }
 
 func (o *OSDiskAccessor) wrapWithPrefix(path string) *string {
-	result := path
-	return &result
+	return &path
 }

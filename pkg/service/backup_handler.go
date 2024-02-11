@@ -100,7 +100,6 @@ func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) 
 	backupRunFunc := func() {
 		started := time.Now()
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
-		slog.Info("backup path " + *backupPath)
 		stats = backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
 			h.storage, h.secretAgent, options, &namespace, backupPath)
 		if stats == nil {

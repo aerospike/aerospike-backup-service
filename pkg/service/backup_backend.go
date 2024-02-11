@@ -41,12 +41,12 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 	removeFullBackup := backupPolicy.RemoveFiles.RemoveFullBackup()
 	switch storage.Type {
 	case model.Local:
-		path := filepath.Join(*storage.Path, routineName)
+		routinePath := filepath.Join(*storage.Path, routineName)
 		return &BackupBackend{
 			StorageAccessor:        NewOSDiskAccessor(),
-			fullBackupsPath:        filepath.Join(path, model.FullBackupDirectory),
-			incrementalBackupsPath: filepath.Join(path, model.IncrementalBackupDirectory),
-			stateFilePath:          filepath.Join(path, model.StateFileName),
+			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
+			incrementalBackupsPath: filepath.Join(routinePath, model.IncrementalBackupDirectory),
+			stateFilePath:          filepath.Join(routinePath, model.StateFileName),
 			removeFullBackup:       removeFullBackup,
 			fullBackupInProgress:   &atomic.Bool{},
 		}
