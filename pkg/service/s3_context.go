@@ -95,8 +95,8 @@ func removeLeadingSlash(s string) string {
 	return s
 }
 
-func (s *S3Context) readBackupState(path string, state *model.BackupState) error {
-	return s.readFile(path, state)
+func (s *S3Context) readBackupState(stateFilePath string, state *model.BackupState) error {
+	return s.readFile(stateFilePath, state)
 }
 
 func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupDetails, error) {
@@ -250,7 +250,7 @@ func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, 
 
 func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 	metadata := &model.BackupMetadata{}
-	err := s.readFile(path, metadata)
+	err := s.readFile(filepath.Join(path, metadataFile), metadata)
 	if err != nil {
 		return nil, err
 	}
