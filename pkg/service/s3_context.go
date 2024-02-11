@@ -172,6 +172,7 @@ func (s *S3Context) writeYaml(filename string, v any) error {
 // listFiles returns all files in the given s3 prefix path.
 func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 	var nextContinuationToken *string
+	slog.Debug("list files", "prefix", prefix)
 	result := make([]types.Object, 0)
 	for {
 		// By default, the action returns up to 1,000 key names.
