@@ -118,9 +118,11 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupD
 
 // readFile reads and decodes the YAML content from the given filePath into v.
 func (s *S3Context) readFile(filename string, v any) error {
+	fullFilePath := filepath.Join(s.path, filename)
+	slog.Debug("Read file " + fullFilePath)
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(filepath.Join(s.path, filename)),
+		Key:    aws.String(fullFilePath),
 	})
 	if err != nil {
 		var opErr *smithy.OperationError
@@ -250,7 +252,8 @@ func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, 
 
 func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 	metadata := &model.BackupMetadata{}
-	err := s.readFile(filepath.Join(path, metadataFile), metadata)
+	meatadaPath := filepath.Join(path, metadataFile)
+	err := s.readFile(meatadaPath, metadata)
 	if err != nil {
 		return nil, err
 	}
