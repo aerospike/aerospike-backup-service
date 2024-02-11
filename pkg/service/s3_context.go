@@ -28,7 +28,6 @@ type S3Context struct {
 	ctx           context.Context
 	client        *s3.Client
 	bucket        string
-	path          string
 	metadataCache *util.LoadingCache[*model.BackupMetadata]
 }
 
@@ -70,7 +69,6 @@ func NewS3Context(storage *model.Storage) (*S3Context, error) {
 		ctx:    ctx,
 		client: client,
 		bucket: bucketName,
-		path:   removeLeadingSlash(parsed.Path),
 	}
 
 	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*model.BackupMetadata, error) {
@@ -118,7 +116,6 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupD
 
 // readFile reads and decodes the YAML content from the given filePath into v.
 func (s *S3Context) readFile(filename string, v any) error {
-	slog.Debug("Read file " + filename)
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(filename),
@@ -145,7 +142,6 @@ func (s *S3Context) readFile(filename string, v any) error {
 			"path", filename, "err", err, "content", string(content))
 		return err
 	}
-	slog.Debug("Read", "content", string(content), "unmrashall", v)
 	return nil
 }
 
