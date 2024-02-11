@@ -107,3 +107,8 @@ func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
 	slog.Debug("Delete folder", "path", pathToDelete)
 	return os.RemoveAll(pathToDelete)
 }
+
+func (o *OSDiskAccessor) wrapWithPrefix(path string) *string {
+	result := path
+	return &result
+}

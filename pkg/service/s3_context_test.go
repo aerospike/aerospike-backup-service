@@ -1,12 +1,10 @@
-//go:build !ci
-
 package service
 
 import (
-	"testing"
-
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/smithy-go/ptr"
+	"testing"
+	"time"
 )
 
 var contexts []S3Context
@@ -32,29 +30,28 @@ func init() {
 	}
 }
 
-func TestS3Context_CleanDir(t *testing.T) {
-	if contexts == nil {
-		t.Skip("contexts is nil")
-	}
+func TestReadWriteState(t *testing.T) {
 	for _, context := range contexts {
 		t.Run(context.path, func(t *testing.T) {
-			runCleanDirTest(t, context)
+			runReadWriteState(t, context)
 		})
 	}
 }
 
-func runCleanDirTest(t *testing.T, context S3Context) {
-	context.writeYaml(context.path+"/incremental/file.txt", "data")
-	context.writeYaml(context.path+"/incremental/file2.txt", "data")
-
-	if files, _ := context.listFiles(context.path + "/incremental"); len(files) != 2 {
-		t.Error("files not created")
+func runReadWriteState(t *testing.T, context S3Context) {
+	metadataWrite := model.BackupMetadata{
+		Namespace: "testNS",
+		Created:   time.Now(),
 	}
+	context.writeYaml("backup_path/"+metadataFile, metadataWrite)
+	metadataRead := model.BackupMetadata{}
 
-	context.CleanDir("incremental") // clean is public function, so "storage1" is appended inside
-
-	if files, _ := context.listFiles(context.path + "/incremental"); len(files) > 0 {
-		t.Error("files not deleted")
+	context.readFile("backup_path/"+metadataFile, &metadataRead)
+	if metadataWrite.Namespace != metadataRead.Namespace {
+		t.Errorf("namespace different, expected %s, got %s", metadataWrite.Namespace, metadataRead.Namespace)
+	}
+	if !metadataWrite.Created.Equal(metadataRead.Created) {
+		t.Errorf("created different, expected %v, got %v", metadataWrite.Created, metadataRead.Created)
 	}
 }
 
@@ -70,17 +67,17 @@ func TestS3Context_DeleteFile(t *testing.T) {
 }
 
 func runDeleteFileTest(t *testing.T, context S3Context) {
-	context.writeYaml(context.path+"/incremental/file.txt", "data")
-	context.writeYaml(context.path+"/incremental/file2.txt", "data")
+	context.writeYaml("incremental/file.txt", "data")
+	context.writeYaml("incremental/file2.txt", "data")
 
-	if files, _ := context.listFiles(context.path + "/incremental"); len(files) != 2 {
+	if files, _ := context.listFiles("incremental"); len(files) != 2 {
 		t.Error("files not created")
 	}
 
 	// DeleteFolder requires full path
-	context.DeleteFolder(s3Protocol + context.bucket + context.path + "/incremental")
+	context.DeleteFolder("incremental")
 
-	if files, _ := context.listFiles(context.path + "/incremental"); len(files) > 0 {
+	if files, _ := context.listFiles("incremental"); len(files) > 0 {
 		t.Error("files not deleted")
 	}
 }

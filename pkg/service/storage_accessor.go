@@ -15,4 +15,6 @@ type StorageAccessor interface {
 	DeleteFolder(path string) error
 	// CreateFolder creates a folder at the specified path.
 	CreateFolder(path string)
+
+	wrapWithPrefix(path string) *string
 }
