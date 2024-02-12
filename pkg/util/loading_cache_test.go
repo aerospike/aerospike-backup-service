@@ -28,7 +28,7 @@ func TestLoadingCache(t *testing.T) {
 }
 
 func TestLoadingCache_Error(t *testing.T) {
-	cache := NewLoadingCache(context.Background(), func(s string) (any, error) {
+	cache := NewLoadingCache(context.Background(), func(_ string) (any, error) {
 		return nil, errors.New("error")
 	})
 	_, err := cache.Get("1")
