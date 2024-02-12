@@ -11,7 +11,7 @@ CGO_CFLAGS=-I $(WORKSPACE)/modules/aerospike-tools-backup/modules/c-client/targe
 GOBUILD = CGO_CFLAGS="$(CGO_CFLAGS)" CGO_ENABLED=1 $(GO) build
 GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
-GO_VERSION = 1.21.4
+GO_VERSION = 1.22.0
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
 
 BINARY_NAME = aerospike-backup-service
