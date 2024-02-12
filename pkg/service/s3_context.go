@@ -70,7 +70,7 @@ func NewS3Context(storage *model.Storage) (*S3Context, error) {
 		ctx:    ctx,
 		client: client,
 		bucket: bucketName,
-		path:   parsed.Path,
+		path:   strings.TrimPrefix(parsed.Path, "/"),
 	}
 
 	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*model.BackupMetadata, error) {
@@ -88,8 +88,8 @@ func createConfig(ctx context.Context, storage *model.Storage) (aws.Config, erro
 	)
 }
 
-func (s *S3Context) readBackupState(path string, state *model.BackupState) error {
-	return s.readFile(path, state)
+func (s *S3Context) readBackupState(stateFilePath string, state *model.BackupState) error {
+	return s.readFile(stateFilePath, state)
 }
 
 func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupDetails, error) {
@@ -103,10 +103,9 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupD
 	if err != nil {
 		return model.BackupDetails{}, err
 	}
-	s3prefix := s3Protocol + s.bucket
 	return model.BackupDetails{
 		BackupMetadata: *metadata,
-		Key:            util.Ptr(s3prefix + "/" + path),
+		Key:            util.Ptr(s3Protocol + s.bucket + "/" + path),
 	}, nil
 }
 
@@ -114,15 +113,14 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupD
 func (s *S3Context) readFile(filePath string, v any) error {
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(removeLeadingSlash(filePath)),
+		Key:    aws.String(filePath),
 	})
 	if err != nil {
 		var opErr *smithy.OperationError
 		if errors.As(err, &opErr) &&
 			(strings.Contains(filePath, model.StateFileName) || strings.Contains(filePath, metadataFile)) &&
 			strings.Contains(opErr.Unwrap().Error(), "StatusCode: 404") {
-			slog.Debug("File does not exist", "path", filePath, "err", err)
-			return nil
+			return err
 		}
 		slog.Warn("Failed to read file", "path", filePath, "err", err)
 		return err
@@ -144,17 +142,14 @@ func (s *S3Context) readFile(filePath string, v any) error {
 
 // WriteYaml writes v into filepath using the YAML format.
 func (s *S3Context) writeYaml(filePath string, v any) error {
-	s3prefix := s3Protocol + s.bucket
-	filePath = strings.TrimPrefix(filePath, s3prefix)
-	backupState, err := yaml.Marshal(v)
+	yamlData, err := yaml.Marshal(v)
 	if err != nil {
 		return err
 	}
-	reader := bytes.NewReader(backupState)
 	_, err = s.client.PutObject(s.ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
-		Key:    aws.String(removeLeadingSlash(filePath)),
-		Body:   reader,
+		Key:    aws.String(filePath),
+		Body:   bytes.NewReader(yamlData),
 	})
 	if err != nil {
 		slog.Warn("Couldn't upload file", "path", filePath,
@@ -168,6 +163,7 @@ func (s *S3Context) writeYaml(filePath string, v any) error {
 // listFiles returns all files in the given s3 prefix path.
 func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 	var nextContinuationToken *string
+	slog.Debug("list files", "prefix", prefix)
 	result := make([]types.Object, 0)
 	for {
 		// By default, the action returns up to 1,000 key names.
@@ -188,9 +184,6 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 // lsDir returns all subfolders in the given s3 prefix path.
 func (s *S3Context) lsDir(prefix string) ([]string, error) {
 	var nextContinuationToken *string
-	if !strings.HasSuffix(prefix, "/") {
-		prefix += "/"
-	}
 	result := make([]string, 0)
 	for {
 		// By default, the action returns up to 1,000 key names.
@@ -203,10 +196,10 @@ func (s *S3Context) lsDir(prefix string) ([]string, error) {
 			if p.Prefix == nil {
 				continue
 			}
-			cleanPrefix := strings.TrimSuffix(*p.Prefix, "/")
+			subfolder := strings.TrimSuffix(*p.Prefix, "/")
 			// Check to avoid including the prefix itself in the results
-			if cleanPrefix != prefix {
-				result = append(result, *p.Prefix)
+			if subfolder != prefix {
+				result = append(result, subfolder)
 			}
 		}
 		nextContinuationToken = listOutput.NextContinuationToken
@@ -221,7 +214,7 @@ func (s *S3Context) lsDir(prefix string) ([]string, error) {
 func (s *S3Context) list(continuationToken *string, prefix, v string) (*s3.ListObjectsV2Output, error) {
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:            aws.String(s.bucket),
-		Prefix:            aws.String(removeLeadingSlash(prefix)),
+		Prefix:            aws.String(prefix + "/"),
 		Delimiter:         aws.String(v),
 		ContinuationToken: continuationToken,
 	})
@@ -237,19 +230,6 @@ func (s *S3Context) CreateFolder(_ string) {
 	// S3 doesn't require to create folders.
 }
 
-func removeLeadingSlash(s string) string {
-	if len(s) > 0 && s[0] == '/' {
-		return s[1:]
-	}
-	return s
-}
-
-// CleanDir cleans the directory with the given name.
-func (s *S3Context) CleanDir(name string) error {
-	path := s3Protocol + s.bucket + s.path + "/" + name
-	return s.DeleteFolder(path)
-}
-
 func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, error) {
 	metadata, err := s.metadataCache.Get(prefix)
 	if err != nil {
@@ -259,9 +239,8 @@ func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, 
 }
 
 func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
-	s3prefix := s3Protocol + s.bucket
-	metadataFilePath := filepath.Join(strings.TrimPrefix(path, s3prefix), metadataFile)
 	metadata := &model.BackupMetadata{}
+	metadataFilePath := filepath.Join(path, metadataFile)
 	err := s.readFile(metadataFilePath, metadata)
 	if err != nil {
 		return nil, err
@@ -270,24 +249,15 @@ func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 	return metadata, nil
 }
 
-func (s *S3Context) DeleteFolder(path string) error {
-	slog.Debug("Delete folder", "path", path)
-	parsed, err := url.Parse(path)
-	if err != nil {
-		return err
-	}
-	if parsed.Host != s.bucket {
-		return fmt.Errorf("wrong bucket name for context: %s, expected: %s",
-			parsed.Host, s.bucket)
-	}
-
+func (s *S3Context) DeleteFolder(folder string) error {
+	slog.Debug("Delete folder", "path", folder)
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
-		Prefix:    aws.String(removeLeadingSlash(parsed.Path)),
+		Prefix:    aws.String(folder),
 		Delimiter: aws.String(""),
 	})
 	if err != nil {
-		slog.Warn("Couldn't list files in directory", "path", path, "err", err)
+		slog.Warn("Couldn't list files in directory", "path", folder, "err", err)
 		return err
 	}
 
@@ -306,4 +276,9 @@ func (s *S3Context) DeleteFolder(path string) error {
 		}
 	}
 	return nil
+}
+
+func (s *S3Context) wrapWithPrefix(path string) *string {
+	result := s3Protocol + s.bucket + "/" + path + "/"
+	return &result
 }

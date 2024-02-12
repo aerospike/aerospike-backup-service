@@ -15,4 +15,6 @@ type StorageAccessor interface {
 	DeleteFolder(path string) error
 	// CreateFolder creates a folder at the specified path.
 	CreateFolder(path string)
+	// wrapWithPrefix combines path with bucket name. This is the opposite of url.parse, required for asbackup library.
+	wrapWithPrefix(path string) *string
 }

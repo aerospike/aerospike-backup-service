@@ -15,12 +15,12 @@ const tempFolder = "./tmp"
 func TestFullBackupRemoveFiles(t *testing.T) {
 	backend := &BackupBackend{
 		StorageAccessor:      &OSDiskAccessor{},
-		path:                 tempFolder + "/testStorage",
+		fullBackupsPath:      tempFolder + "/routine/backup",
 		removeFullBackup:     true,
 		fullBackupInProgress: &atomic.Bool{},
 	}
 
-	path := tempFolder + "/testStorage/backup/source-ns1/"
+	path := backend.fullBackupsPath + "/source-ns1/"
 	_ = os.MkdirAll(path, 0744)
 	_ = backend.writeBackupMetadata(path, model.BackupMetadata{Created: time.UnixMilli(10)})
 
@@ -37,13 +37,13 @@ func TestFullBackupRemoveFiles(t *testing.T) {
 func TestFullBackupKeepFiles(t *testing.T) {
 	backend := &BackupBackend{
 		StorageAccessor:      &OSDiskAccessor{},
-		path:                 tempFolder + "/testStorage",
+		fullBackupsPath:      tempFolder + "/routine/backup",
 		removeFullBackup:     false,
 		fullBackupInProgress: &atomic.Bool{},
 	}
 
 	for _, t := range []int64{10, 20, 30} {
-		path := tempFolder + "/testStorage/backup/source-ns1/" + strconv.FormatInt(t, 10) + "/"
+		path := backend.fullBackupsPath + "/" + strconv.FormatInt(t, 10) + "/source-ns1/"
 		_ = os.MkdirAll(path, 0744)
 		_ = backend.writeBackupMetadata(path, model.BackupMetadata{Created: time.UnixMilli(t)})
 	}

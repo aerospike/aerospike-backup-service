@@ -90,8 +90,8 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 }
 
 func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) {
-	backupFolder := getFullPath(h.storage, h.backupFullPolicy, namespace, now)
-	h.backend.CreateFolder(*backupFolder)
+	backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, now)
+	h.backend.CreateFolder(backupFolder)
 
 	var stats *shared.BackupStat
 	options := shared.BackupOptions{
@@ -99,8 +99,9 @@ func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) 
 	}
 	backupRunFunc := func() {
 		started := time.Now()
+		backupPath := h.backend.wrapWithPrefix(backupFolder)
 		stats = backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
-			h.storage, h.secretAgent, options, &namespace, backupFolder)
+			h.storage, h.secretAgent, options, &namespace, backupPath)
 		if stats == nil {
 			slog.Warn("Failed full backup", "name", h.routineName)
 			backupFailureCounter.Inc()
@@ -118,15 +119,15 @@ func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) 
 		return
 	}
 
-	if err := h.backend.writeBackupMetadata(*backupFolder, stats.ToModel(options, namespace)); err != nil {
+	if err := h.backend.writeBackupMetadata(backupFolder, stats.ToModel(options, namespace)); err != nil {
 		slog.Error("Could not write backup metadata", "name", h.routineName,
-			"folder", *backupFolder, "err", err)
+			"folder", backupFolder, "err", err)
 	}
 }
 
 func (h *BackupHandler) cleanIncrementalBackups() {
 	if h.backupIncrPolicy.RemoveFiles.RemoveIncrementalBackup() {
-		if err := h.backend.DeleteFolder(*h.storage.Path + "/" + model.IncrementalBackupDirectory); err != nil {
+		if err := h.backend.DeleteFolder(h.backend.incrementalBackupsPath); err != nil {
 			slog.Error("Could not clean incremental backups", "name", h.routineName, "err", err)
 		} else {
 			slog.Info("Cleaned incremental backups", "name", h.routineName)
@@ -159,8 +160,8 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 }
 
 func (h *BackupHandler) runIncrBackupForNamespace(now time.Time, namespace string) {
-	backupFolder := getIncrementalPath(h.storage, namespace, now)
-	h.backend.CreateFolder(*backupFolder)
+	backupFolder := getIncrementalPath(h.backend.incrementalBackupsPath, namespace, now)
+	h.backend.CreateFolder(backupFolder)
 
 	var stats *shared.BackupStat
 	options := shared.BackupOptions{
@@ -169,8 +170,9 @@ func (h *BackupHandler) runIncrBackupForNamespace(now time.Time, namespace strin
 	}
 	backupRunFunc := func() {
 		started := time.Now()
+		backupPath := h.backend.wrapWithPrefix(backupFolder)
 		stats = backupService.BackupRun(
-			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, &namespace, backupFolder)
+			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, &namespace, backupPath)
 		if stats == nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()
@@ -185,11 +187,11 @@ func (h *BackupHandler) runIncrBackupForNamespace(now time.Time, namespace strin
 	util.LogCaptured(out)
 	// delete if the backup file is empty
 	if h.isBackupEmpty(stats) {
-		h.deleteEmptyBackup(*backupFolder, h.routineName)
+		h.deleteEmptyBackup(backupFolder, h.routineName)
 	} else {
-		if err := h.backend.writeBackupMetadata(*backupFolder, stats.ToModel(options, namespace)); err != nil {
+		if err := h.backend.writeBackupMetadata(backupFolder, stats.ToModel(options, namespace)); err != nil {
 			slog.Error("Could not write backup metadata", "name", h.routineName,
-				"folder", *backupFolder, "err", err)
+				"folder", backupFolder, "err", err)
 		}
 	}
 }
@@ -203,10 +205,10 @@ func (h *BackupHandler) isBackupEmpty(stats *shared.BackupStat) bool {
 
 func (h *BackupHandler) deleteEmptyBackup(path string, routineName string) {
 	if err := h.backend.DeleteFolder(path); err != nil {
-		slog.Error("Failed to delete empty backup file", "name", routineName,
+		slog.Error("Failed to delete empty backup", "name", routineName,
 			"path", path, "err", err)
 	} else {
-		slog.Debug("Deleted empty backup file", "name", routineName, "path", path)
+		slog.Debug("Deleted empty backup", "name", routineName, "path", path)
 	}
 }
 
@@ -226,18 +228,18 @@ func (h *BackupHandler) writeState() {
 	}
 }
 
-func getFullPath(storage *model.Storage, backupPolicy *model.BackupPolicy, namespace string, now time.Time) *string {
+func getFullPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, namespace string, now time.Time) string {
 	if backupPolicy.RemoveFiles.RemoveFullBackup() {
-		path := fmt.Sprintf("%s/%s/%s/", *storage.Path, model.FullBackupDirectory, namespace)
-		return &path
+		path := fmt.Sprintf("%s/%s", fullBackupsPath, namespace)
+		return path
 	}
-	path := fmt.Sprintf("%s/%s/%s/%s/", *storage.Path, model.FullBackupDirectory, timeSuffix(now), namespace)
-	return &path
+	path := fmt.Sprintf("%s/%s/%s", fullBackupsPath, timeSuffix(now), namespace)
+	return path
 }
 
-func getIncrementalPath(storage *model.Storage, namespace string, now time.Time) *string {
-	path := fmt.Sprintf("%s/%s/%s/%s/", *storage.Path, model.IncrementalBackupDirectory, timeSuffix(now), namespace)
-	return &path
+func getIncrementalPath(incrBackupsPath string, namespace string, now time.Time) string {
+	path := fmt.Sprintf("%s/%s/%s", incrBackupsPath, timeSuffix(now), namespace)
+	return path
 }
 
 func timeSuffix(now time.Time) string {

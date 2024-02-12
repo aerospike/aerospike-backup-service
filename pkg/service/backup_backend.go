@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 
@@ -13,11 +14,12 @@ import (
 // for I/O operations.
 type BackupBackend struct {
 	StorageAccessor
-	path                 string
-	stateFilePath        string
-	removeFullBackup     bool
-	fullBackupInProgress *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
-	stateFileMutex       sync.RWMutex
+	fullBackupsPath        string
+	incrementalBackupsPath string
+	stateFilePath          string
+	removeFullBackup       bool
+	fullBackupInProgress   *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
+	stateFileMutex         sync.RWMutex
 }
 
 var _ BackupListReader = (*BackupBackend)(nil)
@@ -39,13 +41,14 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 	removeFullBackup := backupPolicy.RemoveFiles.RemoveFullBackup()
 	switch storage.Type {
 	case model.Local:
-		path := *storage.Path
+		routinePath := filepath.Join(*storage.Path, routineName)
 		return &BackupBackend{
-			StorageAccessor:      NewOSDiskAccessor(),
-			path:                 path,
-			stateFilePath:        path + "/" + model.StateFileName,
-			removeFullBackup:     removeFullBackup,
-			fullBackupInProgress: &atomic.Bool{},
+			StorageAccessor:        NewOSDiskAccessor(),
+			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
+			incrementalBackupsPath: filepath.Join(routinePath, model.IncrementalBackupDirectory),
+			stateFilePath:          filepath.Join(routinePath, model.StateFileName),
+			removeFullBackup:       removeFullBackup,
+			fullBackupInProgress:   &atomic.Bool{},
 		}
 	case model.S3:
 		s3Context, err := NewS3Context(storage)
@@ -53,12 +56,14 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			panic(err)
 		}
 
+		routinePath := filepath.Join(s3Context.path, routineName)
 		return &BackupBackend{
-			StorageAccessor:      s3Context,
-			path:                 s3Context.path,
-			stateFilePath:        s3Context.path + "/" + model.StateFileName,
-			removeFullBackup:     removeFullBackup,
-			fullBackupInProgress: &atomic.Bool{},
+			StorageAccessor:        s3Context,
+			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
+			incrementalBackupsPath: filepath.Join(routinePath, model.IncrementalBackupDirectory),
+			stateFilePath:          filepath.Join(routinePath, model.StateFileName),
+			removeFullBackup:       removeFullBackup,
+			fullBackupInProgress:   &atomic.Bool{},
 		}
 	default:
 		panic(fmt.Sprintf("Unsupported storage type: %v", storage.Type))
@@ -82,18 +87,21 @@ func (b *BackupBackend) writeState(state *model.BackupState) error {
 	return b.writeYaml(b.stateFilePath, state)
 }
 
+func (b *BackupBackend) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
+	return b.writeYaml(filepath.Join(path, metadataFile), metadata)
+}
+
 // FullBackupList returns a list of available full backups.
 func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
-	backupFolder := b.path + "/" + model.FullBackupDirectory + "/"
-	slog.Info("Get full backups", "backupFolder", backupFolder,
+	slog.Info("Get full backups", "backupFolder", b.fullBackupsPath,
 		"timebounds", timebounds, "removeFullBackup", b.removeFullBackup)
 
 	// when use RemoveFiles.RemoveFullBackup() = true, backup data is located in backupFolder folder itself
 	if b.removeFullBackup {
-		return b.detailsFromPaths(timebounds, false, removeLeadingSlash(backupFolder)), nil
+		return b.detailsFromPaths(timebounds, false, b.fullBackupsPath), nil
 	}
 
-	return b.fromSubfolders(timebounds, backupFolder)
+	return b.fromSubfolders(timebounds, b.fullBackupsPath)
 }
 
 func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache bool,
@@ -131,14 +139,9 @@ func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds,
 
 // IncrementalBackupList returns a list of available incremental backups.
 func (b *BackupBackend) IncrementalBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
-	backupFolder := b.path + "/" + model.IncrementalBackupDirectory
-	return b.fromSubfolders(timebounds, backupFolder)
+	return b.fromSubfolders(timebounds, b.incrementalBackupsPath)
 }
 
 func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {
 	return b.fullBackupInProgress
-}
-
-func (b *BackupBackend) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
-	return b.writeYaml(path+metadataFile, metadata)
 }
