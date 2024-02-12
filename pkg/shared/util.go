@@ -85,6 +85,5 @@ func setTLSOptions(tlsName **C.char, tlsConfig *C.as_config_tls, tls *model.TLS)
 		setCString(&tlsConfig.keyfile, tls.Keyfile)
 		setCString(&tlsConfig.keyfile_pw, tls.KeyfilePassword)
 		setCString(&tlsConfig.certfile, tls.Certfile)
-		setCString(&tlsConfig.cert_blacklist, tls.CertBlacklist)
 	}
 }

@@ -1,6 +1,10 @@
 package model
 
 import (
+	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -127,7 +131,111 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	if c.UseServicesAlternate != nil {
 		policy.UseServicesAlternate = *c.UseServicesAlternate
 	}
+	if c.TLS != nil {
+		policy.TlsConfig = initTLS(c.TLS, c.ClusterLabel)
+	}
 	return policy
+}
+
+//nolint:funlen,staticcheck
+func initTLS(t *TLS, clusterLabel *string) *tls.Config {
+	clusterName := "NA"
+	if clusterLabel != nil {
+		clusterName = *clusterLabel
+	}
+	errorLog := func(err error) {
+		slog.Error("Failed to initialize tls.Config", "cluster", clusterName, "err", err)
+	}
+
+	// Try to load system CA certs, otherwise just make an empty pool
+	serverPool, err := x509.SystemCertPool()
+	if serverPool == nil || err != nil {
+		serverPool = x509.NewCertPool()
+	}
+
+	if t.CAFile != nil && len(*t.CAFile) > 0 {
+		// Try to load system CA certs and add them to the system cert pool
+		caCert, err := readFromFile(*t.CAFile)
+		if err != nil {
+			errorLog(err)
+			return nil
+		}
+		serverPool.AppendCertsFromPEM(caCert)
+	}
+
+	var clientPool []tls.Certificate
+	if (t.Certfile != nil && len(*t.Certfile) > 0) ||
+		t.Keyfile != nil && len(*t.Keyfile) > 0 {
+
+		// Read cert file
+		certFileBytes, err := readFromFile(*t.Certfile)
+		if err != nil {
+			errorLog(err)
+			return nil
+		}
+
+		// Read key file
+		keyFileBytes, err := readFromFile(*t.Keyfile)
+		if err != nil {
+			errorLog(err)
+			return nil
+		}
+
+		// Decode PEM data
+		keyBlock, _ := pem.Decode(keyFileBytes)
+		certBlock, _ := pem.Decode(certFileBytes)
+
+		if keyBlock == nil || certBlock == nil {
+			errorLog(errors.New("failed to decode PEM data for key or certificate"))
+			return nil
+		}
+
+		// Check and Decrypt the the Key Block using passphrase
+		if t.KeyfilePassword != nil && x509.IsEncryptedPEMBlock(keyBlock) {
+			decryptedDERBytes, err := x509.DecryptPEMBlock(keyBlock, []byte(*t.KeyfilePassword))
+			if err != nil {
+				errorLog(err)
+				return nil
+			}
+
+			keyBlock.Bytes = decryptedDERBytes
+			keyBlock.Headers = nil
+		}
+
+		// Encode PEM data
+		keyPEM := pem.EncodeToMemory(keyBlock)
+		certPEM := pem.EncodeToMemory(certBlock)
+
+		if keyPEM == nil || certPEM == nil {
+			errorLog(fmt.Errorf("failed to encode PEM data for key or certificate"))
+		}
+
+		cert, err := tls.X509KeyPair(certPEM, keyPEM)
+		if err != nil {
+			errorLog(fmt.Errorf("failed to add client certificate and key to the pool: %s", err))
+		}
+
+		clientPool = append(clientPool, cert)
+		slog.Debug("Added TLS client certificate and key to the pool", "cluster", clusterName)
+	}
+	tlsConfig := &tls.Config{
+		Certificates:             clientPool,
+		RootCAs:                  serverPool,
+		InsecureSkipVerify:       false,
+		PreferServerCipherSuites: true,
+	}
+
+	return tlsConfig
+}
+
+func readFromFile(filePath string) ([]byte, error) {
+	dataBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read from file %s: %v", filePath, err)
+	}
+	data := bytes.TrimSuffix(dataBytes, []byte("\n"))
+
+	return data, nil
 }
 
 // ASClientHosts builds and returns a Host list from the AerospikeCluster configuration.
@@ -162,8 +270,6 @@ type TLS struct {
 	KeyfilePassword *string `yaml:"keyfile-password,omitempty" json:"keyfile-password,omitempty"`
 	// Path to the chain file for mutual authentication (if Aerospike Cluster supports it).
 	Certfile *string `yaml:"certfile,omitempty" json:"certfile,omitempty"`
-	// Path to a certificate blocklist file. The file should contain one line for each blocklisted certificate.
-	CertBlacklist *string `yaml:"cert-blacklist,omitempty" json:"cert-blacklist,omitempty"`
 }
 
 // Credentials represents authentication details to the Aerospike cluster.

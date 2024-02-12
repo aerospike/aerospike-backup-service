@@ -1853,10 +1853,6 @@ const docTemplate = `{
                     "description": "Path to a directory of trusted CA certificates.",
                     "type": "string"
                 },
-                "cert-blacklist": {
-                    "description": "Path to a certificate blocklist file. The file should contain one line for each blocklisted certificate.",
-                    "type": "string"
-                },
                 "certfile": {
                     "description": "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
                     "type": "string"
