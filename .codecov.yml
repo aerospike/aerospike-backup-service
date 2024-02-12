@@ -1,9 +1,0 @@
-ignore:
-  - "internal/**/*"
-  - "cmd/**/*"
-  - "docs/*"
-  - "**/pkg/model/*"
-  - "**/pkg/shared/*"
-  - "**/pkg/stdio/*"
-  - "**/pkg/service/backup_*.go"
-  - "**/pkg/service/configuration_manager_*.go"

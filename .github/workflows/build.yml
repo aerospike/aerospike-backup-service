@@ -24,7 +24,10 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Test
-      run: go test -race -tags=ci ./... -coverprofile=coverage.out -covermode=atomic
+      run: |
+        go test -race -tags=ci ./... -coverprofile=coverage.out -covermode=atomic
+        grep -v -E -f .covignore coverage.out > coverage.filtered.out
+        mv coverage.filtered.out coverage.out
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
