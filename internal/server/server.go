@@ -189,7 +189,7 @@ func (ws *HTTPServer) Start() {
 	mux.HandleFunc("/restore/timestamp", ws.restoreByTimeHandler)
 
 	// Restore job status endpoint
-	mux.HandleFunc("/restore/status", ws.restoreStatusHandler)
+	mux.HandleFunc("/restore/status/{jobId}", ws.restoreStatusHandler)
 
 	// Read available backups
 	mux.HandleFunc("/backups/full/{name}", ws.getFullBackupsForRoutine)

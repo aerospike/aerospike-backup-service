@@ -610,29 +610,6 @@ paths:
       summary: OpenAPI specification endpoint.
       tags:
       - System
-  /backup/schedule:
-    post:
-      operationId: scheduleFullBackup
-      parameters:
-      - description: Backup routine name
-        in: query
-        name: name
-        required: true
-        type: string
-      - description: Delay interval in milliseconds
-        in: query
-        name: delay
-        type: integer
-      responses:
-        "202":
-          description: Accepted
-        "404":
-          description: Not Found
-          schema:
-            type: string
-      summary: Schedule a full backup once per routine name.
-      tags:
-      - Backup
   /backups/full:
     get:
       operationId: getFullBackups
@@ -765,6 +742,29 @@ paths:
           schema:
             type: string
       summary: Get incremental backups for routine.
+      tags:
+      - Backup
+  /backups/schedule/{name}:
+    post:
+      operationId: scheduleFullBackup
+      parameters:
+      - description: Backup routine name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Delay interval in milliseconds
+        in: query
+        name: delay
+        type: integer
+      responses:
+        "202":
+          description: Accepted
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Schedule a full backup once per routine name.
       tags:
       - Backup
   /config:
@@ -1334,13 +1334,13 @@ paths:
       summary: Trigger an asynchronous incremental restore operation.
       tags:
       - Restore
-  /restore/status:
+  /restore/status/{jobId}:
     get:
       operationId: restoreStatus
       parameters:
       - description: Job ID to retrieve the status
         format: int64
-        in: query
+        in: path
         name: jobId
         required: true
         type: integer

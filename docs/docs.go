@@ -54,41 +54,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/backup/schedule": {
-            "post": {
-                "tags": [
-                    "Backup"
-                ],
-                "summary": "Schedule a full backup once per routine name.",
-                "operationId": "scheduleFullBackup",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Backup routine name",
-                        "name": "name",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Delay interval in milliseconds",
-                        "name": "delay",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "202": {
-                        "description": "Accepted"
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/backups/full": {
             "get": {
                 "produces": [
@@ -279,6 +244,41 @@ const docTemplate = `{
                                 "$ref": "#/definitions/model.BackupDetails"
                             }
                         }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/backups/schedule/{name}": {
+            "post": {
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Schedule a full backup once per routine name.",
+                "operationId": "scheduleFullBackup",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Delay interval in milliseconds",
+                        "name": "delay",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted"
                     },
                     "404": {
                         "description": "Not Found",
@@ -1141,7 +1141,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/restore/status": {
+        "/restore/status/{jobId}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -1157,7 +1157,7 @@ const docTemplate = `{
                         "format": "int64",
                         "description": "Job ID to retrieve the status",
                         "name": "jobId",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],
