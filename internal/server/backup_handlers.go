@@ -15,7 +15,7 @@ import (
 type BackupFunction func(timebounds *model.TimeBounds) ([]model.BackupDetails, error)
 
 // @Summary  Get available full backups.
-// @ID 	     getAvailableFullBackups
+// @ID 	     getFullBackups
 // @Tags     Backup
 // @Produce  json
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
@@ -24,12 +24,57 @@ type BackupFunction func(timebounds *model.TimeBounds) ([]model.BackupDetails, e
 // @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAllFullBackups(w http.ResponseWriter, r *http.Request) {
+	ws.getAllBackups(w, r, true)
+}
+
+// @Summary  Get available full backups for routine.
+// @ID 	     getFullBackupsForRoutine
+// @Tags     Backup
+// @Produce  json
+// @Param    name path string true "Backup routine name"
+// @Param    from query int false "Lower bound timestamp filter" format(int64)
+// @Param    to query int false "Upper bound timestamp filter" format(int64)
+// @Router   /backup/full/{name} [get]
+// @Success  200 {object} []model.BackupDetails "Full backups for routine"
+// @Failure  404 {string} string ""
+func (ws *HTTPServer) getFullBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
+	ws.readBackupsForRoutine(w, r, true)
+}
+
+// @Summary  Get available incremental backups.
+// @ID       getIncrementalBackups
+// @Tags     Backup
+// @Produce  json
+// @Param    from query int false "Lower bound timestamp filter" format(int64)
+// @Param    to query int false "Upper bound timestamp filter" format(int64)
+// @Router   /backup/incremental [get]
+// @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
+// @Failure  404 {string} string ""
+func (ws *HTTPServer) getAllIncrementalBackups(w http.ResponseWriter, r *http.Request) {
+	ws.getAllBackups(w, r, false)
+}
+
+// @Summary  Get available incremental backups.
+// @ID       getIncrementalBackupsForRoutine
+// @Tags     Backup
+// @Produce  json
+// @Param    name query string true "Backup routine name"
+// @Param    from query int false "Lower bound timestamp filter" format(int64)
+// @Param    to query int false "Upper bound timestamp filter" format(int64)
+// @Router   /backup/incremental/{name} [get]
+// @Success  200 {object} []model.BackupDetails "Incremental backups for routine"
+// @Failure  404 {string} string ""
+func (ws *HTTPServer) getIncrementalBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
+	ws.getAllBackups(w, r, false)
+}
+
+func (ws *HTTPServer) getAllBackups(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
 	timeBounds, err := model.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
 		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	backups, err := readBackups(ws.config.BackupRoutines, ws.backupBackends, timeBounds, true)
+	backups, err := readBackupsLogic(ws.config.BackupRoutines, ws.backupBackends, timeBounds, isFullBackup)
 	if err != nil {
 		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -48,17 +93,7 @@ func (ws *HTTPServer) getAllFullBackups(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// @Summary  Get available full backups for routine.
-// @ID 	     getFullBackupsForRoutine
-// @Tags     Backup
-// @Produce  json
-// @Param    name path string true "Backup routine name"
-// @Param    from query int false "Lower bound timestamp filter" format(int64)
-// @Param    to query int false "Upper bound timestamp filter" format(int64)
-// @Router   /backup/full/{name} [get]
-// @Success  200 {object} []model.BackupDetails "Full backups for routine"
-// @Failure  404 {string} string ""
-func (ws *HTTPServer) getFullBackups(w http.ResponseWriter, r *http.Request) {
+func (ws *HTTPServer) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
 	timeBounds, err := model.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
 		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusBadRequest)
@@ -74,7 +109,8 @@ func (ws *HTTPServer) getFullBackups(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "routine name not found: "+routine, http.StatusBadRequest)
 		return
 	}
-	backups, err := backend.FullBackupList(timeBounds)
+	backupListFunction := getBackupFunction(backend, isFullBackup)
+	backups, err := backupListFunction(timeBounds)
 	if err != nil {
 		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -92,14 +128,15 @@ func (ws *HTTPServer) getFullBackups(w http.ResponseWriter, r *http.Request) {
 		slog.Error("failed to write response", "err", err)
 	}
 }
-func readBackups(routines map[string]*model.BackupRoutine,
+
+func readBackupsLogic(routines map[string]*model.BackupRoutine,
 	backends map[string]service.BackupListReader,
 	timeBounds *model.TimeBounds,
 	isFullBackup bool) (map[string][]model.BackupDetails, error) {
 	result := make(map[string][]model.BackupDetails)
 	for routine := range routines {
-		backupList := getBackupFunction(backends[routine], isFullBackup)
-		list, err := backupList(timeBounds)
+		backupListFunction := getBackupFunction(backends[routine], isFullBackup)
+		list, err := backupListFunction(timeBounds)
 		if err != nil {
 			return nil, err
 		}
@@ -108,89 +145,11 @@ func readBackups(routines map[string]*model.BackupRoutine,
 	return result, nil
 }
 
-func readBackupsForRoutine(routine string,
-	backend service.BackupListReader,
-	timeBounds *model.TimeBounds,
-	isFullBackup bool) ([]model.BackupDetails, error) {
-
-	backupList := getBackupFunction(backend, isFullBackup)
-	return backupList(timeBounds)
-}
-
 func getBackupFunction(backend service.BackupListReader, fullBackup bool) BackupFunction {
 	if fullBackup {
 		return backend.FullBackupList
 	}
 	return backend.IncrementalBackupList
-}
-
-// @Summary  Get available incremental backups.
-// @ID       getAvailableIncrementalBackups
-// @Tags     Backup
-// @Produce  json
-// @Param    name query string false "Backup routine name"
-// @Param    from query int false "Lower bound timestamp filter" format(int64)
-// @Param    to query int false "Upper bound timestamp filter" format(int64)
-// @Router   /backup/incremental/list [get]
-// @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
-// @Failure  404 {string} string ""
-func (ws *HTTPServer) getAvailableIncrementalBackups(w http.ResponseWriter, r *http.Request) {
-	ws.getAvailableBackups(w, r, func(timeBounds *model.TimeBounds,
-		backend service.BackupListReader) ([]model.BackupDetails, error) {
-		return backend.IncrementalBackupList(timeBounds)
-	})
-}
-
-func (ws *HTTPServer) getAvailableBackups(
-	w http.ResponseWriter,
-	r *http.Request,
-	backupListFunc func(timebound *model.TimeBounds, backend service.BackupListReader) ([]model.BackupDetails, error),
-) {
-	routines := ws.requestedRoutines(r)
-	timeBounds, err := model.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
-	if err != nil {
-		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	routineToBackups := make(map[string][]model.BackupDetails)
-	for _, routine := range routines {
-		backend, exists := ws.backupBackends[routine]
-		if !exists {
-			http.Error(w, "routine does not exist for "+routine, http.StatusNotFound)
-			return
-		}
-		list, err := backupListFunc(timeBounds, backend)
-		if err != nil {
-			http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		routineToBackups[routine] = list
-	}
-	response, err := json.Marshal(routineToBackups)
-	if err != nil {
-		http.Error(w, "failed to parse backup list", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(response)
-	if err != nil {
-		slog.Error("failed to write response", "err", err)
-	}
-}
-
-// return an array containing single routine from request (if present), or all routines
-func (ws *HTTPServer) requestedRoutines(r *http.Request) []string {
-	queryRoutineName := r.PathValue("name")
-	if queryRoutineName != "" {
-		return []string{queryRoutineName}
-	}
-	routines := make([]string, 0, len(ws.config.BackupRoutines))
-	for name := range ws.config.BackupRoutines {
-		routines = append(routines, name)
-	}
-	return routines
 }
 
 // @Summary  Schedule a full backup once per routine name.

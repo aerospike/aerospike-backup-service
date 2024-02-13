@@ -106,7 +106,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/backup/incremental/list": {
+        "/backup/incremental": {
             "get": {
                 "produces": [
                     "application/json"
@@ -115,14 +115,8 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get available incremental backups.",
-                "operationId": "getAvailableIncrementalBackups",
+                "operationId": "getIncrementalBackups",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Backup routine name",
-                        "name": "name",
-                        "in": "query"
-                    },
                     {
                         "type": "integer",
                         "format": "int64",
@@ -148,6 +142,58 @@ const docTemplate = `{
                                 "items": {
                                     "$ref": "#/definitions/model.BackupDetails"
                                 }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/backup/incremental/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Get available incremental backups.",
+                "operationId": "getIncrementalBackupsForRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Lower bound timestamp filter",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Upper bound timestamp filter",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Incremental backups for routine",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.BackupDetails"
                             }
                         }
                     },
@@ -204,7 +250,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get available full backups.",
-                "operationId": "getAvailableFullBackups",
+                "operationId": "getFullBackups",
                 "parameters": [
                     {
                         "type": "integer",

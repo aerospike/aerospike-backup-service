@@ -191,12 +191,11 @@ func (ws *HTTPServer) Start() {
 	// Restore job status endpoint
 	mux.HandleFunc("/restore/status", ws.restoreStatusHandler)
 
-	// Returns a list of available full backups for the given policy name
-	mux.HandleFunc("/backups/full/{name}", ws.getFullBackups)
+	// Read available backups
+	mux.HandleFunc("/backups/full/{name}", ws.getFullBackupsForRoutine)
 	mux.HandleFunc("/backups/full", ws.getAllFullBackups)
-
-	// Returns a list of available incremental backups for the given policy name
-	mux.HandleFunc("/backup/incremental/list", ws.getAvailableIncrementalBackups)
+	mux.HandleFunc("/backup/incremental/{name}", ws.getIncrementalBackupsForRoutine)
+	mux.HandleFunc("/backup/incremental}", ws.getAllIncrementalBackups)
 
 	// Schedules a full backup operation
 	mux.HandleFunc("/backup/schedule", ws.scheduleFullBackup)
