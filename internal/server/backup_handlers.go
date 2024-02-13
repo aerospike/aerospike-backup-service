@@ -12,8 +12,6 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
-type BackupFunction func(timebounds *model.TimeBounds) ([]model.BackupDetails, error)
-
 // @Summary  Get available full backups.
 // @ID 	     getFullBackups
 // @Tags     Backup
@@ -145,7 +143,8 @@ func readBackupsLogic(routines map[string]*model.BackupRoutine,
 	return result, nil
 }
 
-func getBackupFunction(backend service.BackupListReader, fullBackup bool) BackupFunction {
+func getBackupFunction(backend service.BackupListReader,
+	fullBackup bool) func(*model.TimeBounds) ([]model.BackupDetails, error) {
 	if fullBackup {
 		return backend.FullBackupList
 	}
