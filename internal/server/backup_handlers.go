@@ -52,11 +52,11 @@ func (ws *HTTPServer) getAllIncrementalBackups(w http.ResponseWriter, r *http.Re
 	ws.getAllBackups(w, r, false)
 }
 
-// @Summary  Get available incremental backups.
+// @Summary  Get incremental backups for routine.
 // @ID       getIncrementalBackupsForRoutine
 // @Tags     Backup
 // @Produce  json
-// @Param    name query string true "Backup routine name"
+// @Param    name path string true "Backup routine name"
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /backups/incremental/{name} [get]

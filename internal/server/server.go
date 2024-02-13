@@ -195,7 +195,7 @@ func (ws *HTTPServer) Start() {
 	mux.HandleFunc("/backups/full/{name}", ws.getFullBackupsForRoutine)
 	mux.HandleFunc("/backups/full", ws.getAllFullBackups)
 	mux.HandleFunc("/backups/incremental/{name}", ws.getIncrementalBackupsForRoutine)
-	mux.HandleFunc("/backups/incremental}", ws.getAllIncrementalBackups)
+	mux.HandleFunc("/backups/incremental", ws.getAllIncrementalBackups)
 
 	// Schedules a full backup operation
 	mux.HandleFunc("/backup/schedule", ws.scheduleFullBackup)
