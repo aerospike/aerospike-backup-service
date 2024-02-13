@@ -245,14 +245,14 @@ const docTemplate = `{
                 "tags": [
                     "Backup"
                 ],
-                "summary": "Get available incremental backups.",
+                "summary": "Get incremental backups for routine.",
                 "operationId": "getIncrementalBackupsForRoutine",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "Backup routine name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {

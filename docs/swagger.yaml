@@ -737,7 +737,7 @@ paths:
       operationId: getIncrementalBackupsForRoutine
       parameters:
       - description: Backup routine name
-        in: query
+        in: path
         name: name
         required: true
         type: string
@@ -764,7 +764,7 @@ paths:
           description: Not Found
           schema:
             type: string
-      summary: Get available incremental backups.
+      summary: Get incremental backups for routine.
       tags:
       - Backup
   /config:
