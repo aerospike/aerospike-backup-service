@@ -32,7 +32,7 @@ func (ws *HTTPServer) getAllFullBackups(w http.ResponseWriter, r *http.Request) 
 // @Param    name path string true "Backup routine name"
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
-// @Router   /backup/full/{name} [get]
+// @Router   /backups/full/{name} [get]
 // @Success  200 {object} []model.BackupDetails "Full backups for routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getFullBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +45,7 @@ func (ws *HTTPServer) getFullBackupsForRoutine(w http.ResponseWriter, r *http.Re
 // @Produce  json
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
-// @Router   /backup/incremental [get]
+// @Router   /backups/incremental [get]
 // @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAllIncrementalBackups(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +59,7 @@ func (ws *HTTPServer) getAllIncrementalBackups(w http.ResponseWriter, r *http.Re
 // @Param    name query string true "Backup routine name"
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
-// @Router   /backup/incremental/{name} [get]
+// @Router   /backups/incremental/{name} [get]
 // @Success  200 {object} []model.BackupDetails "Incremental backups for routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getIncrementalBackupsForRoutine(w http.ResponseWriter, r *http.Request) {

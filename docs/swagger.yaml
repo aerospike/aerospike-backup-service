@@ -610,108 +610,6 @@ paths:
       summary: OpenAPI specification endpoint.
       tags:
       - System
-  /backup/full/{name}:
-    get:
-      operationId: getFullBackupsForRoutine
-      parameters:
-      - description: Backup routine name
-        in: path
-        name: name
-        required: true
-        type: string
-      - description: Lower bound timestamp filter
-        format: int64
-        in: query
-        name: from
-        type: integer
-      - description: Upper bound timestamp filter
-        format: int64
-        in: query
-        name: to
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Full backups for routine
-          schema:
-            items:
-              $ref: '#/definitions/model.BackupDetails'
-            type: array
-        "404":
-          description: Not Found
-          schema:
-            type: string
-      summary: Get available full backups for routine.
-      tags:
-      - Backup
-  /backup/incremental:
-    get:
-      operationId: getIncrementalBackups
-      parameters:
-      - description: Lower bound timestamp filter
-        format: int64
-        in: query
-        name: from
-        type: integer
-      - description: Upper bound timestamp filter
-        format: int64
-        in: query
-        name: to
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Incremental backups by routine
-          schema:
-            additionalProperties:
-              items:
-                $ref: '#/definitions/model.BackupDetails'
-              type: array
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            type: string
-      summary: Get available incremental backups.
-      tags:
-      - Backup
-  /backup/incremental/{name}:
-    get:
-      operationId: getIncrementalBackupsForRoutine
-      parameters:
-      - description: Backup routine name
-        in: query
-        name: name
-        required: true
-        type: string
-      - description: Lower bound timestamp filter
-        format: int64
-        in: query
-        name: from
-        type: integer
-      - description: Upper bound timestamp filter
-        format: int64
-        in: query
-        name: to
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Incremental backups for routine
-          schema:
-            items:
-              $ref: '#/definitions/model.BackupDetails'
-            type: array
-        "404":
-          description: Not Found
-          schema:
-            type: string
-      summary: Get available incremental backups.
-      tags:
-      - Backup
   /backup/schedule:
     post:
       operationId: scheduleFullBackup
@@ -765,6 +663,108 @@ paths:
           schema:
             type: string
       summary: Get available full backups.
+      tags:
+      - Backup
+  /backups/full/{name}:
+    get:
+      operationId: getFullBackupsForRoutine
+      parameters:
+      - description: Backup routine name
+        in: path
+        name: name
+        required: true
+        type: string
+      - description: Lower bound timestamp filter
+        format: int64
+        in: query
+        name: from
+        type: integer
+      - description: Upper bound timestamp filter
+        format: int64
+        in: query
+        name: to
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Full backups for routine
+          schema:
+            items:
+              $ref: '#/definitions/model.BackupDetails'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Get available full backups for routine.
+      tags:
+      - Backup
+  /backups/incremental:
+    get:
+      operationId: getIncrementalBackups
+      parameters:
+      - description: Lower bound timestamp filter
+        format: int64
+        in: query
+        name: from
+        type: integer
+      - description: Upper bound timestamp filter
+        format: int64
+        in: query
+        name: to
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Incremental backups by routine
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.BackupDetails'
+              type: array
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Get available incremental backups.
+      tags:
+      - Backup
+  /backups/incremental/{name}:
+    get:
+      operationId: getIncrementalBackupsForRoutine
+      parameters:
+      - description: Backup routine name
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Lower bound timestamp filter
+        format: int64
+        in: query
+        name: from
+        type: integer
+      - description: Upper bound timestamp filter
+        format: int64
+        in: query
+        name: to
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Incremental backups for routine
+          schema:
+            items:
+              $ref: '#/definitions/model.BackupDetails'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Get available incremental backups.
       tags:
       - Backup
   /config:
