@@ -54,7 +54,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/backup/full/list": {
+        "/backup/full/{name}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -62,14 +62,15 @@ const docTemplate = `{
                 "tags": [
                     "Backup"
                 ],
-                "summary": "Get available full backups.",
-                "operationId": "getAvailableFullBackups",
+                "summary": "Get available full backups for routine.",
+                "operationId": "getFullBackupsForRoutine",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "Backup routine name",
                         "name": "name",
-                        "in": "query"
+                        "in": "path",
+                        "required": true
                     },
                     {
                         "type": "integer",
@@ -88,14 +89,11 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Full backups by routine",
+                        "description": "Full backups for routine",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/model.BackupDetails"
-                                }
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.BackupDetails"
                             }
                         }
                     },
@@ -187,6 +185,54 @@ const docTemplate = `{
                 "responses": {
                     "202": {
                         "description": "Accepted"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/backups/full": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Get available full backups.",
+                "operationId": "getAvailableFullBackups",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Lower bound timestamp filter",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Upper bound timestamp filter",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Full backups by routine",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/definitions/model.BackupDetails"
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "description": "Not Found",
@@ -506,7 +552,7 @@ const docTemplate = `{
                     },
                     {
                         "description": "backup policy",
-                        "name": "storage",
+                        "name": "policy",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -545,7 +591,7 @@ const docTemplate = `{
                     },
                     {
                         "description": "backup policy",
-                        "name": "storage",
+                        "name": "policy",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -675,7 +721,7 @@ const docTemplate = `{
                     },
                     {
                         "description": "backup routine",
-                        "name": "storage",
+                        "name": "routine",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -714,7 +760,7 @@ const docTemplate = `{
                     },
                     {
                         "description": "backup routine",
-                        "name": "storage",
+                        "name": "routine",
                         "in": "body",
                         "required": true,
                         "schema": {

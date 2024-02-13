@@ -610,13 +610,14 @@ paths:
       summary: OpenAPI specification endpoint.
       tags:
       - System
-  /backup/full/list:
+  /backup/full/{name}:
     get:
-      operationId: getAvailableFullBackups
+      operationId: getFullBackupsForRoutine
       parameters:
       - description: Backup routine name
-        in: query
+        in: path
         name: name
+        required: true
         type: string
       - description: Lower bound timestamp filter
         format: int64
@@ -632,18 +633,16 @@ paths:
       - application/json
       responses:
         "200":
-          description: Full backups by routine
+          description: Full backups for routine
           schema:
-            additionalProperties:
-              items:
-                $ref: '#/definitions/model.BackupDetails'
-              type: array
-            type: object
+            items:
+              $ref: '#/definitions/model.BackupDetails'
+            type: array
         "404":
           description: Not Found
           schema:
             type: string
-      summary: Get available full backups.
+      summary: Get available full backups for routine.
       tags:
       - Backup
   /backup/incremental/list:
@@ -703,6 +702,38 @@ paths:
           schema:
             type: string
       summary: Schedule a full backup once per routine name.
+      tags:
+      - Backup
+  /backups/full:
+    get:
+      operationId: getAvailableFullBackups
+      parameters:
+      - description: Lower bound timestamp filter
+        format: int64
+        in: query
+        name: from
+        type: integer
+      - description: Upper bound timestamp filter
+        format: int64
+        in: query
+        name: to
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Full backups by routine
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/model.BackupDetails'
+              type: array
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            type: string
+      summary: Get available full backups.
       tags:
       - Backup
   /config:
@@ -928,7 +959,7 @@ paths:
         type: string
       - description: backup policy
         in: body
-        name: storage
+        name: policy
         required: true
         schema:
           $ref: '#/definitions/model.BackupPolicy'
@@ -954,7 +985,7 @@ paths:
         type: string
       - description: backup policy
         in: body
-        name: storage
+        name: policy
         required: true
         schema:
           $ref: '#/definitions/model.BackupPolicy'
@@ -1040,7 +1071,7 @@ paths:
         type: string
       - description: backup routine
         in: body
-        name: storage
+        name: routine
         required: true
         schema:
           $ref: '#/definitions/model.BackupRoutine'
@@ -1066,7 +1097,7 @@ paths:
         type: string
       - description: backup routine
         in: body
-        name: storage
+        name: routine
         required: true
         schema:
           $ref: '#/definitions/model.BackupRoutine'
