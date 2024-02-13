@@ -22,7 +22,7 @@ import (
 // @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAllFullBackups(w http.ResponseWriter, r *http.Request) {
-	ws.getAllBackups(w, r, true)
+	ws.readAllBackups(w, r, true)
 }
 
 // @Summary  Get available full backups for routine.
@@ -49,7 +49,7 @@ func (ws *HTTPServer) getFullBackupsForRoutine(w http.ResponseWriter, r *http.Re
 // @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getAllIncrementalBackups(w http.ResponseWriter, r *http.Request) {
-	ws.getAllBackups(w, r, false)
+	ws.readAllBackups(w, r, false)
 }
 
 // @Summary  Get incremental backups for routine.
@@ -63,10 +63,10 @@ func (ws *HTTPServer) getAllIncrementalBackups(w http.ResponseWriter, r *http.Re
 // @Success  200 {object} []model.BackupDetails "Incremental backups for routine"
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) getIncrementalBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
-	ws.getAllBackups(w, r, false)
+	ws.readBackupsForRoutine(w, r, false)
 }
 
-func (ws *HTTPServer) getAllBackups(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
+func (ws *HTTPServer) readAllBackups(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
 	timeBounds, err := model.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
 		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusBadRequest)
@@ -107,7 +107,7 @@ func (ws *HTTPServer) readBackupsForRoutine(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "routine name not found: "+routine, http.StatusBadRequest)
 		return
 	}
-	backupListFunction := getBackupFunction(backend, isFullBackup)
+	backupListFunction := backupsReadFunction(backend, isFullBackup)
 	backups, err := backupListFunction(timeBounds)
 	if err != nil {
 		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
@@ -133,7 +133,7 @@ func readBackupsLogic(routines map[string]*model.BackupRoutine,
 	isFullBackup bool) (map[string][]model.BackupDetails, error) {
 	result := make(map[string][]model.BackupDetails)
 	for routine := range routines {
-		backupListFunction := getBackupFunction(backends[routine], isFullBackup)
+		backupListFunction := backupsReadFunction(backends[routine], isFullBackup)
 		list, err := backupListFunction(timeBounds)
 		if err != nil {
 			return nil, err
@@ -143,8 +143,8 @@ func readBackupsLogic(routines map[string]*model.BackupRoutine,
 	return result, nil
 }
 
-func getBackupFunction(backend service.BackupListReader,
-	fullBackup bool) func(*model.TimeBounds) ([]model.BackupDetails, error) {
+func backupsReadFunction(
+	backend service.BackupListReader, fullBackup bool) func(*model.TimeBounds) ([]model.BackupDetails, error) {
 	if fullBackup {
 		return backend.FullBackupList
 	}
