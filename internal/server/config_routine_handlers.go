@@ -17,7 +17,7 @@ import (
 // @Router      /config/routines/{name} [post]
 // @Accept      json
 // @Param       name path string true "routine name"
-// @Param       storage body model.BackupRoutine true "backup routine"
+// @Param       routine body model.BackupRoutine true "backup routine"
 // @Success     201
 // @Failure     400 {string} string
 //
@@ -113,7 +113,7 @@ func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
 // @Router       /config/routines/{name} [put]
 // @Accept       json
 // @Param        name path string true "routine name"
-// @Param        storage body model.BackupRoutine true "backup routine"
+// @Param        routine body model.BackupRoutine true "backup routine"
 // @Success      200
 // @Failure      400 {string} string
 //
