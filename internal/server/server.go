@@ -198,7 +198,7 @@ func (ws *HTTPServer) Start() {
 	mux.HandleFunc("/backups/incremental", ws.getAllIncrementalBackups)
 
 	// Schedules a full backup operation
-	mux.HandleFunc("/backup/schedule", ws.scheduleFullBackup)
+	mux.HandleFunc("/backups/schedule/{name}", ws.scheduleFullBackup)
 
 	ws.server.Handler = ws.rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()

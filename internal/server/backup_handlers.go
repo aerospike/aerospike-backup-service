@@ -154,13 +154,17 @@ func backupsReadFunction(
 // @Summary  Schedule a full backup once per routine name.
 // @ID       scheduleFullBackup
 // @Tags     Backup
-// @Param    name query string true "Backup routine name"
+// @Param    name path string true "Backup routine name"
 // @Param    delay query int false "Delay interval in milliseconds"
-// @Router   /backup/schedule [post]
+// @Router   /backups/schedule/{name} [post]
 // @Success  202
 // @Failure  404 {string} string ""
 func (ws *HTTPServer) scheduleFullBackup(w http.ResponseWriter, r *http.Request) {
-	routineName := r.URL.Query().Get("name")
+	routineName := r.PathValue("name")
+	if routineName == "" {
+		http.Error(w, "routine name required", http.StatusBadRequest)
+		return
+	}
 	delayParameter := r.URL.Query().Get("delay")
 	var delayMillis int
 	if delayParameter != "" {
