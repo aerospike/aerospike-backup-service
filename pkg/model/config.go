@@ -85,6 +85,10 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	if err := c.ServiceConfig.HTTPServer.Validate(); err != nil {
+		return err
+	}
+
 	if err := c.ServiceConfig.Logger.Validate(); err != nil { //nolint:revive
 		return err
 	}

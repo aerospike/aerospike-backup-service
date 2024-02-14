@@ -54,7 +54,49 @@ const docTemplate = `{
                 }
             }
         },
-        "/backups/full": {
+        "/health": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Health endpoint.",
+                "operationId": "health",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/metrics": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Prometheus metrics endpoint.",
+                "operationId": "metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/ready": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Readiness endpoint.",
+                "operationId": "ready",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/v1/backups/full": {
             "get": {
                 "produces": [
                     "application/json"
@@ -102,7 +144,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/backups/full/{name}": {
+        "/v1/backups/full/{name}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -154,7 +196,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/backups/incremental": {
+        "/v1/backups/incremental": {
             "get": {
                 "produces": [
                     "application/json"
@@ -202,7 +244,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/backups/incremental/{name}": {
+        "/v1/backups/incremental/{name}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -254,7 +296,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/backups/schedule/{name}": {
+        "/v1/backups/schedule/{name}": {
             "post": {
                 "tags": [
                     "Backup"
@@ -289,7 +331,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config": {
+        "/v1/config": {
             "get": {
                 "produces": [
                     "application/json"
@@ -347,7 +389,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/clusters": {
+        "/v1/config/clusters": {
             "get": {
                 "produces": [
                     "application/json"
@@ -376,7 +418,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/clusters/{name}": {
+        "/v1/config/clusters/{name}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -516,7 +558,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/policies": {
+        "/v1/config/policies": {
             "get": {
                 "produces": [
                     "application/json"
@@ -545,7 +587,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/policies/{name}": {
+        "/v1/config/policies/{name}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -685,7 +727,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/routines": {
+        "/v1/config/routines": {
             "get": {
                 "produces": [
                     "application/json"
@@ -714,7 +756,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/routines/{name}": {
+        "/v1/config/routines/{name}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -854,7 +896,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/storage": {
+        "/v1/config/storage": {
             "get": {
                 "produces": [
                     "application/json"
@@ -883,7 +925,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/storage/{name}": {
+        "/v1/config/storage/{name}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -1023,49 +1065,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/health": {
-            "get": {
-                "tags": [
-                    "System"
-                ],
-                "summary": "Health endpoint.",
-                "operationId": "health",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
-        "/metrics": {
-            "get": {
-                "tags": [
-                    "System"
-                ],
-                "summary": "Prometheus metrics endpoint.",
-                "operationId": "metrics",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
-        "/ready": {
-            "get": {
-                "tags": [
-                    "System"
-                ],
-                "summary": "Readiness endpoint.",
-                "operationId": "ready",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
-        "/restore/full": {
+        "/v1/restore/full": {
             "post": {
                 "description": "Specify the directory parameter for the full backup restore.",
                 "consumes": [
@@ -1103,7 +1103,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/restore/incremental": {
+        "/v1/restore/incremental": {
             "post": {
                 "description": "Specify the file parameter to restore from an incremental backup file.",
                 "consumes": [
@@ -1141,7 +1141,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/restore/status/{jobId}": {
+        "/v1/restore/status/{jobId}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -1177,7 +1177,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/restore/timestamp": {
+        "/v1/restore/timestamp": {
             "post": {
                 "description": "Restores backup from given point in time",
                 "consumes": [
@@ -1326,7 +1326,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "file-limit": {
-                    "description": "File size limit (in MB) for --directory. If an .asb backup file crosses this size threshold,\na new backup file will be created.",
+                    "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created.",
                     "type": "integer"
                 },
                 "filter-exp": {
@@ -1585,6 +1585,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "address": {
+                    "description": "The address to listen on.",
                     "type": "string",
                     "default": "0.0.0.0"
                 },
@@ -1594,11 +1595,17 @@ const docTemplate = `{
                     "default": "/"
                 },
                 "port": {
+                    "description": "The port to listen on.",
                     "type": "integer",
                     "default": 8080
                 },
                 "rate": {
-                    "$ref": "#/definitions/model.RateLimiterConfig"
+                    "description": "HTTP rate limiter configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.RateLimiterConfig"
+                        }
+                    ]
                 }
             }
         },
@@ -1661,14 +1668,17 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "size": {
+                    "description": "Rate limiter token bucket size (bursts threshold).",
                     "type": "integer",
                     "default": 1024
                 },
                 "tps": {
+                    "description": "Rate limiter tokens per second threshold.",
                     "type": "integer",
                     "default": 1024
                 },
                 "white-list": {
+                    "description": "The list of ips to whitelist in rate limiting.",
                     "type": "array",
                     "items": {
                         "type": "string"
