@@ -60,7 +60,7 @@ func run() int {
 		ctx := systemCtx()
 		// set default loggers
 		loggerConfig := config.ServiceConfig.Logger
-		slog.SetDefault(slog.New(util.LogHandler(loggerConfig.Level, loggerConfig.Format)))
+		slog.SetDefault(slog.New(util.LogHandler(loggerConfig)))
 		logger.SetDefault(util.NewQuartzLogger(ctx))
 		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// schedule all configured backups
@@ -70,7 +70,7 @@ func run() int {
 			return err
 		}
 		// run HTTP server
-		err = runHTTPServer(ctx, backendsToReaders(backends), config, scheduler)
+		err = runHTTPServer(ctx, service.BackendsToReaders(backends), config, scheduler)
 		// shutdown shared resources
 		shared.Shutdown()
 		// stop the scheduler
@@ -143,12 +143,4 @@ func runHTTPServer(ctx context.Context, backendMap map[string]service.BackupList
 func main() {
 	// start the application
 	os.Exit(run())
-}
-
-func backendsToReaders(backends map[string]*service.BackupBackend) map[string]service.BackupListReader {
-	result := make(map[string]service.BackupListReader)
-	for key, value := range backends {
-		result[key] = value
-	}
-	return result
 }

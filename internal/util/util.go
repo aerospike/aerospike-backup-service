@@ -8,27 +8,57 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aerospike/backup/pkg/model"
 	pkgutil "github.com/aerospike/backup/pkg/util"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // LogHandler returns the application log handler with the
 // configured level.
-func LogHandler(level, format string) slog.Handler {
+func LogHandler(config *model.LoggerConfig) slog.Handler {
 	addSource := true
-	switch strings.ToUpper(format) {
+	writer := logWriter(config)
+	switch strings.ToUpper(config.Format) {
 	case "PLAIN":
-		return slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level:     logLevel(level),
+		return slog.NewTextHandler(writer, &slog.HandlerOptions{
+			Level:     logLevel(config.Level),
 			AddSource: addSource,
 		})
 	case "JSON":
-		return slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level:     logLevel(level),
+		return slog.NewJSONHandler(writer, &slog.HandlerOptions{
+			Level:     logLevel(config.Level),
 			AddSource: addSource,
 		})
 	default:
-		panic(fmt.Sprintf("unsupported log format: %s", format))
+		panic(fmt.Sprintf("unsupported log format: %s", config.Format))
 	}
+}
+
+func logWriter(config *model.LoggerConfig) io.Writer {
+	if config.FileWriter != nil {
+		fileWriter := &lumberjack.Logger{
+			Filename:   config.FileWriter.Filename,
+			MaxSize:    config.FileWriter.MaxSize,
+			MaxBackups: config.FileWriter.MaxBackups,
+			MaxAge:     config.FileWriter.MaxAge,
+			Compress:   config.FileWriter.Compress,
+		}
+		if config.StdoutWriter {
+			return io.MultiWriter(fileWriter, os.Stdout)
+		}
+		return fileWriter
+	} else if config.StdoutWriter {
+		return os.Stdout
+	}
+	return &ignoreWriter{}
+}
+
+type ignoreWriter struct{}
+
+var _ io.Writer = (*ignoreWriter)(nil)
+
+func (*ignoreWriter) Write(_ []byte) (n int, err error) {
+	return 0, nil
 }
 
 // logLevel returns a level for the given string name.
