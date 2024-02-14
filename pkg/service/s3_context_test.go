@@ -84,3 +84,46 @@ func runDeleteFileTest(t *testing.T, context S3Context) {
 		t.Error("files not deleted")
 	}
 }
+
+func TestS3Context_DeleteFolder(t *testing.T) {
+	if contexts == nil {
+		t.Skip("contexts is nil")
+	}
+	for _, context := range contexts {
+		t.Run(context.path, func(t *testing.T) {
+			runDeleteFolderTest(t, context)
+		})
+	}
+}
+
+func runDeleteFolderTest(t *testing.T, context S3Context) {
+	parent := "storage1/minioIncremental"
+	folder1 := parent + "/source-ns1"
+	folder2 := parent + "/source-ns16"
+	context.writeYaml(folder1+"/file1.txt", "data")
+	context.writeYaml(folder2+"/file2.txt", "data")
+
+	err := context.DeleteFolder(folder1)
+	if err != nil {
+		t.Error("Error deleting", err)
+	}
+
+	listFiles1, _ := context.listFiles(folder1)
+	if len(listFiles1) != 0 {
+		t.Error("file 1 not deleted")
+	}
+	listFiles2, _ := context.listFiles(folder2)
+	if len(listFiles2) != 1 {
+		t.Error("file 2 was deleted")
+	}
+
+	err = context.DeleteFolder(parent)
+	if err != nil {
+		t.Error("Error deleting", err)
+	}
+
+	listFiles3, _ := context.listFiles(folder2)
+	if len(listFiles3) != 0 {
+		t.Error("file 2 not deleted")
+	}
+}
