@@ -214,7 +214,7 @@ func (s *S3Context) lsDir(prefix string) ([]string, error) {
 func (s *S3Context) list(continuationToken *string, prefix, v string) (*s3.ListObjectsV2Output, error) {
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:            aws.String(s.bucket),
-		Prefix:            aws.String(prefix + "/"),
+		Prefix:            aws.String(strings.TrimSuffix(prefix, "/") + "/"),
 		Delimiter:         aws.String(v),
 		ContinuationToken: continuationToken,
 	})
