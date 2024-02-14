@@ -252,9 +252,8 @@ func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 func (s *S3Context) DeleteFolder(folder string) error {
 	slog.Debug("Delete folder", "path", folder)
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
-		Bucket:    aws.String(s.bucket),
-		Prefix:    aws.String(folder + "/"),
-		Delimiter: aws.String("/"),
+		Bucket: aws.String(s.bucket),
+		Prefix: aws.String(strings.TrimSuffix(folder, "/") + "/"),
 	})
 	if err != nil {
 		slog.Warn("Couldn't list files in directory", "path", folder, "err", err)
