@@ -54,7 +54,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/backup/full/list": {
+        "/backups/full": {
             "get": {
                 "produces": [
                     "application/json"
@@ -63,14 +63,8 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get available full backups.",
-                "operationId": "getAvailableFullBackups",
+                "operationId": "getFullBackups",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Backup routine name",
-                        "name": "name",
-                        "in": "query"
-                    },
                     {
                         "type": "integer",
                         "format": "int64",
@@ -108,7 +102,59 @@ const docTemplate = `{
                 }
             }
         },
-        "/backup/incremental/list": {
+        "/backups/full/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Get available full backups for routine.",
+                "operationId": "getFullBackupsForRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Lower bound timestamp filter",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Upper bound timestamp filter",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Full backups for routine",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.BackupDetails"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/backups/incremental": {
             "get": {
                 "produces": [
                     "application/json"
@@ -117,14 +163,8 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get available incremental backups.",
-                "operationId": "getAvailableIncrementalBackups",
+                "operationId": "getIncrementalBackups",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Backup routine name",
-                        "name": "name",
-                        "in": "query"
-                    },
                     {
                         "type": "integer",
                         "format": "int64",
@@ -162,7 +202,59 @@ const docTemplate = `{
                 }
             }
         },
-        "/backup/schedule": {
+        "/backups/incremental/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Get incremental backups for routine.",
+                "operationId": "getIncrementalBackupsForRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Lower bound timestamp filter",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Upper bound timestamp filter",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Incremental backups for routine",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.BackupDetails"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/backups/schedule/{name}": {
             "post": {
                 "tags": [
                     "Backup"
@@ -174,7 +266,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Backup routine name",
                         "name": "name",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     },
                     {
@@ -506,7 +598,7 @@ const docTemplate = `{
                     },
                     {
                         "description": "backup policy",
-                        "name": "storage",
+                        "name": "policy",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -545,7 +637,7 @@ const docTemplate = `{
                     },
                     {
                         "description": "backup policy",
-                        "name": "storage",
+                        "name": "policy",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -675,7 +767,7 @@ const docTemplate = `{
                     },
                     {
                         "description": "backup routine",
-                        "name": "storage",
+                        "name": "routine",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -714,7 +806,7 @@ const docTemplate = `{
                     },
                     {
                         "description": "backup routine",
-                        "name": "storage",
+                        "name": "routine",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -1049,7 +1141,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/restore/status": {
+        "/restore/status/{jobId}": {
             "get": {
                 "produces": [
                     "application/json"
@@ -1065,7 +1157,7 @@ const docTemplate = `{
                         "format": "int64",
                         "description": "Job ID to retrieve the status",
                         "name": "jobId",
-                        "in": "query",
+                        "in": "path",
                         "required": true
                     }
                 ],

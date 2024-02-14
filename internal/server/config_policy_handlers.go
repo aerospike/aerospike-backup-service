@@ -17,7 +17,7 @@ import (
 // @Router      /config/policies/{name} [post]
 // @Accept      json
 // @Param       name path string true "policy name"
-// @Param       storage body model.BackupPolicy true "backup policy"
+// @Param       policy body model.BackupPolicy true "backup policy"
 // @Success     201
 // @Failure     400 {string} string
 //
@@ -113,7 +113,7 @@ func (ws *HTTPServer) readPolicy(w http.ResponseWriter, r *http.Request) {
 // @Router      /config/policies/{name} [put]
 // @Accept      json
 // @Param       name path string true "policy name"
-// @Param       storage body model.BackupPolicy true "backup policy"
+// @Param       policy body model.BackupPolicy true "backup policy"
 // @Success     200
 // @Failure     400 {string} string
 //

@@ -78,7 +78,7 @@ type HTTPServer struct {
 	whiteList      *ipWhiteList
 	scheduler      quartz.Scheduler
 	restoreService service.RestoreService
-	backupBackends map[string]service.BackupListReader
+	backupBackends map[string]service.BackupListReader // key is routine name
 }
 
 // Annotations to generate OpenAPI description (https://github.com/swaggo/swag)
@@ -189,16 +189,16 @@ func (ws *HTTPServer) Start() {
 	mux.HandleFunc("/restore/timestamp", ws.restoreByTimeHandler)
 
 	// Restore job status endpoint
-	mux.HandleFunc("/restore/status", ws.restoreStatusHandler)
+	mux.HandleFunc("/restore/status/{jobId}", ws.restoreStatusHandler)
 
-	// Returns a list of available full backups for the given policy name
-	mux.HandleFunc("/backup/full/list", ws.getAvailableFullBackups)
-
-	// Returns a list of available incremental backups for the given policy name
-	mux.HandleFunc("/backup/incremental/list", ws.getAvailableIncrementalBackups)
+	// Read available backups
+	mux.HandleFunc("/backups/full/{name}", ws.getFullBackupsForRoutine)
+	mux.HandleFunc("/backups/full", ws.getAllFullBackups)
+	mux.HandleFunc("/backups/incremental/{name}", ws.getIncrementalBackupsForRoutine)
+	mux.HandleFunc("/backups/incremental", ws.getAllIncrementalBackups)
 
 	// Schedules a full backup operation
-	mux.HandleFunc("/backup/schedule", ws.scheduleFullBackup)
+	mux.HandleFunc("/backups/schedule/{name}", ws.scheduleFullBackup)
 
 	ws.server.Handler = ws.rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()
