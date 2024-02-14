@@ -1458,6 +1458,36 @@ const docTemplate = `{
                 }
             }
         },
+        "model.FileLoggerConfig": {
+            "description": "FileLoggerConfig represents the configuration for the file logger writer.",
+            "type": "object",
+            "properties": {
+                "compress": {
+                    "description": "Compress determines if the rotated log files should be compressed\nusing gzip. The default is not to perform compression.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "filename": {
+                    "description": "Filename is the file to write logs to.",
+                    "type": "string"
+                },
+                "maxage": {
+                    "description": "MaxAge is the maximum number of days to retain old log files based on the\ntimestamp encoded in their filename. The default is not to remove old log files\nbased on age.",
+                    "type": "integer",
+                    "default": 0
+                },
+                "maxbackups": {
+                    "description": "MaxBackups is the maximum number of old log files to retain. The default\nis to retain all old log files.",
+                    "type": "integer",
+                    "default": 0
+                },
+                "maxsize": {
+                    "description": "MaxSize is the maximum size in megabytes of the log file before it gets rotated.",
+                    "type": "integer",
+                    "default": 100
+                }
+            }
+        },
         "model.HTTPServerConfig": {
             "description": "HTTPServerConfig represents the service's HTTP server configuration.",
             "type": "object",
@@ -1465,6 +1495,11 @@ const docTemplate = `{
                 "address": {
                     "type": "string",
                     "default": "0.0.0.0"
+                },
+                "context-path": {
+                    "description": "ContextPath customizes path for the API endpoints.",
+                    "type": "string",
+                    "default": "/"
                 },
                 "port": {
                     "type": "integer",
@@ -1492,6 +1527,14 @@ const docTemplate = `{
             "description": "LoggerConfig represents the backup service logger configuration.",
             "type": "object",
             "properties": {
+                "file-writer": {
+                    "description": "File writer logging configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.FileLoggerConfig"
+                        }
+                    ]
+                },
                 "format": {
                     "description": "Format is the logger format (PLAIN, JSON).",
                     "type": "string",
@@ -1501,6 +1544,11 @@ const docTemplate = `{
                     "description": "Level is the logger level.",
                     "type": "string",
                     "default": "DEBUG"
+                },
+                "stdout-writer": {
+                    "description": "Whether to enable logging to the standard output.",
+                    "type": "boolean",
+                    "default": true
                 }
             }
         },
