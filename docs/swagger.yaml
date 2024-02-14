@@ -243,11 +243,47 @@ definitions:
         description: The username for the cluster authentication.
         type: string
     type: object
+  model.FileLoggerConfig:
+    description: FileLoggerConfig represents the configuration for the file logger
+      writer.
+    properties:
+      compress:
+        default: false
+        description: |-
+          Compress determines if the rotated log files should be compressed
+          using gzip. The default is not to perform compression.
+        type: boolean
+      filename:
+        description: Filename is the file to write logs to.
+        type: string
+      maxage:
+        default: 0
+        description: |-
+          MaxAge is the maximum number of days to retain old log files based on the
+          timestamp encoded in their filename. The default is not to remove old log files
+          based on age.
+        type: integer
+      maxbackups:
+        default: 0
+        description: |-
+          MaxBackups is the maximum number of old log files to retain. The default
+          is to retain all old log files.
+        type: integer
+      maxsize:
+        default: 100
+        description: MaxSize is the maximum size in megabytes of the log file before
+          it gets rotated.
+        type: integer
+    type: object
   model.HTTPServerConfig:
     description: HTTPServerConfig represents the service's HTTP server configuration.
     properties:
       address:
         default: 0.0.0.0
+        type: string
+      context-path:
+        default: /
+        description: ContextPath customizes path for the API endpoints.
         type: string
       port:
         default: 8080
@@ -268,6 +304,10 @@ definitions:
   model.LoggerConfig:
     description: LoggerConfig represents the backup service logger configuration.
     properties:
+      file-writer:
+        allOf:
+        - $ref: '#/definitions/model.FileLoggerConfig'
+        description: File writer logging configuration.
       format:
         default: PLAIN
         description: Format is the logger format (PLAIN, JSON).
@@ -276,6 +316,10 @@ definitions:
         default: DEBUG
         description: Level is the logger level.
         type: string
+      stdout-writer:
+        default: true
+        description: Whether to enable logging to the standard output.
+        type: boolean
     type: object
   model.Node:
     description: Node represents the Aerospike node details.

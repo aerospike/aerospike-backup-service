@@ -14,3 +14,12 @@ type BackupListReader interface {
 	// where from is inclusive and to is exclusive.
 	IncrementalBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error)
 }
+
+// BackendsToReaders converts a map of *BackupBackend to a map of BackupListReader.
+func BackendsToReaders(backends map[string]*BackupBackend) map[string]BackupListReader {
+	result := make(map[string]BackupListReader, len(backends))
+	for key, value := range backends {
+		result[key] = value
+	}
+	return result
+}

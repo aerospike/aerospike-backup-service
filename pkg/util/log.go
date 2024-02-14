@@ -50,7 +50,8 @@ func LogCaptured(out string) {
 }
 
 func shouldSkip(line string) bool {
-	return isDocker && matchesAnyPattern(line, ignoredLinesInDocker) ||
+	return strings.TrimSpace(line) == "" ||
+		isDocker && matchesAnyPattern(line, ignoredLinesInDocker) ||
 		matchesAnyPattern(line, ignoredLines)
 }
 
