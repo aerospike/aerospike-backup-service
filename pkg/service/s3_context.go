@@ -253,8 +253,8 @@ func (s *S3Context) DeleteFolder(folder string) error {
 	slog.Debug("Delete folder", "path", folder)
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(s.bucket),
-		Prefix:    aws.String(folder),
-		Delimiter: aws.String(""),
+		Prefix:    aws.String(folder + "/"),
+		Delimiter: aws.String("/"),
 	})
 	if err != nil {
 		slog.Warn("Couldn't list files in directory", "path", folder, "err", err)
