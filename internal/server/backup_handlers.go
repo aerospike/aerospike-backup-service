@@ -30,8 +30,8 @@ func (ws *HTTPServer) getAllFullBackups(w http.ResponseWriter, r *http.Request) 
 // @Tags     Backup
 // @Produce  json
 // @Param    name path string true "Backup routine name"
-// @Param    from query int false "Lower bound timestamp filter" format(int64)
-// @Param    to query int false "Upper bound timestamp filter" format(int64)
+// @Param    from query int false "Lower bound timestamp filter" format(int64) example(1707915600000)
+// @Param    to query int false "Upper bound timestamp filter" format(int64) example(1739538000000)
 // @Router   /backups/full/{name} [get]
 // @Success  200 {object} []model.BackupDetails "Full backups for routine"
 // @Failure  404 {string} string ""

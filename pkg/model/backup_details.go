@@ -29,7 +29,7 @@ type BackupMetadata struct {
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups).
 	From time.Time `yaml:"from,omitempty" json:"from,omitempty"`
 	// The namespace of a backup.
-	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty"`
+	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty" example:"testNamespace"`
 	// The total number of records backed up.
 	RecordCount int `yaml:"record-count,omitempty" json:"record-count,omitempty"`
 	// The size of the backup in bytes.

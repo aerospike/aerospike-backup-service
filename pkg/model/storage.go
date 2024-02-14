@@ -15,7 +15,7 @@ type Storage struct {
 	// The type of the storage provider (0 - Local, 1 - AWS S3).
 	Type StorageType `yaml:"type" json:"type"`
 	// The root path for the backup repository.
-	Path *string `yaml:"path,omitempty" json:"path,omitempty"`
+	Path *string `yaml:"path,omitempty" json:"path,omitempty" example:"backups"`
 	// The S3 region string (AWS S3 optional).
 	S3Region *string `yaml:"s3-region,omitempty" json:"s3-region,omitempty"`
 	// The S3 profile name (AWS S3 optional).
