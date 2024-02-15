@@ -20,8 +20,13 @@ fi
 # Check if the openapi-generator installed
 if ! command -v openapi-generator &> /dev/null
 then
-    echo "openapi-generator is not installed. Installing now via Homebrew..."
-    brew install openapi-generator
+    if [[ ! -z $(which brew) ]]; then
+        echo "openapi-generator is not installed. Installing now via Homebrew..."
+        brew install openapi-generator
+    else
+        echo "Error: openapi-generator is not installed. Please install it manually."
+        exit 1;
+    fi
 fi
 
 ROOT_PATH=$(cd `dirname $0` && pwd)/..
@@ -39,4 +44,4 @@ openapi-generator generate -i $ROOT_PATH/docs/swagger.json -g openapi -o $ROOT_P
 mv $ROOT_PATH/tmp/openapi/openapi.yaml $ROOT_PATH/docs/openapi.yaml
 mv $ROOT_PATH/tmp/openapi.json $ROOT_PATH/docs/openapi.json
 
-rm -rf  $ROOT_PATH/tmp $ROOT_PATH/docs/swagger.yaml $ROOT_PATH/docs/swagger.json
+rm -rf $ROOT_PATH/tmp $ROOT_PATH/docs/swagger.yaml $ROOT_PATH/docs/swagger.json
