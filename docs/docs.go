@@ -1872,10 +1872,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "destination": {
+                    "description": "Destination namespace name.",
                     "type": "string",
                     "example": "destination-ns"
                 },
                 "source": {
+                    "description": "Original namespace name.",
                     "type": "string",
                     "example": "source-ns"
                 }

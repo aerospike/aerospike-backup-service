@@ -476,9 +476,11 @@ definitions:
       restore operation.
     properties:
       destination:
+        description: Destination namespace name.
         example: destination-ns
         type: string
       source:
+        description: Original namespace name.
         example: source-ns
         type: string
     required:
