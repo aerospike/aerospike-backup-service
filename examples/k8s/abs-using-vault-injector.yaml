@@ -18,13 +18,13 @@ spec:
           {{- with secret "secret/abs" -}}
           {{ .Data.data.password | base64Decode }}
           {{- end -}}
-        vault.hashicorp.com/agent-inject-template-rootca.pem: |
+        vault.hashicorp.com/agent-inject-template-cert.pem: |
           {{- with secret "secret/abs" -}}
-          {{ .Data.data.rootCA_pem | base64Decode }}
+          {{ .Data.data.cert_pem | base64Decode }}
           {{- end -}}
         vault.hashicorp.com/role: vault-role
         vault.hashicorp.com/secret-volume-path-psw.txt: /etc/aerospike-backup-service
-        vault.hashicorp.com/secret-volume-path-rootca.pem: /etc/aerospike-backup-service/ssl
+        vault.hashicorp.com/secret-volume-path-cert.pem: /etc/aerospike-backup-service/ssl
         vault.hashicorp.com/tls-skip-verify: "true"
       labels:
         app: aerospike-backup-service
@@ -60,7 +60,7 @@ spec:
           readinessProbe:
             failureThreshold: 3
             httpGet:
-              path: /health
+              path: /ready
               port: 8080
               scheme: HTTP
             initialDelaySeconds: 15
@@ -79,3 +79,54 @@ spec:
             name: aerospike-backup-service-cm
             optional: true
           name: backup-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: aerospike-backup-service
+  name: aerospike-backup-service
+  namespace: aerospike
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: aerospike-backup-service
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aerospike-backup-service-cm
+  namespace: aerospike
+data:
+  aerospike-backup-service.yml: |
+    "aerospike-clusters":
+      "absCluster1":
+        "credentials":
+          "password": "psw"
+          "user": "tester"
+        "seed-nodes":
+        - "host-name": "abs-cluster.internal"
+          "port": 3000
+    "backup-policies":
+      "keepFilesPolicy":
+        "parallel": 1
+        "remove-files": false
+        "type": 1
+    "backup-routines":
+      "keepFilesRoutine":
+        "backup-policy": "keepFilesPolicy"
+        "interval-cron": "@daily"
+        "namespace": "test"
+        "source-cluster": "absCluster1"
+        "storage": "s3Storage"
+    "storage":
+      "s3Storage":
+        "path": "s3://abs-backup-bucket/s3Storage"
+        "s3-endpoint-override": ""
+        "s3-profile": ""
+        "s3-region": "eu-central-1"
+        "type": 1
