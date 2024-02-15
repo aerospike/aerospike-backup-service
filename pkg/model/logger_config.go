@@ -16,7 +16,7 @@ type LoggerConfig struct {
 	// Whether to enable logging to the standard output.
 	StdoutWriter bool `yaml:"stdout-writer,omitempty" json:"stdout-writer,omitempty" default:"true"`
 	// File writer logging configuration.
-	FileWriter *FileLoggerConfig `yaml:"file-writer,omitempty" json:"file-writer,omitempty" default:"" example:""`
+	FileWriter *FileLoggerConfig `yaml:"file-writer,omitempty" json:"file-writer,omitempty" default:""`
 }
 
 var (
