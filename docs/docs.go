@@ -1975,6 +1975,12 @@ const docTemplate = `{
         "model.RestoreTimestampRequest": {
             "description": "RestoreTimestampRequest represents a restore by timestamp operation request.",
             "type": "object",
+            "required": [
+                "destination",
+                "policy",
+                "routine",
+                "time"
+            ],
             "properties": {
                 "destination": {
                     "description": "The details of the Aerospike destination cluster.",
@@ -1994,7 +2000,8 @@ const docTemplate = `{
                 },
                 "routine": {
                     "description": "The backup routine name.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "daily"
                 },
                 "secret-agent": {
                     "description": "Secret Agent configuration (optional).",
@@ -2007,7 +2014,8 @@ const docTemplate = `{
                 "time": {
                     "description": "Required epoch time for recovery. The closest backup before the timestamp will be applied.",
                     "type": "integer",
-                    "format": "int64"
+                    "format": "int64",
+                    "example": 1739538000000
                 }
             }
         },
