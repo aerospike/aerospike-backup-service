@@ -75,7 +75,7 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter, _ *http.Request) {
 // @ID	        readRoutine
 // @Tags        Configuration
 // @Router      /v1/config/routines/{name} [get]
-// @Param       name path string true "Name of the routine"
+// @Param       name path string true "routine name"
 // @Produce     json
 // @Success  	200 {object} model.BackupRoutine
 // @Failure     404 {string} string "The specified cluster could not be found."

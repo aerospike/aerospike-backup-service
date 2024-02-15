@@ -76,7 +76,7 @@ func (ws *HTTPServer) readAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @ID	        readStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [get]
-// @Param       name path string true "Name of the storage"
+// @Param       name path string true "storage name"
 // @Produce     json
 // @Success  	200 {object} model.Storage
 // @Failure     404 {string} string "The specified storage could not be found."

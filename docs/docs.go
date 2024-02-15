@@ -769,7 +769,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Name of the routine",
+                        "description": "routine name",
                         "name": "name",
                         "in": "path",
                         "required": true
@@ -938,7 +938,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Name of the storage",
+                        "description": "storage name",
                         "name": "name",
                         "in": "path",
                         "required": true
@@ -1091,7 +1091,8 @@ const docTemplate = `{
                     "202": {
                         "description": "Job ID",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer",
+                            "format": "int64"
                         }
                     },
                     "400": {
@@ -1129,7 +1130,8 @@ const docTemplate = `{
                     "202": {
                         "description": "Job ID",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer",
+                            "format": "int64"
                         }
                     },
                     "400": {
@@ -1203,7 +1205,8 @@ const docTemplate = `{
                     "202": {
                         "description": "Job ID",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer",
+                            "format": "int64"
                         }
                     },
                     "400": {
@@ -1240,7 +1243,8 @@ const docTemplate = `{
             "properties": {
                 "conn-timeout": {
                     "description": "The connection timeout in milliseconds.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 5000
                 },
                 "credentials": {
                     "description": "The authentication details to the Aerospike cluster.",
@@ -1252,7 +1256,8 @@ const docTemplate = `{
                 },
                 "label": {
                     "description": "The cluster name.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "testCluster"
                 },
                 "seed-nodes": {
                     "description": "The seed nodes details.",
@@ -1281,39 +1286,48 @@ const docTemplate = `{
             "properties": {
                 "byte-count": {
                     "description": "The size of the backup in bytes.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 2000
                 },
                 "created": {
                     "description": "The backup time in the ISO 8601 format.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "2023-03-20T14:50:00Z"
                 },
                 "file-count": {
                     "description": "The number of backup files created.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "from": {
                     "description": "The lower time bound of backup entities in the ISO 8601 format (for incremental backups).",
-                    "type": "string"
+                    "type": "string",
+                    "example": "2023-03-19T14:50:00Z"
                 },
                 "key": {
                     "description": "The path to the backup files.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "storage/daily/backup/1707915600000/source-ns1"
                 },
                 "namespace": {
                     "description": "The namespace of a backup.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "testNamespace"
                 },
                 "record-count": {
                     "description": "The total number of records backed up.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 100
                 },
                 "secondary-index-count": {
                     "description": "The number of secondary indexes backed up.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 5
                 },
                 "udf-count": {
                     "description": "The number of UDF files backed up.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 2
                 }
             }
         },
@@ -1323,22 +1337,27 @@ const docTemplate = `{
             "properties": {
                 "bandwidth": {
                     "description": "Throttles backup write operations to the backup file(s) to not exceed the given\nbandwidth in MiB/s.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 10000
                 },
                 "file-limit": {
                     "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1024
                 },
                 "filter-exp": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "EjRWeJq83vEjRRI0VniavN7xI0U="
                 },
                 "max-records": {
                     "description": "An approximate limit for the number of records to process. Available in server 4.9 and above.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 10000
                 },
                 "max-retries": {
                     "description": "Maximum number of retries before aborting the current transaction.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 3
                 },
                 "no-bins": {
                     "description": "Only backup record metadata (digest, TTL, generation count, key).",
@@ -1358,11 +1377,13 @@ const docTemplate = `{
                 },
                 "parallel": {
                     "description": "Maximum number of scan calls to run in parallel.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "records-per-second": {
                     "description": "Limit total returned records per second (RPS). If RPS is zero (the default),\nthe records-per-second limit is not applied.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1000
                 },
                 "remove-artifacts": {
                     "description": "Clear directory or remove output file.",
@@ -1383,50 +1404,69 @@ const docTemplate = `{
                 },
                 "retry-delay": {
                     "description": "RetryDelay defines the delay in milliseconds before retrying a failed operation.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 500
                 },
                 "socket-timeout": {
                     "description": "Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1000
                 },
                 "total-timeout": {
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 2000
                 }
             }
         },
         "model.BackupRoutine": {
             "description": "BackupRoutine represents a scheduled backup operation routine.",
             "type": "object",
+            "required": [
+                "backup-policy",
+                "interval-cron",
+                "source-cluster",
+                "storage"
+            ],
             "properties": {
                 "after-digest": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "EjRWeJq83vEjRRI0VniavN7xI0U="
                 },
                 "backup-policy": {
-                    "description": "The name of the corresponding bakup policy.",
-                    "type": "string"
+                    "description": "The name of the corresponding backup policy.",
+                    "type": "string",
+                    "example": "daily"
                 },
                 "bin-list": {
                     "description": "The list of backup bin names (optional, an empty list implies backing up all bins).",
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "dataBin"
+                    ]
                 },
                 "incr-interval-cron": {
                     "description": "The interval for incremental backup as a cron expression string (optional).",
-                    "type": "string"
+                    "type": "string",
+                    "example": "*/10 * * * * *"
                 },
                 "interval-cron": {
                     "description": "The interval for full backup as a cron expression string.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "0 0 * * * *"
                 },
                 "namespaces": {
                     "description": "The list of the namespaces to back up (optional, empty list implies backup up whole cluster).",
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "source-ns1"
+                    ]
                 },
                 "node-list": {
                     "description": "The list of nodes in the Aerospike cluster to run the backup for.",
@@ -1437,33 +1477,43 @@ const docTemplate = `{
                 },
                 "partition-list": {
                     "description": "Back up list of partition filters. Partition filters can be ranges, individual partitions,\nor records after a specific digest within a single partition.\nDefault number of partitions to back up: 0 to 4095: all partitions.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "0-1000"
                 },
                 "prefer-racks": {
                     "description": "A list of Aerospike Server rack IDs to prefer when reading records for a backup.",
                     "type": "array",
                     "items": {
                         "type": "integer"
-                    }
+                    },
+                    "example": [
+                        0
+                    ]
                 },
                 "secret-agent": {
                     "description": "The Secret Agent configuration for the routine (optional).",
-                    "type": "string"
+                    "type": "string",
+                    "example": "sa"
                 },
                 "set-list": {
                     "description": "The list of backup set names (optional, an empty list implies backing up all sets).",
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "set1"
+                    ]
                 },
                 "source-cluster": {
                     "description": "The name of the corresponding source cluster.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "testCluster"
                 },
                 "storage": {
                     "description": "The name of the corresponding storage provider configuration.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "aws"
                 }
             }
         },
@@ -1534,19 +1584,28 @@ const docTemplate = `{
             "properties": {
                 "auth-mode": {
                     "description": "The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).",
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "INTERNAL",
+                        "EXTERNAL",
+                        "EXTERNAL_INSECURE",
+                        "PKI"
+                    ]
                 },
                 "password": {
                     "description": "The password for the cluster authentication.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "testPswd"
                 },
                 "password-path": {
                     "description": "The file path with the password string, will take precedence over the password field.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "/path/to/pass.txt"
                 },
                 "user": {
                     "description": "The username for the cluster authentication.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "testUser"
                 }
             }
         },
@@ -1561,7 +1620,8 @@ const docTemplate = `{
                 },
                 "filename": {
                     "description": "Filename is the file to write logs to.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "log.txt"
                 },
                 "maxage": {
                     "description": "MaxAge is the maximum number of days to retain old log files based on the\ntimestamp encoded in their filename. The default is not to remove old log files\nbased on age.",
@@ -1576,7 +1636,8 @@ const docTemplate = `{
                 "maxsize": {
                     "description": "MaxSize is the maximum size in megabytes of the log file before it gets rotated.",
                     "type": "integer",
-                    "default": 100
+                    "default": 100,
+                    "example": 100
                 }
             }
         },
@@ -1587,7 +1648,8 @@ const docTemplate = `{
                 "address": {
                     "description": "The address to listen on.",
                     "type": "string",
-                    "default": "0.0.0.0"
+                    "default": "0.0.0.0",
+                    "example": "0.0.0.0"
                 },
                 "context-path": {
                     "description": "ContextPath customizes path for the API endpoints.",
@@ -1597,7 +1659,8 @@ const docTemplate = `{
                 "port": {
                     "description": "The port to listen on.",
                     "type": "integer",
-                    "default": 8080
+                    "default": 8080,
+                    "example": 8080
                 },
                 "rate": {
                     "description": "HTTP rate limiter configuration.",
@@ -1637,12 +1700,24 @@ const docTemplate = `{
                 "format": {
                     "description": "Format is the logger format (PLAIN, JSON).",
                     "type": "string",
-                    "default": "PLAIN"
+                    "default": "PLAIN",
+                    "enum": [
+                        "PLAIN",
+                        "JSON"
+                    ]
                 },
                 "level": {
                     "description": "Level is the logger level.",
                     "type": "string",
-                    "default": "DEBUG"
+                    "default": "DEBUG",
+                    "enum": [
+                        "TRACE",
+                        "DEBUG",
+                        "INFO",
+                        "WARN",
+                        "WARNING",
+                        "ERROR"
+                    ]
                 },
                 "stdout-writer": {
                     "description": "Whether to enable logging to the standard output.",
@@ -1656,10 +1731,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "ip": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "192.168.0.2"
                 },
                 "port": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 3000
                 }
             }
         },
@@ -1670,12 +1747,14 @@ const docTemplate = `{
                 "size": {
                     "description": "Rate limiter token bucket size (bursts threshold).",
                     "type": "integer",
-                    "default": 1024
+                    "default": 1024,
+                    "example": 1024
                 },
                 "tps": {
                     "description": "Rate limiter tokens per second threshold.",
                     "type": "integer",
-                    "default": 1024
+                    "default": 1024,
+                    "example": 1024
                 },
                 "white-list": {
                     "description": "The list of ips to whitelist in rate limiting.",
@@ -1706,25 +1785,32 @@ const docTemplate = `{
             "properties": {
                 "error": {},
                 "existed-records": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 15
                 },
                 "expired-records": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 2
                 },
                 "fresher-records": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 5
                 },
                 "ignored-records": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 12
                 },
                 "index-count": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 3
                 },
                 "inserted-records": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 8
                 },
                 "skipped-records": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 4
                 },
                 "status": {
                     "enum": [
@@ -1739,27 +1825,36 @@ const docTemplate = `{
                     ]
                 },
                 "total-bytes": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 2000
                 },
                 "total-records": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 10
                 },
                 "udf-count": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
         "model.RestoreNamespace": {
             "description": "RestoreNamespace specifies an alternative namespace name for the restore operation.",
             "type": "object",
+            "required": [
+                "destination",
+                "source"
+            ],
             "properties": {
                 "destination": {
                     "description": "Destination namespace name.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "destination-ns"
                 },
                 "source": {
                     "description": "Original namespace name.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "source-ns"
                 }
             }
         },
@@ -1769,18 +1864,24 @@ const docTemplate = `{
             "properties": {
                 "bandwidth": {
                     "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 50000
                 },
                 "batch-size": {
                     "description": "The max allowed number of records per an async batch write call.\nDefault is 128 with batch writes enabled, or 16 without batch writes.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 128
                 },
                 "bin-list": {
                     "description": "The bins to restore (optional, an empty list implies restoring all bins).",
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "bin1",
+                        "bin2"
+                    ]
                 },
                 "disable-batch-writes": {
                     "description": "Disables the use of batch writes when restoring records to the Aerospike cluster.\nBy default, the cluster is checked for batch write support.",
@@ -1788,7 +1889,8 @@ const docTemplate = `{
                 },
                 "max-async-batches": {
                     "description": "The max number of outstanding async record batch write calls at a time.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 32
                 },
                 "namespace": {
                     "description": "Namespace details for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
@@ -1816,7 +1918,8 @@ const docTemplate = `{
                 },
                 "parallel": {
                     "description": "The number of client threads to spawn for writing to the cluster.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 8
                 },
                 "replace": {
                     "description": "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
@@ -1827,15 +1930,21 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "example": [
+                        "set1",
+                        "set2"
+                    ]
                 },
                 "timeout": {
                     "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1000
                 },
                 "tps": {
                     "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 4000
                 },
                 "unique": {
                     "description": "Existing records take precedence. With this option, only records that do not exist in\nthe namespace are restored, regardless of generation numbers. If a record exists in\nthe namespace, the record from the backup is ignored.",
@@ -1846,6 +1955,11 @@ const docTemplate = `{
         "model.RestoreRequest": {
             "description": "RestoreRequest represents a restore operation request.",
             "type": "object",
+            "required": [
+                "destination",
+                "policy",
+                "source"
+            ],
             "properties": {
                 "destination": {
                     "$ref": "#/definitions/model.AerospikeCluster"
@@ -1864,6 +1978,12 @@ const docTemplate = `{
         "model.RestoreTimestampRequest": {
             "description": "RestoreTimestampRequest represents a restore by timestamp operation request.",
             "type": "object",
+            "required": [
+                "destination",
+                "policy",
+                "routine",
+                "time"
+            ],
             "properties": {
                 "destination": {
                     "description": "The details of the Aerospike destination cluster.",
@@ -1883,7 +2003,8 @@ const docTemplate = `{
                 },
                 "routine": {
                     "description": "The backup routine name.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "daily"
                 },
                 "secret-agent": {
                     "description": "Secret Agent configuration (optional).",
@@ -1896,7 +2017,8 @@ const docTemplate = `{
                 "time": {
                     "description": "Required epoch time for recovery. The closest backup before the timestamp will be applied.",
                     "type": "integer",
-                    "format": "int64"
+                    "format": "int64",
+                    "example": 1739538000000
                 }
             }
         },
@@ -1906,19 +2028,23 @@ const docTemplate = `{
             "properties": {
                 "address": {
                     "description": "Address of the Secret Agent.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "localhost"
                 },
                 "port": {
                     "description": "Port the Secret Agent is running on.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "8080"
                 },
                 "timeout": {
                     "description": "Timeout in milliseconds.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 5000
                 },
                 "tls-ca": {
                     "description": "The path to a trusted CA certificate file in PEM format.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "/path/to/ca.pem"
                 },
                 "tls-enabled": {
                     "description": "Indicates whether TLS is enabled.",
@@ -1929,48 +2055,67 @@ const docTemplate = `{
         "model.SeedNode": {
             "description": "SeedNode represents details of a node in the Aerospike cluster.",
             "type": "object",
+            "required": [
+                "host-name",
+                "port"
+            ],
             "properties": {
                 "host-name": {
                     "description": "The host name of the node.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "localhost"
                 },
                 "port": {
                     "description": "The port of the node.",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 3000
                 },
                 "tls-name": {
                     "description": "TLS certificate name used for secure connections (if enabled).",
-                    "type": "string"
+                    "type": "string",
+                    "example": "certName"
                 }
             }
         },
         "model.Storage": {
             "description": "Storage represents the configuration for a backup storage details.",
             "type": "object",
+            "required": [
+                "path",
+                "type"
+            ],
             "properties": {
                 "path": {
                     "description": "The root path for the backup repository.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "backups"
                 },
                 "s3-endpoint-override": {
                     "description": "An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).",
-                    "type": "string"
+                    "type": "string",
+                    "example": "http://host.docker.internal:9000"
                 },
                 "s3-log-level": {
                     "description": "The log level of the AWS S3 SDK (AWS S3 optional).",
                     "type": "string",
-                    "default": "Fatal"
+                    "default": "FATAL"
                 },
                 "s3-profile": {
                     "description": "The S3 profile name (AWS S3 optional).",
-                    "type": "string"
+                    "type": "string",
+                    "example": "default"
                 },
                 "s3-region": {
                     "description": "The S3 region string (AWS S3 optional).",
-                    "type": "string"
+                    "type": "string",
+                    "example": "eu-central-1"
                 },
                 "type": {
                     "description": "The type of the storage provider (0 - Local, 1 - AWS S3).",
+                    "enum": [
+                        0,
+                        1
+                    ],
                     "allOf": [
                         {
                             "$ref": "#/definitions/model.StorageType"
@@ -1997,35 +2142,43 @@ const docTemplate = `{
             "properties": {
                 "cafile": {
                     "description": "Path to a trusted CA certificate file.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "/path/to/cafile.pem"
                 },
                 "capath": {
                     "description": "Path to a directory of trusted CA certificates.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "/path/to/ca"
                 },
                 "certfile": {
                     "description": "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
-                    "type": "string"
+                    "type": "string",
+                    "example": "/path/to/certfile.pem"
                 },
                 "cipher-suite": {
                     "description": "TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "ECDHE-ECDSA-AES256-GCM-SHA384"
                 },
                 "keyfile": {
                     "description": "Path to the key for mutual authentication (if Aerospike cluster supports it).",
-                    "type": "string"
+                    "type": "string",
+                    "example": "/path/to/keyfile.pem"
                 },
                 "keyfile-password": {
                     "description": "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
-                    "type": "string"
+                    "type": "string",
+                    "example": "file:/path/to/password"
                 },
                 "name": {
                     "description": "The default TLS name used to authenticate each TLS socket connection.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "tls-name"
                 },
                 "protocols": {
                     "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "TLSv1.2"
                 }
             }
         }

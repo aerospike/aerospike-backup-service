@@ -1,3 +1,4 @@
+// nolint:lll
 package model
 
 import (
@@ -23,11 +24,11 @@ type AerospikeCluster struct {
 	pwdOnce sync.Once
 	pwd     *string
 	// The cluster name.
-	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty"`
+	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster"`
 	// The seed nodes details.
 	SeedNodes []SeedNode `yaml:"seed-nodes,omitempty" json:"seed-nodes,omitempty"`
 	// The connection timeout in milliseconds.
-	ConnTimeout *int32 `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty"`
+	ConnTimeout *int32 `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty" example:"5000"`
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
 	UseServicesAlternate *bool `yaml:"use-services-alternate,omitempty" json:"use-services-alternate,omitempty"`
 	// The authentication details to the Aerospike cluster.
@@ -255,45 +256,45 @@ func (c *AerospikeCluster) ASClientHosts() []*as.Host {
 // @Description TLS represents the Aerospike cluster TLS configuration options.
 type TLS struct {
 	// Path to a trusted CA certificate file.
-	CAFile *string `yaml:"cafile,omitempty" json:"cafile,omitempty"`
+	CAFile *string `yaml:"cafile,omitempty" json:"cafile,omitempty" example:"/path/to/cafile.pem"`
 	// Path to a directory of trusted CA certificates.
-	CAPath *string `yaml:"capath,omitempty" json:"capath,omitempty"`
+	CAPath *string `yaml:"capath,omitempty" json:"capath,omitempty" example:"/path/to/ca"`
 	// The default TLS name used to authenticate each TLS socket connection.
-	Name *string `yaml:"name,omitempty" json:"name,omitempty"`
+	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name"`
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
-	Protocols *string `yaml:"protocols,omitempty" json:"protocols,omitempty"`
+	Protocols *string `yaml:"protocols,omitempty" json:"protocols,omitempty" example:"TLSv1.2"`
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
-	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty"`
+	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"ECDHE-ECDSA-AES256-GCM-SHA384"`
 	// Path to the key for mutual authentication (if Aerospike cluster supports it).
-	Keyfile *string `yaml:"keyfile,omitempty" json:"keyfile,omitempty"`
+	Keyfile *string `yaml:"keyfile,omitempty" json:"keyfile,omitempty" example:"/path/to/keyfile.pem"`
 	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
-	KeyfilePassword *string `yaml:"keyfile-password,omitempty" json:"keyfile-password,omitempty"`
+	KeyfilePassword *string `yaml:"keyfile-password,omitempty" json:"keyfile-password,omitempty" example:"file:/path/to/password"`
 	// Path to the chain file for mutual authentication (if Aerospike Cluster supports it).
-	Certfile *string `yaml:"certfile,omitempty" json:"certfile,omitempty"`
+	Certfile *string `yaml:"certfile,omitempty" json:"certfile,omitempty" example:"/path/to/certfile.pem"`
 }
 
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
 	// The username for the cluster authentication.
-	User *string `yaml:"user,omitempty" json:"user,omitempty"`
+	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"`
 	// The password for the cluster authentication.
-	Password *string `yaml:"password,omitempty" json:"password,omitempty"`
+	Password *string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"`
 	// The file path with the password string, will take precedence over the password field.
-	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty"`
+	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"`
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
-	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty"`
+	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.
 // @Description SeedNode represents details of a node in the Aerospike cluster.
 type SeedNode struct {
 	// The host name of the node.
-	HostName string `yaml:"host-name,omitempty" json:"host-name,omitempty"`
+	HostName string `yaml:"host-name,omitempty" json:"host-name,omitempty" example:"localhost" validate:"required"`
 	// The port of the node.
-	Port int32 `yaml:"port,omitempty" json:"port,omitempty"`
+	Port int32 `yaml:"port,omitempty" json:"port,omitempty" example:"3000" validate:"required"`
 	// TLS certificate name used for secure connections (if enabled).
-	TLSName string `yaml:"tls-name,omitempty" json:"tls-name,omitempty"`
+	TLSName string `yaml:"tls-name,omitempty" json:"tls-name,omitempty" example:"certName" validate:"optional"`
 }
 
 // Validate validates the SeedNode entity.
