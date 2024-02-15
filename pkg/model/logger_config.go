@@ -83,7 +83,7 @@ func (f *FileLoggerConfig) Validate() error {
 	if f.MaxAge < 0 {
 		return fmt.Errorf("negative logger MaxAge: %d", f.MaxAge)
 	}
-	if f.MaxBackups <= 0 {
+	if f.MaxBackups < 0 {
 		return fmt.Errorf("negative logger MaxBackups: %d", f.MaxBackups)
 	}
 	return nil
