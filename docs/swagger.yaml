@@ -820,13 +820,11 @@ paths:
       operationId: getFullBackups
       parameters:
       - description: Lower bound timestamp filter
-        example: 1707915600000
         format: int64
         in: query
         name: from
         type: integer
       - description: Upper bound timestamp filter
-        example: 1739538000000
         format: int64
         in: query
         name: to
@@ -854,19 +852,16 @@ paths:
       operationId: getFullBackupsForRoutine
       parameters:
       - description: Backup routine name
-        example: daily
         in: path
         name: name
         required: true
         type: string
       - description: Lower bound timestamp filter
-        example: 1707915600000
         format: int64
         in: query
         name: from
         type: integer
       - description: Upper bound timestamp filter
-        example: 1739538000000
         format: int64
         in: query
         name: to
@@ -892,13 +887,11 @@ paths:
       operationId: getIncrementalBackups
       parameters:
       - description: Lower bound timestamp filter
-        example: 1707915600000
         format: int64
         in: query
         name: from
         type: integer
       - description: Upper bound timestamp filter
-        example: 1739538000000
         format: int64
         in: query
         name: to
@@ -931,13 +924,11 @@ paths:
         required: true
         type: string
       - description: Lower bound timestamp filter
-        example: 1707915600000
         format: int64
         in: query
         name: from
         type: integer
       - description: Upper bound timestamp filter
-        example: 1739538000000
         format: int64
         in: query
         name: to
@@ -963,13 +954,11 @@ paths:
       operationId: scheduleFullBackup
       parameters:
       - description: Backup routine name
-        example: daily
         in: path
         name: name
         required: true
         type: string
       - description: Delay interval in milliseconds
-        example: 1000
         in: query
         name: delay
         type: integer
@@ -1045,7 +1034,6 @@ paths:
       operationId: deleteCluster
       parameters:
       - description: cluster Name
-        example: testCluster
         in: path
         name: name
         required: true
@@ -1064,7 +1052,6 @@ paths:
       operationId: readCluster
       parameters:
       - description: Name of the Aerospike cluster
-        example: testCluster
         in: path
         name: name
         required: true
@@ -1090,7 +1077,6 @@ paths:
       operationId: addCluster
       parameters:
       - description: cluster name
-        example: testCluster
         in: path
         name: name
         required: true
@@ -1117,7 +1103,6 @@ paths:
       operationId: updateCluster
       parameters:
       - description: cluster name
-        example: testCluster
         in: path
         name: name
         required: true
@@ -1162,7 +1147,6 @@ paths:
       operationId: deletePolicy
       parameters:
       - description: Policy Name
-        example: keepAll
         in: path
         name: name
         required: true
@@ -1181,7 +1165,6 @@ paths:
       operationId: readPolicy
       parameters:
       - description: Name of the backup policy
-        example: keepAll
         in: path
         name: name
         required: true
@@ -1206,7 +1189,6 @@ paths:
       operationId: addPolicy
       parameters:
       - description: policy name
-        example: keepAll
         in: path
         name: name
         required: true
@@ -1233,7 +1215,6 @@ paths:
       operationId: updatePolicy
       parameters:
       - description: policy name
-        example: keepAll
         in: path
         name: name
         required: true
@@ -1278,7 +1259,6 @@ paths:
       operationId: deleteRoutine
       parameters:
       - description: routine name
-        example: daily
         in: path
         name: name
         required: true
@@ -1297,7 +1277,6 @@ paths:
       operationId: readRoutine
       parameters:
       - description: routine name
-        example: daily
         in: path
         name: name
         required: true
@@ -1322,7 +1301,6 @@ paths:
       operationId: addRoutine
       parameters:
       - description: routine name
-        example: daily
         in: path
         name: name
         required: true
@@ -1349,7 +1327,6 @@ paths:
       operationId: updateRoutine
       parameters:
       - description: routine name
-        example: daily
         in: path
         name: name
         required: true
@@ -1394,7 +1371,6 @@ paths:
       operationId: deleteStorage
       parameters:
       - description: storage name
-        example: aws
         in: path
         name: name
         required: true
@@ -1413,7 +1389,6 @@ paths:
       operationId: readStorage
       parameters:
       - description: storage name
-        example: aws
         in: path
         name: name
         required: true
@@ -1438,7 +1413,6 @@ paths:
       operationId: addStorage
       parameters:
       - description: storage name
-        example: aws
         in: path
         name: name
         required: true
@@ -1465,7 +1439,6 @@ paths:
       operationId: updateStorage
       parameters:
       - description: storage name
-        example: aws
         in: path
         name: name
         required: true
@@ -1544,7 +1517,6 @@ paths:
       operationId: restoreStatus
       parameters:
       - description: Job ID to retrieve the status
-        example: 12345
         format: int64
         in: path
         name: jobId

@@ -16,7 +16,7 @@ import (
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [post]
 // @Accept      json
-// @Param       name path string true "storage name" example(aws)
+// @Param       name path string true "storage name"
 // @Param       storage body model.Storage true "backup storage"
 // @Success     201
 // @Failure     400 {string} string
@@ -76,7 +76,7 @@ func (ws *HTTPServer) readAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @ID	        readStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [get]
-// @Param       name path string true "storage name" example(aws)
+// @Param       name path string true "storage name"
 // @Produce     json
 // @Success  	200 {object} model.Storage
 // @Failure     404 {string} string "The specified storage could not be found."
@@ -113,7 +113,7 @@ func (ws *HTTPServer) readStorage(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [put]
 // @Accept      json
-// @Param       name path string true "storage name" example(aws)
+// @Param       name path string true "storage name"
 // @Param       storage body model.Storage true "backup storage"
 // @Success     200
 // @Failure     400 {string} string
@@ -147,7 +147,7 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 // @ID	        deleteStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [delete]
-// @Param       name path string true "storage name" example(aws)
+// @Param       name path string true "storage name"
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {

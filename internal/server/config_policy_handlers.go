@@ -16,7 +16,7 @@ import (
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [post]
 // @Accept      json
-// @Param       name path string true "policy name" example(keepAll)
+// @Param       name path string true "policy name"
 // @Param       policy body model.BackupPolicy true "backup policy"
 // @Success     201
 // @Failure     400 {string} string
@@ -75,7 +75,7 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter, _ *http.Request) {
 // @ID	        readPolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [get]
-// @Param       name path string true "Name of the backup policy" example(keepAll)
+// @Param       name path string true "Name of the backup policy"
 // @Produce     json
 // @Success  	200 {object} model.BackupPolicy
 // @Failure     404 {string} string "The specified policy could not be found."
@@ -112,7 +112,7 @@ func (ws *HTTPServer) readPolicy(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [put]
 // @Accept      json
-// @Param       name path string true "policy name" example(keepAll)
+// @Param       name path string true "policy name"
 // @Param       policy body model.BackupPolicy true "backup policy"
 // @Success     200
 // @Failure     400 {string} string
@@ -149,7 +149,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @ID          deletePolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [delete]
-// @Param       name path string true "Policy Name" example(keepAll)
+// @Param       name path string true "Policy Name"
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
