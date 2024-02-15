@@ -16,7 +16,7 @@ import (
 // @Tags        Configuration
 // @Router      /config/clusters/{name} [post]
 // @Accept      json
-// @Param       name path string true "cluster name"
+// @Param       name path string true "cluster name" example(testCluster)
 // @Param       cluster body model.AerospikeCluster true "cluster info"
 // @Success     201
 // @Failure     400 {string} string
@@ -76,7 +76,7 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter, _ *http.Reque
 // @ID	        readCluster
 // @Tags        Configuration
 // @Router      /config/clusters/{name} [get]
-// @Param       name path string true "Name of the Aerospike cluster"
+// @Param       name path string true "Name of the Aerospike cluster" example(testCluster)
 // @Produce     json
 // @Success  	200 {object} model.AerospikeCluster
 // @Failure     404 {string} string "The specified cluster could not be found."
@@ -113,7 +113,7 @@ func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Reques
 // @Tags        Configuration
 // @Router      /config/clusters/{name} [put]
 // @Accept      json
-// @Param       name path string true "cluster name"
+// @Param       name path string true "cluster name" example(testCluster)
 // @Param       cluster body model.AerospikeCluster true "aerospike cluster"
 // @Success     200
 // @Failure     400 {string} string
@@ -149,7 +149,7 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 // @ID          deleteCluster
 // @Tags        Configuration
 // @Router      /config/clusters/{name} [delete]
-// @Param       name path string true "cluster Name"
+// @Param       name path string true "cluster Name" example(testCluster)
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {

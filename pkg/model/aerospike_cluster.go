@@ -23,7 +23,7 @@ type AerospikeCluster struct {
 	pwdOnce sync.Once
 	pwd     *string
 	// The cluster name.
-	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"production"`
+	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster"`
 	// The seed nodes details.
 	SeedNodes []SeedNode `yaml:"seed-nodes,omitempty" json:"seed-nodes,omitempty"`
 	// The connection timeout in milliseconds.

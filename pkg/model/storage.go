@@ -13,17 +13,17 @@ import (
 // @Description Storage represents the configuration for a backup storage details.
 type Storage struct {
 	// The type of the storage provider (0 - Local, 1 - AWS S3).
-	Type StorageType `yaml:"type" json:"type"`
+	Type StorageType `yaml:"type" json:"type" enums:"0,1" validate:"required"`
 	// The root path for the backup repository.
-	Path *string `yaml:"path,omitempty" json:"path,omitempty" example:"backups"`
+	Path *string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" validate:"required"`
 	// The S3 region string (AWS S3 optional).
-	S3Region *string `yaml:"s3-region,omitempty" json:"s3-region,omitempty"`
+	S3Region *string `yaml:"s3-region,omitempty" json:"s3-region,omitempty" example:"eu-central-1"`
 	// The S3 profile name (AWS S3 optional).
-	S3Profile *string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty"`
+	S3Profile *string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty" example:"default"`
 	// An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).
-	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty"`
+	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000"`
 	// The log level of the AWS S3 SDK (AWS S3 optional).
-	S3LogLevel *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"Fatal"`
+	S3LogLevel *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enum:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
 }
 
 // StorageType represents the type of the backup storage.

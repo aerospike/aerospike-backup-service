@@ -8,9 +8,9 @@ import (
 // RestoreRequest represents a restore operation request.
 // @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
-	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
-	Policy            *RestorePolicy    `json:"policy,omitempty"`
-	SourceStorage     *Storage          `json:"source,omitempty"`
+	DestinationCuster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
+	Policy            *RestorePolicy    `json:"policy,omitempty" validate:"required"`
+	SourceStorage     *Storage          `json:"source,omitempty" validate:"required"`
 	SecretAgent       *SecretAgent      `json:"secret-agent,omitempty"`
 }
 

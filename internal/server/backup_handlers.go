@@ -16,8 +16,8 @@ import (
 // @ID 	     getFullBackups
 // @Tags     Backup
 // @Produce  json
-// @Param    from query int false "Lower bound timestamp filter" format(int64)
-// @Param    to query int false "Upper bound timestamp filter" format(int64)
+// @Param    from query int false "Lower bound timestamp filter" format(int64) example(1707915600000)
+// @Param    to query int false "Upper bound timestamp filter" format(int64) example(1739538000000)
 // @Router   /backups/full [get]
 // @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
 // @Failure  404 {string} string ""
@@ -29,7 +29,7 @@ func (ws *HTTPServer) getAllFullBackups(w http.ResponseWriter, r *http.Request) 
 // @ID 	     getFullBackupsForRoutine
 // @Tags     Backup
 // @Produce  json
-// @Param    name path string true "Backup routine name"
+// @Param    name path string true "Backup routine name" example(daily)
 // @Param    from query int false "Lower bound timestamp filter" format(int64) example(1707915600000)
 // @Param    to query int false "Upper bound timestamp filter" format(int64) example(1739538000000)
 // @Router   /backups/full/{name} [get]
@@ -43,8 +43,8 @@ func (ws *HTTPServer) getFullBackupsForRoutine(w http.ResponseWriter, r *http.Re
 // @ID       getIncrementalBackups
 // @Tags     Backup
 // @Produce  json
-// @Param    from query int false "Lower bound timestamp filter" format(int64)
-// @Param    to query int false "Upper bound timestamp filter" format(int64)
+// @Param    from query int false "Lower bound timestamp filter" format(int64) example(1707915600000)
+// @Param    to query int false "Upper bound timestamp filter" format(int64) example(1739538000000)
 // @Router   /backups/incremental [get]
 // @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
 // @Failure  404 {string} string ""
@@ -57,8 +57,8 @@ func (ws *HTTPServer) getAllIncrementalBackups(w http.ResponseWriter, r *http.Re
 // @Tags     Backup
 // @Produce  json
 // @Param    name path string true "Backup routine name"
-// @Param    from query int false "Lower bound timestamp filter" format(int64)
-// @Param    to query int false "Upper bound timestamp filter" format(int64)
+// @Param    from query int false "Lower bound timestamp filter" format(int64) example(1707915600000)
+// @Param    to query int false "Upper bound timestamp filter" format(int64) example(1739538000000)
 // @Router   /backups/incremental/{name} [get]
 // @Success  200 {object} []model.BackupDetails "Incremental backups for routine"
 // @Failure  404 {string} string ""
@@ -156,8 +156,8 @@ func backupsReadFunction(
 // @Summary  Schedule a full backup once per routine name.
 // @ID       scheduleFullBackup
 // @Tags     Backup
-// @Param    name path string true "Backup routine name"
-// @Param    delay query int false "Delay interval in milliseconds"
+// @Param    name path string true "Backup routine name" example(daily)
+// @Param    delay query int false "Delay interval in milliseconds" example(1000)
 // @Router   /backups/schedule/{name} [post]
 // @Success  202
 // @Failure  404 {string} string ""

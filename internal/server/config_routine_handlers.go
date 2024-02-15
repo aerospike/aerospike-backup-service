@@ -16,7 +16,7 @@ import (
 // @Tags        Configuration
 // @Router      /config/routines/{name} [post]
 // @Accept      json
-// @Param       name path string true "routine name"
+// @Param       name path string true "routine name" example(daily)
 // @Param       routine body model.BackupRoutine true "backup routine"
 // @Success     201
 // @Failure     400 {string} string
@@ -75,7 +75,7 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter, _ *http.Request) {
 // @ID	        readRoutine
 // @Tags        Configuration
 // @Router      /config/routines/{name} [get]
-// @Param       name path string true "Name of the routine"
+// @Param       name path string true "routine name" example(daily)
 // @Produce     json
 // @Success  	200 {object} model.BackupRoutine
 // @Failure     404 {string} string "The specified cluster could not be found."
@@ -112,7 +112,7 @@ func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
 // @Tags         Configuration
 // @Router       /config/routines/{name} [put]
 // @Accept       json
-// @Param        name path string true "routine name"
+// @Param        name path string true "routine name" example(daily)
 // @Param        routine body model.BackupRoutine true "backup routine"
 // @Success      200
 // @Failure      400 {string} string
@@ -149,7 +149,7 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @ID          deleteRoutine
 // @Tags        Configuration
 // @Router      /config/routines/{name} [delete]
-// @Param       name path string true "routine name"
+// @Param       name path string true "routine name" example(daily)
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteRoutine(w http.ResponseWriter, r *http.Request) {
