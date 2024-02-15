@@ -110,7 +110,6 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "format": "int64",
-                        "example": 1707915600000,
                         "description": "Lower bound timestamp filter",
                         "name": "from",
                         "in": "query"
@@ -118,7 +117,6 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "format": "int64",
-                        "example": 1739538000000,
                         "description": "Upper bound timestamp filter",
                         "name": "to",
                         "in": "query"
@@ -159,7 +157,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "daily",
                         "description": "Backup routine name",
                         "name": "name",
                         "in": "path",
@@ -168,7 +165,6 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "format": "int64",
-                        "example": 1707915600000,
                         "description": "Lower bound timestamp filter",
                         "name": "from",
                         "in": "query"
@@ -176,7 +172,6 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "format": "int64",
-                        "example": 1739538000000,
                         "description": "Upper bound timestamp filter",
                         "name": "to",
                         "in": "query"
@@ -215,7 +210,6 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "format": "int64",
-                        "example": 1707915600000,
                         "description": "Lower bound timestamp filter",
                         "name": "from",
                         "in": "query"
@@ -223,7 +217,6 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "format": "int64",
-                        "example": 1739538000000,
                         "description": "Upper bound timestamp filter",
                         "name": "to",
                         "in": "query"
@@ -272,7 +265,6 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "format": "int64",
-                        "example": 1707915600000,
                         "description": "Lower bound timestamp filter",
                         "name": "from",
                         "in": "query"
@@ -280,7 +272,6 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "format": "int64",
-                        "example": 1739538000000,
                         "description": "Upper bound timestamp filter",
                         "name": "to",
                         "in": "query"
@@ -315,7 +306,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "daily",
                         "description": "Backup routine name",
                         "name": "name",
                         "in": "path",
@@ -323,7 +313,6 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "example": 1000,
                         "description": "Delay interval in milliseconds",
                         "name": "delay",
                         "in": "query"
@@ -442,7 +431,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "testCluster",
                         "description": "Name of the Aerospike cluster",
                         "name": "name",
                         "in": "path",
@@ -476,7 +464,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "testCluster",
                         "description": "cluster name",
                         "name": "name",
                         "in": "path",
@@ -516,7 +503,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "testCluster",
                         "description": "cluster name",
                         "name": "name",
                         "in": "path",
@@ -553,7 +539,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "testCluster",
                         "description": "cluster Name",
                         "name": "name",
                         "in": "path",
@@ -615,7 +600,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "keepAll",
                         "description": "Name of the backup policy",
                         "name": "name",
                         "in": "path",
@@ -649,7 +633,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "keepAll",
                         "description": "policy name",
                         "name": "name",
                         "in": "path",
@@ -689,7 +672,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "keepAll",
                         "description": "policy name",
                         "name": "name",
                         "in": "path",
@@ -726,7 +708,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "keepAll",
                         "description": "Policy Name",
                         "name": "name",
                         "in": "path",
@@ -788,7 +769,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "daily",
                         "description": "routine name",
                         "name": "name",
                         "in": "path",
@@ -822,7 +802,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "daily",
                         "description": "routine name",
                         "name": "name",
                         "in": "path",
@@ -862,7 +841,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "daily",
                         "description": "routine name",
                         "name": "name",
                         "in": "path",
@@ -899,7 +877,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "daily",
                         "description": "routine name",
                         "name": "name",
                         "in": "path",
@@ -961,7 +938,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "aws",
                         "description": "storage name",
                         "name": "name",
                         "in": "path",
@@ -995,7 +971,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "aws",
                         "description": "storage name",
                         "name": "name",
                         "in": "path",
@@ -1035,7 +1010,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "aws",
                         "description": "storage name",
                         "name": "name",
                         "in": "path",
@@ -1072,7 +1046,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "example": "aws",
                         "description": "storage name",
                         "name": "name",
                         "in": "path",
@@ -1182,7 +1155,6 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "format": "int64",
-                        "example": 12345,
                         "description": "Job ID to retrieve the status",
                         "name": "jobId",
                         "in": "path",
