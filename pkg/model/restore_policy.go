@@ -61,8 +61,10 @@ type RestorePolicy struct {
 // @Description RestoreNamespace specifies an alternative namespace name for the restore
 // @Description operation.
 type RestoreNamespace struct {
-	Source      *string `json:"source,omitempty" example:"source-ns" validate:"required"`           // Original namespace name.
-	Destination *string `json:"destination,omitempty" example:"destination-ns" validate:"required"` // Destination namespace name.
+	// Original namespace name.
+	Source *string `json:"source,omitempty" example:"source-ns" validate:"required"`
+	// Destination namespace name.
+	Destination *string `json:"destination,omitempty" example:"destination-ns" validate:"required"`
 }
 
 // Validate validates the restore policy.
