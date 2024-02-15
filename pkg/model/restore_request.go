@@ -24,15 +24,15 @@ type RestoreRequestInternal struct {
 // @Description RestoreTimestampRequest represents a restore by timestamp operation request.
 type RestoreTimestampRequest struct {
 	// The details of the Aerospike destination cluster.
-	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
+	DestinationCuster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
 	// Restore policy to use in the operation.
-	Policy *RestorePolicy `json:"policy,omitempty"`
+	Policy *RestorePolicy `json:"policy,omitempty" validate:"required"`
 	// Secret Agent configuration (optional).
 	SecretAgent *SecretAgent `json:"secret-agent,omitempty"`
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
-	Time int64 `json:"time,omitempty" format:"int64"`
+	Time int64 `json:"time,omitempty" format:"int64" example:"1739538000000" validate:"required"`
 	// The backup routine name.
-	Routine string `json:"routine,omitempty"`
+	Routine string `json:"routine,omitempty" example:"daily" validate:"required"`
 }
 
 // String satisfies the fmt.Stringer interface.
