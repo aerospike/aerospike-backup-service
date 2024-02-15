@@ -1361,10 +1361,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bandwidth": {
+                    "description": "Throttles backup write operations to the backup file(s) to not exceed the given\nbandwidth in MiB/s.",
                     "type": "integer",
                     "example": 10000
                 },
                 "file-limit": {
+                    "description": "File size limit (in MB) for --directory. If an .asb backup file crosses this size threshold,\na new backup file will be created.",
                     "type": "integer",
                     "example": 1024
                 },
@@ -1373,37 +1375,47 @@ const docTemplate = `{
                     "example": "EjRWeJq83vEjRRI0VniavN7xI0U="
                 },
                 "max-records": {
+                    "description": "An approximate limit for the number of records to process. Available in server 4.9 and above.",
                     "type": "integer",
                     "example": 10000
                 },
                 "max-retries": {
+                    "description": "Maximum number of retries before aborting the current transaction.",
                     "type": "integer",
                     "example": 3
                 },
                 "no-bins": {
+                    "description": "Only backup record metadata (digest, TTL, generation count, key).",
                     "type": "boolean"
                 },
                 "no-indexes": {
+                    "description": "Do not back up any secondary index definitions.",
                     "type": "boolean"
                 },
                 "no-records": {
+                    "description": "Do not back up any record data (metadata or bin data).",
                     "type": "boolean"
                 },
                 "no-udfs": {
+                    "description": "Do not back up any UDF modules.",
                     "type": "boolean"
                 },
                 "parallel": {
+                    "description": "Maximum number of scan calls to run in parallel.",
                     "type": "integer",
                     "example": 1
                 },
                 "records-per-second": {
+                    "description": "Limit total returned records per second (RPS). If RPS is zero (the default),\nthe records-per-second limit is not applied.",
                     "type": "integer",
                     "example": 1000
                 },
                 "remove-artifacts": {
+                    "description": "Clear directory or remove output file.",
                     "type": "boolean"
                 },
                 "remove-files": {
+                    "description": "Whether to clear the output directory (default: KeepAll).",
                     "enum": [
                         "KeepAll",
                         "RemoveAll",
@@ -1416,14 +1428,17 @@ const docTemplate = `{
                     ]
                 },
                 "retry-delay": {
+                    "description": "RetryDelay defines the delay in milliseconds before retrying a failed operation.",
                     "type": "integer",
                     "example": 500
                 },
                 "socket-timeout": {
+                    "description": "Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "example": 1000
                 },
                 "total-timeout": {
+                    "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
                     "type": "integer",
                     "example": 2000
                 }
@@ -1834,6 +1849,7 @@ const docTemplate = `{
             }
         },
         "model.RestoreNamespace": {
+            "description": "RestoreNamespace specifies an alternative namespace name for the restore operation.",
             "type": "object",
             "required": [
                 "destination",
@@ -1851,17 +1867,21 @@ const docTemplate = `{
             }
         },
         "model.RestorePolicy": {
+            "description": "RestorePolicy represents a policy for the restore operation.",
             "type": "object",
             "properties": {
                 "bandwidth": {
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
                     "type": "integer",
                     "example": 50000
                 },
                 "batch-size": {
+                    "description": "The max allowed number of records per an async batch write call.\nDefault is 128 with batch writes enabled, or 16 without batch writes.",
                     "type": "integer",
                     "example": 128
                 },
                 "bin-list": {
+                    "description": "The bins to restore (optional, an empty list implies restoring all bins).",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -1872,35 +1892,49 @@ const docTemplate = `{
                     ]
                 },
                 "disable-batch-writes": {
+                    "description": "Disables the use of batch writes when restoring records to the Aerospike cluster.\nBy default, the cluster is checked for batch write support.",
                     "type": "boolean"
                 },
                 "max-async-batches": {
+                    "description": "The max number of outstanding async record batch write calls at a time.",
                     "type": "integer",
                     "example": 32
                 },
                 "namespace": {
-                    "$ref": "#/definitions/model.RestoreNamespace"
+                    "description": "Namespace details for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.RestoreNamespace"
+                        }
+                    ]
                 },
                 "no-generation": {
+                    "description": "Records from backups take precedence. This option disables the generation check.\nWith this option, records from the backup always overwrite records that already exist in\nthe namespace, regardless of generation numbers.",
                     "type": "boolean"
                 },
                 "no-indexes": {
+                    "description": "Do not restore any secondary index definitions.",
                     "type": "boolean"
                 },
                 "no-records": {
+                    "description": "Do not restore any record data (metadata or bin data).\nBy default, record data, secondary index definitions, and UDF modules\nwill be restored.",
                     "type": "boolean"
                 },
                 "no-udfs": {
+                    "description": "Do not restore any UDF modules.",
                     "type": "boolean"
                 },
                 "parallel": {
+                    "description": "The number of client threads to spawn for writing to the cluster.",
                     "type": "integer",
                     "example": 8
                 },
                 "replace": {
+                    "description": "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
                     "type": "boolean"
                 },
                 "set-list": {
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -1911,14 +1945,17 @@ const docTemplate = `{
                     ]
                 },
                 "timeout": {
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.",
                     "type": "integer",
                     "example": 1000
                 },
                 "tps": {
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
                     "type": "integer",
                     "example": 4000
                 },
                 "unique": {
+                    "description": "Existing records take precedence. With this option, only records that do not exist in\nthe namespace are restored, regardless of generation numbers. If a record exists in\nthe namespace, the record from the backup is ignored.",
                     "type": "boolean"
                 }
             }
@@ -1986,6 +2023,7 @@ const docTemplate = `{
             }
         },
         "model.SecretAgent": {
+            "description": "SecretAgent represents the configuration of an Aerospike Secret Agent for a backup/restore operation.",
             "type": "object",
             "properties": {
                 "address": {
