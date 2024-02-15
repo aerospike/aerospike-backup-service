@@ -8,6 +8,8 @@ import (
 
 // BackupRoutine represents a scheduled backup operation routine.
 // @Description BackupRoutine represents a scheduled backup operation routine.
+//
+//nolint:lll
 type BackupRoutine struct {
 	// The name of the corresponding backup policy.
 	BackupPolicy string `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty" example:"daily" validate:"required"`

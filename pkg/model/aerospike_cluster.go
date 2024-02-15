@@ -19,6 +19,8 @@ import (
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 // @Description AerospikeCluster represents the configuration for an Aerospike cluster for backup.
+//
+// nolint:lll
 type AerospikeCluster struct {
 	pwdOnce sync.Once
 	pwd     *string

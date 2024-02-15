@@ -11,6 +11,8 @@ import (
 
 // Storage represents the configuration for a backup storage details.
 // @Description Storage represents the configuration for a backup storage details.
+//
+//nolint:lll
 type Storage struct {
 	// The type of the storage provider (0 - Local, 1 - AWS S3).
 	Type StorageType `yaml:"type" json:"type" enums:"0,1" validate:"required"`

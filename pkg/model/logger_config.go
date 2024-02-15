@@ -8,6 +8,8 @@ import (
 
 // LoggerConfig represents the backup service logger configuration.
 // @Description LoggerConfig represents the backup service logger configuration.
+//
+//nolint:lll
 type LoggerConfig struct {
 	// Level is the logger level.
 	Level string `yaml:"level,omitempty" json:"level,omitempty" default:"DEBUG" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
