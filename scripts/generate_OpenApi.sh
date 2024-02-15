@@ -31,6 +31,7 @@ swag init -d $ROOT_PATH/internal/server,$ROOT_PATH/pkg/model \
 
 # swag codegen cannot handle int64 format for return values
 sed -i '' 's/"type": "int64"/"type": "integer",\n                            "format": "int64"/g' $ROOT_PATH/docs/swagger.json
+sed -i '' 's/"type": "int64"/"type": "integer",\n                            "format": "int64"/g' $ROOT_PATH/docs/docs.go
 sed -i '' 's/type: int64/type: integer\n            format: int64/g' $ROOT_PATH/docs/swagger.yaml
 
 openapi-generator generate -i $ROOT_PATH/docs/swagger.yaml -g openapi-yaml -o $ROOT_PATH/tmp

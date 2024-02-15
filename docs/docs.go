@@ -1091,7 +1091,8 @@ const docTemplate = `{
                     "202": {
                         "description": "Job ID",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer",
+                            "format": "int64"
                         }
                     },
                     "400": {
@@ -1129,7 +1130,8 @@ const docTemplate = `{
                     "202": {
                         "description": "Job ID",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer",
+                            "format": "int64"
                         }
                     },
                     "400": {
@@ -1203,7 +1205,8 @@ const docTemplate = `{
                     "202": {
                         "description": "Job ID",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer",
+                            "format": "int64"
                         }
                     },
                     "400": {
