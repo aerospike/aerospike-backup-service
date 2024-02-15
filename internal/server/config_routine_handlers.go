@@ -14,7 +14,7 @@ import (
 // @Summary     Adds a backup routine to the config.
 // @ID          addRoutine
 // @Tags        Configuration
-// @Router      /config/routines/{name} [post]
+// @Router      /v1/config/routines/{name} [post]
 // @Accept      json
 // @Param       name path string true "routine name" example(daily)
 // @Param       routine body model.BackupRoutine true "backup routine"
@@ -52,7 +52,7 @@ func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
 // @Summary     Reads all routines from the configuration.
 // @ID	        readRoutines
 // @Tags        Configuration
-// @Router      /config/routines [get]
+// @Router      /v1/config/routines [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.BackupRoutine
 // @Failure     400 {string} string
@@ -74,7 +74,7 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Summary     Reads a specific routine from the configuration given its name.
 // @ID	        readRoutine
 // @Tags        Configuration
-// @Router      /config/routines/{name} [get]
+// @Router      /v1/config/routines/{name} [get]
 // @Param       name path string true "routine name" example(daily)
 // @Produce     json
 // @Success  	200 {object} model.BackupRoutine
@@ -110,7 +110,7 @@ func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
 // @Summary      Updates an existing routine in the configuration.
 // @ID 	         updateRoutine
 // @Tags         Configuration
-// @Router       /config/routines/{name} [put]
+// @Router       /v1/config/routines/{name} [put]
 // @Accept       json
 // @Param        name path string true "routine name" example(daily)
 // @Param        routine body model.BackupRoutine true "backup routine"
@@ -148,7 +148,7 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Summary     Deletes a backup routine from the configuration by name.
 // @ID          deleteRoutine
 // @Tags        Configuration
-// @Router      /config/routines/{name} [delete]
+// @Router      /v1/config/routines/{name} [delete]
 // @Param       name path string true "routine name" example(daily)
 // @Success     204
 // @Failure     400 {string} string

@@ -14,7 +14,7 @@ import (
 // @Summary     Adds a storage to the config.
 // @ID	        addStorage
 // @Tags        Configuration
-// @Router      /config/storage/{name} [post]
+// @Router      /v1/config/storage/{name} [post]
 // @Accept      json
 // @Param       name path string true "storage name" example(aws)
 // @Param       storage body model.Storage true "backup storage"
@@ -52,7 +52,7 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 // @Summary     Reads all storage from the configuration.
 // @ID 	        readAllStorage
 // @Tags        Configuration
-// @Router      /config/storage [get]
+// @Router      /v1/config/storage [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.Storage
 // @Failure     400 {string} string
@@ -75,7 +75,7 @@ func (ws *HTTPServer) readAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Summary     Reads a specific storage from the configuration given its name.
 // @ID	        readStorage
 // @Tags        Configuration
-// @Router      /config/storage/{name} [get]
+// @Router      /v1/config/storage/{name} [get]
 // @Param       name path string true "storage name" example(aws)
 // @Produce     json
 // @Success  	200 {object} model.Storage
@@ -111,7 +111,7 @@ func (ws *HTTPServer) readStorage(w http.ResponseWriter, r *http.Request) {
 // @Summary     Updates an existing storage in the configuration.
 // @ID	        updateStorage
 // @Tags        Configuration
-// @Router      /config/storage/{name} [put]
+// @Router      /v1/config/storage/{name} [put]
 // @Accept      json
 // @Param       name path string true "storage name" example(aws)
 // @Param       storage body model.Storage true "backup storage"
@@ -146,7 +146,7 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 // @Summary     Deletes a storage from the configuration by name.
 // @ID	        deleteStorage
 // @Tags        Configuration
-// @Router      /config/storage/{name} [delete]
+// @Router      /v1/config/storage/{name} [delete]
 // @Param       name path string true "storage name" example(aws)
 // @Success     204
 // @Failure     400 {string} string

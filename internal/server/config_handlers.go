@@ -15,7 +15,7 @@ var ConfigurationManager service.ConfigurationManager
 // @Summary     Returns the configuration for the service.
 // @ID	        readConfig
 // @Tags        Configuration
-// @Router      /config [get]
+// @Router      /v1/config [get]
 // @Produce     json
 // @Success     200 {object} model.Config
 // @Failure     400 {string} string
@@ -34,7 +34,7 @@ func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 // @Summary     Updates the configuration for the service.
 // @ID 	        updateConfig
 // @Tags        Configuration
-// @Router      /config [put]
+// @Router      /v1/config [put]
 // @Accept      json
 // @Param       config body model.Config true "config"
 // @Success     200

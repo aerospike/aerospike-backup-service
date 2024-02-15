@@ -48,7 +48,7 @@ type BackupPolicy struct {
 	// Limit total returned records per second (RPS). If RPS is zero (the default),
 	// the records-per-second limit is not applied.
 	RecordsPerSecond *uint32 `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000"`
-	// File size limit (in MB) for --directory. If an .asb backup file crosses this size threshold,
+	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created.
 	FileLimit *uint64 `yaml:"file-limit,omitempty" json:"file-limit,omitempty" example:"1024"`
 	FilterExp *string `yaml:"filter-exp,omitempty" json:"filter-exp,omitempty" example:"EjRWeJq83vEjRRI0VniavN7xI0U="`

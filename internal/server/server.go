@@ -15,6 +15,10 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const (
+	restAPIVersion = "v1"
+)
+
 type ipWhiteList struct {
 	addresses map[string]*netip.Addr
 	networks  []*netip.Prefix
@@ -142,63 +146,63 @@ func (ws *HTTPServer) Start() {
 	mux := http.NewServeMux()
 
 	// root route
-	mux.HandleFunc("/", rootActionHandler)
+	mux.HandleFunc(ws.sys("/"), rootActionHandler)
 
 	// whole config route
-	mux.HandleFunc("/config", ws.configActionHandler)
+	mux.HandleFunc(ws.api("/config"), ws.configActionHandler)
 
 	// cluster config routes
-	mux.HandleFunc("/config/clusters/{name}", ws.configClusterActionHandler)
-	mux.HandleFunc("/config/clusters", ws.readAerospikeClusters)
+	mux.HandleFunc(ws.api("/config/clusters/{name}"), ws.configClusterActionHandler)
+	mux.HandleFunc(ws.api("/config/clusters"), ws.readAerospikeClusters)
 
 	// storage config routes
-	mux.HandleFunc("/config/storage/{name}", ws.configStorageActionHandler)
-	mux.HandleFunc("/config/storage", ws.readAllStorage)
+	mux.HandleFunc(ws.api("/config/storage/{name}"), ws.configStorageActionHandler)
+	mux.HandleFunc(ws.api("/config/storage"), ws.readAllStorage)
 
 	// policy config routes
-	mux.HandleFunc("/config/policies/{name}", ws.configPolicyActionHandler)
-	mux.HandleFunc("/config/policies", ws.readPolicies)
+	mux.HandleFunc(ws.api("/config/policies/{name}"), ws.configPolicyActionHandler)
+	mux.HandleFunc(ws.api("/config/policies"), ws.readPolicies)
 
 	// routine config routes
-	mux.HandleFunc("/config/routines/{name}", ws.configRoutineActionHandler)
-	mux.HandleFunc("/config/routines", ws.readRoutines)
+	mux.HandleFunc(ws.api("/config/routines/{name}"), ws.configRoutineActionHandler)
+	mux.HandleFunc(ws.api("/config/routines"), ws.readRoutines)
 
 	// health route
-	mux.HandleFunc("/health", healthActionHandler)
+	mux.HandleFunc(ws.sys("/health"), healthActionHandler)
 
 	// readiness route
-	mux.HandleFunc("/ready", readyActionHandler)
+	mux.HandleFunc(ws.sys("/ready"), readyActionHandler)
 
 	// version route
-	mux.HandleFunc("/version", versionActionHandler)
+	mux.HandleFunc(ws.sys("/version"), versionActionHandler)
 
 	// Prometheus endpoint
-	mux.Handle("/metrics", metricsActionHandler())
+	mux.Handle(ws.sys("/metrics"), metricsActionHandler())
 
 	// OpenAPI specification endpoint
-	mux.Handle("/api-docs/", apiDocsActionHandler())
+	mux.Handle(ws.sys("/api-docs/"), apiDocsActionHandler())
 
 	// Restore job endpoints
 	// Restore from full backup (by folder)
-	mux.HandleFunc("/restore/full", ws.restoreFullHandler)
+	mux.HandleFunc(ws.api("/restore/full"), ws.restoreFullHandler)
 
 	// Restore from incremental backup (by file)
-	mux.HandleFunc("/restore/incremental", ws.restoreIncrementalHandler)
+	mux.HandleFunc(ws.api("/restore/incremental"), ws.restoreIncrementalHandler)
 
 	// Restore to specific point in time (by timestamp and routine)
-	mux.HandleFunc("/restore/timestamp", ws.restoreByTimeHandler)
+	mux.HandleFunc(ws.api("/restore/timestamp"), ws.restoreByTimeHandler)
 
 	// Restore job status endpoint
-	mux.HandleFunc("/restore/status/{jobId}", ws.restoreStatusHandler)
+	mux.HandleFunc(ws.api("/restore/status/{jobId}"), ws.restoreStatusHandler)
 
 	// Read available backups
-	mux.HandleFunc("/backups/full/{name}", ws.getFullBackupsForRoutine)
-	mux.HandleFunc("/backups/full", ws.getAllFullBackups)
-	mux.HandleFunc("/backups/incremental/{name}", ws.getIncrementalBackupsForRoutine)
-	mux.HandleFunc("/backups/incremental", ws.getAllIncrementalBackups)
+	mux.HandleFunc(ws.api("/backups/full/{name}"), ws.getFullBackupsForRoutine)
+	mux.HandleFunc(ws.api("/backups/full"), ws.getAllFullBackups)
+	mux.HandleFunc(ws.api("/backups/incremental/{name}"), ws.getIncrementalBackupsForRoutine)
+	mux.HandleFunc(ws.api("/backups/incremental"), ws.getAllIncrementalBackups)
 
 	// Schedules a full backup operation
-	mux.HandleFunc("/backups/schedule/{name}", ws.scheduleFullBackup)
+	mux.HandleFunc(ws.api("/backups/schedule/{name}"), ws.scheduleFullBackup)
 
 	ws.server.Handler = ws.rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()
@@ -207,6 +211,25 @@ func (ws *HTTPServer) Start() {
 	} else {
 		panic(err)
 	}
+}
+
+func (ws *HTTPServer) api(pattern string) string {
+	contextPath := ws.config.ServiceConfig.HTTPServer.ContextPath
+	if !strings.HasSuffix(contextPath, "/") {
+		contextPath += "/"
+	}
+	return fmt.Sprintf("%s%s%s", contextPath, restAPIVersion, pattern)
+}
+
+func (ws *HTTPServer) sys(pattern string) string {
+	contextPath := ws.config.ServiceConfig.HTTPServer.ContextPath
+	if contextPath == "/" {
+		return pattern
+	}
+	if !strings.HasSuffix(contextPath, "/") {
+		contextPath += "/"
+	}
+	return fmt.Sprintf("%s%s", contextPath, pattern)
 }
 
 // Shutdown shutdowns the HTTP server.
