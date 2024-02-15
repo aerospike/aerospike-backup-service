@@ -14,7 +14,7 @@ import (
 // @Summary     Adds a policy to the config.
 // @ID          addPolicy
 // @Tags        Configuration
-// @Router      /config/policies/{name} [post]
+// @Router      /v1/config/policies/{name} [post]
 // @Accept      json
 // @Param       name path string true "policy name"
 // @Param       policy body model.BackupPolicy true "backup policy"
@@ -52,7 +52,7 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Summary     Reads all policies from the configuration.
 // @ID	        readPolicies
 // @Tags        Configuration
-// @Router      /config/policies [get]
+// @Router      /v1/config/policies [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.BackupPolicy
 // @Failure     400 {string} string
@@ -74,7 +74,7 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Summary     Reads a backup policy from the configuration given its name.
 // @ID	        readPolicy
 // @Tags        Configuration
-// @Router      /config/policies/{name} [get]
+// @Router      /v1/config/policies/{name} [get]
 // @Param       name path string true "Name of the backup policy"
 // @Produce     json
 // @Success  	200 {object} model.BackupPolicy
@@ -110,7 +110,7 @@ func (ws *HTTPServer) readPolicy(w http.ResponseWriter, r *http.Request) {
 // @Summary     Updates an existing policy in the configuration.
 // @ID 	        updatePolicy
 // @Tags        Configuration
-// @Router      /config/policies/{name} [put]
+// @Router      /v1/config/policies/{name} [put]
 // @Accept      json
 // @Param       name path string true "policy name"
 // @Param       policy body model.BackupPolicy true "backup policy"
@@ -148,7 +148,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Summary     Deletes a policy from the configuration by name.
 // @ID          deletePolicy
 // @Tags        Configuration
-// @Router      /config/policies/{name} [delete]
+// @Router      /v1/config/policies/{name} [delete]
 // @Param       name path string true "Policy Name"
 // @Success     204
 // @Failure     400 {string} string

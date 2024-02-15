@@ -15,7 +15,7 @@ import (
 // @ID 	        restoreFull
 // @Description Specify the directory parameter for the full backup restore.
 // @Tags        Restore
-// @Router      /restore/full [post]
+// @Router      /v1/restore/full [post]
 // @Accept      json
 // @Param       request body model.RestoreRequest true "query params"
 // @Success     202 {int64}  "Job ID"
@@ -56,7 +56,7 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 // @ID 	        restoreIncremental
 // @Description Specify the file parameter to restore from an incremental backup file.
 // @Tags        Restore
-// @Router      /restore/incremental [post]
+// @Router      /v1/restore/incremental [post]
 // @Accept      json
 // @Param       request body model.RestoreRequest true "query params"
 // @Success     202 {int64}  "Job ID"
@@ -96,7 +96,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 // @ID 	        restoreTimestamp
 // @Description Restores backup from given point in time
 // @Tags        Restore
-// @Router      /restore/timestamp [post]
+// @Router      /v1/restore/timestamp [post]
 // @Accept      json
 // @Param       request body model.RestoreTimestampRequest true "query params"
 // @Success     202 {int64}  "Job ID"
@@ -133,7 +133,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 // @Tags        Restore
 // @Produce     json
 // @Param       jobId path int true "Job ID to retrieve the status" format(int64)
-// @Router      /restore/status/{jobId} [get]
+// @Router      /v1/restore/status/{jobId} [get]
 // @Success     200 {object} model.RestoreJobStatus "Job status"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Request) {

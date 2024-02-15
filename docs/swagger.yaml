@@ -69,7 +69,7 @@ definitions:
         type: integer
       file-limit:
         description: |-
-          File size limit (in MB) for --directory. If an .asb backup file crosses this size threshold,
+          File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
           a new backup file will be created.
         type: integer
       filter-exp:
@@ -280,6 +280,7 @@ definitions:
     properties:
       address:
         default: 0.0.0.0
+        description: The address to listen on.
         type: string
       context-path:
         default: /
@@ -287,9 +288,12 @@ definitions:
         type: string
       port:
         default: 8080
+        description: The port to listen on.
         type: integer
       rate:
-        $ref: '#/definitions/model.RateLimiterConfig'
+        allOf:
+        - $ref: '#/definitions/model.RateLimiterConfig'
+        description: HTTP rate limiter configuration.
     type: object
   model.JobStatus:
     enum:
@@ -334,11 +338,14 @@ definitions:
     properties:
       size:
         default: 1024
+        description: Rate limiter token bucket size (bursts threshold).
         type: integer
       tps:
         default: 1024
+        description: Rate limiter tokens per second threshold.
         type: integer
       white-list:
+        description: The list of ips to whitelist in rate limiting.
         items:
           type: string
         type: array
@@ -654,7 +661,34 @@ paths:
       summary: OpenAPI specification endpoint.
       tags:
       - System
-  /backups/full:
+  /health:
+    get:
+      operationId: health
+      responses:
+        "200":
+          description: OK
+      summary: Health endpoint.
+      tags:
+      - System
+  /metrics:
+    get:
+      operationId: metrics
+      responses:
+        "200":
+          description: OK
+      summary: Prometheus metrics endpoint.
+      tags:
+      - System
+  /ready:
+    get:
+      operationId: ready
+      responses:
+        "200":
+          description: OK
+      summary: Readiness endpoint.
+      tags:
+      - System
+  /v1/backups/full:
     get:
       operationId: getFullBackups
       parameters:
@@ -686,7 +720,7 @@ paths:
       summary: Get available full backups.
       tags:
       - Backup
-  /backups/full/{name}:
+  /v1/backups/full/{name}:
     get:
       operationId: getFullBackupsForRoutine
       parameters:
@@ -721,7 +755,7 @@ paths:
       summary: Get available full backups for routine.
       tags:
       - Backup
-  /backups/incremental:
+  /v1/backups/incremental:
     get:
       operationId: getIncrementalBackups
       parameters:
@@ -753,7 +787,7 @@ paths:
       summary: Get available incremental backups.
       tags:
       - Backup
-  /backups/incremental/{name}:
+  /v1/backups/incremental/{name}:
     get:
       operationId: getIncrementalBackupsForRoutine
       parameters:
@@ -788,7 +822,7 @@ paths:
       summary: Get incremental backups for routine.
       tags:
       - Backup
-  /backups/schedule/{name}:
+  /v1/backups/schedule/{name}:
     post:
       operationId: scheduleFullBackup
       parameters:
@@ -811,7 +845,7 @@ paths:
       summary: Schedule a full backup once per routine name.
       tags:
       - Backup
-  /config:
+  /v1/config:
     get:
       operationId: readConfig
       produces:
@@ -849,7 +883,7 @@ paths:
       summary: Updates the configuration for the service.
       tags:
       - Configuration
-  /config/clusters:
+  /v1/config/clusters:
     get:
       operationId: readAllClusters
       produces:
@@ -868,7 +902,7 @@ paths:
       summary: Reads all Aerospike clusters from the configuration.
       tags:
       - Configuration
-  /config/clusters/{name}:
+  /v1/config/clusters/{name}:
     delete:
       operationId: deleteCluster
       parameters:
@@ -962,7 +996,7 @@ paths:
       summary: Updates an existing Aerospike cluster in the configuration.
       tags:
       - Configuration
-  /config/policies:
+  /v1/config/policies:
     get:
       operationId: readPolicies
       produces:
@@ -981,7 +1015,7 @@ paths:
       summary: Reads all policies from the configuration.
       tags:
       - Configuration
-  /config/policies/{name}:
+  /v1/config/policies/{name}:
     delete:
       operationId: deletePolicy
       parameters:
@@ -1074,7 +1108,7 @@ paths:
       summary: Updates an existing policy in the configuration.
       tags:
       - Configuration
-  /config/routines:
+  /v1/config/routines:
     get:
       operationId: readRoutines
       produces:
@@ -1093,7 +1127,7 @@ paths:
       summary: Reads all routines from the configuration.
       tags:
       - Configuration
-  /config/routines/{name}:
+  /v1/config/routines/{name}:
     delete:
       operationId: deleteRoutine
       parameters:
@@ -1186,7 +1220,7 @@ paths:
       summary: Updates an existing routine in the configuration.
       tags:
       - Configuration
-  /config/storage:
+  /v1/config/storage:
     get:
       operationId: readAllStorage
       produces:
@@ -1205,7 +1239,7 @@ paths:
       summary: Reads all storage from the configuration.
       tags:
       - Configuration
-  /config/storage/{name}:
+  /v1/config/storage/{name}:
     delete:
       operationId: deleteStorage
       parameters:
@@ -1298,34 +1332,7 @@ paths:
       summary: Updates an existing storage in the configuration.
       tags:
       - Configuration
-  /health:
-    get:
-      operationId: health
-      responses:
-        "200":
-          description: OK
-      summary: Health endpoint.
-      tags:
-      - System
-  /metrics:
-    get:
-      operationId: metrics
-      responses:
-        "200":
-          description: OK
-      summary: Prometheus metrics endpoint.
-      tags:
-      - System
-  /ready:
-    get:
-      operationId: ready
-      responses:
-        "200":
-          description: OK
-      summary: Readiness endpoint.
-      tags:
-      - System
-  /restore/full:
+  /v1/restore/full:
     post:
       consumes:
       - application/json
@@ -1351,7 +1358,7 @@ paths:
       summary: Trigger an asynchronous full restore operation.
       tags:
       - Restore
-  /restore/incremental:
+  /v1/restore/incremental:
     post:
       consumes:
       - application/json
@@ -1378,7 +1385,7 @@ paths:
       summary: Trigger an asynchronous incremental restore operation.
       tags:
       - Restore
-  /restore/status/{jobId}:
+  /v1/restore/status/{jobId}:
     get:
       operationId: restoreStatus
       parameters:
@@ -1402,7 +1409,7 @@ paths:
       summary: Retrieve status for a restore job.
       tags:
       - Restore
-  /restore/timestamp:
+  /v1/restore/timestamp:
     post:
       consumes:
       - application/json

@@ -14,7 +14,7 @@ import (
 // @Summary     Adds an Aerospike cluster to the config.
 // @ID          addCluster
 // @Tags        Configuration
-// @Router      /config/clusters/{name} [post]
+// @Router      /v1/config/clusters/{name} [post]
 // @Accept      json
 // @Param       name path string true "cluster name"
 // @Param       cluster body model.AerospikeCluster true "cluster info"
@@ -52,7 +52,7 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 // @Summary     Reads all Aerospike clusters from the configuration.
 // @ID	        readAllClusters
 // @Tags        Configuration
-// @Router      /config/clusters [get]
+// @Router      /v1/config/clusters [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.AerospikeCluster
 // @Failure     400 {string} string
@@ -75,7 +75,7 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter, _ *http.Reque
 // @Summary     Reads a specific Aerospike cluster from the configuration given its name.
 // @ID	        readCluster
 // @Tags        Configuration
-// @Router      /config/clusters/{name} [get]
+// @Router      /v1/config/clusters/{name} [get]
 // @Param       name path string true "Name of the Aerospike cluster"
 // @Produce     json
 // @Success  	200 {object} model.AerospikeCluster
@@ -111,7 +111,7 @@ func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Reques
 // @Summary     Updates an existing Aerospike cluster in the configuration.
 // @ID	        updateCluster
 // @Tags        Configuration
-// @Router      /config/clusters/{name} [put]
+// @Router      /v1/config/clusters/{name} [put]
 // @Accept      json
 // @Param       name path string true "cluster name"
 // @Param       cluster body model.AerospikeCluster true "aerospike cluster"
@@ -148,7 +148,7 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 // @Summary     Deletes a cluster from the configuration by name.
 // @ID          deleteCluster
 // @Tags        Configuration
-// @Router      /config/clusters/{name} [delete]
+// @Router      /v1/config/clusters/{name} [delete]
 // @Param       name path string true "cluster Name"
 // @Success     204
 // @Failure     400 {string} string
