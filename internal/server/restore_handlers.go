@@ -13,12 +13,11 @@ import (
 
 // @Summary     Trigger an asynchronous full restore operation.
 // @ID 	        restoreFull
-// @Description Specify the directory parameter for the full backup restore.
 // @Tags        Restore
 // @Router      /v1/restore/full [post]
 // @Accept      json
-// @Param       request body model.RestoreRequest true "query params"
-// @Success     202 {int64}  "Job ID"
+// @Param       request body model.RestoreRequest true "Restore request details"
+// @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -54,12 +53,11 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 
 // @Summary     Trigger an asynchronous incremental restore operation.
 // @ID 	        restoreIncremental
-// @Description Specify the file parameter to restore from an incremental backup file.
 // @Tags        Restore
 // @Router      /v1/restore/incremental [post]
 // @Accept      json
-// @Param       request body model.RestoreRequest true "query params"
-// @Success     202 {int64}  "Job ID"
+// @Param       request body model.RestoreRequest true "Restore request details"
+// @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -94,12 +92,12 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 
 // @Summary     Trigger an asynchronous restore operation to specific point in time.
 // @ID 	        restoreTimestamp
-// @Description Restores backup from given point in time
+// @Description Restores backup from the given point in time.
 // @Tags        Restore
 // @Router      /v1/restore/timestamp [post]
 // @Accept      json
-// @Param       request body model.RestoreTimestampRequest true "query params"
-// @Success     202 {int64}  "Job ID"
+// @Param       request body model.RestoreTimestampRequest true "Restore request details"
+// @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -134,7 +132,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 // @Produce     json
 // @Param       jobId path int true "Job ID to retrieve the status" format(int64)
 // @Router      /v1/restore/status/{jobId} [get]
-// @Success     200 {object} model.RestoreJobStatus "Job status"
+// @Success     200 {object} model.RestoreJobStatus "Restore job status details"
 // @Failure     400 {string} string
 func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	jobIDParam := r.PathValue("jobId")

@@ -135,8 +135,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "string"
                         }
@@ -187,6 +187,12 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -235,8 +241,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "string"
                         }
@@ -287,6 +293,12 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -321,6 +333,12 @@ const docTemplate = `{
                 "responses": {
                     "202": {
                         "description": "Accepted"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
                     },
                     "404": {
                         "description": "Not Found",
@@ -367,7 +385,7 @@ const docTemplate = `{
                 "operationId": "updateConfig",
                 "parameters": [
                     {
-                        "description": "config",
+                        "description": "Configuration details",
                         "name": "config",
                         "in": "body",
                         "required": true,
@@ -431,7 +449,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Name of the Aerospike cluster",
+                        "description": "Aerospike cluster name",
                         "name": "name",
                         "in": "path",
                         "required": true
@@ -444,8 +462,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.AerospikeCluster"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "404": {
-                        "description": "The specified cluster could not be found.",
+                        "description": "The specified cluster could not be found",
                         "schema": {
                             "type": "string"
                         }
@@ -464,13 +488,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "cluster name",
+                        "description": "Aerospike cluster name",
                         "name": "name",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "aerospike cluster",
+                        "description": "Aerospike cluster details",
                         "name": "cluster",
                         "in": "body",
                         "required": true,
@@ -503,13 +527,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "cluster name",
+                        "description": "Aerospike cluster name",
                         "name": "name",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "cluster info",
+                        "description": "Aerospike cluster details",
                         "name": "cluster",
                         "in": "body",
                         "required": true,
@@ -539,7 +563,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "cluster Name",
+                        "description": "Aerospike cluster name",
                         "name": "name",
                         "in": "path",
                         "required": true
@@ -600,7 +624,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Name of the backup policy",
+                        "description": "Backup policy name",
                         "name": "name",
                         "in": "path",
                         "required": true
@@ -613,8 +637,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.BackupPolicy"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "404": {
-                        "description": "The specified policy could not be found.",
+                        "description": "The specified policy could not be found",
                         "schema": {
                             "type": "string"
                         }
@@ -633,13 +663,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "policy name",
+                        "description": "Backup policy name",
                         "name": "name",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "backup policy",
+                        "description": "Backup policy details",
                         "name": "policy",
                         "in": "body",
                         "required": true,
@@ -672,13 +702,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "policy name",
+                        "description": "Backup policy name",
                         "name": "name",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "backup policy",
+                        "description": "Backup policy details",
                         "name": "policy",
                         "in": "body",
                         "required": true,
@@ -708,7 +738,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Policy Name",
+                        "description": "Backup policy name",
                         "name": "name",
                         "in": "path",
                         "required": true
@@ -769,7 +799,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "routine name",
+                        "description": "Backup routine name",
                         "name": "name",
                         "in": "path",
                         "required": true
@@ -782,8 +812,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.BackupRoutine"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "404": {
-                        "description": "The specified cluster could not be found.",
+                        "description": "The specified cluster could not be found",
                         "schema": {
                             "type": "string"
                         }
@@ -802,13 +838,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "routine name",
+                        "description": "Backup routine name",
                         "name": "name",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "backup routine",
+                        "description": "Backup routine details",
                         "name": "routine",
                         "in": "body",
                         "required": true,
@@ -841,13 +877,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "routine name",
+                        "description": "Backup routine name",
                         "name": "name",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "backup routine",
+                        "description": "Backup routine details",
                         "name": "routine",
                         "in": "body",
                         "required": true,
@@ -877,7 +913,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "routine name",
+                        "description": "Backup routine name",
                         "name": "name",
                         "in": "path",
                         "required": true
@@ -938,7 +974,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "storage name",
+                        "description": "Backup storage name",
                         "name": "name",
                         "in": "path",
                         "required": true
@@ -951,8 +987,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.Storage"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "404": {
-                        "description": "The specified storage could not be found.",
+                        "description": "The specified storage could not be found",
                         "schema": {
                             "type": "string"
                         }
@@ -971,13 +1013,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "storage name",
+                        "description": "Backup storage name",
                         "name": "name",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "backup storage",
+                        "description": "Backup storage details",
                         "name": "storage",
                         "in": "body",
                         "required": true,
@@ -1010,13 +1052,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "storage name",
+                        "description": "Backup storage name",
                         "name": "name",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "backup storage",
+                        "description": "Backup storage details",
                         "name": "storage",
                         "in": "body",
                         "required": true,
@@ -1046,7 +1088,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "storage name",
+                        "description": "Backup storage name",
                         "name": "name",
                         "in": "path",
                         "required": true
@@ -1067,7 +1109,6 @@ const docTemplate = `{
         },
         "/v1/restore/full": {
             "post": {
-                "description": "Specify the directory parameter for the full backup restore.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1078,7 +1119,7 @@ const docTemplate = `{
                 "operationId": "restoreFull",
                 "parameters": [
                     {
-                        "description": "query params",
+                        "description": "Restore request details",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -1089,7 +1130,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "202": {
-                        "description": "Job ID",
+                        "description": "Restore operation job id",
                         "schema": {
                             "type": "integer",
                             "format": "int64"
@@ -1106,7 +1147,6 @@ const docTemplate = `{
         },
         "/v1/restore/incremental": {
             "post": {
-                "description": "Specify the file parameter to restore from an incremental backup file.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1117,7 +1157,7 @@ const docTemplate = `{
                 "operationId": "restoreIncremental",
                 "parameters": [
                     {
-                        "description": "query params",
+                        "description": "Restore request details",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -1128,7 +1168,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "202": {
-                        "description": "Job ID",
+                        "description": "Restore operation job id",
                         "schema": {
                             "type": "integer",
                             "format": "int64"
@@ -1165,7 +1205,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Job status",
+                        "description": "Restore job status details",
                         "schema": {
                             "$ref": "#/definitions/model.RestoreJobStatus"
                         }
@@ -1181,7 +1221,7 @@ const docTemplate = `{
         },
         "/v1/restore/timestamp": {
             "post": {
-                "description": "Restores backup from given point in time",
+                "description": "Restores backup from the given point in time.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1192,7 +1232,7 @@ const docTemplate = `{
                 "operationId": "restoreTimestamp",
                 "parameters": [
                     {
-                        "description": "query params",
+                        "description": "Restore request details",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -1203,7 +1243,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "202": {
-                        "description": "Job ID",
+                        "description": "Restore operation job id",
                         "schema": {
                             "type": "integer",
                             "format": "int64"
@@ -1345,10 +1385,6 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 1024
                 },
-                "filter-exp": {
-                    "type": "string",
-                    "example": "EjRWeJq83vEjRRI0VniavN7xI0U="
-                },
                 "max-records": {
                     "description": "An approximate limit for the number of records to process. Available in server 4.9 and above.",
                     "type": "integer",
@@ -1429,10 +1465,6 @@ const docTemplate = `{
                 "storage"
             ],
             "properties": {
-                "after-digest": {
-                    "type": "string",
-                    "example": "EjRWeJq83vEjRRI0VniavN7xI0U="
-                },
                 "backup-policy": {
                     "description": "The name of the corresponding backup policy.",
                     "type": "string",
@@ -1467,13 +1499,6 @@ const docTemplate = `{
                     "example": [
                         "source-ns1"
                     ]
-                },
-                "node-list": {
-                    "description": "The list of nodes in the Aerospike cluster to run the backup for.",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.Node"
-                    }
                 },
                 "partition-list": {
                     "description": "Back up list of partition filters. Partition filters can be ranges, individual partitions,\nor records after a specific digest within a single partition.\nDefault number of partitions to back up: 0 to 4095: all partitions.",
@@ -1723,20 +1748,6 @@ const docTemplate = `{
                     "description": "Whether to enable logging to the standard output.",
                     "type": "boolean",
                     "default": true
-                }
-            }
-        },
-        "model.Node": {
-            "description": "Node represents the Aerospike node details.",
-            "type": "object",
-            "properties": {
-                "ip": {
-                    "type": "string",
-                    "example": "192.168.0.2"
-                },
-                "port": {
-                    "type": "integer",
-                    "example": 3000
                 }
             }
         },

@@ -65,9 +65,6 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	if backupRoutine.BinList != nil {
 		setCString(&backupConfig.bin_list, ptr.String(strings.Join(backupRoutine.BinList, ",")))
 	}
-	if backupRoutine.NodeList != nil {
-		setCString(&backupConfig.node_list, printNodes(backupRoutine.NodeList))
-	}
 	if backupRoutine.PreferRacks != nil {
 		setCString(&backupConfig.prefer_racks, joinInts(backupRoutine.PreferRacks))
 	}
@@ -93,8 +90,6 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCUint(&backupConfig.records_per_second, backupPolicy.RecordsPerSecond)
 	setCUlong(&backupConfig.file_limit, backupPolicy.FileLimit)
 	setCString(&backupConfig.partition_list, backupRoutine.PartitionList)
-	setCString(&backupConfig.after_digest, backupRoutine.AfterDigest)
-	setCString(&backupConfig.filter_exp, backupPolicy.FilterExp)
 
 	// S3 configuration
 	setCString(&backupConfig.s3_endpoint_override, storage.S3EndpointOverride)
