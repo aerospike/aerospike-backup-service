@@ -3,9 +3,9 @@ SHELL = bash
 WORKSPACE = $(shell pwd)
 UNAME = $(shell uname -sm | tr ' ' '-')
 
-BINARY_NAME=aerospike-backup-service
+export BINARY_NAME:=aerospike-backup-service
 export GIT_COMMIT:=$(shell git rev-parse HEAD)
-VERSION=$(shell cat VERSION)
+export VERSION:=$(shell cat VERSION)
 
 # Go parameters
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
