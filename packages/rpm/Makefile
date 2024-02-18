@@ -13,6 +13,7 @@ rpm:
 	--define "_rpmdir $(RESULT_DIR)" \
 	--rmsource \
 	--clean \
+	--build-in-place \
 	$(BINARY_NAME).spec
 
 
