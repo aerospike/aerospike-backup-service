@@ -13,7 +13,6 @@ Aerospike Backup Service
 
 %prep
 %setup -q -n "%{name}-%{version}"
-make install-deps
 
 %build
 make build-submodules

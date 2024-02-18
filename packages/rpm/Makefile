@@ -10,9 +10,7 @@ SOURCES:
 
 .PHONY: archive
 archive: SOURCES
-	cd ../../ && \
-	git archive --prefix=$(BINARY_NAME)-$(VERSION)/ \
-		-o "$(CURDIR)/SOURCES/$(BINARY_NAME)-$(VERSION).tar.gz" HEAD
+	./../../scripts/tarball.sh
 
 .PHONY: build_prepare
 build_prepare: archive
