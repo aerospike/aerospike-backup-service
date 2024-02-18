@@ -1,5 +1,5 @@
 SHELL = bash
-VERSION := $(shell cat VERSION)
+
 WORKSPACE = $(shell pwd)
 UNAME = $(shell uname -sm | tr ' ' '-')
 
@@ -14,9 +14,11 @@ GOCLEAN = $(GO) clean
 GO_VERSION = 1.22.0
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
 
-BINARY_NAME = aerospike-backup-service
-GIT_TAG = $(shell git describe --tags)
+export BINARY_NAME := aerospike-backup-service
+export GIT_COMMIT :=$(shell git rev-parse --short HEAD)
+export VERSION := $(shell cat VERSION)
 
+GIT_TAG = $(shell git describe --tags)
 CMD_DIR = cmd/backup
 TARGET_DIR = target
 PKG_DIR = build/package
@@ -65,15 +67,18 @@ test:
 package: rpm deb tarball
 
 .PHONY: rpm
-rpm: tarball
-	cd $(WORKSPACE)/packages/rpm && mkdir -p BUILD BUILDROOT RPMS SOURCES SPECS SRPMS
-	mv /tmp/$(BINARY_NAME)-$(VERSION).tar.gz $(WORKSPACE)/packages/rpm/SOURCES/
-	rpmbuild -v \
-	--define "_topdir /root/aerospike-backup-service/packages/rpm" \
-	--define "pkg_version $(VERSION)" \
-	--define "pkg_name $(BINARY_NAME)" \
-	--define "build_arch $(shell uname -m)" \
-	-ba $(WORKSPACE)/packages/rpm/SPECS/$(BINARY_NAME).spec
+rpm:
+	$(MAKE) -C packages/rpm
+#.PHONY: rpm
+#rpm: tarball
+#	cd $(WORKSPACE)/packages/rpm && mkdir -p BUILD BUILDROOT RPMS SOURCES SPECS SRPMS
+#	mv /tmp/$(BINARY_NAME)-$(VERSION).tar.gz $(WORKSPACE)/packages/rpm/SOURCES/
+#	rpmbuild -v \
+#	--define "_topdir /root/aerospike-backup-service/packages/rpm" \
+#	--define "pkg_version $(VERSION)" \
+#	--define "pkg_name $(BINARY_NAME)" \
+#	--define "build_arch $(shell uname -m)" \
+#	-ba $(WORKSPACE)/packages/rpm/SPECS/$(BINARY_NAME).spec
 
 .PHONY: deb
 deb:
