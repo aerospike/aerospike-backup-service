@@ -21,5 +21,5 @@ rpm:
 
 
 clean:
-	unset VERSION BINARY_NAME
+	unset GIT_COMMIT
 	rm -rf BUILD BUILDROOT SOURCES RPMS SRPMS
