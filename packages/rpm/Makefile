@@ -20,7 +20,12 @@ build_prepare: archive
 
 .PHONY: rpm
 rpm: build_prepare
-	rpmbuild -v -bb
+	rpmbuild -v -bb --define "pkg_version $(VERSION)" \
+	--define "pkg_name $(BINARY_NAME)" \
+	--define "build_arch $(shell uname -m)" \
+	--define "build_arch $(shell uname -m)" \
+	$(BINARY_NAME).spec
+	
 
 	@echo "VERSION: $(VERSION)"
 	@echo "RESULT_DIR: $(RESULT_DIR)"
