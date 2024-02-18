@@ -67,7 +67,7 @@ test:
 package: rpm deb tarball
 
 .PHONY: rpm
-rpm:
+rpm: prep-submodules
 	$(MAKE) -C packages/rpm
 #.PHONY: rpm
 #rpm: tarball
