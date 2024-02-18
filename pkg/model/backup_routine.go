@@ -29,16 +29,12 @@ type BackupRoutine struct {
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1"`
 	// The list of backup bin names (optional, an empty list implies backing up all bins).
 	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty" example:"dataBin"`
-	// The list of nodes in the Aerospike cluster to run the backup for.
-	NodeList []Node `yaml:"node-list,omitempty" json:"node-list,omitempty"`
 	// A list of Aerospike Server rack IDs to prefer when reading records for a backup.
 	PreferRacks []int `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty" example:"0"`
-
 	// Back up list of partition filters. Partition filters can be ranges, individual partitions,
 	// or records after a specific digest within a single partition.
 	// Default number of partitions to back up: 0 to 4095: all partitions.
 	PartitionList *string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" example:"0-1000"`
-	AfterDigest   *string `yaml:"after-digest,omitempty" json:"after-digest,omitempty" example:"EjRWeJq83vEjRRI0VniavN7xI0U="`
 }
 
 // Validate validates the backup routine configuration.

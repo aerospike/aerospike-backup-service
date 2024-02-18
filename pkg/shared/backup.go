@@ -19,7 +19,6 @@ package shared
 */
 import "C"
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -65,9 +64,6 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	if backupRoutine.BinList != nil {
 		setCString(&backupConfig.bin_list, ptr.String(strings.Join(backupRoutine.BinList, ",")))
 	}
-	if backupRoutine.NodeList != nil {
-		setCString(&backupConfig.node_list, printNodes(backupRoutine.NodeList))
-	}
 	if backupRoutine.PreferRacks != nil {
 		setCString(&backupConfig.prefer_racks, joinInts(backupRoutine.PreferRacks))
 	}
@@ -93,8 +89,6 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCUint(&backupConfig.records_per_second, backupPolicy.RecordsPerSecond)
 	setCUlong(&backupConfig.file_limit, backupPolicy.FileLimit)
 	setCString(&backupConfig.partition_list, backupRoutine.PartitionList)
-	setCString(&backupConfig.after_digest, backupRoutine.AfterDigest)
-	setCString(&backupConfig.filter_exp, backupPolicy.FilterExp)
 
 	// S3 configuration
 	setCString(&backupConfig.s3_endpoint_override, storage.S3EndpointOverride)
@@ -157,15 +151,6 @@ func parseSetList(setVector *C.as_vector, setList *[]string) {
 		concatenatedSetList := strings.Join(*setList, ",")
 		C.parse_set_list(setVector, C.CString(concatenatedSetList))
 	}
-}
-
-func printNodes(nodes []model.Node) *string {
-	nodeStrings := make([]string, 0, len(nodes))
-	for _, node := range nodes {
-		nodeStrings = append(nodeStrings, fmt.Sprintf("%s:%d", node.IP, node.Port))
-	}
-	concatenated := strings.Join(nodeStrings, ",")
-	return &concatenated
 }
 
 func joinInts(nums []int) *string {

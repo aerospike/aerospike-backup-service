@@ -51,7 +51,6 @@ type BackupPolicy struct {
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created.
 	FileLimit *uint64 `yaml:"file-limit,omitempty" json:"file-limit,omitempty" example:"1024"`
-	FilterExp *string `yaml:"filter-exp,omitempty" json:"filter-exp,omitempty" example:"EjRWeJq83vEjRRI0VniavN7xI0U="`
 }
 
 // CopySMDDisabled creates a new instance of the BackupPolicy struct with identical field values.
@@ -73,7 +72,6 @@ func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
 		MaxRecords:       p.MaxRecords,
 		RecordsPerSecond: p.RecordsPerSecond,
 		FileLimit:        p.FileLimit,
-		FilterExp:        p.FilterExp,
 	}
 }
 

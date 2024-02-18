@@ -10,14 +10,16 @@ import (
 	"github.com/aerospike/backup/pkg/service"
 )
 
+const policyNameNotSpecifiedMsg = "Policy name is not specified"
+
 // addPolicy
 // @Summary     Adds a policy to the config.
 // @ID          addPolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [post]
 // @Accept      json
-// @Param       name path string true "policy name"
-// @Param       policy body model.BackupPolicy true "backup policy"
+// @Param       name path string true "Backup policy name"
+// @Param       policy body model.BackupPolicy true "Backup policy details"
 // @Success     201
 // @Failure     400 {string} string
 //
@@ -32,7 +34,7 @@ func (ws *HTTPServer) addPolicy(w http.ResponseWriter, r *http.Request) {
 	r.Body.Close()
 	name := r.PathValue("name")
 	if name == "" {
-		http.Error(w, "policy name is required", http.StatusBadRequest)
+		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err = service.AddPolicy(ws.config, name, &newPolicy)
@@ -75,29 +77,27 @@ func (ws *HTTPServer) readPolicies(w http.ResponseWriter, _ *http.Request) {
 // @ID	        readPolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [get]
-// @Param       name path string true "Name of the backup policy"
+// @Param       name path string true "Backup policy name"
 // @Produce     json
 // @Success  	200 {object} model.BackupPolicy
-// @Failure     404 {string} string "The specified policy could not be found."
+// @Response    400 {string} string
+// @Failure     404 {string} string "The specified policy could not be found"
 func (ws *HTTPServer) readPolicy(w http.ResponseWriter, r *http.Request) {
 	policyName := r.PathValue("name")
 	if policyName == "" {
-		http.Error(w, "The policy name path parameter is required.", http.StatusBadRequest)
+		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-
 	policy, ok := ws.config.BackupPolicies[policyName]
 	if !ok {
-		http.Error(w, fmt.Sprintf("Policy %s could not be found.", policyName), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Policy %s could not be found", policyName), http.StatusNotFound)
 		return
 	}
-
 	jsonResponse, err := json.Marshal(policy)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
@@ -112,8 +112,8 @@ func (ws *HTTPServer) readPolicy(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [put]
 // @Accept      json
-// @Param       name path string true "policy name"
-// @Param       policy body model.BackupPolicy true "backup policy"
+// @Param       name path string true "Backup policy name"
+// @Param       policy body model.BackupPolicy true "Backup policy details"
 // @Success     200
 // @Failure     400 {string} string
 //
@@ -128,7 +128,7 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	r.Body.Close()
 	name := r.PathValue("name")
 	if name == "" {
-		http.Error(w, "policy name is required", http.StatusBadRequest)
+		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err = service.UpdatePolicy(ws.config, name, &updatedPolicy)
@@ -149,22 +149,20 @@ func (ws *HTTPServer) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @ID          deletePolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [delete]
-// @Param       name path string true "Policy Name"
+// @Param       name path string true "Backup policy name"
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deletePolicy(w http.ResponseWriter, r *http.Request) {
 	policyName := r.PathValue("name")
 	if policyName == "" {
-		http.Error(w, "Policy name is required", http.StatusBadRequest)
+		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-
 	err := service.DeletePolicy(ws.config, policyName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	err = ConfigurationManager.WriteConfiguration(ws.config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

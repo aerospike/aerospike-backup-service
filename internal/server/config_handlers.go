@@ -36,7 +36,7 @@ func (ws *HTTPServer) readConfig(w http.ResponseWriter) {
 // @Tags        Configuration
 // @Router      /v1/config [put]
 // @Accept      json
-// @Param       config body model.Config true "config"
+// @Param       config body model.Config true "Configuration details"
 // @Success     200
 // @Failure     400 {string} string
 func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {

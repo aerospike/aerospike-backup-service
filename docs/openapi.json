@@ -127,7 +127,7 @@
             },
             "description" : "Full backups by routine"
           },
-          "404" : {
+          "400" : {
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -135,7 +135,7 @@
                 }
               }
             },
-            "description" : "Not Found"
+            "description" : "Bad Request"
           }
         },
         "summary" : "Get available full backups.",
@@ -183,6 +183,16 @@
               }
             },
             "description" : "Full backups for routine"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Bad Request"
           },
           "404" : {
             "content" : {
@@ -236,7 +246,7 @@
             },
             "description" : "Incremental backups by routine"
           },
-          "404" : {
+          "400" : {
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -244,7 +254,7 @@
                 }
               }
             },
-            "description" : "Not Found"
+            "description" : "Bad Request"
           }
         },
         "summary" : "Get available incremental backups.",
@@ -293,6 +303,16 @@
             },
             "description" : "Incremental backups for routine"
           },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
           "404" : {
             "content" : {
               "application/json" : {
@@ -331,6 +351,16 @@
           "202" : {
             "content" : { },
             "description" : "Accepted"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Bad Request"
           },
           "404" : {
             "content" : {
@@ -385,7 +415,7 @@
               }
             }
           },
-          "description" : "config",
+          "description" : "Configuration details",
           "required" : true
         },
         "responses" : {
@@ -445,7 +475,7 @@
       "delete" : {
         "operationId" : "deleteCluster",
         "parameters" : [ {
-          "description" : "cluster Name",
+          "description" : "Aerospike cluster name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -475,7 +505,7 @@
       "get" : {
         "operationId" : "readCluster",
         "parameters" : [ {
-          "description" : "Name of the Aerospike cluster",
+          "description" : "Aerospike cluster name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -494,6 +524,16 @@
             },
             "description" : "OK"
           },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
           "404" : {
             "content" : {
               "application/json" : {
@@ -502,7 +542,7 @@
                 }
               }
             },
-            "description" : "The specified cluster could not be found."
+            "description" : "The specified cluster could not be found"
           }
         },
         "summary" : "Reads a specific Aerospike cluster from the configuration given its name.",
@@ -511,7 +551,7 @@
       "post" : {
         "operationId" : "addCluster",
         "parameters" : [ {
-          "description" : "cluster name",
+          "description" : "Aerospike cluster name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -527,7 +567,7 @@
               }
             }
           },
-          "description" : "cluster info",
+          "description" : "Aerospike cluster details",
           "required" : true
         },
         "responses" : {
@@ -553,7 +593,7 @@
       "put" : {
         "operationId" : "updateCluster",
         "parameters" : [ {
-          "description" : "cluster name",
+          "description" : "Aerospike cluster name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -569,7 +609,7 @@
               }
             }
           },
-          "description" : "aerospike cluster",
+          "description" : "Aerospike cluster details",
           "required" : true
         },
         "responses" : {
@@ -629,7 +669,7 @@
       "delete" : {
         "operationId" : "deletePolicy",
         "parameters" : [ {
-          "description" : "Policy Name",
+          "description" : "Backup policy name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -659,7 +699,7 @@
       "get" : {
         "operationId" : "readPolicy",
         "parameters" : [ {
-          "description" : "Name of the backup policy",
+          "description" : "Backup policy name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -678,6 +718,16 @@
             },
             "description" : "OK"
           },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
           "404" : {
             "content" : {
               "application/json" : {
@@ -686,7 +736,7 @@
                 }
               }
             },
-            "description" : "The specified policy could not be found."
+            "description" : "The specified policy could not be found"
           }
         },
         "summary" : "Reads a backup policy from the configuration given its name.",
@@ -695,7 +745,7 @@
       "post" : {
         "operationId" : "addPolicy",
         "parameters" : [ {
-          "description" : "policy name",
+          "description" : "Backup policy name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -711,7 +761,7 @@
               }
             }
           },
-          "description" : "backup policy",
+          "description" : "Backup policy details",
           "required" : true
         },
         "responses" : {
@@ -737,7 +787,7 @@
       "put" : {
         "operationId" : "updatePolicy",
         "parameters" : [ {
-          "description" : "policy name",
+          "description" : "Backup policy name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -753,7 +803,7 @@
               }
             }
           },
-          "description" : "backup policy",
+          "description" : "Backup policy details",
           "required" : true
         },
         "responses" : {
@@ -813,7 +863,7 @@
       "delete" : {
         "operationId" : "deleteRoutine",
         "parameters" : [ {
-          "description" : "routine name",
+          "description" : "Backup routine name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -843,7 +893,7 @@
       "get" : {
         "operationId" : "readRoutine",
         "parameters" : [ {
-          "description" : "routine name",
+          "description" : "Backup routine name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -862,6 +912,16 @@
             },
             "description" : "OK"
           },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
           "404" : {
             "content" : {
               "application/json" : {
@@ -870,7 +930,7 @@
                 }
               }
             },
-            "description" : "The specified cluster could not be found."
+            "description" : "The specified cluster could not be found"
           }
         },
         "summary" : "Reads a specific routine from the configuration given its name.",
@@ -879,7 +939,7 @@
       "post" : {
         "operationId" : "addRoutine",
         "parameters" : [ {
-          "description" : "routine name",
+          "description" : "Backup routine name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -895,7 +955,7 @@
               }
             }
           },
-          "description" : "backup routine",
+          "description" : "Backup routine details",
           "required" : true
         },
         "responses" : {
@@ -921,7 +981,7 @@
       "put" : {
         "operationId" : "updateRoutine",
         "parameters" : [ {
-          "description" : "routine name",
+          "description" : "Backup routine name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -937,7 +997,7 @@
               }
             }
           },
-          "description" : "backup routine",
+          "description" : "Backup routine details",
           "required" : true
         },
         "responses" : {
@@ -997,7 +1057,7 @@
       "delete" : {
         "operationId" : "deleteStorage",
         "parameters" : [ {
-          "description" : "storage name",
+          "description" : "Backup storage name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -1027,7 +1087,7 @@
       "get" : {
         "operationId" : "readStorage",
         "parameters" : [ {
-          "description" : "storage name",
+          "description" : "Backup storage name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -1046,6 +1106,16 @@
             },
             "description" : "OK"
           },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
           "404" : {
             "content" : {
               "application/json" : {
@@ -1054,7 +1124,7 @@
                 }
               }
             },
-            "description" : "The specified storage could not be found."
+            "description" : "The specified storage could not be found"
           }
         },
         "summary" : "Reads a specific storage from the configuration given its name.",
@@ -1063,7 +1133,7 @@
       "post" : {
         "operationId" : "addStorage",
         "parameters" : [ {
-          "description" : "storage name",
+          "description" : "Backup storage name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -1079,7 +1149,7 @@
               }
             }
           },
-          "description" : "backup storage",
+          "description" : "Backup storage details",
           "required" : true
         },
         "responses" : {
@@ -1105,7 +1175,7 @@
       "put" : {
         "operationId" : "updateStorage",
         "parameters" : [ {
-          "description" : "storage name",
+          "description" : "Backup storage name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -1121,7 +1191,7 @@
               }
             }
           },
-          "description" : "backup storage",
+          "description" : "Backup storage details",
           "required" : true
         },
         "responses" : {
@@ -1147,7 +1217,6 @@
     },
     "/v1/restore/full" : {
       "post" : {
-        "description" : "Specify the directory parameter for the full backup restore.",
         "operationId" : "restoreFull",
         "requestBody" : {
           "content" : {
@@ -1157,7 +1226,7 @@
               }
             }
           },
-          "description" : "query params",
+          "description" : "Restore request details",
           "required" : true
         },
         "responses" : {
@@ -1170,7 +1239,7 @@
                 }
               }
             },
-            "description" : "Job ID"
+            "description" : "Restore operation job id"
           },
           "400" : {
             "content" : {
@@ -1190,7 +1259,6 @@
     },
     "/v1/restore/incremental" : {
       "post" : {
-        "description" : "Specify the file parameter to restore from an incremental backup file.",
         "operationId" : "restoreIncremental",
         "requestBody" : {
           "content" : {
@@ -1200,7 +1268,7 @@
               }
             }
           },
-          "description" : "query params",
+          "description" : "Restore request details",
           "required" : true
         },
         "responses" : {
@@ -1213,7 +1281,7 @@
                 }
               }
             },
-            "description" : "Job ID"
+            "description" : "Restore operation job id"
           },
           "400" : {
             "content" : {
@@ -1253,7 +1321,7 @@
                 }
               }
             },
-            "description" : "Job status"
+            "description" : "Restore job status details"
           },
           "400" : {
             "content" : {
@@ -1272,7 +1340,7 @@
     },
     "/v1/restore/timestamp" : {
       "post" : {
-        "description" : "Restores backup from given point in time",
+        "description" : "Restores backup from the given point in time.",
         "operationId" : "restoreTimestamp",
         "requestBody" : {
           "content" : {
@@ -1282,7 +1350,7 @@
               }
             }
           },
-          "description" : "query params",
+          "description" : "Restore request details",
           "required" : true
         },
         "responses" : {
@@ -1295,7 +1363,7 @@
                 }
               }
             },
-            "description" : "Job ID"
+            "description" : "Restore operation job id"
           },
           "400" : {
             "content" : {
@@ -1440,10 +1508,6 @@
             "example" : 1024,
             "type" : "integer"
           },
-          "filter-exp" : {
-            "example" : "EjRWeJq83vEjRRI0VniavN7xI0U=",
-            "type" : "string"
-          },
           "max-records" : {
             "description" : "An approximate limit for the number of records to process. Available in server 4.9 and above.",
             "example" : 10000,
@@ -1512,10 +1576,6 @@
       "model.BackupRoutine" : {
         "description" : "BackupRoutine represents a scheduled backup operation routine.",
         "properties" : {
-          "after-digest" : {
-            "example" : "EjRWeJq83vEjRRI0VniavN7xI0U=",
-            "type" : "string"
-          },
           "backup-policy" : {
             "description" : "The name of the corresponding backup policy.",
             "example" : "daily",
@@ -1544,13 +1604,6 @@
             "example" : [ "source-ns1" ],
             "items" : {
               "type" : "string"
-            },
-            "type" : "array"
-          },
-          "node-list" : {
-            "description" : "The list of nodes in the Aerospike cluster to run the backup for.",
-            "items" : {
-              "$ref" : "#/components/schemas/model.Node"
             },
             "type" : "array"
           },
@@ -1768,20 +1821,6 @@
             "default" : true,
             "description" : "Whether to enable logging to the standard output.",
             "type" : "boolean"
-          }
-        },
-        "type" : "object"
-      },
-      "model.Node" : {
-        "description" : "Node represents the Aerospike node details.",
-        "properties" : {
-          "ip" : {
-            "example" : "192.168.0.2",
-            "type" : "string"
-          },
-          "port" : {
-            "example" : 3000,
-            "type" : "integer"
           }
         },
         "type" : "object"

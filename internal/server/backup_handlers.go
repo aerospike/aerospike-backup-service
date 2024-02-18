@@ -20,7 +20,7 @@ import (
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/full [get]
 // @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
-// @Failure  404 {string} string ""
+// @Failure  400 {string} string
 func (ws *HTTPServer) getAllFullBackups(w http.ResponseWriter, r *http.Request) {
 	ws.readAllBackups(w, r, true)
 }
@@ -34,7 +34,8 @@ func (ws *HTTPServer) getAllFullBackups(w http.ResponseWriter, r *http.Request) 
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/full/{name} [get]
 // @Success  200 {object} []model.BackupDetails "Full backups for routine"
-// @Failure  404 {string} string ""
+// @Response 400 {string} string
+// @Failure  404 {string} string
 func (ws *HTTPServer) getFullBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
 	ws.readBackupsForRoutine(w, r, true)
 }
@@ -47,7 +48,7 @@ func (ws *HTTPServer) getFullBackupsForRoutine(w http.ResponseWriter, r *http.Re
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/incremental [get]
 // @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
-// @Failure  404 {string} string ""
+// @Failure  400 {string} string
 func (ws *HTTPServer) getAllIncrementalBackups(w http.ResponseWriter, r *http.Request) {
 	ws.readAllBackups(w, r, false)
 }
@@ -61,7 +62,8 @@ func (ws *HTTPServer) getAllIncrementalBackups(w http.ResponseWriter, r *http.Re
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/incremental/{name} [get]
 // @Success  200 {object} []model.BackupDetails "Incremental backups for routine"
-// @Failure  404 {string} string ""
+// @Response 400 {string} string
+// @Failure  404 {string} string
 func (ws *HTTPServer) getIncrementalBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
 	ws.readBackupsForRoutine(w, r, false)
 }
@@ -160,7 +162,8 @@ func backupsReadFunction(
 // @Param    delay query int false "Delay interval in milliseconds"
 // @Router   /v1/backups/schedule/{name} [post]
 // @Success  202
-// @Failure  404 {string} string ""
+// @Response 400 {string} string
+// @Failure  404 {string} string
 func (ws *HTTPServer) scheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
 	if routineName == "" {
