@@ -19,7 +19,6 @@ package shared
 */
 import "C"
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -152,15 +151,6 @@ func parseSetList(setVector *C.as_vector, setList *[]string) {
 		concatenatedSetList := strings.Join(*setList, ",")
 		C.parse_set_list(setVector, C.CString(concatenatedSetList))
 	}
-}
-
-func printNodes(nodes []model.Node) *string {
-	nodeStrings := make([]string, 0, len(nodes))
-	for _, node := range nodes {
-		nodeStrings = append(nodeStrings, fmt.Sprintf("%s:%d", node.IP, node.Port))
-	}
-	concatenated := strings.Join(nodeStrings, ",")
-	return &concatenated
 }
 
 func joinInts(nums []int) *string {
