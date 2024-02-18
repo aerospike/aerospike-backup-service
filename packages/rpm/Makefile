@@ -10,11 +10,10 @@ rpm:
 	--define "pkg_version $(VERSION)" \
 	--define "pkg_name $(BINARY_NAME)" \
 	--define "build_arch $(shell uname -m)" \
-	--define "_rpmdir $(RESULT_DIR)" \
 	--rmsource \
 	--clean \
-	--build-in-place \
 	$(BINARY_NAME).spec
+	mv "RPMS/$(shell uname -m)/*.rpm $(RESULT_DIR)"
 
 
 	@echo "VERSION: $(VERSION)"
