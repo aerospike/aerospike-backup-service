@@ -1,5 +1,5 @@
-MOCK_CONFIG?=default
-RESULT_DIR?="../../target"
+
+RESULT_DIR ?= "../../target"
 
 .PHONY: all
 all: rpm
@@ -10,6 +10,7 @@ rpm:
 	--define "pkg_version $(VERSION)" \
 	--define "pkg_name $(BINARY_NAME)" \
 	--define "build_arch $(shell uname -m)" \
+	--define "_rpmdir $(RESULT_DIR)" \
 	--rmsource \
 	--clean \
 	$(BINARY_NAME).spec
