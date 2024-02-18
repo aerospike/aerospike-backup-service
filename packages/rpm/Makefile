@@ -10,7 +10,16 @@ rpm:
 	--rmsource \
 	--clean \
 	$(BINARY_NAME).spec
-	mv $(CURDIR)/RPMS/$(shell uname -m)/*.rpm $(PWD)/target
+
+
+	@echo "VERSION: $(VERSION)"
+	@echo "RESULT_DIR: $(RESULT_DIR)"
+	@echo "BINARY_NAME: $(BINARY_NAME)"
+	@echo "PWD: $(PWD)"
+	@echo "CURDIR: $(CURDIR)"
+	@echo "GIT_COMMIT: $(GIT_COMMIT)"
+
 
 clean:
+	unset VERSION BINARY_NAME
 	rm -rf BUILD BUILDROOT SOURCES RPMS SRPMS
