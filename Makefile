@@ -3,17 +3,16 @@ SHELL = bash
 WORKSPACE = $(shell pwd)
 UNAME = $(shell uname -sm | tr ' ' '-')
 
-export BINARY_NAME=aerospike-backup-service
-export GIT_COMMIT=$(shell git rev-parse HEAD)
-export BUILD_DATE=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
-export VERSION=$(shell cat VERSION)
+BINARY_NAME=aerospike-backup-service
+export GIT_COMMIT:=$(shell git rev-parse HEAD)
+VERSION=$(shell cat VERSION)
 
 # Go parameters
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
 CGO_CFLAGS=-I $(WORKSPACE)/modules/aerospike-tools-backup/modules/c-client/target/$(UNAME)/include \
 -I $(WORKSPACE)/modules/aerospike-tools-backup/modules/secret-agent-client/target/$(UNAME)/include \
 -I $(WORKSPACE)/modules/aerospike-tools-backup/include
-GOBUILD = CGO_CFLAGS="$(CGO_CFLAGS)" CGO_ENABLED=1 $(GO) build -X main.commit=$(GIT_COMMIT) -X main.buildTime=$(BUILD_DATE)
+GOBUILD = CGO_CFLAGS="$(CGO_CFLAGS)" CGO_ENABLED=1 $(GO) build -X main.commit=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
 GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
 GO_VERSION = 1.22.0
