@@ -4,24 +4,16 @@ RESULT_DIR?="../../target"
 .PHONY: all
 all: rpm
 
-.PHONY: SOURCES
-SOURCES:
-	mkdir -p "$(CURDIR)/SOURCES"
 
-.PHONY: archive
-archive: SOURCES
-	./../../scripts/tarball.sh
-
-.PHONY: build_prepare
-build_prepare: archive
-	rm -f $(RESULT_DIR)/$(BINARY_NAME)*.rpm
+#.PHONY: build_prepare
+#build_prepare: archive
+#	rm -f $(RESULT_DIR)/$(BINARY_NAME)*.rpm
 
 .PHONY: rpm
-rpm: build_prepare
+rpm:
 	rpmbuild -v -bb --define "_topdir $(CURDIR)" \
 	--define "pkg_version $(VERSION)" \
 	--define "pkg_name $(BINARY_NAME)" \
-	--define "build_arch $(shell uname -m)" \
 	--define "build_arch $(shell uname -m)" \
 	$(BINARY_NAME).spec
 

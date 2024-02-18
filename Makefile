@@ -67,12 +67,14 @@ test:
 package: rpm deb tarball
 
 .PHONY: rpm
-rpm: prep-submodules
+rpm: tarball
+	mkdir -p $(WORKSPACE)/packages/rpm/SOURCES
+	mv /tmp/$(BINARY_NAME)-$(VERSION).tar.gz $(WORKSPACE)/packages/rpm/SOURCES/
 	$(MAKE) -C packages/rpm
 #.PHONY: rpm
 #rpm: tarball
 #	cd $(WORKSPACE)/packages/rpm && mkdir -p BUILD BUILDROOT RPMS SOURCES SPECS SRPMS
-#	mv /tmp/$(BINARY_NAME)-$(VERSION).tar.gz $(WORKSPACE)/packages/rpm/SOURCES/
+#
 #	rpmbuild -v \
 #	--define "_topdir /root/aerospike-backup-service/packages/rpm" \
 #	--define "pkg_version $(VERSION)" \
