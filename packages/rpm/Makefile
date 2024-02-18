@@ -6,14 +6,14 @@ all: rpm
 
 .PHONY: rpm
 rpm:
-	rpmbuild -v -bb --define "_topdir $(CURDIR)" \
-	--define "pkg_version $(VERSION)" \
-	--define "pkg_name $(BINARY_NAME)" \
-	--define "build_arch $(shell uname -m)" \
-	--rmsource \
-	--clean \
-	$(BINARY_NAME).spec
-	mv "RPMS/$(shell uname -m)/*.rpm $(RESULT_DIR)"
+#	rpmbuild -v -bb --define "_topdir $(CURDIR)" \
+#	--define "pkg_version $(VERSION)" \
+#	--define "pkg_name $(BINARY_NAME)" \
+#	--define "build_arch $(shell uname -m)" \
+#	--rmsource \
+#	--clean \
+#	$(BINARY_NAME).spec
+	mv "RPMS/$(shell uname -m)/*.rpm" "$(RESULT_DIR)"
 
 
 	@echo "VERSION: $(VERSION)"
