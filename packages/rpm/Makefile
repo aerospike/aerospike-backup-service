@@ -11,15 +11,7 @@ rpm:
 	--clean \
 	$(BINARY_NAME).spec
 
-
-	@echo "VERSION: $(VERSION)"
-	@echo "RESULT_DIR: $(RESULT_DIR)"
-	@echo "BINARY_NAME: $(BINARY_NAME)"
-	@echo "PWD: $(PWD)"
-	@echo "CURDIR: $(CURDIR)"
-	@echo "GIT_COMMIT: $(GIT_COMMIT)"
-
-
+.PHONY: clean
 clean:
 	unset GIT_COMMIT
 	rm -rf BUILD BUILDROOT SOURCES RPMS SRPMS
