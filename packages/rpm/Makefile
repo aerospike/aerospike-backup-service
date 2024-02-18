@@ -13,7 +13,7 @@ rpm:
 #	--rmsource \
 #	--clean \
 #	$(BINARY_NAME).spec
-	mv "$(CURDIR)/RPMS/$(shell uname -m)/*.rpm" $(RESULT_DIR)
+	mv "$(CURDIR)/RPMS/$(shell uname -m)/*.rpm" "$(PWD)/target"
 
 
 	@echo "VERSION: $(VERSION)"
