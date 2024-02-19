@@ -16,7 +16,7 @@ const (
 // @Description EncryptionPolicy contains backup encryption information.
 type EncryptionPolicy struct {
 	// The encryption mode to be used (NONE, AES128, AES256)
-	Mode string `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE"`
+	Mode string `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE" enums:"NONE,AES128,AES256"`
 	// The path to the file containing the encryption key.
 	KeyFile *string `yaml:"key-file,omitempty" json:"key-file,omitempty"`
 	// The name of the environment variable containing the encryption key.

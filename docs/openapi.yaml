@@ -1410,6 +1410,10 @@ components:
         mode:
           default: NONE
           description: "The encryption mode to be used (NONE, AES128, AES256)"
+          enum:
+          - NONE
+          - AES128
+          - AES256
           type: string
       type: object
     model.FileLoggerConfig:

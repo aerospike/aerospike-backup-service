@@ -1661,7 +1661,12 @@ const docTemplate = `{
                 "mode": {
                     "description": "The encryption mode to be used (NONE, AES128, AES256)",
                     "type": "string",
-                    "default": "NONE"
+                    "default": "NONE",
+                    "enum": [
+                        "NONE",
+                        "AES128",
+                        "AES256"
+                    ]
                 }
             }
         },
