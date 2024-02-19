@@ -51,6 +51,8 @@ type BackupPolicy struct {
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created.
 	FileLimit *uint64 `yaml:"file-limit,omitempty" json:"file-limit,omitempty" example:"1024"`
+	// Encryption details.
+	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 }
 
 // CopySMDDisabled creates a new instance of the BackupPolicy struct with identical field values.
