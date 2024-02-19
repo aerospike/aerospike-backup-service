@@ -52,6 +52,8 @@ type RestorePolicy struct {
 	// in MiB/s and its database write operations to not exceed the given number of transactions
 	// per second.
 	Tps *uint32 `json:"tps,omitempty" example:"4000"`
+	// Encryption details.
+	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 }
 
 // RestoreNamespace specifies an alternative namespace name for the restore
@@ -76,6 +78,9 @@ func (p *RestorePolicy) Validate() error {
 		if err := p.Namespace.Validate(); err != nil {
 			return err
 		}
+	}
+	if err := p.EncryptionPolicy.Validate(); err != nil {
+		return err
 	}
 	return nil
 }

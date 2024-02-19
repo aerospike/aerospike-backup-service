@@ -102,6 +102,9 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	// TLS configuration
 	setTLSOptions(&backupConfig.tls_name, &backupConfig.tls, cluster.TLS)
 
+	// Encryption configuration
+	configureEncryption(&backupConfig.encrypt_mode, &backupConfig.pkey, backupPolicy.EncryptionPolicy)
+
 	setCString(&backupConfig.directory, path)
 	setCLong(&backupConfig.mod_after, opts.ModAfter)
 	setCLong(&backupConfig.mod_before, opts.ModBefore)

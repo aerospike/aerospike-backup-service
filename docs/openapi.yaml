@@ -1082,6 +1082,7 @@ components:
         max-retries: 3
         remove-files: "{}"
         remove-artifacts: true
+        encryption: "{}"
         parallel: 1
         no-indexes: true
         retry-delay: 500
@@ -1096,6 +1097,11 @@ components:
             bandwidth in MiB/s.
           example: 10000
           type: integer
+        encryption:
+          allOf:
+          - $ref: '#/components/schemas/model.EncryptionPolicy'
+          description: Encryption details.
+          type: object
         file-limit:
           description: |-
             File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
@@ -1279,6 +1285,7 @@ components:
             max-retries: 3
             remove-files: "{}"
             remove-artifacts: true
+            encryption: "{}"
             parallel: 1
             no-indexes: true
             retry-delay: 500
@@ -1384,6 +1391,25 @@ components:
         user:
           description: The username for the cluster authentication.
           example: testUser
+          type: string
+      type: object
+    model.EncryptionPolicy:
+      description: EncryptionPolicy contains backup encryption information.
+      properties:
+        key-env:
+          description: The name of the environment variable containing the encryption
+            key.
+          type: string
+        key-file:
+          description: The path to the file containing the encryption key.
+          type: string
+        key-secret:
+          description: The secret keyword in Aerospike Secret Agent containing the
+            encryption key.
+          type: string
+        mode:
+          default: NONE
+          description: "The encryption mode to be used (NONE, AES128, AES256)"
           type: string
       type: object
     model.FileLoggerConfig:
@@ -1607,6 +1633,11 @@ components:
             Disables the use of batch writes when restoring records to the Aerospike cluster.
             By default, the cluster is checked for batch write support.
           type: boolean
+        encryption:
+          allOf:
+          - $ref: '#/components/schemas/model.EncryptionPolicy'
+          description: Encryption details.
+          type: object
         max-async-batches:
           description: The max number of outstanding async record batch write calls
             at a time.

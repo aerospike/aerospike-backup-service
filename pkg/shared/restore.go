@@ -95,6 +95,10 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	// TLS configuration
 	setTLSOptions(&restoreConfig.tls_name, &restoreConfig.tls, restoreRequest.DestinationCuster.TLS)
 
+	// Encryption configuration
+	configureEncryption(&restoreConfig.encrypt_mode, &restoreConfig.pkey,
+		restoreRequest.Policy.EncryptionPolicy)
+
 	// restore source configuration
 	setCString(&restoreConfig.directory, restoreRequest.Dir)
 

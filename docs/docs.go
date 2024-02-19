@@ -1380,6 +1380,14 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 10000
                 },
+                "encryption": {
+                    "description": "Encryption details.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.EncryptionPolicy"
+                        }
+                    ]
+                },
                 "file-limit": {
                     "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created.",
                     "type": "integer",
@@ -1631,6 +1639,29 @@ const docTemplate = `{
                     "description": "The username for the cluster authentication.",
                     "type": "string",
                     "example": "testUser"
+                }
+            }
+        },
+        "model.EncryptionPolicy": {
+            "description": "EncryptionPolicy contains backup encryption information.",
+            "type": "object",
+            "properties": {
+                "key-env": {
+                    "description": "The name of the environment variable containing the encryption key.",
+                    "type": "string"
+                },
+                "key-file": {
+                    "description": "The path to the file containing the encryption key.",
+                    "type": "string"
+                },
+                "key-secret": {
+                    "description": "The secret keyword in Aerospike Secret Agent containing the encryption key.",
+                    "type": "string"
+                },
+                "mode": {
+                    "description": "The encryption mode to be used (NONE, AES128, AES256)",
+                    "type": "string",
+                    "default": "NONE"
                 }
             }
         },
@@ -1897,6 +1928,14 @@ const docTemplate = `{
                 "disable-batch-writes": {
                     "description": "Disables the use of batch writes when restoring records to the Aerospike cluster.\nBy default, the cluster is checked for batch write support.",
                     "type": "boolean"
+                },
+                "encryption": {
+                    "description": "Encryption details.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.EncryptionPolicy"
+                        }
+                    ]
                 },
                 "max-async-batches": {
                     "description": "The max number of outstanding async record batch write calls at a time.",
