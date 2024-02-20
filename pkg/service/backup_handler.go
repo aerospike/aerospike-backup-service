@@ -24,7 +24,7 @@ type BackupHandler struct {
 	storage          *model.Storage
 	secretAgent      *model.SecretAgent
 	state            *model.BackupState
-	timer            *time.Timer
+	retry            *RetryService
 }
 
 // stdIO captures standard output
@@ -61,37 +61,18 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 		secretAgent:      secretAgent,
 		state:            backupBackend.readState(),
 		routineName:      routineName,
+		retry:            NewRetryService(routineName),
 	}, nil
 }
 
-const maxRetries = 3
-const retryInterval = 1 * time.Second
-
-func (h *BackupHandler) runFullBackupWithRetry(now time.Time, n int) {
-	if h.timer != nil {
-		h.timer.Stop()
-		if h.timer.C != nil {
-			<-h.timer.C
-		}
-		h.timer = nil
-	}
-
-	err := h.runFullBackup(now)
-	if err == nil {
-		return
-	}
-	// log error
-	slog.Warn("backup failed", "err", err)
-
-	if n < maxRetries {
-		h.timer = time.AfterFunc(retryInterval, func() {
-			h.runFullBackupWithRetry(now, n+1)
-		})
-	}
+func (h *BackupHandler) runFullBackup(now time.Time) {
+	h.retry.retry(
+		func() error { return h.runFullBackupInternal(now) },
+		time.Duration(*h.backupFullPolicy.RetryDelay)*time.Millisecond,
+		*h.backupFullPolicy.MaxRetries)
 }
 
-// private method
-func (h *BackupHandler) runFullBackup(now time.Time) error {
+func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 	if !h.backend.FullBackupInProgress().CompareAndSwap(false, true) {
 		slog.Log(context.Background(), util.LevelTrace,
 			"Full backup is currently in progress, skipping full backup",
