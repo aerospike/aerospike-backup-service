@@ -1503,6 +1503,13 @@
             "example" : 10000,
             "type" : "integer"
           },
+          "compression" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/model.CompressionPolicy"
+            } ],
+            "description" : "Compression details.",
+            "type" : "object"
+          },
           "encryption" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/model.EncryptionPolicy"
@@ -1670,6 +1677,22 @@
             } ],
             "description" : "Logger is the backup service logger configuration.",
             "type" : "object"
+          }
+        },
+        "type" : "object"
+      },
+      "model.CompressionPolicy" : {
+        "description" : "CompressionPolicy contains backup compression information.",
+        "properties" : {
+          "level" : {
+            "description" : "The compression level to use (or -1 if unspecified).",
+            "type" : "integer"
+          },
+          "mode" : {
+            "default" : "NONE",
+            "description" : "The compression mode to be used (default is NONE).",
+            "enum" : [ "NONE", "ZSTD" ],
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -1977,6 +2000,13 @@
               "type" : "string"
             },
             "type" : "array"
+          },
+          "compression" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/model.CompressionPolicy"
+            } ],
+            "description" : "Compression details.",
+            "type" : "object"
           },
           "disable-batch-writes" : {
             "description" : "Disables the use of batch writes when restoring records to the Aerospike cluster.\nBy default, the cluster is checked for batch write support.",

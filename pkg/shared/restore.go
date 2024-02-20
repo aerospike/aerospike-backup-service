@@ -99,6 +99,9 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	configureEncryption(&restoreConfig.encrypt_mode, &restoreConfig.pkey,
 		restoreRequest.Policy.EncryptionPolicy)
 
+	// Compression configuration
+	configureCompression(&restoreConfig.compress_mode, nil, restoreRequest.Policy.CompressionPolicy)
+
 	// restore source configuration
 	setCString(&restoreConfig.directory, restoreRequest.Dir)
 

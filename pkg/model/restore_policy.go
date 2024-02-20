@@ -54,6 +54,8 @@ type RestorePolicy struct {
 	Tps *uint32 `json:"tps,omitempty" example:"4000"`
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
+	// Compression details.
+	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
 }
 
 // RestoreNamespace specifies an alternative namespace name for the restore
@@ -80,6 +82,9 @@ func (p *RestorePolicy) Validate() error {
 		}
 	}
 	if err := p.EncryptionPolicy.Validate(); err != nil {
+		return err
+	}
+	if err := p.CompressionPolicy.Validate(); err != nil {
 		return err
 	}
 	return nil
