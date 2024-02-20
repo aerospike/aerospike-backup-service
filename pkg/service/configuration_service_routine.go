@@ -28,6 +28,9 @@ func UpdateRoutine(config *model.Config, name string, updatedRoutine *model.Back
 	if !found {
 		return fmt.Errorf("backup routine %s not found", name)
 	}
+	if err := updatedRoutine.Validate(config); err != nil {
+		return err
+	}
 
 	config.BackupRoutines[name] = updatedRoutine
 	return nil
