@@ -21,20 +21,23 @@ func NewRetryService(key string) *RetryService {
 func (r *RetryService) retry(f func() error, retryInterval time.Duration, n uint32) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if n == 0 {
-		slog.Warn("Retry failed for", "key", r.key)
-		return
-	}
+
 	r.clearTimer()
 	err := f()
-	if err == nil {
+
+	if err == nil { // function executed successfully, no retry needed
 		return
 	}
-	slog.Info("Retry scheduled", "key", r.key, "retryInterval", retryInterval)
+
+	if n == 0 {
+		slog.Warn("Execution failed, no retry attempts left", "key", r.key, "err", err)
+		return
+	}
+
+	slog.Info("Execution failed, retry scheduled", "key", r.key, "retryInterval", retryInterval, "err", err)
 	r.timer = time.AfterFunc(retryInterval, func() {
 		r.retry(f, retryInterval, n-1)
 	})
-	return
 }
 
 func (r *RetryService) clearTimer() {
