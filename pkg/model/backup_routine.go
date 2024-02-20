@@ -43,19 +43,19 @@ func (r *BackupRoutine) Validate(c *Config) error {
 		return routineValidationError("backup-policy")
 	}
 	if _, exists := c.BackupPolicies[r.BackupPolicy]; !exists {
-		return fmt.Errorf("backup policy %s not found", r.BackupPolicy)
+		return fmt.Errorf("backup policy '%s' not found", r.BackupPolicy)
 	}
 	if r.SourceCluster == "" {
 		return routineValidationError("source-cluster")
 	}
 	if _, exists := c.AerospikeClusters[r.SourceCluster]; !exists {
-		return fmt.Errorf("Aerospike cluster %s not found", r.SourceCluster)
+		return fmt.Errorf("Aerospike cluster '%s' not found", r.SourceCluster)
 	}
 	if r.Storage == "" {
 		return routineValidationError("storage")
 	}
 	if _, exists := c.Storage[r.Storage]; !exists {
-		return fmt.Errorf("storage %s not found", r.Storage)
+		return fmt.Errorf("storage '%s' not found", r.Storage)
 	}
 
 	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
@@ -63,7 +63,7 @@ func (r *BackupRoutine) Validate(c *Config) error {
 	}
 	if r.IncrIntervalCron != "" { // incremental interval is optional
 		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
-			return fmt.Errorf("incremental backup interval string %s invalid: %v", r.IntervalCron, err)
+			return fmt.Errorf("incremental backup interval string '%s' invalid: %v", r.IntervalCron, err)
 		}
 	}
 	for _, rack := range r.PreferRacks {
@@ -80,7 +80,7 @@ func (r *BackupRoutine) Validate(c *Config) error {
 		}
 
 		if _, exists := c.SecretAgents[*r.SecretAgent]; !exists {
-			return fmt.Errorf("secret agent %s not found", *r.SecretAgent)
+			return fmt.Errorf("secret agent '%s' not found", *r.SecretAgent)
 		}
 	}
 	return nil

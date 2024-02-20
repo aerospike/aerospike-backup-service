@@ -56,7 +56,7 @@ func TestInvalidClusterReference(t *testing.T) {
 	if err == nil {
 		t.Error("Expected validation error, but got none.")
 	}
-	expectedError := "backup routine 'routine1' references a non-existent AerospikeCluster 'nonExistentCluster'"
+	expectedError := "backup routine 'routine1' validation error: Aerospike cluster 'nonExistentCluster' not found"
 	if err.Error() != expectedError {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
@@ -70,7 +70,7 @@ func TestInvalidBackupPolicyReference(t *testing.T) {
 	if err == nil {
 		t.Error("Expected validation error, but got none.")
 	}
-	expectedError := "backup routine 'routine1' references a non-existent BackupPolicy 'nonExistentPolicy'"
+	expectedError := "backup routine 'routine1' validation error: backup policy 'nonExistentPolicy' not found"
 	if err.Error() != expectedError {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
@@ -84,7 +84,7 @@ func TestInvalidStorageReference(t *testing.T) {
 	if err == nil {
 		t.Error("Expected validation error, but got none.")
 	}
-	expectedError := "backup routine 'routine1' references a non-existent Storage 'nonExistentStorage'"
+	expectedError := "backup routine 'routine1' validation error: storage 'nonExistentStorage' not found"
 	if err.Error() != expectedError {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
