@@ -130,7 +130,7 @@ func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) 
 	util.LogCaptured(out)
 
 	if stats == nil {
-		return fmt.Errorf("error during backup")
+		return fmt.Errorf("error during backup namespace %s, routine %s", namespace, h.routineName)
 	}
 
 	if err := h.backend.writeBackupMetadata(backupFolder, stats.ToModel(options, namespace)); err != nil {

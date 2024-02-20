@@ -1,6 +1,6 @@
 module github.com/aerospike/backup
 
-go 1.22.0
+go 1.22
 
 require (
 	github.com/aerospike/aerospike-client-go/v7 v7.1.0
