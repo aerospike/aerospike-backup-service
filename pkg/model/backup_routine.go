@@ -38,16 +38,26 @@ type BackupRoutine struct {
 }
 
 // Validate validates the backup routine configuration.
-func (r *BackupRoutine) Validate() error {
+func (r *BackupRoutine) Validate(c *Config) error {
 	if r.BackupPolicy == "" {
 		return routineValidationError("backup-policy")
+	}
+	if _, exists := c.BackupPolicies[r.BackupPolicy]; !exists {
+		return fmt.Errorf("backup policy %s not found", r.BackupPolicy)
 	}
 	if r.SourceCluster == "" {
 		return routineValidationError("source-cluster")
 	}
+	if _, exists := c.AerospikeClusters[r.SourceCluster]; !exists {
+		return fmt.Errorf("Aerospike cluster %s not found", r.SourceCluster)
+	}
 	if r.Storage == "" {
 		return routineValidationError("storage")
 	}
+	if _, exists := c.Storage[r.Storage]; !exists {
+		return fmt.Errorf("storage %s not found", r.Storage)
+	}
+
 	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
 		return fmt.Errorf("backup interval string %s invalid: %v", r.IntervalCron, err)
 	}
@@ -62,6 +72,15 @@ func (r *BackupRoutine) Validate() error {
 		}
 		if rack > maxRack {
 			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)
+		}
+	}
+	if r.SecretAgent != nil {
+		if *r.SecretAgent == "" {
+			return routineValidationError("secret-agent")
+		}
+
+		if _, exists := c.SecretAgents[*r.SecretAgent]; !exists {
+			return fmt.Errorf("secret agent %s not found", *r.SecretAgent)
 		}
 	}
 	return nil

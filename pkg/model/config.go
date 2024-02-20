@@ -44,26 +44,8 @@ func (c *Config) Validate() error {
 		if name == "" {
 			return fmt.Errorf("empty routine name is not allowed")
 		}
-		if err := routine.Validate(); err != nil {
+		if err := routine.Validate(c); err != nil {
 			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
-		}
-		if _, exists := c.AerospikeClusters[routine.SourceCluster]; !exists {
-			return fmt.Errorf("backup routine '%s' references a non-existent AerospikeCluster '%s'",
-				name, routine.SourceCluster)
-		}
-		if _, exists := c.BackupPolicies[routine.BackupPolicy]; !exists {
-			return fmt.Errorf("backup routine '%s' references a non-existent BackupPolicy '%s'",
-				name, routine.BackupPolicy)
-		}
-		if _, exists := c.Storage[routine.Storage]; !exists {
-			return fmt.Errorf("backup routine '%s' references a non-existent Storage '%s'",
-				name, routine.Storage)
-		}
-		if routine.SecretAgent != nil {
-			if _, exists := c.SecretAgents[*routine.SecretAgent]; !exists {
-				return fmt.Errorf("backup routine '%s' references a non-existent SecretAgent '%s'",
-					name, *routine.SecretAgent)
-			}
 		}
 	}
 
@@ -72,7 +54,7 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("empty storage name is not allowed")
 		}
 		if err := storage.Validate(); err != nil {
-			return err
+			return fmt.Errorf("storage '%s' validation error: %s", name, err.Error())
 		}
 	}
 
@@ -81,7 +63,7 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("empty cluster name is not allowed")
 		}
 		if err := cluster.Validate(); err != nil {
-			return err
+			return fmt.Errorf("cluster '%s' validation error: %s", name, err.Error())
 		}
 	}
 

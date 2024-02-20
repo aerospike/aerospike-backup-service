@@ -88,3 +88,7 @@ func (r *RemoveFilesType) RemoveIncrementalBackup() bool {
 	// Incremental backups are deleted only if RemoveFiles is explicitly set to RemoveAll or RemoveIncremental
 	return r != nil && (*r == RemoveIncremental || *r == RemoveAll)
 }
+
+func (p *BackupPolicy) Validate() error {
+	return nil
+}

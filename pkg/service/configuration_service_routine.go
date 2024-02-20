@@ -9,17 +9,12 @@ import (
 // AddRoutine
 // adds a new BackupRoutine to the configuration if a routine with the same name doesn't already exist.
 func AddRoutine(config *model.Config, name string, newRoutine *model.BackupRoutine) error {
-	_, found := config.Storage[newRoutine.Storage]
-	if !found {
-		return fmt.Errorf("storage %s not found", newRoutine.Storage)
-	}
-	_, found = config.AerospikeClusters[newRoutine.SourceCluster]
-	if !found {
-		return fmt.Errorf("cluster %s not found", newRoutine.SourceCluster)
-	}
-	_, found = config.BackupRoutines[name]
+	_, found := config.BackupRoutines[name]
 	if found {
 		return fmt.Errorf("aerospike routine with the same name %s already exists", name)
+	}
+	if err := newRoutine.Validate(config); err != nil {
+		return err
 	}
 
 	config.BackupRoutines[name] = newRoutine
