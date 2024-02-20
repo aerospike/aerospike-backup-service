@@ -137,7 +137,7 @@ func (p *BackupPolicy) Validate() error {
 	if p.FileLimit != nil && *p.FileLimit <= 0 {
 		return fmt.Errorf("fileLimit %d invalid, should be positive number", *p.FileLimit)
 	}
-	if *p.RemoveFiles != "" &&
+	if p.RemoveFiles != nil &&
 		*p.RemoveFiles != KeepAll && *p.RemoveFiles != RemoveAll && *p.RemoveFiles != RemoveIncremental {
 		return fmt.Errorf("invalid RemoveFiles: %s", *p.RemoveFiles)
 	}
