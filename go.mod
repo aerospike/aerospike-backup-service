@@ -1,6 +1,6 @@
 module github.com/aerospike/backup
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/aerospike/aerospike-client-go/v7 v7.1.0
@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.47.5
 	github.com/aws/smithy-go v1.19.0
 	github.com/prometheus/client_golang v1.18.0
-	github.com/reugn/go-quartz v0.10.0
+	github.com/reugn/go-quartz v0.11.0
 	github.com/spf13/cobra v1.8.0
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.3

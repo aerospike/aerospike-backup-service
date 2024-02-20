@@ -24,6 +24,7 @@ type BackupHandler struct {
 	storage          *model.Storage
 	secretAgent      *model.SecretAgent
 	state            *model.BackupState
+	timer            *time.Timer
 }
 
 // stdIO captures standard output
@@ -63,12 +64,39 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 	}, nil
 }
 
-func (h *BackupHandler) runFullBackup(now time.Time) {
+const maxRetries = 3
+const retryInterval = 1 * time.Second
+
+func (h *BackupHandler) runFullBackupWithRetry(now time.Time, n int) {
+	if h.timer != nil {
+		h.timer.Stop()
+		if h.timer.C != nil {
+			<-h.timer.C
+		}
+		h.timer = nil
+	}
+
+	err := h.runFullBackup(now)
+	if err == nil {
+		return
+	}
+	// log error
+	slog.Warn("backup failed", "err", err)
+
+	if n < maxRetries {
+		h.timer = time.AfterFunc(retryInterval, func() {
+			h.runFullBackupWithRetry(now, n+1)
+		})
+	}
+}
+
+// private method
+func (h *BackupHandler) runFullBackup(now time.Time) error {
 	if !h.backend.FullBackupInProgress().CompareAndSwap(false, true) {
 		slog.Log(context.Background(), util.LevelTrace,
 			"Full backup is currently in progress, skipping full backup",
 			"name", h.routineName)
-		return
+		return nil
 	}
 	slog.Debug("Acquire fullBackupInProgress lock", "name", h.routineName)
 	// release the lock
@@ -77,7 +105,10 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 		slog.Debug("Release fullBackupInProgress lock", "name", h.routineName)
 	}()
 	for _, namespace := range h.backupRoutine.Namespaces {
-		h.fullBackupForNamespace(now, namespace)
+		err := h.fullBackupForNamespace(now, namespace)
+		if err != nil {
+			return err
+		}
 	}
 
 	// increment backupCounter metric
@@ -87,9 +118,11 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	h.updateFullBackupState(now)
 
 	h.cleanIncrementalBackups()
+
+	return nil
 }
 
-func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) {
+func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) error {
 	backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, now)
 	h.backend.CreateFolder(backupFolder)
 
@@ -116,13 +149,15 @@ func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) 
 	util.LogCaptured(out)
 
 	if stats == nil {
-		return
+		return fmt.Errorf("error during backup")
 	}
 
 	if err := h.backend.writeBackupMetadata(backupFolder, stats.ToModel(options, namespace)); err != nil {
 		slog.Error("Could not write backup metadata", "name", h.routineName,
 			"folder", backupFolder, "err", err)
+		return err
 	}
+	return nil
 }
 
 func (h *BackupHandler) cleanIncrementalBackups() {
