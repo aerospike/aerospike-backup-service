@@ -135,3 +135,17 @@ func configureEncryption(encryptMode *C.encryption_opt, pKey **C.encryption_key_
 		}
 	}
 }
+
+func configureCompression(mode *C.compression_opt, level *C.int32_t, policy *model.CompressionPolicy) {
+	if policy != nil {
+		switch policy.Mode {
+		case model.CompressNone:
+			*mode = C.IO_PROXY_COMPRESS_NONE
+		case model.CompressZSTD:
+			*mode = C.IO_PROXY_COMPRESS_ZSTD
+		}
+		if level != nil {
+			*level = C.int(policy.Level)
+		}
+	}
+}

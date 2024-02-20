@@ -53,6 +53,8 @@ type BackupPolicy struct {
 	FileLimit *uint64 `yaml:"file-limit,omitempty" json:"file-limit,omitempty" example:"1024"`
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
+	// Compression details.
+	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
 }
 
 // CopySMDDisabled creates a new instance of the BackupPolicy struct with identical field values.
