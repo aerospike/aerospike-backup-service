@@ -2,12 +2,14 @@ package service
 
 import (
 	"log/slog"
+	"sync"
 	"time"
 )
 
 type RetryService struct {
 	key   string
 	timer *time.Timer
+	mu    sync.Mutex
 }
 
 func NewRetryService(key string) *RetryService {
@@ -17,6 +19,8 @@ func NewRetryService(key string) *RetryService {
 }
 
 func (r *RetryService) retry(f func() error, retryInterval time.Duration, n uint32) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if n == 0 {
 		slog.Warn("Retry failed for", "key", r.key)
 		return
