@@ -6,12 +6,15 @@ import (
 	"time"
 )
 
+// RetryService a service for retrying a function with a specified interval and number of attempts.
 type RetryService struct {
 	key   string
 	timer *time.Timer
 	mu    sync.Mutex
 }
 
+// NewRetryService returns a new RetryService instance.
+// key string parameter is used for logging purposes only.
 func NewRetryService(key string) *RetryService {
 	return &RetryService{
 		key: key,
