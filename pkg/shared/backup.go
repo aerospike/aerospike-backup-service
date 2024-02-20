@@ -105,6 +105,10 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	// Encryption configuration
 	configureEncryption(&backupConfig.encrypt_mode, &backupConfig.pkey, backupPolicy.EncryptionPolicy)
 
+	// Compression configuration
+	configureCompression(&backupConfig.compress_mode, &backupConfig.compression_level,
+		backupPolicy.CompressionPolicy)
+
 	setCString(&backupConfig.directory, path)
 	setCLong(&backupConfig.mod_after, opts.ModAfter)
 	setCLong(&backupConfig.mod_before, opts.ModBefore)

@@ -1380,6 +1380,14 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 10000
                 },
+                "compression": {
+                    "description": "Compression details.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.CompressionPolicy"
+                        }
+                    ]
+                },
                 "encryption": {
                     "description": "Encryption details.",
                     "allOf": [
@@ -1568,6 +1576,25 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/model.LoggerConfig"
                         }
+                    ]
+                }
+            }
+        },
+        "model.CompressionPolicy": {
+            "description": "CompressionPolicy contains backup compression information.",
+            "type": "object",
+            "properties": {
+                "level": {
+                    "description": "The compression level to use (or -1 if unspecified).",
+                    "type": "integer"
+                },
+                "mode": {
+                    "description": "The compression mode to be used (default is NONE).",
+                    "type": "string",
+                    "default": "NONE",
+                    "enum": [
+                        "NONE",
+                        "ZSTD"
                     ]
                 }
             }
@@ -1928,6 +1955,14 @@ const docTemplate = `{
                     "example": [
                         "bin1",
                         "bin2"
+                    ]
+                },
+                "compression": {
+                    "description": "Compression details.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.CompressionPolicy"
+                        }
                     ]
                 },
                 "disable-batch-writes": {
