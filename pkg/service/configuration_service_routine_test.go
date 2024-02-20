@@ -18,7 +18,12 @@ func TestRoutine_Add(t *testing.T) {
 		Storage:           map[string]*model.Storage{storage: {}},
 	}
 
-	routine := model.BackupRoutine{Storage: storage, SourceCluster: cluster}
+	routine := model.BackupRoutine{
+		Storage:       storage,
+		SourceCluster: cluster,
+		BackupPolicy:  policy,
+		IntervalCron:  "@daily",
+	}
 	err := AddRoutine(config, routineName, &routine)
 	if err != nil {
 		t.Errorf("AddRoutine failed, expected nil error, got %v", err)
