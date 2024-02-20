@@ -18,7 +18,7 @@ backup-policies:
   policy1:
     type: 1
     parallel: 1
-    remove-files: false
+    remove-files: KeepAll
 
 backup-routines:
   routine1:
