@@ -43,19 +43,19 @@ func (r *BackupRoutine) Validate(c *Config) error {
 		return emptyFieldValidationError("backup policy")
 	}
 	if _, exists := c.BackupPolicies[r.BackupPolicy]; !exists {
-		return fmt.Errorf("backup policy '%s' not found", r.BackupPolicy)
+		return notFoundValidationError("backup policy", r.BackupPolicy)
 	}
 	if r.SourceCluster == "" {
 		return emptyFieldValidationError("source-cluster")
 	}
 	if _, exists := c.AerospikeClusters[r.SourceCluster]; !exists {
-		return fmt.Errorf("Aerospike cluster '%s' not found", r.SourceCluster)
+		return notFoundValidationError("Aerospike cluster", r.SourceCluster)
 	}
 	if r.Storage == "" {
 		return emptyFieldValidationError("storage")
 	}
 	if _, exists := c.Storage[r.Storage]; !exists {
-		return fmt.Errorf("storage '%s' not found", r.Storage)
+		return notFoundValidationError("storage", r.Storage)
 	}
 
 	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
@@ -80,7 +80,7 @@ func (r *BackupRoutine) Validate(c *Config) error {
 		}
 
 		if _, exists := c.SecretAgents[*r.SecretAgent]; !exists {
-			return fmt.Errorf("secret agent '%s' not found", *r.SecretAgent)
+			return notFoundValidationError("secret agent", *r.SecretAgent)
 		}
 	}
 	return nil
