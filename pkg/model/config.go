@@ -42,7 +42,7 @@ func (c Config) String() string {
 func (c *Config) Validate() error {
 	for name, routine := range c.BackupRoutines {
 		if name == "" {
-			return fmt.Errorf("empty routine name is not allowed")
+			return emptyFieldValidationError("routine name")
 		}
 		if err := routine.Validate(c); err != nil {
 			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
@@ -51,7 +51,7 @@ func (c *Config) Validate() error {
 
 	for name, storage := range c.Storage {
 		if name == "" {
-			return fmt.Errorf("empty storage name is not allowed")
+			return emptyFieldValidationError("storage name")
 		}
 		if err := storage.Validate(); err != nil {
 			return fmt.Errorf("storage '%s' validation error: %s", name, err.Error())
@@ -60,7 +60,7 @@ func (c *Config) Validate() error {
 
 	for name, cluster := range c.AerospikeClusters {
 		if name == "" {
-			return fmt.Errorf("empty cluster name is not allowed")
+			return emptyFieldValidationError("cluster name")
 		}
 		if err := cluster.Validate(); err != nil {
 			return fmt.Errorf("cluster '%s' validation error: %s", name, err.Error())
@@ -69,7 +69,7 @@ func (c *Config) Validate() error {
 
 	for name, policy := range c.BackupPolicies {
 		if name == "" {
-			return fmt.Errorf("empty policy name is not allowed")
+			return emptyFieldValidationError("policy name")
 		}
 		if err := policy.Validate(); err != nil {
 			return err
@@ -85,4 +85,8 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+func emptyFieldValidationError(field string) error {
+	return fmt.Errorf("empty %s is not allowed", field)
 }

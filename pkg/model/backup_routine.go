@@ -40,19 +40,19 @@ type BackupRoutine struct {
 // Validate validates the backup routine configuration.
 func (r *BackupRoutine) Validate(c *Config) error {
 	if r.BackupPolicy == "" {
-		return routineValidationError("backup-policy")
+		return emptyFieldValidationError("backup policy")
 	}
 	if _, exists := c.BackupPolicies[r.BackupPolicy]; !exists {
 		return fmt.Errorf("backup policy '%s' not found", r.BackupPolicy)
 	}
 	if r.SourceCluster == "" {
-		return routineValidationError("source-cluster")
+		return emptyFieldValidationError("source-cluster")
 	}
 	if _, exists := c.AerospikeClusters[r.SourceCluster]; !exists {
 		return fmt.Errorf("Aerospike cluster '%s' not found", r.SourceCluster)
 	}
 	if r.Storage == "" {
-		return routineValidationError("storage")
+		return emptyFieldValidationError("storage")
 	}
 	if _, exists := c.Storage[r.Storage]; !exists {
 		return fmt.Errorf("storage '%s' not found", r.Storage)
@@ -76,7 +76,7 @@ func (r *BackupRoutine) Validate(c *Config) error {
 	}
 	if r.SecretAgent != nil {
 		if *r.SecretAgent == "" {
-			return routineValidationError("secret-agent")
+			return emptyFieldValidationError("secret-agent")
 		}
 
 		if _, exists := c.SecretAgents[*r.SecretAgent]; !exists {
@@ -84,10 +84,6 @@ func (r *BackupRoutine) Validate(c *Config) error {
 		}
 	}
 	return nil
-}
-
-func routineValidationError(field string) error {
-	return fmt.Errorf("%s specification for backup routine is required", field)
 }
 
 // Node represents the Aerospike node details.
