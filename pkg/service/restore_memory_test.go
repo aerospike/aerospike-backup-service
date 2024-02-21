@@ -205,3 +205,25 @@ func Test_RestoreFail(t *testing.T) {
 		t.Errorf("Expected restore job status to be Failed, but got %s", status.Status)
 	}
 }
+
+func Test_RestoreByTimeFailNoBackend(t *testing.T) {
+	request := &model.RestoreTimestampRequest{
+		Routine: "wrongRoutine",
+	}
+
+	_, err := restoreService.RestoreByTime(request)
+	if err == nil && !strings.Contains(err.Error(), "Backend not found for restore") {
+		t.Errorf("Expected error 'Backend not found', but got %v", err)
+	}
+}
+
+func Test_RestoreByTimeFailNoFullBackup(t *testing.T) {
+	request := &model.RestoreTimestampRequest{
+		Routine: "routine",
+	}
+
+	_, err := restoreService.RestoreByTime(request)
+	if err == nil && !strings.Contains(err.Error(), "last full backup not found") {
+		t.Errorf("Expected error 'full backup not found', but got %v", err)
+	}
+}
