@@ -67,6 +67,15 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	for name, policy := range c.BackupPolicies {
+		if name == "" {
+			return fmt.Errorf("empty policy name is not allowed")
+		}
+		if err := policy.Validate(); err != nil {
+			return err
+		}
+	}
+
 	if err := c.ServiceConfig.HTTPServer.Validate(); err != nil {
 		return err
 	}

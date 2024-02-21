@@ -1,12 +1,22 @@
 package model
 
-import "github.com/aerospike/backup/pkg/util"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/aws/smithy-go/ptr"
+
+	"github.com/aerospike/backup/pkg/util"
+)
 
 const (
 	KeepAll           RemoveFilesType = "KeepAll"
 	RemoveAll         RemoveFilesType = "RemoveAll"
 	RemoveIncremental RemoveFilesType = "RemoveIncremental"
 )
+
+// default retry delay is 1 minute
+var defaultRetryDelay = ptr.Uint32(60_000)
 
 // RemoveFilesType represents the type of the backup storage.
 // @Description RemoveFilesType represents the type of the backup storage.
@@ -89,6 +99,53 @@ func (r *RemoveFilesType) RemoveIncrementalBackup() bool {
 	return r != nil && (*r == RemoveIncremental || *r == RemoveAll)
 }
 
+// Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
 func (p *BackupPolicy) Validate() error {
+	if p == nil {
+		return errors.New("backup policy is not specified")
+	}
+	if p.Parallel != nil && *p.Parallel <= 0 {
+		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
+	}
+	if p.SocketTimeout != nil && *p.SocketTimeout <= 0 {
+		return fmt.Errorf("socketTimeout %d invalid, should be positive number", *p.SocketTimeout)
+	}
+	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
+		return fmt.Errorf("totalTimeout %d invalid, should be positive number", *p.TotalTimeout)
+	}
+	if p.MaxRetries == nil {
+		p.MaxRetries = ptr.Uint32(0)
+	}
+	if *p.MaxRetries < 0 {
+		return fmt.Errorf("maxRetries %d invalid, should be positive number", *p.MaxRetries)
+	}
+	if p.RetryDelay == nil {
+		p.RetryDelay = defaultRetryDelay
+	}
+	if *p.RetryDelay < 0 {
+		return fmt.Errorf("retryDelay %d invalid, should be positive number", *p.RetryDelay)
+	}
+	if p.Bandwidth != nil && *p.Bandwidth <= 0 {
+		return fmt.Errorf("bandwidth %d invalid, should be positive number", *p.Bandwidth)
+	}
+	if p.MaxRecords != nil && *p.MaxRecords <= 0 {
+		return fmt.Errorf("maxRecords %d invalid, should be positive number", *p.MaxRecords)
+	}
+	if p.RecordsPerSecond != nil && *p.RecordsPerSecond <= 0 {
+		return fmt.Errorf("recordsPerSecond %d invalid, should be positive number", *p.RecordsPerSecond)
+	}
+	if p.FileLimit != nil && *p.FileLimit <= 0 {
+		return fmt.Errorf("fileLimit %d invalid, should be positive number", *p.FileLimit)
+	}
+	if p.RemoveFiles != nil &&
+		*p.RemoveFiles != KeepAll && *p.RemoveFiles != RemoveAll && *p.RemoveFiles != RemoveIncremental {
+		return fmt.Errorf("invalid RemoveFiles: %s", *p.RemoveFiles)
+	}
+	if err := p.EncryptionPolicy.Validate(); err != nil {
+		return err
+	}
+	if err := p.CompressionPolicy.Validate(); err != nil {
+		return err
+	}
 	return nil
 }

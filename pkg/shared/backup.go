@@ -69,8 +69,6 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	}
 	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
 	setCUint(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
-	setCUint(&backupConfig.max_retries, backupPolicy.MaxRetries)
-	setCUint(&backupConfig.retry_delay, backupPolicy.RetryDelay)
 
 	// namespace list configuration
 	nsCharArray := C.CString(*namespace)
