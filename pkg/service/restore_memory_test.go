@@ -217,13 +217,24 @@ func Test_RestoreByTimeFailNoBackend(t *testing.T) {
 	}
 }
 
-func Test_RestoreByTimeFailNoFullBackup(t *testing.T) {
+func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
 		Routine: "routine",
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil && !strings.Contains(err.Error(), "last full backup not found") {
+	if err == nil || !strings.Contains(err.Error(), "last full backup not found: toTime should be positive") {
+		t.Errorf("Expected error 'full backup not found', but got %v", err)
+	}
+}
+func Test_RestoreByTimeFailNoBackup(t *testing.T) {
+	request := &model.RestoreTimestampRequest{
+		Routine: "routine",
+		Time:    1,
+	}
+
+	_, err := restoreService.RestoreByTime(request)
+	if err == nil || !strings.Contains(err.Error(), "last full backup not found: no full backup found at 1") {
 		t.Errorf("Expected error 'full backup not found', but got %v", err)
 	}
 }
