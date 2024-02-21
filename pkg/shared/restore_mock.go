@@ -4,6 +4,7 @@ package shared
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 )
@@ -22,7 +23,12 @@ func NewRestore() *RestoreShared {
 
 // RestoreRun mocks the interface method.
 func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal) *model.RestoreResult {
+	if restoreRequest.DestinationCuster == nil {
+		slog.Info("RestoreRun mock call without DestinationCuster provided, will fail")
+		return nil
+	}
 	slog.Info("RestoreRun mock call")
+	time.Sleep(100 * time.Millisecond)
 	result := model.NewRestoreResult()
 	result.TotalRecords = 1
 	return result

@@ -2,6 +2,7 @@ package service
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,8 +11,29 @@ import (
 	"github.com/aws/smithy-go/ptr"
 )
 
-func TestRestoreMemory(t *testing.T) {
-	restoreService := NewRestoreMemory(nil, nil)
+var restoreService *RestoreMemory
+
+var validBackupPath = "./testout/backup"
+
+func TestMain(m *testing.M) {
+	config := model.NewConfigWithDefaultValues()
+	config.Storage["s"] = &model.Storage{
+		Path: ptr.String("/"),
+	}
+	config.BackupRoutines["routine"] = &model.BackupRoutine{
+		Storage: "s",
+	}
+	backends := map[string]BackupListReader{
+		"routine": &BackendMock{},
+	}
+	restoreService = NewRestoreMemory(backends, config)
+	_ = createMockBackupFile(validBackupPath)
+
+	m.Run()
+	os.RemoveAll("./testout")
+}
+
+func TestRestoreOK(t *testing.T) {
 	restoreRequest := &model.RestoreRequest{
 		DestinationCuster: model.NewLocalAerospikeCluster(),
 		Policy: &model.RestorePolicy{
@@ -19,28 +41,24 @@ func TestRestoreMemory(t *testing.T) {
 		},
 		SourceStorage: &model.Storage{},
 	}
-	path := "./testout/backup"
 	requestInternal := &model.RestoreRequestInternal{
 		RestoreRequest: *restoreRequest,
-		Dir:            util.Ptr(path),
+		Dir:            util.Ptr(validBackupPath),
 	}
-	_ = createMockBackupFile(path)
 	jobID, _ := restoreService.Restore(requestInternal)
 
 	jobStatus, _ := restoreService.JobStatus(jobID)
 	if jobStatus.Status != model.JobStatusRunning {
 		t.Errorf("Expected jobStatus to be %s", model.JobStatusRunning)
 	}
-
+	jobStatus, _ = restoreService.JobStatus(jobID)
+	if jobStatus.Status != model.JobStatusRunning {
+		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
+	}
 	time.Sleep(1 * time.Second)
-	// jobStatus, _ = restoreService.JobStatus(jobID)
-	// if jobStatus.Status != model.JobStatusDone {
-	// 	t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
-	// }
-
-	wrongJobStatus, err := restoreService.JobStatus(1111)
-	if err == nil {
-		t.Errorf("Expected not found, but go %v", wrongJobStatus)
+	jobStatus, _ = restoreService.JobStatus(jobID)
+	if jobStatus.Status != model.JobStatusDone {
+		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
 }
 
@@ -103,19 +121,7 @@ func (*BackendMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDe
 	}}, nil
 }
 
-func TestRestoreTimestamp(t *testing.T) {
-	config := model.NewConfigWithDefaultValues()
-	config.Storage["s"] = &model.Storage{
-		Path: ptr.String("/"),
-	}
-	config.BackupRoutines["routine"] = &model.BackupRoutine{
-		Storage: "s",
-	}
-	backends := map[string]BackupListReader{
-		"routine": &BackendMock{},
-	}
-	restoreService := NewRestoreMemory(backends, config)
-
+func Test_RestoreTimestamp(t *testing.T) {
 	request := model.RestoreTimestampRequest{
 		DestinationCuster: model.NewLocalAerospikeCluster(),
 		Policy: &model.RestorePolicy{
@@ -125,17 +131,77 @@ func TestRestoreTimestamp(t *testing.T) {
 		Routine: "routine",
 	}
 
-	_, err := restoreService.RestoreByTime(&request)
+	jobID, err := restoreService.RestoreByTime(&request)
 	if err != nil {
 		t.Errorf("expected nil, got %s", err.Error())
 	}
 
-	// time.Sleep(1 * time.Second)
-	// jobStatus, _ := restoreService.JobStatus(jobID)
-	// if jobStatus.Status != model.JobStatusDone {
-	// 	t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
-	// }
-	// if jobStatus.TotalRecords != 3 {
-	// 	t.Errorf("Expected 3 (one full and 2 incremental backups")
-	// }
+	time.Sleep(1 * time.Second)
+	jobStatus, _ := restoreService.JobStatus(jobID)
+	if jobStatus.Status != model.JobStatusDone {
+		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
+	}
+	if jobStatus.TotalRecords != 3 {
+		t.Errorf("Expected 3 (one full and 2 incremental backups")
+	}
+}
+
+func Test_WrongStatus(t *testing.T) {
+	wrongJobStatus, err := restoreService.JobStatus(1111)
+	if err == nil {
+		t.Errorf("Expected not found, but got %v", wrongJobStatus)
+	}
+}
+
+func Test_RestoreFromWrongFolder(t *testing.T) {
+	requestInternal := &model.RestoreRequestInternal{
+		RestoreRequest: model.RestoreRequest{
+			SourceStorage: &model.Storage{
+				Type: model.Local,
+			},
+		},
+		Dir: util.Ptr("wrongPath"),
+	}
+
+	_, err := restoreService.Restore(requestInternal)
+	if !os.IsNotExist(err) {
+		t.Errorf("Expected not exist, but got %v", err)
+	}
+}
+
+func Test_RestoreFromEmptyFolder(t *testing.T) {
+	requestInternal := &model.RestoreRequestInternal{
+		RestoreRequest: model.RestoreRequest{
+			SourceStorage: &model.Storage{
+				Type: model.Local,
+			},
+		},
+		Dir: util.Ptr("./"),
+	}
+
+	_, err := restoreService.Restore(requestInternal)
+	if !strings.Contains(err.Error(), "no backup files found") {
+		t.Errorf("Expected no backup found, but got %v", err)
+	}
+}
+
+func Test_RestoreFail(t *testing.T) {
+	restoreRequest := &model.RestoreRequest{
+		DestinationCuster: nil,
+		Policy: &model.RestorePolicy{
+			SetList: []string{"set1"},
+		},
+		SourceStorage: &model.Storage{},
+	}
+	requestInternal := &model.RestoreRequestInternal{
+		RestoreRequest: *restoreRequest,
+		Dir:            util.Ptr(validBackupPath),
+	}
+
+	jobId, _ := restoreService.Restore(requestInternal)
+	time.Sleep(1 * time.Second)
+	status, _ := restoreService.JobStatus(jobId)
+	if status.Status != model.JobStatusFailed {
+		t.Errorf("Expected restore job status to be Failed, but got %s", status.Status)
+	}
 }
