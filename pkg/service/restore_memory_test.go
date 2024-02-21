@@ -212,7 +212,7 @@ func Test_RestoreByTimeFailNoBackend(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !strings.Contains(err.Error(), "Backend not found for restore") {
+	if err == nil || !strings.Contains(err.Error(), "backend 'wrongRoutine' not found for restore") {
 		t.Errorf("Expected error 'Backend not found', but got %v", err)
 	}
 }
