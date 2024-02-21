@@ -59,7 +59,7 @@ func (r *BackupRoutine) Validate(c *Config) error {
 	}
 
 	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
-		return fmt.Errorf("backup interval string %s invalid: %v", r.IntervalCron, err)
+		return fmt.Errorf("backup interval string '%s' invalid: %v", r.IntervalCron, err)
 	}
 	if r.IncrIntervalCron != "" { // incremental interval is optional
 		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
