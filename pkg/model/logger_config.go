@@ -1,7 +1,6 @@
 package model
 
 import (
-	"errors"
 	"fmt"
 	"slices"
 )
@@ -74,7 +73,7 @@ func (f *FileLoggerConfig) Validate() error {
 		return nil
 	}
 	if f.Filename == "" {
-		return errors.New("logger file name is not specified")
+		return emptyFieldValidationError("logger file")
 	}
 	if f.MaxSize < 0 {
 		return fmt.Errorf("negative logger MaxSize: %d", f.MaxSize)

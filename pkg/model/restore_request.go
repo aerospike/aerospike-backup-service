@@ -101,7 +101,7 @@ func (r *RestoreTimestampRequest) Validate() error {
 		return errors.New("restore point in time should be positive")
 	}
 	if r.Routine == "" {
-		return errors.New("routine to restore is not specified")
+		return emptyFieldValidationError(r.Routine)
 	}
 	return nil
 }

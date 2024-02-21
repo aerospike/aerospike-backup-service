@@ -38,22 +38,32 @@ type BackupRoutine struct {
 }
 
 // Validate validates the backup routine configuration.
-func (r *BackupRoutine) Validate() error {
+func (r *BackupRoutine) Validate(c *Config) error {
 	if r.BackupPolicy == "" {
-		return routineValidationError("backup-policy")
+		return emptyFieldValidationError("backup policy")
+	}
+	if _, exists := c.BackupPolicies[r.BackupPolicy]; !exists {
+		return notFoundValidationError("backup policy", r.BackupPolicy)
 	}
 	if r.SourceCluster == "" {
-		return routineValidationError("source-cluster")
+		return emptyFieldValidationError("source-cluster")
+	}
+	if _, exists := c.AerospikeClusters[r.SourceCluster]; !exists {
+		return notFoundValidationError("Aerospike cluster", r.SourceCluster)
 	}
 	if r.Storage == "" {
-		return routineValidationError("storage")
+		return emptyFieldValidationError("storage")
 	}
+	if _, exists := c.Storage[r.Storage]; !exists {
+		return notFoundValidationError("storage", r.Storage)
+	}
+
 	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
-		return fmt.Errorf("backup interval string %s invalid: %v", r.IntervalCron, err)
+		return fmt.Errorf("backup interval string '%s' invalid: %v", r.IntervalCron, err)
 	}
 	if r.IncrIntervalCron != "" { // incremental interval is optional
 		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
-			return fmt.Errorf("incremental backup interval string %s invalid: %v", r.IntervalCron, err)
+			return fmt.Errorf("incremental backup interval string '%s' invalid: %v", r.IntervalCron, err)
 		}
 	}
 	for _, rack := range r.PreferRacks {
@@ -64,11 +74,16 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)
 		}
 	}
-	return nil
-}
+	if r.SecretAgent != nil {
+		if *r.SecretAgent == "" {
+			return emptyFieldValidationError("secret-agent")
+		}
 
-func routineValidationError(field string) error {
-	return fmt.Errorf("%s specification for backup routine is required", field)
+		if _, exists := c.SecretAgents[*r.SecretAgent]; !exists {
+			return notFoundValidationError("secret agent", *r.SecretAgent)
+		}
+	}
+	return nil
 }
 
 // Node represents the Aerospike node details.

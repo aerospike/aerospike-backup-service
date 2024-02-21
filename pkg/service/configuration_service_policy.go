@@ -13,6 +13,9 @@ func AddPolicy(config *model.Config, name string, newPolicy *model.BackupPolicy)
 	if found {
 		return fmt.Errorf("backup policy with the same name %s already exists", name)
 	}
+	if err := newPolicy.Validate(); err != nil {
+		return err
+	}
 
 	config.BackupPolicies[name] = newPolicy
 	return nil
@@ -25,7 +28,9 @@ func UpdatePolicy(config *model.Config, name string, updatedPolicy *model.Backup
 	if !found {
 		return fmt.Errorf("backup policy %s not found", name)
 	}
-
+	if err := updatedPolicy.Validate(); err != nil {
+		return err
+	}
 	config.BackupPolicies[name] = updatedPolicy
 	return nil
 }

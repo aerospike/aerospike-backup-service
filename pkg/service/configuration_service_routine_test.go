@@ -18,7 +18,12 @@ func TestRoutine_Add(t *testing.T) {
 		Storage:           map[string]*model.Storage{storage: {}},
 	}
 
-	routine := model.BackupRoutine{Storage: storage, SourceCluster: cluster}
+	routine := model.BackupRoutine{
+		Storage:       storage,
+		SourceCluster: cluster,
+		BackupPolicy:  policy,
+		IntervalCron:  "@daily",
+	}
 	err := AddRoutine(config, routineName, &routine)
 	if err != nil {
 		t.Errorf("AddRoutine failed, expected nil error, got %v", err)
@@ -62,12 +67,21 @@ func TestRoutine_AddErrors(t *testing.T) {
 func TestRoutine_Update(t *testing.T) {
 	name := "routine1"
 	name2 := "routine2"
+	policy := "policy"
+	cluster := "cluster"
+	storage := "storage"
 	config := &model.Config{
-		BackupRoutines: map[string]*model.BackupRoutine{name: {}},
+		BackupRoutines:    map[string]*model.BackupRoutine{name: {}},
+		BackupPolicies:    map[string]*model.BackupPolicy{policy: {}},
+		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {}},
+		Storage:           map[string]*model.Storage{storage: {}},
 	}
 
 	updatedRoutine := &model.BackupRoutine{
-		IntervalCron: "* * * * *",
+		IntervalCron:  "* * * * * *",
+		BackupPolicy:  policy,
+		SourceCluster: cluster,
+		Storage:       storage,
 	}
 
 	err := UpdateRoutine(config, name2, updatedRoutine)
