@@ -1411,6 +1411,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 3
                 },
+                "no-backup-updated-keys": {
+                    "description": "NoBackupUpdatedKeys determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.",
+                    "type": "boolean"
+                },
                 "no-bins": {
                     "description": "Only backup record metadata (digest, TTL, generation count, key).",
                     "type": "boolean"

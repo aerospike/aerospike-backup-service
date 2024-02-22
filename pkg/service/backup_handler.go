@@ -107,7 +107,7 @@ func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace s
 	h.backend.CreateFolder(backupFolder)
 
 	options := shared.BackupOptions{}
-	if h.backupIncrPolicy.UseUpperTimeLimit {
+	if h.backupIncrPolicy.NoBackupUpdatedKeys {
 		options.ModBefore = util.Ptr(upperBound.UnixNano())
 	}
 
@@ -185,7 +185,7 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	options := shared.BackupOptions{
 		ModAfter: util.Ptr(fromEpoch),
 	}
-	if h.backupIncrPolicy.UseUpperTimeLimit {
+	if h.backupIncrPolicy.NoBackupUpdatedKeys {
 		options.ModBefore = util.Ptr(upperBound.UnixNano())
 	}
 	backupRunFunc := func() {

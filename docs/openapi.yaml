@@ -1076,6 +1076,7 @@ components:
       example:
         no-records: true
         no-udfs: true
+        no-backup-updated-keys: true
         bandwidth: 10000
         total-timeout: 2000
         no-bins: true
@@ -1123,6 +1124,12 @@ components:
           description: Maximum number of retries before aborting the current transaction.
           example: 3
           type: integer
+        no-backup-updated-keys:
+          description: |-
+            NoBackupUpdatedKeys determines whether backup should include keys updated during the backup process.
+            When true, the backup contains only records that last modified before backup started.
+            When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
+          type: boolean
         no-bins:
           description: "Only backup record metadata (digest, TTL, generation count,\
             \ key)."
@@ -1299,6 +1306,7 @@ components:
           key:
             no-records: true
             no-udfs: true
+            no-backup-updated-keys: true
             bandwidth: 10000
             total-timeout: 2000
             no-bins: true
