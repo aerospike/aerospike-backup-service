@@ -21,12 +21,19 @@ func TestMain(m *testing.M) {
 	config.Storage["s"] = &model.Storage{
 		Path: ptr.String("/"),
 	}
-	config.BackupRoutines["routine"] = &model.BackupRoutine{
-		Storage: "s",
+	config.BackupRoutines = map[string]*model.BackupRoutine{
+		"routine": {
+			Storage: "s",
+		},
+		"routine_fail_restore": {
+			Storage: "s",
+		},
 	}
+
 	backends := map[string]BackupListReader{
-		"routine":      &BackendMock{},
-		"routine_fail": &BackendFailMock{},
+		"routine":              &BackendMock{},
+		"routine_fail_read":    &BackendFailMock{},
+		"routine_fail_restore": &BackendMock{},
 	}
 	restoreService = NewRestoreMemory(backends, config)
 	_ = os.MkdirAll(validBackupPath, os.ModePerm)
@@ -42,18 +49,27 @@ type BackendMock struct {
 
 func (*BackendMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
-		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(5)},
-		Key:            ptr.String("key"),
+		BackupMetadata: model.BackupMetadata{
+			Created:   time.UnixMilli(5),
+			Namespace: "ns1",
+		},
+		Key: ptr.String(validBackupPath),
 	}}, nil
 }
 
 func (*BackendMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
-		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)},
-		Key:            ptr.String("key"),
+		BackupMetadata: model.BackupMetadata{
+			Created:   time.UnixMilli(10),
+			Namespace: "ns1",
+		},
+		Key: ptr.String("key"),
 	}, {
-		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)},
-		Key:            ptr.String("key2"),
+		BackupMetadata: model.BackupMetadata{
+			Created:   time.UnixMilli(20),
+			Namespace: "ns1",
+		},
+		Key: ptr.String("key2"),
 	}}, nil
 }
 
@@ -153,7 +169,7 @@ func Test_RestoreTimestamp(t *testing.T) {
 		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
 	if jobStatus.TotalRecords != 3 {
-		t.Errorf("Expected 3 (one full and 2 incremental backups")
+		t.Errorf("Expected 3 (one full and 2 incremental backups), got %d", jobStatus.TotalRecords)
 	}
 }
 
@@ -245,20 +261,33 @@ func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !strings.Contains(err.Error(), "last full backup not found: no full backup found at 1") {
+	if err == nil || !(err.Error() == "last full backup not found: no full backup found at 1") {
 		t.Errorf("Expected error 'full backup not found', but got %v", err)
 	}
 }
 
 func Test_readBackupsFail(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
-		Routine: "routine_fail",
+		Routine: "routine_fail_read",
 		Time:    1,
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !strings.Contains(err.Error(), "last full backup not found: cannot read full backup list: mock error") {
+	if err == nil || !(err.Error() == "last full backup not found: cannot read full backup list: mock error") {
 		t.Errorf("Expected error 'full backup not found', but got %v", err)
 	}
+}
 
+func Test_restoreTimestampFail(t *testing.T) {
+	request := &model.RestoreTimestampRequest{
+		Routine: "routine_fail_restore",
+		Time:    10,
+	}
+
+	jobId, _ := restoreService.RestoreByTime(request)
+	time.Sleep(1 * time.Second)
+	status, _ := restoreService.JobStatus(jobId)
+	if status.Status != model.JobStatusFailed {
+		t.Errorf("Expected restore job status to be Failed, but got %s", status.Status)
+	}
 }
