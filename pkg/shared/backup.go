@@ -67,8 +67,8 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	if backupRoutine.PreferRacks != nil {
 		setCString(&backupConfig.prefer_racks, joinInts(backupRoutine.PreferRacks))
 	}
-	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
-	setCUint(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
+	setCInt(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
+	setCInt(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
 
 	// namespace list configuration
 	nsCharArray := C.CString(*namespace)
@@ -82,10 +82,10 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCBool(&backupConfig.no_indexes, backupPolicy.NoIndexes)
 	setCBool(&backupConfig.no_udfs, backupPolicy.NoUdfs)
 
-	setCUlong(&backupConfig.bandwidth, backupPolicy.Bandwidth)
-	setCUlong(&backupConfig.max_records, backupPolicy.MaxRecords)
-	setCUint(&backupConfig.records_per_second, backupPolicy.RecordsPerSecond)
-	setCUlong(&backupConfig.file_limit, backupPolicy.FileLimit)
+	setCLong(&backupConfig.bandwidth, backupPolicy.Bandwidth)
+	setCLong(&backupConfig.max_records, backupPolicy.MaxRecords)
+	setCInt(&backupConfig.records_per_second, backupPolicy.RecordsPerSecond)
+	setCLong(&backupConfig.file_limit, backupPolicy.FileLimit)
 	setCString(&backupConfig.partition_list, backupRoutine.PartitionList)
 
 	// S3 configuration
