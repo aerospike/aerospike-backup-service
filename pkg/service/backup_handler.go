@@ -69,14 +69,13 @@ func (h *BackupHandler) runFullBackup(now time.Time) {
 	h.retry.retry(
 		func() error { return h.runFullBackupInternal(now) },
 		time.Duration(*h.backupFullPolicy.RetryDelay)*time.Millisecond,
-		*h.backupFullPolicy.MaxRetries)
+		*h.backupFullPolicy.MaxRetries,
+	)
 }
 
 func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 	if !h.backend.FullBackupInProgress().CompareAndSwap(false, true) {
-		slog.Log(context.Background(), util.LevelTrace,
-			"Full backup is currently in progress, skipping full backup",
-			"name", h.routineName)
+		slog.Info("Full backup is currently in progress, skipping full backup", "name", h.routineName)
 		return nil
 	}
 	slog.Debug("Acquire fullBackupInProgress lock", "name", h.routineName)
@@ -103,37 +102,39 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 	return nil
 }
 
-func (h *BackupHandler) fullBackupForNamespace(now time.Time, namespace string) error {
-	backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, now)
+func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace string) error {
+	backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, upperBound)
 	h.backend.CreateFolder(backupFolder)
 
-	var stats *shared.BackupStat
-	options := shared.BackupOptions{
-		ModBefore: util.Ptr(now.UnixNano()),
+	options := shared.BackupOptions{}
+	if h.backupIncrPolicy.Sealed {
+		options.ModBefore = util.Ptr(upperBound.UnixNano())
 	}
+
+	var stats *shared.BackupStat
 	backupRunFunc := func() {
 		started := time.Now()
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
 		stats = backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
 			h.storage, h.secretAgent, options, &namespace, backupPath)
 		if stats == nil {
-			slog.Warn("Failed full backup", "name", h.routineName)
-			backupFailureCounter.Inc()
 			return
 		}
 		elapsed := time.Since(started)
 		backupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
-	slog.Debug("Starting full backup", "up to", now, "name", h.routineName)
+	slog.Debug("Starting full backup", "up to", upperBound, "name", h.routineName)
 	out := stdIO.Capture(backupRunFunc)
 	slog.Debug("Completed full backup", "name", h.routineName)
 	util.LogCaptured(out)
 
 	if stats == nil {
+		backupFailureCounter.Inc()
 		return fmt.Errorf("error during backup namespace %s, routine %s", namespace, h.routineName)
 	}
 
-	if err := h.backend.writeBackupMetadata(backupFolder, stats.ToModel(options, namespace)); err != nil {
+	metadata := stats.ToMetadata(time.Time{}, upperBound, namespace)
+	if err := h.backend.writeBackupMetadata(backupFolder, metadata); err != nil {
 		slog.Error("Could not write backup metadata", "name", h.routineName,
 			"folder", backupFolder, "err", err)
 		return err
@@ -175,14 +176,17 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	h.updateIncrementalBackupState(now)
 }
 
-func (h *BackupHandler) runIncrBackupForNamespace(now time.Time, namespace string) {
-	backupFolder := getIncrementalPath(h.backend.incrementalBackupsPath, namespace, now)
+func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespace string) {
+	backupFolder := getIncrementalPath(h.backend.incrementalBackupsPath, namespace, upperBound)
 	h.backend.CreateFolder(backupFolder)
 
 	var stats *shared.BackupStat
+	fromEpoch := h.state.LastRunEpoch()
 	options := shared.BackupOptions{
-		ModBefore: util.Ptr(now.UnixNano()),
-		ModAfter:  util.Ptr(h.state.LastRunEpoch()),
+		ModAfter: util.Ptr(fromEpoch),
+	}
+	if h.backupIncrPolicy.Sealed {
+		options.ModBefore = util.Ptr(upperBound.UnixNano())
 	}
 	backupRunFunc := func() {
 		started := time.Now()
@@ -205,7 +209,8 @@ func (h *BackupHandler) runIncrBackupForNamespace(now time.Time, namespace strin
 	if h.isBackupEmpty(stats) {
 		h.deleteEmptyBackup(backupFolder, h.routineName)
 	} else {
-		if err := h.backend.writeBackupMetadata(backupFolder, stats.ToModel(options, namespace)); err != nil {
+		metadata := stats.ToMetadata(time.Unix(0, fromEpoch), upperBound, namespace)
+		if err := h.backend.writeBackupMetadata(backupFolder, metadata); err != nil {
 			slog.Error("Could not write backup metadata", "name", h.routineName,
 				"folder", backupFolder, "err", err)
 		}

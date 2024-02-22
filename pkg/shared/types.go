@@ -48,9 +48,10 @@ type Restore interface {
 	RestoreRun(restoreRequest *model.RestoreRequestInternal) *model.RestoreResult
 }
 
-func (stats *BackupStat) ToModel(backupOptions BackupOptions, namespace string) model.BackupMetadata {
-	metadata := model.BackupMetadata{
-		Created:             time.Unix(0, *backupOptions.ModBefore),
+func (stats *BackupStat) ToMetadata(from, created time.Time, namespace string) model.BackupMetadata {
+	return model.BackupMetadata{
+		Created:             created,
+		From:                from,
 		Namespace:           namespace,
 		RecordCount:         stats.RecordCount,
 		FileCount:           stats.FileCount,
@@ -58,8 +59,4 @@ func (stats *BackupStat) ToModel(backupOptions BackupOptions, namespace string) 
 		SecondaryIndexCount: stats.IndexCount,
 		UDFCount:            stats.UDFCount,
 	}
-	if backupOptions.ModAfter != nil {
-		metadata.From = time.Unix(0, *backupOptions.ModAfter)
-	}
-	return metadata
 }
