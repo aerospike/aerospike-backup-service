@@ -12,11 +12,21 @@ import (
 	"github.com/aws/smithy-go/ptr"
 )
 
-var restoreService *RestoreMemory
+var restoreService = makeTestRestoreService()
 
 var validBackupPath = "./testout/backup/namespace"
 
-func TestMain(m *testing.M) {
+func makeTestFolders() {
+	_ = os.MkdirAll(validBackupPath, os.ModePerm)
+	create, _ := os.Create(validBackupPath + "/backup.asb")
+	_ = create.Close()
+}
+
+func cleanTestFolder() {
+	_ = os.RemoveAll("./testout")
+}
+
+func makeTestRestoreService() *RestoreMemory {
 	config := model.NewConfigWithDefaultValues()
 	config.Storage["s"] = &model.Storage{
 		Path: ptr.String("/"),
@@ -35,13 +45,7 @@ func TestMain(m *testing.M) {
 		"routine_fail_read":    &BackendFailMock{},
 		"routine_fail_restore": &BackendMock{},
 	}
-	restoreService = NewRestoreMemory(backends, config)
-	_ = os.MkdirAll(validBackupPath, os.ModePerm)
-	create, _ := os.Create(validBackupPath + "/backup.asb")
-	_ = create.Close()
-
-	m.Run()
-	_ = os.RemoveAll("./testout")
+	return NewRestoreMemory(backends, config)
 }
 
 type BackendMock struct {
@@ -85,6 +89,10 @@ func (*BackendFailMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.Back
 }
 
 func TestRestoreOK(t *testing.T) {
+	makeTestFolders()
+	t.Cleanup(func() {
+		cleanTestFolder()
+	})
 	restoreRequest := &model.RestoreRequest{
 		DestinationCuster: model.NewLocalAerospikeCluster(),
 		Policy: &model.RestorePolicy{
@@ -98,7 +106,10 @@ func TestRestoreOK(t *testing.T) {
 		RestoreRequest: *restoreRequest,
 		Dir:            &validBackupPath,
 	}
-	jobID, _ := restoreService.Restore(requestInternal)
+	jobID, err := restoreService.Restore(requestInternal)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 
 	jobStatus, _ := restoreService.JobStatus(jobID)
 	if jobStatus.Status != model.JobStatusRunning {
@@ -217,6 +228,11 @@ func Test_RestoreFromEmptyFolder(t *testing.T) {
 }
 
 func Test_RestoreFail(t *testing.T) {
+	makeTestFolders()
+	t.Cleanup(func() {
+		cleanTestFolder()
+	})
+
 	restoreRequest := &model.RestoreRequest{
 		DestinationCuster: nil,
 		Policy: &model.RestorePolicy{
@@ -231,7 +247,10 @@ func Test_RestoreFail(t *testing.T) {
 		Dir:            &validBackupPath,
 	}
 
-	jobId, _ := restoreService.Restore(requestInternal)
+	jobId, err := restoreService.Restore(requestInternal)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
 	time.Sleep(1 * time.Second)
 	status, _ := restoreService.JobStatus(jobId)
 	if status.Status != model.JobStatusFailed {
