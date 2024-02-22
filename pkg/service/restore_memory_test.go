@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -13,7 +14,7 @@ import (
 
 var restoreService *RestoreMemory
 
-var validBackupPath = "./testout/backup"
+var validBackupPath = "./testout/backup/namespace"
 
 func TestMain(m *testing.M) {
 	config := model.NewConfigWithDefaultValues()
@@ -24,13 +25,47 @@ func TestMain(m *testing.M) {
 		Storage: "s",
 	}
 	backends := map[string]BackupListReader{
-		"routine": &BackendMock{},
+		"routine":      &BackendMock{},
+		"routine_fail": &BackendFailMock{},
 	}
 	restoreService = NewRestoreMemory(backends, config)
-	_ = createMockBackupFile(validBackupPath)
+	_ = os.MkdirAll(validBackupPath, os.ModePerm)
+	create, _ := os.Create(validBackupPath + "/backup.asb")
+	_ = create.Close()
 
 	m.Run()
-	os.RemoveAll("./testout")
+	_ = os.RemoveAll("./testout")
+}
+
+type BackendMock struct {
+}
+
+func (*BackendMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
+	return []model.BackupDetails{{
+		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(5)},
+		Key:            ptr.String("key"),
+	}}, nil
+}
+
+func (*BackendMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
+	return []model.BackupDetails{{
+		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)},
+		Key:            ptr.String("key"),
+	}, {
+		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)},
+		Key:            ptr.String("key2"),
+	}}, nil
+}
+
+type BackendFailMock struct {
+}
+
+func (*BackendFailMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
+	return nil, errors.New("mock error")
+}
+
+func (*BackendFailMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
+	return nil, errors.New("mock error")
 }
 
 func TestRestoreOK(t *testing.T) {
@@ -62,17 +97,11 @@ func TestRestoreOK(t *testing.T) {
 	}
 }
 
-func createMockBackupFile(path string) error {
-	os.MkdirAll(path, os.ModePerm)
-	create, err := os.Create(path + "/backup.asb")
-	create.Close()
-	return err
-}
-
 func TestLatestFullBackupBeforeTime(t *testing.T) {
 	backupList := []model.BackupDetails{
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)}},
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}}, // Should be the latest full backup
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}}, // Should be the latest full backup too
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(30)}},
 	}
 
@@ -81,7 +110,9 @@ func TestLatestFullBackupBeforeTime(t *testing.T) {
 	if result == nil {
 		t.Error("Expected a non-nil result, but got nil")
 	}
-
+	if len(result) != 2 {
+		t.Errorf("Expected 2 backups")
+	}
 	if result[0] != backupList[1] {
 		t.Errorf("Expected the latest backup, but got %+v", result)
 	}
@@ -99,26 +130,6 @@ func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
 	if result != nil {
 		t.Errorf("Expected a non result, but got %+v", result)
 	}
-}
-
-type BackendMock struct {
-}
-
-func (*BackendMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
-	return []model.BackupDetails{{
-		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(5)},
-		Key:            ptr.String("key"),
-	}}, nil
-}
-
-func (*BackendMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
-	return []model.BackupDetails{{
-		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)},
-		Key:            ptr.String("key"),
-	}, {
-		BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)},
-		Key:            ptr.String("key2"),
-	}}, nil
 }
 
 func Test_RestoreTimestamp(t *testing.T) {
@@ -237,4 +248,17 @@ func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "last full backup not found: no full backup found at 1") {
 		t.Errorf("Expected error 'full backup not found', but got %v", err)
 	}
+}
+
+func Test_readBackupsFail(t *testing.T) {
+	request := &model.RestoreTimestampRequest{
+		Routine: "routine_fail",
+		Time:    1,
+	}
+
+	_, err := restoreService.RestoreByTime(request)
+	if err == nil || !strings.Contains(err.Error(), "last full backup not found: cannot read full backup list: mock error") {
+		t.Errorf("Expected error 'full backup not found', but got %v", err)
+	}
+
 }

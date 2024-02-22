@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -164,10 +163,7 @@ func (r *RestoreMemory) restore(
 	request *model.RestoreTimestampRequest,
 	key *string,
 ) (*model.RestoreResult, error) {
-	restoreRequest, err := r.toRestoreRequest(request)
-	if err != nil {
-		return nil, err
-	}
+	restoreRequest := r.toRestoreRequest(request)
 	restoreResult := r.doRestore(&model.RestoreRequestInternal{
 		RestoreRequest: *restoreRequest,
 		Dir:            key,
@@ -203,15 +199,9 @@ func (r *RestoreMemory) findIncrementalBackupsForNamespace(
 	return filteredIncrementalBackups, nil
 }
 
-func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) (*model.RestoreRequest, error) {
-	routine, found := r.config.BackupRoutines[request.Routine]
-	if !found {
-		return nil, errors.New("routine not found")
-	}
-	storage, found := r.config.Storage[routine.Storage]
-	if !found {
-		return nil, errors.New("storage not found")
-	}
+func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
+	routine := r.config.BackupRoutines[request.Routine]
+	storage := r.config.Storage[routine.Storage]
 	return model.NewRestoreRequest(
 		request.DestinationCuster,
 		request.Policy,
