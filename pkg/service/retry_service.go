@@ -21,7 +21,7 @@ func NewRetryService(label string) *RetryService {
 	}
 }
 
-func (r *RetryService) retry(f func() error, retryInterval time.Duration, n uint32) {
+func (r *RetryService) retry(f func() error, retryInterval time.Duration, n int32) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
