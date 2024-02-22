@@ -53,23 +53,19 @@ func (r RestoreTimestampRequest) String() string {
 	return string(request)
 }
 
-// NewRestoreRequest creates and validates a new RestoreRequest.
+// NewRestoreRequest creates a new RestoreRequest.
 func NewRestoreRequest(
 	destinationCluster *AerospikeCluster,
 	policy *RestorePolicy,
 	sourceStorage *Storage,
 	secretAgent *SecretAgent,
-) (*RestoreRequest, error) {
-	request := &RestoreRequest{
+) *RestoreRequest {
+	return &RestoreRequest{
 		DestinationCuster: destinationCluster,
 		Policy:            policy,
 		SourceStorage:     sourceStorage,
 		SecretAgent:       secretAgent,
 	}
-	if err := request.Validate(); err != nil {
-		return nil, err
-	}
-	return request, nil
 }
 
 // Validate validates the restore operation request.
