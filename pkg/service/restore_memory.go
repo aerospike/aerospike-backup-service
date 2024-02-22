@@ -3,10 +3,7 @@ package service
 import (
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -220,45 +217,11 @@ func validate(path *string, storage *model.Storage) error {
 	case model.Local:
 		return validatePathContainsBackup(*path)
 	case model.S3:
-		return validateStorageContainsBackup(*path, storage)
-	}
-	return nil
-}
-
-func validateStorageContainsBackup(path string, storage *model.Storage) error {
-	context, err := NewS3Context(storage)
-	if err != nil {
-		return err
-	}
-	s3prefix := s3Protocol + context.bucket
-	prefix := strings.TrimPrefix(path, s3prefix)
-	files, err := context.listFiles(strings.Trim(prefix, "/"))
-	if err != nil {
-		return err
-	}
-	if len(files) == 0 {
-		return fmt.Errorf("given path %s not exist", path)
-	}
-	for _, file := range files {
-		if strings.HasSuffix(*file.Key, ".asb") {
-			return nil
+		context, err := NewS3Context(storage)
+		if err != nil {
+			return err
 		}
-	}
-	return fmt.Errorf("no backup files found in %s", path)
-}
-
-func validatePathContainsBackup(path string) error {
-	_, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-
-	absFiles, err := filepath.Glob(filepath.Join(path, "*.asb"))
-	if err != nil {
-		return err
-	}
-	if len(absFiles) == 0 {
-		return fmt.Errorf("no backup files found in %s", path)
+		return context.validateStorageContainsBackup(*path)
 	}
 	return nil
 }

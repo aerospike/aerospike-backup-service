@@ -281,3 +281,19 @@ func (s *S3Context) wrapWithPrefix(path string) *string {
 	result := s3Protocol + s.bucket + "/" + path + "/"
 	return &result
 }
+
+func (s *S3Context) validateStorageContainsBackup(path string) error {
+	files, err := s.listFiles(path)
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		return fmt.Errorf("given path %s not exist", path)
+	}
+	for _, file := range files {
+		if strings.HasSuffix(*file.Key, ".asb") {
+			return nil
+		}
+	}
+	return fmt.Errorf("no backup files found in %s", path)
+}
