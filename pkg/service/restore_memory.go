@@ -34,7 +34,7 @@ func NewRestoreMemory(backends map[string]BackupListReader, config *model.Config
 
 func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, error) {
 	jobID := r.restoreJobs.newJob()
-	if err := validate(request.Dir, request.SourceStorage); err != nil {
+	if err := validateStorageContainsBackup(request.SourceStorage); err != nil {
 		return 0, err
 	}
 	go func() {
@@ -212,16 +212,16 @@ func (r *RestoreMemory) JobStatus(jobID int) (*model.RestoreJobStatus, error) {
 	return r.restoreJobs.getStatus(jobID)
 }
 
-func validate(path *string, storage *model.Storage) error {
+func validateStorageContainsBackup(storage *model.Storage) error {
 	switch storage.Type {
 	case model.Local:
-		return validatePathContainsBackup(*path)
+		return validatePathContainsBackup(*storage.Path)
 	case model.S3:
 		context, err := NewS3Context(storage)
 		if err != nil {
 			return err
 		}
-		return context.validateStorageContainsBackup(*path)
+		return context.validateStorageContainsBackup()
 	}
 	return nil
 }

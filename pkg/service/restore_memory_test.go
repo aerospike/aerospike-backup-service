@@ -53,7 +53,7 @@ func (*BackendMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, 
 			Created:   time.UnixMilli(5),
 			Namespace: "ns1",
 		},
-		Key: ptr.String(validBackupPath),
+		Key: &validBackupPath,
 	}}, nil
 }
 
@@ -90,11 +90,13 @@ func TestRestoreOK(t *testing.T) {
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
-		SourceStorage: &model.Storage{},
+		SourceStorage: &model.Storage{
+			Path: &validBackupPath,
+		},
 	}
 	requestInternal := &model.RestoreRequestInternal{
 		RestoreRequest: *restoreRequest,
-		Dir:            util.Ptr(validBackupPath),
+		Dir:            &validBackupPath,
 	}
 	jobID, _ := restoreService.Restore(requestInternal)
 
@@ -185,6 +187,7 @@ func Test_RestoreFromWrongFolder(t *testing.T) {
 		RestoreRequest: model.RestoreRequest{
 			SourceStorage: &model.Storage{
 				Type: model.Local,
+				Path: util.Ptr("wrongPath"),
 			},
 		},
 		Dir: util.Ptr("wrongPath"),
@@ -201,6 +204,7 @@ func Test_RestoreFromEmptyFolder(t *testing.T) {
 		RestoreRequest: model.RestoreRequest{
 			SourceStorage: &model.Storage{
 				Type: model.Local,
+				Path: util.Ptr("./"),
 			},
 		},
 		Dir: util.Ptr("./"),
@@ -218,11 +222,13 @@ func Test_RestoreFail(t *testing.T) {
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
-		SourceStorage: &model.Storage{},
+		SourceStorage: &model.Storage{
+			Path: &validBackupPath,
+		},
 	}
 	requestInternal := &model.RestoreRequestInternal{
 		RestoreRequest: *restoreRequest,
-		Dir:            util.Ptr(validBackupPath),
+		Dir:            &validBackupPath,
 	}
 
 	jobId, _ := restoreService.Restore(requestInternal)
