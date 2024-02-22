@@ -38,7 +38,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 		return 0, err
 	}
 	go func() {
-		restoreResult := r.doRestore(request)
+		restoreResult := r.runRestoreService(request)
 		if restoreResult == nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation"))
 			return
@@ -49,7 +49,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 	return jobID, nil
 }
 
-func (r *RestoreMemory) doRestore(request *model.RestoreRequestInternal) *model.RestoreResult {
+func (r *RestoreMemory) runRestoreService(request *model.RestoreRequestInternal) *model.RestoreResult {
 	var result *model.RestoreResult
 	restoreRunFunc := func() {
 		request.SourceStorage.SetDefaultProfile()
@@ -89,6 +89,49 @@ func (r *RestoreMemory) restoreByTimeSync(backend BackupListReader,
 	r.restoreJobs.setDone(jobID)
 }
 
+func (r *RestoreMemory) restoreNamespace(
+	backend BackupListReader,
+	request *model.RestoreTimestampRequest,
+	jobID int, fullBackup model.BackupDetails,
+) error {
+	result, err := r.restoreFromPath(request, fullBackup.Key)
+	if err != nil {
+		return fmt.Errorf("could not restore full backup for namespace %s: %v", fullBackup.Namespace, err)
+	}
+	r.restoreJobs.increaseStats(jobID, result)
+
+	incrementalBackups, err := r.findIncrementalBackupsForNamespace(
+		backend, fullBackup.Created.UnixMilli(), request.Time, fullBackup.Namespace)
+	if err != nil {
+		return fmt.Errorf("could not find incremental backups for namespace %s: %v", fullBackup.Namespace, err)
+	}
+	slog.Info("Apply incremental backups", "size", len(incrementalBackups))
+	for _, incrBackup := range incrementalBackups {
+		result, err := r.restoreFromPath(request, incrBackup.Key)
+		if err != nil {
+			return fmt.Errorf("could not restore incremental backup %s: %v", *incrBackup.Key, err)
+		}
+		r.restoreJobs.increaseStats(jobID, result)
+	}
+	return nil
+}
+
+func (r *RestoreMemory) restoreFromPath(
+	request *model.RestoreTimestampRequest,
+	backupPath *string,
+) (*model.RestoreResult, error) {
+	restoreRequest := r.toRestoreRequest(request)
+	restoreResult := r.runRestoreService(&model.RestoreRequestInternal{
+		RestoreRequest: *restoreRequest,
+		Dir:            backupPath,
+	})
+	if restoreResult == nil {
+		return nil, fmt.Errorf("could not restore backup at %s", *backupPath)
+	}
+
+	return restoreResult, nil
+}
+
 func (r *RestoreMemory) findLastFullBackup(
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
@@ -109,33 +152,6 @@ func (r *RestoreMemory) findLastFullBackup(
 	return fullBackup, nil
 }
 
-func (r *RestoreMemory) restoreNamespace(
-	backend BackupListReader,
-	request *model.RestoreTimestampRequest,
-	jobID int, fullBackup model.BackupDetails,
-) error {
-	result, err := r.restore(request, fullBackup.Key)
-	if err != nil {
-		return fmt.Errorf("could not restore full backup for namespace %s: %v", fullBackup.Namespace, err)
-	}
-	r.restoreJobs.increaseStats(jobID, result)
-
-	incrementalBackups, err := r.findIncrementalBackupsForNamespace(
-		backend, fullBackup.Created.UnixMilli(), request.Time, fullBackup.Namespace)
-	if err != nil {
-		return fmt.Errorf("could not find incremental backups for namespace %s: %v", fullBackup.Namespace, err)
-	}
-	slog.Info("Apply incremental backups", "size", len(incrementalBackups))
-	for _, incrBackup := range incrementalBackups {
-		result, err := r.restore(request, incrBackup.Key)
-		if err != nil {
-			return fmt.Errorf("could not restore incremental backup %s: %v", *incrBackup.Key, err)
-		}
-		r.restoreJobs.increaseStats(jobID, result)
-	}
-	return nil
-}
-
 // latestFullBackupBeforeTime returns list of backups with same creation time, latest before upperBound.
 func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound time.Time) []model.BackupDetails {
 	var result []model.BackupDetails
@@ -154,22 +170,6 @@ func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound tim
 		}
 	}
 	return result
-}
-
-func (r *RestoreMemory) restore(
-	request *model.RestoreTimestampRequest,
-	key *string,
-) (*model.RestoreResult, error) {
-	restoreRequest := r.toRestoreRequest(request)
-	restoreResult := r.doRestore(&model.RestoreRequestInternal{
-		RestoreRequest: *restoreRequest,
-		Dir:            key,
-	})
-	if restoreResult == nil {
-		return nil, fmt.Errorf("could not restore backup at %s", *key)
-	}
-
-	return restoreResult, nil
 }
 
 func (r *RestoreMemory) findIncrementalBackupsForNamespace(
