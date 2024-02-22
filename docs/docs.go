@@ -1411,10 +1411,6 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 3
                 },
-                "no-backup-updated-keys": {
-                    "description": "NoBackupUpdatedKeys determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.",
-                    "type": "boolean"
-                },
                 "no-bins": {
                     "description": "Only backup record metadata (digest, TTL, generation count, key).",
                     "type": "boolean"
@@ -1462,6 +1458,10 @@ const docTemplate = `{
                     "description": "RetryDelay defines the delay in milliseconds before retrying a failed operation.",
                     "type": "integer",
                     "example": 500
+                },
+                "sealed": {
+                    "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.",
+                    "type": "boolean"
                 },
                 "socket-timeout": {
                     "description": "Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",

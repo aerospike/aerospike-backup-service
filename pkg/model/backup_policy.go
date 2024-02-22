@@ -65,10 +65,10 @@ type BackupPolicy struct {
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details.
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
-	// NoBackupUpdatedKeys determines whether backup should include keys updated during the backup process.
+	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
-	NoBackupUpdatedKeys bool `yaml:"no-backup-updated-keys,omitempty" json:"no-backup-updated-keys,omitempty"`
+	Sealed bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
 }
 
 // CopySMDDisabled creates a new instance of the BackupPolicy struct with identical field values.
