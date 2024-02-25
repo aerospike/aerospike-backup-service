@@ -3,9 +3,8 @@ package service
 import (
 	"testing"
 
-	"github.com/aws/smithy-go/ptr"
-
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aws/smithy-go/ptr"
 )
 
 func TestPolicy_AddOK(t *testing.T) {
