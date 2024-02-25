@@ -1327,6 +1327,7 @@ const docTemplate = `{
                 "byte-count": {
                     "description": "The size of the backup in bytes.",
                     "type": "integer",
+                    "format": "int64",
                     "example": 2000
                 },
                 "created": {
@@ -1337,6 +1338,7 @@ const docTemplate = `{
                 "file-count": {
                     "description": "The number of backup files created.",
                     "type": "integer",
+                    "format": "int64",
                     "example": 1
                 },
                 "from": {
@@ -1357,16 +1359,19 @@ const docTemplate = `{
                 "record-count": {
                     "description": "The total number of records backed up.",
                     "type": "integer",
+                    "format": "int64",
                     "example": 100
                 },
                 "secondary-index-count": {
                     "description": "The number of secondary indexes backed up.",
                     "type": "integer",
+                    "format": "int64",
                     "example": 5
                 },
                 "udf-count": {
                     "description": "The number of UDF files backed up.",
                     "type": "integer",
+                    "format": "int64",
                     "example": 2
                 }
             }
@@ -1864,30 +1869,37 @@ const docTemplate = `{
                 "error": {},
                 "existed-records": {
                     "type": "integer",
+                    "format": "int64",
                     "example": 15
                 },
                 "expired-records": {
                     "type": "integer",
+                    "format": "int64",
                     "example": 2
                 },
                 "fresher-records": {
                     "type": "integer",
+                    "format": "int64",
                     "example": 5
                 },
                 "ignored-records": {
                     "type": "integer",
+                    "format": "int64",
                     "example": 12
                 },
                 "index-count": {
                     "type": "integer",
+                    "format": "int64",
                     "example": 3
                 },
                 "inserted-records": {
                     "type": "integer",
+                    "format": "int64",
                     "example": 8
                 },
                 "skipped-records": {
                     "type": "integer",
+                    "format": "int64",
                     "example": 4
                 },
                 "status": {
@@ -1904,14 +1916,17 @@ const docTemplate = `{
                 },
                 "total-bytes": {
                     "type": "integer",
+                    "format": "int64",
                     "example": 2000
                 },
                 "total-records": {
                     "type": "integer",
+                    "format": "int64",
                     "example": 10
                 },
                 "udf-count": {
                     "type": "integer",
+                    "format": "int64",
                     "example": 1
                 }
             }

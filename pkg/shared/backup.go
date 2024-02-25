@@ -133,11 +133,11 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 }
 
 func setStatistics(result *BackupStat, status *C.backup_status_t) {
-	result.RecordCount = int(status.rec_count_total)
-	result.ByteCount = int(status.byte_count_total)
-	result.FileCount = int(status.file_count)
-	result.IndexCount = int(status.index_count)
-	result.UDFCount = int(status.udf_count)
+	result.RecordCount = uint64(status.rec_count_total)
+	result.ByteCount = uint64(status.byte_count_total)
+	result.FileCount = uint64(status.file_count)
+	result.IndexCount = uint64(status.index_count)
+	result.UDFCount = uint64(status.udf_count)
 }
 
 func backupSecretAgent(config *C.backup_config_t, secretsAgent *model.SecretAgent) {
