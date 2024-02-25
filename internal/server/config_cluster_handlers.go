@@ -10,14 +10,16 @@ import (
 	"github.com/aerospike/backup/pkg/service"
 )
 
+const clusterNameNotSpecifiedMsg = "Cluster name is not specified"
+
 // addAerospikeCluster
 // @Summary     Adds an Aerospike cluster to the config.
 // @ID          addCluster
 // @Tags        Configuration
 // @Router      /v1/config/clusters/{name} [post]
 // @Accept      json
-// @Param       name path string true "cluster name"
-// @Param       cluster body model.AerospikeCluster true "cluster info"
+// @Param       name path string true "Aerospike cluster name"
+// @Param       cluster body model.AerospikeCluster true "Aerospike cluster details"
 // @Success     201
 // @Failure     400 {string} string
 //
@@ -32,7 +34,7 @@ func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request
 	r.Body.Close()
 	name := r.PathValue("name")
 	if name == "" {
-		http.Error(w, "cluster name is required", http.StatusBadRequest)
+		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err = service.AddCluster(ws.config, name, &newCluster)
@@ -76,29 +78,27 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter, _ *http.Reque
 // @ID	        readCluster
 // @Tags        Configuration
 // @Router      /v1/config/clusters/{name} [get]
-// @Param       name path string true "Name of the Aerospike cluster"
+// @Param       name path string true "Aerospike cluster name"
 // @Produce     json
 // @Success  	200 {object} model.AerospikeCluster
-// @Failure     404 {string} string "The specified cluster could not be found."
+// @Response    400 {string} string
+// @Failure     404 {string} string "The specified cluster could not be found"
 func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	clusterName := r.PathValue("name")
 	if clusterName == "" {
-		http.Error(w, "The cluster name path parameter is required.", http.StatusBadRequest)
+		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-
 	cluster, ok := ws.config.AerospikeClusters[clusterName]
 	if !ok {
-		http.Error(w, fmt.Sprintf("Cluster %s could not be found.", clusterName), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("Cluster %s could not be found", clusterName), http.StatusNotFound)
 		return
 	}
-
 	jsonResponse, err := json.Marshal(cluster)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
@@ -113,8 +113,8 @@ func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Reques
 // @Tags        Configuration
 // @Router      /v1/config/clusters/{name} [put]
 // @Accept      json
-// @Param       name path string true "cluster name"
-// @Param       cluster body model.AerospikeCluster true "aerospike cluster"
+// @Param       name path string true "Aerospike cluster name"
+// @Param       cluster body model.AerospikeCluster true "Aerospike cluster details"
 // @Success     200
 // @Failure     400 {string} string
 //
@@ -129,7 +129,7 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 	r.Body.Close()
 	clusterName := r.PathValue("name")
 	if clusterName == "" {
-		http.Error(w, "cluster is required", http.StatusBadRequest)
+		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err = service.UpdateCluster(ws.config, clusterName, &updatedCluster)
@@ -149,22 +149,20 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 // @ID          deleteCluster
 // @Tags        Configuration
 // @Router      /v1/config/clusters/{name} [delete]
-// @Param       name path string true "cluster Name"
+// @Param       name path string true "Aerospike cluster name"
 // @Success     204
 // @Failure     400 {string} string
 func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	clusterName := r.PathValue("name")
 	if clusterName == "" {
-		http.Error(w, "cluster name is required", http.StatusBadRequest)
+		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-
 	err := service.DeleteCluster(ws.config, clusterName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	err = ConfigurationManager.WriteConfiguration(ws.config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

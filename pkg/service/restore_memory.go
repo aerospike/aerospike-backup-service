@@ -1,13 +1,9 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -38,11 +34,11 @@ func NewRestoreMemory(backends map[string]BackupListReader, config *model.Config
 
 func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, error) {
 	jobID := r.restoreJobs.newJob()
-	if err := validate(request.Dir, request.SourceStorage); err != nil {
+	if err := validateStorageContainsBackup(request.SourceStorage); err != nil {
 		return 0, err
 	}
 	go func() {
-		restoreResult := r.doRestore(request)
+		restoreResult := r.runRestoreService(request)
 		if restoreResult == nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation"))
 			return
@@ -53,7 +49,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 	return jobID, nil
 }
 
-func (r *RestoreMemory) doRestore(request *model.RestoreRequestInternal) *model.RestoreResult {
+func (r *RestoreMemory) runRestoreService(request *model.RestoreRequestInternal) *model.RestoreResult {
 	var result *model.RestoreResult
 	restoreRunFunc := func() {
 		request.SourceStorage.SetDefaultProfile()
@@ -67,28 +63,73 @@ func (r *RestoreMemory) doRestore(request *model.RestoreRequestInternal) *model.
 func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (int, error) {
 	backend, found := r.backends[request.Routine]
 	if !found {
-		slog.Error("Backend not found for restore", "routine", request.Routine)
-		return 0, fmt.Errorf("backend %s not found for restore", request.Routine)
+		return 0, fmt.Errorf("backend '%s' not found for restore", request.Routine)
 	}
-
+	fullBackups, err := r.findLastFullBackup(backend, request)
+	if err != nil {
+		return 0, fmt.Errorf("last full backup not found: %v", err)
+	}
 	jobID := r.restoreJobs.newJob()
-	go r.restoreByTimeSync(backend, request, jobID)
+	go r.restoreByTimeSync(backend, request, jobID, fullBackups)
 	return jobID, nil
 }
 
-func (r *RestoreMemory) restoreByTimeSync(backend BackupListReader, request *model.RestoreTimestampRequest, jobID int) {
-	fullBackups, err := r.findLastFullBackup(backend, request)
-	if err != nil {
-		slog.Error("Could not find last full backup", "JobId", jobID, "routine", request.Routine,
-			"err", err)
-		r.restoreJobs.setFailed(jobID, err)
-		return
-	}
+func (r *RestoreMemory) restoreByTimeSync(backend BackupListReader,
+	request *model.RestoreTimestampRequest,
+	jobID int,
+	fullBackups []model.BackupDetails,
+) {
 	for _, nsBackup := range fullBackups {
-		r.restoreNamespace(backend, request, jobID, nsBackup)
+		if err := r.restoreNamespace(backend, request, jobID, nsBackup); err != nil {
+			slog.Error("Failed to restore by timestamp", "routine", request.Routine, "err", err)
+			r.restoreJobs.setFailed(jobID, err)
+			return
+		}
+	}
+	r.restoreJobs.setDone(jobID)
+}
+
+func (r *RestoreMemory) restoreNamespace(
+	backend BackupListReader,
+	request *model.RestoreTimestampRequest,
+	jobID int, fullBackup model.BackupDetails,
+) error {
+	result, err := r.restoreFromPath(request, fullBackup.Key)
+	if err != nil {
+		return fmt.Errorf("could not restore full backup for namespace %s: %v", fullBackup.Namespace, err)
+	}
+	r.restoreJobs.increaseStats(jobID, result)
+
+	incrementalBackups, err := r.findIncrementalBackupsForNamespace(
+		backend, fullBackup.Created.UnixMilli(), request.Time, fullBackup.Namespace)
+	if err != nil {
+		return fmt.Errorf("could not find incremental backups for namespace %s: %v", fullBackup.Namespace, err)
+	}
+	slog.Info("Apply incremental backups", "size", len(incrementalBackups))
+	for _, incrBackup := range incrementalBackups {
+		result, err := r.restoreFromPath(request, incrBackup.Key)
+		if err != nil {
+			return fmt.Errorf("could not restore incremental backup %s: %v", *incrBackup.Key, err)
+		}
+		r.restoreJobs.increaseStats(jobID, result)
+	}
+	return nil
+}
+
+func (r *RestoreMemory) restoreFromPath(
+	request *model.RestoreTimestampRequest,
+	backupPath *string,
+) (*model.RestoreResult, error) {
+	restoreRequest := r.toRestoreRequest(request)
+	restoreResult := r.runRestoreService(&model.RestoreRequestInternal{
+		RestoreRequest: *restoreRequest,
+		Dir:            backupPath,
+	})
+	if restoreResult == nil {
+		return nil, fmt.Errorf("could not restore backup at %s", *backupPath)
 	}
 
-	r.restoreJobs.setDone(jobID)
+	return restoreResult, nil
 }
 
 func (r *RestoreMemory) findLastFullBackup(
@@ -101,7 +142,7 @@ func (r *RestoreMemory) findLastFullBackup(
 	}
 	fullBackupList, err := backend.FullBackupList(to)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read full backup list")
+		return nil, fmt.Errorf("cannot read full backup list: %v", err)
 	}
 
 	fullBackup := latestFullBackupBeforeTime(fullBackupList, time.UnixMilli(request.Time))
@@ -109,37 +150,6 @@ func (r *RestoreMemory) findLastFullBackup(
 		return nil, fmt.Errorf("no full backup found at %d", request.Time)
 	}
 	return fullBackup, nil
-}
-
-func (r *RestoreMemory) restoreNamespace(
-	backend BackupListReader, request *model.RestoreTimestampRequest, jobID int, fullBackup model.BackupDetails) {
-	result, err := r.restore(request, fullBackup.Key)
-	if err != nil {
-		slog.Error("Could not restore full backup", "JobId", jobID, "routine", request.Routine, "err", err)
-		r.restoreJobs.setFailed(jobID, err)
-		return
-	}
-	r.restoreJobs.increaseStats(jobID, result)
-
-	incrementalBackups, err := r.findIncrementalBackupsForNamespace(
-		backend, fullBackup.Created.UnixMilli(), request.Time, fullBackup.Namespace)
-	if err != nil {
-		slog.Error("Could not find incremental backups",
-			"JobId", jobID, "routine", request.Routine, "err", err)
-		r.restoreJobs.setFailed(jobID, err)
-		return
-	}
-	slog.Info("Apply incremental backups", "size", len(incrementalBackups))
-	for _, incrBackup := range incrementalBackups {
-		result, err := r.restore(request, incrBackup.Key)
-		if err != nil {
-			slog.Error("Could not restore incremental backups", "JobId", jobID, "routine", request.Routine,
-				"err", err)
-			r.restoreJobs.setFailed(jobID, err)
-			return
-		}
-		r.restoreJobs.increaseStats(jobID, result)
-	}
 }
 
 // latestFullBackupBeforeTime returns list of backups with same creation time, latest before upperBound.
@@ -160,25 +170,6 @@ func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound tim
 		}
 	}
 	return result
-}
-
-func (r *RestoreMemory) restore(
-	request *model.RestoreTimestampRequest,
-	key *string,
-) (*model.RestoreResult, error) {
-	restoreRequest, err := r.toRestoreRequest(request)
-	if err != nil {
-		return nil, err
-	}
-	restoreResult := r.doRestore(&model.RestoreRequestInternal{
-		RestoreRequest: *restoreRequest,
-		Dir:            key,
-	})
-	if restoreResult == nil {
-		return nil, fmt.Errorf("could not restore backup at %s", *key)
-	}
-
-	return restoreResult, nil
 }
 
 func (r *RestoreMemory) findIncrementalBackupsForNamespace(
@@ -205,15 +196,9 @@ func (r *RestoreMemory) findIncrementalBackupsForNamespace(
 	return filteredIncrementalBackups, nil
 }
 
-func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) (*model.RestoreRequest, error) {
-	routine, found := r.config.BackupRoutines[request.Routine]
-	if !found {
-		return nil, errors.New("routine not found")
-	}
-	storage, found := r.config.Storage[routine.Storage]
-	if !found {
-		return nil, errors.New("storage not found")
-	}
+func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
+	routine := r.config.BackupRoutines[request.Routine]
+	storage := r.config.Storage[routine.Storage]
 	return model.NewRestoreRequest(
 		request.DestinationCuster,
 		request.Policy,
@@ -227,50 +212,16 @@ func (r *RestoreMemory) JobStatus(jobID int) (*model.RestoreJobStatus, error) {
 	return r.restoreJobs.getStatus(jobID)
 }
 
-func validate(path *string, storage *model.Storage) error {
+func validateStorageContainsBackup(storage *model.Storage) error {
 	switch storage.Type {
 	case model.Local:
-		return validatePathContainsBackup(*path)
+		return validatePathContainsBackup(*storage.Path)
 	case model.S3:
-		return validateStorageContainsBackup(*path, storage)
-	}
-	return nil
-}
-
-func validateStorageContainsBackup(path string, storage *model.Storage) error {
-	context, err := NewS3Context(storage)
-	if err != nil {
-		return err
-	}
-	s3prefix := s3Protocol + context.bucket
-	prefix := strings.TrimPrefix(path, s3prefix)
-	files, err := context.listFiles(strings.Trim(prefix, "/"))
-	if err != nil {
-		return err
-	}
-	if len(files) == 0 {
-		return fmt.Errorf("given path %s not exist", path)
-	}
-	for _, file := range files {
-		if strings.HasSuffix(*file.Key, ".asb") {
-			return nil
+		context, err := NewS3Context(storage)
+		if err != nil {
+			return err
 		}
-	}
-	return fmt.Errorf("no backup files found in %s", path)
-}
-
-func validatePathContainsBackup(path string) error {
-	_, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-
-	absFiles, err := filepath.Glob(filepath.Join(path, "*.asb"))
-	if err != nil {
-		return err
-	}
-	if len(absFiles) == 0 {
-		return fmt.Errorf("no backup files found in %s", path)
+		return context.validateStorageContainsBackup()
 	}
 	return nil
 }

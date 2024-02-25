@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -105,9 +106,43 @@ func (o *OSDiskAccessor) CreateFolder(path string) {
 
 func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
 	slog.Debug("Delete folder", "path", pathToDelete)
-	return os.RemoveAll(pathToDelete)
+	err := os.RemoveAll(pathToDelete)
+	if err != nil {
+		return err
+	}
+
+	parentDir := filepath.Dir(pathToDelete)
+	lsDir, err := o.lsDir(parentDir)
+	if err != nil {
+		return err
+	}
+
+	if len(lsDir) == 0 {
+		err := os.Remove(parentDir)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (o *OSDiskAccessor) wrapWithPrefix(path string) *string {
 	return &path
+}
+
+func validatePathContainsBackup(path string) error {
+	_, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	absFiles, err := filepath.Glob(filepath.Join(path, "*.asb"))
+	if err != nil {
+		return err
+	}
+	if len(absFiles) == 0 {
+		return fmt.Errorf("no backup files found in %s", path)
+	}
+	return nil
 }

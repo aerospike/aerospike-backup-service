@@ -9,9 +9,9 @@ import (
 // @Description HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
 	// The address to listen on.
-	Address string `yaml:"address,omitempty" json:"address,omitempty" default:"0.0.0.0"`
+	Address string `yaml:"address,omitempty" json:"address,omitempty" default:"0.0.0.0" example:"0.0.0.0"`
 	// The port to listen on.
-	Port int `yaml:"port,omitempty" json:"port,omitempty" default:"8080"`
+	Port int `yaml:"port,omitempty" json:"port,omitempty" default:"8080" example:"8080"`
 	// HTTP rate limiter configuration.
 	Rate RateLimiterConfig `yaml:"rate,omitempty" json:"rate,omitempty"`
 	// ContextPath customizes path for the API endpoints.
@@ -22,9 +22,9 @@ type HTTPServerConfig struct {
 // @Description RateLimiterConfig is the HTTP server rate limiter configuration.
 type RateLimiterConfig struct {
 	// Rate limiter tokens per second threshold.
-	Tps int `yaml:"tps,omitempty" json:"tps,omitempty" default:"1024"`
+	Tps int `yaml:"tps,omitempty" json:"tps,omitempty" default:"1024" example:"1024"`
 	// Rate limiter token bucket size (bursts threshold).
-	Size int `yaml:"size,omitempty" json:"size,omitempty" default:"1024"`
+	Size int `yaml:"size,omitempty" json:"size,omitempty" default:"1024" example:"1024"`
 	// The list of ips to whitelist in rate limiting.
 	WhiteList []string `yaml:"white-list,omitempty" json:"white-list,omitempty" default:""`
 }

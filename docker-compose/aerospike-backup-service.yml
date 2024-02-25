@@ -20,7 +20,7 @@ backup-policies:
     # Run backup operations in a single thread.
     parallel: 1
     # Previous full backups are not deleted when a new one is created.
-    remove-files: false
+    remove-files: KeepAll
 backup-routines:
   minioKeepFilesRoutine:
     # 24 hours interval for full backups.

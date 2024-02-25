@@ -8,9 +8,9 @@ import (
 // RestoreRequest represents a restore operation request.
 // @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
-	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
-	Policy            *RestorePolicy    `json:"policy,omitempty"`
-	SourceStorage     *Storage          `json:"source,omitempty"`
+	DestinationCuster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
+	Policy            *RestorePolicy    `json:"policy,omitempty" validate:"required"`
+	SourceStorage     *Storage          `json:"source,omitempty" validate:"required"`
 	SecretAgent       *SecretAgent      `json:"secret-agent,omitempty"`
 }
 
@@ -24,15 +24,15 @@ type RestoreRequestInternal struct {
 // @Description RestoreTimestampRequest represents a restore by timestamp operation request.
 type RestoreTimestampRequest struct {
 	// The details of the Aerospike destination cluster.
-	DestinationCuster *AerospikeCluster `json:"destination,omitempty"`
+	DestinationCuster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
 	// Restore policy to use in the operation.
-	Policy *RestorePolicy `json:"policy,omitempty"`
+	Policy *RestorePolicy `json:"policy,omitempty" validate:"required"`
 	// Secret Agent configuration (optional).
 	SecretAgent *SecretAgent `json:"secret-agent,omitempty"`
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
-	Time int64 `json:"time,omitempty" format:"int64"`
+	Time int64 `json:"time,omitempty" format:"int64" example:"1739538000000" validate:"required"`
 	// The backup routine name.
-	Routine string `json:"routine,omitempty"`
+	Routine string `json:"routine,omitempty" example:"daily" validate:"required"`
 }
 
 // String satisfies the fmt.Stringer interface.
@@ -53,23 +53,19 @@ func (r RestoreTimestampRequest) String() string {
 	return string(request)
 }
 
-// NewRestoreRequest creates and validates a new RestoreRequest.
+// NewRestoreRequest creates a new RestoreRequest.
 func NewRestoreRequest(
 	destinationCluster *AerospikeCluster,
 	policy *RestorePolicy,
 	sourceStorage *Storage,
 	secretAgent *SecretAgent,
-) (*RestoreRequest, error) {
-	request := &RestoreRequest{
+) *RestoreRequest {
+	return &RestoreRequest{
 		DestinationCuster: destinationCluster,
 		Policy:            policy,
 		SourceStorage:     sourceStorage,
 		SecretAgent:       secretAgent,
 	}
-	if err := request.Validate(); err != nil {
-		return nil, err
-	}
-	return request, nil
 }
 
 // Validate validates the restore operation request.
@@ -101,7 +97,7 @@ func (r *RestoreTimestampRequest) Validate() error {
 		return errors.New("restore point in time should be positive")
 	}
 	if r.Routine == "" {
-		return errors.New("routine to restore is not specified")
+		return emptyFieldValidationError(r.Routine)
 	}
 	return nil
 }

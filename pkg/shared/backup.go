@@ -19,7 +19,6 @@ package shared
 */
 import "C"
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -65,16 +64,11 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	if backupRoutine.BinList != nil {
 		setCString(&backupConfig.bin_list, ptr.String(strings.Join(backupRoutine.BinList, ",")))
 	}
-	if backupRoutine.NodeList != nil {
-		setCString(&backupConfig.node_list, printNodes(backupRoutine.NodeList))
-	}
 	if backupRoutine.PreferRacks != nil {
 		setCString(&backupConfig.prefer_racks, joinInts(backupRoutine.PreferRacks))
 	}
 	setCUint(&backupConfig.socket_timeout, backupPolicy.SocketTimeout)
 	setCUint(&backupConfig.total_timeout, backupPolicy.TotalTimeout)
-	setCUint(&backupConfig.max_retries, backupPolicy.MaxRetries)
-	setCUint(&backupConfig.retry_delay, backupPolicy.RetryDelay)
 
 	// namespace list configuration
 	nsCharArray := C.CString(*namespace)
@@ -93,8 +87,6 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCUint(&backupConfig.records_per_second, backupPolicy.RecordsPerSecond)
 	setCUlong(&backupConfig.file_limit, backupPolicy.FileLimit)
 	setCString(&backupConfig.partition_list, backupRoutine.PartitionList)
-	setCString(&backupConfig.after_digest, backupRoutine.AfterDigest)
-	setCString(&backupConfig.filter_exp, backupPolicy.FilterExp)
 
 	// S3 configuration
 	setCString(&backupConfig.s3_endpoint_override, storage.S3EndpointOverride)
@@ -107,6 +99,13 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 
 	// TLS configuration
 	setTLSOptions(&backupConfig.tls_name, &backupConfig.tls, cluster.TLS)
+
+	// Encryption configuration
+	configureEncryption(&backupConfig.encrypt_mode, &backupConfig.pkey, backupPolicy.EncryptionPolicy)
+
+	// Compression configuration
+	configureCompression(&backupConfig.compress_mode, &backupConfig.compression_level,
+		backupPolicy.CompressionPolicy)
 
 	setCString(&backupConfig.directory, path)
 	setCLong(&backupConfig.mod_after, opts.ModAfter)
@@ -134,11 +133,11 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 }
 
 func setStatistics(result *BackupStat, status *C.backup_status_t) {
-	result.RecordCount = int(status.rec_count_total)
-	result.ByteCount = int(status.byte_count_total)
-	result.FileCount = int(status.file_count)
-	result.IndexCount = int(status.index_count)
-	result.UDFCount = int(status.udf_count)
+	result.RecordCount = uint64(status.rec_count_total)
+	result.ByteCount = uint64(status.byte_count_total)
+	result.FileCount = uint64(status.file_count)
+	result.IndexCount = uint64(status.index_count)
+	result.UDFCount = uint64(status.udf_count)
 }
 
 func backupSecretAgent(config *C.backup_config_t, secretsAgent *model.SecretAgent) {
@@ -157,15 +156,6 @@ func parseSetList(setVector *C.as_vector, setList *[]string) {
 		concatenatedSetList := strings.Join(*setList, ",")
 		C.parse_set_list(setVector, C.CString(concatenatedSetList))
 	}
-}
-
-func printNodes(nodes []model.Node) *string {
-	nodeStrings := make([]string, 0, len(nodes))
-	for _, node := range nodes {
-		nodeStrings = append(nodeStrings, fmt.Sprintf("%s:%d", node.IP, node.Port))
-	}
-	concatenated := strings.Join(nodeStrings, ",")
-	return &concatenated
 }
 
 func joinInts(nums []int) *string {

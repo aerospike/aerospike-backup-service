@@ -33,7 +33,7 @@ func run() int {
 		configFile string
 	)
 
-	validateFlags := func(cmd *cobra.Command, args []string) error {
+	validateFlags := func(_ *cobra.Command, _ []string) error {
 		if len(configFile) == 0 {
 			return errors.New("--config is required")
 		}
@@ -49,7 +49,7 @@ func run() int {
 
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path/URL")
 
-	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
+	rootCmd.RunE = func(_ *cobra.Command, _ []string) error {
 		setConfigurationManager(configFile)
 		// read configuration file
 		config, err := readConfiguration()

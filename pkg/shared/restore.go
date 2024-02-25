@@ -95,6 +95,13 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	// TLS configuration
 	setTLSOptions(&restoreConfig.tls_name, &restoreConfig.tls, restoreRequest.DestinationCuster.TLS)
 
+	// Encryption configuration
+	configureEncryption(&restoreConfig.encrypt_mode, &restoreConfig.pkey,
+		restoreRequest.Policy.EncryptionPolicy)
+
+	// Compression configuration
+	configureCompression(&restoreConfig.compress_mode, nil, restoreRequest.Policy.CompressionPolicy)
+
 	// restore source configuration
 	setCString(&restoreConfig.directory, restoreRequest.Dir)
 
@@ -123,20 +130,18 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 }
 
 func getRestoreResult(status *C.restore_status_t) *model.RestoreResult {
-	result := &model.RestoreResult{
-		TotalRecords:    int(status.total_records),
-		TotalBytes:      int(status.total_bytes),
-		ExpiredRecords:  int(status.expired_records),
-		SkippedRecords:  int(status.skipped_records),
-		IgnoredRecords:  int(status.ignored_records),
-		InsertedRecords: int(status.inserted_records),
-		ExistedRecords:  int(status.existed_records),
-		FresherRecords:  int(status.fresher_records),
-		IndexCount:      int(status.index_count),
-		UDFCount:        int(status.udf_count),
+	return &model.RestoreResult{
+		TotalRecords:    uint64(status.total_records),
+		TotalBytes:      uint64(status.total_bytes),
+		ExpiredRecords:  uint64(status.expired_records),
+		SkippedRecords:  uint64(status.skipped_records),
+		IgnoredRecords:  uint64(status.ignored_records),
+		InsertedRecords: uint64(status.inserted_records),
+		ExistedRecords:  uint64(status.existed_records),
+		FresherRecords:  uint64(status.fresher_records),
+		IndexCount:      uint64(status.index_count),
+		UDFCount:        uint64(status.udf_count),
 	}
-
-	return result
 }
 
 func restoreSecretAgent(config *C.restore_config_t, secretsAgent *model.SecretAgent) {
