@@ -19,6 +19,7 @@ package shared
 */
 import "C"
 import (
+	"log/slog"
 	"strconv"
 	"strings"
 	"sync"
@@ -52,6 +53,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 
 	backupConfig := C.backup_config_t{}
 	C.backup_config_init(&backupConfig)
+	defer C.backup_config_destroy(&backupConfig)
 
 	setCString(&backupConfig.host, cluster.SeedNodesAsString())
 	setCBool(&backupConfig.use_services_alternate, cluster.UseServicesAlternate)
@@ -101,7 +103,11 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setTLSOptions(&backupConfig.tls_name, &backupConfig.tls, cluster.TLS)
 
 	// Encryption configuration
-	configureEncryption(&backupConfig.encrypt_mode, &backupConfig.pkey, backupPolicy.EncryptionPolicy)
+	err := configureEncryption(&backupConfig.encrypt_mode, &backupConfig.pkey, backupPolicy.EncryptionPolicy)
+	if err != nil {
+		slog.Error("error configuring encryption", "err", err)
+		return nil
+	}
 
 	// Compression configuration
 	configureCompression(&backupConfig.compress_mode, &backupConfig.compression_level,
@@ -112,8 +118,6 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCLong(&backupConfig.mod_before, opts.ModBefore)
 
 	backupStatus := C.backup_run(&backupConfig)
-	// destroy the backup_config
-	defer C.backup_config_destroy(&backupConfig)
 
 	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_FAILURE {
 		return nil

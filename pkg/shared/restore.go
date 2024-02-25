@@ -51,6 +51,7 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 
 	restoreConfig := C.restore_config_t{}
 	C.restore_config_init(&restoreConfig)
+	defer C.restore_config_destroy(&restoreConfig)
 
 	setCString(&restoreConfig.host, restoreRequest.DestinationCuster.SeedNodesAsString())
 	setCBool(&restoreConfig.use_services_alternate, restoreRequest.DestinationCuster.UseServicesAlternate)
@@ -96,8 +97,11 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	setTLSOptions(&restoreConfig.tls_name, &restoreConfig.tls, restoreRequest.DestinationCuster.TLS)
 
 	// Encryption configuration
-	configureEncryption(&restoreConfig.encrypt_mode, &restoreConfig.pkey,
-		restoreRequest.Policy.EncryptionPolicy)
+	err := configureEncryption(&restoreConfig.encrypt_mode, &restoreConfig.pkey, restoreRequest.Policy.EncryptionPolicy)
+	if err != nil {
+		slog.Error("error configuring encryption", "err", err)
+		return nil
+	}
 
 	// Compression configuration
 	configureCompression(&restoreConfig.compress_mode, nil, restoreRequest.Policy.CompressionPolicy)
@@ -113,8 +117,6 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	setCUint(&restoreConfig.tps, restoreRequest.Policy.Tps)
 
 	restoreStatus := C.restore_run(&restoreConfig)
-	// destroy the restore_config
-	defer C.restore_config_destroy(&restoreConfig)
 
 	if unsafe.Pointer(restoreStatus) == C.RUN_RESTORE_FAILURE {
 		slog.Warn("Failed restore operation", "request", restoreRequest)
