@@ -1581,7 +1581,7 @@ components:
         total-bytes: 2000
         expired-records: 2
         fresher-records: 5
-        error: "{}"
+        error: error
         skipped-records: 4
         total-records: 10
         existed-records: 15
@@ -1589,7 +1589,7 @@ components:
         status: "{}"
       properties:
         error:
-          type: object
+          type: string
         existed-records:
           example: 15
           format: int64
