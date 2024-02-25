@@ -1866,7 +1866,9 @@ const docTemplate = `{
             "description": "RestoreJobStatus represents a restore job status.",
             "type": "object",
             "properties": {
-                "error": {},
+                "error": {
+                    "type": "string"
+                },
                 "existed-records": {
                     "type": "integer",
                     "format": "int64",

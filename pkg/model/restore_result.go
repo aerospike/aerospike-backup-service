@@ -13,7 +13,7 @@ const (
 type RestoreJobStatus struct {
 	RestoreResult
 	Status JobStatus `yaml:"status,omitempty" json:"status,omitempty" enums:"Running,Done,Failed"`
-	Error  error     `yaml:"error,omitempty" json:"error,omitempty"`
+	Error  string    `yaml:"error,omitempty" json:"error,omitempty"`
 }
 
 // RestoreResult represents a single restore operation result.

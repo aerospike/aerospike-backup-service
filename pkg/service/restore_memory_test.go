@@ -247,12 +247,12 @@ func Test_RestoreFail(t *testing.T) {
 		Dir:            &validBackupPath,
 	}
 
-	jobId, err := restoreService.Restore(requestInternal)
+	jobID, err := restoreService.Restore(requestInternal)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
 	time.Sleep(1 * time.Second)
-	status, _ := restoreService.JobStatus(jobId)
+	status, _ := restoreService.JobStatus(jobID)
 	if status.Status != model.JobStatusFailed {
 		t.Errorf("Expected restore job status to be Failed, but got %s", status.Status)
 	}
@@ -309,9 +309,9 @@ func Test_restoreTimestampFail(t *testing.T) {
 		Time:    10,
 	}
 
-	jobId, _ := restoreService.RestoreByTime(request)
+	jobID, _ := restoreService.RestoreByTime(request)
 	time.Sleep(1 * time.Second)
-	status, _ := restoreService.JobStatus(jobId)
+	status, _ := restoreService.JobStatus(jobID)
 	if status.Status != model.JobStatusFailed {
 		t.Errorf("Expected restore job status to be Failed, but got %s", status.Status)
 	}

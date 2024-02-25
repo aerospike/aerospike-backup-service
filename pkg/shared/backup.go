@@ -19,6 +19,7 @@ package shared
 */
 import "C"
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -45,13 +46,14 @@ func NewBackup() *BackupShared {
 //nolint:funlen,gocritic
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
-	opts BackupOptions, namespace *string, path *string) *BackupStat {
+	opts BackupOptions, namespace *string, path *string) (*BackupStat, error) {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
 
 	backupConfig := C.backup_config_t{}
 	C.backup_config_init(&backupConfig)
+	defer C.backup_config_destroy(&backupConfig)
 
 	setCString(&backupConfig.host, cluster.SeedNodesAsString())
 	setCBool(&backupConfig.use_services_alternate, cluster.UseServicesAlternate)
@@ -101,7 +103,10 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setTLSOptions(&backupConfig.tls_name, &backupConfig.tls, cluster.TLS)
 
 	// Encryption configuration
-	configureEncryption(&backupConfig.encrypt_mode, &backupConfig.pkey, backupPolicy.EncryptionPolicy)
+	err := configureEncryption(&backupConfig.encrypt_mode, &backupConfig.pkey, backupPolicy.EncryptionPolicy)
+	if err != nil {
+		return nil, fmt.Errorf("error configuring encryption: %w", err)
+	}
 
 	// Compression configuration
 	configureCompression(&backupConfig.compress_mode, &backupConfig.compression_level,
@@ -112,16 +117,14 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	setCLong(&backupConfig.mod_before, opts.ModBefore)
 
 	backupStatus := C.backup_run(&backupConfig)
-	// destroy the backup_config
-	defer C.backup_config_destroy(&backupConfig)
 
 	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_FAILURE {
-		return nil
+		return nil, fmt.Errorf("backup failure")
 	}
 
 	result := &BackupStat{}
 	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS {
-		return result
+		return result, nil
 	}
 
 	setStatistics(result, backupStatus)
@@ -129,7 +132,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	C.backup_status_destroy(backupStatus)
 	C.cf_free(unsafe.Pointer(backupStatus))
 
-	return result
+	return result, nil
 }
 
 func setStatistics(result *BackupStat, status *C.backup_status_t) {

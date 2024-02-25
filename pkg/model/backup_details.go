@@ -23,6 +23,8 @@ func (details BackupDetails) String() string {
 }
 
 // BackupMetadata is an internal container for storing backup metadata.
+//
+//nolint:lll
 type BackupMetadata struct {
 	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created,omitempty" json:"created,omitempty" example:"2023-03-20T14:50:00Z"`

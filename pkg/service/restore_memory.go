@@ -38,9 +38,9 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 		return 0, err
 	}
 	go func() {
-		restoreResult := r.runRestoreService(request)
-		if restoreResult == nil {
-			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation"))
+		restoreResult, err := r.runRestoreService(request)
+		if err != nil {
+			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
 			return
 		}
 		r.restoreJobs.increaseStats(jobID, restoreResult)
@@ -49,15 +49,16 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 	return jobID, nil
 }
 
-func (r *RestoreMemory) runRestoreService(request *model.RestoreRequestInternal) *model.RestoreResult {
+func (r *RestoreMemory) runRestoreService(request *model.RestoreRequestInternal) (*model.RestoreResult, error) {
 	var result *model.RestoreResult
+	var err error
 	restoreRunFunc := func() {
 		request.SourceStorage.SetDefaultProfile()
-		result = r.restoreService.RestoreRun(request)
+		result, err = r.restoreService.RestoreRun(request)
 	}
 	out := stdIO.Capture(restoreRunFunc)
 	util.LogCaptured(out)
-	return result
+	return result, err
 }
 
 func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (int, error) {
@@ -121,12 +122,12 @@ func (r *RestoreMemory) restoreFromPath(
 	backupPath *string,
 ) (*model.RestoreResult, error) {
 	restoreRequest := r.toRestoreRequest(request)
-	restoreResult := r.runRestoreService(&model.RestoreRequestInternal{
+	restoreResult, err := r.runRestoreService(&model.RestoreRequestInternal{
 		RestoreRequest: *restoreRequest,
 		Dir:            backupPath,
 	})
-	if restoreResult == nil {
-		return nil, fmt.Errorf("could not restore backup at %s", *backupPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not restore backup at %s: %w", *backupPath, err)
 	}
 
 	return restoreResult, nil

@@ -71,6 +71,6 @@ func (h *JobsHolder) setFailed(jobID int, err error) {
 	current, found := h.restoreJobs[jobID]
 	if found {
 		current.Status = model.JobStatusFailed
-		current.Error = err
+		current.Error = err.Error()
 	}
 }

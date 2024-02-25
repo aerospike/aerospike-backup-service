@@ -3,6 +3,7 @@
 package shared
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -22,14 +23,13 @@ func NewRestore() *RestoreShared {
 }
 
 // RestoreRun mocks the interface method.
-func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal) *model.RestoreResult {
+func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error) {
 	if restoreRequest.DestinationCuster == nil {
-		slog.Info("RestoreRun mock call without DestinationCuster provided, will fail")
-		return nil
+		return nil, fmt.Errorf("RestoreRun mock call without DestinationCuster provided, will fail")
 	}
 	slog.Info("RestoreRun mock call")
 	time.Sleep(100 * time.Millisecond)
 	result := model.NewRestoreResult()
 	result.TotalRecords = 1
-	return result
+	return result, nil
 }
