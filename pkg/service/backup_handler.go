@@ -112,12 +112,13 @@ func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace s
 	}
 
 	var stats *shared.BackupStat
+	var err error
 	backupRunFunc := func() {
 		started := time.Now()
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
-		stats = backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
+		stats, err = backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
 			h.storage, h.secretAgent, options, &namespace, backupPath)
-		if stats == nil {
+		if err != nil {
 			return
 		}
 		elapsed := time.Since(started)
@@ -128,9 +129,9 @@ func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace s
 	slog.Debug("Completed full backup", "name", h.routineName)
 	util.LogCaptured(out)
 
-	if stats == nil {
+	if err != nil {
 		backupFailureCounter.Inc()
-		return fmt.Errorf("error during backup namespace %s, routine %s", namespace, h.routineName)
+		return fmt.Errorf("error during backup namespace %s, routine %s: %w", namespace, h.routineName, err)
 	}
 
 	metadata := stats.ToMetadata(time.Time{}, upperBound, namespace)
@@ -181,6 +182,7 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	h.backend.CreateFolder(backupFolder)
 
 	var stats *shared.BackupStat
+	var err error
 	fromEpoch := h.state.LastRunEpoch()
 	options := shared.BackupOptions{
 		ModAfter: util.Ptr(fromEpoch),
@@ -191,9 +193,9 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	backupRunFunc := func() {
 		started := time.Now()
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
-		stats = backupService.BackupRun(
+		stats, err = backupService.BackupRun(
 			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, &namespace, backupPath)
-		if stats == nil {
+		if err != nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()
 			return

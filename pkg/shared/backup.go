@@ -19,7 +19,7 @@ package shared
 */
 import "C"
 import (
-	"log/slog"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,7 +46,7 @@ func NewBackup() *BackupShared {
 //nolint:funlen,gocritic
 func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
-	opts BackupOptions, namespace *string, path *string) *BackupStat {
+	opts BackupOptions, namespace *string, path *string) (*BackupStat, error) {
 	// lock to restrict parallel execution (shared library limitation)
 	b.Lock()
 	defer b.Unlock()
@@ -105,8 +105,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	// Encryption configuration
 	err := configureEncryption(&backupConfig.encrypt_mode, &backupConfig.pkey, backupPolicy.EncryptionPolicy)
 	if err != nil {
-		slog.Error("error configuring encryption", "err", err)
-		return nil
+		return nil, fmt.Errorf("error configuring encryption: %w", err)
 	}
 
 	// Compression configuration
@@ -120,12 +119,12 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	backupStatus := C.backup_run(&backupConfig)
 
 	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_FAILURE {
-		return nil
+		return nil, fmt.Errorf("backup failure")
 	}
 
 	result := &BackupStat{}
 	if unsafe.Pointer(backupStatus) == C.RUN_BACKUP_SUCCESS {
-		return result
+		return result, nil
 	}
 
 	setStatistics(result, backupStatus)
@@ -133,7 +132,7 @@ func (b *BackupShared) BackupRun(backupRoutine *model.BackupRoutine, backupPolic
 	C.backup_status_destroy(backupStatus)
 	C.cf_free(unsafe.Pointer(backupStatus))
 
-	return result
+	return result, nil
 }
 
 func setStatistics(result *BackupStat, status *C.backup_status_t) {

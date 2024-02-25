@@ -18,6 +18,7 @@ package shared
 */
 import "C"
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"unsafe"
@@ -42,7 +43,7 @@ func NewRestore() *RestoreShared {
 // RestoreRun calls the restore_run function from the asrestore shared library.
 //
 //nolint:funlen,gocritic
-func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal) *model.RestoreResult {
+func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error) {
 	// lock to restrict parallel execution (shared library limitation)
 	r.Lock()
 	defer r.Unlock()
@@ -99,8 +100,7 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	// Encryption configuration
 	err := configureEncryption(&restoreConfig.encrypt_mode, &restoreConfig.pkey, restoreRequest.Policy.EncryptionPolicy)
 	if err != nil {
-		slog.Error("error configuring encryption", "err", err)
-		return nil
+		return nil, fmt.Errorf("error configuring encryption: %w", err)
 	}
 
 	// Compression configuration
@@ -119,8 +119,7 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	restoreStatus := C.restore_run(&restoreConfig)
 
 	if unsafe.Pointer(restoreStatus) == C.RUN_RESTORE_FAILURE {
-		slog.Warn("Failed restore operation", "request", restoreRequest)
-		return nil
+		return nil, fmt.Errorf("failed restore operation")
 	}
 
 	result := getRestoreResult(restoreStatus)
@@ -128,7 +127,7 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 	C.restore_status_destroy(restoreStatus)
 	C.cf_free(unsafe.Pointer(restoreStatus))
 
-	return result
+	return result, nil
 }
 
 func getRestoreResult(status *C.restore_status_t) *model.RestoreResult {

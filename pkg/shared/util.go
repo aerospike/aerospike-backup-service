@@ -125,18 +125,12 @@ func configureEncryption(encryptMode *C.encryption_opt, pKey **C.encryption_key_
 		if res := C.read_private_key_file(C.CString(*policy.KeyFile), *pKey); res != 0 {
 			return fmt.Errorf("failed to read encryption key from file: %s", *policy.KeyFile)
 		}
-		return nil
-	}
-
-	if policy.KeyEnv != nil {
+	} else if policy.KeyEnv != nil {
 		*pKey = C.parse_encryption_key_env(C.CString(*policy.KeyEnv))
 		if C.is_null(unsafe.Pointer(*pKey)) {
 			return fmt.Errorf("failed to read encryption key from env: %s", *policy.KeyEnv)
 		}
-		return nil
-	}
-
-	if policy.KeySecret != nil {
+	} else if policy.KeySecret != nil {
 		*pKey = C.enc_key_malloc()
 		if res := C.read_private_key(C.CString(*policy.KeySecret), *pKey); res != 0 {
 			return fmt.Errorf("failed to read encryption key from secret: %s", *policy.KeySecret)
