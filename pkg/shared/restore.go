@@ -52,11 +52,7 @@ func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal)
 
 	restoreConfig := C.restore_config_t{}
 	C.restore_config_init(&restoreConfig)
-	defer func() {
-		slog.Info("start destroy config")
-		C.restore_config_destroy(&restoreConfig)
-		slog.Info("finish destroy config")
-	}()
+	defer C.restore_config_destroy(&restoreConfig)
 
 	setCString(&restoreConfig.host, restoreRequest.DestinationCuster.SeedNodesAsString())
 	setCBool(&restoreConfig.use_services_alternate, restoreRequest.DestinationCuster.UseServicesAlternate)

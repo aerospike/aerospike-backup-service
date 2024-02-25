@@ -38,11 +38,6 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 		return 0, err
 	}
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Warn("Recovered", "r", r)
-			}
-		}()
 		restoreResult, err := r.runRestoreService(request)
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
