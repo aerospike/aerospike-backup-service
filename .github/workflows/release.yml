@@ -1,0 +1,72 @@
+
+name: Build and Publish Artifacts
+on:
+  push: null
+    #  release:
+#    types: [published]
+  workflow_dispatch:
+jobs:
+  build-artifacts-container:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ["amd64","arm64"]
+        container: ["rhel9:test"]
+        include:
+          - container: "rhel9"
+            cmd: "make rpm"
+            ext: "rpm"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+#      - uses: actions-ecosystem/action-get-latest-tag@v1
+#        id: get-latest-tag
+#      - name: Setup Jfrog
+#        uses: jfrog/setup-jfrog-cli@v3
+#        env:
+#          JF_URL: ${{ secrets.ARTIFACTORY_URL }}
+#          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+#      - name: Login to JFrog
+#        uses: docker/login-action@v2
+#        with:
+#          registry: aerospike.jfrog.io
+#          username: ${{ secrets.ARTIFACTORY_USER }}
+#          password: ${{ secrets.ARTIFACTORY_TOKEN }}
+#      - name: Build artifact
+#        id: build-artifact
+#        run: |
+#          docker run -v ${{ github.workspace }}:/aerospike-backup-service/ -w /aerospike-backup-service/ --platform linux/${{ matrix.arch }} aerospike.jfrog.io/ecosystem-container-dev-local/base-${{ matrix.container }} ${{ matrix.cmd }}
+#      - name: Find output file
+#        uses: jeertmans/filesfinder@latest
+#        id: build-output # Any id, to be used later to reference to files output
+#        with:
+#          args: "--dir './target/' *.${{ matrix.ext }}"
+#      - name: Set Name
+#        id: get-name
+#        run: echo "name=$(basename ${{ steps.build-output.outputs.files }})" >> $GITHUB_OUTPUT
+#      - name: Set sha outputs
+#        id: short-sha
+#        run: echo "sha_short=$(git describe --tags)" >> $GITHUB_OUTPUT
+#      - name: Deploy Artifact
+#        run: curl -H "X-JFrog-Art-Api:${{ secrets.ARTIFACTORY_TOKEN }}" -XPUT https://aerospike.jfrog.io/artifactory/core-${{ matrix.ext }}-dev-local/aerospike-secret-agent/${{ steps.get-latest-tag.outputs.tag }}/${{ steps.short-sha.outputs.sha_short }}/${{ steps.get-name.outputs.name }} -T "${{ steps.build-output.outputs.files }}"
+#      - name: Deploy to Github Artifats
+#        run: echo "Deploy artifacts to github"
+#
+#
+#
+#name: hello-world
+#on:
+#  push: null
+#jobs:
+#  my-job:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: my-step
+#        run: echo "Hello World!"

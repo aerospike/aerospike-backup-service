@@ -1,5 +1,5 @@
 .PHONY: all
-all: rpm clean
+all: rpm mv clean
 
 .PHONY: rpm
 rpm:
@@ -10,6 +10,10 @@ rpm:
 	--rmsource \
 	--clean \
 	$(BINARY_NAME).spec
+
+.PHONY: mv
+mv:
+	cp ./RPMS/$(shell uname -m)/$(BINARY_NAME)-$(VERSION)-1.$(shell uname -m).rpm "../../target"
 
 .PHONY: clean
 clean:
