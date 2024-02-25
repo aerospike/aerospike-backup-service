@@ -14,11 +14,11 @@ type BackupOptions struct {
 
 // BackupStat represents partial backup result statistics returned from asbackup library.
 type BackupStat struct {
-	RecordCount int
-	ByteCount   int
-	FileCount   int
-	IndexCount  int
-	UDFCount    int
+	RecordCount uint64
+	ByteCount   uint64
+	FileCount   uint64
+	IndexCount  uint64
+	UDFCount    uint64
 }
 
 // IsEmpty indicates whether the backup operation represented by the

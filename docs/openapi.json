@@ -1450,6 +1450,7 @@
           "byte-count" : {
             "description" : "The size of the backup in bytes.",
             "example" : 2000,
+            "format" : "int64",
             "type" : "integer"
           },
           "created" : {
@@ -1460,6 +1461,7 @@
           "file-count" : {
             "description" : "The number of backup files created.",
             "example" : 1,
+            "format" : "int64",
             "type" : "integer"
           },
           "from" : {
@@ -1480,16 +1482,19 @@
           "record-count" : {
             "description" : "The total number of records backed up.",
             "example" : 100,
+            "format" : "int64",
             "type" : "integer"
           },
           "secondary-index-count" : {
             "description" : "The number of secondary indexes backed up.",
             "example" : 5,
+            "format" : "int64",
             "type" : "integer"
           },
           "udf-count" : {
             "description" : "The number of UDF files backed up.",
             "example" : 2,
+            "format" : "int64",
             "type" : "integer"
           }
         },
@@ -1920,30 +1925,37 @@
           },
           "existed-records" : {
             "example" : 15,
+            "format" : "int64",
             "type" : "integer"
           },
           "expired-records" : {
             "example" : 2,
+            "format" : "int64",
             "type" : "integer"
           },
           "fresher-records" : {
             "example" : 5,
+            "format" : "int64",
             "type" : "integer"
           },
           "ignored-records" : {
             "example" : 12,
+            "format" : "int64",
             "type" : "integer"
           },
           "index-count" : {
             "example" : 3,
+            "format" : "int64",
             "type" : "integer"
           },
           "inserted-records" : {
             "example" : 8,
+            "format" : "int64",
             "type" : "integer"
           },
           "skipped-records" : {
             "example" : 4,
+            "format" : "int64",
             "type" : "integer"
           },
           "status" : {
@@ -1954,14 +1966,17 @@
           },
           "total-bytes" : {
             "example" : 2000,
+            "format" : "int64",
             "type" : "integer"
           },
           "total-records" : {
             "example" : 10,
+            "format" : "int64",
             "type" : "integer"
           },
           "udf-count" : {
             "example" : 1,
+            "format" : "int64",
             "type" : "integer"
           }
         },

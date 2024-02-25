@@ -31,13 +31,13 @@ type BackupMetadata struct {
 	// The namespace of a backup.
 	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty" example:"testNamespace"`
 	// The total number of records backed up.
-	RecordCount int `yaml:"record-count,omitempty" json:"record-count,omitempty" example:"100"`
+	RecordCount uint64 `yaml:"record-count,omitempty" json:"record-count,omitempty" format:"int64" example:"100"`
 	// The size of the backup in bytes.
-	ByteCount int `yaml:"byte-count,omitempty" json:"byte-count,omitempty" example:"2000"`
+	ByteCount uint64 `yaml:"byte-count,omitempty" json:"byte-count,omitempty" format:"int64" example:"2000"`
 	// The number of backup files created.
-	FileCount int `yaml:"file-count,omitempty" json:"file-count,omitempty" example:"1"`
+	FileCount uint64 `yaml:"file-count,omitempty" json:"file-count,omitempty" format:"int64" example:"1"`
 	// The number of secondary indexes backed up.
-	SecondaryIndexCount int `yaml:"secondary-index-count,omitempty" json:"secondary-index-count,omitempty" example:"5"`
+	SecondaryIndexCount uint64 `yaml:"secondary-index-count,omitempty" json:"secondary-index-count,omitempty" format:"int64" example:"5"`
 	// The number of UDF files backed up.
-	UDFCount int `yaml:"udf-count,omitempty" json:"udf-count,omitempty" example:"2"`
+	UDFCount uint64 `yaml:"udf-count,omitempty" json:"udf-count,omitempty" format:"int64" example:"2"`
 }
