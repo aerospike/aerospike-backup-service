@@ -5,6 +5,7 @@ all: rpm clean
 
 .PHONY: rpm
 rpm:
+	@ echo "Here"
 	ldconfig; \
 	rpmbuild -v -bb --define "_topdir $(CURDIR)" \
 	--define "pkg_version $(VERSION)" \
