@@ -1,8 +1,6 @@
 package model
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // RestorePolicy represents a policy for the restore operation.
 // @Description RestorePolicy represents a policy for the restore operation.
