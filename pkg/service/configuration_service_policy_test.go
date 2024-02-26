@@ -59,7 +59,7 @@ func TestPolicy_Update(t *testing.T) {
 	}
 
 	err = UpdatePolicy(config, name, &model.BackupPolicy{
-		MaxRetries: ptr.Uint32(10),
+		MaxRetries: ptr.Int32(10),
 	})
 	if err != nil {
 		t.Errorf("UpdatePolicy failed, expected nil error, got %v", err)
