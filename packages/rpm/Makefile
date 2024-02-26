@@ -1,8 +1,11 @@
+export LD_LIBRARY_PATH:=/opt/openssl/lib:/opt/openssl/lib64:\$LD_LIBRARY_PATH
+
 .PHONY: all
 all: rpm clean
 
 .PHONY: rpm
 rpm:
+	ldconfig; \
 	rpmbuild -v -bb --define "_topdir $(CURDIR)" \
 	--define "pkg_version $(VERSION)" \
 	--define "pkg_name $(BINARY_NAME)" \
