@@ -43,7 +43,6 @@ else
       OPENSSL_STATIC_PATH="/usr/local/lib"
     fi
   else
-    dnf install -y openssl-devel
     ZSTD_STATIC_PATH="/usr/local/lib64"
     OPENSSL_STATIC_PATH="/opt/openssl/lib64"
     if [ "$(uname -m)" == "aarch64" ]; then
