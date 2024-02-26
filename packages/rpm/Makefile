@@ -1,5 +1,5 @@
 .PHONY: all
-all: rpm mv clean
+all: rpm clean
 
 .PHONY: rpm
 rpm:
@@ -11,11 +11,11 @@ rpm:
 	--clean \
 	$(BINARY_NAME).spec
 
-.PHONY: mv
-mv:
-	cp ./RPMS/$(shell uname -m)/$(BINARY_NAME)-$(VERSION)-1.$(shell uname -m).rpm "../../target"
+#.PHONY: mv
+#mv:
+#	cp ./RPMS/$(shell uname -m)/$(BINARY_NAME)-$(VERSION)-1.$(shell uname -m).rpm "../../target"
 
 .PHONY: clean
 clean:
 	unset GIT_COMMIT BINARY_NAME VERSION
-	rm -rf BUILD BUILDROOT SOURCES RPMS SRPMS
+	#rm -rf BUILD BUILDROOT SOURCES RPMS SRPMS
