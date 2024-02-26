@@ -1,5 +1,5 @@
 .PHONY: all
-all: rpm clean
+all: rpm mv clean
 
 .PHONY: rpm
 rpm:
