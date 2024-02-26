@@ -44,9 +44,9 @@ else
     fi
   else
     ZSTD_STATIC_PATH="/usr/local/lib64"
-    OPENSSL_STATIC_PATH="/opt/openssl/lib64"
+    OPENSSL_STATIC_PATH="/opt/openssl"
     if [ "$(uname -m)" == "aarch64" ]; then
-      OPENSSL_STATIC_PATH="/opt/openssl/lib"
+      OPENSSL_STATIC_PATH="/opt/openssl"
     fi
   fi
   make -C "$WORKSPACE/modules/aerospike-tools-backup" shared \
