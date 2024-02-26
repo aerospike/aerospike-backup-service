@@ -47,7 +47,7 @@ func setCInt(cint *C.int, i *int32) {
 func setCUint(cint *C.uint, i *int32) {
 	if i != nil {
 		var unsignedValue = uint32(*i)
-		*cint = C.uint(&unsignedValue)
+		*cint = C.uint(unsignedValue)
 	}
 }
 
@@ -60,7 +60,7 @@ func setCLong(clong *C.int64_t, l *int64) {
 func setCUlong(clong *C.uint64_t, l *int64) {
 	if l != nil {
 		var unsignedValue = uint64(*l)
-		*clong = C.uint64_t(&unsignedValue)
+		*clong = C.uint64_t(unsignedValue)
 	}
 }
 
