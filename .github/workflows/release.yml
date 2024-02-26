@@ -10,13 +10,16 @@ jobs:
       fail-fast: false
       matrix:
         arch: ["amd64","arm64"]
-        container: ["rhel9:test", "ubuntu2204:test"]
+        container: ["rhel9:latest", "rhel8:latest", "ubuntu2204:latest"]
         include:
-          - container: "rhel9:test"
-            cmd: "/usr/bin/make rpm"
+          - container: "rhel8:latest"
+            cmd: "make rpm"
+            ext: "rpm"
+          - container: "rhel9:latest"
+            cmd: "make rpm"
             ext: "rpm"
           - container: "ubuntu2204:test"
-            cmd: "/usr/bin/make deb"
+            cmd: "make deb"
             ext: "deb"
     runs-on: ubuntu-latest
     steps:
