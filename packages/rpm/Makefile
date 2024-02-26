@@ -1,4 +1,4 @@
-export LD_LIBRARY_PATH:=/opt/openssl/lib:/opt/openssl/lib64:\$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH:=/opt/openssl/lib/:/opt/openssl/lib64/:$LD_LIBRARY_PATH
 
 .PHONY: all
 all: rpm clean
