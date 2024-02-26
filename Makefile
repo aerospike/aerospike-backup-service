@@ -80,6 +80,7 @@ deb:
 	cd $(WORKSPACE)/packages && dpkg-buildpackage
 	mv $(WORKSPACE)/$(BINARY_NAME)_* $(WORKSPACE)/target
 	mv $(WORKSPACE)/$(BINARY_NAME)-* $(WORKSPACE)/target
+	$(MAKE) clean-submodules
 
 .PHONY: install
 install:
