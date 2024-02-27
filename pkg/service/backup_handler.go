@@ -27,9 +27,6 @@ type BackupHandler struct {
 	retry            *RetryService
 }
 
-// stdIO captures standard output
-var stdIO = &stdio.CgoStdio{}
-
 var backupService shared.Backup = shared.NewBackup()
 
 // newBackupHandler returns a new BackupHandler instance.
@@ -125,7 +122,7 @@ func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace s
 		backupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
 	slog.Debug("Starting full backup", "up to", upperBound, "name", h.routineName)
-	out := stdIO.Capture(backupRunFunc)
+	out := stdio.Stderr.Capture(backupRunFunc)
 	slog.Debug("Completed full backup", "name", h.routineName)
 	util.LogCaptured(out)
 
@@ -204,7 +201,7 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 		incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
 	slog.Debug("Starting incremental backup", "name", h.routineName)
-	out := stdIO.Capture(backupRunFunc)
+	out := stdio.Stderr.Capture(backupRunFunc)
 	slog.Debug("Completed incremental backup", "name", h.routineName)
 	util.LogCaptured(out)
 	// delete if the backup file is empty

@@ -1786,6 +1786,11 @@ const docTemplate = `{
             "description": "LoggerConfig represents the backup service logger configuration.",
             "type": "object",
             "properties": {
+                "capture-shared": {
+                    "description": "Whether to capture logs from the shared libraries.",
+                    "type": "boolean",
+                    "default": false
+                },
                 "file-writer": {
                     "description": "File writer logging configuration.",
                     "allOf": [

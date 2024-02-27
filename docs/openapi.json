@@ -1861,6 +1861,11 @@
       "model.LoggerConfig" : {
         "description" : "LoggerConfig represents the backup service logger configuration.",
         "properties" : {
+          "capture-shared" : {
+            "default" : false,
+            "description" : "Whether to capture logs from the shared libraries.",
+            "type" : "boolean"
+          },
           "file-writer" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/model.FileLoggerConfig"

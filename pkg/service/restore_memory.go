@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/aerospike/backup/pkg/stdio"
 	"github.com/aerospike/backup/pkg/util"
 )
 
@@ -56,7 +57,7 @@ func (r *RestoreMemory) runRestoreService(request *model.RestoreRequestInternal)
 		request.SourceStorage.SetDefaultProfile()
 		result, err = r.restoreService.RestoreRun(request)
 	}
-	out := stdIO.Capture(restoreRunFunc)
+	out := stdio.Stderr.Capture(restoreRunFunc)
 	util.LogCaptured(out)
 	return result, err
 }
