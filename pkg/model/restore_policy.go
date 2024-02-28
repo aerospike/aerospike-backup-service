@@ -1,12 +1,12 @@
 package model
 
-import "errors"
+import "fmt"
 
 // RestorePolicy represents a policy for the restore operation.
 // @Description RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
 	// The number of client threads to spawn for writing to the cluster.
-	Parallel *uint32 `json:"parallel,omitempty" example:"8"`
+	Parallel *int32 `json:"parallel,omitempty" example:"8"`
 	// Do not restore any record data (metadata or bin data).
 	// By default, record data, secondary index definitions, and UDF modules
 	// will be restored.
@@ -16,15 +16,15 @@ type RestorePolicy struct {
 	// Do not restore any UDF modules.
 	NoUdfs *bool `json:"no-udfs,omitempty"`
 	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-	Timeout *uint32 `json:"timeout,omitempty" example:"1000"`
+	Timeout *int32 `json:"timeout,omitempty" example:"1000"`
 	// Disables the use of batch writes when restoring records to the Aerospike cluster.
 	// By default, the cluster is checked for batch write support.
 	DisableBatchWrites *bool `json:"disable-batch-writes,omitempty"`
 	// The max number of outstanding async record batch write calls at a time.
-	MaxAsyncBatches *uint32 `json:"max-async-batches,omitempty" example:"32"`
+	MaxAsyncBatches *int32 `json:"max-async-batches,omitempty" example:"32"`
 	// The max allowed number of records per an async batch write call.
 	// Default is 128 with batch writes enabled, or 16 without batch writes.
-	BatchSize *uint32 `json:"batch-size,omitempty" example:"128"`
+	BatchSize *int32 `json:"batch-size,omitempty" example:"128"`
 	// Namespace details for the restore operation.
 	// By default, the data is restored to the namespace from which it was taken.
 	Namespace *RestoreNamespace `json:"namespace,omitempty"`
@@ -47,11 +47,11 @@ type RestorePolicy struct {
 	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
 	// in MiB/s and its database write operations to not exceed the given number of transactions
 	// per second.
-	Bandwidth *uint64 `json:"bandwidth,omitempty" example:"50000"`
+	Bandwidth *int64 `json:"bandwidth,omitempty" example:"50000"`
 	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
 	// in MiB/s and its database write operations to not exceed the given number of transactions
 	// per second.
-	Tps *uint32 `json:"tps,omitempty" example:"4000"`
+	Tps *int32 `json:"tps,omitempty" example:"4000"`
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details.
@@ -74,8 +74,27 @@ type RestoreNamespace struct {
 // Validate validates the restore policy.
 func (p *RestorePolicy) Validate() error {
 	if p == nil {
-		return errors.New("restore policy is not specified")
+		return fmt.Errorf("restore policy is not specified")
 	}
+	if p.Parallel != nil && *p.Parallel <= 0 {
+		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
+	}
+	if p.Timeout != nil && *p.Timeout <= 0 {
+		return fmt.Errorf("timeout %d invalid, should be positive number", *p.Timeout)
+	}
+	if p.MaxAsyncBatches != nil && *p.MaxAsyncBatches <= 0 {
+		return fmt.Errorf("maxAsyncBatches %d invalid, should be positive number", *p.MaxAsyncBatches)
+	}
+	if p.BatchSize != nil && *p.BatchSize <= 0 {
+		return fmt.Errorf("batchSize %d invalid, should be positive number", *p.BatchSize)
+	}
+	if p.Bandwidth != nil && *p.Bandwidth <= 0 {
+		return fmt.Errorf("bandwidth %d invalid, should be positive number", *p.Bandwidth)
+	}
+	if p.Tps != nil && *p.Tps <= 0 {
+		return fmt.Errorf("tps %d invalid, should be positive number", *p.Tps)
+	}
+
 	if p.Namespace != nil { // namespace is optional.
 		if err := p.Namespace.Validate(); err != nil {
 			return err
@@ -93,10 +112,10 @@ func (p *RestorePolicy) Validate() error {
 // Validate validates the restore namespace.
 func (n *RestoreNamespace) Validate() error {
 	if n.Source == nil {
-		return errors.New("source namespace is not specified")
+		return fmt.Errorf("source namespace is not specified")
 	}
 	if n.Destination == nil {
-		return errors.New("destination namespace is not specified")
+		return fmt.Errorf("destination namespace is not specified")
 	}
 	return nil
 }

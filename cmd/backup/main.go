@@ -17,6 +17,7 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/aerospike/backup/pkg/stdio"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
@@ -63,6 +64,8 @@ func run() int {
 		slog.SetDefault(slog.New(util.LogHandler(loggerConfig)))
 		logger.SetDefault(util.NewQuartzLogger(ctx))
 		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
+		// init stderr log capturer
+		stdio.Stderr = stdio.NewCgoStdio(config.ServiceConfig.Logger.CaptureShared)
 		// schedule all configured backups
 		backends := service.BuildBackupBackends(config)
 		scheduler, err := service.ScheduleBackup(ctx, config, backends)

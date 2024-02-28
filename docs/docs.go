@@ -1786,6 +1786,11 @@ const docTemplate = `{
             "description": "LoggerConfig represents the backup service logger configuration.",
             "type": "object",
             "properties": {
+                "capture-shared": {
+                    "description": "Whether to capture logs from the shared libraries.",
+                    "type": "boolean",
+                    "default": false
+                },
                 "file-writer": {
                     "description": "File writer logging configuration.",
                     "allOf": [
@@ -1866,7 +1871,9 @@ const docTemplate = `{
             "description": "RestoreJobStatus represents a restore job status.",
             "type": "object",
             "properties": {
-                "error": {},
+                "error": {
+                    "type": "string"
+                },
                 "existed-records": {
                     "type": "integer",
                     "format": "int64",
@@ -2300,7 +2307,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "0.1.0",
+	Version:          "0.2.0",
 	Host:             "localhost:8080",
 	BasePath:         "",
 	Schemes:          []string{},

@@ -25,7 +25,7 @@ encryption_key_t* enc_key_malloc() {
 */
 import "C"
 import (
-	"log/slog"
+	"fmt"
 	"strings"
 	"unsafe"
 
@@ -44,9 +44,10 @@ func setCInt(cint *C.int, i *int32) {
 	}
 }
 
-func setCUint(cint *C.uint, i *uint32) {
+func setCUint(cint *C.uint, i *int32) {
 	if i != nil {
-		*cint = C.uint(*i)
+		unsignedValue := uint32(*i)
+		*cint = C.uint(unsignedValue)
 	}
 }
 
@@ -56,9 +57,10 @@ func setCLong(clong *C.int64_t, l *int64) {
 	}
 }
 
-func setCUlong(clong *C.uint64_t, l *uint64) {
+func setCUlong(clong *C.uint64_t, l *int64) {
 	if l != nil {
-		*clong = C.uint64_t(*l)
+		unsignedValue := uint64(*l)
+		*clong = C.uint64_t(unsignedValue)
 	}
 }
 
@@ -106,33 +108,38 @@ func setTLSOptions(tlsName **C.char, tlsConfig *C.as_config_tls, tls *model.TLS)
 
 //nolint:gocritic
 func configureEncryption(encryptMode *C.encryption_opt, pKey **C.encryption_key_t,
-	policy *model.EncryptionPolicy) {
-	if policy != nil {
-		switch policy.Mode {
-		case model.EncryptNone:
-			*encryptMode = C.IO_PROXY_ENCRYPT_NONE
-		case model.EncryptAES128:
-			*encryptMode = C.IO_PROXY_ENCRYPT_AES128
-		case model.EncryptAES256:
-			*encryptMode = C.IO_PROXY_ENCRYPT_AES256
+	policy *model.EncryptionPolicy) error {
+	if policy == nil {
+		return nil
+	}
+
+	switch policy.Mode {
+	case model.EncryptNone:
+		*encryptMode = C.IO_PROXY_ENCRYPT_NONE
+	case model.EncryptAES128:
+		*encryptMode = C.IO_PROXY_ENCRYPT_AES128
+	case model.EncryptAES256:
+		*encryptMode = C.IO_PROXY_ENCRYPT_AES256
+	}
+
+	if policy.KeyFile != nil {
+		*pKey = C.enc_key_malloc()
+		if res := C.read_private_key_file(C.CString(*policy.KeyFile), *pKey); res != 0 {
+			return fmt.Errorf("failed to read encryption key from file: %s", *policy.KeyFile)
 		}
-		if policy.KeyFile != nil {
-			*pKey = C.enc_key_malloc()
-			if res := C.read_private_key_file(C.CString(*policy.KeyFile), *pKey); res != 0 {
-				slog.Error("Failed to read encryption key", "file", *policy.KeyFile)
-			}
-		} else if policy.KeyEnv != nil {
-			*pKey = C.parse_encryption_key_env(C.CString(*policy.KeyEnv))
-			if C.is_null(unsafe.Pointer(*pKey)) {
-				slog.Error("Failed to read encryption key", "env", *policy.KeyEnv)
-			}
-		} else if policy.KeySecret != nil {
-			*pKey = C.enc_key_malloc()
-			if res := C.read_private_key(C.CString(*policy.KeySecret), *pKey); res != 0 {
-				slog.Error("Failed to read encryption key", "secret", *policy.KeySecret)
-			}
+	} else if policy.KeyEnv != nil {
+		*pKey = C.parse_encryption_key_env(C.CString(*policy.KeyEnv))
+		if C.is_null(unsafe.Pointer(*pKey)) {
+			return fmt.Errorf("failed to read encryption key from env: %s", *policy.KeyEnv)
+		}
+	} else if policy.KeySecret != nil {
+		*pKey = C.enc_key_malloc()
+		if res := C.read_private_key(C.CString(*policy.KeySecret), *pKey); res != 0 {
+			return fmt.Errorf("failed to read encryption key from secret: %s", *policy.KeySecret)
 		}
 	}
+
+	return nil
 }
 
 func configureCompression(mode *C.compression_opt, level *C.int32_t, policy *model.CompressionPolicy) {

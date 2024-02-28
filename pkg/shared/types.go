@@ -40,12 +40,12 @@ type Backup interface {
 		opts BackupOptions,
 		namespace *string,
 		path *string,
-	) *BackupStat
+	) (*BackupStat, error)
 }
 
 // Restore represents a restore service.
 type Restore interface {
-	RestoreRun(restoreRequest *model.RestoreRequestInternal) *model.RestoreResult
+	RestoreRun(restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error)
 }
 
 func (stats *BackupStat) ToMetadata(from, created time.Time, namespace string) model.BackupMetadata {

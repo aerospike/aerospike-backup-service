@@ -14,6 +14,8 @@ type LoggerConfig struct {
 	Level string `yaml:"level,omitempty" json:"level,omitempty" default:"DEBUG" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
 	// Format is the logger format (PLAIN, JSON).
 	Format string `yaml:"format,omitempty" json:"format,omitempty" default:"PLAIN" enums:"PLAIN,JSON"`
+	// Whether to capture logs from the shared libraries.
+	CaptureShared bool `yaml:"capture-shared,omitempty" json:"capture-shared,omitempty" default:"false"`
 	// Whether to enable logging to the standard output.
 	StdoutWriter bool `yaml:"stdout-writer,omitempty" json:"stdout-writer,omitempty" default:"true"`
 	// File writer logging configuration.

@@ -27,9 +27,6 @@ type BackupHandler struct {
 	retry            *RetryService
 }
 
-// stdIO captures standard output
-var stdIO = &stdio.CgoStdio{}
-
 var backupService shared.Backup = shared.NewBackup()
 
 // newBackupHandler returns a new BackupHandler instance.
@@ -112,25 +109,26 @@ func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace s
 	}
 
 	var stats *shared.BackupStat
+	var err error
 	backupRunFunc := func() {
 		started := time.Now()
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
-		stats = backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
+		stats, err = backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
 			h.storage, h.secretAgent, options, &namespace, backupPath)
-		if stats == nil {
+		if err != nil {
 			return
 		}
 		elapsed := time.Since(started)
 		backupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
 	slog.Debug("Starting full backup", "up to", upperBound, "name", h.routineName)
-	out := stdIO.Capture(backupRunFunc)
+	out := stdio.Stderr.Capture(backupRunFunc)
 	slog.Debug("Completed full backup", "name", h.routineName)
 	util.LogCaptured(out)
 
-	if stats == nil {
+	if err != nil {
 		backupFailureCounter.Inc()
-		return fmt.Errorf("error during backup namespace %s, routine %s", namespace, h.routineName)
+		return fmt.Errorf("error during backup namespace %s, routine %s: %w", namespace, h.routineName, err)
 	}
 
 	metadata := stats.ToMetadata(time.Time{}, upperBound, namespace)
@@ -181,6 +179,7 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	h.backend.CreateFolder(backupFolder)
 
 	var stats *shared.BackupStat
+	var err error
 	fromEpoch := h.state.LastRunEpoch()
 	options := shared.BackupOptions{
 		ModAfter: util.Ptr(fromEpoch),
@@ -191,9 +190,9 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	backupRunFunc := func() {
 		started := time.Now()
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
-		stats = backupService.BackupRun(
+		stats, err = backupService.BackupRun(
 			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, &namespace, backupPath)
-		if stats == nil {
+		if err != nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName)
 			incrBackupFailureCounter.Inc()
 			return
@@ -202,7 +201,7 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 		incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	}
 	slog.Debug("Starting incremental backup", "name", h.routineName)
-	out := stdIO.Capture(backupRunFunc)
+	out := stdio.Stderr.Capture(backupRunFunc)
 	slog.Debug("Completed incremental backup", "name", h.routineName)
 	util.LogCaptured(out)
 	// delete if the backup file is empty

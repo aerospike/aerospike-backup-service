@@ -1,10 +1,10 @@
 package service
 
 import (
-	"github.com/aws/smithy-go/ptr"
 	"testing"
 
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aws/smithy-go/ptr"
 )
 
 func TestPolicy_AddOK(t *testing.T) {
@@ -59,7 +59,7 @@ func TestPolicy_Update(t *testing.T) {
 	}
 
 	err = UpdatePolicy(config, name, &model.BackupPolicy{
-		MaxRetries: ptr.Uint32(10),
+		MaxRetries: ptr.Int32(10),
 	})
 	if err != nil {
 		t.Errorf("UpdatePolicy failed, expected nil error, got %v", err)

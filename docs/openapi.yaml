@@ -6,7 +6,7 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   title: Backup Service REST API Specification
-  version: 0.1.0
+  version: 0.2.0
 externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
@@ -1516,6 +1516,10 @@ components:
     model.LoggerConfig:
       description: LoggerConfig represents the backup service logger configuration.
       properties:
+        capture-shared:
+          default: false
+          description: Whether to capture logs from the shared libraries.
+          type: boolean
         file-writer:
           allOf:
           - $ref: '#/components/schemas/model.FileLoggerConfig'
@@ -1581,7 +1585,7 @@ components:
         total-bytes: 2000
         expired-records: 2
         fresher-records: 5
-        error: "{}"
+        error: error
         skipped-records: 4
         total-records: 10
         existed-records: 15
@@ -1589,7 +1593,7 @@ components:
         status: "{}"
       properties:
         error:
-          type: object
+          type: string
         existed-records:
           example: 15
           format: int64
