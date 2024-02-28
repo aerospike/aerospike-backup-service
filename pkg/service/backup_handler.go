@@ -106,7 +106,6 @@ func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace s
 	options := shared.BackupOptions{}
 	if h.backupFullPolicy.Sealed {
 		options.ModBefore = util.Ptr(upperBound.UnixNano())
-		slog.Debug("Use sealed flag", "modBefore", upperBound.UnixNano())
 	}
 
 	var stats *shared.BackupStat
