@@ -18,13 +18,30 @@ import (
 
 type CgoStdio struct {
 	sync.Mutex
+	capture bool
 }
+
+// NewCgoStdio returns a new CgoStdio.
+func NewCgoStdio(capture bool) *CgoStdio {
+	return &CgoStdio{
+		capture: capture,
+	}
+}
+
+// Stderr log capturer.
+var Stderr *CgoStdio
 
 // Capture captures and returns the stderr output produced by the
 // given function f.
 func (c *CgoStdio) Capture(f func()) string {
 	c.Lock()
 	defer c.Unlock()
+
+	// don't capture shared library logs
+	if !c.capture {
+		f()
+		return ""
+	}
 
 	sourceFd := syscall.Stderr
 	var r, w *os.File
