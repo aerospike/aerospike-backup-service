@@ -89,6 +89,7 @@ func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
 		MaxRecords:       p.MaxRecords,
 		RecordsPerSecond: p.RecordsPerSecond,
 		FileLimit:        p.FileLimit,
+		Sealed:           p.Sealed,
 	}
 }
 
