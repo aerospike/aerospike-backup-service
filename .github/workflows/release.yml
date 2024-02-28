@@ -1,39 +1,62 @@
 
-name: Build and Publish Artifacts
+name: Create a Release and Push Release assets
 on:
-  release:
-    types: [published]
+  push:
+    branches: [ master ]
+    tags:
+      - '*'
   workflow_dispatch:
 jobs:
-  build-artifacts-container:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: Add-build-actions
+          token: ${{ secrets.MY_TOKEN || github.token }}
+      - uses: actions/create-release@v1
+        id: create-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: true
+          prerelease: false}
+
+  build-packages:
+    needs: create-release
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         arch: ["amd64","arm64"]
-        container: ["rhel9:latest", "rhel8:latest", "ubuntu2204:latest"]
+        container: [ "rhel8:latest", "rhel9:latest", "ubuntu2204:latest"]
         include:
           - container: "rhel8:latest"
             cmd: "make rpm"
+            distro_symbol: "el8"
             ext: "rpm"
           - container: "rhel9:latest"
             cmd: "make rpm"
+            distro_symbol: "el9"
             ext: "rpm"
-          - container: "ubuntu2204:test"
+          - container: "ubuntu2204:latest"
             cmd: "make deb"
+            distro_symbol: "debian"
             ext: "deb"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-#          fetch-depth: 0
           ref: Add-build-actions
+          token: ${{ secrets.MY_TOKEN || github.token }}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-#      - name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v3
-#      - uses: actions-ecosystem/action-get-latest-tag@v1
-#        id: get-latest-tag
       - name: Setup Jfrog
         uses: jfrog/setup-jfrog-cli@v3
         env:
@@ -45,23 +68,40 @@ jobs:
           registry: aerospike.jfrog.io
           username: ${{ secrets.ARTIFACTORY_USER }}
           password: ${{ secrets.ARTIFACTORY_TOKEN }}
+      - name: Create target directory
+        run: mkdir -p ${{ github.workspace }}/target
+      - name: Create lib directory
+        run: mkdir -p ${{ github.workspace }}/lib
       - name: Build artifact
         id: build-artifact
+        run: docker run -v ${{ github.workspace }}:/aerospike-backup-service/ -w /aerospike-backup-service/ --platform linux/${{ matrix.arch }} aerospike.jfrog.io/ecosystem-container-dev-local/base-${{ matrix.container }} ${{ matrix.cmd }}
+      - name: Set variable arch variable based on condition
+        id: set-variables
         run: |
-          docker run -v ${{ github.workspace }}:/aerospike-backup-service/ -w /aerospike-backup-service/ --platform linux/${{ matrix.arch }} aerospike.jfrog.io/ecosystem-container-dev-local/base-${{ matrix.container }} ${{ matrix.cmd }}
-#      - name: Find output file
-#        uses: jeertmans/filesfinder@latest
-#        id: build-output # Any id, to be used later to reference to files output
-#        with:
-#          args: "--dir './target/' *.${{ matrix.ext }}"
-#      - name: Set Name
-#        id: get-name
-#        run: echo "name=$(basename ${{ steps.build-output.outputs.files }})" >> $GITHUB_OUTPUT
-#      - name: Set sha outputs
-#        id: short-sha
-#        run: echo "sha_short=$(git describe --tags)" >> $GITHUB_OUTPUT
-#      - name: Deploy Artifact
-#        run: curl -H "X-JFrog-Art-Api:${{ secrets.ARTIFACTORY_TOKEN }}" -XPUT https://aerospike.jfrog.io/artifactory/core-${{ matrix.ext }}-dev-local/aerospike-secret-agent/${{ steps.get-latest-tag.outputs.tag }}/${{ steps.short-sha.outputs.sha_short }}/${{ steps.get-name.outputs.name }} -T "${{ steps.build-output.outputs.files }}"
-#      - name: Deploy to Github Artifats
-#        run: echo "Deploy artifacts to github"
-#
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
+            echo "arch=aarch64" >> $GITHUB_OUTPUT
+          else
+            echo "arch=x86_64" >> $GITHUB_OUTPUT
+          fi
+          REPO_NAME="$(echo $GITHUB_REPOSITORY | cut -d '/' -f 2)"
+          echo "repo=$REPO_NAME" >> $GITHUB_OUTPUT
+          VERSION="$(cat VERSION)"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - uses: actions/upload-release-asset@v1
+        if: ${{ matrix.ext == 'rpm' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}.${{ matrix.ext }}
+          asset_name: ${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}.${{ matrix.ext }}
+          asset_content_type: application/x-${{ matrix.ext }}
+      - uses: actions/upload-release-asset@v1
+        if: ${{ matrix.ext == 'deb' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}_${{ steps.set-variables.outputs.version }}-1_${{ matrix.arch }}.${{ matrix.ext }}
+          asset_name: ${{ steps.set-variables.outputs.repo }}_${{ steps.set-variables.outputs.version }}-1_${{ matrix.arch }}.${{ matrix.ext }}
+          asset_content_type: application/x-${{ matrix.ext }}
