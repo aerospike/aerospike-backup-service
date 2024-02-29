@@ -9,11 +9,14 @@ import "C"
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type CgoStdio struct {
@@ -43,6 +46,8 @@ func (c *CgoStdio) Capture(f func()) string {
 		return ""
 	}
 
+	slog.Debug("Descriptors", "limit", getLimit())
+
 	sourceFd := syscall.Stderr
 	var r, w *os.File
 	var err error
@@ -64,12 +69,7 @@ func (c *CgoStdio) Capture(f func()) string {
 		goto executeF
 	}
 	defer func() {
-		if err = dup2(originalFd, sourceFd); err != nil {
-			slog.Warn("error in dup2", "err", err)
-		}
-		if err = syscall.Close(originalFd); err != nil {
-			slog.Warn("error in syscall.Close", "err", err)
-		}
+		c.closeFd(err, originalFd, sourceFd)
 	}()
 
 executeF:
@@ -93,6 +93,29 @@ executeF:
 	return <-out
 }
 
+func (c *CgoStdio) closeFd(err error, originalFd int, sourceFd int) {
+	attempts := 0
+	maxRetries := 5
+
+	for {
+		if err = dup2(originalFd, sourceFd); err != nil {
+			slog.Warn("error in dup2", "attempt", attempts, "err", err)
+
+			// Check if the error is caused by a device or resource being busy.
+			if errors.Is(err, syscall.EBUSY) && attempts < maxRetries {
+				time.Sleep(time.Second * 1) // Delay for 1 second
+				attempts++
+				continue
+			}
+		}
+		break
+	}
+
+	if err = syscall.Close(originalFd); err != nil {
+		slog.Warn("error in syscall.Close", "err", err)
+	}
+}
+
 func copyCaptured(r *os.File) <-chan string {
 	out := make(chan string)
 	go func() {
@@ -109,4 +132,14 @@ func copyCaptured(r *os.File) <-chan string {
 		}
 	}()
 	return out
+}
+
+func getLimit() syscall.Rlimit {
+	var rLimit syscall.Rlimit
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		fmt.Println("Error getting RLIMIT_NOFILE:", err)
+		return syscall.Rlimit{}
+	}
+	return rLimit
 }
