@@ -2,7 +2,7 @@ Name:           %{pkg_name}
 Version:        %{pkg_version}
 BuildArch:      %{build_arch}
 Source0:        %{name}-%{version}.tar.gz
-Release:        1
+Release:        1%{?dist}
 Summary:        Aerospike Backup Service
 License:        Apache 2.0
 Requires:       libuv
@@ -13,7 +13,6 @@ Aerospike Backup Service
 
 %prep
 %setup -q -n "%{name}-%{version}"
-make install-deps
 
 %build
 make build-submodules

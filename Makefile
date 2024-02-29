@@ -1,22 +1,35 @@
 SHELL = bash
-VERSION := $(shell cat VERSION)
+
 WORKSPACE = $(shell pwd)
 UNAME = $(shell uname -sm | tr ' ' '-')
+UNAME_M=$(shell uname -m)
+
+ifeq ($(UNAME_M),x86_64)
+    ARCH := amd64
+else ifeq ($(UNAME_M),aarch64)
+    ARCH := arm64
+else
+    $(error Unsupported architecture)
+endif
+
+export BINARY_NAME:=aerospike-backup-service
+export GIT_COMMIT:=$(shell git rev-parse HEAD)
+export VERSION:=$(shell cat VERSION)
 
 # Go parameters
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
 CGO_CFLAGS=-I $(WORKSPACE)/modules/aerospike-tools-backup/modules/c-client/target/$(UNAME)/include \
 -I $(WORKSPACE)/modules/aerospike-tools-backup/modules/secret-agent-client/target/$(UNAME)/include \
 -I $(WORKSPACE)/modules/aerospike-tools-backup/include
-GOBUILD = CGO_CFLAGS="$(CGO_CFLAGS)" CGO_ENABLED=1 $(GO) build
+GOBUILD = CGO_CFLAGS="$(CGO_CFLAGS)" CGO_ENABLED=1 $(GO) build \
+-ldflags="-X main.commit=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
 GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
 GO_VERSION = 1.22.0
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
 
-BINARY_NAME = aerospike-backup-service
-GIT_TAG = $(shell git describe --tags)
 
+GIT_TAG = $(shell git describe --tags)
 CMD_DIR = cmd/backup
 TARGET_DIR = target
 PKG_DIR = build/package
@@ -66,21 +79,27 @@ package: rpm deb tarball
 
 .PHONY: rpm
 rpm: tarball
-	cd $(WORKSPACE)/packages/rpm && mkdir -p BUILD BUILDROOT RPMS SOURCES SPECS SRPMS
+	mkdir -p $(WORKSPACE)/packages/rpm/SOURCES
 	mv /tmp/$(BINARY_NAME)-$(VERSION).tar.gz $(WORKSPACE)/packages/rpm/SOURCES/
-	rpmbuild -v \
-	--define "_topdir /root/aerospike-backup-service/packages/rpm" \
-	--define "pkg_version $(VERSION)" \
-	--define "pkg_name $(BINARY_NAME)" \
-	--define "build_arch $(shell uname -m)" \
-	-ba $(WORKSPACE)/packages/rpm/SPECS/$(BINARY_NAME).spec
+	$(MAKE) -C packages/rpm
 
 .PHONY: deb
 deb:
 	echo "abs:version=$(VERSION)" > packages/debian/substvars
 	cd $(WORKSPACE)/packages && dpkg-buildpackage
-	mv $(WORKSPACE)/$(BINARY_NAME)_* $(WORKSPACE)/target
-	mv $(WORKSPACE)/$(BINARY_NAME)-* $(WORKSPACE)/target
+	mv $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).deb $(WORKSPACE)/target
+	$(MAKE) clean-deb
+	rm -f $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).*
+	rm -f $(WORKSPACE)/$(BINARY_NAME)-dbgsym_$(VERSION)-1_$(ARCH).*
+	rm -f $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1.*
+	rm -f $(WORKSPACE)/packages/debian/*.log
+	rm -f $(WORKSPACE)/packages/debian/*.debhelper
+	rm -f $(WORKSPACE)/packages/debian/*.substvars
+	rm -f $(WORKSPACE)/packages/debian/debhelper-build-stamp
+	rm -f $(WORKSPACE)/packages/debian/files
+	rm -rf $(WORKSPACE)/packages/debian/$(BINARY_NAME)
+	rm -rf $(WORKSPACE)/packages/debian/.debhelper
+	$(MAKE) clean-submodules
 
 .PHONY: install
 install:

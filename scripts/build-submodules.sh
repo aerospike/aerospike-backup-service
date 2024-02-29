@@ -45,8 +45,14 @@ else
   else
     ZSTD_STATIC_PATH="/usr/local/lib64"
     OPENSSL_STATIC_PATH="/usr/local/lib64"
+    if [ "$(grep '^VERSION_ID' /etc/os-release | cut -d'=' -f2 | cut -d'.' -f1 | tr -d '"')" == 8 ]; then
+      OPENSSL_STATIC_PATH="/opt/openssl/lib64"
+    fi
     if [ "$(uname -m)" == "aarch64" ]; then
       OPENSSL_STATIC_PATH="/usr/local/lib"
+      if [ "$(grep '^VERSION_ID' /etc/os-release | cut -d'=' -f2 | cut -d'.' -f1 | tr -d '"')" == 8 ]; then
+        OPENSSL_STATIC_PATH="/opt/openssl/lib"
+      fi
     fi
   fi
   make -C "$WORKSPACE/modules/aerospike-tools-backup" shared \
