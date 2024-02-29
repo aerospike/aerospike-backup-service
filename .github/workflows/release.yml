@@ -47,9 +47,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          ref: Add-build-actions
-          token: ${{ secrets.MY_TOKEN || github.token }}
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Setup Jfrog
