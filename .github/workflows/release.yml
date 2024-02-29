@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.MY_TOKEN || github.token }}
       - uses: actions/create-release@v1
         id: create-release
         env:
