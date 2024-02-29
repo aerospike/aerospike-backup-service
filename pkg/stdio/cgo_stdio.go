@@ -9,7 +9,6 @@ import "C"
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -102,11 +101,14 @@ func (c *CgoStdio) closeFd(err error, originalFd int, sourceFd int) {
 			slog.Warn("error in dup2", "attempt", attempts, "err", err)
 
 			// Check if the error is caused by a device or resource being busy.
-			if errors.Is(err, syscall.EBUSY) && attempts < maxRetries {
+			if attempts < maxRetries {
 				time.Sleep(time.Second * 1) // Delay for 1 second
 				attempts++
 				continue
 			}
+		}
+		if attempts > 0 {
+			slog.Info("dup2 passed", "attempts", attempts)
 		}
 		break
 	}
