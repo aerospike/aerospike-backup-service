@@ -44,10 +44,17 @@ func (c *CgoStdio) Capture(f func()) string {
 	sourceFd := syscall.Stderr
 	var r, w *os.File
 	var err error
-	originalFd, err := syscall.Dup(sourceFd)
-	if err != nil {
-		slog.Warn("error in syscall.Dup", "sourceFd", sourceFd, "err", err)
-	} else {
+	var originalFd int
+	for i := 0; i < 5; i++ {
+		originalFd, err = syscall.Dup(sourceFd)
+		if err != nil {
+			slog.Warn("error in syscall.Dup", "sourceFd", sourceFd, "err", err)
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+		break
+	}
+	if err == nil {
 		r, w, err = os.Pipe()
 		if err != nil {
 			slog.Warn("error in os.Pipe", "err", err)
