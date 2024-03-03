@@ -14,6 +14,7 @@ import (
 	"os"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type CgoStdio struct {
@@ -76,13 +77,30 @@ func (c *CgoStdio) Capture(f func()) string {
 
 	out := <-copyCaptured(r)
 
-	if err = dup2(originalFd, sourceFd); err != nil {
-		slog.Warn("error in dup2", "err", err)
+	c.closeFd(originalFd, sourceFd)
+	return out
+}
+
+func (c *CgoStdio) closeFd(originalFd int, sourceFd int) {
+	attempts := 0
+	maxRetries := 5
+
+	for {
+		if err := dup2(originalFd, sourceFd); err != nil {
+			slog.Warn("error in dup2", "attempt", attempts, "err", err)
+
+			if attempts < maxRetries {
+				time.Sleep(time.Second * 1)
+				attempts++
+				continue
+			}
+		}
+		break
 	}
-	if err = syscall.Close(originalFd); err != nil {
+
+	if err := syscall.Close(originalFd); err != nil {
 		slog.Warn("error in syscall.Close", "err", err)
 	}
-	return out
 }
 
 func copyCaptured(r *os.File) <-chan string {
