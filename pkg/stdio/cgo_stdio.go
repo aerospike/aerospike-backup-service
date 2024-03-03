@@ -9,13 +9,11 @@ import "C"
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"sync"
 	"syscall"
-	"time"
 )
 
 type CgoStdio struct {
@@ -38,41 +36,32 @@ var Stderr *CgoStdio
 func (c *CgoStdio) Capture(f func()) string {
 	c.Lock()
 	defer c.Unlock()
-
-	// // don't capture shared library logs
 	// if !c.capture {
 	// 	f()
 	// 	return ""
 	// }
-
-	slog.Debug("Descriptors", "limit", getLimit())
-
 	sourceFd := syscall.Stderr
 	var r, w *os.File
 	var err error
-
 	originalFd, err := syscall.Dup(sourceFd)
 	if err != nil {
 		slog.Warn("error in syscall.Dup", "err", err)
-		goto executeF
+	} else {
+		r, w, err = os.Pipe()
+		if err != nil {
+			slog.Warn("error in os.Pipe", "err", err)
+		} else {
+			if err = dup2(int(w.Fd()), sourceFd); err != nil {
+				slog.Warn("error in dup2", "err", err)
+			}
+		}
 	}
 
-	r, w, err = os.Pipe()
-	if err != nil {
-		slog.Warn("error in os.Pipe", "err", err)
-		goto executeF
-	}
-
-	if err = dup2(int(w.Fd()), sourceFd); err != nil {
-		slog.Warn("error in dup2", "err", err)
-		goto executeF
-	}
-	defer func() {
-		c.closeFd(originalFd, sourceFd)
-	}()
-
-executeF:
 	f()
+
+	if err != nil {
+		return ""
+	}
 
 	C.fflush(C.stderr)
 	C.fflush(C.stdout)
@@ -80,40 +69,20 @@ executeF:
 	if err = w.Close(); err != nil {
 		slog.Warn("error in w.Close", "err", err)
 	}
+
 	if err = syscall.Close(sourceFd); err != nil {
 		slog.Warn("error in syscall.Close", "err", err)
 	}
 
-	out := copyCaptured(r)
+	out := <-copyCaptured(r)
 
-	slog.Info("captured", "len", len(out))
-	return <-out
-}
-
-func (c *CgoStdio) closeFd(originalFd int, sourceFd int) {
-	attempts := 0
-	maxRetries := 5
-
-	for {
-		if err := dup2(originalFd, sourceFd); err != nil {
-			slog.Warn("error in dup2", "attempt", attempts, "err", err)
-
-			// Check if the error is caused by a device or resource being busy.
-			if attempts < maxRetries {
-				time.Sleep(time.Second * 1) // Delay for 1 second
-				attempts++
-				continue
-			}
-		}
-		if attempts > 0 {
-			slog.Info("dup2 passed", "attempts", attempts)
-		}
-		break
+	if err = dup2(originalFd, sourceFd); err != nil {
+		slog.Warn("error in dup2", "err", err)
 	}
-
-	if err := syscall.Close(originalFd); err != nil {
+	if err = syscall.Close(originalFd); err != nil {
 		slog.Warn("error in syscall.Close", "err", err)
 	}
+	return out
 }
 
 func copyCaptured(r *os.File) <-chan string {
@@ -132,14 +101,4 @@ func copyCaptured(r *os.File) <-chan string {
 		}
 	}()
 	return out
-}
-
-func getLimit() syscall.Rlimit {
-	var rLimit syscall.Rlimit
-	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-	if err != nil {
-		fmt.Println("Error getting RLIMIT_NOFILE:", err)
-		return syscall.Rlimit{}
-	}
-	return rLimit
 }
