@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"os"
 	"sync"
@@ -34,44 +33,9 @@ func NewCgoStdio(capture bool) *CgoStdio {
 // Stderr log capturer.
 var Stderr *CgoStdio
 
-func (c *CgoStdio) Capture(f func()) string {
-	c.Lock()
-	defer c.Unlock()
-
-	// don't capture shared library logs
-	if !c.capture {
-		f()
-		return ""
-	}
-
-	old := os.Stderr // keep backup of the real stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		log.Fatal("Failed to create pipe:", err)
-	}
-	os.Stderr = w
-
-	f()
-
-	outC := make(chan string)
-	// copy the output in a separate goroutine so printing can't block indefinitely
-	go func() {
-		var buf bytes.Buffer
-		io.Copy(&buf, r)
-		outC <- buf.String()
-	}()
-
-	// back to normal state
-	w.Close()
-	os.Stderr = old // restoring the real stdout
-	out := <-outC
-	slog.Info("Logs read: ", "len", len(out))
-	return out
-}
-
 // Capture captures and returns the stderr output produced by the
 // given function f.
-func (c *CgoStdio) CaptureOld(f func()) string {
+func (c *CgoStdio) Capture(f func()) string {
 	c.Lock()
 	defer c.Unlock()
 
@@ -104,14 +68,11 @@ func (c *CgoStdio) CaptureOld(f func()) string {
 		goto executeF
 	}
 	defer func() {
-		c.closeFd(err, originalFd, sourceFd)
+		c.closeFd(originalFd, sourceFd)
 	}()
 
 executeF:
 	f()
-	if err != nil {
-		return ""
-	}
 
 	C.fflush(C.stderr)
 	C.fflush(C.stdout)
@@ -125,15 +86,16 @@ executeF:
 
 	out := copyCaptured(r)
 
+	slog.Info("captured", "len", len(out))
 	return <-out
 }
 
-func (c *CgoStdio) closeFd(err error, originalFd int, sourceFd int) {
+func (c *CgoStdio) closeFd(originalFd int, sourceFd int) {
 	attempts := 0
 	maxRetries := 5
 
 	for {
-		if err = dup2(originalFd, sourceFd); err != nil {
+		if err := dup2(originalFd, sourceFd); err != nil {
 			slog.Warn("error in dup2", "attempt", attempts, "err", err)
 
 			// Check if the error is caused by a device or resource being busy.
@@ -149,7 +111,7 @@ func (c *CgoStdio) closeFd(err error, originalFd int, sourceFd int) {
 		break
 	}
 
-	if err = syscall.Close(originalFd); err != nil {
+	if err := syscall.Close(originalFd); err != nil {
 		slog.Warn("error in syscall.Close", "err", err)
 	}
 }
