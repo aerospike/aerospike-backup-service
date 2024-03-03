@@ -65,9 +65,7 @@ func (c *CgoStdio) Capture(f func()) string {
 	w.Close()
 	os.Stderr = old // restoring the real stdout
 	out := <-outC
-	if len(out) == 0 {
-		slog.Info("no logs read")
-	}
+	slog.Info("Logs read: ", "len", len(out))
 	return out
 }
 
