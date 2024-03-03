@@ -39,11 +39,11 @@ func (c *CgoStdio) Capture(f func()) string {
 	c.Lock()
 	defer c.Unlock()
 
-	// don't capture shared library logs
-	if !c.capture {
-		f()
-		return ""
-	}
+	// // don't capture shared library logs
+	// if !c.capture {
+	// 	f()
+	// 	return ""
+	// }
 
 	slog.Debug("Descriptors", "limit", getLimit())
 
