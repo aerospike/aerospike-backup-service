@@ -9,6 +9,7 @@ import "C"
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -41,6 +42,8 @@ func (c *CgoStdio) Capture(f func()) string {
 	// 	f()
 	// 	return ""
 	// }
+	descriptors, _ := GetNumFileDescriptors()
+	slog.Info("Descriptors: ", "num", descriptors)
 	sourceFd := syscall.Stderr
 	var r, w *os.File
 	var err error
@@ -48,8 +51,8 @@ func (c *CgoStdio) Capture(f func()) string {
 	for i := 0; i < 5; i++ {
 		originalFd, err = syscall.Dup(sourceFd)
 		if err != nil {
-			slog.Warn("error in syscall.Dup", "sourceFd", sourceFd, "err", err)
-			time.Sleep(100 * time.Millisecond)
+			slog.Warn("error in syscall.Dup", "sourceFd", sourceFd, "attempt", i, "err", err)
+			time.Sleep(1 * time.Second)
 			continue
 		}
 		break
@@ -126,4 +129,21 @@ func copyCaptured(r *os.File) <-chan string {
 		}
 	}()
 	return out
+}
+
+func GetNumFileDescriptors() (int, error) {
+	pid := os.Getpid()
+	// Path to the file descriptor directory of the process
+	fdDir := fmt.Sprintf("/proc/%d/fd", pid)
+
+	// Read the file descriptor directory
+	files, err := os.ReadDir(fdDir)
+	if err != nil {
+		return 0, err
+	}
+
+	// Count the number of files (file descriptors)
+	numFileDescriptors := len(files)
+
+	return numFileDescriptors, nil
 }
