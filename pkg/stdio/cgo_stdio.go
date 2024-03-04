@@ -64,17 +64,19 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 		slog.Warn("Error redirecting standard error: %v", err)
 		return "", false
 	}
-	w.Close() // Close the write end of the pipe
 
 	// Execute the function
 	f()
+
+	C.fflush(C.stderr)
+	C.fflush(C.stdout)
+	w.Close()
 
 	if err := syscall.Dup2(originalFd, syscall.Stderr); err != nil {
 		slog.Warn("Error restoring standard error: %v", err)
 		return "", true
 	}
 
-	// Read the output from the pipe into a string
 	var buf bytes.Buffer
 	_, err = buf.ReadFrom(r)
 	if err != nil {
