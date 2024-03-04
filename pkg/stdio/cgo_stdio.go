@@ -38,37 +38,76 @@ var Stderr *CgoStdio
 func (c *CgoStdio) Capture(f func()) string {
 	c.Lock()
 	defer c.Unlock()
-	// if !c.capture {
-	// 	f()
-	// 	return ""
-	// }
-	descriptors, _ := GetNumFileDescriptors()
-	slog.Info("Descriptors: ", "num", descriptors)
-	sourceFd := syscall.Stderr
+
+	return ExecuteAndCapture(f)
+}
+
+func ExecuteAndCapture(f func()) string {
+	// Create a pipe
+	r, w, err := os.Pipe()
+	if err != nil {
+		panic(fmt.Sprintf("Error creating pipe: %v", err))
+	}
+	defer r.Close()
+	defer w.Close()
+
+	// Duplicate the standard error file descriptor
+	originalFd, err := syscall.Dup(syscall.Stderr)
+	if err != nil {
+		panic(fmt.Sprintf("Error duplicating file descriptor: %v", err))
+	}
+	defer syscall.Close(originalFd) // Ensure originalFd is closed when main() exits
+
+	// Redirect standard error to the write end of the pipe
+	if err := syscall.Dup2(int(w.Fd()), syscall.Stderr); err != nil {
+		panic(fmt.Sprintf("Error redirecting standard error: %v", err))
+	}
+	w.Close() // Close the write end of the pipe
+
+	// Execute the function
+	f()
+
+	// Restore standard error to its original destination
+	if err := syscall.Dup2(originalFd, syscall.Stderr); err != nil {
+		panic(fmt.Sprintf("Error restoring standard error: %v", err))
+	}
+
+	// Read the output from the pipe into a string
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(r)
+	if err != nil {
+		panic(fmt.Sprintf("Error reading from pipe: %v", err))
+	}
+
+	return buf.String()
+}
+
+func old() string {
 	var r, w *os.File
 	var err error
 	var originalFd int
 	for i := 0; i < 5; i++ {
-		originalFd, err = syscall.Dup(sourceFd)
+		originalFd, err = syscall.Dup(syscall.Stderr)
 		if err != nil {
-			slog.Warn("error in syscall.Dup", "sourceFd", sourceFd, "attempt", i, "err", err)
+			slog.Warn("error in syscall.Dup", "sourceFd", syscall.Stderr, "attempt", i, "err", err)
 			time.Sleep(1 * time.Second)
 			continue
 		}
 		break
 	}
+	println(originalFd)
 	if err == nil {
 		r, w, err = os.Pipe()
 		if err != nil {
 			slog.Warn("error in os.Pipe", "err", err)
 		} else {
-			if err = dup2(int(w.Fd()), sourceFd); err != nil {
+			if err = dup2(int(w.Fd()), syscall.Stderr); err != nil {
 				slog.Warn("error in dup2", "err", err)
 			}
 		}
 	}
 
-	f()
+	// f()
 
 	if err != nil {
 		return ""
@@ -81,13 +120,13 @@ func (c *CgoStdio) Capture(f func()) string {
 		slog.Warn("error in w.Close", "err", err)
 	}
 
-	if err = syscall.Close(sourceFd); err != nil {
+	if err = syscall.Close(syscall.Stderr); err != nil {
 		slog.Warn("error in syscall.Close", "err", err)
 	}
 
 	out := <-copyCaptured(r)
 
-	c.closeFd(originalFd, sourceFd)
+	// c.closeFd(originalFd, syscall.Stderr)
 	return out
 }
 
