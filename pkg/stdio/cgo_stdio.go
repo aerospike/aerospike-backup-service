@@ -68,8 +68,8 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 	// Execute the function
 	f()
 
-	// C.fflush(C.stderr)
-	// C.fflush(C.stdout)
+	C.fflush(C.stderr)
+	C.fflush(C.stdout)
 
 	if err := syscall.Dup2(originalFd, syscall.Stderr); err != nil {
 		slog.Warn("Error restoring standard error: %v", err)
