@@ -58,9 +58,9 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 		slog.Warn("Error duplicating file descriptor: %v", err)
 		return "", false
 	}
-	defer syscall.Close(originalFd) // Ensure originalFd is closed when main() exits
+	defer syscall.Close(originalFd)
 
-	if err := syscall.Dup2(int(w.Fd()), syscall.Stderr); err != nil {
+	if err := dup2(int(w.Fd()), syscall.Stderr); err != nil {
 		slog.Warn("Error redirecting standard error: %v", err)
 		return "", false
 	}
@@ -71,7 +71,7 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 	C.fflush(C.stderr)
 	C.fflush(C.stdout)
 
-	if err := syscall.Dup2(originalFd, syscall.Stderr); err != nil {
+	if err := dup2(originalFd, syscall.Stderr); err != nil {
 		slog.Warn("Error restoring standard error: %v", err)
 		return "", true
 	}
