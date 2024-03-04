@@ -70,7 +70,6 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 
 	C.fflush(C.stderr)
 	C.fflush(C.stdout)
-	w.Close()
 
 	if err := syscall.Dup2(originalFd, syscall.Stderr); err != nil {
 		slog.Warn("Error restoring standard error: %v", err)
