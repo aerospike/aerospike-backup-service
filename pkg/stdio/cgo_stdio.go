@@ -64,7 +64,7 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 		slog.Warn("Error redirecting standard error: %v", err)
 		return "", false
 	}
-
+	w.Close()
 	// Execute the function
 	f()
 
