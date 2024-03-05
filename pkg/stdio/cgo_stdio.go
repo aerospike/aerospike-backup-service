@@ -23,6 +23,8 @@ type CgoStdioImpl struct {
 	capture bool
 }
 
+var _ CgoStdio = (*CgoStdioImpl)(nil)
+
 // NewCgoStdio returns a new CgoStdioImpl.
 func NewCgoStdio(capture bool) *CgoStdioImpl {
 	return &CgoStdioImpl{
@@ -31,7 +33,7 @@ func NewCgoStdio(capture bool) *CgoStdioImpl {
 }
 
 // Stderr log capturer.
-var Stderr *CgoStdio
+var Stderr CgoStdio
 
 // Capture captures and returns the stderr output produced by the
 // given function f.
