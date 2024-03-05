@@ -37,6 +37,16 @@ func (c *CgoStdio) Capture(f func()) string {
 	c.Lock()
 	defer c.Unlock()
 
+	rLimit := getRlimit()
+	descriptors, _ := getNumFileDescriptors()
+	slog.Info("stats: rLimit = %d, descriptors = %d\n", rLimit.Cur, descriptors)
+
+	// don't capture shared library logs
+	if !c.capture {
+		f()
+		return ""
+	}
+
 	output, executed := ExecuteAndCapture(f)
 	if !executed {
 		f()
@@ -50,21 +60,33 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 		slog.Warn("Error creating pipe: %v", err)
 		return "", false
 	}
-	defer r.Close()
-	defer w.Close()
+	defer func(r *os.File) {
+		err := r.Close()
+		if err != nil {
+			slog.Warn("Error closing r", "err", err)
+		}
+	}(r)
 
 	originalFd, err := syscall.Dup(syscall.Stderr)
 	if err != nil {
 		slog.Warn("Error duplicating file descriptor: %v", err)
 		return "", false
 	}
-	defer syscall.Close(originalFd)
+	defer func(fd int) {
+		err := syscall.Close(fd)
+		if err != nil {
+			slog.Warn("Error closing originalFd", "err", err)
+		}
+	}(originalFd)
 
 	if err := dup2(int(w.Fd()), syscall.Stderr); err != nil {
 		slog.Warn("Error redirecting standard error: %v", err)
 		return "", false
 	}
-	w.Close()
+	err = w.Close()
+	if err != nil {
+		slog.Warn("Error closing w", "err", err)
+	}
 	// Execute the function
 	f()
 
@@ -86,7 +108,13 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 	return buf.String(), true
 }
 
-func GetNumFileDescriptors() (int, error) {
+func getRlimit() syscall.Rlimit {
+	var rLimit syscall.Rlimit
+	_ = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	return rLimit
+}
+
+func getNumFileDescriptors() (int, error) {
 	pid := os.Getpid()
 	// Path to the file descriptor directory of the process
 	fdDir := fmt.Sprintf("/proc/%d/fd", pid)
