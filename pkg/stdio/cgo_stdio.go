@@ -37,7 +37,7 @@ func (c *CgoStdio) Capture(f func()) string {
 
 	rLimit := getRlimit()
 	descriptors, _ := getNumFileDescriptors()
-	slog.Info("stats: rLimit = %d, descriptors = %d\n", rLimit.Cur, descriptors)
+	slog.Info("stats", "rlimit", rLimit.Cur, "descriptors", descriptors)
 
 	// don't capture shared library logs
 	if !c.capture {
