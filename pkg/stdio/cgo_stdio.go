@@ -1,5 +1,3 @@
-//go:build !ci
-
 package stdio
 
 /*
