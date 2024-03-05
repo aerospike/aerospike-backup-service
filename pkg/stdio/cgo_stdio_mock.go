@@ -6,7 +6,8 @@ type CgoStdioMock struct {
 }
 
 func init() {
-	Stderr = &CgoStdioMock{}
+	mock := CgoStdioMock{}
+	Stderr = &mock
 }
 
 // Capture mocks the original call by returning an empty string.
