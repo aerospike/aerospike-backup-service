@@ -1,7 +1,6 @@
 package stdio
 
 import (
-	"fmt"
 	"os"
 	"testing"
 )
@@ -20,9 +19,6 @@ func TestCgoStdio_Capture(t *testing.T) {
 	// Repeat the string to reach your desired length
 	printFunction := func() {
 		_, _ = os.Stderr.WriteString(longStr)
-		rLimit := getRlimit()
-		descriptors, _ := getNumFileDescriptors()
-		fmt.Printf("stats: rLimit = %d, descriptors = %d\n", rLimit.Cur, descriptors)
 	}
 	for i := 0; i < iterations; i++ {
 		captured := stdio.Capture(printFunction)

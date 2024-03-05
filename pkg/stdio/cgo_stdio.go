@@ -7,7 +7,6 @@ import "C"
 
 import (
 	"bytes"
-	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -40,10 +39,6 @@ var Stderr CgoStdio
 func (c *CgoStdioImpl) Capture(f func()) string {
 	c.Lock()
 	defer c.Unlock()
-
-	rLimit := getRlimit()
-	descriptors, _ := getNumFileDescriptors()
-	slog.Info("stats", "rlimit", rLimit.Cur, "descriptors", descriptors)
 
 	// don't capture shared library logs
 	if !c.capture {
@@ -110,27 +105,4 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 	}
 
 	return buf.String(), true
-}
-
-func getRlimit() syscall.Rlimit {
-	var rLimit syscall.Rlimit
-	_ = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-	return rLimit
-}
-
-func getNumFileDescriptors() (int, error) {
-	pid := os.Getpid()
-	// Path to the file descriptor directory of the process
-	fdDir := fmt.Sprintf("/proc/%d/fd", pid)
-
-	// Read the file descriptor directory
-	files, err := os.ReadDir(fdDir)
-	if err != nil {
-		return 0, err
-	}
-
-	// Count the number of files (file descriptors)
-	numFileDescriptors := len(files)
-
-	return numFileDescriptors, nil
 }
