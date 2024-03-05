@@ -88,7 +88,7 @@ func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
 		return err
 	}
 	jobStore.put(fullJobDetail.JobKey().String(), fullJobDetail)
-	if needToRunFullBackupNow(handler) {
+	if needToRunFullBackupNow(handler.state.LastFullRun, fullCronTrigger) {
 		slog.Debug("Schedule initial full backup", "name", routineName)
 		fullJobDetail := quartz.NewJobDetail(
 			fullJob,
@@ -119,6 +119,18 @@ func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupHandle
 	return nil
 }
 
-func needToRunFullBackupNow(backupHandler *BackupHandler) bool {
-	return backupHandler.state.LastFullRun.Equal(time.Time{})
+func needToRunFullBackupNow(lastFullRun time.Time, trigger *quartz.CronTrigger) bool {
+	if lastFullRun.Equal(time.Time{}) {
+		return true // no previous run
+	}
+
+	fireTimeNano, err := trigger.NextFireTime(lastFullRun.UnixNano())
+	if err != nil {
+		return true // some error, run backup to be safe
+	}
+	if time.Unix(0, fireTimeNano).Before(time.Now()) {
+		return true // next scheduled backup is in past
+	}
+
+	return false
 }
