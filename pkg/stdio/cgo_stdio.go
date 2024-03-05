@@ -14,14 +14,18 @@ import (
 	"syscall"
 )
 
-type CgoStdio struct {
+type CgoStdio interface {
+	Capture(f func()) string
+}
+
+type CgoStdioImpl struct {
 	sync.Mutex
 	capture bool
 }
 
-// NewCgoStdio returns a new CgoStdio.
-func NewCgoStdio(capture bool) *CgoStdio {
-	return &CgoStdio{
+// NewCgoStdio returns a new CgoStdioImpl.
+func NewCgoStdio(capture bool) *CgoStdioImpl {
+	return &CgoStdioImpl{
 		capture: capture,
 	}
 }
@@ -31,7 +35,7 @@ var Stderr *CgoStdio
 
 // Capture captures and returns the stderr output produced by the
 // given function f.
-func (c *CgoStdio) Capture(f func()) string {
+func (c *CgoStdioImpl) Capture(f func()) string {
 	c.Lock()
 	defer c.Unlock()
 
