@@ -56,7 +56,7 @@ func (c *CgoStdioImpl) Capture(f func()) string {
 func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 	r, w, err := os.Pipe()
 	if err != nil {
-		slog.Warn("Error creating pipe: %v", err)
+		slog.Warn("Error creating pipe", "err", err)
 		return "", false
 	}
 	defer func(r *os.File) {
