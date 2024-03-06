@@ -100,7 +100,7 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 	var buf bytes.Buffer
 	_, err = buf.ReadFrom(r)
 	if err != nil {
-		slog.Warn("Error reading from pipe: %v", err)
+		slog.Warn("Error reading from pipe", "err", err)
 		return "", true
 	}
 
