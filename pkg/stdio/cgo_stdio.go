@@ -79,7 +79,7 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 	}(originalFd)
 
 	if err := dup2(int(w.Fd()), syscall.Stderr); err != nil {
-		slog.Warn("Error redirecting standard error: %v", err)
+		slog.Warn("Error redirecting standard error", "err", err)
 		return "", false
 	}
 	err = w.Close()
