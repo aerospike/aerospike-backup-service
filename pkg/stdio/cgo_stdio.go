@@ -1,5 +1,3 @@
-//go:build !ci
-
 package stdio
 
 /*
@@ -9,31 +7,36 @@ import "C"
 
 import (
 	"bytes"
-	"io"
 	"log/slog"
 	"os"
 	"sync"
 	"syscall"
 )
 
-type CgoStdio struct {
+type CgoStdio interface {
+	Capture(f func()) string
+}
+
+type CgoStdioImpl struct {
 	sync.Mutex
 	capture bool
 }
 
-// NewCgoStdio returns a new CgoStdio.
-func NewCgoStdio(capture bool) *CgoStdio {
-	return &CgoStdio{
+var _ CgoStdio = (*CgoStdioImpl)(nil)
+
+// NewCgoStdio returns a new CgoStdioImpl.
+func NewCgoStdio(capture bool) *CgoStdioImpl {
+	return &CgoStdioImpl{
 		capture: capture,
 	}
 }
 
 // Stderr log capturer.
-var Stderr *CgoStdio
+var Stderr CgoStdio
 
 // Capture captures and returns the stderr output produced by the
 // given function f.
-func (c *CgoStdio) Capture(f func()) string {
+func (c *CgoStdioImpl) Capture(f func()) string {
 	c.Lock()
 	defer c.Unlock()
 
@@ -43,70 +46,63 @@ func (c *CgoStdio) Capture(f func()) string {
 		return ""
 	}
 
-	sourceFd := syscall.Stderr
-	var r, w *os.File
-	var err error
+	output, executed := ExecuteAndCapture(f)
+	if !executed {
+		f()
+	}
+	return output
+}
 
-	originalFd, err := syscall.Dup(sourceFd)
+func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
+	r, w, err := os.Pipe()
 	if err != nil {
-		slog.Warn("error in syscall.Dup", "err", err)
-		goto executeF
+		slog.Warn("Error creating pipe", "err", err)
+		return "", false
 	}
+	defer func(r *os.File) {
+		err := r.Close()
+		if err != nil {
+			slog.Warn("Error closing r", "err", err)
+		}
+	}(r)
 
-	r, w, err = os.Pipe()
+	originalFd, err := syscall.Dup(syscall.Stderr)
 	if err != nil {
-		slog.Warn("error in os.Pipe", "err", err)
-		goto executeF
+		slog.Warn("Error duplicating file descriptor", "err", err)
+		return "", false
 	}
+	defer func(fd int) {
+		err := syscall.Close(fd)
+		if err != nil {
+			slog.Warn("Error closing originalFd", "err", err)
+		}
+	}(originalFd)
 
-	if err = dup2(int(w.Fd()), sourceFd); err != nil {
-		slog.Warn("error in dup2", "err", err)
-		goto executeF
+	if err := dup2(int(w.Fd()), syscall.Stderr); err != nil {
+		slog.Warn("Error redirecting standard error", "err", err)
+		return "", false
 	}
-	defer func() {
-		if err = dup2(originalFd, sourceFd); err != nil {
-			slog.Warn("error in dup2", "err", err)
-		}
-		if err = syscall.Close(originalFd); err != nil {
-			slog.Warn("error in syscall.Close", "err", err)
-		}
-	}()
-
-executeF:
+	err = w.Close()
+	if err != nil {
+		slog.Warn("Error closing w", "err", err)
+	}
+	// Execute the function
 	f()
-	if err != nil {
-		return ""
-	}
 
 	C.fflush(C.stderr)
 	C.fflush(C.stdout)
 
-	if err = w.Close(); err != nil {
-		slog.Warn("error in w.Close", "err", err)
-	}
-	if err = syscall.Close(sourceFd); err != nil {
-		slog.Warn("error in syscall.Close", "err", err)
+	if err := dup2(originalFd, syscall.Stderr); err != nil {
+		slog.Warn("Error restoring standard error", "err", err)
+		return "", true
 	}
 
-	out := copyCaptured(r)
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(r)
+	if err != nil {
+		slog.Warn("Error reading from pipe", "err", err)
+		return "", true
+	}
 
-	return <-out
-}
-
-func copyCaptured(r *os.File) <-chan string {
-	out := make(chan string)
-	go func() {
-		var b bytes.Buffer
-		_, err := io.Copy(&b, r)
-		if err != nil {
-			slog.Warn("error in io.Copy", "err", err)
-			out <- ""
-		} else {
-			out <- b.String()
-		}
-		if err = r.Close(); err != nil {
-			slog.Warn("error in r.Close", "err", err)
-		}
-	}()
-	return out
+	return buf.String(), true
 }
