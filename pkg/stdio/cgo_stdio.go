@@ -68,7 +68,7 @@ func ExecuteAndCapture(f func()) (output string, functionExecuted bool) {
 
 	originalFd, err := syscall.Dup(syscall.Stderr)
 	if err != nil {
-		slog.Warn("Error duplicating file descriptor: %v", err)
+		slog.Warn("Error duplicating file descriptor", "err", err)
 		return "", false
 	}
 	defer func(fd int) {
