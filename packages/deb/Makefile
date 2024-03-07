@@ -5,13 +5,18 @@ all: deb
 
 
 .PHONY: deb
-deb: gen-substvars
+deb: gen-substvars man-page
 	cd $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb && \
 	SOURCE_DIR=$(SOURCE_DIR) BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) ARCH=$(ARCH) dpkg-buildpackage
 
 .PHONY: gen-substvars
 gen-substvars:
 	@echo "abs:version=$(VERSION)" > $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb/debian/substvars
+
+.PHONY: man-page
+man-page:
+	cp $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb/man/$(BINARY_NAME).1 \
+	$(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb/debian
 
 #.PHONY: mv
 #mv:
