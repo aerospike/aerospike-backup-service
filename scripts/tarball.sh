@@ -19,7 +19,7 @@ git submodule foreach --recursive | while read -r submodule_path; do
     --output="$WORKSPACE/$name.tar" \
     --format=tar HEAD
 
-    tar --concatenate --file="/tmp/$BINARY_NAME-$VERSION.tar" "$WORKSPACE/$name.tar"
+    tar --concatenate --file="/tmp/$BINARY_NAME-$VERSION-$(uname -m).tar" "$WORKSPACE/$name.tar"
     rm -rf "$WORKSPACE/$name.tar"
 done
 

@@ -3,10 +3,12 @@ all: rpm mv
 
 .PHONY: rpm
 rpm:
-	rpmbuild -v -bb --define "_topdir $(CURDIR)" \
+	rpmbuild -v -bb \
+	--define "_topdir $(CURDIR)" \
 	--define "pkg_version $(VERSION)" \
 	--define "pkg_name $(BINARY_NAME)" \
 	--define "build_arch $(shell uname -m)" \
+	--define "_builddir $(CURDIR)/BUILD/$(shell uname -m)" \
 	--rmsource \
 	--clean \
 	$(BINARY_NAME).spec
