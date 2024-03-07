@@ -80,29 +80,14 @@ package: rpm deb tarball
 .PHONY: rpm
 rpm: tarball
 	mkdir -p $(WORKSPACE)/packages/rpm/SOURCES
-	mv /tmp/$(BINARY_NAME)-$(VERSION).tar.gz $(WORKSPACE)/packages/rpm/SOURCES/
-	$(MAKE) -C packages/rpm
+	mv /tmp/$(BINARY_NAME)-$(VERSION)-$(UNAME_M).tar.gz $(WORKSPACE)/packages/rpm/SOURCES/
+	BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) $(MAKE) -C packages/rpm
 
 .PHONY: deb
 deb: tarball
 	mkdir -p $(WORKSPACE)/packages/deb/$(ARCH)
-	tar -xvf /tmp/$(BINARY_NAME)-$(VERSION).tar.gz -C $(WORKSPACE)/packages/deb/$(ARCH)
+	tar -xvf /tmp/$(BINARY_NAME)-$(VERSION)-$(UNAME_M).tar.gz -C $(WORKSPACE)/packages/deb/$(ARCH)
 	BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) ARCH=$(ARCH) $(MAKE) -C packages/deb
-#	echo "abs:version=$(VERSION)" > packages/debian/substvars
-#	cd $(WORKSPACE)/packages && dpkg-buildpackage
-#	mv $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).deb $(WORKSPACE)/target
-#	$(MAKE) clean-deb
-#	rm -f $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).*
-#	rm -f $(WORKSPACE)/$(BINARY_NAME)-dbgsym_$(VERSION)-1_$(ARCH).*
-#	rm -f $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1.*
-#	rm -f $(WORKSPACE)/packages/debian/*.log
-#	rm -f $(WORKSPACE)/packages/debian/*.debhelper
-#	rm -f $(WORKSPACE)/packages/debian/*.substvars
-#	rm -f $(WORKSPACE)/packages/debian/debhelper-build-stamp
-#	rm -f $(WORKSPACE)/packages/debian/files
-#	rm -rf $(WORKSPACE)/packages/debian/$(BINARY_NAME)
-#	rm -rf $(WORKSPACE)/packages/debian/.debhelper
-#	$(MAKE) clean-submodules
 
 .PHONY: install
 install:
@@ -155,12 +140,6 @@ clean-rpm:
 	rpmbuild --clean $(WORKSPACE)/packages/rpm/SPECS/$(BINARY_NAME).spec
 	rm -rf $(WORKSPACE)/packages/rpm/SOURCES/*.tar.gz
 	rm -rf $(WORKSPACE)/packages/rpm/SRPMS/*.rpm
-
-.PHONY: process-submodules
-process-submodules:
-	git submodule foreach --recursive | while read -r submodule_path; do \
-	echo "Processing submodule at path: $($$submodule_path | awk -F\' '{print $$2}')"; \
-	done \
 
 .PHONY: all
 all: build test package

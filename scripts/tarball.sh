@@ -7,7 +7,7 @@ VERSION="$(cat $WORKSPACE/VERSION)"
 cd "$WORKSPACE" && git archive \
 --format=tar \
 --prefix="$BINARY_NAME-$VERSION/" \
---output="/tmp/$BINARY_NAME-$VERSION.tar" HEAD
+--output="/tmp/$BINARY_NAME-$VERSION-$(uname -m).tar" HEAD
 
 cd - || exit
 
@@ -23,4 +23,4 @@ git submodule foreach --recursive | while read -r submodule_path; do
     rm -rf "$WORKSPACE/$name.tar"
 done
 
-gzip -9 -f "/tmp/$BINARY_NAME-$VERSION.tar"
+gzip -9 -f "/tmp/$BINARY_NAME-$VERSION-$(uname -m).tar"
