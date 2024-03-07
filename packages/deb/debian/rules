@@ -1,18 +1,15 @@
 #!/usr/bin/make -f
 export DH_VERBOSE=1
-SOURCE_DIR := $(shell git rev-parse --show-toplevel)
-BINARY_NAME := $(shell basename $(SOURCE_DIR))
-ARCH := $(shell dpkg-architecture -qDEB_BUILD_ARCH)
-VERSION := $(shell cat $(SOURCE_DIR)/VERSION)
+
 %:
-	dh $@
+	dh $@ --sourcedirectory
 override_dh_auto_configure:
 	(cd $(SOURCE_DIR); $(MAKE) prep-submodules)
 	dh_auto_configure
 override_dh_installchangelogs:
 	dh_installchangelogs
 override_dh_installman:
-	dh_installman man/$(BINARY_NAME).1
+	dh_installman deb/man/$(BINARY_NAME).1
 override_dh_installdocs:
 	dh_installdocs
 override_dh_auto_build:

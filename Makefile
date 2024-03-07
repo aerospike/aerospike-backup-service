@@ -5,9 +5,9 @@ UNAME = $(shell uname -sm | tr ' ' '-')
 UNAME_M=$(shell uname -m)
 
 ifeq ($(UNAME_M),x86_64)
-    ARCH := amd64
+    export ARCH:=amd64
 else ifeq ($(UNAME_M),aarch64)
-    ARCH := arm64
+    export ARCH:=arm64
 else
     $(error Unsupported architecture)
 endif
@@ -84,22 +84,25 @@ rpm: tarball
 	$(MAKE) -C packages/rpm
 
 .PHONY: deb
-deb:
-	echo "abs:version=$(VERSION)" > packages/debian/substvars
-	cd $(WORKSPACE)/packages && dpkg-buildpackage
-	mv $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).deb $(WORKSPACE)/target
-	$(MAKE) clean-deb
-	rm -f $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).*
-	rm -f $(WORKSPACE)/$(BINARY_NAME)-dbgsym_$(VERSION)-1_$(ARCH).*
-	rm -f $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1.*
-	rm -f $(WORKSPACE)/packages/debian/*.log
-	rm -f $(WORKSPACE)/packages/debian/*.debhelper
-	rm -f $(WORKSPACE)/packages/debian/*.substvars
-	rm -f $(WORKSPACE)/packages/debian/debhelper-build-stamp
-	rm -f $(WORKSPACE)/packages/debian/files
-	rm -rf $(WORKSPACE)/packages/debian/$(BINARY_NAME)
-	rm -rf $(WORKSPACE)/packages/debian/.debhelper
-	$(MAKE) clean-submodules
+deb: tarball
+	mkdir -p $(WORKSPACE)/packages/deb/$(ARCH)
+	tar -xvf /tmp/$(BINARY_NAME)-$(VERSION).tar.gz -C $(WORKSPACE)/packages/deb/$(ARCH)
+	$(MAKE) -C packages/deb
+#	echo "abs:version=$(VERSION)" > packages/debian/substvars
+#	cd $(WORKSPACE)/packages && dpkg-buildpackage
+#	mv $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).deb $(WORKSPACE)/target
+#	$(MAKE) clean-deb
+#	rm -f $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).*
+#	rm -f $(WORKSPACE)/$(BINARY_NAME)-dbgsym_$(VERSION)-1_$(ARCH).*
+#	rm -f $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1.*
+#	rm -f $(WORKSPACE)/packages/debian/*.log
+#	rm -f $(WORKSPACE)/packages/debian/*.debhelper
+#	rm -f $(WORKSPACE)/packages/debian/*.substvars
+#	rm -f $(WORKSPACE)/packages/debian/debhelper-build-stamp
+#	rm -f $(WORKSPACE)/packages/debian/files
+#	rm -rf $(WORKSPACE)/packages/debian/$(BINARY_NAME)
+#	rm -rf $(WORKSPACE)/packages/debian/.debhelper
+#	$(MAKE) clean-submodules
 
 .PHONY: install
 install:
