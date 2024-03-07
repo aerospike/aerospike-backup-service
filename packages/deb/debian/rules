@@ -22,5 +22,4 @@ override_dh_strip:
 	dh_strip --no-automatic-dbgsym
 
 override_dh_clean:
-	rm -f .debhelper
 	dh_clean
