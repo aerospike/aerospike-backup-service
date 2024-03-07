@@ -1,18 +1,16 @@
-export SOURCE_DIR:=$(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)
-
 .PHONY: all
 all: deb
 
 .PHONY: deb
-deb: gen-files
-	dpkg-buildpackage
+deb:
+	cd $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION) && dpkg-buildpackage
 
-.PHONY: gen-files
-gen-files:
-	@echo "../$(ARCH)/target/$(BINARY_NAME) /usr/bin" > $(CURDIR)/debian/install
-	@echo "../$(ARCH)/lib/* /usr/lib" >> $(CURDIR)/debian/install
-	@echo "../$(ARCH)/packages/config/$(BINARY_NAME).yml /etc/$(BINARY_NAME)" >> $(CURDIR)/debian/install
-	@echo "abs:version=$(VERSION)" > $(CURDIR)/debian/substvars
+#.PHONY: gen-files
+#gen-files:
+#	@echo "../$(ARCH)/target/$(BINARY_NAME) /usr/bin" > $(CURDIR)/debian/install
+#	@echo "../$(ARCH)/lib/* /usr/lib" >> $(CURDIR)/debian/install
+#	@echo "../$(ARCH)/packages/config/$(BINARY_NAME).yml /etc/$(BINARY_NAME)" >> $(CURDIR)/debian/install
+#	@echo "abs:version=$(VERSION)" > $(CURDIR)/debian/substvars
 
 #.PHONY: mv
 #mv:

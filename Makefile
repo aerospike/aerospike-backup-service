@@ -5,16 +5,16 @@ UNAME = $(shell uname -sm | tr ' ' '-')
 UNAME_M=$(shell uname -m)
 
 ifeq ($(UNAME_M),x86_64)
-    export ARCH:=amd64
+    ARCH:=amd64
 else ifeq ($(UNAME_M),aarch64)
-    export ARCH:=arm64
+    ARCH:=arm64
 else
     $(error Unsupported architecture)
 endif
 
-export BINARY_NAME:=aerospike-backup-service
-export GIT_COMMIT:=$(shell git rev-parse HEAD)
-export VERSION:=$(shell cat VERSION)
+BINARY_NAME:=aerospike-backup-service
+GIT_COMMIT:=$(shell git rev-parse HEAD)
+VERSION:=$(shell cat VERSION)
 
 # Go parameters
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
@@ -87,7 +87,7 @@ rpm: tarball
 deb: tarball
 	mkdir -p $(WORKSPACE)/packages/deb/$(ARCH)
 	tar -xvf /tmp/$(BINARY_NAME)-$(VERSION).tar.gz -C $(WORKSPACE)/packages/deb/$(ARCH)
-	$(MAKE) -C packages/deb
+	BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) ARCH=$(ARCH) $(MAKE) -C packages/deb
 #	echo "abs:version=$(VERSION)" > packages/debian/substvars
 #	cd $(WORKSPACE)/packages && dpkg-buildpackage
 #	mv $(WORKSPACE)/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).deb $(WORKSPACE)/target
