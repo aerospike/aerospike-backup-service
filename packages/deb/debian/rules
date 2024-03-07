@@ -2,7 +2,7 @@
 export DH_VERBOSE=1
 
 %:
-	dh $@ --sourcedirectory
+	dh $@
 override_dh_auto_configure:
 	(cd $(SOURCE_DIR); $(MAKE) prep-submodules)
 	dh_auto_configure
@@ -19,7 +19,7 @@ override_dh_dwz:
 override_dh_installsystemd:
 	dh_installsystemd $(BINARY_NAME).service
 override_dh_strip:
-    dh_strip --no-automatic-dbgsym
+	dh_strip --no-automatic-dbgsym
 
 override_dh_clean:
 	set -x
