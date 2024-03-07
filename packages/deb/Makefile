@@ -1,16 +1,17 @@
+SOURCE_DIR:=$(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)
+
 .PHONY: all
 all: deb
 
-.PHONY: deb
-deb:
-	cd $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION) && dpkg-buildpackage
 
-#.PHONY: gen-files
-#gen-files:
-#	@echo "../$(ARCH)/target/$(BINARY_NAME) /usr/bin" > $(CURDIR)/debian/install
-#	@echo "../$(ARCH)/lib/* /usr/lib" >> $(CURDIR)/debian/install
-#	@echo "../$(ARCH)/packages/config/$(BINARY_NAME).yml /etc/$(BINARY_NAME)" >> $(CURDIR)/debian/install
-#	@echo "abs:version=$(VERSION)" > $(CURDIR)/debian/substvars
+.PHONY: deb
+deb: gen-substvars
+	cd $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb && \
+	SOURCE_DIR=$(SOURCE_DIR) BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) ARCH=$(ARCH) dpkg-buildpackage
+
+.PHONY: gen-substvars
+gen-substvars:
+	@echo "abs:version=$(VERSION)" > $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb/debian/substvars
 
 #.PHONY: mv
 #mv:

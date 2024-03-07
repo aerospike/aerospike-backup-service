@@ -14,7 +14,6 @@ override_dh_installdocs:
 	dh_installdocs
 override_dh_auto_build:
 	(cd $(SOURCE_DIR); $(MAKE) build-submodules; $(MAKE) build)
-	dh_auto_build
 override_dh_dwz:
 
 override_dh_installsystemd:
