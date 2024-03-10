@@ -1,15 +1,12 @@
 name: Nightly Build
 
 on:
-  push: null
-#  schedule:
-#    - cron: '0 20 * * *'
-
+  schedule:
+    - cron: '0 20 * * *'
 jobs:
   nightly-build:
     strategy:
       fail-fast: false
-#      max-parallel: 1
       matrix:
         arch: [ "amd64","arm64" ]
         container: [ "rhel8:latest", "rhel9:latest", "ubuntu2204:latest" ]
@@ -30,9 +27,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          ref: nightly-build
-          token: ${{ secrets.MY_TOKEN || github.token }}
       - name: Check if the last commit was today
         id: check-commit
         run: |
