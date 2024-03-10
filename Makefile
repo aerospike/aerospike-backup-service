@@ -32,6 +32,7 @@ GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
 GIT_TAG = $(shell git describe --tags)
 CMD_DIR = cmd/backup
 TARGET_DIR = target
+LIB_DIR = lib
 PKG_DIR = build/package
 PREP_DIR = $(TARGET_DIR)/pkg_install
 CONFIG_FILES = $(wildcard config/*)
@@ -74,9 +75,6 @@ build:
 test:
 	$(GOTEST) -v ./...
 
-.PHONY: package
-package: rpm deb tarball
-
 .PHONY: rpm
 rpm: tarball
 	mkdir -p $(WORKSPACE)/packages/rpm/SOURCES
@@ -89,40 +87,6 @@ deb: tarball
 	tar -xvf /tmp/$(BINARY_NAME)-$(VERSION)-$(UNAME_M).tar.gz -C $(WORKSPACE)/packages/deb/$(ARCH)
 	BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) ARCH=$(ARCH) $(MAKE) -C packages/deb
 
-.PHONY: install
-install:
-	@if [ "$$(uname)" == "Darwin" ]; then \
-		echo "Running macOS specific commands"; \
-	else \
-		echo "Running Linux specific commands"; \
-		# Add Linux specific commands here
-	fi
-
-.PHONY: prep
-prep:
-ifndef DISTRO_FULL
-	$(error Distro not found)
-endif
-
-ifndef DISTRO_VERSION
-	$(error Distro Version not found)
-endif
-
-	@echo "Distro: $(DISTRO_FULL)"
-	@echo "Distro Version: $(DISTRO_VERSION)"
-
-	@which git > /dev/null || (echo "Git is not installed"; exit 1)
-	@which fpm > /dev/null || (echo "FPM is not installed"; exit 1)
-
-	install -d $(PREP_DIR)
-	install -d $(PREP_DIR)/usr/local/bin
-	install -d $(PREP_DIR)/var/log/aerospike
-	install -d $(PREP_DIR)/etc/$(BINARY_NAME)
-	install -d $(PREP_DIR)/etc/systemd/system
-	install -m 755 $(TARGET_DIR)/$(BINARY_NAME) $(PREP_DIR)/usr/local/bin/$(BINARY_NAME)
-	install -m 644 $(CONFIG_FILES) $(PREP_DIR)/etc/$(BINARY_NAME)/
-	install -m 644 $(PKG_DIR)/$(BINARY_NAME).service $(PREP_DIR)/etc/systemd/system/$(BINARY_NAME).service
-
 .PHONY: tarball
 tarball: prep-submodules
 	cd ./scripts && ./tarball.sh
@@ -130,16 +94,5 @@ tarball: prep-submodules
 .PHONY: clean
 clean:
 	$(GOCLEAN)
-	rm -rf $(TARGET_DIR)
-
-.PHONY: clean-deb
-	cd $(WORKSPACE)/packages && dpkg-buildpackage -Tclean
-
-.PHONY: clean-rpm
-clean-rpm:
-	rpmbuild --clean $(WORKSPACE)/packages/rpm/SPECS/$(BINARY_NAME).spec
-	rm -rf $(WORKSPACE)/packages/rpm/SOURCES/*.tar.gz
-	rm -rf $(WORKSPACE)/packages/rpm/SRPMS/*.rpm
-
-.PHONY: all
-all: build test package
+	$(MAKE) clean-submodules
+	rm -rf $(TARGET_DIR) $(LIB_DIR)

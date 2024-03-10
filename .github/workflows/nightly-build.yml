@@ -1,0 +1,102 @@
+name: Nightly Build
+
+on:
+  push: null
+#  schedule:
+#    - cron: '0 20 * * *'
+
+jobs:
+  nightly-build:
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        arch: [ "amd64","arm64" ]
+        container: [ "rhel8:latest", "rhel9:latest", "ubuntu2204:latest" ]
+        include:
+          - container: "rhel8:latest"
+            cmd: "make rpm"
+            distro_symbol: "el8"
+            ext: "rpm"
+          - container: "rhel9:latest"
+            cmd: "make rpm"
+            distro_symbol: "el9"
+            ext: "rpm"
+          - container: "ubuntu2204:latest"
+            cmd: "make deb"
+            distro_symbol: "debian"
+            ext: "deb"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: nightly-build
+          token: ${{ secrets.MY_TOKEN || github.token }}
+      - name: Check if the last commit was today
+        id: check-commit
+        run: |
+          LAST_COMMIT_DATE="$(git log -1 --format=%cd --date=short)"
+          TODAY="$(date -u +%Y-%m-%d)"
+          if [ "$LAST_COMMIT_DATE" == "$TODAY" ]; then
+            echo "commit_today=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "commit_today=false" >> "$GITHUB_OUTPUT"
+      - name: Set up QEMU
+        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
+        uses: docker/setup-qemu-action@v3
+      - name: Setup Jfrog
+        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
+        uses: jfrog/setup-jfrog-cli@v3
+        env:
+          JF_URL: ${{ secrets.ARTIFACTORY_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+      - name: Login to JFrog
+        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
+        uses: docker/login-action@v2
+        with:
+          registry: aerospike.jfrog.io
+          username: ${{ secrets.ARTIFACTORY_USER }}
+          password: ${{ secrets.ARTIFACTORY_TOKEN }}
+      - name: Create target directory
+        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
+        run: mkdir -p ${{ github.workspace }}/target
+      - name: Create lib directory
+        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
+        run: mkdir -p ${{ github.workspace }}/lib
+      - name: Build artifact
+        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
+        id: build-artifact
+        run: |
+          docker run \
+          -v ${{ github.workspace }}:/aerospike-backup-service/ \
+          -w /aerospike-backup-service/ \
+          --platform linux/${{ matrix.arch }} \
+          aerospike.jfrog.io/ecosystem-container-dev-local/base-${{ matrix.container }} ${{ matrix.cmd }}
+      - name: Set variable arch variable based on condition
+        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
+        id: set-variables
+        run: |
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
+            echo "arch=aarch64" >> "$GITHUB_OUTPUT"
+          else
+            echo "arch=x86_64" >> "$GITHUB_OUTPUT"
+          fi
+          REPO_NAME="$(echo $GITHUB_REPOSITORY | cut -d '/' -f 2)"
+          echo "repo=$REPO_NAME" >> "$GITHUB_OUTPUT"
+          VERSION="$(cat VERSION)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Deploy Artifact
+        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
+        run: |
+          if [ ${{ matrix.ext }} == "rpm" ]; then
+            curl \
+            -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
+            -XPUT https://aerospike.jfrog.io/artifactory/ecosystem-${{ matrix.ext }}-dev-local/${{ steps.set-variables.outputs.repo }}/${{ steps.set-variables.outputs.version }} \
+            -T ${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}_$(date +%Y%m%d).${{ matrix.ext }}
+          else
+            curl \
+            -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
+            -XPUT https://aerospike.jfrog.io/artifactory/ecosystem-${{ matrix.ext }}-dev-local/${{ steps.set-variables.outputs.repo }}/${{ steps.set-variables.outputs.version }} \
+            -T ${{ steps.set-variables.outputs.repo }}_${{ steps.set-variables.outputs.version }}-1_${{ matrix.arch }}_$(date +%Y%m%d).${{ matrix.ext }}
+          fi
