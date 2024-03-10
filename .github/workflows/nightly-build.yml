@@ -93,11 +93,11 @@ jobs:
           if [ ${{ matrix.ext }} == "rpm" ]; then
             curl \
             -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
-            -XPUT https://aerospike.jfrog.io/artifactory/ecosystem-${{ matrix.ext }}-dev-local/${{ steps.set-variables.outputs.repo }}/${{ steps.set-variables.outputs.version }} \
-            -T ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}_$(date +%Y%m%d).${{ matrix.ext }}
+            -XPUT https://aerospike.jfrog.io/artifactory/ecosystem-${{ matrix.ext }}-dev-local/${{ steps.set-variables.outputs.repo }}/${{ steps.set-variables.outputs.version }}/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}_$(date +%Y%m%d).${{ matrix.ext }} \
+            -T ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}.${{ matrix.ext }}
           else
             curl \
             -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
-            -XPUT https://aerospike.jfrog.io/artifactory/ecosystem-${{ matrix.ext }}-dev-local/${{ steps.set-variables.outputs.repo }}/${{ steps.set-variables.outputs.version }} \
-            -T ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}_${{ steps.set-variables.outputs.version }}-1_${{ matrix.arch }}_$(date +%Y%m%d).${{ matrix.ext }}
+            -XPUT https://aerospike.jfrog.io/artifactory/ecosystem-${{ matrix.ext }}-dev-local/${{ steps.set-variables.outputs.repo }}/${{ steps.set-variables.outputs.version }}/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}_$(date +%Y%m%d).${{ matrix.ext }} \
+            -T ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}_${{ steps.set-variables.outputs.version }}-1_${{ matrix.arch }}.${{ matrix.ext }}
           fi
