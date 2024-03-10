@@ -39,9 +39,10 @@ jobs:
           LAST_COMMIT_DATE="$(git log -1 --format=%cd --date=short)"
           TODAY="$(date -u +%Y-%m-%d)"
           if [ "$LAST_COMMIT_DATE" == "$TODAY" ]; then
-            echo "commit_today=true" >> $GITHUB_OUTPUT
+            echo "commit_today=true" >> "$GITHUB_OUTPUT"
           else
-            echo "commit_today=false" >> $GITHUB_OUTPUT
+            echo "commit_today=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Set up QEMU
         if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
         uses: docker/setup-qemu-action@v3
@@ -78,14 +79,14 @@ jobs:
         id: set-variables
         run: |
           if [ "${{ matrix.arch }}" == "arm64" ]; then
-            echo "arch=aarch64" >> $GITHUB_OUTPUT
+            echo "arch=aarch64" >> "$GITHUB_OUTPUT"
           else
-            echo "arch=x86_64" >> $GITHUB_OUTPUT
+            echo "arch=x86_64" >> "$GITHUB_OUTPUT"
           fi
           REPO_NAME="$(echo $GITHUB_REPOSITORY | cut -d '/' -f 2)"
-          echo "repo=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "repo=$REPO_NAME" >> "$GITHUB_OUTPUT"
           VERSION="$(cat VERSION)"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Deploy Artifact
         if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
         run: |
