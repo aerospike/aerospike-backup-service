@@ -57,7 +57,7 @@ Other configuration endpoints include Storage, Policies, and Routines.
 #### Storage Connection
 This entity contains information about connections to local or cloud storage, where the backup files will be stored.
 Get information about a specific configured storage option, for example to check the cloud storage location for a backup.
-You can also add, update, or remove a storage configuration. See the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities under `/config/storage`for detailed information.
+You can also add, update, or remove a storage configuration. See the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities under `/config/storage` for detailed information.
 
 :warning: ABS currently supports only AWS S3 cloud storage.
 
