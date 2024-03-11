@@ -1,9 +1,9 @@
 name: Nightly Build
 
 on:
-  push: null
-#  schedule:
-#    - cron: '0 20 * * *'
+
+  schedule:
+    - cron: '0 20 * * *'
 jobs:
   last-commit:
     runs-on: ubuntu-latest
@@ -26,7 +26,7 @@ jobs:
 
   nightly-build:
     needs: last-commit
-    if: ${{ needs.last-commit.outputs.commit_today == 'false' }}
+    if: ${{ needs.last-commit.outputs.commit_today == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -87,7 +87,6 @@ jobs:
           VERSION="$(cat VERSION)"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Deploy Artifact
-        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
         run: |
           if [ ${{ matrix.ext }} == "rpm" ]; then
             curl \
