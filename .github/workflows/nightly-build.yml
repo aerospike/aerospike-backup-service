@@ -25,7 +25,7 @@ jobs:
       commit_today: ${{ steps.check-commit.outputs.commit_today }}
   nightly-build:
     needs: last-commit
-    if: ${{ needs.last-commit.outputs.commit_today == 'false' }}
+    if: ${{ needs.last-commit.outputs.commit_today == 'true' }}
     strategy:
       fail-fast: false
       matrix:
