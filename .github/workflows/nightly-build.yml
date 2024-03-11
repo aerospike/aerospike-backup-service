@@ -22,8 +22,7 @@ jobs:
             echo "commit_today=false" >> "$GITHUB_OUTPUT"
           fi
     outputs:
-      commit_today: steps.check-commit.outputs.commit_today
-
+      commit_today: ${{ steps.check-commit.outputs.commit_today }}
   nightly-build:
     needs: last-commit
     if: ${{ needs.last-commit.outputs.commit_today == 'false' }}
