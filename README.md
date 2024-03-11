@@ -55,7 +55,7 @@ Other configuration endpoints include Storage, Policies, and Routines.
 :warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/tools/backup#secret-agent-options) to avoid including secrets in your configuration.
 
 #### Storage Connection
-This entity contains information about connections to local or cloud storage, where the backup files will be stored.
+This entity contains endpoints that give information about connections to local or cloud storage, where the backup files will be stored.
 Get information about a specific configured storage option, for example to check the cloud storage location for a backup.
 You can also add, update, or remove a storage configuration. See the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities under `/config/storage` for detailed information.
 
@@ -64,7 +64,7 @@ You can also add, update, or remove a storage configuration. See the [Storage](h
 #### Backup Policy
 A backup policy is a set of rules that define how backups should be performed. It could include information about a backup schedule, criteria for what data is being backed up, and the storage destination. See [`GET: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readPolicies) for full details about what parameters are available to customize a backup policy.
 
-ABS supports multiple policies stored concurrently. 
+You can save multiple policies with different configurations.
 When you run the [`POST: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addPolicy) command to create a policy, ensure that you give your policy a name that will let you quickly identify its characteristics.
 
 Aerospike recommends defining both a backup and restore policy.
