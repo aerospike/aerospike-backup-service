@@ -1,9 +1,9 @@
 name: Nightly Build
 
 on:
-
-  schedule:
-    - cron: '0 20 * * *'
+  push: null
+#  schedule:
+#    - cron: '0 20 * * *'
 jobs:
   last-commit:
     runs-on: ubuntu-latest
