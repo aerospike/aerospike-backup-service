@@ -35,7 +35,7 @@ Linux installation packages are available under [releases](https://github.com/ae
 ### Entities
 
 Each entity defined in the API specification has endpoints for reading and writing backup configurations at general or granular levels.
-The most common 
+
 For specifics and example values, see the [OpenAPI docs](https://aerospike.github.io/aerospike-backup-service/).
 
 #### System
@@ -50,27 +50,29 @@ Cluster configuration endpoints establish connections to Aerospike clusters.
 These connections include the cluster IP address, port number, authentication information, and more.
 See [`POST: /config/clusters`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addCluster) for the full specification.
 
-Other configuration endpoints include Policies, Routines, and Storage.
+Other configuration endpoints include Storage, Policies, and Routines.
 
 :warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/tools/backup#secret-agent-options) to avoid including secrets in your configuration.
 
 #### Storage Connection
-Details about connections to local or cloud storage, where the backup files will be stored.
-Add, update, or remove a storage configuration.
+This entity contains information about connections to local or cloud storage, where the backup files will be stored.
 Get information about a specific configured storage option, for example to check the cloud storage location for a backup.
+You can also add, update, or remove a storage configuration. See the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities under `/config/storage`for detailed information.
 
 :warning: ABS currently supports only AWS S3 cloud storage.
 
 #### Backup Policy
 A backup policy is a set of rules that define how backups should be performed. It could include information about a backup schedule, criteria for what data is being backed up, and the storage destination. See [`GET: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readPolicies) for full details about what parameters are available to customize a backup policy.
-ABS supports multiple policies stored concurrently.
+
+ABS supports multiple policies stored concurrently. 
+When you run the [`POST: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addPolicy) command to create a policy, ensure that you give your policy a name that will let you quickly identify its characteristics.
 
 Aerospike recommends defining both a backup and restore policy.
 
 #### Backup Routine
-A backup routine is a set of procedures that perform backups based on the predefined backup policy.
+A backup routine is a set of procedures that actually perform backups based on the predefined backup policy.
 
-:warning: Incremental backups are deleted if they are empty and after each full backup, and system metadata is backed up only on full backups.
+:warning: Incremental backups are deleted if they are empty and after each full backup. System metadata is backed up only on full backups.
 
 ### Operations
 
@@ -113,17 +115,18 @@ Example configuration files can be found in the [config](./config/) folder.
 
 ## Monitoring
 
-The service exposes a wide variety of system metrics that [Prometheus](https://prometheus.io/) can scrape, including the following application metrics.
-| Name | Description |
-| --- | --- |
-| backup_runs_total | Full backup runs counter |
-| backup_incremental_runs_total | Incremental backup runs counter |
-| backup_skip_total | Full backup skip counter |
-| backup_incremental_skip_total | Incremental backup skip counter |
-| backup_failure_total | Full backup failure counter |
-| backup_incremental_failure_total | Incremental backup failure counter |
-| backup_duration_millis | Full backup duration in milliseconds |
-| backup_incremental_duration_millis | Incremental backup duration in milliseconds |
+The service exposes a wide variety of system metrics that [Prometheus](https://prometheus.io/) can scrape, including the following application metrics:
+
+| Name                                 | Description                                 |
+|--------------------------------------|---------------------------------------------|
+| `backup_runs_total`                  | Full backup runs counter                    |
+| `backup_incremental_runs_total`      | Incremental backup runs counter             |
+| `backup_skip_total`                  | Full backup skip counter                    |
+| `backup_incremental_skip_total`      | Incremental backup skip counter             |
+| `backup_failure_total`               | Full backup failure counter                 |
+| `backup_incremental_failure_total`   | Incremental backup failure counter          |
+| `backup_duration_millis`             | Full backup duration in milliseconds        |
+| `backup_incremental_duration_millis` | Incremental backup duration in milliseconds |
 
 * `/metrics` exposes metrics for Prometheus to check performance of the backup service. See [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/getting_started/) for instructions.
 * `/health` allows monitoring systems to check the service health.
@@ -149,7 +152,7 @@ Read the official documentation for the [library build instructions](https://git
 
 ### Build the service
 
-The following command will generate a binary under the `target` directory.
+The following command generates a binary under the `target` directory.
 
 ```bash
 make build
@@ -158,13 +161,11 @@ make build
 ### Build Docker image
 
 #### AMD64
-
 ```
 docker build --build-arg GOARCH=amd64 -t backup-service .
 ```
 
 #### ARM64
-
 ```
 docker build --build-arg GOARCH=arm64 -t backup-service .
 ```
@@ -183,7 +184,8 @@ The service will skip the next startup until the previous backup run is complete
 
 ### Can multiple backup routines be performed simultaneously?
 
-The service uses the asbackup shared library, which is not currently thread safe. Given this limitation, there is a global lock in which backup operations wait for each other to process.
+The service uses the [`asbackup` shared library](https://github.com/aerospike/aerospike-tools-backup), which is not currently thread safe. 
+Given this limitation, backup routines are performed in sequence. 
 
 ### Which storage providers are supported?
 

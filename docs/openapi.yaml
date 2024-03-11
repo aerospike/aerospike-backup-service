@@ -1159,7 +1159,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/model.RemoveFilesType'
           description: "Whether to clear the output directory (default: KeepAll)."
-          type: object
+          type: boolean
         retry-delay:
           description: RetryDelay defines the delay in milliseconds before retrying
             a failed operation.
