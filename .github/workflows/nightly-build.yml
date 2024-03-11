@@ -1,10 +1,32 @@
 name: Nightly Build
 
 on:
-  schedule:
-    - cron: '0 20 * * *'
+  push: null
+#  schedule:
+#    - cron: '0 20 * * *'
 jobs:
+  last-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if the last commit was today
+        id: check-commit
+        run: |
+          LAST_COMMIT_DATE="$(date -u -d \
+          $(curl -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/aerospike/aerospike-backup-service/commits" | \
+          jq -r '.[0].commit.committer.date') "+%Y-%m-%d")"
+          TODAY="$(date -u +%Y-%m-%d)"
+          if [ "$LAST_COMMIT_DATE" == "$TODAY" ]; then
+            echo "commit_today=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "commit_today=false" >> "$GITHUB_OUTPUT"
+          fi
+    outputs:
+      commit_today: steps.check-commit.outputs.commit_today
+
   nightly-build:
+    needs: last-commit
+    if: needs.last-commit.outputs.commit_today == "true"
     strategy:
       fail-fast: false
       matrix:
@@ -27,40 +49,24 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      - name: Check if the last commit was today
-        id: check-commit
-        run: |
-          LAST_COMMIT_DATE="$(git log -1 --format=%cd --date=short)"
-          TODAY="$(date -u +%Y-%m-%d)"
-          if [ "$LAST_COMMIT_DATE" == "$TODAY" ]; then
-            echo "commit_today=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "commit_today=false" >> "$GITHUB_OUTPUT"
-          fi
       - name: Set up QEMU
-        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
         uses: docker/setup-qemu-action@v3
       - name: Setup Jfrog
-        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
         uses: jfrog/setup-jfrog-cli@v3
         env:
           JF_URL: ${{ secrets.ARTIFACTORY_URL }}
           JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
       - name: Login to JFrog
-        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
         uses: docker/login-action@v2
         with:
           registry: aerospike.jfrog.io
           username: ${{ secrets.ARTIFACTORY_USER }}
           password: ${{ secrets.ARTIFACTORY_TOKEN }}
       - name: Create target directory
-        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
         run: mkdir -p ${{ github.workspace }}/target
       - name: Create lib directory
-        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
         run: mkdir -p ${{ github.workspace }}/lib
       - name: Build artifact
-        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
         id: build-artifact
         run: |
           docker run \
@@ -69,7 +75,6 @@ jobs:
           --platform linux/${{ matrix.arch }} \
           aerospike.jfrog.io/ecosystem-container-dev-local/base-${{ matrix.container }} ${{ matrix.cmd }}
       - name: Set variable arch variable based on condition
-        if: ${{ steps.check-commit.outputs.commit_today == 'true' }}
         id: set-variables
         run: |
           if [ "${{ matrix.arch }}" == "arm64" ]; then
