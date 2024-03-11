@@ -26,7 +26,7 @@ jobs:
 
   nightly-build:
     needs: last-commit
-    if: needs.last-commit.outputs.commit_today == true
+    if: needs.last-commit.outputs.commit_today == false
     strategy:
       fail-fast: false
       matrix:
