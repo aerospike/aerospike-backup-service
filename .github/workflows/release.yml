@@ -20,13 +20,12 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           draft: true
-          prerelease: false}
+          prerelease: true
 
   build-packages:
     needs: create-release
     strategy:
       fail-fast: false
-      max-parallel: 1
       matrix:
         arch: ["amd64","arm64"]
         container: [ "rhel8:latest", "rhel9:latest", "ubuntu2204:latest"]

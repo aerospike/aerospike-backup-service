@@ -1,7 +1,7 @@
 Name:           %{pkg_name}
 Version:        %{pkg_version}
 BuildArch:      %{build_arch}
-Source0:        %{name}-%{version}.tar.gz
+Source0:        %{name}-%{version}-%{build_arch}.tar.gz
 Release:        1%{?dist}
 Summary:        Aerospike Backup Service
 License:        Apache 2.0
@@ -27,7 +27,7 @@ mkdir -p %{buildroot}/%{_sharedstatedir}/%{name}
 install -Dpm755 target/%{name} %{buildroot}%{_bindir}
 install -Dpm755 lib/* %{buildroot}%{_libdir}
 install -Dpm644 packages/man/%{name}.1 %{buildroot}%{_mandir}/man1/%{name}.1
-install -Dpm644 packages/debian/%{name}.service %{buildroot}/lib/systemd/system/%{name}.service
+install -Dpm644 packages/config/%{name}.service %{buildroot}/lib/systemd/system/%{name}.service
 install -Dpm644 packages/config/%{name}.yml %{buildroot}%{_sysconfdir}/%{name}/%{name}.yml
 
 %files

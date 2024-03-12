@@ -1,28 +1,26 @@
 #!/usr/bin/make -f
 export DH_VERBOSE=1
-SOURCE_DIR := $(shell git rev-parse --show-toplevel)
-BINARY_NAME := $(shell basename $(SOURCE_DIR))
-ARCH := $(shell dpkg-architecture -qDEB_BUILD_ARCH)
-VERSION := $(shell cat $(SOURCE_DIR)/VERSION)
+
 %:
 	dh $@
 override_dh_auto_configure:
+	cp ../config/$(BINARY_NAME).service $(CURDIR)/debian/$(BINARY_NAME).service
 	(cd $(SOURCE_DIR); $(MAKE) prep-submodules)
 	dh_auto_configure
 override_dh_installchangelogs:
 	dh_installchangelogs
 override_dh_installman:
-	dh_installman man/$(BINARY_NAME).1
+	dh_installman
 override_dh_installdocs:
 	dh_installdocs
 override_dh_auto_build:
 	(cd $(SOURCE_DIR); $(MAKE) build-submodules; $(MAKE) build)
-	dh_auto_build
 override_dh_dwz:
 
 override_dh_installsystemd:
 	dh_installsystemd $(BINARY_NAME).service
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym
 
 override_dh_clean:
-	set -x
 	dh_clean
