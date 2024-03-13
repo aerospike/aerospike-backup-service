@@ -38,19 +38,15 @@ Each entity defined in the API specification has endpoints for reading and writi
 
 For specifics and example values, see the [OpenAPI docs](https://aerospike.github.io/aerospike-backup-service/).
 
-#### System
-The System entity includes an endpoint for serving the OpenAPI specification, as well as endpoints for monitoring the health of the Aerospike Backup Service itself.
-See [Monitoring](#monitoring) for more detailed information.
-
 #### Configuration
-The Configuration entity allows the user to view or modify the configuration file.
+The endpoints defined within the configuration section permit the user to view or modify the configuration file.
 Endpoints ending in `/config` permit reading and changing the entire file at once, while `/config/cluster` endpoints enable more granular changes.
 
+
+#### Cluster Connection
 Cluster configuration entities denote the configuration properties needed to establish connections to Aerospike clusters.
 These connections include the cluster IP address, port number, authentication information, and more.
 See [`POST: /config/clusters`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addCluster) for the full specification.
-
-Other configuration entities include Storage, Policies, and Routines.
 
 :warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/tools/backup#secret-agent-options) to avoid including secrets in your configuration.
 
