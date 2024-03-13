@@ -46,17 +46,17 @@ See [Monitoring](#monitoring) for more detailed information.
 The Configuration entity allows the user to view or modify the configuration file.
 Endpoints ending in `/config` permit reading and changing the entire file at once, while `/config/cluster` endpoints enable more granular changes.
 
-Cluster configuration endpoints establish connections to Aerospike clusters.
+Cluster configuration entities denote the configuration properties needed to establish connections to Aerospike clusters.
 These connections include the cluster IP address, port number, authentication information, and more.
 See [`POST: /config/clusters`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addCluster) for the full specification.
 
-Other configuration endpoints include Storage, Policies, and Routines.
+Other configuration entities include Storage, Policies, and Routines.
 
 :warning: Use the [Aerospike Secret Agent](https://aerospike.com/docs/tools/backup#secret-agent-options) to avoid including secrets in your configuration.
 
 #### Storage Connection
-This entity contains endpoints that give information about connections to local or cloud storage, where the backup files will be stored.
-Get information about a specific configured storage option, for example to check the cloud storage location for a backup.
+This entity includes properties of connections to local or cloud storage, where the backup files are stored.
+You can get information about a specific configured storage option, for example to check the cloud storage location for a backup.
 You can also add, update, or remove a storage configuration. See the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities under `/config/storage` for detailed information.
 
 :warning: ABS currently supports only AWS S3 cloud storage.
@@ -67,10 +67,12 @@ A backup policy is a set of rules that define how backups should be performed. I
 You can save multiple policies with different configurations.
 When you run the [`POST: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addPolicy) command to create a policy, ensure that you give your policy a name that will let you quickly identify its characteristics.
 
-Aerospike recommends defining both a backup and restore policy.
+Aerospike recommends defining at least one backup and restore policy.
 
 #### Backup Routine
 A backup routine is a set of procedures that actually perform backups based on the predefined backup policy.
+Routines are individually named just as policies are.
+See the [Routines](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readRoutines) section for command examples showing how to find all routines, get information about a specific named routine, and add, remove, or update an existing routine.
 
 :warning: Incremental backups are deleted if they are empty and after each full backup. System metadata is backed up only on full backups.
 
