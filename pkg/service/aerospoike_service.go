@@ -46,16 +46,16 @@ func GetInfo(cluster *model.AerospikeCluster) []asconfig.DotConf {
 		conf, err := asInfo.GetAsConfig()
 
 		if err != nil {
-			slog.Error("error", "host", host, "err", err)
-			continue // skip current host, continue with the next one
+			slog.Error("error reading configuration", "host", host, "err", err)
+			continue
 		}
 
 		asconf, _ := asconfig.NewMapAsConfig(logr.Discard(), conf)
 		configAsString, err := util.TryAndRecover(asconf.ToConfFile)
 
 		if err != nil {
-			slog.Error("error", "host", host, "err", err)
-			continue // skip current host, continue with the next one
+			slog.Error("error serialising configuration", "host", host, "err", err)
+			continue
 		}
 
 		outputs = append(outputs, configAsString)
