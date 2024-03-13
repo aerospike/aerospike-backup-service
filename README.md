@@ -186,7 +186,7 @@ The service will skip the next startup until the previous backup run is complete
 
 ### Can multiple backup routines be performed simultaneously?
 
-The service uses the [`asbackup` shared library](https://github.com/aerospike/aerospike-tools-backup), which is not currently thread safe. 
+The service uses the [asbackup](https://github.com/aerospike/aerospike-tools-backup) shared library, which is not currently thread safe. 
 Given this limitation, backup routines are performed in sequence. 
 
 ### Which storage providers are supported?
