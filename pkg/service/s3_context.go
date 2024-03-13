@@ -146,10 +146,14 @@ func (s *S3Context) writeYaml(filePath string, v any) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.client.PutObject(s.ctx, &s3.PutObjectInput{
+	return s.write(filePath, yamlData)
+}
+
+func (s *S3Context) write(filePath string, data []byte) error {
+	_, err := s.client.PutObject(s.ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(filePath),
-		Body:   bytes.NewReader(yamlData),
+		Body:   bytes.NewReader(data),
 	})
 	if err != nil {
 		slog.Warn("Couldn't upload file", "path", filePath,

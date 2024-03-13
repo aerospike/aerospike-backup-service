@@ -65,12 +65,8 @@ func (o *OSDiskAccessor) readBackupDetails(path string, _ bool) (model.BackupDet
 	}, nil
 }
 
-func (o *OSDiskAccessor) writeYaml(filePath string, v any) error {
-	backupState, err := yaml.Marshal(v)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filePath, backupState, 0644)
+func (o *OSDiskAccessor) write(filePath string, data []byte) error {
+	return os.WriteFile(filePath, data, 0644)
 }
 
 func (o *OSDiskAccessor) lsDir(path string) ([]string, error) {

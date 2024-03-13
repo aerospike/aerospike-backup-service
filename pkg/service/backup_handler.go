@@ -96,7 +96,22 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 
 	h.cleanIncrementalBackups()
 
+	h.writeClusterConfiguration(now)
 	return nil
+
+}
+
+func (h *BackupHandler) writeClusterConfiguration(now time.Time) {
+	infos := GetInfo(h.cluster)
+	path := getConfigurationPath(h.backend.confBackupPath, now)
+	h.backend.CreateFolder(path)
+	for i, info := range infos {
+		sprintf := fmt.Sprintf("%s/aerospike_%d.conf", path, i)
+		err := h.backend.write(sprintf, []byte(info))
+		if err != nil {
+			slog.Error("Failed to write configuration for the backup", "name", h.routineName, "err", err)
+		}
+	}
 }
 
 func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace string) error {
@@ -258,8 +273,11 @@ func getFullPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, names
 }
 
 func getIncrementalPath(incrBackupsPath string, namespace string, now time.Time) string {
-	path := fmt.Sprintf("%s/%s/%s", incrBackupsPath, timeSuffix(now), namespace)
-	return path
+	return fmt.Sprintf("%s/%s/%s", incrBackupsPath, timeSuffix(now), namespace)
+}
+
+func getConfigurationPath(confPath string, now time.Time) string {
+	return fmt.Sprintf("%s/%s", confPath, timeSuffix(now))
 }
 
 func timeSuffix(now time.Time) string {

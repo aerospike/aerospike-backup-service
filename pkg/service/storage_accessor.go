@@ -7,8 +7,8 @@ type StorageAccessor interface {
 	readBackupState(stateFilePath string, state *model.BackupState) error
 	// readBackupDetails returns backup details for a backup.
 	readBackupDetails(path string, useCache bool) (model.BackupDetails, error)
-	// writeYaml writes the given object to a file in the YAML format.
-	writeYaml(filePath string, v any) error
+	// write writes the given byte array to a file
+	write(filePath string, v []byte) error
 	// lsDir lists all subdirectories in the given path.
 	lsDir(path string) ([]string, error)
 	// DeleteFolder removes the folder and all its contents at the specified path.

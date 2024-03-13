@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/aerospike/backup/pkg/model"
+	"gopkg.in/yaml.v3"
 )
 
 // BackupBackend handles the backup management logic, employing a StorageAccessor implementation
@@ -17,6 +18,7 @@ type BackupBackend struct {
 	fullBackupsPath        string
 	incrementalBackupsPath string
 	stateFilePath          string
+	confBackupPath         string
 	removeFullBackup       bool
 	fullBackupInProgress   *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
 	stateFileMutex         sync.RWMutex
@@ -47,6 +49,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
 			incrementalBackupsPath: filepath.Join(routinePath, model.IncrementalBackupDirectory),
 			stateFilePath:          filepath.Join(routinePath, model.StateFileName),
+			confBackupPath:         filepath.Join(routinePath, model.ConfigurationBackupDirectory),
 			removeFullBackup:       removeFullBackup,
 			fullBackupInProgress:   &atomic.Bool{},
 		}
@@ -62,6 +65,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
 			incrementalBackupsPath: filepath.Join(routinePath, model.IncrementalBackupDirectory),
 			stateFilePath:          filepath.Join(routinePath, model.StateFileName),
+			confBackupPath:         filepath.Join(routinePath, model.ConfigurationBackupDirectory),
 			removeFullBackup:       removeFullBackup,
 			fullBackupInProgress:   &atomic.Bool{},
 		}
@@ -88,7 +92,17 @@ func (b *BackupBackend) writeState(state *model.BackupState) error {
 }
 
 func (b *BackupBackend) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
-	return b.writeYaml(filepath.Join(path, metadataFile), metadata)
+	metadataFilePath := filepath.Join(path, metadataFile)
+	return b.writeYaml(metadataFilePath, metadata)
+}
+
+func (b *BackupBackend) writeYaml(path string, data any) error {
+	dataYaml, err := yaml.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	return b.write(path, dataYaml)
 }
 
 // FullBackupList returns a list of available full backups.
