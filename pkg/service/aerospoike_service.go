@@ -2,12 +2,13 @@ package service
 
 import (
 	"fmt"
+	"log/slog"
+	"strings"
+
 	"github.com/aerospike/aerospike-management-lib/asconfig"
 	"github.com/aerospike/aerospike-management-lib/info"
 	"github.com/aerospike/backup/pkg/util"
 	"github.com/go-logr/logr"
-	"log/slog"
-	"strings"
 
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup/pkg/model"
@@ -34,7 +35,7 @@ func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error
 	return strings.Split(namespaces, ";"), nil
 }
 
-func GetInfo(cluster *model.AerospikeCluster) []asconfig.DotConf {
+func getClusterConfiguration(cluster *model.AerospikeCluster) []asconfig.DotConf {
 	var outputs []asconfig.DotConf
 	cp := &as.ClientPolicy{
 		User:     *cluster.GetUser(),
