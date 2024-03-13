@@ -110,8 +110,9 @@ func (h *BackupHandler) writeClusterConfiguration(now time.Time) {
 	path := getConfigurationPath(h.backend.confBackupPath, now)
 	h.backend.CreateFolder(path)
 	for i, info := range infos {
-		sprintf := fmt.Sprintf("%s/aerospike_%d.conf", path, i)
-		err := h.backend.write(sprintf, []byte(info))
+		confFilePath := fmt.Sprintf("%s/aerospike_%d.conf", path, i)
+		slog.Info("Write aerospike configuration", "path", confFilePath)
+		err := h.backend.write(confFilePath, []byte(info))
 		if err != nil {
 			slog.Error("Failed to write configuration for the backup", "name", h.routineName, "err", err)
 		}
