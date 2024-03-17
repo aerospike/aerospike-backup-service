@@ -14,7 +14,7 @@ import (
 
 var restoreService = makeTestRestoreService()
 
-var validBackupPath = "./testout/backup/namespace"
+var validBackupPath = "./testout/backup/data/namespace"
 
 func makeTestFolders() {
 	_ = os.MkdirAll(validBackupPath, os.ModePerm)
