@@ -65,6 +65,10 @@ func (o *OSDiskAccessor) readBackupDetails(path string, _ bool) (model.BackupDet
 	}, nil
 }
 
+func (o *OSDiskAccessor) read(filePath string) ([]byte, error) {
+	return os.ReadFile(filePath)
+}
+
 func (o *OSDiskAccessor) write(filePath string, data []byte) error {
 	return os.WriteFile(filePath, data, 0644)
 }
@@ -86,6 +90,25 @@ func (o *OSDiskAccessor) lsDir(path string) ([]string, error) {
 		}
 	}
 	return onlyDirs, nil
+}
+
+func (o *OSDiskAccessor) lsFiles(path string) ([]string, error) {
+	content, err := os.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+		return nil, err
+	}
+
+	var files []string
+	for _, c := range content {
+		if !c.IsDir() {
+			fullPath := filepath.Join(path, c.Name())
+			files = append(files, fullPath)
+		}
+	}
+	return files, nil
 }
 
 func (o *OSDiskAccessor) CreateFolder(path string) {

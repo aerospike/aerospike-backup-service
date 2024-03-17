@@ -13,6 +13,8 @@ type BackupListReader interface {
 	// The parameters are timestamp filters by creation time (epoch millis),
 	// where from is inclusive and to is exclusive.
 	IncrementalBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error)
+
+	ReadClusterConfiguration(path string) ([]byte, error)
 }
 
 // BackendsToReaders converts a map of *BackupBackend to a map of BackupListReader.

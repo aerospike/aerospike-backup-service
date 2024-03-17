@@ -1,6 +1,8 @@
 package service
 
 import (
+	"archive/zip"
+	"bytes"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -18,7 +20,6 @@ type BackupBackend struct {
 	fullBackupsPath        string
 	incrementalBackupsPath string
 	stateFilePath          string
-	confBackupPath         string
 	removeFullBackup       bool
 	fullBackupInProgress   *atomic.Bool // BackupBackend needs to know if full backup is running to filter it out
 	stateFileMutex         sync.RWMutex
@@ -49,7 +50,6 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
 			incrementalBackupsPath: filepath.Join(routinePath, model.IncrementalBackupDirectory),
 			stateFilePath:          filepath.Join(routinePath, model.StateFileName),
-			confBackupPath:         filepath.Join(routinePath, model.ConfigurationBackupDirectory),
 			removeFullBackup:       removeFullBackup,
 			fullBackupInProgress:   &atomic.Bool{},
 		}
@@ -65,7 +65,6 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
 			incrementalBackupsPath: filepath.Join(routinePath, model.IncrementalBackupDirectory),
 			stateFilePath:          filepath.Join(routinePath, model.StateFileName),
-			confBackupPath:         filepath.Join(routinePath, model.ConfigurationBackupDirectory),
 			removeFullBackup:       removeFullBackup,
 			fullBackupInProgress:   &atomic.Bool{},
 		}
@@ -123,7 +122,7 @@ func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache 
 	// each path contains a backup of specific time
 	backupDetails := []model.BackupDetails{}
 	for _, path := range paths {
-		namespaces, err := b.lsDir(path)
+		namespaces, err := b.lsDir(filepath.Join(path, model.DataDirectory))
 		if err != nil {
 			slog.Warn("Cannot list backup dir", "path", path, "err", err)
 			continue
@@ -158,4 +157,47 @@ func (b *BackupBackend) IncrementalBackupList(timebounds *model.TimeBounds) ([]m
 
 func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {
 	return b.fullBackupInProgress
+}
+
+func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
+	configBackups, err := b.lsFiles(path)
+	if err != nil {
+		return nil, err
+	}
+
+	zip, _ := b.packageFiles(configBackups)
+	return zip, nil
+}
+
+// PackageFiles creates a zip archive from the given file list and returns it as a byte array
+func (b *BackupBackend) packageFiles(files []string) ([]byte, error) {
+	// Create a buffer to write our archive to
+	buf := new(bytes.Buffer)
+
+	// Create a new zip archive
+	w := zip.NewWriter(buf)
+
+	for _, file := range files {
+		data, err := b.read(file)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file %s: %w", file, err)
+		}
+
+		f, err := w.Create(filepath.Base(file))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create entry for filename %s: %w", file, err)
+		}
+
+		_, err = f.Write(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write file %s: %w", file, err)
+		}
+	}
+
+	err := w.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed to close the zip writer: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }

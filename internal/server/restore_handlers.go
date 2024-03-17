@@ -4,11 +4,10 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aerospike/backup/pkg/model"
 	"log/slog"
 	"net/http"
 	"strconv"
-
-	"github.com/aerospike/backup/pkg/model"
 )
 
 // @Summary     Trigger an asynchronous full restore operation.
@@ -161,5 +160,52 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 		if err != nil {
 			slog.Error("failed to write response", "err", err)
 		}
+	}
+}
+
+// @Summary     Retrieve Aerospike cluster configuration backup
+// @ID	        restoreConfiguration
+// @Tags        Restore
+// @Produce     application/zip
+// @Param       name path string true "Backup routine name"
+// @Param       timestamp path int true "Backup timestamp" format(int64)
+// @Router      /v1/restore/configuration/{name}/{timestamp} [get]
+// @Success     200 {file} application/zip "configuration backup"
+// @Failure     400 {string} string
+func (ws *HTTPServer) restoreConfig(w http.ResponseWriter, r *http.Request) {
+	// Check if method is GET
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	name := r.PathValue("name")
+	if name == "" {
+		http.Error(w, "Routine name required", http.StatusBadRequest)
+		return
+	}
+	timestampStr := r.PathValue("timestamp")
+	if timestampStr == "" {
+		http.Error(w, "Timestamp required", http.StatusBadRequest)
+		return
+	}
+
+	timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Timestamp incorrect", http.StatusBadRequest)
+		return
+	}
+
+	buf, err := ws.restoreService.RestoreConfiguration(name, timestamp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", `attachment; filename="archive.zip"`)
+	_, err = w.Write(buf)
+	if err != nil {
+		slog.Error("failed to write response", "err", err)
 	}
 }

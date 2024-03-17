@@ -109,8 +109,7 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupD
 	}, nil
 }
 
-// readFile reads and decodes the YAML content from the given filePath into v.
-func (s *S3Context) readFile(filePath string, v any) error {
+func (s *S3Context) read(filePath string) ([]byte, error) {
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(filePath),
@@ -120,16 +119,25 @@ func (s *S3Context) readFile(filePath string, v any) error {
 		if errors.As(err, &opErr) &&
 			(strings.Contains(filePath, model.StateFileName) || strings.Contains(filePath, metadataFile)) &&
 			strings.Contains(opErr.Unwrap().Error(), "StatusCode: 404") {
-			return err
+			return nil, err
 		}
 		slog.Warn("Failed to read file", "path", filePath, "err", err)
-		return err
+		return nil, err
 	}
 	defer result.Body.Close()
 	content, err := io.ReadAll(result.Body)
 	if err != nil {
 		slog.Warn("Couldn't read object body of a file",
 			"path", filePath, "err", err)
+		return nil, err
+	}
+	return content, nil
+}
+
+// readFile reads and decodes the YAML content from the given filePath into v.
+func (s *S3Context) readFile(filePath string, v any) error {
+	content, err := s.read(filePath)
+	if err != nil {
 		return err
 	}
 	if err = yaml.Unmarshal(content, v); err != nil {
@@ -187,6 +195,36 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 
 // lsDir returns all subfolders in the given s3 prefix path.
 func (s *S3Context) lsDir(prefix string) ([]string, error) {
+	var nextContinuationToken *string
+	result := make([]string, 0)
+	for {
+		// By default, the action returns up to 1,000 key names.
+		// It is necessary to repeat to collect all the items, if there are more.
+		listOutput, err := s.list(nextContinuationToken, prefix, "/")
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range listOutput.CommonPrefixes {
+			if p.Prefix == nil {
+				continue
+			}
+			subfolder := strings.TrimSuffix(*p.Prefix, "/")
+			// Check to avoid including the prefix itself in the results
+			if subfolder != prefix {
+				result = append(result, subfolder)
+			}
+		}
+		nextContinuationToken = listOutput.NextContinuationToken
+		if nextContinuationToken == nil {
+			break
+		}
+	}
+	slog.Info("Read dir", "prefix", prefix, "result", result)
+	return result, nil
+}
+
+// lsDir returns all subfolders in the given s3 prefix path.
+func (s *S3Context) lsFiles(prefix string) ([]string, error) {
 	var nextContinuationToken *string
 	result := make([]string, 0)
 	for {

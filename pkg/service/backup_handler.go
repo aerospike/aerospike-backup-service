@@ -98,7 +98,6 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 
 	h.writeClusterConfiguration(now)
 	return nil
-
 }
 
 func (h *BackupHandler) writeClusterConfiguration(now time.Time) {
@@ -107,7 +106,7 @@ func (h *BackupHandler) writeClusterConfiguration(now time.Time) {
 		slog.Warn("Could not read aerospike configuration", "name", h.routineName)
 		return
 	}
-	path := getConfigurationPath(h.backend.confBackupPath, now)
+	path := getConfigurationPath(h.backend.fullBackupsPath, now)
 	h.backend.CreateFolder(path)
 	for i, info := range infos {
 		confFilePath := fmt.Sprintf("%s/aerospike_%d.conf", path, i)
@@ -270,10 +269,10 @@ func (h *BackupHandler) writeState() {
 
 func getFullPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, namespace string, now time.Time) string {
 	if backupPolicy.RemoveFiles.RemoveFullBackup() {
-		path := fmt.Sprintf("%s/%s", fullBackupsPath, namespace)
+		path := fmt.Sprintf("%s/%s/%s", fullBackupsPath, model.DataDirectory, namespace)
 		return path
 	}
-	path := fmt.Sprintf("%s/%s/%s", fullBackupsPath, timeSuffix(now), namespace)
+	path := fmt.Sprintf("%s/%s/%s/%s", fullBackupsPath, timeSuffix(now), model.DataDirectory, namespace)
 	return path
 }
 
@@ -281,8 +280,8 @@ func getIncrementalPath(incrBackupsPath string, namespace string, now time.Time)
 	return fmt.Sprintf("%s/%s/%s", incrBackupsPath, timeSuffix(now), namespace)
 }
 
-func getConfigurationPath(confPath string, now time.Time) string {
-	return fmt.Sprintf("%s/%s", confPath, timeSuffix(now))
+func getConfigurationPath(fullBackupsPath string, now time.Time) string {
+	return fmt.Sprintf("%s/%s/%s", fullBackupsPath, timeSuffix(now), model.ConfigurationBackupDirectory)
 }
 
 func timeSuffix(now time.Time) string {

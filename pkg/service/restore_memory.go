@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -67,7 +68,7 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 	if !found {
 		return 0, fmt.Errorf("backend '%s' not found for restore", request.Routine)
 	}
-	fullBackups, err := r.findLastFullBackup(backend, request)
+	fullBackups, err := r.findLastFullBackup(backend, request.Time)
 	if err != nil {
 		return 0, fmt.Errorf("last full backup not found: %v", err)
 	}
@@ -136,9 +137,9 @@ func (r *RestoreMemory) restoreFromPath(
 
 func (r *RestoreMemory) findLastFullBackup(
 	backend BackupListReader,
-	request *model.RestoreTimestampRequest,
+	toTimeMillis int64,
 ) ([]model.BackupDetails, error) {
-	to, err := model.NewTimeBoundsTo(request.Time)
+	to, err := model.NewTimeBoundsTo(toTimeMillis)
 	if err != nil {
 		return nil, err
 	}
@@ -147,9 +148,9 @@ func (r *RestoreMemory) findLastFullBackup(
 		return nil, fmt.Errorf("cannot read full backup list: %v", err)
 	}
 
-	fullBackup := latestFullBackupBeforeTime(fullBackupList, time.UnixMilli(request.Time))
+	fullBackup := latestFullBackupBeforeTime(fullBackupList, time.UnixMilli(toTimeMillis)) // it's a list of namespaces
 	if fullBackup == nil {
-		return nil, fmt.Errorf("no full backup found at %d", request.Time)
+		return nil, fmt.Errorf("no full backup found at %d", toTimeMillis)
 	}
 	return fullBackup, nil
 }
@@ -196,6 +197,29 @@ func (r *RestoreMemory) findIncrementalBackupsForNamespace(
 	})
 
 	return filteredIncrementalBackups, nil
+}
+
+func (r *RestoreMemory) RestoreConfiguration(routine string, toTimeMillis int64) ([]byte, error) {
+	backend, found := r.backends[routine]
+	if !found {
+		return nil, fmt.Errorf("backend '%s' not found for restore", routine)
+	}
+	fullBackups, err := r.findLastFullBackup(backend, toTimeMillis)
+	if err != nil {
+		return nil, fmt.Errorf("last full backup not found: %v", err)
+	}
+	lastFullBackup := fullBackups[0]
+
+	configPath := calculateConfigurationBackupPath(*lastFullBackup.Key)
+
+	return backend.ReadClusterConfiguration(configPath)
+}
+
+func calculateConfigurationBackupPath(path string) string {
+	// Move up two directories
+	base := filepath.Dir(filepath.Dir(path))
+	// Join new directory 'config' with the new base
+	return filepath.Join(base, model.ConfigurationBackupDirectory)
 }
 
 func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {

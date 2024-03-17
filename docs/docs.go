@@ -1107,6 +1107,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/restore/configuration/{name}/{timestamp}": {
+            "get": {
+                "produces": [
+                    "application/zip"
+                ],
+                "tags": [
+                    "Restore"
+                ],
+                "summary": "Retrieve Aerospike cluster configuration backup",
+                "operationId": "restoreConfiguration",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Backup timestamp",
+                        "name": "timestamp",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/restore/full": {
             "post": {
                 "consumes": [
