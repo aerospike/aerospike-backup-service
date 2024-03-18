@@ -5,13 +5,12 @@ import (
 	"log/slog"
 	"strings"
 
+	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
 	"github.com/aerospike/aerospike-management-lib/info"
+	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 	"github.com/go-logr/logr"
-
-	as "github.com/aerospike/aerospike-client-go/v7"
-	"github.com/aerospike/backup/pkg/model"
 )
 
 const namespaceInfo = "namespaces"
