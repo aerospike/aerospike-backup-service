@@ -149,7 +149,7 @@ func (r *RestoreMemory) findLastFullBackup(
 	}
 
 	fullBackup := latestFullBackupBeforeTime(fullBackupList, time.UnixMilli(toTimeMillis)) // it's a list of namespaces
-	if fullBackup == nil {
+	if len(fullBackup) == 0 {
 		return nil, fmt.Errorf("no full backup found at %d", toTimeMillis)
 	}
 	return fullBackup, nil
@@ -208,10 +208,10 @@ func (r *RestoreMemory) RestoreConfiguration(routine string, toTimeMillis int64)
 	if err != nil {
 		return nil, fmt.Errorf("last full backup not found: %v", err)
 	}
+
+	// fullBackups has backups for multiple namespaces, but same timestamp, they share same configuration.
 	lastFullBackup := fullBackups[0]
-
 	configPath := calculateConfigurationBackupPath(*lastFullBackup.Key)
-
 	return backend.ReadClusterConfiguration(configPath)
 }
 
