@@ -204,7 +204,7 @@ func (r *RestoreMemory) RestoreConfiguration(routine string, toTimeMillis int64)
 	if !found {
 		return nil, fmt.Errorf("backend '%s' not found for restore", routine)
 	}
-	fullBackups, err := r.v(backend, toTimeMillis)
+	fullBackups, err := r.findLastFullBackup(backend, toTimeMillis)
 	if err != nil || len(fullBackups) == 0 {
 		return nil, fmt.Errorf("last full backup not found: %v", err)
 	}
