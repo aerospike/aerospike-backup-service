@@ -848,40 +848,6 @@ paths:
       tags:
       - Configuration
       x-codegen-request-body-name: storage
-  /v1/restore/configuration/{name}/{timestamp}:
-    get:
-      operationId: restoreConfiguration
-      parameters:
-      - description: Backup routine name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
-      - description: Backup timestamp
-        in: path
-        name: timestamp
-        required: true
-        schema:
-          format: int64
-          type: integer
-      responses:
-        "200":
-          content:
-            application/zip:
-              schema:
-                format: binary
-                type: string
-          description: OK
-        "400":
-          content:
-            application/zip:
-              schema:
-                type: string
-          description: Bad Request
-      summary: Retrieve Aerospike cluster configuration backup
-      tags:
-      - Restore
   /v1/restore/full:
     post:
       operationId: restoreFull
@@ -994,6 +960,40 @@ paths:
       tags:
       - Restore
       x-codegen-request-body-name: request
+  /v1/retrieve/configuration/{name}/{timestamp}:
+    get:
+      operationId: restoreConfiguration
+      parameters:
+      - description: Backup routine name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      - description: Backup timestamp
+        in: path
+        name: timestamp
+        required: true
+        schema:
+          format: int64
+          type: integer
+      responses:
+        "200":
+          content:
+            application/zip:
+              schema:
+                format: binary
+                type: string
+          description: OK
+        "400":
+          content:
+            application/zip:
+              schema:
+                type: string
+          description: Bad Request
+      summary: Retrieve Aerospike cluster configuration backup
+      tags:
+      - Restore
   /version:
     get:
       operationId: version

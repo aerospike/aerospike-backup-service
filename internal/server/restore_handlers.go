@@ -169,10 +169,10 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 // @Produce     application/zip
 // @Param       name path string true "Backup routine name"
 // @Param       timestamp path int true "Backup timestamp" format(int64)
-// @Router      /v1/restore/configuration/{name}/{timestamp} [get]
+// @Router      /v1/retrieve/configuration/{name}/{timestamp} [get]
 // @Success     200 {file} application/zip "configuration backup"
 // @Failure     400 {string} string
-func (ws *HTTPServer) restoreConfig(w http.ResponseWriter, r *http.Request) {
+func (ws *HTTPServer) retrieveConfig(w http.ResponseWriter, r *http.Request) {
 	// Check if method is GET
 	if r.Method != http.MethodGet {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
