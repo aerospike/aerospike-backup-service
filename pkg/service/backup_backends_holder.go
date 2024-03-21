@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/aerospike/backup/pkg/model"
 	"sync"
+
+	"github.com/aerospike/backup/pkg/model"
 )
 
 // BackendsHolder is an interface for storing backup backends.
