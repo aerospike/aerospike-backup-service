@@ -59,3 +59,20 @@ func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 }
+
+// applyConfig
+// @Summary     Applies the configuration for the service.
+// @ID          applyConfig
+// @Tags        Configuration
+// @Router      /v1/config/apply [post]
+// @Accept      json
+// @Success     200
+// @Failure     400 {string} string
+func (ws *HTTPServer) applyConfig(w http.ResponseWriter, _ *http.Request) {
+	err := service.ApplyNewConfig(ws.scheduler, ws.config, ws.backupBackends)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}

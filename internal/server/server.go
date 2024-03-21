@@ -150,6 +150,8 @@ func (ws *HTTPServer) Start() {
 
 	// whole config route
 	mux.HandleFunc(ws.api("/config"), ws.configActionHandler)
+	// apply config after update
+	mux.HandleFunc(ws.api("/config/apply"), ws.applyConfig)
 
 	// cluster config routes
 	mux.HandleFunc(ws.api("/config/clusters/{name}"), ws.configClusterActionHandler)
