@@ -26,14 +26,6 @@ var _ BackupListReader = (*BackupBackend)(nil)
 
 const metadataFile = "metadata.yaml"
 
-func BuildBackupBackends(config *model.Config) map[string]*BackupBackend {
-	backends := map[string]*BackupBackend{}
-	for routineName := range config.BackupRoutines {
-		backends[routineName] = newBackend(config, routineName)
-	}
-	return backends
-}
-
 func newBackend(config *model.Config, routineName string) *BackupBackend {
 	backupRoutine := config.BackupRoutines[routineName]
 	storage := config.Storage[backupRoutine.Storage]

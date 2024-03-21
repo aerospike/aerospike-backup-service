@@ -104,12 +104,12 @@ func (ws *HTTPServer) readBackupsForRoutine(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "routine name required", http.StatusBadRequest)
 		return
 	}
-	backend, found := ws.backupBackends[routine]
+	reader, found := ws.backupBackends.GetReader(routine)
 	if !found {
 		http.Error(w, "routine name not found: "+routine, http.StatusBadRequest)
 		return
 	}
-	backupListFunction := backupsReadFunction(backend, isFullBackup)
+	backupListFunction := backupsReadFunction(reader, isFullBackup)
 	backups, err := backupListFunction(timeBounds)
 	if err != nil {
 		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
@@ -130,13 +130,14 @@ func (ws *HTTPServer) readBackupsForRoutine(w http.ResponseWriter, r *http.Reque
 }
 
 func readBackupsLogic(routines map[string]*model.BackupRoutine,
-	backends map[string]service.BackupListReader,
+	backends service.BackendsHolder,
 	timeBounds *model.TimeBounds,
 	isFullBackup bool) (map[string][]model.BackupDetails, error) {
 
 	result := make(map[string][]model.BackupDetails)
 	for routine := range routines {
-		backupListFunction := backupsReadFunction(backends[routine], isFullBackup)
+		reader, _ := backends.GetReader(routine)
+		backupListFunction := backupsReadFunction(reader, isFullBackup)
 		list, err := backupListFunction(timeBounds)
 		if err != nil {
 			return nil, err
