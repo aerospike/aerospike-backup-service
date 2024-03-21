@@ -227,7 +227,7 @@ GET {{baseUrl}}/v1/config/clusters
 
 #### Get routine configuration
 
-Retrieves the configured backup routines, including policies, source clusters, storage options, and scheduling.
+Retrieves the configured backup routines.
 
 Request:
 ```http
@@ -261,7 +261,7 @@ GET {{baseUrl}}/v1/config/routines
 
 #### Get storage configuration
 
-Shows the storage configurations available, including local and MinIO (S3) storage options.
+Returns all the configured storage endpoints, including, if applicable, cloud storage endpoint information such as region and path. 
 
 Request:
 ```http
@@ -288,9 +288,9 @@ GET {{baseUrl}}/v1/config/storage
 ```
 </details>
 
-### Retrieve Backup List
+### Retrieve lackup list
 
-#### Full Backup List
+#### Full backup list
 
 Provides a list of backups for each configured routine, including details such as creation time, namespace, and storage location.
 
@@ -330,7 +330,7 @@ GET {{baseUrl}}/v1/backups/full
 
 ### Restore backup (direct restoration)
 
-#### Direct Restore Using a Specific Backup
+#### Direct restore using a specific backup
 
 Destination field says where to restore to. It can be one of the clusters we read in 1st section, or any other Aerospike cluster.
 
