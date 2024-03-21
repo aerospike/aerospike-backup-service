@@ -46,13 +46,12 @@ func (b *BackendHolderImpl) Get(name string) (*BackupBackend, bool) {
 
 func NewBackupBackends(config *model.Config) *BackendHolderImpl {
 	return &BackendHolderImpl{
-		RWMutex: sync.RWMutex{},
-		data:    BuildBackupBackends(config),
+		data: BuildBackupBackends(config),
 	}
 }
 
 func BuildBackupBackends(config *model.Config) map[string]*BackupBackend {
-	backends := map[string]*BackupBackend{}
+	backends := make(map[string]*BackupBackend, len(config.BackupRoutines))
 	for routineName := range config.BackupRoutines {
 		backends[routineName] = newBackend(config, routineName)
 	}

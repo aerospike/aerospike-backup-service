@@ -71,7 +71,7 @@ func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
 func (ws *HTTPServer) applyConfig(w http.ResponseWriter, _ *http.Request) {
 	err := service.ApplyNewConfig(ws.scheduler, ws.config, ws.backupBackends)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusOK)
