@@ -201,7 +201,7 @@ This endpoint returns the configurations of existing clusters, including the def
 
 Request:
 ```http
-  GET {{baseUrl}}/v1/config/clusters
+GET {{baseUrl}}/v1/config/clusters
 ```
 
 <details>
