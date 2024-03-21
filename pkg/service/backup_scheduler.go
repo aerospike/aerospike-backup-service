@@ -70,7 +70,7 @@ func ScheduleBackup(ctx context.Context, config *model.Config, backends Backends
 
 func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config, backends BackendsHolder) error {
 	for routineName, routine := range config.BackupRoutines {
-		backend := backends.Get(routineName)
+		backend, _ := backends.Get(routineName)
 		handler, err := newBackupHandler(config, routineName, backend)
 		if err != nil {
 			slog.Error("failed to create backup handler", "routine", routineName, "err", err)

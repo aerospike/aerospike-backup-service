@@ -28,36 +28,23 @@ func cleanTestFolder() {
 
 type BackendHolderMock struct{}
 
-func (b *BackendHolderMock) GetReader(name string) BackupListReader {
+func (b *BackendHolderMock) GetReader(name string) (BackupListReader, bool) {
 	switch name {
 	case "routine":
-		return &BackendMock{}
+		return &BackendMock{}, true
 	case "routine_fail_read":
-		return &BackendFailMock{}
+		return &BackendFailMock{}, true
 	case "routine_fail_restore":
-		return &BackendMock{}
+		return &BackendMock{}, true
 	}
-	return nil
+	return nil, false
 }
 
-func (b *BackendHolderMock) Get(_ string) *BackupBackend {
-	return nil
-}
-
-func (b *BackendHolderMock) Found(name string) bool {
-	if name != "wrongRoutine" {
-		return true
-	}
-	return false
+func (b *BackendHolderMock) Get(_ string) (*BackupBackend, bool) {
+	return nil, false
 }
 
 func (b *BackendHolderMock) SetData(_ map[string]*BackupBackend) {
-}
-
-func (b *BackendHolderMock) Lock() {
-}
-
-func (b *BackendHolderMock) Unlock() {
 }
 
 func makeTestRestoreService() *RestoreMemory {

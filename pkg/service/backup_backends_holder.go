@@ -9,11 +9,9 @@ import (
 // We need it because same backends are used in API handlers and backup jobs.
 type BackendsHolder interface {
 	// GetReader returns BackupBackend for routine as BackupListReader.
-	GetReader(routineName string) BackupListReader
+	GetReader(routineName string) (BackupListReader, bool)
 	// Get returns BackupBackend for routine.
-	Get(routineName string) *BackupBackend
-	// Found returns true if given routine exist.
-	Found(routineName string) bool
+	Get(routineName string) (*BackupBackend, bool)
 	// SetData replaces stored backends.
 	SetData(backends map[string]*BackupBackend)
 }
@@ -31,23 +29,18 @@ func (b *BackendHolderImpl) SetData(backends map[string]*BackupBackend) {
 
 var _ BackendsHolder = (*BackendHolderImpl)(nil)
 
-func (b *BackendHolderImpl) GetReader(name string) BackupListReader {
+func (b *BackendHolderImpl) GetReader(name string) (BackupListReader, bool) {
 	b.RLock()
 	defer b.RUnlock()
-	return b.data[name]
+	backend, found := b.data[name]
+	return backend, found
 }
 
-func (b *BackendHolderImpl) Get(name string) *BackupBackend {
+func (b *BackendHolderImpl) Get(name string) (*BackupBackend, bool) {
 	b.RLock()
 	defer b.RUnlock()
-	return b.data[name]
-}
-
-func (b *BackendHolderImpl) Found(name string) bool {
-	b.RLock()
-	defer b.RUnlock()
-	_, found := b.data[name]
-	return !found
+	backend, found := b.data[name]
+	return backend, found
 }
 
 func NewBackupBackends(config *model.Config) *BackendHolderImpl {

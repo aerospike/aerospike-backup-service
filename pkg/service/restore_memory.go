@@ -63,16 +63,16 @@ func (r *RestoreMemory) runRestoreService(request *model.RestoreRequestInternal)
 }
 
 func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (int, error) {
-	if !r.backends.Found(request.Routine) {
+	reader, found := r.backends.GetReader(request.Routine)
+	if !found {
 		return 0, fmt.Errorf("backend '%s' not found for restore", request.Routine)
 	}
-	backend := r.backends.GetReader(request.Routine)
-	fullBackups, err := r.findLastFullBackup(backend, request)
+	fullBackups, err := r.findLastFullBackup(reader, request)
 	if err != nil {
 		return 0, fmt.Errorf("last full backup not found: %v", err)
 	}
 	jobID := r.restoreJobs.newJob()
-	go r.restoreByTimeSync(backend, request, jobID, fullBackups)
+	go r.restoreByTimeSync(reader, request, jobID, fullBackups)
 	return jobID, nil
 }
 
