@@ -67,13 +67,13 @@ func run() int {
 		// init stderr log capturer
 		stdio.Stderr = stdio.NewCgoStdio(config.ServiceConfig.Logger.CaptureShared)
 		// schedule all configured backups
-		backends := service.BuildBackupBackends(config)
+		backends := service.NewBackupBackends(config)
 		scheduler, err := service.ScheduleBackup(ctx, config, backends)
 		if err != nil {
 			return err
 		}
 		// run HTTP server
-		err = runHTTPServer(ctx, service.BackendsToReaders(backends), config, scheduler)
+		err = runHTTPServer(ctx, backends, config, scheduler)
 		// shutdown shared resources
 		shared.Shutdown()
 		// stop the scheduler
@@ -124,9 +124,9 @@ func readConfiguration() (*model.Config, error) {
 	return config, nil
 }
 
-func runHTTPServer(ctx context.Context, backendMap map[string]service.BackupListReader,
+func runHTTPServer(ctx context.Context, backends service.BackendsHolder,
 	config *model.Config, scheduler quartz.Scheduler) error {
-	server := server.NewHTTPServer(backendMap, config, scheduler)
+	server := server.NewHTTPServer(backends, config, scheduler)
 	go func() {
 		server.Start()
 	}()

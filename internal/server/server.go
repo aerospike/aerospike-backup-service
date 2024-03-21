@@ -82,7 +82,7 @@ type HTTPServer struct {
 	whiteList      *ipWhiteList
 	scheduler      quartz.Scheduler
 	restoreService service.RestoreService
-	backupBackends map[string]service.BackupListReader // key is routine name
+	backupBackends service.BackendsHolder
 }
 
 // Annotations to generate OpenAPI description (https://github.com/swaggo/swag)
@@ -97,7 +97,7 @@ type HTTPServer struct {
 // @externalDocs.url          https://swagger.io/resources/open-api/
 //
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(backendMap map[string]service.BackupListReader, config *model.Config,
+func NewHTTPServer(backends service.BackendsHolder, config *model.Config,
 	scheduler quartz.Scheduler) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer
 	addr := fmt.Sprintf("%s:%d", serverConfig.Address, serverConfig.Port)
@@ -114,8 +114,8 @@ func NewHTTPServer(backendMap map[string]service.BackupListReader, config *model
 		rateLimiter:    rateLimiter,
 		whiteList:      newIPWhiteList(serverConfig.Rate.WhiteList),
 		scheduler:      scheduler,
-		restoreService: service.NewRestoreMemory(backendMap, config),
-		backupBackends: backendMap,
+		restoreService: service.NewRestoreMemory(backends, config),
+		backupBackends: backends,
 	}
 }
 
