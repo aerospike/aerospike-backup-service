@@ -56,7 +56,6 @@ func run() int {
 			return err
 		}
 		server.ConfigurationManager = manager
-		setConfigurationManager(configFile)
 		// read configuration file
 		config, err := readConfiguration()
 		if err != nil {
@@ -92,9 +91,6 @@ func run() int {
 	}
 
 	return util.ToExitVal(err)
-}
-
-func setConfigurationManager(configFile string) {
 }
 
 func systemCtx() context.Context {
