@@ -14,12 +14,19 @@ type S3ConfigurationManager struct {
 var _ ConfigurationManager = (*S3ConfigurationManager)(nil)
 
 // NewS3ConfigurationManager returns a new S3ConfigurationManager.
-func NewS3ConfigurationManager(configStorage *model.Storage) ConfigurationManager {
-	s3Context, _ := NewS3Context(configStorage)
+func NewS3ConfigurationManager(configStorage *model.Storage) (ConfigurationManager, error) {
+	s3Context, err := NewS3Context(configStorage)
+	if err != nil {
+		return nil, err
+	}
+	err = configStorage.Validate()
+	if err != nil {
+		return nil, err
+	}
 	return &S3ConfigurationManager{
 		S3Context:      s3Context,
 		configFilePath: *configStorage.Path,
-	}
+	}, nil
 }
 
 // ReadConfiguration reads and returns the configuration from S3.
