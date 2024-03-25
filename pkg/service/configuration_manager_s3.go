@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"github.com/aerospike/backup/pkg/model"
 )
 
@@ -32,7 +33,7 @@ func (s *S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	config := model.NewConfigWithDefaultValues()
 	err := s.readFile(s.path, config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot read file %s: %v", s.path, err)
 	}
 	err = config.Validate()
 	if err != nil {
