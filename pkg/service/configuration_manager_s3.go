@@ -8,7 +8,6 @@ import (
 // performing I/O operations on AWS S3.
 type S3ConfigurationManager struct {
 	*S3Context
-	configFilePath string
 }
 
 var _ ConfigurationManager = (*S3ConfigurationManager)(nil)
@@ -24,20 +23,25 @@ func NewS3ConfigurationManager(configStorage *model.Storage) (ConfigurationManag
 		return nil, err
 	}
 	return &S3ConfigurationManager{
-		S3Context:      s3Context,
-		configFilePath: *configStorage.Path,
+		s3Context,
 	}, nil
 }
 
 // ReadConfiguration reads and returns the configuration from S3.
 func (s *S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	config := model.NewConfigWithDefaultValues()
-	_ = s.readFile(s.configFilePath, config)
-	err := config.Validate()
-	return config, err
+	err := s.readFile(s.path, config)
+	if err != nil {
+		return nil, err
+	}
+	err = config.Validate()
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
 }
 
 // WriteConfiguration writes the configuration to S3.
 func (s *S3ConfigurationManager) WriteConfiguration(config *model.Config) error {
-	return s.writeYaml(s.configFilePath, config)
+	return s.writeYaml(s.path, config)
 }
