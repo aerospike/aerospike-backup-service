@@ -962,7 +962,7 @@ paths:
       x-codegen-request-body-name: request
   /v1/retrieve/configuration/{name}/{timestamp}:
     get:
-      operationId: restoreConfiguration
+      operationId: retrieveConfiguration
       parameters:
       - description: Backup routine name
         in: path

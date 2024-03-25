@@ -164,7 +164,7 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 }
 
 // @Summary     Retrieve Aerospike cluster configuration backup
-// @ID	        restoreConfiguration
+// @ID	        retrieveConfiguration
 // @Tags        Restore
 // @Produce     application/zip
 // @Param       name path string true "Backup routine name"

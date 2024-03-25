@@ -1267,7 +1267,7 @@ const docTemplate = `{
                     "Restore"
                 ],
                 "summary": "Retrieve Aerospike cluster configuration backup",
-                "operationId": "restoreConfiguration",
+                "operationId": "retrieveConfiguration",
                 "parameters": [
                     {
                         "type": "string",
