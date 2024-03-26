@@ -67,7 +67,16 @@ type BackupPolicy struct {
 	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
-	Sealed bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
+	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
+}
+
+// IsSealed returns the value of the Sealed property.
+// If the property is not set, it returns the default value.
+func (p *BackupPolicy) IsSealed() bool {
+	if p.Sealed != nil {
+		return *p.Sealed
+	}
+	return defaultConfig.backupPolicy.sealed
 }
 
 // CopySMDDisabled creates a new instance of the BackupPolicy struct with identical field values.

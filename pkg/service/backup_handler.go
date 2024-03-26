@@ -20,6 +20,7 @@ type BackupHandler struct {
 	backupIncrPolicy *model.BackupPolicy
 	backupRoutine    *model.BackupRoutine
 	routineName      string
+	namespaces       []string
 	cluster          *model.AerospikeCluster
 	storage          *model.Storage
 	secretAgent      *model.SecretAgent
@@ -40,12 +41,13 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 		secretAgent = config.SecretAgents[*backupRoutine.SecretAgent]
 	}
 
-	if len(backupRoutine.Namespaces) == 0 {
-		namespaces, err := getAllNamespacesOfCluster(cluster)
+	namespaces := backupRoutine.Namespaces
+	if len(namespaces) == 0 {
+		var err error
+		namespaces, err = getAllNamespacesOfCluster(cluster)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get namespaces: %v", err)
+			return nil, fmt.Errorf("failed to get namespaces: %w", err)
 		}
-		backupRoutine.Namespaces = namespaces
 	}
 
 	return &BackupHandler{
@@ -53,11 +55,12 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 		backupRoutine:    backupRoutine,
 		backupFullPolicy: backupPolicy,
 		backupIncrPolicy: backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
+		routineName:      routineName,
+		namespaces:       namespaces,
 		cluster:          cluster,
 		storage:          storage,
 		secretAgent:      secretAgent,
 		state:            backupBackend.readState(),
-		routineName:      routineName,
 		retry:            NewRetryService(routineName),
 	}, nil
 }
@@ -81,7 +84,7 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 		h.backend.FullBackupInProgress().Store(false)
 		slog.Debug("Release fullBackupInProgress lock", "name", h.routineName)
 	}()
-	for _, namespace := range h.backupRoutine.Namespaces {
+	for _, namespace := range h.namespaces {
 		err := h.fullBackupForNamespace(now, namespace)
 		if err != nil {
 			return err
@@ -104,7 +107,7 @@ func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace s
 	h.backend.CreateFolder(backupFolder)
 
 	options := shared.BackupOptions{}
-	if h.backupFullPolicy.Sealed {
+	if h.backupFullPolicy.IsSealed() {
 		options.ModBefore = util.Ptr(upperBound.UnixNano())
 	}
 
@@ -163,7 +166,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 			"name", h.routineName)
 		return
 	}
-	for _, namespace := range h.backupRoutine.Namespaces {
+	for _, namespace := range h.namespaces {
 		h.runIncrBackupForNamespace(now, namespace)
 	}
 
@@ -184,7 +187,7 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	options := shared.BackupOptions{
 		ModAfter: util.Ptr(fromEpoch),
 	}
-	if h.backupIncrPolicy.Sealed {
+	if h.backupIncrPolicy.IsSealed() {
 		options.ModBefore = util.Ptr(upperBound.UnixNano())
 	}
 	backupRunFunc := func() {
@@ -193,7 +196,7 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 		stats, err = backupService.BackupRun(
 			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, &namespace, backupPath)
 		if err != nil {
-			slog.Warn("Failed incremental backup", "name", h.routineName)
+			slog.Warn("Failed incremental backup", "name", h.routineName, "err", err)
 			incrBackupFailureCounter.Inc()
 			return
 		}

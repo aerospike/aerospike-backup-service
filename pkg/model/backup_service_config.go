@@ -12,7 +12,7 @@ type BackupServiceConfig struct {
 // NewBackupServiceConfigWithDefaultValues returns a new BackupServiceConfig with default values.
 func NewBackupServiceConfigWithDefaultValues() *BackupServiceConfig {
 	return &BackupServiceConfig{
-		HTTPServer: NewHTTPServerWithDefaultValues(),
-		Logger:     NewLoggerConfigWithDefaultValues(),
+		HTTPServer: &HTTPServerConfig{},
+		Logger:     &LoggerConfig{},
 	}
 }

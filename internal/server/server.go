@@ -100,11 +100,11 @@ type HTTPServer struct {
 func NewHTTPServer(backends service.BackendsHolder, config *model.Config,
 	scheduler quartz.Scheduler) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer
-	addr := fmt.Sprintf("%s:%d", serverConfig.Address, serverConfig.Port)
+	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddress(), serverConfig.GetPort())
 
 	rateLimiter := NewIPRateLimiter(
-		rate.Limit(serverConfig.Rate.Tps),
-		serverConfig.Rate.Size,
+		rate.Limit(serverConfig.GetRate().GetTps()),
+		serverConfig.GetRate().GetSize(),
 	)
 	return &HTTPServer{
 		config: config,
@@ -112,7 +112,7 @@ func NewHTTPServer(backends service.BackendsHolder, config *model.Config,
 			Addr: addr,
 		},
 		rateLimiter:    rateLimiter,
-		whiteList:      newIPWhiteList(serverConfig.Rate.WhiteList),
+		whiteList:      newIPWhiteList(serverConfig.GetRate().GetWhiteList()),
 		scheduler:      scheduler,
 		restoreService: service.NewRestoreMemory(backends, config),
 		backupBackends: backends,
@@ -216,7 +216,7 @@ func (ws *HTTPServer) Start() {
 }
 
 func (ws *HTTPServer) api(pattern string) string {
-	contextPath := ws.config.ServiceConfig.HTTPServer.ContextPath
+	contextPath := ws.config.ServiceConfig.HTTPServer.GetContextPath()
 	if !strings.HasSuffix(contextPath, "/") {
 		contextPath += "/"
 	}
@@ -224,7 +224,7 @@ func (ws *HTTPServer) api(pattern string) string {
 }
 
 func (ws *HTTPServer) sys(pattern string) string {
-	contextPath := ws.config.ServiceConfig.HTTPServer.ContextPath
+	contextPath := ws.config.ServiceConfig.HTTPServer.GetContextPath()
 	if contextPath == "/" {
 		return pattern
 	}

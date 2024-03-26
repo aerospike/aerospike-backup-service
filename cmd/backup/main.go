@@ -65,7 +65,7 @@ func run() int {
 		logger.SetDefault(util.NewQuartzLogger(ctx))
 		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// init stderr log capturer
-		stdio.Stderr = stdio.NewCgoStdio(config.ServiceConfig.Logger.CaptureShared)
+		stdio.Stderr = stdio.NewCgoStdio(config.ServiceConfig.Logger.GetCaptureShared())
 		// schedule all configured backups
 		backends := service.NewBackupBackends(config)
 		scheduler, err := service.ScheduleBackup(ctx, config, backends)

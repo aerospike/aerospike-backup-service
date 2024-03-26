@@ -18,19 +18,19 @@ import (
 func LogHandler(config *model.LoggerConfig) slog.Handler {
 	addSource := true
 	writer := logWriter(config)
-	switch strings.ToUpper(config.Format) {
+	switch strings.ToUpper(config.GetFormat()) {
 	case "PLAIN":
 		return slog.NewTextHandler(writer, &slog.HandlerOptions{
-			Level:     logLevel(config.Level),
+			Level:     logLevel(config.GetLevel()),
 			AddSource: addSource,
 		})
 	case "JSON":
 		return slog.NewJSONHandler(writer, &slog.HandlerOptions{
-			Level:     logLevel(config.Level),
+			Level:     logLevel(config.GetLevel()),
 			AddSource: addSource,
 		})
 	default:
-		panic(fmt.Sprintf("unsupported log format: %s", config.Format))
+		panic(fmt.Sprintf("unsupported log format: %s", *config.Format))
 	}
 }
 
@@ -43,11 +43,11 @@ func logWriter(config *model.LoggerConfig) io.Writer {
 			MaxAge:     config.FileWriter.MaxAge,
 			Compress:   config.FileWriter.Compress,
 		}
-		if config.StdoutWriter {
+		if config.GetStdoutWriter() {
 			return io.MultiWriter(fileWriter, os.Stdout)
 		}
 		return fileWriter
-	} else if config.StdoutWriter {
+	} else if config.GetStdoutWriter() {
 		return os.Stdout
 	}
 	return &ignoreWriter{}
