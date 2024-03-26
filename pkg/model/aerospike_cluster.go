@@ -66,8 +66,8 @@ func (c *AerospikeCluster) GetUser() *string {
 // Returns the password value. If it failed to read password, it will return nil
 // and try to read again next time.
 func (c *AerospikeCluster) GetPassword() *string {
-	if pwd := c.pwd.Load(); pwd != nil {
-		return pwd
+	if password := c.pwd.Load(); password != nil {
+		return password
 	}
 
 	if c.Credentials == nil || c.Credentials.PasswordPath == nil {
