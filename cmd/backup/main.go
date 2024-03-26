@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -32,6 +30,7 @@ var (
 func run() int {
 	var (
 		configFile string
+		remote     bool
 	)
 
 	validateFlags := func(_ *cobra.Command, _ []string) error {
@@ -49,9 +48,14 @@ func run() int {
 	}
 
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path/URL")
+	rootCmd.Flags().BoolVarP(&remote, "remote", "r", false, "use remote config file")
 
 	rootCmd.RunE = func(_ *cobra.Command, _ []string) error {
-		setConfigurationManager(configFile)
+		manager, err := service.NewConfigurationManager(configFile, remote)
+		if err != nil {
+			return err
+		}
+		server.ConfigurationManager = manager
 		// read configuration file
 		config, err := readConfiguration()
 		if err != nil {
@@ -87,15 +91,6 @@ func run() int {
 	}
 
 	return util.ToExitVal(err)
-}
-
-func setConfigurationManager(configFile string) {
-	uri, err := url.Parse(configFile)
-	if err == nil && strings.HasPrefix(uri.Scheme, "http") {
-		server.ConfigurationManager = service.NewHTTPConfigurationManager(configFile)
-	} else {
-		server.ConfigurationManager = service.NewFileConfigurationManager(configFile)
-	}
 }
 
 func systemCtx() context.Context {
