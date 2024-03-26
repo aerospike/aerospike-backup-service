@@ -2,11 +2,12 @@ package service
 
 import (
 	"bytes"
-	"github.com/aerospike/backup/pkg/model"
-	"gopkg.in/yaml.v3"
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/aerospike/backup/pkg/model"
+	"gopkg.in/yaml.v3"
 )
 
 type ConfigurationManager interface {
