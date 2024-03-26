@@ -23,7 +23,7 @@ func NewConfigurationManager(configFile string, remote bool) (ConfigurationManag
 	isDownload := uri.Scheme == "http" || uri.Scheme == "https"
 
 	if remote {
-		return newRemoteConfigurationManager(configFile, isDownload)
+		return remoteConfigurationManager(configFile, isDownload)
 	}
 	if isDownload {
 		return NewHTTPConfigurationManager(configFile), nil
@@ -31,7 +31,7 @@ func NewConfigurationManager(configFile string, remote bool) (ConfigurationManag
 	return NewFileConfigurationManager(configFile), nil
 }
 
-func newRemoteConfigurationManager(configFile string, isDownload bool) (ConfigurationManager, error) {
+func remoteConfigurationManager(configFile string, isDownload bool) (ConfigurationManager, error) {
 	var buf []byte
 	var err error
 
