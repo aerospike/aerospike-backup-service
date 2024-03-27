@@ -200,7 +200,7 @@ func (r *RestoreMemory) findIncrementalBackupsForNamespace(
 }
 
 func (r *RestoreMemory) RestoreConfiguration(routine string, toTimeMillis int64) ([]byte, error) {
-	backend, found := r.backends[routine]
+	backend, found := r.backends.GetReader(routine)
 	if !found {
 		return nil, fmt.Errorf("backend '%s' not found for restore", routine)
 	}
