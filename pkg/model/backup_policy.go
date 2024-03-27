@@ -140,10 +140,10 @@ func (p *BackupPolicy) Validate() error {
 	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
 		return fmt.Errorf("totalTimeout %d invalid, should be positive number", *p.TotalTimeout)
 	}
-	if *p.MaxRetries < 0 {
+	if p.MaxRetries != nil && *p.MaxRetries < 0 {
 		return fmt.Errorf("maxRetries %d invalid, should be positive number", *p.MaxRetries)
 	}
-	if *p.RetryDelay < 0 {
+	if p.RetryDelay != nil && *p.RetryDelay < 0 {
 		return fmt.Errorf("retryDelay %d invalid, should be positive number", *p.RetryDelay)
 	}
 	if p.Bandwidth != nil && *p.Bandwidth <= 0 {
