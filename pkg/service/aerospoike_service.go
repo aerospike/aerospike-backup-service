@@ -2,10 +2,15 @@ package service
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	as "github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/aerospike-management-lib/asconfig"
+	"github.com/aerospike/aerospike-management-lib/info"
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
+	"github.com/go-logr/logr"
 )
 
 const namespaceInfo = "namespaces"
@@ -27,4 +32,34 @@ func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error
 	}
 	namespaces := infoRes[namespaceInfo]
 	return strings.Split(namespaces, ";"), nil
+}
+
+func getClusterConfiguration(cluster *model.AerospikeCluster) []asconfig.DotConf {
+	var outputs []asconfig.DotConf
+	cp := &as.ClientPolicy{
+		User:     *cluster.GetUser(),
+		Password: *cluster.GetPassword(),
+	}
+
+	for _, host := range cluster.ASClientHosts() {
+		asInfo := info.NewAsInfo(logr.Logger{}, host, cp)
+		conf, err := asInfo.GetAsConfig()
+
+		if err != nil {
+			slog.Error("Error reading configuration", "host", host, "err", err)
+			continue
+		}
+
+		asconf, _ := asconfig.NewMapAsConfig(logr.Discard(), conf)
+		configAsString, err := util.TryAndRecover(asconf.ToConfFile)
+
+		if err != nil {
+			slog.Error("Error serialising configuration", "host", host, "err", err)
+			continue
+		}
+
+		outputs = append(outputs, configAsString)
+	}
+
+	return outputs
 }

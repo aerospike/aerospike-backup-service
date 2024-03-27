@@ -14,7 +14,7 @@ import (
 
 var restoreService = makeTestRestoreService()
 
-var validBackupPath = "./testout/backup/namespace"
+var validBackupPath = "./testout/backup/data/namespace"
 
 func makeTestFolders() {
 	_ = os.MkdirAll(validBackupPath, os.ModePerm)
@@ -68,6 +68,10 @@ func makeTestRestoreService() *RestoreMemory {
 type BackendMock struct {
 }
 
+func (m *BackendMock) ReadClusterConfiguration(path string) ([]byte, error) {
+	return nil, nil
+}
+
 func (*BackendMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
 		BackupMetadata: model.BackupMetadata{
@@ -95,6 +99,10 @@ func (*BackendMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDe
 }
 
 type BackendFailMock struct {
+}
+
+func (m *BackendFailMock) ReadClusterConfiguration(path string) ([]byte, error) {
+	return nil, nil
 }
 
 func (*BackendFailMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
