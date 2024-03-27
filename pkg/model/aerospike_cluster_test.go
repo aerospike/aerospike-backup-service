@@ -8,16 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testdataFolder = "./testdata"
-const passwordPath = "./testdata/password.txt"
-
-func CreateValidFile() {
-	text := []byte("password")
-	os.MkdirAll(testdataFolder, 0744)
-	f, _ := os.OpenFile(passwordPath, os.O_WRONLY|os.O_CREATE, 0644)
-	defer f.Close()
-	f.Write(text)
-}
+const (
+	testdataFolder = "./testdata"
+	passwordPath   = testdataFolder + "/password.txt"
+)
 
 func TestAerospikeCluster_GetPassword(t *testing.T) {
 	tests := []struct {
@@ -29,7 +23,7 @@ func TestAerospikeCluster_GetPassword(t *testing.T) {
 	}{
 		{
 			name:      "ValidPasswordPath",
-			setupMock: CreateValidFile,
+			setupMock: createValidFile,
 			credentials: &Credentials{
 				User:         nil,
 				PasswordPath: ptr.String(passwordPath),
@@ -82,7 +76,7 @@ func TestAerospikeCluster_GetPassword(t *testing.T) {
 }
 
 func TestAerospikeCluster_GetPasswordCaching(t *testing.T) {
-	CreateValidFile()
+	createValidFile()
 
 	cluster := &AerospikeCluster{
 		Credentials: &Credentials{
@@ -101,4 +95,12 @@ func TestAerospikeCluster_GetPasswordCaching(t *testing.T) {
 	// Make a second call to GetPassword and check if the returned passwords are same
 	passwordAfterCache := cluster.GetPassword()
 	assert.Equal(t, password, passwordAfterCache)
+}
+
+func createValidFile() {
+	text := []byte("password")
+	os.MkdirAll(testdataFolder, 0744)
+	f, _ := os.OpenFile(passwordPath, os.O_WRONLY|os.O_CREATE, 0644)
+	defer f.Close()
+	f.Write(text)
 }
