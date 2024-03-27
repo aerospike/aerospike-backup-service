@@ -25,9 +25,10 @@ var defaultConfig = struct {
 		ContextPath: util.Ptr("/"),
 	},
 	logger: LoggerConfig{
-		Level:        util.Ptr("DEBUG"),
-		Format:       util.Ptr("PLAIN"),
-		StdoutWriter: util.Ptr(true),
+		Level:         util.Ptr("DEBUG"),
+		Format:        util.Ptr("PLAIN"),
+		StdoutWriter:  util.Ptr(true),
+		CaptureShared: util.Ptr(false),
 	},
 	backupPolicy: backupPolicy{
 		retryDelay: 60_000, // default retry delay is 1 minute
