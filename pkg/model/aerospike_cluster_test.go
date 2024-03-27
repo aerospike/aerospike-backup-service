@@ -1,9 +1,10 @@
 package model
 
 import (
-	"github.com/aws/smithy-go/ptr"
 	"os"
 	"testing"
+
+	"github.com/aws/smithy-go/ptr"
 
 	"github.com/stretchr/testify/assert"
 )
