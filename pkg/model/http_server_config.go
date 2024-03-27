@@ -18,36 +18,36 @@ type HTTPServerConfig struct {
 	ContextPath *string `yaml:"context-path,omitempty" json:"context-path,omitempty" default:"/"`
 }
 
-// GetAddress returns the value of the Address property.
+// GetAddressOrDefault returns the value of the Address property.
 // If the property is not set, it returns the default value.
-func (s *HTTPServerConfig) GetAddress() string {
+func (s *HTTPServerConfig) GetAddressOrDefault() string {
 	if s.Address != nil {
 		return *s.Address
 	}
 	return *defaultConfig.http.Address
 }
 
-// GetPort returns the value of the Port property.
+// GetPortOrDefault returns the value of the Port property.
 // If the property is not set, it returns the default value.
-func (s *HTTPServerConfig) GetPort() int {
+func (s *HTTPServerConfig) GetPortOrDefault() int {
 	if s.Port != nil {
 		return *s.Port
 	}
 	return *defaultConfig.http.Port
 }
 
-// GetRate returns the value of the Rate property.
+// GetRateOrDefault returns the value of the Rate property.
 // If the property is not set, it returns the default value.
-func (s *HTTPServerConfig) GetRate() *RateLimiterConfig {
+func (s *HTTPServerConfig) GetRateOrDefault() *RateLimiterConfig {
 	if s.Rate != nil {
 		return s.Rate
 	}
 	return defaultConfig.http.Rate
 }
 
-// GetContextPath returns the value of the ContextPath property.
+// GetContextPathOrDefault returns the value of the ContextPath property.
 // If the property is not set, it returns the default value.
-func (s *HTTPServerConfig) GetContextPath() string {
+func (s *HTTPServerConfig) GetContextPathOrDefault() string {
 	if s.ContextPath != nil {
 		return *s.ContextPath
 	}
@@ -65,27 +65,27 @@ type RateLimiterConfig struct {
 	WhiteList []string `yaml:"white-list,omitempty" json:"white-list,omitempty" default:""`
 }
 
-// GetTps returns the value of the Tps property.
+// GetTpsOrDefault returns the value of the Tps property.
 // If the property is not set, it returns the default value.
-func (r *RateLimiterConfig) GetTps() int {
+func (r *RateLimiterConfig) GetTpsOrDefault() int {
 	if r.Tps != nil {
 		return *r.Tps
 	}
 	return *defaultConfig.http.Rate.Tps
 }
 
-// GetSize returns the value of the Size property.
+// GetSizeOrDefault returns the value of the Size property.
 // If the property is not set, it returns the default value.
-func (r *RateLimiterConfig) GetSize() int {
+func (r *RateLimiterConfig) GetSizeOrDefault() int {
 	if r.Size != nil {
 		return *r.Size
 	}
 	return *defaultConfig.http.Rate.Size
 }
 
-// GetWhiteList returns the value of the WhiteList property.
+// GetWhiteListOrDefault returns the value of the WhiteList property.
 // If the property is not set, it returns the default value.
-func (r *RateLimiterConfig) GetWhiteList() []string {
+func (r *RateLimiterConfig) GetWhiteListOrDefault() []string {
 	if r.WhiteList != nil {
 		return r.WhiteList
 	}

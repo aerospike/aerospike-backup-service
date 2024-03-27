@@ -68,8 +68,8 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 func (h *BackupHandler) runFullBackup(now time.Time) {
 	h.retry.retry(
 		func() error { return h.runFullBackupInternal(now) },
-		time.Duration(*h.backupFullPolicy.RetryDelay)*time.Millisecond,
-		*h.backupFullPolicy.MaxRetries,
+		time.Duration(h.backupFullPolicy.GetRetryDelayOrDefault())*time.Millisecond,
+		h.backupFullPolicy.GetMaxRetriesOrDefault(),
 	)
 }
 

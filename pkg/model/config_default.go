@@ -3,7 +3,9 @@ package model
 import "github.com/aerospike/backup/pkg/util"
 
 type backupPolicy struct {
-	sealed bool
+	maxRetries int32
+	retryDelay int32
+	sealed     bool
 }
 
 // defaultConfig represents default configuration values.
@@ -26,5 +28,8 @@ var defaultConfig = struct {
 		Level:        util.Ptr("DEBUG"),
 		Format:       util.Ptr("PLAIN"),
 		StdoutWriter: util.Ptr(true),
+	},
+	backupPolicy: backupPolicy{
+		retryDelay: 60_000, // default retry delay is 1 minute
 	},
 }

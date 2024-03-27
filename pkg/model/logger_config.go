@@ -27,36 +27,36 @@ var (
 	supportedLoggerFormats = []string{"PLAIN", "JSON"}
 )
 
-// GetLevel returns the value of the Level property.
+// GetLevelOrDefault returns the value of the Level property.
 // If the property is not set, it returns the default value.
-func (l *LoggerConfig) GetLevel() string {
+func (l *LoggerConfig) GetLevelOrDefault() string {
 	if l.Level != nil {
 		return *l.Level
 	}
 	return *defaultConfig.logger.Level
 }
 
-// GetFormat returns the value of the Format property.
+// GetFormatOrDefault returns the value of the Format property.
 // If the property is not set, it returns the default value.
-func (l *LoggerConfig) GetFormat() string {
+func (l *LoggerConfig) GetFormatOrDefault() string {
 	if l.Format != nil {
 		return *l.Format
 	}
 	return *defaultConfig.logger.Format
 }
 
-// GetCaptureShared returns the value of the CaptureShared property.
+// GetCaptureSharedOrDefault returns the value of the CaptureShared property.
 // If the property is not set, it returns the default value.
-func (l *LoggerConfig) GetCaptureShared() bool {
+func (l *LoggerConfig) GetCaptureSharedOrDefault() bool {
 	if l.CaptureShared != nil {
 		return *l.CaptureShared
 	}
 	return *defaultConfig.logger.CaptureShared
 }
 
-// GetStdoutWriter returns the value of the StdoutWriter property.
+// GetStdoutWriterOrDefault returns the value of the StdoutWriter property.
 // If the property is not set, it returns the default value.
-func (l *LoggerConfig) GetStdoutWriter() bool {
+func (l *LoggerConfig) GetStdoutWriterOrDefault() bool {
 	if l.StdoutWriter != nil {
 		return *l.StdoutWriter
 	}
