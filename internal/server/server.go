@@ -82,7 +82,7 @@ type HTTPServer struct {
 	whiteList      *ipWhiteList
 	scheduler      quartz.Scheduler
 	restoreService service.RestoreService
-	backupBackends map[string]service.BackupListReader // key is routine name
+	backupBackends service.BackendsHolder
 }
 
 // Annotations to generate OpenAPI description (https://github.com/swaggo/swag)
@@ -97,14 +97,14 @@ type HTTPServer struct {
 // @externalDocs.url          https://swagger.io/resources/open-api/
 //
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(backendMap map[string]service.BackupListReader, config *model.Config,
+func NewHTTPServer(backends service.BackendsHolder, config *model.Config,
 	scheduler quartz.Scheduler) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer
-	addr := fmt.Sprintf("%s:%d", serverConfig.Address, serverConfig.Port)
+	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
 	rateLimiter := NewIPRateLimiter(
-		rate.Limit(serverConfig.Rate.Tps),
-		serverConfig.Rate.Size,
+		rate.Limit(serverConfig.GetRateOrDefault().GetTpsOrDefault()),
+		serverConfig.GetRateOrDefault().GetSizeOrDefault(),
 	)
 	return &HTTPServer{
 		config: config,
@@ -112,10 +112,10 @@ func NewHTTPServer(backendMap map[string]service.BackupListReader, config *model
 			Addr: addr,
 		},
 		rateLimiter:    rateLimiter,
-		whiteList:      newIPWhiteList(serverConfig.Rate.WhiteList),
+		whiteList:      newIPWhiteList(serverConfig.GetRateOrDefault().GetWhiteListOrDefault()),
 		scheduler:      scheduler,
-		restoreService: service.NewRestoreMemory(backendMap, config),
-		backupBackends: backendMap,
+		restoreService: service.NewRestoreMemory(backends, config),
+		backupBackends: backends,
 	}
 }
 
@@ -150,6 +150,8 @@ func (ws *HTTPServer) Start() {
 
 	// whole config route
 	mux.HandleFunc(ws.api("/config"), ws.configActionHandler)
+	// apply config after update
+	mux.HandleFunc(ws.api("/config/apply"), ws.applyConfig)
 
 	// cluster config routes
 	mux.HandleFunc(ws.api("/config/clusters/{name}"), ws.configClusterActionHandler)
@@ -217,7 +219,7 @@ func (ws *HTTPServer) Start() {
 }
 
 func (ws *HTTPServer) api(pattern string) string {
-	contextPath := ws.config.ServiceConfig.HTTPServer.ContextPath
+	contextPath := ws.config.ServiceConfig.HTTPServer.GetContextPathOrDefault()
 	if !strings.HasSuffix(contextPath, "/") {
 		contextPath += "/"
 	}
@@ -225,7 +227,7 @@ func (ws *HTTPServer) api(pattern string) string {
 }
 
 func (ws *HTTPServer) sys(pattern string) string {
-	contextPath := ws.config.ServiceConfig.HTTPServer.ContextPath
+	contextPath := ws.config.ServiceConfig.HTTPServer.GetContextPathOrDefault()
 	if contextPath == "/" {
 		return pattern
 	}

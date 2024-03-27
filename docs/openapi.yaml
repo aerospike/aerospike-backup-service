@@ -307,6 +307,22 @@ paths:
       tags:
       - Configuration
       x-codegen-request-body-name: config
+  /v1/config/apply:
+    post:
+      operationId: applyConfig
+      responses:
+        "200":
+          content: {}
+          description: OK
+        "400":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Bad Request
+      summary: Applies the configuration for the service.
+      tags:
+      - Configuration
   /v1/config/clusters:
     get:
       operationId: readAllClusters

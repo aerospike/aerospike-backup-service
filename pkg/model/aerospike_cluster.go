@@ -11,7 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	as "github.com/aerospike/aerospike-client-go/v7"
@@ -21,8 +21,7 @@ import (
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 // @Description AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 type AerospikeCluster struct {
-	pwdOnce sync.Once
-	pwd     *string
+	pwd atomic.Pointer[string]
 	// The cluster name.
 	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster"`
 	// The seed nodes details.
@@ -64,25 +63,28 @@ func (c *AerospikeCluster) GetUser() *string {
 }
 
 // GetPassword tries to read and set the password once from PasswordPath, if it exists.
-// Returns the password value.
+// Returns the password value. If it failed to read password, it will return nil
+// and try to read again next time.
 func (c *AerospikeCluster) GetPassword() *string {
-	c.pwdOnce.Do(func() {
-		if c.Credentials != nil {
-			if c.Credentials.PasswordPath != nil {
-				data, err := os.ReadFile(*c.Credentials.PasswordPath)
-				if err != nil {
-					slog.Error("Failed to read password", "path", *c.Credentials.PasswordPath, "err", err)
-				} else {
-					slog.Debug("Successfully read password", "path", *c.Credentials.PasswordPath)
-					password := string(data)
-					c.pwd = &password
-				}
-			} else {
-				c.pwd = c.Credentials.Password
-			}
-		}
-	})
-	return c.pwd
+	if password := c.pwd.Load(); password != nil {
+		return password
+	}
+
+	if c.Credentials == nil || c.Credentials.PasswordPath == nil {
+		slog.Warn("No credentials provided to read password")
+		return nil
+	}
+
+	data, err := os.ReadFile(*c.Credentials.PasswordPath)
+	if err != nil {
+		slog.Error("Failed to read password", "path", *c.Credentials.PasswordPath, "err", err)
+		return nil
+	}
+
+	slog.Debug("Successfully read password", "path", *c.Credentials.PasswordPath)
+	password := string(data)
+	c.pwd.Store(&password)
+	return &password
 }
 
 // GetAuthMode safely returns the authentication mode.

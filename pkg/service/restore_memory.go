@@ -19,13 +19,13 @@ type RestoreMemory struct {
 	config         *model.Config
 	restoreJobs    *JobsHolder
 	restoreService shared.Restore
-	backends       map[string]BackupListReader
+	backends       BackendsHolder
 }
 
 var _ RestoreService = (*RestoreMemory)(nil)
 
 // NewRestoreMemory returns a new RestoreMemory instance.
-func NewRestoreMemory(backends map[string]BackupListReader, config *model.Config) *RestoreMemory {
+func NewRestoreMemory(backends BackendsHolder, config *model.Config) *RestoreMemory {
 	return &RestoreMemory{
 		restoreJobs:    NewJobsHolder(),
 		restoreService: shared.NewRestore(),
@@ -64,16 +64,16 @@ func (r *RestoreMemory) runRestoreService(request *model.RestoreRequestInternal)
 }
 
 func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (int, error) {
-	backend, found := r.backends[request.Routine]
+	reader, found := r.backends.GetReader(request.Routine)
 	if !found {
 		return 0, fmt.Errorf("backend '%s' not found for restore", request.Routine)
 	}
-	fullBackups, err := r.findLastFullBackup(backend, request.Time)
+	fullBackups, err := r.findLastFullBackup(reader, request.Time)
 	if err != nil {
 		return 0, fmt.Errorf("last full backup not found: %v", err)
 	}
 	jobID := r.restoreJobs.newJob()
-	go r.restoreByTimeSync(backend, request, jobID, fullBackups)
+	go r.restoreByTimeSync(reader, request, jobID, fullBackups)
 	return jobID, nil
 }
 

@@ -11,13 +11,13 @@ import (
 //nolint:lll
 type LoggerConfig struct {
 	// Level is the logger level.
-	Level string `yaml:"level,omitempty" json:"level,omitempty" default:"DEBUG" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
+	Level *string `yaml:"level,omitempty" json:"level,omitempty" default:"DEBUG" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
 	// Format is the logger format (PLAIN, JSON).
-	Format string `yaml:"format,omitempty" json:"format,omitempty" default:"PLAIN" enums:"PLAIN,JSON"`
+	Format *string `yaml:"format,omitempty" json:"format,omitempty" default:"PLAIN" enums:"PLAIN,JSON"`
 	// Whether to capture logs from the shared libraries.
-	CaptureShared bool `yaml:"capture-shared,omitempty" json:"capture-shared,omitempty" default:"false"`
+	CaptureShared *bool `yaml:"capture-shared,omitempty" json:"capture-shared,omitempty" default:"false"`
 	// Whether to enable logging to the standard output.
-	StdoutWriter bool `yaml:"stdout-writer,omitempty" json:"stdout-writer,omitempty" default:"true"`
+	StdoutWriter *bool `yaml:"stdout-writer,omitempty" json:"stdout-writer,omitempty" default:"true"`
 	// File writer logging configuration.
 	FileWriter *FileLoggerConfig `yaml:"file-writer,omitempty" json:"file-writer,omitempty" default:""`
 }
@@ -27,27 +27,54 @@ var (
 	supportedLoggerFormats = []string{"PLAIN", "JSON"}
 )
 
+// GetLevelOrDefault returns the value of the Level property.
+// If the property is not set, it returns the default value.
+func (l *LoggerConfig) GetLevelOrDefault() string {
+	if l.Level != nil {
+		return *l.Level
+	}
+	return *defaultConfig.logger.Level
+}
+
+// GetFormatOrDefault returns the value of the Format property.
+// If the property is not set, it returns the default value.
+func (l *LoggerConfig) GetFormatOrDefault() string {
+	if l.Format != nil {
+		return *l.Format
+	}
+	return *defaultConfig.logger.Format
+}
+
+// GetCaptureSharedOrDefault returns the value of the CaptureShared property.
+// If the property is not set, it returns the default value.
+func (l *LoggerConfig) GetCaptureSharedOrDefault() bool {
+	if l.CaptureShared != nil {
+		return *l.CaptureShared
+	}
+	return *defaultConfig.logger.CaptureShared
+}
+
+// GetStdoutWriterOrDefault returns the value of the StdoutWriter property.
+// If the property is not set, it returns the default value.
+func (l *LoggerConfig) GetStdoutWriterOrDefault() bool {
+	if l.StdoutWriter != nil {
+		return *l.StdoutWriter
+	}
+	return *defaultConfig.logger.StdoutWriter
+}
+
 // Validate validates the logger configuration.
 func (l *LoggerConfig) Validate() error {
-	if !slices.Contains(validLoggerLevels, l.Level) {
-		return fmt.Errorf("invalid logger level: %s", l.Level)
+	if l.Level != nil && !slices.Contains(validLoggerLevels, *l.Level) {
+		return fmt.Errorf("invalid logger level: %s", *l.Level)
 	}
-	if !slices.Contains(supportedLoggerFormats, l.Format) {
-		return fmt.Errorf("invalid logger format: %s", l.Format)
+	if l.Format != nil && !slices.Contains(supportedLoggerFormats, *l.Format) {
+		return fmt.Errorf("invalid logger format: %s", *l.Format)
 	}
 	if err := l.FileWriter.Validate(); err != nil {
 		return err
 	}
 	return nil
-}
-
-// NewLoggerConfigWithDefaultValues returns a new LoggerConfig with default values.
-func NewLoggerConfigWithDefaultValues() *LoggerConfig {
-	return &LoggerConfig{
-		Level:        "DEBUG",
-		Format:       "PLAIN",
-		StdoutWriter: true,
-	}
 }
 
 // FileLoggerConfig represents the configuration for the file logger writer.

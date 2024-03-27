@@ -17,12 +17,3 @@ type BackupListReader interface {
 	// ReadClusterConfiguration return backed up cluster configuration as a compressed zip.
 	ReadClusterConfiguration(path string) ([]byte, error)
 }
-
-// BackendsToReaders converts a map of *BackupBackend to a map of BackupListReader.
-func BackendsToReaders(backends map[string]*BackupBackend) map[string]BackupListReader {
-	result := make(map[string]BackupListReader, len(backends))
-	for key, value := range backends {
-		result[key] = value
-	}
-	return result
-}

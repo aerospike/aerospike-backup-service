@@ -407,6 +407,29 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/config/apply": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Applies the configuration for the service.",
+                "operationId": "applyConfig",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/config/clusters": {
             "get": {
                 "produces": [

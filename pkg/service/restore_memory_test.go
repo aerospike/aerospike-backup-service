@@ -26,6 +26,27 @@ func cleanTestFolder() {
 	_ = os.RemoveAll("./testout")
 }
 
+type BackendHolderMock struct{}
+
+func (b *BackendHolderMock) GetReader(name string) (BackupListReader, bool) {
+	switch name {
+	case "routine":
+		return &BackendMock{}, true
+	case "routine_fail_read":
+		return &BackendFailMock{}, true
+	case "routine_fail_restore":
+		return &BackendMock{}, true
+	}
+	return nil, false
+}
+
+func (b *BackendHolderMock) Get(_ string) (*BackupBackend, bool) {
+	return nil, false
+}
+
+func (b *BackendHolderMock) SetData(_ map[string]*BackupBackend) {
+}
+
 func makeTestRestoreService() *RestoreMemory {
 	config := model.NewConfigWithDefaultValues()
 	config.Storage["s"] = &model.Storage{
@@ -40,12 +61,8 @@ func makeTestRestoreService() *RestoreMemory {
 		},
 	}
 
-	backends := map[string]BackupListReader{
-		"routine":              &BackendMock{},
-		"routine_fail_read":    &BackendFailMock{},
-		"routine_fail_restore": &BackendMock{},
-	}
-	return NewRestoreMemory(backends, config)
+	backends := BackendHolderMock{}
+	return NewRestoreMemory(&backends, config)
 }
 
 type BackendMock struct {

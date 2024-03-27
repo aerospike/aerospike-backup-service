@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -29,9 +27,12 @@ var (
 )
 
 // run parses the CLI parameters and executes backup.
+//
+//nolint:funlen
 func run() int {
 	var (
 		configFile string
+		remote     bool
 	)
 
 	validateFlags := func(_ *cobra.Command, _ []string) error {
@@ -49,9 +50,14 @@ func run() int {
 	}
 
 	rootCmd.Flags().StringVarP(&configFile, "config", "c", "", "configuration file path/URL")
+	rootCmd.Flags().BoolVarP(&remote, "remote", "r", false, "use remote config file")
 
 	rootCmd.RunE = func(_ *cobra.Command, _ []string) error {
-		setConfigurationManager(configFile)
+		manager, err := service.NewConfigurationManager(configFile, remote)
+		if err != nil {
+			return err
+		}
+		server.ConfigurationManager = manager
 		// read configuration file
 		config, err := readConfiguration()
 		if err != nil {
@@ -65,15 +71,15 @@ func run() int {
 		logger.SetDefault(util.NewQuartzLogger(ctx))
 		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// init stderr log capturer
-		stdio.Stderr = stdio.NewCgoStdio(config.ServiceConfig.Logger.CaptureShared)
+		stdio.Stderr = stdio.NewCgoStdio(config.ServiceConfig.Logger.GetCaptureSharedOrDefault())
 		// schedule all configured backups
-		backends := service.BuildBackupBackends(config)
+		backends := service.NewBackupBackends(config)
 		scheduler, err := service.ScheduleBackup(ctx, config, backends)
 		if err != nil {
 			return err
 		}
 		// run HTTP server
-		err = runHTTPServer(ctx, service.BackendsToReaders(backends), config, scheduler)
+		err = runHTTPServer(ctx, backends, config, scheduler)
 		// shutdown shared resources
 		shared.Shutdown()
 		// stop the scheduler
@@ -87,15 +93,6 @@ func run() int {
 	}
 
 	return util.ToExitVal(err)
-}
-
-func setConfigurationManager(configFile string) {
-	uri, err := url.Parse(configFile)
-	if err == nil && strings.HasPrefix(uri.Scheme, "http") {
-		server.ConfigurationManager = service.NewHTTPConfigurationManager(configFile)
-	} else {
-		server.ConfigurationManager = service.NewFileConfigurationManager(configFile)
-	}
 }
 
 func systemCtx() context.Context {
@@ -124,9 +121,9 @@ func readConfiguration() (*model.Config, error) {
 	return config, nil
 }
 
-func runHTTPServer(ctx context.Context, backendMap map[string]service.BackupListReader,
+func runHTTPServer(ctx context.Context, backends service.BackendsHolder,
 	config *model.Config, scheduler quartz.Scheduler) error {
-	server := server.NewHTTPServer(backendMap, config, scheduler)
+	server := server.NewHTTPServer(backends, config, scheduler)
 	go func() {
 		server.Start()
 	}()

@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/aerospike/backup/pkg/util"
-	"github.com/aws/smithy-go/ptr"
 )
 
 const (
@@ -13,9 +12,6 @@ const (
 	RemoveAll         RemoveFilesType = "RemoveAll"
 	RemoveIncremental RemoveFilesType = "RemoveIncremental"
 )
-
-// default retry delay is 1 minute
-var defaultRetryDelay = ptr.Int32(60_000)
 
 // RemoveFilesType represents the type of the backup storage.
 // @Description RemoveFilesType represents the type of the backup storage.
@@ -67,7 +63,34 @@ type BackupPolicy struct {
 	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
-	Sealed bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
+	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
+}
+
+// GetMaxRetriesOrDefault returns the value of the MaxRetries property.
+// If the property is not set, it returns the default value.
+func (p *BackupPolicy) GetMaxRetriesOrDefault() int32 {
+	if p.MaxRetries != nil {
+		return *p.MaxRetries
+	}
+	return defaultConfig.backupPolicy.maxRetries
+}
+
+// GetRetryDelayOrDefault returns the value of the RetryDelay property.
+// If the property is not set, it returns the default value.
+func (p *BackupPolicy) GetRetryDelayOrDefault() int32 {
+	if p.RetryDelay != nil {
+		return *p.RetryDelay
+	}
+	return defaultConfig.backupPolicy.retryDelay
+}
+
+// IsSealed returns the value of the Sealed property.
+// If the property is not set, it returns the default value.
+func (p *BackupPolicy) IsSealed() bool {
+	if p.Sealed != nil {
+		return *p.Sealed
+	}
+	return defaultConfig.backupPolicy.sealed
 }
 
 // CopySMDDisabled creates a new instance of the BackupPolicy struct with identical field values.
@@ -117,16 +140,10 @@ func (p *BackupPolicy) Validate() error {
 	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
 		return fmt.Errorf("totalTimeout %d invalid, should be positive number", *p.TotalTimeout)
 	}
-	if p.MaxRetries == nil {
-		p.MaxRetries = ptr.Int32(0)
-	}
-	if *p.MaxRetries < 0 {
+	if p.MaxRetries != nil && *p.MaxRetries < 0 {
 		return fmt.Errorf("maxRetries %d invalid, should be positive number", *p.MaxRetries)
 	}
-	if p.RetryDelay == nil {
-		p.RetryDelay = defaultRetryDelay
-	}
-	if *p.RetryDelay < 0 {
+	if p.RetryDelay != nil && *p.RetryDelay < 0 {
 		return fmt.Errorf("retryDelay %d invalid, should be positive number", *p.RetryDelay)
 	}
 	if p.Bandwidth != nil && *p.Bandwidth <= 0 {
