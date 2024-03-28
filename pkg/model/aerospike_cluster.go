@@ -70,6 +70,11 @@ func (c *AerospikeCluster) GetPassword() *string {
 		return password
 	}
 
+	if c.Credentials != nil && c.Credentials.Password != nil {
+		c.pwd.Store(c.Credentials.Password)
+		return c.Credentials.Password
+	}
+
 	if c.Credentials == nil || c.Credentials.PasswordPath == nil {
 		slog.Warn("No credentials provided to read password")
 		return nil
