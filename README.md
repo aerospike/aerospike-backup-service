@@ -189,6 +189,10 @@ Given this limitation, backup routines are performed in sequence.
 
 The backup service supports AWS S3 or compatible (such as MinIO) and local storage.
 
+## Known Issues
+
+* The service may crash if an invalid S3 backup key is provided during configuration.
+
 ## Example requests and responses
 
 ### Read configurations
@@ -288,7 +292,7 @@ GET {{baseUrl}}/v1/config/storage
 ```
 </details>
 
-### Retrieve lackup list
+### Retrieve backup list
 
 #### Full backup list
 
