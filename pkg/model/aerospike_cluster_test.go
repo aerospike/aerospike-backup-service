@@ -27,7 +27,6 @@ func TestAerospikeCluster_GetPassword(t *testing.T) {
 			credentials: &Credentials{
 				User:         nil,
 				PasswordPath: ptr.String(passwordPath),
-				AuthMode:     nil,
 			},
 			expectedPassword: ptr.String("password"),
 			expectedErr:      false,
@@ -38,7 +37,6 @@ func TestAerospikeCluster_GetPassword(t *testing.T) {
 			credentials: &Credentials{
 				User:         nil,
 				PasswordPath: ptr.String("not-existing.txt"),
-				AuthMode:     nil,
 			},
 			expectedPassword: nil,
 			expectedErr:      true,
@@ -82,7 +80,6 @@ func TestAerospikeCluster_GetPasswordCaching(t *testing.T) {
 		Credentials: &Credentials{
 			User:         nil,
 			PasswordPath: ptr.String(passwordPath),
-			AuthMode:     nil,
 		},
 	}
 
@@ -95,6 +92,17 @@ func TestAerospikeCluster_GetPasswordCaching(t *testing.T) {
 	// Make a second call to GetPassword and check if the returned passwords are same
 	passwordAfterCache := cluster.GetPassword()
 	assert.Equal(t, password, passwordAfterCache)
+}
+func TestAerospikeCluster_GetPasswordFromCredentials(t *testing.T) {
+	cluster := &AerospikeCluster{
+		Credentials: &Credentials{
+			User:     nil,
+			Password: ptr.String("password"),
+		},
+	}
+
+	password := cluster.GetPassword()
+	assert.Equal(t, ptr.String("password"), password)
 }
 
 func createValidFile() {
