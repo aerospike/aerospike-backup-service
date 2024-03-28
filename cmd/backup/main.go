@@ -27,8 +27,6 @@ var (
 )
 
 // run parses the CLI parameters and executes backup.
-//
-//nolint:funlen
 func run() int {
 	var (
 		configFile string
@@ -71,7 +69,7 @@ func run() int {
 		logger.SetDefault(util.NewQuartzLogger(ctx))
 		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// init stderr log capturer
-		stdio.Stderr = stdio.NewCgoStdio(config.ServiceConfig.Logger.GetCaptureSharedOrDefault())
+		stdio.Stderr = stdio.NewCgoStdio(config.ServiceConfig.Logger.CaptureShared)
 		// schedule all configured backups
 		backends := service.NewBackupBackends(config)
 		scheduler, err := service.ScheduleBackup(ctx, config, backends)
