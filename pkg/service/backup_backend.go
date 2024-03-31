@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
-	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -116,7 +115,6 @@ func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache 
 	backupDetails := []model.BackupDetails{}
 	for _, path := range paths {
 		namespaces, err := b.lsDir(filepath.Join(path, model.DataDirectory))
-		slog.Debug("lsDir namespaces: " + strings.Join(namespaces, ","))
 		if err != nil {
 			slog.Warn("Cannot list backup dir", "path", path, "err", err)
 			continue
@@ -128,7 +126,6 @@ func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache 
 				continue
 			}
 			if timebounds.Contains(details.Created.UnixMilli()) {
-				slog.Debug("Backup added", "backup", backupDetails)
 				backupDetails = append(backupDetails, details)
 			}
 		}
@@ -142,13 +139,11 @@ func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds,
 	if err != nil {
 		return nil, err
 	}
-	slog.Debug("lsDir", "subfolders", strings.Join(subfolders, ","))
 	return b.detailsFromPaths(timebounds, true, subfolders...), nil
 }
 
 // IncrementalBackupList returns a list of available incremental backups.
 func (b *BackupBackend) IncrementalBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
-	slog.Debug("Read incr backup from", "path", b.incrementalBackupsPath)
 	return b.fromSubfolders(timebounds, b.incrementalBackupsPath)
 }
 
