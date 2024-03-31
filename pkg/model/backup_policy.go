@@ -160,7 +160,7 @@ func (p *BackupPolicy) Validate() error {
 	}
 	if p.RemoveFiles != nil &&
 		*p.RemoveFiles != KeepAll && *p.RemoveFiles != RemoveAll && *p.RemoveFiles != RemoveIncremental {
-		return fmt.Errorf("invalid RemoveFiles: %s", *p.RemoveFiles)
+		return fmt.Errorf("invalid RemoveFiles: %s. Possible values: KeepAll, RemoveAll, RemoveIncremental", *p.RemoveFiles)
 	}
 	if err := p.EncryptionPolicy.Validate(); err != nil {
 		return err
