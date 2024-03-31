@@ -53,7 +53,7 @@ func run() int {
 	rootCmd.Flags().BoolVarP(&remote, "remote", "r", false, "use remote config file")
 
 	rootCmd.RunE = func(_ *cobra.Command, _ []string) error {
-		manager, err := service.NewConfigurationManager(configFile, remote)
+		manager, err := service.NewConfigManagerBuilder().NewConfigManager(configFile, remote)
 		if err != nil {
 			return err
 		}

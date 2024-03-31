@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -15,38 +16,88 @@ type ConfigurationManager interface {
 	WriteConfiguration(config *model.Config) error
 }
 
-func NewConfigurationManager(configFile string, remote bool) (ConfigurationManager, error) {
-	uri, err := url.Parse(configFile)
+type Downloader interface {
+	Download(string) ([]byte, error)
+}
+
+type HTTPDownloader struct{}
+
+func (h HTTPDownloader) Download(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+type FileReader struct{}
+
+func (f FileReader) Download(url string) ([]byte, error) {
+	return os.ReadFile(url)
+}
+
+type ConfigManagerBuilder struct {
+	http      Downloader
+	file      Downloader
+	s3Builder S3ManagerBuilder
+}
+
+func NewConfigManagerBuilder() *ConfigManagerBuilder {
+	return &ConfigManagerBuilder{
+		http:      HTTPDownloader{},
+		file:      FileReader{},
+		s3Builder: S3ManagerBuilderImpl{},
+	}
+}
+
+func (b *ConfigManagerBuilder) NewConfigManager(configFile string, remote bool) (ConfigurationManager, error) {
+	configStorage, err := b.makeConfigStorage(configFile, remote)
 	if err != nil {
 		return nil, err
 	}
 
-	isDownload := uri.Scheme == "http" || uri.Scheme == "https"
-
-	if remote {
-		return remoteConfigurationManager(configFile, isDownload)
+	switch configStorage.Type {
+	case model.S3:
+		return b.s3Builder.NewS3ConfigurationManager(configStorage)
+	case model.Local:
+		return newLocalConfigurationManager(configStorage)
+	default:
+		return nil, fmt.Errorf("unknown type %d", configStorage.Type)
 	}
-	if isDownload {
-		return NewHTTPConfigurationManager(configFile), nil
-	}
-	return NewFileConfigurationManager(configFile), nil
 }
 
-func remoteConfigurationManager(configFile string, isDownload bool) (ConfigurationManager, error) {
-	var buf []byte
-	var err error
-
-	if isDownload {
-		buf, err = download(configFile)
-	} else {
-		buf, err = os.ReadFile(configFile)
+func newLocalConfigurationManager(configStorage *model.Storage) (ConfigurationManager, error) {
+	isHttp, err := isDownload(*configStorage.Path)
+	if err != nil {
+		return nil, err
 	}
+	if isHttp {
+		return NewHTTPConfigurationManager(*configStorage.Path), nil
+	}
+	return NewFileConfigurationManager(*configStorage.Path), nil
+}
+
+func (b *ConfigManagerBuilder) makeConfigStorage(configUri string, remote bool) (*model.Storage, error) {
+	if !remote {
+		return &model.Storage{
+			Type: model.Local,
+			Path: &configUri,
+		}, nil
+	}
+
+	content, err := b.loadFileContent(configUri)
 	if err != nil {
 		return nil, err
 	}
 
 	configStorage := &model.Storage{}
-	err = yaml.Unmarshal(buf, configStorage)
+	err = yaml.Unmarshal(content, configStorage)
 	if err != nil {
 		return nil, err
 	}
@@ -55,27 +106,26 @@ func remoteConfigurationManager(configFile string, isDownload bool) (Configurati
 	if err != nil {
 		return nil, err
 	}
+	return configStorage, nil
+}
 
-	switch configStorage.Type {
-	case model.S3:
-		return NewS3ConfigurationManager(configStorage)
-	default:
-		return NewFileConfigurationManager(*configStorage.Path), nil
+func (b *ConfigManagerBuilder) loadFileContent(configFile string) ([]byte, error) {
+	isDownload, err := isDownload(configFile)
+	if err != nil {
+		return nil, err
+	}
+	if isDownload {
+		return b.http.Download(configFile)
+	} else {
+		return b.file.Download(configFile)
 	}
 }
 
-func download(url string) ([]byte, error) {
-	resp, err := http.Get(url)
+func isDownload(configFile string) (bool, error) {
+	uri, err := url.Parse(configFile)
 	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(resp.Body)
-	if err != nil {
-		return nil, err
+		return false, err
 	}
 
-	return buf.Bytes(), nil
+	return uri.Scheme == "http" || uri.Scheme == "https", nil
 }
