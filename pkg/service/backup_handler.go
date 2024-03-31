@@ -278,7 +278,7 @@ func getFullPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, names
 }
 
 func getIncrementalPath(incrBackupsPath string, namespace string, now time.Time) string {
-	return fmt.Sprintf("%s/%s/%s", incrBackupsPath, timeSuffix(now), namespace)
+	return fmt.Sprintf("%s/%s/%s/%s", incrBackupsPath, timeSuffix(now), model.DataDirectory, namespace)
 }
 
 func getConfigurationPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, now time.Time) string {
