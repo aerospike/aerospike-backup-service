@@ -14,7 +14,7 @@ type MockDownloader struct {
 	mock.Mock
 }
 
-func (m *MockDownloader) Download(configFile string) ([]byte, error) {
+func (m *MockDownloader) read(configFile string) ([]byte, error) {
 	args := m.Called(configFile)
 	return args.Get(0).([]byte), args.Error(1)
 }
@@ -65,7 +65,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			remote:     true,
 			setMock: func() {
 				mockLocal.
-					On("Download", "/path/to/remote.yaml").
+					On("read", "/path/to/remote.yaml").
 					Return([]byte("path: config.yaml"), nil)
 			},
 			expectError:  false,
@@ -77,7 +77,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			remote:     true,
 			setMock: func() {
 				mockLocal.
-					On("Download", "/path/to/remote.yaml").
+					On("read", "/path/to/remote.yaml").
 					Return([]byte("path: https://example.com/config.yaml"), nil)
 			},
 			expectError:  false,
@@ -89,7 +89,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			remote:     true,
 			setMock: func() {
 				mockHttp.
-					On("Download", "https://example.com/config.yaml").
+					On("read", "https://example.com/config.yaml").
 					Return([]byte("path: config.yaml"), nil)
 			},
 			expectError:  false,
@@ -101,7 +101,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			remote:     true,
 			setMock: func() {
 				mockHttp.
-					On("Download", "http://path/to/remote.yaml").
+					On("read", "http://path/to/remote.yaml").
 					Return([]byte("path: https://example.com/config.yaml"), nil)
 			},
 			expectError:  false,
@@ -114,7 +114,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			remote:     true,
 			setMock: func() {
 				mockLocal.
-					On("Download", "config.yaml").
+					On("read", "config.yaml").
 					Return([]byte("type: 1\npath: s3://bucket/config.yaml\ns3-region: europe"), nil)
 			},
 			expectError:  false,
@@ -126,7 +126,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			remote:     true,
 			setMock: func() {
 				mockHttp.
-					On("Download", "https://example.com/config.yaml").
+					On("read", "https://example.com/config.yaml").
 					Return([]byte("type: 1\npath: s3://bucket/config.yaml\ns3-region: europe"), nil)
 			},
 			expectError:  false,

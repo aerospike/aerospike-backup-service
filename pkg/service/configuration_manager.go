@@ -16,13 +16,13 @@ type ConfigurationManager interface {
 	WriteConfiguration(config *model.Config) error
 }
 
-type Downloader interface {
-	Download(string) ([]byte, error)
+type Reader interface {
+	read(string) ([]byte, error)
 }
 
-type HTTPDownloader struct{}
+type HTTPReader struct{}
 
-func (h HTTPDownloader) Download(url string) ([]byte, error) {
+func (h HTTPReader) read(url string) ([]byte, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -38,19 +38,19 @@ func (h HTTPDownloader) Download(url string) ([]byte, error) {
 
 type FileReader struct{}
 
-func (f FileReader) Download(url string) ([]byte, error) {
+func (f FileReader) read(url string) ([]byte, error) {
 	return os.ReadFile(url)
 }
 
 type ConfigManagerBuilder struct {
-	http      Downloader
-	file      Downloader
+	http      Reader
+	file      Reader
 	s3Builder S3ManagerBuilder
 }
 
 func NewConfigManagerBuilder() *ConfigManagerBuilder {
 	return &ConfigManagerBuilder{
-		http:      HTTPDownloader{},
+		http:      HTTPReader{},
 		file:      FileReader{},
 		s3Builder: S3ManagerBuilderImpl{},
 	}
@@ -73,7 +73,7 @@ func (b *ConfigManagerBuilder) NewConfigManager(configFile string, remote bool) 
 }
 
 func newLocalConfigurationManager(configStorage *model.Storage) (ConfigurationManager, error) {
-	isHttp, err := isDownload(*configStorage.Path)
+	isHttp, err := isHttpPath(*configStorage.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -110,19 +110,19 @@ func (b *ConfigManagerBuilder) makeConfigStorage(configUri string, remote bool) 
 }
 
 func (b *ConfigManagerBuilder) loadFileContent(configFile string) ([]byte, error) {
-	isDownload, err := isDownload(configFile)
+	isDownload, err := isHttpPath(configFile)
 	if err != nil {
 		return nil, err
 	}
 	if isDownload {
-		return b.http.Download(configFile)
+		return b.http.read(configFile)
 	} else {
-		return b.file.Download(configFile)
+		return b.file.read(configFile)
 	}
 }
 
-func isDownload(configFile string) (bool, error) {
-	uri, err := url.Parse(configFile)
+func isHttpPath(path string) (bool, error) {
+	uri, err := url.Parse(path)
 	if err != nil {
 		return false, err
 	}
