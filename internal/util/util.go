@@ -115,7 +115,7 @@ func CaptureStdout(f func()) string {
 	}()
 
 	// back to normal state
-	w.Close()
+	_ = w.Close()
 	os.Stdout = old // restoring the real stdout
 	out := <-outC
 	return out

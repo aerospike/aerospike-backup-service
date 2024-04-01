@@ -157,8 +157,7 @@ func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	zip, _ := b.packageFiles(configBackups)
-	return zip, nil
+	return b.packageFiles(configBackups)
 }
 
 // PackageFiles creates a zip archive from the given file list and returns it as a byte array

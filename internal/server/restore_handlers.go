@@ -44,7 +44,7 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 		slog.Info("Restore full", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, jobID)
+		_, _ = fmt.Fprint(w, jobID)
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
@@ -83,7 +83,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 		slog.Info("RestoreByPath action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, jobID)
+		_, _ = fmt.Fprint(w, jobID)
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
@@ -120,7 +120,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 		slog.Info("Restore action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, jobID)
+		_, _ = fmt.Fprint(w, jobID)
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
