@@ -1,14 +1,30 @@
 package schema
 
 import (
+	"fmt"
 	"io/fs"
 	"path/filepath"
 	"strings"
 )
 
-// this file is copied from the aerospike kubernetes operator
+// this file is based on copy from asconfig
+// https://github.com/aerospike/asconfig/blob/main/schema/schemamap.go
 
 type SchemaMap map[string]string
+
+var schemaMap SchemaMap
+
+func init() {
+	var err error
+	schemaMap, err = NewSchemaMap()
+	if err != nil {
+		panic(fmt.Errorf("error initialising schema: %v", err))
+	}
+}
+
+func GetSchemas() SchemaMap {
+	return schemaMap
+}
 
 func NewSchemaMap() (SchemaMap, error) {
 	schema := make(SchemaMap)
