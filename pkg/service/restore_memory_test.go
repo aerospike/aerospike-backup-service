@@ -68,7 +68,7 @@ func makeTestRestoreService() *RestoreMemory {
 type BackendMock struct {
 }
 
-func (m *BackendMock) ReadClusterConfiguration(path string) ([]byte, error) {
+func (m *BackendMock) ReadClusterConfiguration(_ string) ([]byte, error) {
 	return nil, nil
 }
 
@@ -101,7 +101,7 @@ func (*BackendMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDe
 type BackendFailMock struct {
 }
 
-func (m *BackendFailMock) ReadClusterConfiguration(path string) ([]byte, error) {
+func (m *BackendFailMock) ReadClusterConfiguration(_ string) ([]byte, error) {
 	return nil, nil
 }
 
@@ -247,7 +247,7 @@ func Test_RestoreFromEmptyFolder(t *testing.T) {
 	}
 
 	_, err := restoreService.Restore(requestInternal)
-	if !strings.Contains(err.Error(), "no backup files found") {
+	if err == nil || !strings.Contains(err.Error(), "no backup files found") {
 		t.Errorf("Expected no backup found, but got %v", err)
 	}
 }

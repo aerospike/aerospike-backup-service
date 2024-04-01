@@ -54,7 +54,7 @@ func TestInvalidClusterReference(t *testing.T) {
 
 	err := config.Validate()
 	if err == nil {
-		t.Error("Expected validation error, but got none.")
+		t.Fatalf("Expected validation error, but got none.")
 	}
 	expectedError := "backup routine 'routine1' validation error: Aerospike cluster 'nonExistentCluster' not found"
 	if err.Error() != expectedError {
@@ -68,7 +68,7 @@ func TestInvalidBackupPolicyReference(t *testing.T) {
 
 	err := config.Validate()
 	if err == nil {
-		t.Error("Expected validation error, but got none.")
+		t.Fatalf("Expected validation error, but got none.")
 	}
 	expectedError := "backup routine 'routine1' validation error: backup policy 'nonExistentPolicy' not found"
 	if err.Error() != expectedError {
@@ -82,7 +82,7 @@ func TestInvalidStorageReference(t *testing.T) {
 
 	err := config.Validate()
 	if err == nil {
-		t.Error("Expected validation error, but got none.")
+		t.Fatalf("Expected validation error, but got none.")
 	}
 	expectedError := "backup routine 'routine1' validation error: storage 'nonExistentStorage' not found"
 	if err.Error() != expectedError {
