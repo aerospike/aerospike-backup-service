@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/aerospike/backup/modules/schema"
+
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
 	"github.com/aerospike/aerospike-management-lib/info"
@@ -40,19 +42,24 @@ func getClusterConfiguration(cluster *model.AerospikeCluster) []asconfig.DotConf
 		User:     *cluster.GetUser(),
 		Password: *cluster.GetPassword(),
 	}
+	schemaMap, err := schema.NewSchemaMap()
+	if err != nil {
+		slog.Error("Error initialising schema", "err", err)
+		return nil
+	}
+
+	asconfig.InitFromMap(logr.Discard(), schemaMap)
 
 	for _, host := range cluster.ASClientHosts() {
 		asInfo := info.NewAsInfo(logr.Logger{}, host, cp)
-		conf, err := asInfo.GetAsConfig()
 
+		conf, err := asconfig.GenerateConf(logr.Discard(), asInfo, true)
 		if err != nil {
 			slog.Error("Error reading configuration", "host", host, "err", err)
 			continue
 		}
-
-		asconf, _ := asconfig.NewMapAsConfig(logr.Discard(), conf)
+		asconf, _ := asconfig.NewMapAsConfig(logr.Discard(), conf.Conf)
 		configAsString, err := util.TryAndRecover(asconf.ToConfFile)
-
 		if err != nil {
 			slog.Error("Error serialising configuration", "host", host, "err", err)
 			continue
