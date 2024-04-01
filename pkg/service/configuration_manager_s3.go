@@ -6,7 +6,7 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// FileConfigurationManager implements the ConfigurationManager interface,
+// S3ConfigurationManager implements the ConfigurationManager interface,
 // performing I/O operations on AWS S3.
 type S3ConfigurationManager struct {
 	*S3Context
@@ -14,8 +14,17 @@ type S3ConfigurationManager struct {
 
 var _ ConfigurationManager = (*S3ConfigurationManager)(nil)
 
-// NewS3ConfigurationManager returns a new S3ConfigurationManager.
-func NewS3ConfigurationManager(configStorage *model.Storage) (ConfigurationManager, error) {
+// S3ManagerBuilder defines the interface for building S3ConfigurationManager.
+type S3ManagerBuilder interface {
+	// NewS3ConfigurationManager returns a new S3ConfigurationManager.
+	NewS3ConfigurationManager(configStorage *model.Storage) (ConfigurationManager, error)
+}
+
+type S3ManagerBuilderImpl struct{}
+
+var _ S3ManagerBuilder = &S3ManagerBuilderImpl{}
+
+func (builder S3ManagerBuilderImpl) NewS3ConfigurationManager(configStorage *model.Storage) (ConfigurationManager, error) {
 	s3Context, err := NewS3Context(configStorage)
 	if err != nil {
 		return nil, err
