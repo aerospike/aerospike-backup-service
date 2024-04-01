@@ -37,11 +37,7 @@ func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error
 
 func getClusterConfiguration(cluster *model.AerospikeCluster) []asconfig.DotConf {
 	var outputs []asconfig.DotConf
-	cp := &as.ClientPolicy{
-		User:     *cluster.GetUser(),
-		Password: *cluster.GetPassword(),
-	}
-
+	cp := cluster.ASClientPolicy()
 	asconfig.InitFromMap(logr.Discard(), schema.GetSchemas())
 
 	for _, host := range cluster.ASClientHosts() {
