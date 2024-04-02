@@ -156,6 +156,9 @@ func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(configBackups) == 0 {
+		return nil, fmt.Errorf("no configuration backups found for %s", path)
+	}
 
 	return b.packageFiles(configBackups)
 }

@@ -16,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
 	"gopkg.in/yaml.v3"
 )
@@ -172,11 +171,11 @@ func (s *S3Context) write(filePath string, data []byte) error {
 	return nil
 }
 
-// listFiles returns all files in the given s3 prefix path.
-func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
+// lsFiles returns all files in the given s3 prefix path.
+func (s *S3Context) lsFiles(prefix string) ([]string, error) {
 	var nextContinuationToken *string
 	slog.Debug("list files", "prefix", prefix)
-	result := make([]types.Object, 0)
+	var result []string
 	for {
 		// By default, the action returns up to 1,000 key names.
 		// It is necessary to repeat to collect all the items, if there are more.
@@ -184,7 +183,12 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, listOutput.Contents...)
+		for _, p := range listOutput.Contents {
+			if p.Key != nil {
+				result = append(result, *p.Key)
+			}
+		}
+
 		nextContinuationToken = listOutput.NextContinuationToken
 		if nextContinuationToken == nil {
 			break
@@ -195,36 +199,6 @@ func (s *S3Context) listFiles(prefix string) ([]types.Object, error) {
 
 // lsDir returns all subfolders in the given s3 prefix path.
 func (s *S3Context) lsDir(prefix string) ([]string, error) {
-	var nextContinuationToken *string
-	result := make([]string, 0)
-	for {
-		// By default, the action returns up to 1,000 key names.
-		// It is necessary to repeat to collect all the items, if there are more.
-		listOutput, err := s.list(nextContinuationToken, prefix, "/")
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range listOutput.CommonPrefixes {
-			if p.Prefix == nil {
-				continue
-			}
-			subfolder := strings.TrimSuffix(*p.Prefix, "/")
-			// Check to avoid including the prefix itself in the results
-			if subfolder != prefix {
-				result = append(result, subfolder)
-			}
-		}
-		nextContinuationToken = listOutput.NextContinuationToken
-		if nextContinuationToken == nil {
-			break
-		}
-	}
-	slog.Info("Read dir", "prefix", prefix, "result", result)
-	return result, nil
-}
-
-// lsDir returns all subfolders in the given s3 prefix path.
-func (s *S3Context) lsFiles(prefix string) ([]string, error) {
 	var nextContinuationToken *string
 	result := make([]string, 0)
 	for {
@@ -325,7 +299,7 @@ func (s *S3Context) wrapWithPrefix(path string) *string {
 }
 
 func (s *S3Context) validateStorageContainsBackup() error {
-	files, err := s.listFiles(s.path)
+	files, err := s.lsFiles(s.path)
 	if err != nil {
 		return err
 	}
@@ -333,7 +307,7 @@ func (s *S3Context) validateStorageContainsBackup() error {
 		return fmt.Errorf("given path %s not exist", s.path)
 	}
 	for _, file := range files {
-		if strings.HasSuffix(*file.Key, ".asb") {
+		if strings.HasSuffix(file, ".asb") {
 			return nil
 		}
 	}

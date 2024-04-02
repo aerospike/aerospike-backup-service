@@ -3,8 +3,10 @@ package service
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -216,8 +218,9 @@ func (r *RestoreMemory) RestoreConfiguration(routine string, toTimeMillis int64)
 }
 
 func calculateConfigurationBackupPath(path string) string {
+	parse, _ := url.Parse(path)
 	// Move up two directories
-	base := filepath.Dir(filepath.Dir(path))
+	base := strings.TrimPrefix(filepath.Dir(filepath.Dir(parse.Path)), "/")
 	// Join new directory 'config' with the new base
 	return filepath.Join(base, model.ConfigurationBackupDirectory)
 }

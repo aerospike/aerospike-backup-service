@@ -73,14 +73,14 @@ func runDeleteFileTest(t *testing.T, context S3Context) {
 	context.writeYaml("incremental/file.txt", "data")
 	context.writeYaml("incremental/file2.txt", "data")
 
-	if files, _ := context.listFiles("incremental"); len(files) != 2 {
+	if files, _ := context.lsFiles("incremental"); len(files) != 2 {
 		t.Error("files not created")
 	}
 
 	// DeleteFolder requires full path
 	context.DeleteFolder("incremental")
 
-	if files, _ := context.listFiles("incremental"); len(files) > 0 {
+	if files, _ := context.lsFiles("incremental"); len(files) > 0 {
 		t.Error("files not deleted")
 	}
 }
@@ -108,11 +108,11 @@ func runDeleteFolderTest(t *testing.T, context S3Context) {
 		t.Error("Error deleting", err)
 	}
 
-	listFiles1, _ := context.listFiles(folder1)
+	listFiles1, _ := context.lsFiles(folder1)
 	if len(listFiles1) != 0 {
 		t.Error("file 1 not deleted")
 	}
-	listFiles2, _ := context.listFiles(folder2)
+	listFiles2, _ := context.lsFiles(folder2)
 	if len(listFiles2) != 1 {
 		t.Error("file 2 was deleted")
 	}
@@ -122,7 +122,7 @@ func runDeleteFolderTest(t *testing.T, context S3Context) {
 		t.Error("Error deleting", err)
 	}
 
-	listFiles3, _ := context.listFiles(folder2)
+	listFiles3, _ := context.lsFiles(folder2)
 	if len(listFiles3) != 0 {
 		t.Error("file 2 not deleted")
 	}
