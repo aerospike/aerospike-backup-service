@@ -5,29 +5,26 @@ import (
 	"io/fs"
 	"path/filepath"
 	"strings"
+
+	"github.com/aerospike/aerospike-management-lib/asconfig"
+	"github.com/go-logr/logr"
 )
 
 // this file is based on copy from asconfig
 // https://github.com/aerospike/asconfig/blob/main/schema/schemamap.go
 
-type SchemaMap map[string]string
-
-var schemaMap SchemaMap
+type Schemas map[string]string
 
 func init() {
-	var err error
-	schemaMap, err = NewSchemaMap()
+	schemaMap, err := NewSchemaMap()
 	if err != nil {
 		panic(fmt.Errorf("error initialising schema: %v", err))
 	}
+	asconfig.InitFromMap(logr.Discard(), schemaMap)
 }
 
-func GetSchemas() SchemaMap {
-	return schemaMap
-}
-
-func NewSchemaMap() (SchemaMap, error) {
-	schema := make(SchemaMap)
+func NewSchemaMap() (Schemas, error) {
+	schema := make(Schemas)
 
 	if err := fs.WalkDir(
 		schemas, ".", func(path string, d fs.DirEntry, err error) error {
