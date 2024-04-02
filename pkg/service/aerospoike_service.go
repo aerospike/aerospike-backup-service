@@ -22,7 +22,7 @@ var clientMap = util.NewLoadingCache(context.TODO(), func(cluster *model.Aerospi
 })
 
 func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error) {
-	client, err := clientMap.Get(cluster)
+	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Aerospike server: %s", err)
@@ -70,7 +70,7 @@ func getClusterConfiguration(cluster *model.AerospikeCluster) ([]asconfig.DotCon
 }
 
 func getActiveHosts(cluster *model.AerospikeCluster) ([]*as.Host, error) {
-	client, err := clientMap.Get(cluster)
+	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
 	if err != nil {
 		return nil, err
 	}
