@@ -73,25 +73,25 @@ func (b *ConfigManagerBuilder) NewConfigManager(configFile string, remote bool) 
 }
 
 func newLocalConfigurationManager(configStorage *model.Storage) (ConfigurationManager, error) {
-	isHttp, err := isHttpPath(*configStorage.Path)
+	isHTTP, err := isHTTPPath(*configStorage.Path)
 	if err != nil {
 		return nil, err
 	}
-	if isHttp {
+	if isHTTP {
 		return NewHTTPConfigurationManager(*configStorage.Path), nil
 	}
 	return NewFileConfigurationManager(*configStorage.Path), nil
 }
 
-func (b *ConfigManagerBuilder) makeConfigStorage(configUri string, remote bool) (*model.Storage, error) {
+func (b *ConfigManagerBuilder) makeConfigStorage(configURI string, remote bool) (*model.Storage, error) {
 	if !remote {
 		return &model.Storage{
 			Type: model.Local,
-			Path: &configUri,
+			Path: &configURI,
 		}, nil
 	}
 
-	content, err := b.loadFileContent(configUri)
+	content, err := b.loadFileContent(configURI)
 	if err != nil {
 		return nil, err
 	}
@@ -110,18 +110,17 @@ func (b *ConfigManagerBuilder) makeConfigStorage(configUri string, remote bool) 
 }
 
 func (b *ConfigManagerBuilder) loadFileContent(configFile string) ([]byte, error) {
-	isDownload, err := isHttpPath(configFile)
+	isHTTP, err := isHTTPPath(configFile)
 	if err != nil {
 		return nil, err
 	}
-	if isDownload {
+	if isHTTP {
 		return b.http.read(configFile)
-	} else {
-		return b.file.read(configFile)
 	}
+	return b.file.read(configFile)
 }
 
-func isHttpPath(path string) (bool, error) {
+func isHTTPPath(path string) (bool, error) {
 	uri, err := url.Parse(path)
 	if err != nil {
 		return false, err

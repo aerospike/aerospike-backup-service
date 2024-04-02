@@ -31,7 +31,7 @@ func (m *MockS3Builder) NewS3ConfigurationManager(storage *model.Storage) (Confi
 
 func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 	mockLocal := new(MockDownloader)
-	mockHttp := new(MockDownloader)
+	mockHTTP := new(MockDownloader)
 
 	tests := []struct {
 		name         string
@@ -88,7 +88,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			configFile: "https://example.com/config.yaml",
 			remote:     true,
 			setMock: func() {
-				mockHttp.
+				mockHTTP.
 					On("read", "https://example.com/config.yaml").
 					Return([]byte("path: config.yaml"), nil)
 			},
@@ -100,7 +100,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			configFile: "http://path/to/remote.yaml",
 			remote:     true,
 			setMock: func() {
-				mockHttp.
+				mockHTTP.
 					On("read", "http://path/to/remote.yaml").
 					Return([]byte("path: https://example.com/config.yaml"), nil)
 			},
@@ -125,7 +125,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			configFile: "https://example.com/config.yaml",
 			remote:     true,
 			setMock: func() {
-				mockHttp.
+				mockHTTP.
 					On("read", "https://example.com/config.yaml").
 					Return([]byte("type: 1\npath: s3://bucket/config.yaml\ns3-region: europe"), nil)
 			},
@@ -137,9 +137,9 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockLocal = new(MockDownloader)
-			mockHttp = new(MockDownloader)
+			mockHTTP = new(MockDownloader)
 			builder := &ConfigManagerBuilder{
-				http:      mockHttp,
+				http:      mockHTTP,
 				file:      mockLocal,
 				s3Builder: &MockS3Builder{},
 			}

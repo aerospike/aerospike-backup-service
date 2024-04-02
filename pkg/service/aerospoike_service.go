@@ -8,7 +8,7 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
 	"github.com/aerospike/aerospike-management-lib/info"
-	_ "github.com/aerospike/backup/modules/schema"
+	_ "github.com/aerospike/backup/modules/schema" // it's required to load configuration schemas in init method
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 	"github.com/go-logr/logr"
@@ -36,7 +36,7 @@ func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error
 }
 
 func getClusterConfiguration(cluster *model.AerospikeCluster) []asconfig.DotConf {
-	var outputs []asconfig.DotConf
+	var outputs = make([]asconfig.DotConf, 0, len(cluster.ASClientHosts()))
 	cp := cluster.ASClientPolicy()
 
 	for _, host := range cluster.ASClientHosts() {

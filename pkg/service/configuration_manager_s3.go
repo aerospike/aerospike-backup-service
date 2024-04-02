@@ -24,7 +24,8 @@ type S3ManagerBuilderImpl struct{}
 
 var _ S3ManagerBuilder = &S3ManagerBuilderImpl{}
 
-func (builder S3ManagerBuilderImpl) NewS3ConfigurationManager(configStorage *model.Storage) (ConfigurationManager, error) {
+func (builder S3ManagerBuilderImpl) NewS3ConfigurationManager(configStorage *model.Storage,
+) (ConfigurationManager, error) {
 	s3Context, err := NewS3Context(configStorage)
 	if err != nil {
 		return nil, err

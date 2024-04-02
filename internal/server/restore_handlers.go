@@ -4,10 +4,11 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aerospike/backup/pkg/model"
 	"log/slog"
 	"net/http"
 	"strconv"
+
+	"github.com/aerospike/backup/pkg/model"
 )
 
 // @Summary     Trigger an asynchronous full restore operation.
