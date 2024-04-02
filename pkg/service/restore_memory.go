@@ -213,16 +213,22 @@ func (r *RestoreMemory) RestoreConfiguration(routine string, toTimeMillis int64)
 
 	// fullBackups has backups for multiple namespaces, but same timestamp, they share same configuration.
 	lastFullBackup := fullBackups[0]
-	configPath := calculateConfigurationBackupPath(*lastFullBackup.Key)
+	configPath, err := calculateConfigurationBackupPath(*lastFullBackup.Key)
+	if err != nil {
+		return nil, err
+	}
 	return backend.ReadClusterConfiguration(configPath)
 }
 
-func calculateConfigurationBackupPath(path string) string {
-	parse, _ := url.Parse(path)
+func calculateConfigurationBackupPath(path string) (string, error) {
+	parse, err := url.Parse(path)
+	if err != nil {
+		return "", err
+	}
 	// Move up two directories
 	base := strings.TrimPrefix(filepath.Dir(filepath.Dir(parse.Path)), "/")
 	// Join new directory 'config' with the new base
-	return filepath.Join(base, model.ConfigurationBackupDirectory)
+	return filepath.Join(base, model.ConfigurationBackupDirectory), nil
 }
 
 func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
