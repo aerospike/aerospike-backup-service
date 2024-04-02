@@ -104,9 +104,9 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 }
 
 func (h *BackupHandler) writeClusterConfiguration(now time.Time) {
-	infos := getClusterConfiguration(h.cluster)
-	if len(infos) == 0 {
-		slog.Warn("Could not read aerospike configuration", "name", h.routineName)
+	infos, err := getClusterConfiguration(h.cluster)
+	if err != nil || len(infos) == 0 {
+		slog.Warn("Could not read aerospike configuration", "err", err, "name", h.routineName)
 		return
 	}
 	path := getConfigurationPath(h.backend.fullBackupsPath, h.backupFullPolicy, now)

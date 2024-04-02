@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -16,8 +17,13 @@ import (
 
 const namespaceInfo = "namespaces"
 
+var clientMap = util.NewLoadingCache(context.TODO(), func(cluster *model.AerospikeCluster) (*as.Client, error) {
+	return as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
+})
+
 func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error) {
-	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
+	client, err := clientMap.Get(cluster)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Aerospike server: %s", err)
 	}
@@ -35,12 +41,15 @@ func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error
 	return strings.Split(namespaces, ";"), nil
 }
 
-func getClusterConfiguration(cluster *model.AerospikeCluster) []asconfig.DotConf {
-	var outputs = make([]asconfig.DotConf, 0, len(cluster.ASClientHosts()))
-	cp := cluster.ASClientPolicy()
+func getClusterConfiguration(cluster *model.AerospikeCluster) ([]asconfig.DotConf, error) {
+	activeHosts, err := getActiveHosts(cluster)
+	if err != nil {
+		return nil, err
+	}
 
-	for _, host := range cluster.ASClientHosts() {
-		asInfo := info.NewAsInfo(logr.Logger{}, host, cp)
+	var outputs = make([]asconfig.DotConf, 0, len(activeHosts))
+	for _, host := range activeHosts {
+		asInfo := info.NewAsInfo(logr.Logger{}, host, cluster.ASClientPolicy())
 
 		conf, err := asconfig.GenerateConf(logr.Discard(), asInfo, true)
 		if err != nil {
@@ -57,5 +66,19 @@ func getClusterConfiguration(cluster *model.AerospikeCluster) []asconfig.DotConf
 		outputs = append(outputs, configAsString)
 	}
 
-	return outputs
+	return outputs, nil
+}
+
+func getActiveHosts(cluster *model.AerospikeCluster) ([]*as.Host, error) {
+	client, err := clientMap.Get(cluster)
+	if err != nil {
+		return nil, err
+	}
+	var activeHosts []*as.Host
+	for _, node := range client.GetNodes() {
+		if node.IsActive() {
+			activeHosts = append(activeHosts, node.GetHost())
+		}
+	}
+	return activeHosts, nil
 }

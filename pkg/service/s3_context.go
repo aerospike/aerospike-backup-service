@@ -28,7 +28,7 @@ type S3Context struct {
 	client        *s3.Client
 	bucket        string
 	path          string
-	metadataCache *util.LoadingCache[*model.BackupMetadata]
+	metadataCache *util.LoadingCache[string, *model.BackupMetadata]
 }
 
 var _ StorageAccessor = (*S3Context)(nil)
