@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -16,10 +15,6 @@ import (
 )
 
 const namespaceInfo = "namespaces"
-
-var clientMap = util.NewLoadingCache(context.TODO(), func(cluster *model.AerospikeCluster) (*as.Client, error) {
-	return as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
-})
 
 func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error) {
 	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
