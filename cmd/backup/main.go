@@ -123,15 +123,15 @@ func readConfiguration() (*model.Config, error) {
 
 func runHTTPServer(ctx context.Context, backends service.BackendsHolder,
 	config *model.Config, scheduler quartz.Scheduler) error {
-	server := server.NewHTTPServer(backends, config, scheduler)
+	httpServer := server.NewHTTPServer(backends, config, scheduler)
 	go func() {
-		server.Start()
+		httpServer.Start()
 	}()
 
 	<-ctx.Done()
 	time.Sleep(time.Millisecond * 100) // wait for other goroutines to exit
 	// shutdown the HTTP server gracefully
-	if err := server.Shutdown(); err != nil {
+	if err := httpServer.Shutdown(); err != nil {
 		slog.Error("HTTP server shutdown failed", "error", err)
 		return err
 	}

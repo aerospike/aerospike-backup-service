@@ -99,7 +99,26 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 
 	h.cleanIncrementalBackups()
 
+	h.writeClusterConfiguration(now)
 	return nil
+}
+
+func (h *BackupHandler) writeClusterConfiguration(now time.Time) {
+	infos, err := getClusterConfiguration(h.cluster)
+	if err != nil || len(infos) == 0 {
+		slog.Warn("Could not read aerospike configuration", "err", err, "name", h.routineName)
+		return
+	}
+	path := getConfigurationPath(h.backend.fullBackupsPath, h.backupFullPolicy, now)
+	h.backend.CreateFolder(path)
+	for i, info := range infos {
+		confFilePath := fmt.Sprintf("%s/aerospike_%d.conf", path, i)
+		slog.Debug("Write aerospike configuration", "path", confFilePath)
+		err := h.backend.write(confFilePath, []byte(info))
+		if err != nil {
+			slog.Error("Failed to write configuration for the backup", "name", h.routineName, "err", err)
+		}
+	}
 }
 
 func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace string) error {
@@ -253,16 +272,22 @@ func (h *BackupHandler) writeState() {
 
 func getFullPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, namespace string, now time.Time) string {
 	if backupPolicy.RemoveFiles.RemoveFullBackup() {
-		path := fmt.Sprintf("%s/%s", fullBackupsPath, namespace)
-		return path
+		return fmt.Sprintf("%s/%s/%s", fullBackupsPath, model.DataDirectory, namespace)
 	}
-	path := fmt.Sprintf("%s/%s/%s", fullBackupsPath, timeSuffix(now), namespace)
-	return path
+	return fmt.Sprintf("%s/%s/%s/%s", fullBackupsPath, timeSuffix(now), model.DataDirectory, namespace)
 }
 
 func getIncrementalPath(incrBackupsPath string, namespace string, now time.Time) string {
-	path := fmt.Sprintf("%s/%s/%s", incrBackupsPath, timeSuffix(now), namespace)
-	return path
+	return fmt.Sprintf("%s/%s/%s/%s", incrBackupsPath, timeSuffix(now), model.DataDirectory, namespace)
+}
+
+func getConfigurationPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, now time.Time) string {
+	if backupPolicy.RemoveFiles.RemoveFullBackup() {
+		path := fmt.Sprintf("%s/%s", fullBackupsPath, model.ConfigurationBackupDirectory)
+		return path
+	}
+
+	return fmt.Sprintf("%s/%s/%s", fullBackupsPath, timeSuffix(now), model.ConfigurationBackupDirectory)
 }
 
 func timeSuffix(now time.Time) string {

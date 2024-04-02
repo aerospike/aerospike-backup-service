@@ -1,3 +1,6 @@
 [submodule "modules/aerospike-tools-backup"]
 	path = modules/aerospike-tools-backup
 	url = https://github.com/aerospike/aerospike-tools-backup.git
+[submodule "modules/schema/schemas"]
+	path = modules/schema/schemas
+	url = https://github.com/aerospike/schemas

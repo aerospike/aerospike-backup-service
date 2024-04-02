@@ -45,7 +45,7 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 		slog.Info("Restore full", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, jobID)
+		_, _ = fmt.Fprint(w, jobID)
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
@@ -84,7 +84,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 		slog.Info("RestoreByPath action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, jobID)
+		_, _ = fmt.Fprint(w, jobID)
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
@@ -121,7 +121,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 		slog.Info("Restore action", "jobID", jobID, "request", request)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, jobID)
+		_, _ = fmt.Fprint(w, jobID)
 	} else {
 		http.Error(w, "", http.StatusNotFound)
 	}
@@ -161,5 +161,52 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 		if err != nil {
 			slog.Error("failed to write response", "err", err)
 		}
+	}
+}
+
+// @Summary     Retrieve Aerospike cluster configuration backup
+// @ID	        retrieveConfiguration
+// @Tags        Restore
+// @Produce     application/zip
+// @Param       name path string true "Backup routine name"
+// @Param       timestamp path int true "Backup timestamp" format(int64)
+// @Router      /v1/retrieve/configuration/{name}/{timestamp} [get]
+// @Success     200 {file} application/zip "configuration backup"
+// @Failure     400 {string} string
+func (ws *HTTPServer) retrieveConfig(w http.ResponseWriter, r *http.Request) {
+	// Check if method is GET
+	if r.Method != http.MethodGet {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	name := r.PathValue("name")
+	if name == "" {
+		http.Error(w, "Routine name required", http.StatusBadRequest)
+		return
+	}
+	timestampStr := r.PathValue("timestamp")
+	if timestampStr == "" {
+		http.Error(w, "Timestamp required", http.StatusBadRequest)
+		return
+	}
+
+	timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Timestamp incorrect", http.StatusBadRequest)
+		return
+	}
+
+	buf, err := ws.restoreService.RetrieveConfiguration(name, timestamp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", `attachment; filename="archive.zip"`)
+	_, err = w.Write(buf)
+	if err != nil {
+		slog.Error("failed to write response", "err", err)
 	}
 }

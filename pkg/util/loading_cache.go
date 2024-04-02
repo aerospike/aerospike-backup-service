@@ -7,22 +7,22 @@ import (
 )
 
 // LoadFunc is the LoadingCache value loader.
-type LoadFunc[T any] func(string) (T, error)
+type LoadFunc[K comparable, T any] func(K) (T, error)
 
 // LoadingCache maps keys to values where values are automatically
 // loaded by the cache.
-type LoadingCache[T any] struct {
+type LoadingCache[K comparable, T any] struct {
 	sync.Mutex
 	ctx      context.Context
-	data     map[string]T
-	loadFunc LoadFunc[T]
+	data     map[K]T
+	loadFunc LoadFunc[K, T]
 }
 
 // NewLoadingCache returns a new LoadingCache instance.
-func NewLoadingCache[T any](ctx context.Context, loadFunc LoadFunc[T]) *LoadingCache[T] {
-	cache := &LoadingCache[T]{
+func NewLoadingCache[K comparable, T any](ctx context.Context, loadFunc LoadFunc[K, T]) *LoadingCache[K, T] {
+	cache := &LoadingCache[K, T]{
 		ctx:      ctx,
-		data:     make(map[string]T),
+		data:     make(map[K]T),
 		loadFunc: loadFunc,
 	}
 
@@ -32,7 +32,7 @@ func NewLoadingCache[T any](ctx context.Context, loadFunc LoadFunc[T]) *LoadingC
 
 // Get retrieves or loads the value for the specified key and stores
 // it in the cache.
-func (c *LoadingCache[T]) Get(key string) (T, error) {
+func (c *LoadingCache[K, T]) Get(key K) (T, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -50,7 +50,7 @@ func (c *LoadingCache[T]) Get(key string) (T, error) {
 	return loadedValue, nil
 }
 
-func (c *LoadingCache[T]) startCleanup() {
+func (c *LoadingCache[T, K]) startCleanup() {
 	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
 	for {
@@ -63,8 +63,8 @@ func (c *LoadingCache[T]) startCleanup() {
 	}
 }
 
-func (c *LoadingCache[T]) clean() {
+func (c *LoadingCache[K, T]) clean() {
 	c.Lock()
 	defer c.Unlock()
-	c.data = make(map[string]T)
+	c.data = make(map[K]T)
 }

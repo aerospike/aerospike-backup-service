@@ -3,7 +3,10 @@ package service
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
+	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -67,7 +70,7 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 	if !found {
 		return 0, fmt.Errorf("backend '%s' not found for restore", request.Routine)
 	}
-	fullBackups, err := r.findLastFullBackup(reader, request)
+	fullBackups, err := r.findLastFullBackup(reader, request.Time)
 	if err != nil {
 		return 0, fmt.Errorf("last full backup not found: %v", err)
 	}
@@ -136,9 +139,9 @@ func (r *RestoreMemory) restoreFromPath(
 
 func (r *RestoreMemory) findLastFullBackup(
 	backend BackupListReader,
-	request *model.RestoreTimestampRequest,
+	toTimeMillis int64,
 ) ([]model.BackupDetails, error) {
-	to, err := model.NewTimeBoundsTo(request.Time)
+	to, err := model.NewTimeBoundsTo(toTimeMillis)
 	if err != nil {
 		return nil, err
 	}
@@ -147,9 +150,9 @@ func (r *RestoreMemory) findLastFullBackup(
 		return nil, fmt.Errorf("cannot read full backup list: %v", err)
 	}
 
-	fullBackup := latestFullBackupBeforeTime(fullBackupList, time.UnixMilli(request.Time))
-	if fullBackup == nil {
-		return nil, fmt.Errorf("no full backup found at %d", request.Time)
+	fullBackup := latestFullBackupBeforeTime(fullBackupList, time.UnixMilli(toTimeMillis)) // it's a list of namespaces
+	if len(fullBackup) == 0 {
+		return nil, fmt.Errorf("no full backup found at %d", toTimeMillis)
 	}
 	return fullBackup, nil
 }
@@ -196,6 +199,36 @@ func (r *RestoreMemory) findIncrementalBackupsForNamespace(
 	})
 
 	return filteredIncrementalBackups, nil
+}
+
+func (r *RestoreMemory) RetrieveConfiguration(routine string, toTimeMillis int64) ([]byte, error) {
+	backend, found := r.backends.GetReader(routine)
+	if !found {
+		return nil, fmt.Errorf("backend '%s' not found for restore", routine)
+	}
+	fullBackups, err := r.findLastFullBackup(backend, toTimeMillis)
+	if err != nil || len(fullBackups) == 0 {
+		return nil, fmt.Errorf("last full backup not found: %v", err)
+	}
+
+	// fullBackups has backups for multiple namespaces, but same timestamp, they share same configuration.
+	lastFullBackup := fullBackups[0]
+	configPath, err := calculateConfigurationBackupPath(*lastFullBackup.Key)
+	if err != nil {
+		return nil, err
+	}
+	return backend.ReadClusterConfiguration(configPath)
+}
+
+func calculateConfigurationBackupPath(path string) (string, error) {
+	parse, err := url.Parse(path)
+	if err != nil {
+		return "", err
+	}
+	// Move up two directories
+	base := strings.TrimPrefix(filepath.Dir(filepath.Dir(parse.Path)), "/")
+	// Join new directory 'config' with the new base
+	return filepath.Join(base, model.ConfigurationBackupDirectory), nil
 }
 
 func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {

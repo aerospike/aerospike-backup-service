@@ -1,6 +1,8 @@
 package service
 
 import (
+	"archive/zip"
+	"bytes"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -8,6 +10,7 @@ import (
 	"sync/atomic"
 
 	"github.com/aerospike/backup/pkg/model"
+	"gopkg.in/yaml.v3"
 )
 
 // BackupBackend handles the backup management logic, employing a StorageAccessor implementation
@@ -80,7 +83,17 @@ func (b *BackupBackend) writeState(state *model.BackupState) error {
 }
 
 func (b *BackupBackend) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
-	return b.writeYaml(filepath.Join(path, metadataFile), metadata)
+	metadataFilePath := filepath.Join(path, metadataFile)
+	return b.writeYaml(metadataFilePath, metadata)
+}
+
+func (b *BackupBackend) writeYaml(path string, data any) error {
+	dataYaml, err := yaml.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	return b.write(path, dataYaml)
 }
 
 // FullBackupList returns a list of available full backups.
@@ -101,7 +114,7 @@ func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache 
 	// each path contains a backup of specific time
 	backupDetails := []model.BackupDetails{}
 	for _, path := range paths {
-		namespaces, err := b.lsDir(path)
+		namespaces, err := b.lsDir(filepath.Join(path, model.DataDirectory))
 		if err != nil {
 			slog.Warn("Cannot list backup dir", "path", path, "err", err)
 			continue
@@ -136,4 +149,49 @@ func (b *BackupBackend) IncrementalBackupList(timebounds *model.TimeBounds) ([]m
 
 func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {
 	return b.fullBackupInProgress
+}
+
+func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
+	configBackups, err := b.lsFiles(path)
+	if err != nil {
+		return nil, err
+	}
+	if len(configBackups) == 0 {
+		return nil, fmt.Errorf("no configuration backups found for %s", path)
+	}
+
+	return b.packageFiles(configBackups)
+}
+
+// PackageFiles creates a zip archive from the given file list and returns it as a byte array
+func (b *BackupBackend) packageFiles(files []string) ([]byte, error) {
+	// Create a buffer to write our archive to
+	buf := new(bytes.Buffer)
+
+	// Create a new zip archive
+	w := zip.NewWriter(buf)
+
+	for _, file := range files {
+		data, err := b.read(file)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read file %s: %w", file, err)
+		}
+
+		f, err := w.Create(filepath.Base(file))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create entry for filename %s: %w", file, err)
+		}
+
+		_, err = f.Write(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to write file %s: %w", file, err)
+		}
+	}
+
+	err := w.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed to close the zip writer: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }

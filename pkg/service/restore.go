@@ -15,4 +15,7 @@ type RestoreService interface {
 
 	// JobStatus returns status for the given job id.
 	JobStatus(jobID int) (*model.RestoreJobStatus, error)
+
+	// RetrieveConfiguration return backed up Aerospike configuration.
+	RetrieveConfiguration(routine string, toTimeMillis int64) ([]byte, error)
 }
