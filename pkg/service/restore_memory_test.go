@@ -7,11 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 	"github.com/aws/smithy-go/ptr"
+	"github.com/stretchr/testify/assert"
 )
 
 var restoreService = makeTestRestoreService()

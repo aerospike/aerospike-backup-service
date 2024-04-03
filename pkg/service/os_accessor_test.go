@@ -289,3 +289,67 @@ func TestReadBackupDetailsNegative(t *testing.T) {
 		})
 	}
 }
+
+func TestReadState(t *testing.T) {
+	accessor := NewOSDiskAccessor()
+
+	dir := os.TempDir()
+	_ = os.MkdirAll(dir, fs.ModePerm)
+	path := filepath.Join(dir, "test_state.yaml")
+	expected := &model.BackupState{
+		Performed: 10,
+	}
+	data, _ := json.Marshal(expected)
+	_ = accessor.write(path, data)
+
+	state := &model.BackupState{}
+	err := accessor.readBackupState(path, state)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, state)
+}
+
+func TestReadStateNegative(t *testing.T) {
+	accessor := &OSDiskAccessor{}
+	tests := []struct {
+		name      string
+		setup     func() string
+		ignoreErr bool
+	}{
+		{
+			name: "NonExistentDir",
+			setup: func() string {
+				return "nonexistentdir"
+			},
+			ignoreErr: true, // when state file not exists, default is returned.
+		},
+		{
+			name: "EmptyDir",
+			setup: func() string {
+				return t.TempDir()
+			},
+		},
+		{
+			name: "InvalidState",
+			setup: func() string {
+				dir := t.TempDir()
+				path := filepath.Join(dir, "test_state.yaml")
+				_ = accessor.write(path, []byte{1, 2, 3})
+				return path
+			},
+			ignoreErr: true, // when state file corrupted, default is returned.
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := tt.setup()
+			state := &model.BackupState{}
+			err := accessor.readBackupState(dir, state)
+			if tt.ignoreErr {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
