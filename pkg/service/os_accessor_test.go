@@ -1,12 +1,17 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/aerospike/backup/pkg/model"
+	"github.com/stretchr/testify/assert"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
 	"syscall"
 	"testing"
+	"time"
 )
 
 func TestDeleteFolder(t *testing.T) {
@@ -223,6 +228,63 @@ func TestOSDiskAccessor_CreateFolder(t *testing.T) {
 			if stats != nil && !tc.success {
 				t.Fatalf("Expected to faile create folder")
 			}
+		})
+	}
+}
+
+func TestReadBackupDetails(t *testing.T) {
+	accessor := NewOSDiskAccessor()
+
+	path := filepath.Join(os.TempDir(), "test.yaml")
+	_ = os.MkdirAll(path, fs.ModePerm)
+	metadata := model.BackupMetadata{
+		Created:   time.Now(),
+		Namespace: "test-backup",
+	}
+
+	data, _ := json.Marshal(metadata)
+	_ = accessor.write(filepath.Join(path, metadataFile), data)
+
+	details, err := accessor.readBackupDetails(path, true)
+	assert.NoError(t, err)
+	assert.True(t, metadata.Created.Equal(details.BackupMetadata.Created))
+	assert.Equal(t, path, *details.Key)
+}
+
+func TestReadBackupDetailsNegative(t *testing.T) {
+
+	accessor := &OSDiskAccessor{}
+	tests := []struct {
+		name  string
+		setup func() string
+	}{
+		{
+			name: "NonExistentDir",
+			setup: func() string {
+				return "nonexistentdir"
+			},
+		},
+		{
+			name: "EmptyDir",
+			setup: func() string {
+				return t.TempDir()
+			},
+		},
+		{
+			name: "InvalidMetadata",
+			setup: func() string {
+				dir := t.TempDir()
+				_ = accessor.write(filepath.Join(dir, metadataFile), []byte{1, 2, 3})
+				return dir
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := tt.setup()
+			_, err := accessor.readBackupDetails(dir, false)
+			assert.Error(t, err)
 		})
 	}
 }
