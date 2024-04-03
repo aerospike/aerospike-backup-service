@@ -46,10 +46,10 @@ func runReadWriteState(t *testing.T, context S3Context) {
 		Namespace: "testNS",
 		Created:   time.Now(),
 	}
-	context.writeYaml("backup_path/"+metadataFile, metadataWrite)
+	_ = context.writeYaml("backup_path/"+metadataFile, metadataWrite)
 	metadataRead := model.BackupMetadata{}
 
-	context.readFile("backup_path/"+metadataFile, &metadataRead)
+	_ = context.readFile("backup_path/"+metadataFile, &metadataRead)
 	if metadataWrite.Namespace != metadataRead.Namespace {
 		t.Errorf("namespace different, expected %s, got %s", metadataWrite.Namespace, metadataRead.Namespace)
 	}
@@ -70,15 +70,15 @@ func TestS3Context_DeleteFile(t *testing.T) {
 }
 
 func runDeleteFileTest(t *testing.T, context S3Context) {
-	context.writeYaml("incremental/file.txt", "data")
-	context.writeYaml("incremental/file2.txt", "data")
+	_ = context.writeYaml("incremental/file.txt", "data")
+	_ = context.writeYaml("incremental/file2.txt", "data")
 
 	if files, _ := context.lsFiles("incremental"); len(files) != 2 {
 		t.Error("files not created")
 	}
 
 	// DeleteFolder requires full path
-	context.DeleteFolder("incremental")
+	_ = context.DeleteFolder("incremental")
 
 	if files, _ := context.lsFiles("incremental"); len(files) > 0 {
 		t.Error("files not deleted")
@@ -100,8 +100,8 @@ func runDeleteFolderTest(t *testing.T, context S3Context) {
 	parent := "storage1/minioIncremental"
 	folder1 := parent + "/source-ns1"
 	folder2 := parent + "/source-ns16"
-	context.writeYaml(folder1+"/file1.txt", "data")
-	context.writeYaml(folder2+"/file2.txt", "data")
+	_ = context.writeYaml(folder1+"/file1.txt", "data")
+	_ = context.writeYaml(folder2+"/file2.txt", "data")
 
 	err := context.DeleteFolder(folder1)
 	if err != nil {

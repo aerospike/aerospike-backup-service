@@ -68,7 +68,7 @@ func TestAerospikeCluster_GetPassword(t *testing.T) {
 			if test.expectedErr {
 				assert.Nil(t, password)
 			}
-			os.RemoveAll(testdataFolder)
+			_ = os.RemoveAll(testdataFolder)
 		})
 	}
 }
@@ -87,7 +87,7 @@ func TestAerospikeCluster_GetPasswordCaching(t *testing.T) {
 	assert.Equal(t, ptr.String("password"), password)
 
 	// remove file to ensure second call will not read it
-	os.RemoveAll(testdataFolder)
+	_ = os.RemoveAll(testdataFolder)
 
 	// Make a second call to GetPassword and check if the returned passwords are same
 	passwordAfterCache := cluster.GetPassword()
@@ -108,8 +108,13 @@ func TestAerospikeCluster_GetPasswordFromCredentials(t *testing.T) {
 
 func createValidFile() {
 	text := []byte("password")
-	os.MkdirAll(testdataFolder, 0744)
+	_ = os.MkdirAll(testdataFolder, 0744)
 	f, _ := os.OpenFile(passwordPath, os.O_WRONLY|os.O_CREATE, 0644)
-	defer f.Close()
-	f.Write(text)
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(f)
+	_, _ = f.Write(text)
 }

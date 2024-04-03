@@ -44,7 +44,7 @@ func LogCaptured(out string) {
 				slog.Debug(groups[4])
 			}
 		} else { // print to stderr
-			fmt.Fprintln(os.Stderr, entry)
+			_, _ = fmt.Fprintln(os.Stderr, entry)
 		}
 	}
 }

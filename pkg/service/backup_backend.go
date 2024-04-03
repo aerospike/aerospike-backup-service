@@ -112,7 +112,7 @@ func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.Ba
 func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache bool,
 	paths ...string) []model.BackupDetails {
 	// each path contains a backup of specific time
-	backupDetails := []model.BackupDetails{}
+	backupDetails := make([]model.BackupDetails, 0, len(paths))
 	for _, path := range paths {
 		namespaces, err := b.lsDir(filepath.Join(path, model.DataDirectory))
 		if err != nil {
