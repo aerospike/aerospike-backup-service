@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"strings"
 	"testing"
@@ -69,7 +70,7 @@ type BackendMock struct {
 }
 
 func (m *BackendMock) ReadClusterConfiguration(_ string) ([]byte, error) {
-	return nil, nil
+	return []byte{}, nil
 }
 
 func (*BackendMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
@@ -102,7 +103,7 @@ type BackendFailMock struct {
 }
 
 func (m *BackendFailMock) ReadClusterConfiguration(_ string) ([]byte, error) {
-	return nil, nil
+	return nil, errors.New("mock error")
 }
 
 func (*BackendFailMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
@@ -339,6 +340,52 @@ func Test_restoreTimestampFail(t *testing.T) {
 	status, _ := restoreService.JobStatus(jobID)
 	if status.Status != model.JobStatusFailed {
 		t.Errorf("Expected restore job status to be Failed, but got %s", status.Status)
+	}
+}
+
+func Test_RetrieveConfiguration(t *testing.T) {
+	tests := []struct {
+		name      string
+		routine   string
+		timestamp int64
+		wantErr   bool
+	}{
+		{
+			name:      "normal",
+			routine:   "routine",
+			timestamp: 10,
+			wantErr:   false,
+		},
+		{
+			name:      "wrong time",
+			routine:   "routine",
+			timestamp: 1,
+			wantErr:   true,
+		},
+		{
+			name:      "wrong routine",
+			routine:   "routine_fail_read",
+			timestamp: 10,
+			wantErr:   true,
+		},
+		{
+			name:      "routine not found",
+			routine:   "routine not found",
+			timestamp: 10,
+			wantErr:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := restoreService.RetrieveConfiguration(tt.routine, tt.timestamp)
+			assert.Equal(t, tt.wantErr, err != nil, "Unexpected error presence, got: %v", err)
+
+			if !tt.wantErr {
+				assert.NotNil(t, res, "Expected non-nil result, got nil.")
+			} else {
+				assert.Nil(t, res, "Expected nil result as an error was expected.")
+			}
+		})
 	}
 }
 
