@@ -1,9 +1,11 @@
 /internal/
 /cmd/
 /docs/
+/modules/
 /pkg/model/
 /pkg/shared/
 /pkg/stdio/
+/pkg/service/aerospike_service.go
 /pkg/service/backup_.*\.go
 /pkg/service/configuration_manager.*\.go
 /pkg/service/s3_context.go

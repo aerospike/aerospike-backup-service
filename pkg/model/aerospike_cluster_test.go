@@ -93,6 +93,7 @@ func TestAerospikeCluster_GetPasswordCaching(t *testing.T) {
 	passwordAfterCache := cluster.GetPassword()
 	assert.Equal(t, password, passwordAfterCache)
 }
+
 func TestAerospikeCluster_GetPasswordFromCredentials(t *testing.T) {
 	cluster := &AerospikeCluster{
 		Credentials: &Credentials{
