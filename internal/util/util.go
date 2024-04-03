@@ -15,7 +15,7 @@ import (
 // LogHandler returns the application log handler with the
 // configured level.
 func LogHandler(config *model.LoggerConfig) slog.Handler {
-	addSource := true
+	const addSource = true
 	writer := logWriter(config)
 	switch strings.ToUpper(config.GetFormatOrDefault()) {
 	case "PLAIN":

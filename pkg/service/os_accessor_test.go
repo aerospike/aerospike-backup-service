@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -215,15 +214,14 @@ func TestOSDiskAccessor_CreateFolder(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			path := tc.parent + "/test"
 			NewOSDiskAccessor().CreateFolder(path)
 			stats, err := os.Stat(path)
 			if stats == nil && tc.success {
-				log.Fatalf("Expected to create folder, got error %v", err)
+				t.Fatalf("Expected to create folder, got error %v", err)
 			}
 			if stats != nil && !tc.success {
-				log.Fatalf("Expected to faile create folder")
+				t.Fatalf("Expected to faile create folder")
 			}
 		})
 	}

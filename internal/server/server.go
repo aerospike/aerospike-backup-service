@@ -85,6 +85,8 @@ type HTTPServer struct {
 	backupBackends service.BackendsHolder
 }
 
+// NewHTTPServer returns a new instance of HTTPServer.
+//
 // Annotations to generate OpenAPI description (https://github.com/swaggo/swag)
 // @title           Backup Service REST API Specification
 // @version         0.3.0
@@ -95,8 +97,6 @@ type HTTPServer struct {
 //
 // @externalDocs.description  OpenAPI
 // @externalDocs.url          https://swagger.io/resources/open-api/
-//
-// NewHTTPServer returns a new instance of HTTPServer.
 func NewHTTPServer(backends service.BackendsHolder, config *model.Config,
 	scheduler quartz.Scheduler) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer
@@ -211,7 +211,7 @@ func (ws *HTTPServer) Start() {
 
 	ws.server.Handler = ws.rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()
-	if strings.Contains(err.Error(), "Server closed") {
+	if err != nil && strings.Contains(err.Error(), "Server closed") {
 		slog.Info(err.Error())
 	} else {
 		panic(err)
