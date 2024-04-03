@@ -3,8 +3,6 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/stretchr/testify/assert"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -12,6 +10,9 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/aerospike/backup/pkg/model"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDeleteFolder(t *testing.T) {
