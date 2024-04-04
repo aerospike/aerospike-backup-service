@@ -77,12 +77,14 @@ test:
 
 .PHONY: rpm
 rpm: tarball
+	mkdir -p $(WORKSPACE)/target
 	mkdir -p $(WORKSPACE)/packages/rpm/SOURCES
 	mv /tmp/$(BINARY_NAME)-$(VERSION)-$(UNAME_M).tar.gz $(WORKSPACE)/packages/rpm/SOURCES/
 	BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) $(MAKE) -C packages/rpm
 
 .PHONY: deb
 deb: tarball
+	mkdir -p $(WORKSPACE)/target
 	mkdir -p $(WORKSPACE)/packages/deb/$(ARCH)
 	tar -xvf /tmp/$(BINARY_NAME)-$(VERSION)-$(UNAME_M).tar.gz -C $(WORKSPACE)/packages/deb/$(ARCH)
 	BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) ARCH=$(ARCH) $(MAKE) -C packages/deb
