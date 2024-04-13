@@ -16,6 +16,6 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: ${{ secrets.ORG }},
               repo: ${{ secrets.REPO }},
-              workflow_id: 'hello-wold.yaml',
+              workflow_id: 'hello-world.yml',
               ref: 'APPS-1189-improve-release-github-action-workflow'
               })
