@@ -1,5 +1,8 @@
 name: Test
 on:
+  push:
+    branches:
+      - APPS-1189-improve-release-github-action-workflow
   workflow_dispatch:
 jobs:
   test-job:
@@ -14,5 +17,5 @@ jobs:
               owner: ${{ secrets.ORG }},
               repo: ${{ secrets.REPO }},
               workflow_id: 'hello-wold.yaml',
-              ref: 'main'
+              ref: 'APPS-1189-improve-release-github-action-workflow'
               })
