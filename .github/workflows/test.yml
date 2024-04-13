@@ -10,13 +10,16 @@ jobs:
     steps:
       - uses: actions/github-script@v7
         name: Invoke docker image build
+        env:
+          OWNER: ${{ secrets.ORG }}
+          REPO: ${{ secrets.REPO }}
         with:
           debug: true
           github-token: ${{ secrets.PAT }}
           script: |
             await github.rest.actions.createWorkflowDispatch({
-              owner: ${{ secrets.ORG }},
-              repo: ${{ secrets.REPO }},
+              owner: "${OWNER}",
+              repo: "${REPO}",
               workflow_id: 'hello-world.yml',
               ref: 'APPS-1189-improve-release-github-action-workflow'
               })
