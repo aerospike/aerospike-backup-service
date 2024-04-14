@@ -19,3 +19,4 @@ jobs:
               repo: ecosystem-automation,
               workflow_id: 'hello-world.yml',
               ref: 'APPS-1189-improve-release-github-action-workflow'
+            })
