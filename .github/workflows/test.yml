@@ -20,7 +20,7 @@ jobs:
                   workflow_id: 'hello-world.yml',
                   ref: 'APPS-1189-improve-release-github-action-workflow',
                   inputs: {
-                    tag: 0.3.0
+                    tag: '0.3.0'
                   }
               })
               console.log(result);
