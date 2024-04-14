@@ -19,7 +19,7 @@ jobs:
                   repo: '${{ secrets.REPO }}',
                   workflow_id: 'hello-world.yml',
                   ref: 'APPS-1189-improve-release-github-action-workflow',
-                  client_payload: '{tag: 0.3.0}'
+                  inputs: '{tag: 0.3.0}'
               })
               console.log(result);
             } catch(error) {
