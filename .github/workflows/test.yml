@@ -8,18 +8,9 @@ jobs:
   test-job:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v7
-        name: Invoke docker image build
-        env:
-          OWNER: ${{ secrets.ORG }}
-          REPO: ${{ secrets.REPO }}
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v3
         with:
-          debug: true
-          github-token: ${{ secrets.PAT }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: ${{ env.OWNER }},
-              repo: ${{ env.REPO }},
-              workflow_id: 'hello-world.yml',
-              ref: 'APPS-1189-improve-release-github-action-workflow'
-              })
+          token: ${{ secrets.PAT }}
+          repository:  ${{ secrets.ORG }}/${{ secrets.REPO }}
+          event-type: my-event
