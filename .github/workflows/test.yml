@@ -8,9 +8,17 @@ jobs:
   test-job:
     runs-on: ubuntu-latest
     steps:
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v3
+      - uses: actions/github-script@v7
+        name: Invoke docker image build
+        env:
+          OWNER: ${{ secrets.ORG }}
+          REPO: ${{ secrets.REPO }}
         with:
-          token: ${{ secrets.PAT }}
-          repository:  citrusleaf/ecosystem-automation
-          event-type: my-event
+          debug: true
+          github-token: ${{ secrets.PAT }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: citrusleaf,
+              repo: ecosystem-automation,
+              workflow_id: 'hello-world.yml',
+              ref: 'APPS-1189-improve-release-github-action-workflow'
