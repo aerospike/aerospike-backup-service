@@ -10,9 +10,6 @@ jobs:
     steps:
       - uses: actions/github-script@v7
         name: Invoke docker image build
-        env:
-          OWNER: ${{ secrets.ORG }}
-          REPO: ${{ secrets.REPO }}
         with:
           debug: true
           github-token: ${{ secrets.PAT }}
