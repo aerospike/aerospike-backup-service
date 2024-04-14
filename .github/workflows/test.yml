@@ -12,5 +12,5 @@ jobs:
         uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.PAT }}
-          repository:  ${{ secrets.ORG }}/${{ secrets.REPO }}
+          repository:  citrusleaf/ecosystem-automation
           event-type: my-event
