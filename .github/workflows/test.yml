@@ -14,7 +14,7 @@ jobs:
           github-token: ${{ secrets.PAT }}
           script: |
             try {
-                await github.rest.actions.createWorkflowDispatch({
+                const result = await github.rest.actions.createWorkflowDispatch({
                   owner: '${{ secrets.ORG }}',
                   repo: '${{ secrets.REPO }}',
                   workflow_id: 'hello-world.yml',
