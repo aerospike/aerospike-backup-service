@@ -30,7 +30,6 @@ jobs:
           github-token: ${{ secrets.PAT }}
           script: |
             try {
-                const REPO_NAME = process.env.REPO_NAME;
                 const result = await github.rest.actions.createWorkflowDispatch({
                   owner: '${{ secrets.ORG }}',
                   repo: '${{ secrets.REPO }}',
