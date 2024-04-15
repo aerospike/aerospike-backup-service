@@ -1,7 +1,7 @@
 #!/bin/bash -e
 WORKSPACE="$(git rev-parse --show-toplevel)"
 
-docker run --rm --volume "$WORKSPACE":/local ghcr.io/swaggo/swag:latest init \
+docker run --rm --volume "$WORKSPACE":/local davi17g/swag:latest init \
 -d /local/internal/server,/local/pkg/model -g server.go -o /local/docs
 
 # swag codegen cannot handle int64 format for return values
@@ -9,13 +9,15 @@ docker run --rm --volume "$WORKSPACE":/local ghcr.io/swaggo/swag:latest init \
 cat <<< "$(docker run --rm --volume "$WORKSPACE/docs/swagger.json":/local/docs/swagger.json ghcr.io/jqlang/jq:latest \
 '(.paths.[].[].responses
 | select(has("202")).["202"]
-| select(has("schema")).["schema"]).type =  "integer"' \
+| select(has("schema")).["schema"]
+| select(.type | contains("int64"))) = {type: "integer", format: "int64"}' \
 /local/docs/swagger.json)" > "$WORKSPACE"/docs/swagger.json
 
 cat <<< "$(docker run --rm --volume "$WORKSPACE/docs/swagger.yaml":/local/docs/swagger.yaml mikefarah/yq:latest \
-'(.paths.[][].responses
+'(.paths.[].[].responses
 | select(has("202")).["202"]
-| select(has("schema")).schema).type = "integer"' \
+| select(has("schema")).["schema"]
+| select(.type | contains("int64"))) = {"type": "integer", "format": "int64"}' \
 /local/docs/swagger.yaml)" > "$WORKSPACE"/docs/swagger.yaml
 
 mkdir -p "$WORKSPACE"/tmp
