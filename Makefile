@@ -95,7 +95,7 @@ tarball: prep-submodules
 
 .PHONY: release
 release:
-	cd ./scripts && ./release.sh
+	cd ./scripts && ./release.sh $(NEXT_VERSION)
 
 .PHONY: clean
 clean:
