@@ -22,7 +22,7 @@ jobs:
               const response = await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                tag: tag
+                tag: context.ref
               });
 
               if (response.status === 200) {
