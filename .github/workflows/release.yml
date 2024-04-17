@@ -25,12 +25,12 @@ jobs:
               });
 
               if (response.status === 200) {
-                console.log(`Release with tag ${tag} exists.`);
+                console.log(`Release with tag exists.`);
                 core.setOutput('release-exists', 'true');
               }
             } catch (error) {
               if (error.status === 404) {
-                console.log(`Release with tag ${tag} does not exist.`);
+                console.log(`Release with tag does not exist.`);
                 core.setOutput('release-exists', 'false');
               } else {
                 throw error;
