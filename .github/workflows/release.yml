@@ -12,7 +12,34 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+      - name: Check if release exists
+        id: check-release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const octokit = github.getOctokit();
+            try {
+              const response = await octokit.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: '${{ github.ref }}'
+              });
+
+              if (response.status === 200) {
+                console.log(`Release with tag ${tag} exists.`);
+                core.setOutput('release-exists', 'true');
+              }
+            } catch (error) {
+              if (error.status === 404) {
+                console.log(`Release with tag ${tag} does not exist.`);
+                core.setOutput('release-exists', 'false');
+              } else {
+                throw error;
+              }
+            }
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/create-release@v1
+        if: ${{ steps.check-release.outputs.release-exists == 'false'}}
         id: create-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -104,12 +131,12 @@ jobs:
         id: package-checksum
         run: |
           if [ "${{ matrix.ext }}" == "rpm" ]; then
-            sha256sum ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}.${{ matrix.ext }} > \
+            sha256sum ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}.${{ matrix.ext }} | cut -d' ' -f1 > \
               ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}.${{ matrix.ext }}.sha256
           fi
           
           if [ "${{ matrix.ext }}" == "deb" ]; then
-            sha256sum ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}_${{ steps.set-variables.outputs.version }}-1_${{ matrix.arch }}.${{ matrix.ext }} > \
+            sha256sum ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}_${{ steps.set-variables.outputs.version }}-1_${{ matrix.arch }}.${{ matrix.ext }} | cut -d' ' -f1 > \
               ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}_${{ steps.set-variables.outputs.version }}-1_${{ matrix.arch }}.${{ matrix.ext }}.sha256
           fi
       - uses: actions/upload-release-asset@v1
