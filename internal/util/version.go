@@ -1,3 +1,3 @@
 package util
 
-const Version = "0.3.0-test"
+const Version = "0.0.1"
