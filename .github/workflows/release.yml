@@ -18,7 +18,6 @@ jobs:
         with:
           script: |
             try {
-              const tag = `${{ github.ref }}`;
               const response = await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
