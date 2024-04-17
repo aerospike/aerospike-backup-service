@@ -64,7 +64,7 @@ jobs:
                   owner: '${{ secrets.ORG }}',
                   repo: '${{ secrets.REPO }}',
                   workflow_id: 'release.yml',
-                  ref: 'APPS-1189-improve-release-github-action-workflow',
+                  ref: 'main',
                   inputs: {
                     version: '${{ github.ref_name }}',
                     commit: '${{ github.sha }}',
