@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/aerospike/backup"
 	_ "github.com/aerospike/backup/docs" // auto-generated Swagger spec
-	"github.com/aerospike/backup/internal/util"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
@@ -56,7 +56,7 @@ func readyActionHandler(w http.ResponseWriter, _ *http.Request) {
 // @Router      /version [get]
 // @Success 	200 {string} string "version"
 func versionActionHandler(w http.ResponseWriter, _ *http.Request) {
-	_, err := fmt.Fprint(w, util.Version)
+	_, err := fmt.Fprint(w, backup.Version)
 	if err != nil {
 		slog.Error("failed to write response", "err", err)
 	}

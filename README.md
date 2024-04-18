@@ -11,7 +11,7 @@ The Aerospike Backup Service provides a set of REST API endpoints to back up and
 You can perform full and incremental backups and set different backup policies and schedules.
 There are also several monitoring endpoints to check backup information.
 
-Use the [OpenAPI generation script](./scripts/generate_OpenApi.sh) to generate an OpenAPI specification for the service.
+Use the [OpenAPI generation script](./scripts/generate-openapi.sh) to generate an OpenAPI specification for the service.
 A pre-built OpenAPI specification is available in Swagger format [here](https://aerospike.github.io/aerospike-backup-service/).
 
 ## Table of contents

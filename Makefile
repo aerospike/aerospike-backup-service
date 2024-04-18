@@ -93,6 +93,10 @@ deb: tarball
 tarball: prep-submodules
 	cd ./scripts && ./tarball.sh
 
+.PHONY: release
+release:
+	cd ./scripts && ./release.sh $(NEXT_VERSION)
+
 .PHONY: clean
 clean:
 	$(GOCLEAN)
