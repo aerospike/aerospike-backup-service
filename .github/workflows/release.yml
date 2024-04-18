@@ -119,10 +119,12 @@ jobs:
         run: mkdir -p ${{ github.workspace }}/lib
       - name: Build artifact
         id: build-artifact
+        env:
+          ARTIFACTORY_CONTAINER_DEV_URL: ${{ vars.ARTIFACTORY_CONTAINER_DEV_URL }}
         run: |
           docker run -v ${{ github.workspace }}:/aerospike-backup-service/ \
           -w /aerospike-backup-service/ \
-          --platform linux/${{ matrix.arch }} aerospike.jfrog.io/ecosystem-container-dev-local/base-${{ matrix.container }} ${{ matrix.cmd }}
+          --platform linux/${{ matrix.arch }} "$ARTIFACTORY_CONTAINER_DEV_URL"/base-${{ matrix.container }} ${{ matrix.cmd }}
       - name: Set variable arch variable based on condition
         id: set-variables
         run: |
