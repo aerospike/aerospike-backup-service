@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aerospike/backup"
 	"github.com/aerospike/backup/internal/server"
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
@@ -45,7 +46,7 @@ func run() int {
 	rootCmd := &cobra.Command{
 		Use:     "Use the following properties for service configuration",
 		Short:   "Aerospike Backup Service",
-		Version: util.Version,
+		Version: backup.Version,
 		PreRunE: validateFlags,
 	}
 

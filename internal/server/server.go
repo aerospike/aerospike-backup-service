@@ -85,18 +85,6 @@ type HTTPServer struct {
 	backupBackends service.BackendsHolder
 }
 
-// NewHTTPServer returns a new instance of HTTPServer.
-//
-// Annotations to generate OpenAPI description (https://github.com/swaggo/swag)
-// @title           Backup Service REST API Specification
-// @version         0.3.0
-// @description     Aerospike Backup Service
-// @license.name    Apache 2.0
-// @license.url     http://www.apache.org/licenses/LICENSE-2.0.html
-// @host            localhost:8080
-//
-// @externalDocs.description  OpenAPI
-// @externalDocs.url          https://swagger.io/resources/open-api/
 func NewHTTPServer(backends service.BackendsHolder, config *model.Config,
 	scheduler quartz.Scheduler) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer

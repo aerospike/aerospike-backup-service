@@ -17,9 +17,7 @@ mv "$CHANGE_LOG_TEMP_FILE" "$WORKSPACE"/packages/deb/debian/changelog
 
 docker run --rm --interactive --volume "$WORKSPACE":/local bash:latest <<EOF
 sed -i "s/$PREV_VERSION/$NEXT_VERSION/g" /local/VERSION
-sed -i "s/\"$PREV_VERSION\"/\"$NEXT_VERSION\"/" /local/docs/docs.go
-sed -i "s/$PREV_VERSION/$NEXT_VERSION/" /local/internal/server/server.go
-sed -i "s/$PREV_VERSION/$NEXT_VERSION/" /local/internal/util/version.go
+sed -i "s/$PREV_VERSION/$NEXT_VERSION/" /local/internal/server/info.go
 EOF
 
 bash -c "$WORKSPACE"/scripts/generate-openapi.sh
