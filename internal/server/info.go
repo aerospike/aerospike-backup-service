@@ -1,7 +1,5 @@
 package server
 
-// NewHTTPServer returns a new instance of HTTPServer.
-//
 // Annotations to generate OpenAPI description (https://github.com/swaggo/swag)
 // @title           Backup Service REST API Specification
 // @version         0.3.0
