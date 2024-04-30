@@ -4,9 +4,9 @@ aerospike-clusters:
     seed-nodes:
       - host-name: "localhost"
         port: 3000
-    # credentials:
-      # user: "tester"
-      # password: "psw"
+    credentials:
+      user: "tester"
+      password: "psw"
 
 storage:
   local1:
@@ -26,6 +26,6 @@ backup-routines:
     backup-policy: "policy1"
     source-cluster: "cluster1"
     storage: "local1"
-    namespaces: ["test"]
+    namespaces: [ "source-ns1" ]
     set-list:
       - set1
