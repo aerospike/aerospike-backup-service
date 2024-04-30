@@ -4,3 +4,6 @@
 [submodule "modules/schema/schemas"]
 	path = modules/schema/schemas
 	url = https://github.com/aerospike/schemas
+[submodule "pkg/model/modules/backup-go"]
+	path = pkg/model/modules/backup-go
+	url = git@github.com:aerospike/backup-go
