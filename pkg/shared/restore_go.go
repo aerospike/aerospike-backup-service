@@ -79,7 +79,7 @@ func getReader(path *string, storage *model.Storage, decoder backup.DecoderFacto
 			Profile:   *storage.S3Profile,
 			Prefix:    parsed.Path,
 			ChunkSize: 0,
-		}, nil)
+		}, decoder)
 	}
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
 }
