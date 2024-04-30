@@ -28,7 +28,7 @@ type BackupHandler struct {
 	retry            *RetryService
 }
 
-var backupService shared.Backup = shared.NewBackup()
+var backupService shared.Backup = shared.NewBackupGo()
 
 // newBackupHandler returns a new BackupHandler instance.
 func newBackupHandler(config *model.Config, routineName string, backupBackend *BackupBackend) (*BackupHandler, error) {
