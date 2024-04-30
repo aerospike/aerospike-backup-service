@@ -30,7 +30,7 @@ var _ RestoreService = (*RestoreMemory)(nil)
 func NewRestoreMemory(backends BackendsHolder, config *model.Config) *RestoreMemory {
 	return &RestoreMemory{
 		restoreJobs:    NewJobsHolder(),
-		restoreService: shared.NewRestore(),
+		restoreService: shared.NewRestoreGo(),
 		backends:       backends,
 		config:         config,
 	}
