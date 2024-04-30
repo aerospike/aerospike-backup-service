@@ -61,6 +61,7 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		RecordCount: handler.GetStats().GetRecords(),
 		IndexCount:  uint64(handler.GetStats().GetSIndexes()),
 		UDFCount:    uint64(handler.GetStats().GetUDFs()),
+		ByteCount:   1,
 	}, nil
 }
 

@@ -38,7 +38,7 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 		return nil, err
 	}
 
-	config := &backup.RestoreConfig{}
+	config := backup.NewRestoreConfig()
 
 	reader, err := getReader(restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
 	if err != nil {
