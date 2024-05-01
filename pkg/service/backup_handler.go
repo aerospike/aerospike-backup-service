@@ -127,7 +127,7 @@ func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace s
 
 	options := shared.BackupOptions{}
 	if h.backupFullPolicy.IsSealed() {
-		options.ModBefore = util.Ptr(upperBound.UnixNano())
+		options.ModBefore = &upperBound
 	}
 
 	var stats *shared.BackupStat
@@ -204,10 +204,10 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	var err error
 	fromEpoch := h.state.LastRunEpoch()
 	options := shared.BackupOptions{
-		ModAfter: util.Ptr(fromEpoch),
+		ModAfter: util.Ptr(time.Unix(0, fromEpoch)),
 	}
 	if h.backupIncrPolicy.IsSealed() {
-		options.ModBefore = util.Ptr(upperBound.UnixNano())
+		options.ModBefore = &upperBound
 	}
 	backupRunFunc := func() {
 		started := time.Now()

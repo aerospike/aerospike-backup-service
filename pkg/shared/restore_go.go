@@ -3,11 +3,12 @@ package shared
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"net/url"
+
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
-	"log/slog"
-	"net/url"
 )
 
 // RestoreGo implements the Restore interface.

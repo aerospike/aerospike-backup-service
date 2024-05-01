@@ -8,8 +8,8 @@ import (
 
 // BackupOptions provides additional properties for running a backup.
 type BackupOptions struct {
-	ModBefore *int64
-	ModAfter  *int64
+	ModBefore *time.Time
+	ModAfter  *time.Time
 }
 
 // BackupStat represents partial backup result statistics returned from asbackup library.
