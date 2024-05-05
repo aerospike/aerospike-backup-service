@@ -11,8 +11,6 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
-	"github.com/aerospike/backup/pkg/stdio"
-	"github.com/aerospike/backup/pkg/util"
 )
 
 // RestoreMemory implements the RestoreService interface.
@@ -56,12 +54,8 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 func (r *RestoreMemory) runRestoreService(request *model.RestoreRequestInternal) (*model.RestoreResult, error) {
 	var result *model.RestoreResult
 	var err error
-	restoreRunFunc := func() {
-		request.SourceStorage.SetDefaultProfile()
-		result, err = r.restoreService.RestoreRun(request)
-	}
-	out := stdio.Stderr.Capture(restoreRunFunc)
-	util.LogCaptured(out)
+	request.SourceStorage.SetDefaultProfile()
+	result, err = r.restoreService.RestoreRun(request)
 	return result, err
 }
 
