@@ -3,11 +3,11 @@ package shared
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/backup-go"
 	"log/slog"
 	"net/url"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
 )
 
@@ -73,7 +73,7 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 	}
 
 	return &BackupStat{
-		RecordCount: handler.GetStats().GetRecords(),
+		RecordCount: handler.GetStats().GetRecordsTotal(),
 		IndexCount:  uint64(handler.GetStats().GetSIndexes()),
 		UDFCount:    uint64(handler.GetStats().GetUDFs()),
 		ByteCount:   handler.GetStats().GetTotalSize(),

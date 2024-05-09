@@ -3,11 +3,12 @@ package shared
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"net/url"
+
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
-	"log/slog"
-	"net/url"
 )
 
 // RestoreGo implements the Restore interface.
@@ -41,6 +42,9 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	config := backup.NewRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
 	config.WritePolicy = client.DefaultWritePolicy
+	if restoreRequest.Policy.Tps != nil {
+		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)
+	}
 
 	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
 	config.WritePolicy.RecordExistsAction = recordExistsAction(restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
@@ -74,13 +78,14 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 
 	stats := handler.GetStats()
 	return &model.RestoreResult{
-		TotalRecords:   stats.GetRecords(),
-		IndexCount:     uint64(stats.GetSIndexes()),
-		UDFCount:       uint64(stats.GetUDFs()),
-		FresherRecords: stats.GetRecordsFresher(),
-		SkippedRecords: stats.GetRecordsSkipped(),
-		ExistedRecords: stats.GetRecordsExisted(),
-		ExpiredRecords: stats.GetRecordsExpired(),
+		TotalRecords:    stats.GetRecordsTotal(),
+		InsertedRecords: stats.GetRecordsInserted(),
+		IndexCount:      uint64(stats.GetSIndexes()),
+		UDFCount:        uint64(stats.GetUDFs()),
+		FresherRecords:  stats.GetRecordsFresher(),
+		SkippedRecords:  stats.GetRecordsSkipped(),
+		ExistedRecords:  stats.GetRecordsExisted(),
+		ExpiredRecords:  stats.GetRecordsExpired(),
 	}, nil
 }
 

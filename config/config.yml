@@ -161,7 +161,7 @@ backup-routines:
   fullBackup1:
     interval-cron: "@yearly"
     source-cluster: absDefaultCluster
-    storage: minio
+    storage: local
     namespaces: ["source-ns9"]
     backup-policy: keepFilesPolicy
   fullBackup2:
