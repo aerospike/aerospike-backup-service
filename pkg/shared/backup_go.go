@@ -43,6 +43,16 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 	config := backup.NewBackupConfig()
 	config.Namespace = *namespace
 	config.BinList = backupRoutine.BinList
+	if backupPolicy.NoRecords != nil && *backupPolicy.NoRecords {
+		config.NoRecords = true
+	}
+	if backupPolicy.NoIndexes != nil && *backupPolicy.NoIndexes {
+		config.NoIndexes = true
+	}
+	if backupPolicy.NoUdfs != nil && *backupPolicy.NoUdfs {
+		config.NoUDFs = true
+	}
+
 	if len(backupRoutine.SetList) > 0 {
 		config.Set = backupRoutine.SetList[0]
 	}

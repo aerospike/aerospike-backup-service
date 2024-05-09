@@ -23,7 +23,7 @@ require (
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
-	github.com/aerospike/backup-go v0.0.0-20240502091323-8fe8d179e2bc // indirect
+	github.com/aerospike/backup-go v0.0.0-20240509084912-1ee3468645ab // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.2 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.11 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.1 // indirect

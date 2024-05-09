@@ -3,12 +3,11 @@ package shared
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"net/url"
-
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
+	"log/slog"
+	"net/url"
 )
 
 // RestoreGo implements the Restore interface.
@@ -40,6 +39,23 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	}
 
 	config := backup.NewRestoreConfig()
+	config.BinList = restoreRequest.Policy.BinList
+	config.WritePolicy = client.DefaultWritePolicy
+
+	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
+	config.WritePolicy.RecordExistsAction = recordExistsAction(restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
+
+	if restoreRequest.Policy.NoRecords != nil && *restoreRequest.Policy.NoRecords {
+		config.NoRecords = true
+	}
+	if restoreRequest.Policy.NoIndexes != nil && *restoreRequest.Policy.NoIndexes {
+		config.NoIndexes = true
+	}
+	if restoreRequest.Policy.NoUdfs != nil && *restoreRequest.Policy.NoUdfs {
+		config.NoUDFs = true
+	}
+
+	config.WritePolicy.GenerationPolicy = a.NONE
 
 	reader, err := getReader(restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
 	if err != nil {
@@ -58,10 +74,33 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 
 	stats := handler.GetStats()
 	return &model.RestoreResult{
-		TotalRecords: stats.GetRecords(),
-		IndexCount:   uint64(stats.GetSIndexes()),
-		UDFCount:     uint64(stats.GetUDFs()),
+		TotalRecords:   stats.GetRecords(),
+		IndexCount:     uint64(stats.GetSIndexes()),
+		UDFCount:       uint64(stats.GetUDFs()),
+		FresherRecords: stats.GetRecordsFresher(),
+		SkippedRecords: stats.GetRecordsSkipped(),
+		ExistedRecords: stats.GetRecordsExisted(),
+		ExpiredRecords: stats.GetRecordsExpired(),
 	}, nil
+}
+
+func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
+	switch {
+	case replace != nil && *replace && unique != nil && *unique:
+		panic("Replace and Unique options are contradictory")
+
+	// overwrite all bins of an existing record
+	case replace != nil && *replace:
+		return a.REPLACE
+
+	// only insert the record if it does not already exist in the database
+	case unique != nil && *unique:
+		return a.CREATE_ONLY
+
+	// default behaviour: merge bins with existing record, or create a new record if it does not exist
+	default:
+		return a.UPDATE
+	}
 }
 
 func getReader(path *string, storage *model.Storage, decoder backup.DecoderFactory) (backup.ReaderFactory, error) {
