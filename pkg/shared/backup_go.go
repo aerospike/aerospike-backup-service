@@ -57,6 +57,13 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		config.SetList = backupRoutine.SetList
 	}
 
+	if backupPolicy.Parallel != nil {
+		config.Parallel = int(*backupPolicy.Parallel)
+	}
+
+	config.ModBefore = opts.ModBefore
+	config.ModAfter = opts.ModAfter
+
 	config.ScanPolicy = a.NewScanPolicy()
 	if backupPolicy.MaxRecords != nil {
 		config.ScanPolicy.MaxRecords = *backupPolicy.MaxRecords
@@ -82,6 +89,7 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		IndexCount:  uint64(handler.GetStats().GetSIndexes()),
 		UDFCount:    uint64(handler.GetStats().GetUDFs()),
 		ByteCount:   handler.GetStats().GetTotalSize(),
+		FileCount:   handler.GetStats().GetFileCount(),
 	}, nil
 }
 
