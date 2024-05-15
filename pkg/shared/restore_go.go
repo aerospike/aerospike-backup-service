@@ -41,6 +41,7 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 
 	config := backup.NewRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
+	config.SetList = restoreRequest.Policy.SetList
 	config.WritePolicy = client.DefaultWritePolicy
 	if restoreRequest.Policy.Tps != nil {
 		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)
@@ -60,6 +61,7 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	}
 
 	config.WritePolicy.GenerationPolicy = a.NONE
+	config.Namespace = restoreRequest.Policy.Namespace
 
 	reader, err := getReader(restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
 	if err != nil {

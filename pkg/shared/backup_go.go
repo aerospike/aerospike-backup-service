@@ -54,7 +54,12 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 	}
 
 	if len(backupRoutine.SetList) > 0 {
-		config.Set = backupRoutine.SetList[0]
+		config.SetList = backupRoutine.SetList
+	}
+
+	config.ScanPolicy = a.NewScanPolicy()
+	if backupPolicy.MaxRecords != nil {
+		config.ScanPolicy.MaxRecords = *backupPolicy.MaxRecords
 	}
 
 	writerFactory, err := getWriter(path, storage, config.EncoderFactory)
@@ -83,7 +88,7 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 func getWriter(path *string, storage *model.Storage, encoder backup.EncoderFactory) (backup.WriteFactory, error) {
 	switch storage.Type {
 	case model.Local:
-		return backup.NewDirectoryWriterFactory(*path, 0, encoder)
+		return backup.NewDirectoryWriterFactory(*path, 0, encoder, true)
 	case model.S3:
 		parsed, err := url.Parse(*path)
 		if err != nil {
@@ -96,7 +101,7 @@ func getWriter(path *string, storage *model.Storage, encoder backup.EncoderFacto
 			Profile:   *storage.S3Profile,
 			Prefix:    parsed.Path,
 			ChunkSize: 0,
-		}, encoder)
+		}, encoder, true)
 	}
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
 }

@@ -1,6 +1,9 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/aerospike/backup-go"
+)
 
 // RestorePolicy represents a policy for the restore operation.
 // @Description RestorePolicy represents a policy for the restore operation.
@@ -27,7 +30,7 @@ type RestorePolicy struct {
 	BatchSize *int32 `json:"batch-size,omitempty" example:"128"`
 	// Namespace details for the restore operation.
 	// By default, the data is restored to the namespace from which it was taken.
-	Namespace *RestoreNamespace `json:"namespace,omitempty"`
+	Namespace *backup.RestoreNamespace `json:"namespace,omitempty"`
 	// The sets to restore (optional, an empty list implies restoring all sets).
 	SetList []string `json:"set-list,omitempty" example:"set1,set2"`
 	// The bins to restore (optional, an empty list implies restoring all bins).
@@ -56,19 +59,6 @@ type RestorePolicy struct {
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details.
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
-}
-
-// RestoreNamespace specifies an alternative namespace name for the restore
-// operation, where Source is the original namespace name and Destination is
-// the namespace name to which the backup data is to be restored.
-//
-// @Description RestoreNamespace specifies an alternative namespace name for the restore
-// @Description operation.
-type RestoreNamespace struct {
-	// Original namespace name.
-	Source *string `json:"source,omitempty" example:"source-ns" validate:"required"`
-	// Destination namespace name.
-	Destination *string `json:"destination,omitempty" example:"destination-ns" validate:"required"`
 }
 
 // Validate validates the restore policy.
@@ -105,17 +95,6 @@ func (p *RestorePolicy) Validate() error {
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {
 		return err
-	}
-	return nil
-}
-
-// Validate validates the restore namespace.
-func (n *RestoreNamespace) Validate() error {
-	if n.Source == nil {
-		return fmt.Errorf("source namespace is not specified")
-	}
-	if n.Destination == nil {
-		return fmt.Errorf("destination namespace is not specified")
 	}
 	return nil
 }
