@@ -68,6 +68,9 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 	if backupPolicy.MaxRecords != nil {
 		config.ScanPolicy.MaxRecords = *backupPolicy.MaxRecords
 	}
+	if backupPolicy.Bandwidth != nil {
+		config.Bandwidth = int(*backupPolicy.Bandwidth)
+	}
 
 	writerFactory, err := getWriter(path, storage, config.EncoderFactory)
 	if err != nil {
