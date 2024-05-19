@@ -46,6 +46,14 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	if restoreRequest.Policy.Tps != nil {
 		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)
 	}
+	if restoreRequest.Policy.Bandwidth != nil {
+		config.Bandwidth = int(*restoreRequest.Policy.Bandwidth)
+	}
+
+	config.WritePolicy.GenerationPolicy = a.EXPECT_GEN_GT
+	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration == true {
+		config.WritePolicy.GenerationPolicy = a.NONE
+	}
 
 	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
 	config.WritePolicy.RecordExistsAction = recordExistsAction(restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
@@ -60,7 +68,6 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 		config.NoUDFs = true
 	}
 
-	config.WritePolicy.GenerationPolicy = a.NONE
 	config.Namespace = restoreRequest.Policy.Namespace
 
 	reader, err := getReader(restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
@@ -88,6 +95,7 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 		SkippedRecords:  stats.GetRecordsSkipped(),
 		ExistedRecords:  stats.GetRecordsExisted(),
 		ExpiredRecords:  stats.GetRecordsExpired(),
+		TotalBytes:      stats.GetTotalSize(),
 	}, nil
 }
 
