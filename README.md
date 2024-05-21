@@ -115,16 +115,16 @@ Example configuration files can be found in the [config](./config/) folder.
 
 The service exposes a wide variety of system metrics that [Prometheus](https://prometheus.io/) can scrape, including the following application metrics:
 
-| Name                                 | Description                                 |
-|--------------------------------------|---------------------------------------------|
-| `backup_runs_total`                  | Full backup runs counter                    |
-| `backup_incremental_runs_total`      | Incremental backup runs counter             |
-| `backup_skip_total`                  | Full backup skip counter                    |
-| `backup_incremental_skip_total`      | Incremental backup skip counter             |
-| `backup_failure_total`               | Full backup failure counter                 |
-| `backup_incremental_failure_total`   | Incremental backup failure counter          |
-| `backup_duration_millis`             | Full backup duration in milliseconds        |
-| `backup_incremental_duration_millis` | Incremental backup duration in milliseconds |
+| Name                                                   | Description                                 |
+|--------------------------------------------------------|---------------------------------------------|
+| `aerospike_backup_service_runs_total`                  | Full backup runs counter                    |
+| `aerospike_backup_service_incremental_runs_total`      | Incremental backup runs counter             |
+| `aerospike_backup_service_skip_total`                  | Full backup skip counter                    |
+| `aerospike_backup_service_incremental_skip_total`      | Incremental backup skip counter             |
+| `aerospike_backup_service_failure_total`               | Full backup failure counter                 |
+| `aerospike_backup_service_incremental_failure_total`   | Incremental backup failure counter          |
+| `aerospike_backup_service_duration_millis`             | Full backup duration in milliseconds        |
+| `aerospike_backup_service_incremental_duration_millis` | Incremental backup duration in milliseconds |
 
 * `/metrics` exposes metrics for Prometheus to check performance of the backup service. See [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/getting_started/) for instructions.
 * `/health` allows monitoring systems to check the service health.
