@@ -67,7 +67,9 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 	config.ScanPolicy = a.NewScanPolicy()
 	if backupPolicy.MaxRecords != nil {
 		config.ScanPolicy.MaxRecords = *backupPolicy.MaxRecords
+		config.Parallel = 1
 	}
+
 	if backupPolicy.Bandwidth != nil {
 		config.Bandwidth = int(*backupPolicy.Bandwidth)
 	}
@@ -91,7 +93,7 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		RecordCount: handler.GetStats().GetRecordsTotal(),
 		IndexCount:  uint64(handler.GetStats().GetSIndexes()),
 		UDFCount:    uint64(handler.GetStats().GetUDFs()),
-		ByteCount:   handler.GetStats().GetTotalSize(),
+		ByteCount:   handler.GetStats().GetTotalBytesWritten(),
 		FileCount:   handler.GetStats().GetFileCount(),
 	}, nil
 }

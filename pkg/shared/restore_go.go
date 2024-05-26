@@ -95,7 +95,7 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 		SkippedRecords:  stats.GetRecordsSkipped(),
 		ExistedRecords:  stats.GetRecordsExisted(),
 		ExpiredRecords:  stats.GetRecordsExpired(),
-		TotalBytes:      stats.GetTotalSize(),
+		TotalBytes:      stats.GetTotalBytesRead(),
 	}, nil
 }
 
