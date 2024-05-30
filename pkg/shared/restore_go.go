@@ -3,6 +3,9 @@ package shared
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/backup-go/encoding"
+	"github.com/aerospike/backup-go/io/local"
+	"github.com/aerospike/backup-go/io/s3"
 	"log/slog"
 	"net/url"
 
@@ -43,6 +46,7 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
 	config.WritePolicy = client.DefaultWritePolicy
+	config.WritePolicy.MaxRetries = 100
 	if restoreRequest.Policy.Tps != nil {
 		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)
 	}
@@ -118,16 +122,16 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	}
 }
 
-func getReader(path *string, storage *model.Storage, decoder backup.DecoderFactory) (backup.ReaderFactory, error) {
+func getReader(path *string, storage *model.Storage, decoder encoding.DecoderFactory) (backup.ReaderFactory, error) {
 	switch storage.Type {
 	case model.Local:
-		return backup.NewDirectoryReaderFactory(*path, decoder), nil
+		return local.NewDirectoryReaderFactory(*path, decoder)
 	case model.S3:
 		parsed, err := url.Parse(*path)
 		if err != nil {
 			return nil, err
 		}
-		return backup.NewS3ReaderFactory(&backup.S3Config{
+		return s3.NewS3ReaderFactory(&s3.StorageConfig{
 			Bucket:    parsed.Host,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,

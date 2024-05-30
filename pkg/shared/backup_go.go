@@ -3,6 +3,9 @@ package shared
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/backup-go/encoding"
+	"github.com/aerospike/backup-go/io/local"
+	"github.com/aerospike/backup-go/io/s3"
 	"log/slog"
 	"net/url"
 
@@ -98,16 +101,16 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 	}, nil
 }
 
-func getWriter(path *string, storage *model.Storage, encoder backup.EncoderFactory) (backup.WriteFactory, error) {
+func getWriter(path *string, storage *model.Storage, encoder encoding.EncoderFactory) (backup.WriteFactory, error) {
 	switch storage.Type {
 	case model.Local:
-		return backup.NewDirectoryWriterFactory(*path, 0, encoder, true)
+		return local.NewDirectoryWriterFactory(*path, 0, encoder, true)
 	case model.S3:
 		parsed, err := url.Parse(*path)
 		if err != nil {
 			return nil, err
 		}
-		return backup.NewS3WriterFactory(&backup.S3Config{
+		return s3.NewS3WriterFactory(&s3.StorageConfig{
 			Bucket:    parsed.Host,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,
