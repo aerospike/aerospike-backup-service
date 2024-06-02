@@ -23,12 +23,9 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
       - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
-      - name: test latest tag
+      - name: Promote to DockerHub
         run: |
-          echo "${{ steps.get-latest-tag.outputs.tag }}"
-#      - name: Promote to DockerHub
-#        run: |
-#          docker buildx imagetools create \
-#          --tag "docker.io/davi17g/${GITHUB_REPOSITORY#*/}:${{ steps.get-latest-tag.outputs.tag }}" \
-#          --tag "docker.io/davi17g/${GITHUB_REPOSITORY#*/}:latest"
-#          "aerospike.jfrog.io/ecosystem-container-prod-local/${GITHUB_REPOSITORY#*/}:${{ steps.get-latest-tag.outputs.tag }}"
+          docker buildx imagetools create \
+          --tag "docker.io/davi17g/${GITHUB_REPOSITORY#*/}:${{ steps.get-latest-tag.outputs.tag }}" \
+          --tag "docker.io/davi17g/${GITHUB_REPOSITORY#*/}:latest"
+          "aerospike.jfrog.io/ecosystem-container-prod-local/${GITHUB_REPOSITORY#*/}:${{ steps.get-latest-tag.outputs.tag }}"
