@@ -28,6 +28,6 @@ jobs:
       - name: Promote to DockerHub
         run: |
           docker buildx imagetools create \
-          --tag "docker.io/davi17g/${{ steps.variables_step.outputs.repo_name }}:${{ steps.get-latest-tag.outputs.tag }}" \
-          --tag "docker.io/davi17g/${{ steps.variables_step.outputs.repo_name }}:latest" \
+          --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:${{ steps.get-latest-tag.outputs.tag }}" \
+          --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:latest" \
           "aerospike.jfrog.io/ecosystem-container-prod-local/${{ steps.variables_step.outputs.repo_name }}:${{ steps.get-latest-tag.outputs.tag }}"
