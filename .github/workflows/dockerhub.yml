@@ -1,8 +1,5 @@
 name: Promote Images to DockerHub
 on:
-  push:
-    branches:
-      - "APPS-1196-create-promote-to-docker-hub-action"
   workflow_dispatch:
 
 jobs:
