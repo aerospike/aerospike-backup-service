@@ -21,12 +21,9 @@ jobs:
           registry: docker.io
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-#      - name: Promote to DockerHub
-#        run: |
-#          docker buildx imagetools create \
-#          --tag "docker.io/davi17g/${{ github.event.inputs.service }}:${{ github.ref_name }}" \
-#          --tag "docker.io/davi17g/${{ github.event.inputs.service }}:latest"
-#          "aerospike.jfrog.io/ecosystem-container-prod-local/aerospike-backup-service:${{ github.ref_name }}"
       - name: Promote to DockerHub
         run: |
-          echo "${GITHUB_REPOSITORY#*/}"
+          docker buildx imagetools create \
+          --tag "docker.io/davi17g/${GITHUB_REPOSITORY#*/}:${{ github.ref_name }}" \
+          --tag "docker.io/davi17g/${GITHUB_REPOSITORY#*/}:latest"
+          "aerospike.jfrog.io/ecosystem-container-prod-local/${GITHUB_REPOSITORY#*/}:${{ github.ref_name }}"
