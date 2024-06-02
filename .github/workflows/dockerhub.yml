@@ -1,4 +1,4 @@
-name: Build Release Docker Images
+name: Promote Images to DockerHub
 on:
   push:
     branches:
