@@ -3,14 +3,14 @@ package shared
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/backup-go/encoding"
-	"github.com/aerospike/backup-go/io/local"
-	"github.com/aerospike/backup-go/io/s3"
 	"log/slog"
 	"net/url"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/encoding"
+	"github.com/aerospike/backup-go/io/local"
+	"github.com/aerospike/backup-go/io/s3"
 	"github.com/aerospike/backup/pkg/model"
 )
 
@@ -39,7 +39,7 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 
 	backupClient, err := backup.NewClient(client, "1", slog.Default(), backup.NewConfig())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("faild to connect to aerospike cluster, %w", err)
 	}
 
 	config := backup.NewRestoreConfig()
@@ -76,17 +76,17 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 
 	reader, err := getReader(restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}
 
 	handler, err := backupClient.Restore(context.TODO(), config, reader)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to start restore, %w", err)
 	}
 
 	err = handler.Wait(context.TODO())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error during restore, %w", err)
 	}
 
 	stats := handler.GetStats()
