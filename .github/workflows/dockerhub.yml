@@ -26,8 +26,10 @@ jobs:
         run: |
           echo "repo_name=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
       - name: Promote to DockerHub
+        env:
+          ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
         run: |
           docker buildx imagetools create \
           --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:${{ steps.get-latest-tag.outputs.tag }}" \
           --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:latest" \
-          "aerospike.jfrog.io/ecosystem-container-prod-local/${{ steps.variables_step.outputs.repo_name }}:${{ steps.get-latest-tag.outputs.tag }}"
+          "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/${{ steps.variables_step.outputs.repo_name }}:${{ steps.get-latest-tag.outputs.tag }}"
