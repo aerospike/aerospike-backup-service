@@ -3,14 +3,14 @@ package shared
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/backup-go/encoding"
-	"github.com/aerospike/backup-go/io/local"
-	"github.com/aerospike/backup-go/io/s3"
 	"log/slog"
 	"net/url"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/encoding"
+	"github.com/aerospike/backup-go/io/local"
+	"github.com/aerospike/backup-go/io/s3"
 	"github.com/aerospike/backup/pkg/model"
 )
 
@@ -35,12 +35,13 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 	var err error
 	client, err := a.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to aerospike cluster, %w", err)
 	}
+	defer client.Close()
 
 	backupClient, err := backup.NewClient(client, "1", slog.Default(), backup.NewConfig())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create backup client, %w", err)
 	}
 
 	config := backup.NewBackupConfig()
@@ -79,17 +80,17 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 
 	writerFactory, err := getWriter(path, storage, config.EncoderFactory)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create backup writer, %w", err)
 	}
 
 	handler, err := backupClient.Backup(context.TODO(), config, writerFactory)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to start backup, %w", err)
 	}
 
 	err = handler.Wait(context.TODO())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error during backup, %w", err)
 	}
 
 	return &BackupStat{

@@ -34,12 +34,13 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 		restoreRequest.DestinationCuster.ASClientPolicy(),
 		restoreRequest.DestinationCuster.ASClientHosts()...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to aerospike cluster, %w", err)
 	}
+	defer client.Close()
 
 	backupClient, err := backup.NewClient(client, "1", slog.Default(), backup.NewConfig())
 	if err != nil {
-		return nil, fmt.Errorf("faild to connect to aerospike cluster, %w", err)
+		return nil, fmt.Errorf("failed to create backup client, %w", err)
 	}
 
 	config := backup.NewRestoreConfig()
