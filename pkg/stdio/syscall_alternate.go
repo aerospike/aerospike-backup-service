@@ -1,9 +1,0 @@
-//go:build linux && (arm || arm64)
-
-package stdio
-
-import "syscall"
-
-func dup2(oldfd int, newfd int) error {
-	return syscall.Dup3(oldfd, newfd, 0)
-}

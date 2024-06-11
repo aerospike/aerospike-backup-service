@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aerospike/backup/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -35,7 +34,7 @@ func (j *backupJob) Execute(ctx context.Context) error {
 				"name", j.handler.routineName)
 		}
 	} else {
-		slog.Log(ctx, util.LevelTrace,
+		slog.Debug(
 			"Backup is currently in progress, skipping it",
 			"type", j.jobType,
 			"name", j.handler.routineName)

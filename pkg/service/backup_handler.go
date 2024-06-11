@@ -9,7 +9,6 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
-	"github.com/aerospike/backup/pkg/stdio"
 	"github.com/aerospike/backup/pkg/util"
 )
 
@@ -130,23 +129,15 @@ func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace s
 		options.ModBefore = &upperBound
 	}
 
-	var stats *shared.BackupStat
-	var err error
-	backupRunFunc := func() {
-		started := time.Now()
-		backupPath := h.backend.wrapWithPrefix(backupFolder)
-		stats, err = backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
-			h.storage, h.secretAgent, options, &namespace, backupPath)
-		if err != nil {
-			return
-		}
-		elapsed := time.Since(started)
-		backupDurationGauge.Set(float64(elapsed.Milliseconds()))
-	}
 	slog.Debug("Starting full backup", "up to", upperBound, "name", h.routineName)
-	out := stdio.Stderr.Capture(backupRunFunc)
+
+	started := time.Now()
+	backupPath := h.backend.wrapWithPrefix(backupFolder)
+	stats, err := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
+		h.storage, h.secretAgent, options, &namespace, backupPath)
+	elapsed := time.Since(started)
+	backupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	slog.Debug("Completed full backup", "name", h.routineName)
-	util.LogCaptured(out)
 
 	if err != nil {
 		backupFailureCounter.Inc()
@@ -174,13 +165,13 @@ func (h *BackupHandler) cleanIncrementalBackups() {
 
 func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	if h.state.LastFullRunIsEmpty() {
-		slog.Log(context.Background(), util.LevelTrace,
+		slog.Log(context.Background(), slog.LevelDebug,
 			"Skip incremental backup until initial full backup is done",
 			"name", h.routineName)
 		return
 	}
 	if h.backend.FullBackupInProgress().Load() {
-		slog.Log(context.Background(), util.LevelTrace,
+		slog.Log(context.Background(), slog.LevelDebug,
 			"Full backup is currently in progress, skipping incremental backup",
 			"name", h.routineName)
 		return
@@ -200,8 +191,6 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	backupFolder := getIncrementalPath(h.backend.incrementalBackupsPath, namespace, upperBound)
 	h.backend.CreateFolder(backupFolder)
 
-	var stats *shared.BackupStat
-	var err error
 	fromEpoch := h.state.LastRunEpoch()
 	options := shared.BackupOptions{
 		ModAfter: util.Ptr(time.Unix(0, fromEpoch)),
@@ -209,23 +198,22 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	if h.backupIncrPolicy.IsSealed() {
 		options.ModBefore = &upperBound
 	}
-	backupRunFunc := func() {
-		started := time.Now()
-		backupPath := h.backend.wrapWithPrefix(backupFolder)
-		stats, err = backupService.BackupRun(
-			h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, &namespace, backupPath)
-		if err != nil {
-			slog.Warn("Failed incremental backup", "name", h.routineName, "err", err)
-			incrBackupFailureCounter.Inc()
-			return
-		}
-		elapsed := time.Since(started)
-		incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
-	}
+
 	slog.Debug("Starting incremental backup", "name", h.routineName)
-	out := stdio.Stderr.Capture(backupRunFunc)
+	started := time.Now()
+	backupPath := h.backend.wrapWithPrefix(backupFolder)
+	stats, err := backupService.BackupRun(
+		h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, &namespace, backupPath)
+	elapsed := time.Since(started)
+
+	incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
 	slog.Debug("Completed incremental backup", "name", h.routineName)
-	util.LogCaptured(out)
+
+	if err != nil {
+		slog.Warn("Failed incremental backup", "name", h.routineName, "err", err)
+		incrBackupFailureCounter.Inc()
+		return
+	}
 	// delete if the backup file is empty
 	if h.isBackupEmpty(stats) {
 		h.deleteEmptyBackup(backupFolder, h.routineName)

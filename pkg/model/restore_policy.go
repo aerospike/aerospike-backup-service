@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+
 	"github.com/aerospike/backup-go/models"
 )
 
