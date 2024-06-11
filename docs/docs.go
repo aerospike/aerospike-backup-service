@@ -2292,8 +2292,8 @@ const docTemplate = `{
                 "type": {
                     "description": "The type of the storage provider (0 - Local, 1 - AWS S3).",
                     "enum": [
-                        0,
-                        1
+                        "local",
+                        "aws-s3"
                     ],
                     "allOf": [
                         {
@@ -2305,10 +2305,10 @@ const docTemplate = `{
         },
         "model.StorageType": {
             "description": "StorageType represents the type of the backup storage.",
-            "type": "integer",
+            "type": "string",
             "enum": [
-                0,
-                1
+                "local",
+                "aws-s3"
             ],
             "x-enum-varnames": [
                 "Local",

@@ -10,7 +10,7 @@ aerospike-clusters:
 
 storage:
   local1:
-    type: 0
+    type: "local"
     path: "./testout"
 
 backup-policies:
