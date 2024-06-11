@@ -66,7 +66,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			setMock: func() {
 				mockLocal.
 					On("read", "/path/to/remote.yaml").
-					Return([]byte("path: config.yaml"), nil)
+					Return([]byte("type: local\npath: config.yaml"), nil)
 			},
 			expectError:  false,
 			expectedType: reflect.TypeOf(&FileConfigurationManager{}),
@@ -78,7 +78,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			setMock: func() {
 				mockLocal.
 					On("read", "/path/to/remote.yaml").
-					Return([]byte("path: https://example.com/config.yaml"), nil)
+					Return([]byte("type: local\npath: https://example.com/config.yaml"), nil)
 			},
 			expectError:  false,
 			expectedType: reflect.TypeOf(&HTTPConfigurationManager{}),
@@ -90,7 +90,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			setMock: func() {
 				mockHTTP.
 					On("read", "https://example.com/config.yaml").
-					Return([]byte("path: config.yaml"), nil)
+					Return([]byte("type: local\npath: config.yaml"), nil)
 			},
 			expectError:  false,
 			expectedType: reflect.TypeOf(&FileConfigurationManager{}),
@@ -102,7 +102,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			setMock: func() {
 				mockHTTP.
 					On("read", "http://path/to/remote.yaml").
-					Return([]byte("path: https://example.com/config.yaml"), nil)
+					Return([]byte("type: local\npath: https://example.com/config.yaml"), nil)
 			},
 			expectError:  false,
 			expectedType: reflect.TypeOf(&HTTPConfigurationManager{}),
