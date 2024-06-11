@@ -2327,7 +2327,7 @@
       },
       "model.StorageType" : {
         "description" : "StorageType represents the type of the backup storage.",
-        "enum" : [ "local", "s3" ],
+        "enum" : [ "local", "aws-s3" ],
         "type" : "string",
         "x-enum-varnames" : [ "Local", "S3" ]
       },

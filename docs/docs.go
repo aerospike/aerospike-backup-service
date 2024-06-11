@@ -2293,7 +2293,7 @@ const docTemplate = `{
                     "description": "The type of the storage provider (0 - Local, 1 - AWS S3).",
                     "enum": [
                         "local",
-                        "s3"
+                        "aws-s3"
                     ],
                     "allOf": [
                         {
@@ -2308,7 +2308,7 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "local",
-                "s3"
+                "aws-s3"
             ],
             "x-enum-varnames": [
                 "Local",

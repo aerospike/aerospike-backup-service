@@ -92,6 +92,7 @@ Usage:
 Flags:
   -c, --config string   configuration file path/URL
   -h, --help            help for Use
+  -r, --remote          use remote config file
   -v, --version         version for Use
 ```
 

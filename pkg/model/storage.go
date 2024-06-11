@@ -14,8 +14,8 @@ import (
 //
 //nolint:lll
 type Storage struct {
-	// The type of the storage provider (0 - Local, 1 - AWS S3).
-	Type StorageType `yaml:"type" json:"type" enums:"local,s3" validate:"required"`
+	// The type of the storage provider
+	Type StorageType `yaml:"type" json:"type" enums:"local,aws-s3" validate:"required"`
 	// The root path for the backup repository.
 	Path *string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" validate:"required"`
 	// The S3 region string (AWS S3 optional).
@@ -34,7 +34,7 @@ type StorageType string
 
 const (
 	Local StorageType = "local"
-	S3    StorageType = "s3"
+	S3    StorageType = "aws-s3"
 )
 
 var validS3LogLevels = []string{"OFF", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"}
@@ -47,13 +47,13 @@ func (s *Storage) Validate() error {
 	if s.Path == nil || len(*s.Path) == 0 {
 		return errors.New("storage path is not specified")
 	}
+	if err := s.validateType(); err != nil {
+		return err
+	}
 	if s.Type == S3 {
 		if s.S3Region == nil || len(*s.S3Region) == 0 {
 			return errors.New("s3 region is not specified")
 		}
-	}
-	if err := s.validateType(); err != nil {
-		return err
 	}
 	if s.S3LogLevel != nil &&
 		!slices.Contains(validS3LogLevels, strings.ToUpper(*s.S3LogLevel)) {
@@ -64,6 +64,7 @@ func (s *Storage) Validate() error {
 
 // validateType validates the storage provider type.
 func (s *Storage) validateType() error {
+	s.Type = StorageType(strings.ToLower(string(s.Type)))
 	switch s.Type {
 	case Local, S3:
 		return nil
