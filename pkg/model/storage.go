@@ -15,7 +15,7 @@ import (
 //nolint:lll
 type Storage struct {
 	// The type of the storage provider (0 - Local, 1 - AWS S3).
-	Type StorageType `yaml:"type" json:"type" enums:"0,1" validate:"required"`
+	Type StorageType `yaml:"type" json:"type" enums:"local,s3" validate:"required"`
 	// The root path for the backup repository.
 	Path *string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" validate:"required"`
 	// The S3 region string (AWS S3 optional).
@@ -30,11 +30,11 @@ type Storage struct {
 
 // StorageType represents the type of the backup storage.
 // @Description StorageType represents the type of the backup storage.
-type StorageType int
+type StorageType string
 
 const (
-	Local StorageType = iota
-	S3
+	Local StorageType = "local"
+	S3    StorageType = "s3"
 )
 
 var validS3LogLevels = []string{"OFF", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"}
