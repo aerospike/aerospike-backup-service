@@ -96,6 +96,13 @@ Flags:
   -v, --version         version for Use
 ```
 
+Set the configuration file path with `-c` and specify:
+
+- A local file path (e.g., --config /path/to/config.yaml), or
+- A remote URL (e.g., --config http://example.com/config.yaml)
+
+You must use the `-r` flag if you specify a remote URL.
+
 ### Run
 
 Run as a binary using a configuration file:
