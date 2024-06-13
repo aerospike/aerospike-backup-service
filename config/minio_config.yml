@@ -8,8 +8,8 @@ aerospike-clusters:
       password: psw
 storage:
   minioStorage:
-    # Use 1 for S3 or compatible and 0 for local storage.
-    type: 1
+    # Use "aws-s3" for S3 or compatible and "local" for local storage.
+    type: "aws-s3"
     # as-backup-bucket is expected to exist in MinIO.
     path: s3://as-backup-bucket/minioStorage
     s3-region: eu-central-1

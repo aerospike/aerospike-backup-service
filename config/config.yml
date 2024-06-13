@@ -10,7 +10,7 @@ aerospike-clusters:
 
 storage:
   local:
-    type: 0
+    type: "local"
     path: ./localStorage
   minio:
     type: 1
