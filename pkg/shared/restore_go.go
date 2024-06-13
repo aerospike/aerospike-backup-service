@@ -72,7 +72,9 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	if restoreRequest.Policy.NoUdfs != nil && *restoreRequest.Policy.NoUdfs {
 		config.NoUDFs = true
 	}
-
+	config.MaxAsyncBatches = 10
+	config.BatchSize = 10
+	config.BatchWrites = true
 	config.Namespace = restoreRequest.Policy.Namespace
 
 	reader, err := getReader(restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
