@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/shared"
 )
 
 // RestoreMemory implements the RestoreService interface.
@@ -18,7 +17,7 @@ import (
 type RestoreMemory struct {
 	config         *model.Config
 	restoreJobs    *JobsHolder
-	restoreService shared.Restore
+	restoreService Restore
 	backends       BackendsHolder
 }
 
@@ -28,7 +27,7 @@ var _ RestoreService = (*RestoreMemory)(nil)
 func NewRestoreMemory(backends BackendsHolder, config *model.Config) *RestoreMemory {
 	return &RestoreMemory{
 		restoreJobs:    NewJobsHolder(),
-		restoreService: shared.NewRestoreGo(),
+		restoreService: NewRestoreGo(),
 		backends:       backends,
 		config:         config,
 	}

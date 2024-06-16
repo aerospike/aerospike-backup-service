@@ -1,4 +1,4 @@
-package shared
+package service
 
 import (
 	"context"
@@ -14,21 +14,21 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// RestoreGo implements the Restore interface.
-type RestoreGo struct {
+// RestoreLib implements the Restore interface.
+type RestoreLib struct {
 }
 
-var _ Restore = (*RestoreGo)(nil)
+var _ Restore = (*RestoreLib)(nil)
 
-// NewRestoreGo returns a new RestoreGo instance.
-func NewRestoreGo() *RestoreGo {
-	return &RestoreGo{}
+// NewRestoreGo returns a new RestoreLib instance.
+func NewRestoreGo() *RestoreLib {
+	return &RestoreLib{}
 }
 
 // RestoreRun calls the restore_run function from the asrestore shared library.
 //
 //nolint:funlen,gocritic
-func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error) {
+func (r *RestoreLib) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error) {
 	var err error
 	client, err := a.NewClientWithPolicyAndHost(
 		restoreRequest.DestinationCuster.ASClientPolicy(),
@@ -56,7 +56,7 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	}
 
 	config.WritePolicy.GenerationPolicy = a.EXPECT_GEN_GT
-	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration == true {
+	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
 		config.WritePolicy.GenerationPolicy = a.NONE
 	}
 
@@ -72,9 +72,22 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	if restoreRequest.Policy.NoUdfs != nil && *restoreRequest.Policy.NoUdfs {
 		config.NoUDFs = true
 	}
-	config.MaxAsyncBatches = 10
-	config.BatchSize = 10
-	config.BatchWrites = true
+
+	if restoreRequest.Policy.MaxAsyncBatches != nil {
+		config.MaxAsyncBatches = int(*restoreRequest.Policy.MaxAsyncBatches)
+	}
+	if restoreRequest.Policy.BatchSize != nil {
+		config.BatchSize = int(*restoreRequest.Policy.BatchSize)
+	}
+	if restoreRequest.Policy.DisableBatchWrites != nil && *restoreRequest.Policy.DisableBatchWrites {
+		config.BatchWrites = false
+	} else {
+		config.BatchWrites, err = useBatchWrites(restoreRequest.Policy, client)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	config.Namespace = restoreRequest.Policy.Namespace
 
 	reader, err := getReader(restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
@@ -104,6 +117,21 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 		ExpiredRecords:  stats.GetRecordsExpired(),
 		TotalBytes:      stats.GetTotalBytesRead(),
 	}, nil
+}
+
+func useBatchWrites(restorePolicy *model.RestorePolicy, client *a.Client) (bool, error) {
+	if restorePolicy.DisableBatchWrites != nil && *restorePolicy.DisableBatchWrites {
+		return false, nil
+	}
+	version, err := GetAerospikeVersion(client)
+	if err != nil {
+		return false, fmt.Errorf("failed to get aerospike version: %w", err)
+	}
+	const AerospikeVersionBatchWrite = 6
+	if version[0] < AerospikeVersionBatchWrite {
+		return false, nil
+	}
+	return true, nil
 }
 
 func recordExistsAction(replace, unique *bool) a.RecordExistsAction {

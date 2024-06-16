@@ -1,6 +1,6 @@
 //go:build ci
 
-package shared
+package service
 
 import (
 	"fmt"
@@ -10,20 +10,20 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// RestoreShared mocks the Restore interface.
+// RestoreMock mocks the Restore interface.
 // Used in CI workflows to skip building the C shared libraries.
-type RestoreShared struct {
+type RestoreMock struct {
 }
 
-var _ Restore = (*RestoreShared)(nil)
+var _ Restore = (*RestoreMock)(nil)
 
-// NewRestore returns a new RestoreShared instance.
-func NewRestore() *RestoreShared {
-	return &RestoreShared{}
+// NewRestore returns a new RestoreMock instance.
+func NewRestore() *RestoreMock {
+	return &RestoreMock{}
 }
 
 // RestoreRun mocks the interface method.
-func (r *RestoreShared) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error) {
+func (r *RestoreMock) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error) {
 	if restoreRequest.DestinationCuster == nil {
 		return nil, fmt.Errorf("RestoreRun mock call without DestinationCuster provided, will fail")
 	}

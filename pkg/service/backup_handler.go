@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/util"
 )
 
@@ -27,7 +26,7 @@ type BackupHandler struct {
 	retry            *RetryService
 }
 
-var backupService shared.Backup = shared.NewBackupGo()
+var backupService Backup = NewBackupGo()
 
 // newBackupHandler returns a new BackupHandler instance.
 func newBackupHandler(config *model.Config, routineName string, backupBackend *BackupBackend) (*BackupHandler, error) {
@@ -124,7 +123,7 @@ func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace s
 	backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, upperBound)
 	h.backend.CreateFolder(backupFolder)
 
-	options := shared.BackupOptions{}
+	options := BackupOptions{}
 	if h.backupFullPolicy.IsSealed() {
 		options.ModBefore = &upperBound
 	}
@@ -192,7 +191,7 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	h.backend.CreateFolder(backupFolder)
 
 	fromEpoch := h.state.LastRunEpoch()
-	options := shared.BackupOptions{
+	options := BackupOptions{
 		ModAfter: util.Ptr(time.Unix(0, fromEpoch)),
 	}
 	if h.backupIncrPolicy.IsSealed() {
@@ -226,7 +225,7 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	}
 }
 
-func (h *BackupHandler) isBackupEmpty(stats *shared.BackupStat) bool {
+func (h *BackupHandler) isBackupEmpty(stats *BackupStat) bool {
 	if stats == nil {
 		return true
 	}

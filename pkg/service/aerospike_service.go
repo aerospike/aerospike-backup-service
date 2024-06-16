@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 
 	as "github.com/aerospike/aerospike-client-go/v7"
@@ -34,6 +35,37 @@ func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error
 	}
 	namespaces := infoRes[namespaceInfo]
 	return strings.Split(namespaces, ";"), nil
+}
+
+type AerospikeVersion [4]int
+
+// GetAerospikeVersion gets the version of the Aerospike cluster
+func GetAerospikeVersion(client *as.Client) (AerospikeVersion, error) {
+	node, aerr := client.Cluster().GetRandomNode()
+	if aerr != nil {
+		return AerospikeVersion{}, fmt.Errorf("failed to get node: %s", aerr)
+	}
+
+	res, aerr := node.RequestInfo(&as.InfoPolicy{}, "version")
+	if aerr != nil {
+		return AerospikeVersion{}, fmt.Errorf("error during RequestInfo: %w", aerr)
+	}
+
+	versionInfo := res["version"]
+	parts := strings.Split(versionInfo, " ")
+	versionParts := strings.Split(parts[len(parts)-1], ".")
+	if len(versionParts) > 4 {
+		return AerospikeVersion{}, fmt.Errorf("unexpected vesrion format %s", versionInfo)
+	}
+	var version AerospikeVersion
+	for i, v := range versionParts {
+		var err error
+		version[i], err = strconv.Atoi(v)
+		if err != nil {
+			return AerospikeVersion{}, fmt.Errorf("unexpected vesrion format %s: %w", versionInfo, err)
+		}
+	}
+	return version, nil
 }
 
 func getClusterConfiguration(cluster *model.AerospikeCluster) ([]asconfig.DotConf, error) {

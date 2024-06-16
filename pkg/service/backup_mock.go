@@ -1,6 +1,6 @@
 //go:build ci
 
-package shared
+package service
 
 import (
 	"log/slog"

@@ -3,7 +3,6 @@ package util
 
 import (
 	"fmt"
-	"os"
 )
 
 // Ptr returns a pointer to the given object.
@@ -20,11 +19,6 @@ func Find[T any](items map[string]T, f func(T) bool) *string {
 		}
 	}
 	return nil
-}
-
-func isRunningInDockerContainer() bool {
-	_, found := os.LookupEnv("DOCKER_CONTAINER")
-	return found
 }
 
 // ValueOrZero dereferences a pointer and returns the value.
