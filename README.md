@@ -96,12 +96,14 @@ Flags:
   -v, --version         version for Use
 ```
 
-Set the configuration file path with `-c` and specify:
+Set the configuration file path with `-c`.
 
-- A local file path (e.g., --config /path/to/config.yaml), or
-- A remote URL (e.g., --config http://example.com/config.yaml)
+Without the `-r` flag, the file specified after `-c` is the actual configuration file.
+With the `-r` flag, the file specified after `-c` contains the path or URL to the actual configuration file. 
 
-You must use the `-r` flag if you specify a remote URL.
+For example, you may store your configurations remotely, such as on AWS S3 storage. 
+In this case, you could have a remote_config.yaml file containing S3 details, and you would run the server with `-c remote_config.yaml -r`.
+
 
 ### Run
 
