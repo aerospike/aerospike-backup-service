@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/url"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
@@ -12,6 +11,7 @@ import (
 	"github.com/aerospike/backup-go/io/local"
 	"github.com/aerospike/backup-go/io/s3"
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 // BackupGo implements the Backup interface.
@@ -107,16 +107,16 @@ func getWriter(path *string, storage *model.Storage, encoder encoding.EncoderFac
 	case model.Local:
 		return local.NewDirectoryWriterFactory(*path, 0, encoder, true)
 	case model.S3:
-		parsed, err := url.Parse(*path)
+		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err
 		}
 		return s3.NewS3WriterFactory(&s3.StorageConfig{
-			Bucket:    parsed.Host,
+			Bucket:    bucket,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,
 			Profile:   *storage.S3Profile,
-			Prefix:    parsed.Path,
+			Prefix:    parsedPath,
 			ChunkSize: 0,
 		}, encoder, true)
 	}
