@@ -2,13 +2,13 @@ package service
 
 import (
 	"errors"
-	"github.com/aerospike/backup/pkg/shared"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/util"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"

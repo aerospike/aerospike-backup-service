@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/backup/pkg/shared"
 	"log/slog"
 	"net"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/aerospike/backup/pkg/shared"
 	"github.com/reugn/go-quartz/quartz"
 	"golang.org/x/time/rate"
 )
