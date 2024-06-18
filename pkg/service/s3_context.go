@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -51,25 +50,24 @@ func NewS3Context(storage *model.Storage) (*S3Context, error) {
 		o.UsePathStyle = true
 	})
 
-	parsed, err := url.Parse(*storage.Path)
+	bucket, path, err := util.ParseS3Path(*storage.Path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse S3 storage path: %v", err)
 	}
 
-	bucketName := parsed.Host
 	// Check if the bucket exists
 	_, err = client.HeadBucket(ctx, &s3.HeadBucketInput{
-		Bucket: aws.String(bucketName),
+		Bucket: aws.String(bucket),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error checking S3 bucket %s existence: %v", bucketName, err)
+		return nil, fmt.Errorf("error checking S3 bucket %s existence: %v", bucket, err)
 	}
 
 	s := &S3Context{
 		ctx:    ctx,
 		client: client,
-		bucket: bucketName,
-		path:   strings.TrimPrefix(parsed.Path, "/"),
+		bucket: bucket,
+		path:   path,
 	}
 
 	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*model.BackupMetadata, error) {

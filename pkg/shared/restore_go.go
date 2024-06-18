@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/url"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
@@ -12,6 +11,7 @@ import (
 	"github.com/aerospike/backup-go/io/local"
 	"github.com/aerospike/backup-go/io/s3"
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 // RestoreGo implements the Restore interface.
@@ -128,16 +128,16 @@ func getReader(path *string, storage *model.Storage, decoder encoding.DecoderFac
 	case model.Local:
 		return local.NewDirectoryReaderFactory(*path, decoder)
 	case model.S3:
-		parsed, err := url.Parse(*path)
+		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err
 		}
 		return s3.NewS3ReaderFactory(&s3.StorageConfig{
-			Bucket:    parsed.Host,
+			Bucket:    bucket,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,
 			Profile:   *storage.S3Profile,
-			Prefix:    parsed.Path,
+			Prefix:    parsedPath,
 			ChunkSize: 0,
 		}, decoder)
 	}

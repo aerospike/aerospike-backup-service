@@ -3,7 +3,9 @@ package util
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 )
 
 // Ptr returns a pointer to the given object.
@@ -46,4 +48,13 @@ func TryAndRecover(f func() string) (output string, err error) {
 		}
 	}()
 	return f(), err
+}
+
+func ParseS3Path(s string) (bucket string, path string, err error) {
+	parsed, err := url.Parse(s)
+	if err != nil {
+		return "", "", err
+	}
+
+	return parsed.Host, strings.TrimPrefix(parsed.Path, "/"), nil
 }

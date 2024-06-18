@@ -3,14 +3,13 @@ package service
 import (
 	"fmt"
 	"log/slog"
-	"net/url"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
+	"github.com/aerospike/backup/pkg/util"
 )
 
 // RestoreMemory implements the RestoreService interface.
@@ -206,13 +205,13 @@ func (r *RestoreMemory) RetrieveConfiguration(routine string, toTimeMillis int64
 	return backend.ReadClusterConfiguration(configPath)
 }
 
-func calculateConfigurationBackupPath(path string) (string, error) {
-	parse, err := url.Parse(path)
+func calculateConfigurationBackupPath(backupKey string) (string, error) {
+	_, path, err := util.ParseS3Path(backupKey)
 	if err != nil {
 		return "", err
 	}
 	// Move up two directories
-	base := strings.TrimPrefix(filepath.Dir(filepath.Dir(parse.Path)), "/")
+	base := filepath.Dir(filepath.Dir(path))
 	// Join new directory 'config' with the new base
 	return filepath.Join(base, model.ConfigurationBackupDirectory), nil
 }
