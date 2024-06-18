@@ -13,28 +13,30 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: [1.22.x]
+        go-version: [ 1.22.x ]
     steps:
-    - name: Setup Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: ${{ matrix.go-version }}
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
 
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Test
-      run: |
-        go test -race -tags=ci ./... -coverprofile=coverage.out -covermode=atomic
-        grep -v -E -f .covignore coverage.out > coverage.filtered.out
-        mv coverage.filtered.out coverage.out
+      - name: Test
+        env:
+          GOPRIVATE: github.com/aerospike/backup-go
+        run: |
+          go test -race -tags=ci ./... -coverprofile=coverage.out -covermode=atomic
+          grep -v -E -f .covignore coverage.out > coverage.filtered.out
+          mv coverage.filtered.out coverage.out
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
-    - name: Build
-      run: |
-        cd cmd/backup
-        go build -tags=ci .
+      - name: Build
+        run: |
+          cd cmd/backup
+          go build -tags=ci .
