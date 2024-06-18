@@ -29,7 +29,7 @@ func NewBackupGo() *BackupGo {
 //
 //nolint:funlen,gocritic
 func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
-	cluster *model.AerospikeCluster, storage *model.Storage, secretAgent *model.SecretAgent,
+	cluster *model.AerospikeCluster, storage *model.Storage, _ *model.SecretAgent,
 	opts BackupOptions, namespace *string, path *string) (*BackupStat, error) {
 
 	var err error

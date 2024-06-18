@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -165,14 +164,12 @@ func (h *BackupHandler) cleanIncrementalBackups() {
 
 func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	if h.state.LastFullRunIsEmpty() {
-		slog.Log(context.Background(), slog.LevelDebug,
-			"Skip incremental backup until initial full backup is done",
+		slog.Debug("Skip incremental backup until initial full backup is done",
 			"name", h.routineName)
 		return
 	}
 	if h.backend.FullBackupInProgress().Load() {
-		slog.Log(context.Background(), slog.LevelDebug,
-			"Full backup is currently in progress, skipping incremental backup",
+		slog.Debug("Full backup is currently in progress, skipping incremental backup",
 			"name", h.routineName)
 		return
 	}

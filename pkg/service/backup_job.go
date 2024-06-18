@@ -20,7 +20,7 @@ type backupJob struct {
 var _ quartz.Job = (*backupJob)(nil)
 
 // Execute is called by a Scheduler when the Trigger associated with this job fires.
-func (j *backupJob) Execute(ctx context.Context) error {
+func (j *backupJob) Execute(_ context.Context) error {
 	if j.isRunning.CompareAndSwap(false, true) {
 		defer j.isRunning.Store(false)
 		switch j.jobType {
