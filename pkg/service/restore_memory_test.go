@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"github.com/aerospike/backup/pkg/shared"
 	"os"
 	"strings"
 	"testing"
@@ -52,6 +53,7 @@ func makeTestRestoreService() *RestoreMemory {
 	config := model.NewConfigWithDefaultValues()
 	config.Storage["s"] = &model.Storage{
 		Path: ptr.String("/"),
+		Type: model.Local,
 	}
 	config.BackupRoutines = map[string]*model.BackupRoutine{
 		"routine": {
@@ -63,7 +65,7 @@ func makeTestRestoreService() *RestoreMemory {
 	}
 
 	backends := BackendHolderMock{}
-	return NewRestoreMemory(&backends, config)
+	return NewRestoreMemory(&backends, config, shared.NewRestoreMock())
 }
 
 type BackendMock struct {

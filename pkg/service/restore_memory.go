@@ -25,10 +25,10 @@ type RestoreMemory struct {
 var _ RestoreService = (*RestoreMemory)(nil)
 
 // NewRestoreMemory returns a new RestoreMemory instance.
-func NewRestoreMemory(backends BackendsHolder, config *model.Config) *RestoreMemory {
+func NewRestoreMemory(backends BackendsHolder, config *model.Config, restoreService shared.Restore) *RestoreMemory {
 	return &RestoreMemory{
 		restoreJobs:    NewJobsHolder(),
-		restoreService: shared.NewRestoreGo(),
+		restoreService: restoreService,
 		backends:       backends,
 		config:         config,
 	}

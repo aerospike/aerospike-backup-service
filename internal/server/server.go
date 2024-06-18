@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/backup/pkg/shared"
 	"log/slog"
 	"net"
 	"net/http"
@@ -103,7 +104,7 @@ func NewHTTPServer(backends service.BackendsHolder, config *model.Config,
 		rateLimiter:    rateLimiter,
 		whiteList:      newIPWhiteList(serverConfig.GetRateOrDefault().GetWhiteListOrDefault()),
 		scheduler:      scheduler,
-		restoreService: service.NewRestoreMemory(backends, config),
+		restoreService: service.NewRestoreMemory(backends, config, shared.NewRestoreGo()),
 		backupBackends: backends,
 	}
 }
