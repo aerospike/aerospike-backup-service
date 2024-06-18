@@ -44,6 +44,9 @@ func TryAndRecover(f func() string) (output string, err error) {
 	return f(), err
 }
 
+// ParseS3Path parses an S3 path and returns the bucket and path components.
+// The path is trimmed of the leading slash (/).
+// Amazon S3 require paths to be without slashes.
 func ParseS3Path(s string) (bucket string, path string, err error) {
 	parsed, err := url.Parse(s)
 	if err != nil {
