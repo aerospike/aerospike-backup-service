@@ -64,7 +64,7 @@ jobs:
                   owner: '${{ secrets.ORG }}',
                   repo: '${{ secrets.REPO }}',
                   workflow_id: 'release.yml',
-                  ref: 'main',
+                  ref: 'master',
                   inputs: {
                     version: '${{ github.ref_name }}',
                     commit: '${{ github.sha }}',

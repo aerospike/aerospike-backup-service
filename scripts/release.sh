@@ -9,7 +9,7 @@ CHANGE_LOG_TEMP_FILE="$(mktemp)"
 cat <<EOF > "$CHANGE_LOG_RECORD_TEMP_FILE"
 aerospike-backup-service ($NEXT_VERSION-1) unstable; urgency=low
     * Version $NEXT_VERSION release
- -- $(git config user.name) <$(git config user.email)>  $(date +'%a, %d %b %Y %H:%M:%S %z')
+ -- $(git config user.name) <$(git config user.email)>  $(LC_TIME=C date +'%a, %d %b %Y %H:%M:%S %z')
 EOF
 
 cat "$CHANGE_LOG_RECORD_TEMP_FILE" "$WORKSPACE"/packages/deb/debian/changelog > "$CHANGE_LOG_TEMP_FILE"

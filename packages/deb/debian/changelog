@@ -1,3 +1,6 @@
+aerospike-backup-service (1.0.0-1) unstable; urgency=low
+    * Version 1.0.0 release
+ -- David Gerchikov <dgerchikov@aerospike.com>  Tue, 18 Jun 2024 10:14:14 +0300
 aerospike-backup-service (0.3.0-1) unstable; urgency=low
     * Version 0.3.0 release
  -- David Gerchikov <dgerchikov@aerospike.com>  Thu, 04 Apr 2024 10:08:23 +0300
