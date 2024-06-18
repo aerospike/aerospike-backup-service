@@ -56,7 +56,7 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	}
 
 	config.WritePolicy.GenerationPolicy = a.EXPECT_GEN_GT
-	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration == true {
+	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
 		config.WritePolicy.GenerationPolicy = a.NONE
 	}
 
