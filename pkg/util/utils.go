@@ -4,7 +4,6 @@ package util
 import (
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 )
 
@@ -22,11 +21,6 @@ func Find[T any](items map[string]T, f func(T) bool) *string {
 		}
 	}
 	return nil
-}
-
-func isRunningInDockerContainer() bool {
-	_, found := os.LookupEnv("DOCKER_CONTAINER")
-	return found
 }
 
 // ValueOrZero dereferences a pointer and returns the value.
