@@ -126,6 +126,7 @@ func TestRestoreOK(t *testing.T) {
 		},
 		SourceStorage: &model.Storage{
 			Path: &validBackupPath,
+			Type: model.Local,
 		},
 	}
 	requestInternal := &model.RestoreRequestInternal{
