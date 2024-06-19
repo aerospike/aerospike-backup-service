@@ -74,6 +74,7 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	}
 
 	config.Namespace = restoreRequest.Policy.Namespace
+	config.BatchWrites = true
 
 	reader, err := getReader(restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
 	if err != nil {
