@@ -74,7 +74,19 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	}
 
 	config.Namespace = restoreRequest.Policy.Namespace
-	config.BatchWrites = true
+
+	if restoreRequest.Policy.Parallel != nil {
+		config.Parallel = int(*restoreRequest.Policy.Parallel)
+	}
+	if restoreRequest.Policy.MaxAsyncBatches != nil {
+		config.MaxAsyncBatches = int(*restoreRequest.Policy.MaxAsyncBatches)
+	}
+	if restoreRequest.Policy.BatchSize != nil {
+		config.BatchSize = int(*restoreRequest.Policy.BatchSize)
+	}
+	if restoreRequest.Policy.DisableBatchWrites != nil {
+		config.DisableBatchWrites = *restoreRequest.Policy.DisableBatchWrites
+	}
 
 	reader, err := getReader(restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
 	if err != nil {
