@@ -3,11 +3,11 @@ package shared
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/backup-go/models"
 	"log/slog"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/encoding"
 	"github.com/aerospike/backup-go/io/local"
 	"github.com/aerospike/backup-go/io/s3"
 	"github.com/aerospike/backup/pkg/model"
@@ -78,7 +78,14 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		config.Bandwidth = int(*backupPolicy.Bandwidth)
 	}
 
-	writerFactory, err := getWriter(path, storage, config.EncoderFactory)
+	if backupPolicy.CompressionPolicy != nil {
+		config.CompressionPolicy = &models.CompressionPolicy{
+			Mode:  backupPolicy.CompressionPolicy.Mode,
+			Level: int(backupPolicy.CompressionPolicy.Level),
+		}
+	}
+
+	writerFactory, err := getWriter(path, storage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer, %w", err)
 	}
@@ -102,10 +109,10 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 	}, nil
 }
 
-func getWriter(path *string, storage *model.Storage, encoder encoding.EncoderFactory) (backup.WriteFactory, error) {
+func getWriter(path *string, storage *model.Storage) (backup.WriteFactory, error) {
 	switch storage.Type {
 	case model.Local:
-		return local.NewDirectoryWriterFactory(*path, 0, encoder, true)
+		return local.NewDirectoryWriterFactory(*path, true)
 	case model.S3:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
@@ -118,7 +125,7 @@ func getWriter(path *string, storage *model.Storage, encoder encoding.EncoderFac
 			Profile:   *storage.S3Profile,
 			Prefix:    parsedPath,
 			ChunkSize: 0,
-		}, encoder, true)
+		}, true)
 	}
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
 }

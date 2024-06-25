@@ -3,6 +3,7 @@ package shared
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/backup-go/models"
 	"log/slog"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
@@ -86,6 +87,12 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 	}
 	if restoreRequest.Policy.DisableBatchWrites != nil {
 		config.DisableBatchWrites = *restoreRequest.Policy.DisableBatchWrites
+	}
+	if restoreRequest.Policy.CompressionPolicy != nil {
+		config.CompressionPolicy = &models.CompressionPolicy{
+			Mode:  restoreRequest.Policy.CompressionPolicy.Mode,
+			Level: int(restoreRequest.Policy.CompressionPolicy.Level),
+		}
 	}
 
 	reader, err := getReader(restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
