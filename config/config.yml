@@ -15,7 +15,6 @@ storage:
 
 backup-policies:
   policy1:
-    type: 1
     parallel: 1
     remove-files: KeepAll
 

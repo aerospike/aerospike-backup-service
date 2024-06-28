@@ -11,12 +11,11 @@ aerospike-clusters:
 
 storage:
   local1:
-    type: 0
+    type: "local"
     path: "/var/lib/aerospike-backup-service"
 
 backup-policies:
   policy1:
-    type: 1
     parallel: 1
     remove-files: KeepAll
 
@@ -27,4 +26,6 @@ backup-routines:
     backup-policy: "policy1"
     source-cluster: "cluster1"
     storage: "local1"
-    namespace: "test"
+    namespaces: ["test"]
+    set-list:
+      - set1
