@@ -13,7 +13,7 @@ deb: gen-substvars install-manpage
 
 .PHONY: gen-substvars
 gen-substvars:
-	@echo "version=$(VERSION)" > $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb/debian/substvars
+	@echo "abs:version=$(VERSION)" > $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb/DEBIAN/substvars
 
 .PHONY: install-manpage
 install-manpage:

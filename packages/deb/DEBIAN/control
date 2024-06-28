@@ -1,7 +1,7 @@
 Source: aerospike-backup-service
 Section: misc
 Priority: optional
-Version: ${version}
+Version: ${abs:version}
 Maintainer: Aerospike <info@aerospike.com>
 Build-Depends: debhelper, debhelper-compat (= 13)
 
