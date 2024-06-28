@@ -6,7 +6,7 @@ all: deb
 .PHONY: deb
 deb: gen-substvars install-manpage
 	cd $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb && \
-	SOURCE_DIR=$(SOURCE_DIR) BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) ARCH=$(ARCH) dpkg-deb -b . $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).deb -Zxz
+	SOURCE_DIR=$(SOURCE_DIR) BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) ARCH=$(ARCH) dpkg-deb -b . $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).deb
 	mv $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).deb \
     ../../target/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).deb
 	$(MAKE) clean
@@ -20,7 +20,7 @@ gen-substvars:
 .PHONY: install-manpage
 install-manpage:
 	cp $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/man/$(BINARY_NAME).1 \
-	$(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb/debian
+	$(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb/DEBIAN
 
 .PHONY: clean
 clean:
