@@ -5,7 +5,7 @@ Maintainer: Aerospike <info@aerospike.com>
 Build-Depends: debhelper, debhelper-compat (= 13)
 
 Package: aerospike-backup-service
-Architecture: amd64 arm64
+Architecture: amd64
 Depends: libc6
 Description: Aerospike Backup Service
  This package provides backup and restore capabilities
