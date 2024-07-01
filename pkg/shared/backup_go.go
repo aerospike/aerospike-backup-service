@@ -3,13 +3,13 @@ package shared
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/backup-go/models"
 	"log/slog"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/local"
 	"github.com/aerospike/backup-go/io/s3"
+	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 )
@@ -82,6 +82,13 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		config.CompressionPolicy = &models.CompressionPolicy{
 			Mode:  backupPolicy.CompressionPolicy.Mode,
 			Level: int(backupPolicy.CompressionPolicy.Level),
+		}
+	}
+
+	if backupPolicy.EncryptionPolicy != nil {
+		config.EncryptionPolicy = &models.EncryptionPolicy{
+			Mode:    backupPolicy.EncryptionPolicy.Mode,
+			KeyFile: backupPolicy.EncryptionPolicy.KeyFile,
 		}
 	}
 
