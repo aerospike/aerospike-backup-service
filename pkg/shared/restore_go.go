@@ -3,7 +3,6 @@ package shared
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/backup-go/models"
 	"log/slog"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
@@ -11,6 +10,7 @@ import (
 	"github.com/aerospike/backup-go/encoding"
 	"github.com/aerospike/backup-go/io/local"
 	"github.com/aerospike/backup-go/io/s3"
+	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 )
@@ -92,6 +92,12 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 		config.CompressionPolicy = &models.CompressionPolicy{
 			Mode:  restoreRequest.Policy.CompressionPolicy.Mode,
 			Level: int(restoreRequest.Policy.CompressionPolicy.Level),
+		}
+	}
+	if restoreRequest.Policy.EncryptionPolicy != nil {
+		config.EncryptionPolicy = &models.EncryptionPolicy{
+			Mode:    restoreRequest.Policy.EncryptionPolicy.Mode,
+			KeyFile: restoreRequest.Policy.EncryptionPolicy.KeyFile,
 		}
 	}
 

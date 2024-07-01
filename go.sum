@@ -188,6 +188,12 @@ github.com/aerospike/backup-go v0.0.0-20240624125706-f703d5760e4d h1:DIViygwPkuk
 github.com/aerospike/backup-go v0.0.0-20240624125706-f703d5760e4d/go.mod h1:UmB+z24FhXhpyjzN6NrZU/96dSPi9jlb7slx4BVTaM0=
 github.com/aerospike/backup-go v0.0.0-20240624131603-4c7a81ef6960 h1:RjFOZhQiWHCCFNXkXtIo6ku/GeGGFD5LZwsijTlxEDE=
 github.com/aerospike/backup-go v0.0.0-20240624131603-4c7a81ef6960/go.mod h1:iYfKYQCq5Ppkk1ljCiAUzWGVzUwVMQHG0awYhi0wbAc=
+github.com/aerospike/backup-go v0.0.0-20240625141038-f275f8253242 h1:1+COQkw7tTnQwDeYGrrtEyE1sB0Nq+5yRHYrRAMbtJ8=
+github.com/aerospike/backup-go v0.0.0-20240625141038-f275f8253242/go.mod h1:iYfKYQCq5Ppkk1ljCiAUzWGVzUwVMQHG0awYhi0wbAc=
+github.com/aerospike/backup-go v0.0.0-20240627131146-68a7997e284a h1:Fp3Ecy6kpAuSIlO8u5E+DS1XWaG6i1Tj8H/Acr70g+Y=
+github.com/aerospike/backup-go v0.0.0-20240627131146-68a7997e284a/go.mod h1:iYfKYQCq5Ppkk1ljCiAUzWGVzUwVMQHG0awYhi0wbAc=
+github.com/aerospike/backup-go v0.0.0-20240701065547-d48f841dcbfa h1:aOueresnEJaSVP5WA+UkPRgpo6yKdx8WZ/CLHgFnkM8=
+github.com/aerospike/backup-go v0.0.0-20240701065547-d48f841dcbfa/go.mod h1:iYfKYQCq5Ppkk1ljCiAUzWGVzUwVMQHG0awYhi0wbAc=
 github.com/aws/aws-sdk-go-v2 v1.26.1 h1:5554eUqIYVWpU0YmeeYZ0wU64H2VLBs8TlhRB2L+EkA=
 github.com/aws/aws-sdk-go-v2 v1.26.1/go.mod h1:ffIFB97e2yNsv4aTSGkqtHnppsIJzw7G7BReUZ3jCXM=
 github.com/aws/aws-sdk-go-v2 v1.27.0 h1:7bZWKoXhzI+mMR/HjdMx8ZCC5+6fY0lS5tr0bbgiLlo=
