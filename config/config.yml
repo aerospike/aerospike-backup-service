@@ -21,31 +21,31 @@ storage:
 
 backup-policies:
   keepFilesMaxRecordsPolicy:
-    parallel: 1
+    parallel: 8
     remove-files: KeepAll
     max-records: 100
     sealed: true
     retry-delay: 10_000
     max-retries: 10
   keepFilesPolicy:
-    parallel: 1
+    parallel: 8
     remove-files: KeepAll
     sealed: true
   removeFilesPolicy:
-    parallel: 1
+    parallel: 8
     remove-files: RemoveAll
     sealed: true
   removeIncrementalPolicy:
-    parallel: 1
+    parallel: 8
     remove-files: RemoveIncremental
     sealed: true
   keepFilesPolicySlow:
-    parallel: 1
+    parallel: 8
     remove-files: KeepAll
     bandwidth: 120000
     sealed: true
   encryptedCompressedPolicy:
-    parallel: 1
+    parallel: 8
     remove-files: RemoveAll
     sealed: true
     encryption:
@@ -55,11 +55,11 @@ backup-policies:
       level: 20
       mode: ZSTD
   notSealed:
-    parallel: 1
+    parallel: 8
     remove-files: KeepAll
     sealed: false
   noIndexesUdfsRecords:
-    parallel: 1
+    parallel: 8
     remove-files: KeepAll
     sealed: true
     no-indexes: true
