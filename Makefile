@@ -84,6 +84,7 @@ rpm: tarball
 
 .PHONY: deb
 deb: tarball
+	apt-get install --only-upgrade build-essential
 	mkdir -p $(WORKSPACE)/target
 	mkdir -p $(WORKSPACE)/packages/deb/$(ARCH)
 	tar -xvf /tmp/$(BINARY_NAME)-$(VERSION)-$(UNAME_M).tar.gz -C $(WORKSPACE)/packages/deb/$(ARCH)
