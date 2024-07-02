@@ -17,6 +17,8 @@ override_dh_auto_build:
 	(cd $(SOURCE_DIR); $(MAKE) build-submodules; $(MAKE) build)
 override_dh_dwz:
 	dh_dwz --exclude=libasbackup.so --exclude=libasrestore.so --exclude=$(BINARY_NAME)
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym
 override_dh_installsystemd:
 	dh_installsystemd $(BINARY_NAME).service
 override_dh_builddeb:
