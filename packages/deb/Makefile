@@ -4,17 +4,13 @@ SOURCE_DIR:=$(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)
 all: deb
 
 .PHONY: deb
-deb: gen-substvars install-manpage
+deb: install-manpage
 	cd $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb && \
 	SOURCE_DIR=$(SOURCE_DIR) BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) ARCH=$(ARCH) \
 	dpkg-buildpackage -b -rfakeroot -us -uc -Zxz
 	mv $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).deb \
     ../../target/$(BINARY_NAME)_$(VERSION)-1_$(ARCH).deb
 	$(MAKE) clean
-
-.PHONY: gen-substvars
-gen-substvars:
-	@sed -i 's/{version}/$(VERSION)/g' $(CURDIR)/$(ARCH)/$(BINARY_NAME)-$(VERSION)/packages/deb/DEBIAN/control
 
 .PHONY: install-manpage
 install-manpage:
