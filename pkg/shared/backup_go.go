@@ -39,7 +39,7 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 	}
 	defer client.Close()
 
-	backupClient, err := backup.NewClient(client, "1", slog.Default(), backup.NewConfig())
+	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup client, %w", err)
 	}
