@@ -69,6 +69,9 @@ func getActiveHosts(cluster *model.AerospikeCluster) ([]*as.Host, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	defer client.Close()
+
 	var activeHosts []*as.Host
 	for _, node := range client.GetNodes() {
 		if node.IsActive() {
