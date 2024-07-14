@@ -65,6 +65,10 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		config.Parallel = int(*backupPolicy.Parallel)
 	}
 
+	if backupPolicy.FileLimit != nil {
+		config.FileLimit = *backupPolicy.FileLimit
+	}
+
 	config.ModBefore = opts.ModBefore
 	config.ModAfter = opts.ModAfter
 
