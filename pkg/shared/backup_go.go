@@ -29,15 +29,8 @@ func NewBackupGo() *BackupGo {
 //
 //nolint:funlen,gocritic
 func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
-	cluster *model.AerospikeCluster, storage *model.Storage, _ *model.SecretAgent,
-	opts BackupOptions, namespace *string, path *string) (*BackupStat, error) {
-
-	var err error
-	client, err := a.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to aerospike cluster, %w", err)
-	}
-	defer client.Close()
+	client *a.Client, storage *model.Storage, _ *model.SecretAgent,
+	opts BackupOptions, namespace *string, path *string) (*backup.BackupHandler, error) {
 
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
@@ -106,18 +99,7 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		return nil, fmt.Errorf("failed to start backup, %w", err)
 	}
 
-	err = handler.Wait(context.TODO())
-	if err != nil {
-		return nil, fmt.Errorf("error during backup, %w", err)
-	}
-
-	return &BackupStat{
-		RecordCount: handler.GetStats().GetRecordsTotal(),
-		IndexCount:  uint64(handler.GetStats().GetSIndexes()),
-		UDFCount:    uint64(handler.GetStats().GetUDFs()),
-		ByteCount:   handler.GetStats().GetTotalBytesWritten(),
-		FileCount:   handler.GetStats().GetFileCount(),
-	}, nil
+	return handler, nil
 }
 
 func getWriter(path *string, storage *model.Storage) (backup.WriteFactory, error) {

@@ -1,11 +1,14 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strconv"
 	"time"
 
+	"github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/util"
@@ -77,13 +80,21 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 		return nil
 	}
 	slog.Debug("Acquire fullBackupInProgress lock", "name", h.routineName)
+
+	client, err := aerospike.NewClientWithPolicyAndHost(h.cluster.ASClientPolicy(), h.cluster.ASClientHosts()...)
+	if err != nil {
+		return fmt.Errorf("failed to connect to aerospike cluster, %w", err)
+	}
+
 	// release the lock
 	defer func() {
 		h.backend.FullBackupInProgress().Store(false)
 		slog.Debug("Release fullBackupInProgress lock", "name", h.routineName)
+		client.Close()
 	}()
+
 	for _, namespace := range h.namespaces {
-		err := h.fullBackupForNamespace(now, namespace)
+		err := h.fullBackupForNamespace(client, now, namespace)
 		if err != nil {
 			return err
 		}
@@ -119,7 +130,7 @@ func (h *BackupHandler) writeClusterConfiguration(now time.Time) {
 	}
 }
 
-func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace string) error {
+func (h *BackupHandler) fullBackupForNamespace(client *aerospike.Client, upperBound time.Time, namespace string) error {
 	backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, upperBound)
 	h.backend.CreateFolder(backupFolder)
 
@@ -130,25 +141,52 @@ func (h *BackupHandler) fullBackupForNamespace(upperBound time.Time, namespace s
 
 	slog.Debug("Starting full backup", "up to", upperBound, "name", h.routineName)
 
-	started := time.Now()
 	backupPath := h.backend.wrapWithPrefix(backupFolder)
-	stats, err := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, h.cluster,
+	handler, err := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, client,
 		h.storage, h.secretAgent, options, &namespace, backupPath)
-	elapsed := time.Since(started)
-	backupDurationGauge.Set(float64(elapsed.Milliseconds()))
-	slog.Debug("Completed full backup", "name", h.routineName)
+	if err != nil {
+		backupFailureCounter.Inc()
+		return fmt.Errorf("could not start backup of namespace %s, routine %s: %w", namespace, h.routineName, err)
+	}
 
+	startTime := time.Now()
+	err = handler.Wait(context.TODO())
 	if err != nil {
 		backupFailureCounter.Inc()
 		return fmt.Errorf("error during backup namespace %s, routine %s: %w", namespace, h.routineName, err)
 	}
 
-	metadata := stats.ToMetadata(time.Time{}, upperBound, namespace)
+	backupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))
+	slog.Debug("Completed full backup", "name", h.routineName)
+
+	if err := h.writeBackupMetadata(handler.GetStats(), upperBound, namespace, backupFolder); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h *BackupHandler) writeBackupMetadata(stats *models.BackupStats,
+	created time.Time,
+	namespace string,
+	backupFolder string) error {
+	metadata := model.BackupMetadata{
+		From:                time.Time{},
+		Created:             created,
+		Namespace:           namespace,
+		RecordCount:         stats.GetRecordsReadTotal(),
+		FileCount:           stats.GetFileCount(),
+		ByteCount:           stats.GetTotalBytesWritten(),
+		SecondaryIndexCount: uint64(stats.GetSIndexes()),
+		UDFCount:            uint64(stats.GetUDFs()),
+	}
+
 	if err := h.backend.writeBackupMetadata(backupFolder, metadata); err != nil {
 		slog.Error("Could not write backup metadata", "name", h.routineName,
 			"folder", backupFolder, "err", err)
 		return err
 	}
+
 	return nil
 }
 
@@ -173,8 +211,14 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 			"name", h.routineName)
 		return
 	}
+
+	client, err := aerospike.NewClientWithPolicyAndHost(h.cluster.ASClientPolicy(), h.cluster.ASClientHosts()...)
+	if err != nil {
+		slog.Error("failed to connect to aerospike cluster", "err", err)
+	}
+
 	for _, namespace := range h.namespaces {
-		h.runIncrBackupForNamespace(now, namespace)
+		h.runIncrBackupForNamespace(client, now, namespace)
 	}
 
 	// increment incrBackupCounter metric
@@ -184,7 +228,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	h.updateIncrementalBackupState(now)
 }
 
-func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespace string) {
+func (h *BackupHandler) runIncrBackupForNamespace(client *aerospike.Client, upperBound time.Time, namespace string) {
 	backupFolder := getIncrementalPath(h.backend.incrementalBackupsPath, namespace, upperBound)
 	h.backend.CreateFolder(backupFolder)
 
@@ -199,35 +243,38 @@ func (h *BackupHandler) runIncrBackupForNamespace(upperBound time.Time, namespac
 	slog.Debug("Starting incremental backup", "name", h.routineName)
 	started := time.Now()
 	backupPath := h.backend.wrapWithPrefix(backupFolder)
-	stats, err := backupService.BackupRun(
-		h.backupRoutine, h.backupIncrPolicy, h.cluster, h.storage, h.secretAgent, options, &namespace, backupPath)
-	elapsed := time.Since(started)
+	handler, err := backupService.BackupRun(
+		h.backupRoutine, h.backupIncrPolicy, client, h.storage, h.secretAgent, options, &namespace, backupPath)
+	if err != nil {
+		incrBackupFailureCounter.Inc()
+		slog.Warn("could not start backup", "namespace", namespace, "routine", h.routineName, "err", err)
+	}
 
-	incrBackupDurationGauge.Set(float64(elapsed.Milliseconds()))
+	incrBackupDurationGauge.Set(float64(time.Since(started).Milliseconds()))
 	slog.Debug("Completed incremental backup", "name", h.routineName)
 
+	err = handler.Wait(context.TODO())
 	if err != nil {
 		slog.Warn("Failed incremental backup", "name", h.routineName, "err", err)
 		incrBackupFailureCounter.Inc()
 		return
 	}
+
 	// delete if the backup file is empty
-	if h.isBackupEmpty(stats) {
+	if h.isBackupEmpty(handler.GetStats()) {
 		h.deleteEmptyBackup(backupFolder, h.routineName)
 	} else {
-		metadata := stats.ToMetadata(time.Unix(0, fromEpoch), upperBound, namespace)
-		if err := h.backend.writeBackupMetadata(backupFolder, metadata); err != nil {
+		if err := h.writeBackupMetadata(handler.GetStats(), upperBound, namespace, backupFolder); err != nil {
 			slog.Error("Could not write backup metadata", "name", h.routineName,
 				"folder", backupFolder, "err", err)
 		}
 	}
 }
 
-func (h *BackupHandler) isBackupEmpty(stats *shared.BackupStat) bool {
-	if stats == nil {
-		return true
-	}
-	return stats.IsEmpty()
+func (h *BackupHandler) isBackupEmpty(stats *models.BackupStats) bool {
+	return stats.GetUDFs() == 0 &&
+		stats.GetSIndexes() == 0 &&
+		stats.GetRecordsReadTotal() == 0
 }
 
 func (h *BackupHandler) deleteEmptyBackup(path string, routineName string) {

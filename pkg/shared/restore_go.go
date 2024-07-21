@@ -118,7 +118,7 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 
 	stats := handler.GetStats()
 	return &model.RestoreResult{
-		TotalRecords:    stats.GetRecordsTotal(),
+		TotalRecords:    stats.GetRecordsReadTotal(),
 		InsertedRecords: stats.GetRecordsInserted(),
 		IndexCount:      uint64(stats.GetSIndexes()),
 		UDFCount:        uint64(stats.GetUDFs()),
