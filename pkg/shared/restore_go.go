@@ -149,16 +149,16 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	}
 }
 
-func getReader(path *string, storage *model.Storage, decoder encoding.DecoderFactory) (backup.ReaderFactory, error) {
+func getReader(path *string, storage *model.Storage, decoder encoding.DecoderFactory) (backup.StreamingReader, error) {
 	switch storage.Type {
 	case model.Local:
-		return local.NewDirectoryReaderFactory(*path, decoder)
+		return local.NewDirectoryStreamingReader(*path, decoder)
 	case model.S3:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err
 		}
-		return s3.NewS3ReaderFactory(&s3.StorageConfig{
+		return s3.NewS3StreamingReader(&s3.StorageConfig{
 			Bucket:    bucket,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,
