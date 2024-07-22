@@ -69,6 +69,10 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		config.FileLimit = *backupPolicy.FileLimit * 1_048_576 // lib expects limit in bytes.
 	}
 
+	if backupPolicy.RecordsPerSecond != nil {
+		config.RecordsPerSecond = int(*backupPolicy.RecordsPerSecond)
+	}
+
 	config.ModBefore = opts.ModBefore
 	config.ModAfter = opts.ModAfter
 
