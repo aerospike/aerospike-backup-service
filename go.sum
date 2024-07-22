@@ -202,6 +202,8 @@ github.com/aerospike/backup-go v0.0.0-20240717083222-02c55c5e75a0 h1:v5Uq2d3XhEj
 github.com/aerospike/backup-go v0.0.0-20240717083222-02c55c5e75a0/go.mod h1:N7LfTR9wlRCVh5G9XnDMx1BbmH0OspAfB+pz5B5whSA=
 github.com/aerospike/backup-go v0.0.0-20240721091611-e2c98c19a04f h1:bxOBPKvC6CzSGb8MaI8wOcpiyHj7diDPEIPd7X8ICyY=
 github.com/aerospike/backup-go v0.0.0-20240721091611-e2c98c19a04f/go.mod h1:N7LfTR9wlRCVh5G9XnDMx1BbmH0OspAfB+pz5B5whSA=
+github.com/aerospike/backup-go v0.0.0-20240722094113-5ce2575f7658 h1:6C4uA3QZcUEEjhriLfI2FtPuD66hwsCiZJMCDkrWZtY=
+github.com/aerospike/backup-go v0.0.0-20240722094113-5ce2575f7658/go.mod h1:N7LfTR9wlRCVh5G9XnDMx1BbmH0OspAfB+pz5B5whSA=
 github.com/aws/aws-sdk-go-v2 v1.26.1 h1:5554eUqIYVWpU0YmeeYZ0wU64H2VLBs8TlhRB2L+EkA=
 github.com/aws/aws-sdk-go-v2 v1.26.1/go.mod h1:ffIFB97e2yNsv4aTSGkqtHnppsIJzw7G7BReUZ3jCXM=
 github.com/aws/aws-sdk-go-v2 v1.27.0 h1:7bZWKoXhzI+mMR/HjdMx8ZCC5+6fY0lS5tr0bbgiLlo=

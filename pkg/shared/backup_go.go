@@ -112,10 +112,10 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 	}
 
 	return &BackupStat{
-		RecordCount: handler.GetStats().GetRecordsTotal(),
+		RecordCount: handler.GetStats().GetReadRecords(),
 		IndexCount:  uint64(handler.GetStats().GetSIndexes()),
 		UDFCount:    uint64(handler.GetStats().GetUDFs()),
-		ByteCount:   handler.GetStats().GetTotalBytesWritten(),
+		ByteCount:   handler.GetStats().GetBytesWritten(),
 		FileCount:   handler.GetStats().GetFileCount(),
 	}, nil
 }
