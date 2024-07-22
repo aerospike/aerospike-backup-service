@@ -1,0 +1,17 @@
+name: Hello World Workflow
+
+on:
+  push:
+    branches:
+      - arm-github-action-test
+
+jobs:
+  hello-world-job:
+    runs-on: ubuntu-24-arm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Print Hello World
+        run: echo "Hello, world"
