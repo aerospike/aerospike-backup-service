@@ -100,17 +100,18 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		}
 	}
 
-	writerFactory, err := getWriter(path, storage)
+	ctx := context.TODO()
+	writerFactory, err := getWriter(ctx, path, storage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer, %w", err)
 	}
 
-	handler, err := backupClient.Backup(context.TODO(), config, writerFactory)
+	handler, err := backupClient.Backup(ctx, config, writerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start backup, %w", err)
 	}
 
-	err = handler.Wait(context.TODO())
+	err = handler.Wait(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error during backup, %w", err)
 	}
@@ -124,7 +125,7 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 	}, nil
 }
 
-func getWriter(path *string, storage *model.Storage) (backup.WriteFactory, error) {
+func getWriter(ctx context.Context, path *string, storage *model.Storage) (backup.WriteFactory, error) {
 	switch storage.Type {
 	case model.Local:
 		return local.NewDirectoryWriterFactory(*path, true)
@@ -133,7 +134,7 @@ func getWriter(path *string, storage *model.Storage) (backup.WriteFactory, error
 		if err != nil {
 			return nil, err
 		}
-		return s3.NewS3WriterFactory(&s3.StorageConfig{
+		return s3.NewS3WriterFactory(ctx, &s3.StorageConfig{
 			Bucket:    bucket,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,

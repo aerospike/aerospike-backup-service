@@ -101,17 +101,18 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 		}
 	}
 
-	reader, err := getReader(restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
+	ctx := context.TODO()
+	reader, err := getReader(ctx, restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}
 
-	handler, err := backupClient.Restore(context.TODO(), config, reader)
+	handler, err := backupClient.Restore(ctx, config, reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start restore, %w", err)
 	}
 
-	err = handler.Wait(context.TODO())
+	err = handler.Wait(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error during restore, %w", err)
 	}
@@ -149,7 +150,7 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	}
 }
 
-func getReader(path *string, storage *model.Storage, decoder encoding.DecoderFactory) (backup.StreamingReader, error) {
+func getReader(ctx context.Context, path *string, storage *model.Storage, decoder encoding.DecoderFactory) (backup.StreamingReader, error) {
 	switch storage.Type {
 	case model.Local:
 		return local.NewDirectoryStreamingReader(*path, decoder)
@@ -158,7 +159,7 @@ func getReader(path *string, storage *model.Storage, decoder encoding.DecoderFac
 		if err != nil {
 			return nil, err
 		}
-		return s3.NewS3StreamingReader(&s3.StorageConfig{
+		return s3.NewS3StreamingReader(ctx, &s3.StorageConfig{
 			Bucket:    bucket,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,
