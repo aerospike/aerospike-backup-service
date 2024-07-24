@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/backup-go"
 	"log/slog"
 	"strconv"
 	"time"
@@ -16,17 +17,18 @@ import (
 
 // BackupHandler implements backup logic for single routine.
 type BackupHandler struct {
-	backend          *BackupBackend
-	backupFullPolicy *model.BackupPolicy
-	backupIncrPolicy *model.BackupPolicy
-	backupRoutine    *model.BackupRoutine
-	routineName      string
-	namespaces       []string
-	cluster          *model.AerospikeCluster
-	storage          *model.Storage
-	secretAgent      *model.SecretAgent
-	state            *model.BackupState
-	retry            *RetryService
+	backend              *BackupBackend
+	backupFullPolicy     *model.BackupPolicy
+	backupIncrPolicy     *model.BackupPolicy
+	backupRoutine        *model.BackupRoutine
+	routineName          string
+	namespaces           []string
+	cluster              *model.AerospikeCluster
+	storage              *model.Storage
+	secretAgent          *model.SecretAgent
+	state                *model.BackupState
+	retry                *RetryService
+	handlersForNamespace map[string]*backup.BackupHandler
 }
 
 var backupService shared.Backup = shared.NewBackupGo()
@@ -52,17 +54,18 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 	}
 
 	return &BackupHandler{
-		backend:          backupBackend,
-		backupRoutine:    backupRoutine,
-		backupFullPolicy: backupPolicy,
-		backupIncrPolicy: backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
-		routineName:      routineName,
-		namespaces:       namespaces,
-		cluster:          cluster,
-		storage:          storage,
-		secretAgent:      secretAgent,
-		state:            backupBackend.readState(),
-		retry:            NewRetryService(routineName),
+		backend:              backupBackend,
+		backupRoutine:        backupRoutine,
+		backupFullPolicy:     backupPolicy,
+		backupIncrPolicy:     backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
+		routineName:          routineName,
+		namespaces:           namespaces,
+		cluster:              cluster,
+		storage:              storage,
+		secretAgent:          secretAgent,
+		state:                backupBackend.readState(),
+		retry:                NewRetryService(routineName),
+		handlersForNamespace: make(map[string]*backup.BackupHandler),
 	}, nil
 }
 
@@ -81,9 +84,9 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 	}
 	slog.Debug("Acquire fullBackupInProgress lock", "name", h.routineName)
 
-	client, err := aerospike.NewClientWithPolicyAndHost(h.cluster.ASClientPolicy(), h.cluster.ASClientHosts()...)
-	if err != nil {
-		return fmt.Errorf("failed to connect to aerospike cluster, %w", err)
+	client, aerr := aerospike.NewClientWithPolicyAndHost(h.cluster.ASClientPolicy(), h.cluster.ASClientHosts()...)
+	if aerr != nil {
+		return fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
 	}
 
 	// release the lock
@@ -93,12 +96,12 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 		client.Close()
 	}()
 
-	for _, namespace := range h.namespaces {
-		err := h.fullBackupForNamespace(client, now, namespace)
-		if err != nil {
-			return err
-		}
+	startTime := time.Now()
+	err := h.backupNamespaces(now, client)
+	if err != nil {
+		return err
 	}
+	backupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))
 
 	// increment backupCounter metric
 	backupCounter.Inc()
@@ -110,6 +113,50 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 
 	h.writeClusterConfiguration(now)
 	return nil
+}
+
+func (h *BackupHandler) backupNamespaces(now time.Time, client *aerospike.Client) error {
+	for _, namespace := range h.namespaces {
+		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, now)
+		backupHandler, err := h.startBackup(client, backupFolder, now, namespace)
+		if err != nil {
+			return err
+		}
+		h.handlersForNamespace[namespace] = backupHandler
+	}
+
+	for namespace, handler := range h.handlersForNamespace {
+		err := handler.Wait(context.TODO())
+		if err != nil {
+			backupFailureCounter.Inc()
+			return fmt.Errorf("error during backup namespace %s, routine %s: %w", namespace, h.routineName, err)
+		}
+
+		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, now)
+		if err := h.writeBackupMetadata(handler.GetStats(), now, namespace, backupFolder); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (h *BackupHandler) startBackup(client *aerospike.Client, backupFolder string, upperBound time.Time, namespace string) (*backup.BackupHandler, error) {
+	h.backend.CreateFolder(backupFolder)
+	options := shared.BackupOptions{}
+	if h.backupFullPolicy.IsSealed() {
+		options.ModBefore = &upperBound
+	}
+
+	backupPath := h.backend.wrapWithPrefix(backupFolder)
+	handler, err := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, client,
+		h.storage, h.secretAgent, options, &namespace, backupPath)
+	if err != nil {
+		backupFailureCounter.Inc()
+		return nil, fmt.Errorf("could not start backup of namespace %s, routine %s: %w", namespace, h.routineName, err)
+	}
+
+	return handler, nil
 }
 
 func (h *BackupHandler) writeClusterConfiguration(now time.Time) {
@@ -128,42 +175,6 @@ func (h *BackupHandler) writeClusterConfiguration(now time.Time) {
 			slog.Error("Failed to write configuration for the backup", "name", h.routineName, "err", err)
 		}
 	}
-}
-
-func (h *BackupHandler) fullBackupForNamespace(client *aerospike.Client, upperBound time.Time, namespace string) error {
-	backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, upperBound)
-	h.backend.CreateFolder(backupFolder)
-
-	options := shared.BackupOptions{}
-	if h.backupFullPolicy.IsSealed() {
-		options.ModBefore = &upperBound
-	}
-
-	slog.Debug("Starting full backup", "up to", upperBound, "name", h.routineName)
-
-	backupPath := h.backend.wrapWithPrefix(backupFolder)
-	handler, err := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, client,
-		h.storage, h.secretAgent, options, &namespace, backupPath)
-	if err != nil {
-		backupFailureCounter.Inc()
-		return fmt.Errorf("could not start backup of namespace %s, routine %s: %w", namespace, h.routineName, err)
-	}
-
-	startTime := time.Now()
-	err = handler.Wait(context.TODO())
-	if err != nil {
-		backupFailureCounter.Inc()
-		return fmt.Errorf("error during backup namespace %s, routine %s: %w", namespace, h.routineName, err)
-	}
-
-	backupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))
-	slog.Debug("Completed full backup", "name", h.routineName)
-
-	if err := h.writeBackupMetadata(handler.GetStats(), upperBound, namespace, backupFolder); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (h *BackupHandler) writeBackupMetadata(stats *models.BackupStats,

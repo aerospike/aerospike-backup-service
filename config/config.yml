@@ -44,13 +44,23 @@ backup-policies:
     remove-files: KeepAll
     bandwidth: 120000
     sealed: true
-  encryptedCompressedPolicy:
+  encryptedCompressedPolicy128:
     parallel: 8
     remove-files: RemoveAll
     sealed: true
     encryption:
       key-file: encryptionKey
       mode: AES128
+    compression:
+      level: 20
+      mode: ZSTD
+  encryptedCompressedPolicy256:
+    parallel: 8
+    remove-files: RemoveAll
+    sealed: true
+    encryption:
+      key-file: encryptionKey
+      mode: AES256
     compression:
       level: 20
       mode: ZSTD
@@ -194,12 +204,18 @@ backup-routines:
     storage: local
     namespaces: ["source-ns13"]
     backup-policy: keepFilesPolicySlow
-  fullBackupEncrypedCompressed:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns18"]
-    backup-policy: encryptedCompressedPolicy
+  fullBackupEncrypedCompressed128:
+      interval-cron: "@yearly"
+      source-cluster: absDefaultCluster
+      storage: local
+      namespaces: ["source-ns18"]
+      backup-policy: encryptedCompressedPolicy128
+  fullBackupEncrypedCompressed256:
+      interval-cron: "@yearly"
+      source-cluster: absDefaultCluster
+      storage: local
+      namespaces: ["source-ns21"]
+      backup-policy: encryptedCompressedPolicy256
   noIndexesUdfsRecords:
     interval-cron: "@yearly"
     source-cluster: absDefaultCluster
