@@ -78,13 +78,13 @@ func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config, backends
 		}
 
 		// schedule full backup job for the routine
-		if err := scheduleFullBackup(scheduler, handler, routine, routineName); err != nil {
+		if err := scheduleFullBackup(scheduler, handler, routine.IntervalCron, routineName); err != nil {
 			return err
 		}
 
 		if routine.IncrIntervalCron != "" {
 			// schedule incremental backup job for the routine
-			if err := scheduleIncrementalBackup(scheduler, handler, routine, routineName); err != nil {
+			if err := scheduleIncrementalBackup(scheduler, handler, routine.IncrIntervalCron, routineName); err != nil {
 				return err
 			}
 		}
@@ -93,8 +93,8 @@ func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config, backends
 }
 
 func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
-	routine *model.BackupRoutine, routineName string) error {
-	fullCronTrigger, err := quartz.NewCronTrigger(routine.IntervalCron)
+	interval string, routineName string) error {
+	fullCronTrigger, err := quartz.NewCronTrigger(interval)
 	if err != nil {
 		return err
 	}
@@ -121,8 +121,8 @@ func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
 }
 
 func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupHandler,
-	routine *model.BackupRoutine, routineName string) error {
-	incrCronTrigger, err := quartz.NewCronTrigger(routine.IncrIntervalCron)
+	interval string, routineName string) error {
+	incrCronTrigger, err := quartz.NewCronTrigger(interval)
 	if err != nil {
 		return err
 	}
