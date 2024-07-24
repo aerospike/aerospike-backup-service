@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -197,4 +198,27 @@ func (ws *HTTPServer) scheduleFullBackup(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// @Summary  Get current backup statistics.
+// @ID       getCurrentBackup
+// @Tags     Backup
+// @Produce  json
+// @Param    name path string true "Backup routine name"
+// @Router   /v1/backups/currentBackup/{name} [get]
+// @Success  200 {object} int "Current backup statistics"
+// @Failure  404 {string} string
+func (ws *HTTPServer) getCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
+	routineName := r.PathValue("name")
+	if routineName == "" {
+		http.Error(w, "routine name required", http.StatusBadRequest)
+		return
+	}
+
+	handler := ws.handlerHolder.Handlers[routineName]
+	stat := handler.GetCurrentStat()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "%d", stat)
 }

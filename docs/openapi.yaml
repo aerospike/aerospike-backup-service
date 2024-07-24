@@ -67,6 +67,32 @@ paths:
       summary: Readiness endpoint.
       tags:
       - System
+  /v1/backups/currentBackup/{name}:
+    get:
+      operationId: getCurrentBackup
+      parameters:
+      - description: Backup routine name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: integer
+          description: Current backup statistics
+        "404":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Not Found
+      summary: Get current backup statistics.
+      tags:
+      - Backup
   /v1/backups/full:
     get:
       operationId: getFullBackups
@@ -1689,145 +1715,9 @@ components:
           format: int64
           type: integer
       type: object
-    model.RestoreNamespace:
-      description: RestoreNamespace specifies an alternative namespace name for the
-        restore operation.
-      properties:
-        destination:
-          description: Destination namespace name.
-          example: destination-ns
-          type: string
-        source:
-          description: Original namespace name.
-          example: source-ns
-          type: string
-      required:
-      - destination
-      - source
-      type: object
     model.RestorePolicy:
-      description: RestorePolicy represents a policy for the restore operation.
-      properties:
-        bandwidth:
-          description: |-
-            Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
-            in MiB/s and its database write operations to not exceed the given number of transactions
-            per second.
-          example: 50000
-          type: integer
-        batch-size:
-          description: |-
-            The max allowed number of records per an async batch write call.
-            Default is 128 with batch writes enabled, or 16 without batch writes.
-          example: 128
-          type: integer
-        bin-list:
-          description: "The bins to restore (optional, an empty list implies restoring\
-            \ all bins)."
-          example:
-          - bin1
-          - bin2
-          items:
-            type: string
-          type: array
-        compression:
-          allOf:
-          - $ref: '#/components/schemas/model.CompressionPolicy'
-          description: Compression details.
-          type: object
-        disable-batch-writes:
-          description: |-
-            Disables the use of batch writes when restoring records to the Aerospike cluster.
-            By default, the cluster is checked for batch write support.
-          type: boolean
-        encryption:
-          allOf:
-          - $ref: '#/components/schemas/model.EncryptionPolicy'
-          description: Encryption details.
-          type: object
-        max-async-batches:
-          description: The max number of outstanding async record batch write calls
-            at a time.
-          example: 32
-          type: integer
-        namespace:
-          allOf:
-          - $ref: '#/components/schemas/model.RestoreNamespace'
-          description: |-
-            Namespace details for the restore operation.
-            By default, the data is restored to the namespace from which it was taken.
-          type: object
-        no-generation:
-          description: |-
-            Records from backups take precedence. This option disables the generation check.
-            With this option, records from the backup always overwrite records that already exist in
-            the namespace, regardless of generation numbers.
-          type: boolean
-        no-indexes:
-          description: Do not restore any secondary index definitions.
-          type: boolean
-        no-records:
-          description: |-
-            Do not restore any record data (metadata or bin data).
-            By default, record data, secondary index definitions, and UDF modules
-            will be restored.
-          type: boolean
-        no-udfs:
-          description: Do not restore any UDF modules.
-          type: boolean
-        parallel:
-          description: The number of client threads to spawn for writing to the cluster.
-          example: 8
-          type: integer
-        replace:
-          description: |-
-            Replace records. This controls how records from the backup overwrite existing records in
-            the namespace. By default, restoring a record from a backup only replaces the bins
-            contained in the backup; all other bins of an existing record remain untouched.
-          type: boolean
-        set-list:
-          description: "The sets to restore (optional, an empty list implies restoring\
-            \ all sets)."
-          example:
-          - set1
-          - set2
-          items:
-            type: string
-          type: array
-        timeout:
-          description: "Timeout (ms) for Aerospike commands to write records, create\
-            \ indexes and create UDFs."
-          example: 1000
-          type: integer
-        tps:
-          description: |-
-            Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
-            in MiB/s and its database write operations to not exceed the given number of transactions
-            per second.
-          example: 4000
-          type: integer
-        unique:
-          description: |-
-            Existing records take precedence. With this option, only records that do not exist in
-            the namespace are restored, regardless of generation numbers. If a record exists in
-            the namespace, the record from the backup is ignored.
-          type: boolean
       type: object
     model.RestoreRequest:
-      description: RestoreRequest represents a restore operation request.
-      properties:
-        destination:
-          $ref: '#/components/schemas/model.AerospikeCluster'
-        policy:
-          $ref: '#/components/schemas/model.RestorePolicy'
-        secret-agent:
-          $ref: '#/components/schemas/model.SecretAgent'
-        source:
-          $ref: '#/components/schemas/model.Storage'
-      required:
-      - destination
-      - policy
-      - source
       type: object
     model.RestoreTimestampRequest:
       description: RestoreTimestampRequest represents a restore by timestamp operation
@@ -1951,7 +1841,7 @@ components:
         type:
           allOf:
           - $ref: '#/components/schemas/model.StorageType'
-          description: "The type of the storage provider (0 - Local, 1 - AWS S3)."
+          description: The type of the storage provider
           type: object
       required:
       - path

@@ -336,3 +336,18 @@ func getConfigurationPath(fullBackupsPath string, backupPolicy *model.BackupPoli
 func timeSuffix(now time.Time) string {
 	return strconv.FormatInt(now.UnixMilli(), 10)
 }
+
+func (h *BackupHandler) GetCurrentStat() int {
+	var total, done uint64
+	for _, handler := range h.handlersForNamespace {
+		done += handler.GetStats().GetRecordsReadTotal()
+		total += handler.GetStats().RecordsToBackup
+	}
+
+	if total == 0 {
+		return 0
+	}
+
+	// TODO: add more data
+	return int(100 * done / total)
+}
