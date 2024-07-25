@@ -55,6 +55,6 @@ func GetAnyHandler(m map[string]*backup.BackupHandler) *backup.BackupHandler {
 
 func calculateEstimatedEndTime(startTime time.Time, percentDone float64) time.Time {
 	elapsed := time.Since(startTime)
-	totalTime := time.Duration(float64(elapsed) * 100 / percentDone)
+	totalTime := time.Duration(float64(elapsed) / percentDone)
 	return startTime.Add(totalTime)
 }
