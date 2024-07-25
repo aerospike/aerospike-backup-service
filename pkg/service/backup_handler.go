@@ -3,12 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/backup-go"
 	"log/slog"
 	"strconv"
 	"time"
 
 	"github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
@@ -121,17 +121,25 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 	return nil
 }
 
-func (h *BackupHandler) startFullBackupForAllNamespaces(now time.Time, client *aerospike.Client) error {
+func (h *BackupHandler) startFullBackupForAllNamespaces(upperBound time.Time, client *aerospike.Client) error {
 	clear(h.fullBackupHandlersForNamespace)
 
+	options := shared.BackupOptions{}
+	if h.backupFullPolicy.IsSealed() {
+		options.ModBefore = &upperBound
+	}
+
 	for _, namespace := range h.namespaces {
-		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, now)
-		backupHandler, err := h.startBackup(client, backupFolder, now, namespace)
+		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, upperBound)
+		backupPath := h.backend.wrapWithPrefix(backupFolder)
+		handler, err := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, client,
+			h.storage, h.secretAgent, options, &namespace, backupPath)
 		if err != nil {
-			return err
+			backupFailureCounter.Inc()
+			return fmt.Errorf("could not start backup of namespace %s, routine %s: %w", namespace, h.routineName, err)
 		}
 
-		h.fullBackupHandlersForNamespace[namespace] = backupHandler
+		h.fullBackupHandlersForNamespace[namespace] = handler
 	}
 
 	return nil
@@ -153,24 +161,6 @@ func (h *BackupHandler) waitForFullBackups(ctx context.Context, now time.Time) e
 	}
 	backupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))
 	return nil
-}
-
-func (h *BackupHandler) startBackup(client *aerospike.Client, backupFolder string, upperBound time.Time, namespace string) (*backup.BackupHandler, error) {
-	h.backend.CreateFolder(backupFolder)
-	options := shared.BackupOptions{}
-	if h.backupFullPolicy.IsSealed() {
-		options.ModBefore = &upperBound
-	}
-
-	backupPath := h.backend.wrapWithPrefix(backupFolder)
-	handler, err := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, client,
-		h.storage, h.secretAgent, options, &namespace, backupPath)
-	if err != nil {
-		backupFailureCounter.Inc()
-		return nil, fmt.Errorf("could not start backup of namespace %s, routine %s: %w", namespace, h.routineName, err)
-	}
-
-	return handler, nil
 }
 
 func (h *BackupHandler) writeClusterConfiguration(now time.Time) {

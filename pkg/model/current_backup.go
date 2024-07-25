@@ -1,8 +1,9 @@
 package model
 
 import (
-	"github.com/aerospike/backup-go"
 	"time"
+
+	"github.com/aerospike/backup-go"
 )
 
 type CurrentBackups struct {
