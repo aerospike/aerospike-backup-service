@@ -332,25 +332,18 @@ func timeSuffix(now time.Time) string {
 }
 
 func (h *BackupHandler) GetCurrentStat() *model.CurrentBackup {
+	if len(h.handlersForNamespace) == 0 {
+		return nil
+	}
+
 	var total, done uint64
 	for _, handler := range h.handlersForNamespace {
 		done += handler.GetStats().GetReadRecords()
 		total += handler.GetStats().TotalRecords
 	}
 
-	if total == 0 {
-		return nil
-	}
-
-	percent := int(100 * done / total)
 	handler := GetRandomHandler(h.handlersForNamespace)
-	stats := handler.GetStats()
-
-	return &model.CurrentBackup{
-		StartTime:        stats.StartTime,
-		EstimatedEndTime: calculateEstimatedEndTime(stats.StartTime, percent),
-		PercentageDone:   percent,
-	}
+	return model.NewCurrentBackup(handler.GetStats().StartTime, done, total)
 }
 
 func GetRandomHandler(m map[string]*backup.BackupHandler) *backup.BackupHandler {
@@ -359,10 +352,4 @@ func GetRandomHandler(m map[string]*backup.BackupHandler) *backup.BackupHandler 
 	}
 
 	return nil
-}
-
-func calculateEstimatedEndTime(startTime time.Time, percentDone int) time.Time {
-	elapsed := time.Since(startTime)
-	totalTime := time.Duration(int64(elapsed) * 100 / int64(percentDone))
-	return startTime.Add(totalTime)
 }

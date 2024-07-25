@@ -119,7 +119,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Current backup statistics",
                         "schema": {
-                            "type": "integer"
+                            "$ref": "#/definitions/model.CurrentBackup"
                         }
                     },
                     "404": {
@@ -1773,6 +1773,26 @@ const docTemplate = `{
                     "description": "The username for the cluster authentication.",
                     "type": "string",
                     "example": "testUser"
+                }
+            }
+        },
+        "model.CurrentBackup": {
+            "type": "object",
+            "properties": {
+                "done_records": {
+                    "type": "integer"
+                },
+                "estimated_end_time": {
+                    "type": "string"
+                },
+                "percentage_done": {
+                    "type": "integer"
+                },
+                "start_time": {
+                    "type": "string"
+                },
+                "total_records": {
+                    "type": "integer"
                 }
             }
         },

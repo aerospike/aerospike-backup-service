@@ -107,7 +107,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "integer"
+                  "$ref" : "#/components/schemas/model.CurrentBackup"
                 }
               }
             },
@@ -1876,6 +1876,26 @@
             "description" : "The username for the cluster authentication.",
             "example" : "testUser",
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "model.CurrentBackup" : {
+        "properties" : {
+          "done_records" : {
+            "type" : "integer"
+          },
+          "estimated_end_time" : {
+            "type" : "string"
+          },
+          "percentage_done" : {
+            "type" : "integer"
+          },
+          "start_time" : {
+            "type" : "string"
+          },
+          "total_records" : {
+            "type" : "integer"
           }
         },
         "type" : "object"
