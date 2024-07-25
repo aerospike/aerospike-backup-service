@@ -35,9 +35,7 @@ type BackupHandler struct {
 }
 
 // BackupHandlerHolder stores backupHandlers by routine name
-type BackupHandlerHolder struct {
-	Handlers map[string]*BackupHandler
-}
+type BackupHandlerHolder map[string]*BackupHandler
 
 var backupService shared.Backup = shared.NewBackupGo()
 

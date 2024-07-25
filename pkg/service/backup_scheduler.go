@@ -56,7 +56,7 @@ func ApplyNewConfig(scheduler quartz.Scheduler, config *model.Config, backends B
 
 // ScheduleBackup creates a new quartz.Scheduler, schedules all the configured backup jobs,
 // starts and returns the scheduler.
-func ScheduleBackup(ctx context.Context, config *model.Config, handlers *BackupHandlerHolder,
+func ScheduleBackup(ctx context.Context, config *model.Config, handlers BackupHandlerHolder,
 ) (quartz.Scheduler, error) {
 	scheduler := quartz.NewStdScheduler()
 	scheduler.Start(ctx)
@@ -68,8 +68,8 @@ func ScheduleBackup(ctx context.Context, config *model.Config, handlers *BackupH
 	return scheduler, nil
 }
 
-func MakeHandlers(config *model.Config, backends BackendsHolder) *BackupHandlerHolder {
-	r := make(map[string]*BackupHandler)
+func MakeHandlers(config *model.Config, backends BackendsHolder) BackupHandlerHolder {
+	handlers := make(BackupHandlerHolder)
 	for routineName := range config.BackupRoutines {
 		backend, _ := backends.Get(routineName)
 		handler, err := newBackupHandler(config, routineName, backend)
@@ -77,14 +77,14 @@ func MakeHandlers(config *model.Config, backends BackendsHolder) *BackupHandlerH
 			slog.Error("failed to create backup handler", "routine", routineName, "err", err)
 			continue
 		}
-		r[routineName] = handler
+		handlers[routineName] = handler
 	}
-	return &BackupHandlerHolder{r}
+	return handlers
 }
 
-func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config, handlers *BackupHandlerHolder) error {
+func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config, handlers BackupHandlerHolder) error {
 	for routineName, routine := range config.BackupRoutines {
-		handler := handlers.Handlers[routineName]
+		handler := handlers[routineName]
 
 		// schedule full backup job for the routine
 		if err := scheduleFullBackup(scheduler, handler, routine.IntervalCron, routineName); err != nil {

@@ -214,7 +214,7 @@ func (ws *HTTPServer) getCurrentBackupInfo(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	handler, found := ws.handlerHolder.Handlers[routineName]
+	handler, found := ws.handlerHolder[routineName]
 	if !found {
 		http.Error(w, "unknown routine name "+routineName, http.StatusNotFound)
 		return

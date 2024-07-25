@@ -124,7 +124,7 @@ func runHTTPServer(ctx context.Context,
 	backends service.BackendsHolder,
 	config *model.Config,
 	scheduler quartz.Scheduler,
-	handlerHolder *service.BackupHandlerHolder,
+	handlerHolder service.BackupHandlerHolder,
 ) error {
 	httpServer := server.NewHTTPServer(backends, config, scheduler, handlerHolder)
 	go func() {

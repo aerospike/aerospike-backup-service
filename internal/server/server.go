@@ -84,7 +84,7 @@ type HTTPServer struct {
 	scheduler      quartz.Scheduler
 	restoreService service.RestoreService
 	backupBackends service.BackendsHolder
-	handlerHolder  *service.BackupHandlerHolder
+	handlerHolder  service.BackupHandlerHolder
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
@@ -92,7 +92,7 @@ func NewHTTPServer(
 	backends service.BackendsHolder,
 	config *model.Config,
 	scheduler quartz.Scheduler,
-	handlerHolder *service.BackupHandlerHolder,
+	handlerHolder service.BackupHandlerHolder,
 ) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
