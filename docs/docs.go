@@ -119,7 +119,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Current backup statistics",
                         "schema": {
-                            "$ref": "#/definitions/model.CurrentBackup"
+                            "$ref": "#/definitions/model.CurrentBackups"
                         }
                     },
                     "404": {
@@ -1793,6 +1793,17 @@ const docTemplate = `{
                 },
                 "total_records": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.CurrentBackups": {
+            "type": "object",
+            "properties": {
+                "full": {
+                    "$ref": "#/definitions/model.CurrentBackup"
+                },
+                "incremental": {
+                    "$ref": "#/definitions/model.CurrentBackup"
                 }
             }
         },

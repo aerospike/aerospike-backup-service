@@ -187,7 +187,7 @@ func (ws *HTTPServer) scheduleFullBackup(w http.ResponseWriter, r *http.Request)
 	}
 	fullBackupJobDetail := service.NewAdHocFullBackupJobForRoutine(routineName)
 	if fullBackupJobDetail == nil {
-		http.Error(w, "unknown routine name", http.StatusNotFound)
+		http.Error(w, "unknown routine name "+routineName, http.StatusNotFound)
 		return
 	}
 	trigger := quartz.NewRunOnceTrigger(time.Duration(delayMillis) * time.Millisecond)
@@ -205,7 +205,7 @@ func (ws *HTTPServer) scheduleFullBackup(w http.ResponseWriter, r *http.Request)
 // @Produce  json
 // @Param    name path string true "Backup routine name"
 // @Router   /v1/backups/currentBackup/{name} [get]
-// @Success  200 {object} model.CurrentBackup "Current backup statistics"
+// @Success  200 {object} model.CurrentBackups "Current backup statistics"
 // @Failure  404 {string} string
 func (ws *HTTPServer) getCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
@@ -214,7 +214,12 @@ func (ws *HTTPServer) getCurrentBackupInfo(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	handler := ws.handlerHolder.Handlers[routineName]
+	handler, found := ws.handlerHolder.Handlers[routineName]
+	if !found {
+		http.Error(w, "unknown routine name "+routineName, http.StatusNotFound)
+		return
+
+	}
 	stat := handler.GetCurrentStat()
 	response, err := json.Marshal(stat)
 	if err != nil {

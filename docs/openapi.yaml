@@ -82,7 +82,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/model.CurrentBackup'
+                $ref: '#/components/schemas/model.CurrentBackups'
           description: Current backup statistics
         "404":
           content:
@@ -1521,6 +1521,26 @@ components:
           type: string
         total_records:
           type: integer
+      type: object
+    model.CurrentBackups:
+      example:
+        incremental:
+          start_time: start_time
+          estimated_end_time: estimated_end_time
+          done_records: 0
+          total_records: 1
+          percentage_done: 6
+        full:
+          start_time: start_time
+          estimated_end_time: estimated_end_time
+          done_records: 0
+          total_records: 1
+          percentage_done: 6
+      properties:
+        full:
+          $ref: '#/components/schemas/model.CurrentBackup'
+        incremental:
+          $ref: '#/components/schemas/model.CurrentBackup'
       type: object
     model.EncryptionPolicy:
       description: EncryptionPolicy contains backup encryption information.
