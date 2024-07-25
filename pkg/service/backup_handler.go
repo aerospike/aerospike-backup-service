@@ -185,9 +185,9 @@ func (h *BackupHandler) writeBackupMetadata(stats *models.BackupStats,
 		From:                time.Time{},
 		Created:             created,
 		Namespace:           namespace,
-		RecordCount:         stats.GetRecordsReadTotal(),
+		RecordCount:         stats.GetReadRecords(),
 		FileCount:           stats.GetFileCount(),
-		ByteCount:           stats.GetTotalBytesWritten(),
+		ByteCount:           stats.GetBytesWritten(),
 		SecondaryIndexCount: uint64(stats.GetSIndexes()),
 		UDFCount:            uint64(stats.GetUDFs()),
 	}
@@ -272,7 +272,7 @@ func (h *BackupHandler) runIncrBackupForNamespace(client *aerospike.Client, uppe
 	}
 
 	// delete if the backup file is empty
-	if h.isBackupEmpty(handler.GetStats()) {
+	if handler.GetStats().IsEmpty() {
 		h.deleteEmptyBackup(backupFolder, h.routineName)
 	} else {
 		if err := h.writeBackupMetadata(handler.GetStats(), upperBound, namespace, backupFolder); err != nil {
@@ -280,12 +280,6 @@ func (h *BackupHandler) runIncrBackupForNamespace(client *aerospike.Client, uppe
 				"folder", backupFolder, "err", err)
 		}
 	}
-}
-
-func (h *BackupHandler) isBackupEmpty(stats *models.BackupStats) bool {
-	return stats.GetUDFs() == 0 &&
-		stats.GetSIndexes() == 0 &&
-		stats.GetRecordsReadTotal() == 0
 }
 
 func (h *BackupHandler) deleteEmptyBackup(path string, routineName string) {
@@ -337,17 +331,38 @@ func timeSuffix(now time.Time) string {
 	return strconv.FormatInt(now.UnixMilli(), 10)
 }
 
-func (h *BackupHandler) GetCurrentStat() int {
+func (h *BackupHandler) GetCurrentStat() *model.CurrentBackup {
 	var total, done uint64
 	for _, handler := range h.handlersForNamespace {
-		done += handler.GetStats().GetRecordsReadTotal()
-		total += handler.GetStats().RecordsToBackup
+		done += handler.GetStats().GetReadRecords()
+		total += handler.GetStats().TotalRecords
 	}
 
 	if total == 0 {
-		return 0
+		return nil
 	}
 
-	// TODO: add more data
-	return int(100 * done / total)
+	percent := int(100 * done / total)
+	handler := GetRandomHandler(h.handlersForNamespace)
+	stats := handler.GetStats()
+
+	return &model.CurrentBackup{
+		StartTime:        stats.StartTime,
+		EstimatedEndTime: calculateEstimatedEndTime(stats.StartTime, percent),
+		PercentageDone:   percent,
+	}
+}
+
+func GetRandomHandler(m map[string]*backup.BackupHandler) *backup.BackupHandler {
+	for _, value := range m {
+		return value
+	}
+
+	return nil
+}
+
+func calculateEstimatedEndTime(startTime time.Time, percentDone int) time.Time {
+	elapsed := time.Since(startTime)
+	totalTime := time.Duration(int64(elapsed) * 100 / int64(percentDone))
+	return startTime.Add(totalTime)
 }
