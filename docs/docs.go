@@ -2067,11 +2067,158 @@ const docTemplate = `{
                 }
             }
         },
+        "model.RestoreNamespace": {
+            "description": "RestoreNamespace specifies an alternative namespace name for the restore operation.",
+            "type": "object",
+            "required": [
+                "destination",
+                "source"
+            ],
+            "properties": {
+                "destination": {
+                    "description": "Destination namespace name.",
+                    "type": "string",
+                    "example": "destination-ns"
+                },
+                "source": {
+                    "description": "Original namespace name.",
+                    "type": "string",
+                    "example": "source-ns"
+                }
+            }
+        },
         "model.RestorePolicy": {
-            "type": "object"
+            "description": "RestorePolicy represents a policy for the restore operation.",
+            "type": "object",
+            "properties": {
+                "bandwidth": {
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
+                    "type": "integer",
+                    "example": 50000
+                },
+                "batch-size": {
+                    "description": "The max allowed number of records per an async batch write call.\nDefault is 128 with batch writes enabled, or 16 without batch writes.",
+                    "type": "integer",
+                    "example": 128
+                },
+                "bin-list": {
+                    "description": "The bins to restore (optional, an empty list implies restoring all bins).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "bin1",
+                        "bin2"
+                    ]
+                },
+                "compression": {
+                    "description": "Compression details.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.CompressionPolicy"
+                        }
+                    ]
+                },
+                "disable-batch-writes": {
+                    "description": "Disables the use of batch writes when restoring records to the Aerospike cluster.\nBy default, the cluster is checked for batch write support.",
+                    "type": "boolean"
+                },
+                "encryption": {
+                    "description": "Encryption details.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.EncryptionPolicy"
+                        }
+                    ]
+                },
+                "max-async-batches": {
+                    "description": "The max number of outstanding async record batch write calls at a time.",
+                    "type": "integer",
+                    "example": 32
+                },
+                "namespace": {
+                    "description": "Namespace details for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.RestoreNamespace"
+                        }
+                    ]
+                },
+                "no-generation": {
+                    "description": "Records from backups take precedence. This option disables the generation check.\nWith this option, records from the backup always overwrite records that already exist in\nthe namespace, regardless of generation numbers.",
+                    "type": "boolean"
+                },
+                "no-indexes": {
+                    "description": "Do not restore any secondary index definitions.",
+                    "type": "boolean"
+                },
+                "no-records": {
+                    "description": "Do not restore any record data (metadata or bin data).\nBy default, record data, secondary index definitions, and UDF modules\nwill be restored.",
+                    "type": "boolean"
+                },
+                "no-udfs": {
+                    "description": "Do not restore any UDF modules.",
+                    "type": "boolean"
+                },
+                "parallel": {
+                    "description": "The number of client threads to spawn for writing to the cluster.",
+                    "type": "integer",
+                    "example": 8
+                },
+                "replace": {
+                    "description": "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
+                    "type": "boolean"
+                },
+                "set-list": {
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "set1",
+                        "set2"
+                    ]
+                },
+                "timeout": {
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.",
+                    "type": "integer",
+                    "example": 1000
+                },
+                "tps": {
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
+                    "type": "integer",
+                    "example": 4000
+                },
+                "unique": {
+                    "description": "Existing records take precedence. With this option, only records that do not exist in\nthe namespace are restored, regardless of generation numbers. If a record exists in\nthe namespace, the record from the backup is ignored.",
+                    "type": "boolean"
+                }
+            }
         },
         "model.RestoreRequest": {
-            "type": "object"
+            "description": "RestoreRequest represents a restore operation request.",
+            "type": "object",
+            "required": [
+                "destination",
+                "policy",
+                "source"
+            ],
+            "properties": {
+                "destination": {
+                    "$ref": "#/definitions/model.AerospikeCluster"
+                },
+                "policy": {
+                    "$ref": "#/definitions/model.RestorePolicy"
+                },
+                "secret-agent": {
+                    "$ref": "#/definitions/model.SecretAgent"
+                },
+                "source": {
+                    "$ref": "#/definitions/model.Storage"
+                }
+            }
         },
         "model.RestoreTimestampRequest": {
             "description": "RestoreTimestampRequest represents a restore by timestamp operation request.",

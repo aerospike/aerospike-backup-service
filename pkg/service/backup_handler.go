@@ -72,6 +72,7 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 		state:                          backupBackend.readState(),
 		retry:                          NewRetryService(routineName),
 		fullBackupHandlersForNamespace: make(map[string]*backup.BackupHandler),
+		incrBackupHandlersForNamespace: make(map[string]*backup.BackupHandler),
 	}, nil
 }
 

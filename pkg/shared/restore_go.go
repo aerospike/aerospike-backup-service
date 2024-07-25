@@ -74,7 +74,12 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 		config.NoUDFs = true
 	}
 
-	config.Namespace = restoreRequest.Policy.Namespace
+	if restoreRequest.Policy.Namespace != nil {
+		config.Namespace = &models.RestoreNamespace{
+			Source:      restoreRequest.Policy.Namespace.Source,
+			Destination: restoreRequest.Policy.Namespace.Destination,
+		}
+	}
 
 	if restoreRequest.Policy.Parallel != nil {
 		config.Parallel = int(*restoreRequest.Policy.Parallel)
