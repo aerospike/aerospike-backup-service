@@ -12,11 +12,11 @@ type CurrentBackups struct {
 }
 
 type CurrentBackup struct {
-	TotalRecords     uint64    `json:"total_records,omitempty"`
-	DoneRecords      uint64    `json:"done_records,omitempty"`
-	StartTime        time.Time `json:"start_time,omitempty"`
-	PercentageDone   int       `json:"percentage_done,omitempty"`
-	EstimatedEndTime time.Time `json:"estimated_end_time,omitempty"`
+	TotalRecords     uint64     `json:"total_records,omitempty"`
+	DoneRecords      uint64     `json:"done_records,omitempty"`
+	StartTime        time.Time  `json:"start_time,omitempty"`
+	PercentageDone   int        `json:"percentage_done,omitempty"`
+	EstimatedEndTime *time.Time `json:"estimated_end_time,omitempty"`
 }
 
 func NewCurrentBackup(handlers map[string]*backup.BackupHandler) *CurrentBackup {
@@ -53,8 +53,13 @@ func GetAnyHandler(m map[string]*backup.BackupHandler) *backup.BackupHandler {
 	return nil
 }
 
-func calculateEstimatedEndTime(startTime time.Time, percentDone float64) time.Time {
+func calculateEstimatedEndTime(startTime time.Time, percentDone float64) *time.Time {
+	if percentDone < 0.01 { // too early to calculate estimation, or zero done yet.
+		return nil
+	}
+
 	elapsed := time.Since(startTime)
 	totalTime := time.Duration(float64(elapsed) / percentDone)
-	return startTime.Add(totalTime)
+	result := startTime.Add(totalTime)
+	return &result
 }
