@@ -17,19 +17,21 @@ import (
 
 // BackupHandler implements backup logic for single routine.
 type BackupHandler struct {
-	backend                        *BackupBackend
-	backupFullPolicy               *model.BackupPolicy
-	backupIncrPolicy               *model.BackupPolicy
-	backupRoutine                  *model.BackupRoutine
-	routineName                    string
-	namespaces                     []string
-	cluster                        *model.AerospikeCluster
-	storage                        *model.Storage
-	secretAgent                    *model.SecretAgent
-	state                          *model.BackupState
-	retry                          *RetryService
-	fullBackupHandlersForNamespace map[string]*backup.BackupHandler
-	incrBackupHandlersForNamespace map[string]*backup.BackupHandler
+	backend          *BackupBackend
+	backupFullPolicy *model.BackupPolicy
+	backupIncrPolicy *model.BackupPolicy
+	backupRoutine    *model.BackupRoutine
+	routineName      string
+	namespaces       []string
+	cluster          *model.AerospikeCluster
+	storage          *model.Storage
+	secretAgent      *model.SecretAgent
+	state            *model.BackupState
+	retry            *RetryService
+
+	// backup handlers by namespace
+	fullBackupHandlers map[string]*backup.BackupHandler
+	incrBackupHandlers map[string]*backup.BackupHandler
 }
 
 // BackupHandlerHolder stores backupHandlers by routine name
@@ -60,19 +62,19 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 	}
 
 	return &BackupHandler{
-		backend:                        backupBackend,
-		backupRoutine:                  backupRoutine,
-		backupFullPolicy:               backupPolicy,
-		backupIncrPolicy:               backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
-		routineName:                    routineName,
-		namespaces:                     namespaces,
-		cluster:                        cluster,
-		storage:                        storage,
-		secretAgent:                    secretAgent,
-		state:                          backupBackend.readState(),
-		retry:                          NewRetryService(routineName),
-		fullBackupHandlersForNamespace: make(map[string]*backup.BackupHandler),
-		incrBackupHandlersForNamespace: make(map[string]*backup.BackupHandler),
+		backend:            backupBackend,
+		backupRoutine:      backupRoutine,
+		backupFullPolicy:   backupPolicy,
+		backupIncrPolicy:   backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
+		routineName:        routineName,
+		namespaces:         namespaces,
+		cluster:            cluster,
+		storage:            storage,
+		secretAgent:        secretAgent,
+		state:              backupBackend.readState(),
+		retry:              NewRetryService(routineName),
+		fullBackupHandlers: make(map[string]*backup.BackupHandler),
+		incrBackupHandlers: make(map[string]*backup.BackupHandler),
 	}, nil
 }
 
@@ -102,7 +104,7 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 		h.backend.FullBackupInProgress().Store(false)
 		slog.Debug("Release fullBackupInProgress lock", "name", h.routineName)
 		client.Close()
-		clear(h.fullBackupHandlersForNamespace)
+		clear(h.fullBackupHandlers)
 	}()
 
 	err = h.startFullBackupForAllNamespaces(now, client)
@@ -128,7 +130,7 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 }
 
 func (h *BackupHandler) startFullBackupForAllNamespaces(upperBound time.Time, client *aerospike.Client) error {
-	clear(h.fullBackupHandlersForNamespace)
+	clear(h.fullBackupHandlers)
 
 	options := shared.BackupOptions{}
 	if h.backupFullPolicy.IsSealed() {
@@ -145,7 +147,7 @@ func (h *BackupHandler) startFullBackupForAllNamespaces(upperBound time.Time, cl
 			return fmt.Errorf("could not start backup of namespace %s, routine %s: %w", namespace, h.routineName, err)
 		}
 
-		h.fullBackupHandlersForNamespace[namespace] = handler
+		h.fullBackupHandlers[namespace] = handler
 	}
 
 	return nil
@@ -153,7 +155,7 @@ func (h *BackupHandler) startFullBackupForAllNamespaces(upperBound time.Time, cl
 
 func (h *BackupHandler) waitForFullBackups(ctx context.Context, now time.Time) error {
 	startTime := time.Now()
-	for namespace, handler := range h.fullBackupHandlersForNamespace {
+	for namespace, handler := range h.fullBackupHandlers {
 		err := handler.Wait(ctx)
 		if err != nil {
 			backupFailureCounter.Inc()
@@ -232,7 +234,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 			"name", h.routineName)
 		return
 	}
-	if len(h.incrBackupHandlersForNamespace) > 0 {
+	if len(h.incrBackupHandlers) > 0 {
 		slog.Debug("Incremental backup is currently in progress, skipping incremental backup",
 			"name", h.routineName)
 		return
@@ -244,7 +246,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 	}
 	defer func() {
 		client.Close()
-		clear(h.incrBackupHandlersForNamespace)
+		clear(h.incrBackupHandlers)
 	}()
 
 	h.startIncrementalBackupForAllNamespaces(client, now)
@@ -266,7 +268,7 @@ func (h *BackupHandler) startIncrementalBackupForAllNamespaces(client *aerospike
 		options.ModBefore = &upperBound
 	}
 
-	clear(h.incrBackupHandlersForNamespace)
+	clear(h.incrBackupHandlers)
 	for _, namespace := range h.namespaces {
 		backupFolder := getIncrementalPath(h.backend.incrementalBackupsPath, namespace, upperBound)
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
@@ -276,13 +278,13 @@ func (h *BackupHandler) startIncrementalBackupForAllNamespaces(client *aerospike
 			incrBackupFailureCounter.Inc()
 			slog.Warn("could not start backup", "namespace", namespace, "routine", h.routineName, "err", err)
 		}
-		h.incrBackupHandlersForNamespace[namespace] = handler
+		h.incrBackupHandlers[namespace] = handler
 	}
 }
 
 func (h *BackupHandler) waitForIncrementalBackups(ctx context.Context, upperBound time.Time) {
 	started := time.Now()
-	for namespace, handler := range h.incrBackupHandlersForNamespace {
+	for namespace, handler := range h.incrBackupHandlers {
 		err := handler.Wait(ctx)
 		if err != nil {
 			slog.Warn("Failed incremental backup", "name", h.routineName, "err", err)
@@ -355,7 +357,7 @@ func timeSuffix(now time.Time) string {
 
 func (h *BackupHandler) GetCurrentStat() *model.CurrentBackups {
 	return &model.CurrentBackups{
-		Full:        model.NewCurrentBackup(h.fullBackupHandlersForNamespace),
-		Incremental: model.NewCurrentBackup(h.incrBackupHandlersForNamespace),
+		Full:        model.NewCurrentBackup(h.fullBackupHandlers),
+		Incremental: model.NewCurrentBackup(h.incrBackupHandlers),
 	}
 }
