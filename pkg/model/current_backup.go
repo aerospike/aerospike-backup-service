@@ -1,6 +1,14 @@
 package model
 
-import "time"
+import (
+	"github.com/aerospike/backup-go"
+	"time"
+)
+
+type CurrentBackups struct {
+	Full        *CurrentBackup `json:"full,omitempty"`
+	Incremental *CurrentBackup `json:"incremental,omitempty"`
+}
 
 type CurrentBackup struct {
 	TotalRecords     uint64    `json:"total_records,omitempty"`
@@ -10,12 +18,22 @@ type CurrentBackup struct {
 	EstimatedEndTime time.Time `json:"estimated_end_time,omitempty"`
 }
 
-func NewCurrentBackup(startTime time.Time, done, total uint64) *CurrentBackup {
-	if total == 0 {
+func NewCurrentBackup(handlers map[string]*backup.BackupHandler) *CurrentBackup {
+	if len(handlers) == 0 {
 		return nil
 	}
 
+	var total, done uint64
+	for _, handler := range handlers {
+		done += handler.GetStats().GetReadRecords()
+		total += handler.GetStats().TotalRecords
+	}
+	if total == 0 {
+		return nil
+	}
 	percent := float64(done) / float64(total)
+
+	startTime := GetAnyHandler(handlers).GetStats().StartTime
 
 	return &CurrentBackup{
 		TotalRecords:     total,
@@ -24,6 +42,14 @@ func NewCurrentBackup(startTime time.Time, done, total uint64) *CurrentBackup {
 		PercentageDone:   int(percent * 100),
 		EstimatedEndTime: calculateEstimatedEndTime(startTime, percent),
 	}
+}
+
+func GetAnyHandler(m map[string]*backup.BackupHandler) *backup.BackupHandler {
+	for _, value := range m {
+		return value
+	}
+
+	return nil
 }
 
 func calculateEstimatedEndTime(startTime time.Time, percentDone float64) time.Time {
