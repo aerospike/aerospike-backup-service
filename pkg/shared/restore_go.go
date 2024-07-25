@@ -150,7 +150,8 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	}
 }
 
-func getReader(ctx context.Context, path *string, storage *model.Storage, decoder encoding.DecoderFactory) (backup.StreamingReader, error) {
+func getReader(ctx context.Context, path *string, storage *model.Storage, decoder encoding.DecoderFactory,
+) (backup.StreamingReader, error) {
 	switch storage.Type {
 	case model.Local:
 		return local.NewDirectoryStreamingReader(*path, decoder)

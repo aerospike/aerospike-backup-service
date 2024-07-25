@@ -70,7 +70,7 @@ func ScheduleBackup(ctx context.Context, config *model.Config, handlers *BackupH
 
 func MakeHandlers(config *model.Config, backends BackendsHolder) *BackupHandlerHolder {
 	r := make(map[string]*BackupHandler)
-	for routineName, _ := range config.BackupRoutines {
+	for routineName := range config.BackupRoutines {
 		backend, _ := backends.Get(routineName)
 		handler, err := newBackupHandler(config, routineName, backend)
 		if err != nil {

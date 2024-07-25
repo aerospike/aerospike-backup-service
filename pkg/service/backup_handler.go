@@ -243,6 +243,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 
 	h.startIncrementalBackupForAllNamespaces(client, now)
 
+	h.waitForIncrementalBackups(context.TODO(), now)
 	// increment incrBackupCounter metric
 	incrBackupCounter.Inc()
 
