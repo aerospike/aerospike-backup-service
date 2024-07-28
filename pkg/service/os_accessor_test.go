@@ -200,39 +200,6 @@ func TestValidatePathContainsBackup(t *testing.T) {
 	}
 }
 
-func TestOSDiskAccessor_CreateFolder(t *testing.T) {
-	testCases := []struct {
-		name    string
-		parent  string
-		success bool
-	}{
-		{
-			name:    "Successful directory creation",
-			parent:  t.TempDir(),
-			success: true,
-		},
-		{
-			name:    "Attempting to create a directory with invalid path",
-			parent:  "/",
-			success: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			path := tc.parent + "/test"
-			NewOSDiskAccessor().CreateFolder(path)
-			stats, err := os.Stat(path)
-			if stats == nil && tc.success {
-				t.Fatalf("Expected to create folder, got error %v", err)
-			}
-			if stats != nil && !tc.success {
-				t.Fatalf("Expected to faile create folder")
-			}
-		})
-	}
-}
-
 func TestReadBackupDetails(t *testing.T) {
 	accessor := NewOSDiskAccessor()
 

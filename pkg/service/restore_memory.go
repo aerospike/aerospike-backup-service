@@ -58,7 +58,7 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 	if !found {
 		return 0, fmt.Errorf("backend '%s' not found for restore", request.Routine)
 	}
-	fullBackups, err := r.findLastFullBackup(reader, request.Time)
+	fullBackups, err := r.findLastFullBackup(reader, time.UnixMilli(request.Time))
 	if err != nil {
 		return 0, fmt.Errorf("last full backup not found: %v", err)
 	}
@@ -98,7 +98,7 @@ func (r *RestoreMemory) restoreNamespace(
 	r.restoreJobs.increaseStats(jobID, result)
 
 	incrementalBackups, err := r.findIncrementalBackupsForNamespace(
-		backend, fullBackup.Created.UnixMilli(), request.Time, fullBackup.Namespace)
+		backend, fullBackup.Created, time.UnixMilli(request.Time), fullBackup.Namespace)
 	if err != nil {
 		return fmt.Errorf("could not find incremental backups for namespace %s: %v", fullBackup.Namespace, err)
 	}
@@ -133,20 +133,16 @@ func (r *RestoreMemory) restoreFromPath(
 
 func (r *RestoreMemory) findLastFullBackup(
 	backend BackupListReader,
-	toTimeMillis int64,
+	toTime time.Time,
 ) ([]model.BackupDetails, error) {
-	to, err := model.NewTimeBoundsTo(toTimeMillis)
-	if err != nil {
-		return nil, err
-	}
-	fullBackupList, err := backend.FullBackupList(to)
+	fullBackupList, err := backend.FullBackupList(model.NewTimeBoundsTo(toTime))
 	if err != nil {
 		return nil, fmt.Errorf("cannot read full backup list: %v", err)
 	}
 
-	fullBackup := latestFullBackupBeforeTime(fullBackupList, time.UnixMilli(toTimeMillis)) // it's a list of namespaces
+	fullBackup := latestFullBackupBeforeTime(fullBackupList, toTime) // it's a list of namespaces
 	if len(fullBackup) == 0 {
-		return nil, fmt.Errorf("no full backup found at %d", toTimeMillis)
+		return nil, fmt.Errorf("no full backup found at %s", toTime)
 	}
 	return fullBackup, nil
 }
@@ -172,7 +168,7 @@ func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound tim
 }
 
 func (r *RestoreMemory) findIncrementalBackupsForNamespace(
-	backend BackupListReader, from, to int64, namespace string) ([]model.BackupDetails, error) {
+	backend BackupListReader, from, to time.Time, namespace string) ([]model.BackupDetails, error) {
 	bounds, err := model.NewTimeBounds(&from, &to)
 	if err != nil {
 		return nil, err
@@ -195,12 +191,12 @@ func (r *RestoreMemory) findIncrementalBackupsForNamespace(
 	return filteredIncrementalBackups, nil
 }
 
-func (r *RestoreMemory) RetrieveConfiguration(routine string, toTimeMillis int64) ([]byte, error) {
+func (r *RestoreMemory) RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error) {
 	backend, found := r.backends.GetReader(routine)
 	if !found {
 		return nil, fmt.Errorf("backend '%s' not found for restore", routine)
 	}
-	fullBackups, err := r.findLastFullBackup(backend, toTimeMillis)
+	fullBackups, err := r.findLastFullBackup(backend, toTime)
 	if err != nil || len(fullBackups) == 0 {
 		return nil, fmt.Errorf("last full backup not found: %v", err)
 	}

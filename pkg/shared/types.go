@@ -2,18 +2,11 @@ package shared
 
 import (
 	"context"
-	"time"
 
 	"github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
 )
-
-// BackupOptions provides additional properties for running a backup.
-type BackupOptions struct {
-	ModBefore *time.Time
-	ModAfter  *time.Time
-}
 
 // Backup represents a backup service.
 type Backup interface {
@@ -23,7 +16,7 @@ type Backup interface {
 		client *aerospike.Client,
 		storage *model.Storage,
 		secretAgent *model.SecretAgent,
-		opts BackupOptions,
+		timebounds model.TimeBounds,
 		namespace *string,
 		path *string,
 	) (*backup.BackupHandler, error)
