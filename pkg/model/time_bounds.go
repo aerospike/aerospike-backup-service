@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -50,11 +51,14 @@ func parseTimestamp(value string) (*time.Time, error) {
 	if len(value) == 0 {
 		return nil, nil
 	}
-	i, err := strconv.ParseInt(value, 10, 64)
+	intValue, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	result := time.UnixMilli(i)
+	if intValue < 0 {
+		return nil, fmt.Errorf("timestamp should be positive or zero, got %d", intValue)
+	}
+	result := time.UnixMilli(intValue)
 	return &result, nil
 }
 
