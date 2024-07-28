@@ -51,8 +51,12 @@ func (state *BackupState) SetLastIncrRun(time time.Time) {
 	state.LastIncrRun = time
 }
 
-func (state *BackupState) LastRunEpoch() int64 {
+func (state *BackupState) LastRun() time.Time {
 	state.Lock()
 	defer state.Unlock()
-	return max(state.LastIncrRun.UnixNano(), state.LastFullRun.UnixNano())
+	if state.LastIncrRun.After(state.LastFullRun) {
+		return state.LastIncrRun
+	}
+
+	return state.LastFullRun
 }
