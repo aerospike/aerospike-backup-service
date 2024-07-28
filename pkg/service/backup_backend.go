@@ -125,7 +125,7 @@ func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache 
 				slog.Debug("Cannot read backup details", "err", err)
 				continue
 			}
-			if timebounds.Contains(details.Created.UnixMilli()) {
+			if timebounds.Contains(details.Created) {
 				backupDetails = append(backupDetails, details)
 			}
 		}
