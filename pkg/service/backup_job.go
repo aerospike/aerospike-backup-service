@@ -20,14 +20,14 @@ type backupJob struct {
 var _ quartz.Job = (*backupJob)(nil)
 
 // Execute is called by a Scheduler when the Trigger associated with this job fires.
-func (j *backupJob) Execute(_ context.Context) error {
+func (j *backupJob) Execute(ctx context.Context) error {
 	if j.isRunning.CompareAndSwap(false, true) {
 		defer j.isRunning.Store(false)
 		switch j.jobType {
 		case quartzGroupBackupFull:
-			j.handler.runFullBackup(time.Now())
+			j.handler.runFullBackup(ctx, time.Now())
 		case quartzGroupBackupIncremental:
-			j.handler.runIncrementalBackup(time.Now())
+			j.handler.runIncrementalBackup(ctx, time.Now())
 		default:
 			slog.Error("Unsupported backup type",
 				"type", j.jobType,

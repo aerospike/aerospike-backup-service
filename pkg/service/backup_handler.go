@@ -76,15 +76,15 @@ func newBackupHandler(config *model.Config, routineName string, backupBackend *B
 	}, nil
 }
 
-func (h *BackupHandler) runFullBackup(now time.Time) {
+func (h *BackupHandler) runFullBackup(ctx context.Context, now time.Time) {
 	h.retry.retry(
-		func() error { return h.runFullBackupInternal(now) },
+		func() error { return h.runFullBackupInternal(ctx, now) },
 		time.Duration(h.backupFullPolicy.GetRetryDelayOrDefault())*time.Millisecond,
 		h.backupFullPolicy.GetMaxRetriesOrDefault(),
 	)
 }
 
-func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
+func (h *BackupHandler) runFullBackupInternal(ctx context.Context, now time.Time) error {
 	var err error
 	if !h.backend.FullBackupInProgress().CompareAndSwap(false, true) {
 		slog.Info("Full backup is currently in progress, skipping full backup", "name", h.routineName)
@@ -110,7 +110,7 @@ func (h *BackupHandler) runFullBackupInternal(now time.Time) error {
 		return err
 	}
 
-	err = h.waitForFullBackups(context.TODO(), now)
+	err = h.waitForFullBackups(ctx, now)
 	if err != nil {
 		return err
 	}
@@ -221,7 +221,7 @@ func (h *BackupHandler) cleanIncrementalBackups() {
 	}
 }
 
-func (h *BackupHandler) runIncrementalBackup(now time.Time) {
+func (h *BackupHandler) runIncrementalBackup(ctx context.Context, now time.Time) {
 	if h.state.LastFullRunIsEmpty() {
 		slog.Debug("Skip incremental backup until initial full backup is done",
 			"name", h.routineName)
@@ -249,7 +249,7 @@ func (h *BackupHandler) runIncrementalBackup(now time.Time) {
 
 	h.startIncrementalBackupForAllNamespaces(client, now)
 
-	h.waitForIncrementalBackups(context.TODO(), now)
+	h.waitForIncrementalBackups(ctx, now)
 	// increment incrBackupCounter metric
 	incrBackupCounter.Inc()
 
