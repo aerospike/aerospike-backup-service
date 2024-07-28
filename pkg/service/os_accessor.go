@@ -111,18 +111,6 @@ func (o *OSDiskAccessor) lsFiles(path string) ([]string, error) {
 	return files, nil
 }
 
-func (o *OSDiskAccessor) CreateFolder(path string) {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		if err = os.MkdirAll(path, 0744); err != nil {
-			slog.Warn("Error creating backup directory", "path", path, "err", err)
-		}
-	}
-	if err = os.Chmod(path, 0744); err != nil {
-		slog.Warn("Failed to Chmod backup directory", "path", path, "err", err)
-	}
-}
-
 func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
 	slog.Debug("Delete folder", "path", pathToDelete)
 	err := os.RemoveAll(pathToDelete)
