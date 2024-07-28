@@ -15,6 +15,7 @@ import (
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/aerospike/backup/pkg/shared"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
@@ -78,6 +79,8 @@ func run() int {
 		}
 		// run HTTP server
 		err = runHTTPServer(ctx, backends, config, scheduler, handlers)
+		// shutdown shared resources
+		shared.Shutdown()
 		// stop the scheduler
 		scheduler.Stop()
 		return err

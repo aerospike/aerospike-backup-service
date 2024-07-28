@@ -350,31 +350,31 @@ func Test_RetrieveConfiguration(t *testing.T) {
 	tests := []struct {
 		name      string
 		routine   string
-		timestamp time.Time
+		timestamp int64
 		wantErr   bool
 	}{
 		{
 			name:      "normal",
 			routine:   "routine",
-			timestamp: time.UnixMilli(10),
+			timestamp: 10,
 			wantErr:   false,
 		},
 		{
 			name:      "wrong time",
 			routine:   "routine",
-			timestamp: time.UnixMilli(1),
+			timestamp: 1,
 			wantErr:   true,
 		},
 		{
 			name:      "wrong routine",
 			routine:   "routine_fail_read",
-			timestamp: time.UnixMilli(10),
+			timestamp: 10,
 			wantErr:   true,
 		},
 		{
 			name:      "routine not found",
 			routine:   "routine not found",
-			timestamp: time.UnixMilli(10),
+			timestamp: 10,
 			wantErr:   true,
 		},
 	}

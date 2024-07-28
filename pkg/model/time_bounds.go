@@ -3,37 +3,35 @@ package model
 import (
 	"errors"
 	"strconv"
-	"time"
 )
 
 // TimeBounds represents a period of time between two timestamps.
 type TimeBounds struct {
-	FromTime *time.Time
-	ToTime   *time.Time
+	FromTime *int64
+	ToTime   *int64
 }
 
 // NewTimeBounds creates a new TimeBounds using provided fromTime and toTime values.
-func NewTimeBounds(fromTime, toTime *time.Time) (*TimeBounds, error) {
-	if fromTime != nil && toTime != nil && fromTime.After(*toTime) {
-		return nil, errors.New("fromTime should be before toTime")
+func NewTimeBounds(fromTime, toTime *int64) (*TimeBounds, error) {
+	if fromTime != nil && *fromTime < 0 {
+		return nil, errors.New("fromTime should be positive or zero")
+	}
+	if toTime != nil && *toTime <= 0 {
+		return nil, errors.New("toTime should be positive")
+	}
+	if fromTime != nil && toTime != nil && *fromTime >= *toTime {
+		return nil, errors.New("fromTime should be less than toTime")
 	}
 	return &TimeBounds{FromTime: fromTime, ToTime: toTime}, nil
 }
 
 // NewTimeBoundsTo creates a new TimeBounds until the provided toTime.
-func NewTimeBoundsTo(toTime time.Time) *TimeBounds {
-	timeBounds, _ := NewTimeBounds(nil, &toTime) // validation only make sense with two parameters.
-	return timeBounds
-}
-
-// NewTimeBoundsFrom creates a new TimeBounds from the provided fromTime.
-func NewTimeBoundsFrom(fromTime time.Time) *TimeBounds {
-	timeBounds, _ := NewTimeBounds(&fromTime, nil) // validation only makes sense with two parameters.
-	return timeBounds
+func NewTimeBoundsTo(toTime int64) (*TimeBounds, error) {
+	return NewTimeBounds(nil, &toTime)
 }
 
 // NewTimeBoundsFromString creates a TimeBounds from the string representation of
-// time boundaries (string is given as epoch time millis).
+// time boundaries.
 func NewTimeBoundsFromString(from, to string) (*TimeBounds, error) {
 	fromTime, err := parseTimestamp(from)
 	if err != nil {
@@ -46,7 +44,7 @@ func NewTimeBoundsFromString(from, to string) (*TimeBounds, error) {
 	return NewTimeBounds(fromTime, toTime)
 }
 
-func parseTimestamp(value string) (*time.Time, error) {
+func parseTimestamp(value string) (*int64, error) {
 	if len(value) == 0 {
 		return nil, nil
 	}
@@ -54,19 +52,16 @@ func parseTimestamp(value string) (*time.Time, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := time.UnixMilli(i)
-	return &result, nil
+	return &i, nil
 }
 
 // Contains verifies if the given value lies within FromTime (inclusive) and ToTime (exclusive).
-func (tb *TimeBounds) Contains(value time.Time) bool {
-	if tb.FromTime != nil && value.Before(*tb.FromTime) {
+func (tb *TimeBounds) Contains(value int64) bool {
+	if tb.FromTime != nil && value < *tb.FromTime {
 		return false
 	}
-
-	if tb.ToTime != nil && value.After(*tb.ToTime) {
+	if tb.ToTime != nil && value >= *tb.ToTime {
 		return false
 	}
-
 	return true
 }

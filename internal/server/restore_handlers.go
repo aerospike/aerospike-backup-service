@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 )
@@ -198,7 +197,7 @@ func (ws *HTTPServer) retrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf, err := ws.restoreService.RetrieveConfiguration(name, time.UnixMilli(timestamp))
+	buf, err := ws.restoreService.RetrieveConfiguration(name, timestamp)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

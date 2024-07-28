@@ -1,8 +1,6 @@
 package service
 
 import (
-	"time"
-
 	"github.com/aerospike/backup/pkg/model"
 )
 
@@ -19,5 +17,5 @@ type RestoreService interface {
 	JobStatus(jobID int) (*model.RestoreJobStatus, error)
 
 	// RetrieveConfiguration return backed up Aerospike configuration.
-	RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error)
+	RetrieveConfiguration(routine string, toTimeMillis int64) ([]byte, error)
 }

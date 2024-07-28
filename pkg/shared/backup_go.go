@@ -30,7 +30,7 @@ func NewBackupGo() *BackupGo {
 //nolint:funlen,gocritic
 func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	client *a.Client, storage *model.Storage, _ *model.SecretAgent,
-	timebounds model.TimeBounds, namespace *string, path *string) (*backup.BackupHandler, error) {
+	opts BackupOptions, namespace *string, path *string) (*backup.BackupHandler, error) {
 
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
@@ -66,8 +66,8 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		config.RecordsPerSecond = int(*backupPolicy.RecordsPerSecond)
 	}
 
-	config.ModBefore = timebounds.ToTime
-	config.ModAfter = timebounds.FromTime
+	config.ModBefore = opts.ModBefore
+	config.ModAfter = opts.ModAfter
 
 	config.ScanPolicy = a.NewScanPolicy()
 	if backupPolicy.MaxRecords != nil {
