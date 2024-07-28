@@ -205,6 +205,7 @@ func (ws *HTTPServer) Start() {
 	// Schedules a full backup operation
 	mux.HandleFunc(ws.api("/backups/schedule/{name}"), ws.scheduleFullBackup)
 
+	// Get information on currently running backups
 	mux.HandleFunc(ws.api("/backups/currentBackup/{name}"), ws.getCurrentBackupInfo)
 
 	ws.server.Handler = ws.rateLimiterMiddleware(mux)

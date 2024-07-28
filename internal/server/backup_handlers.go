@@ -218,8 +218,8 @@ func (ws *HTTPServer) getCurrentBackupInfo(w http.ResponseWriter, r *http.Reques
 	if !found {
 		http.Error(w, "unknown routine name "+routineName, http.StatusNotFound)
 		return
-
 	}
+
 	stat := handler.GetCurrentStat()
 	response, err := json.Marshal(stat)
 	if err != nil {
