@@ -1,6 +1,8 @@
 package shared
 
 import (
+	"context"
+
 	"github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
@@ -8,7 +10,8 @@ import (
 
 // Backup represents a backup service.
 type Backup interface {
-	BackupRun(backupRoutine *model.BackupRoutine,
+	BackupRun(ctx context.Context,
+		backupRoutine *model.BackupRoutine,
 		backupPolicy *model.BackupPolicy,
 		client *aerospike.Client,
 		storage *model.Storage,
@@ -21,5 +24,5 @@ type Backup interface {
 
 // Restore represents a restore service.
 type Restore interface {
-	RestoreRun(restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error)
+	RestoreRun(ctx context.Context, restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error)
 }

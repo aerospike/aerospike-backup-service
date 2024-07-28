@@ -28,7 +28,7 @@ func NewBackupGo() *BackupGo {
 // BackupRun calls the backup_run function from the asbackup shared library.
 //
 //nolint:funlen,gocritic
-func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
+func (b *BackupGo) BackupRun(ctx context.Context, backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	client *a.Client, storage *model.Storage, _ *model.SecretAgent,
 	timebounds model.TimeBounds, namespace *string, path *string) (*backup.BackupHandler, error) {
 
@@ -93,7 +93,6 @@ func (b *BackupGo) BackupRun(backupRoutine *model.BackupRoutine, backupPolicy *m
 		}
 	}
 
-	ctx := context.TODO()
 	writerFactory, err := getWriter(ctx, path, storage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer, %w", err)

@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"time"
@@ -21,7 +22,8 @@ func NewRestoreMock() *RestoreMock {
 }
 
 // RestoreRun mocks the interface method.
-func (r *RestoreMock) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error) {
+func (r *RestoreMock) RestoreRun(_ context.Context, restoreRequest *model.RestoreRequestInternal,
+) (*model.RestoreResult, error) {
 	if restoreRequest.DestinationCuster == nil {
 		return nil, fmt.Errorf("RestoreRun mock call without DestinationCuster provided, will fail")
 	}

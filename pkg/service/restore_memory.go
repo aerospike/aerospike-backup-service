@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -38,8 +39,9 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 	if err := validateStorageContainsBackup(request.SourceStorage); err != nil {
 		return 0, err
 	}
+	ctx := context.TODO()
 	go func() {
-		restoreResult, err := r.restoreService.RestoreRun(request)
+		restoreResult, err := r.restoreService.RestoreRun(ctx, request)
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
 			return
@@ -47,6 +49,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 		r.restoreJobs.increaseStats(jobID, restoreResult)
 		r.restoreJobs.setDone(jobID)
 	}()
+
 	return jobID, nil
 }
 
@@ -60,17 +63,20 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 		return 0, fmt.Errorf("last full backup not found: %v", err)
 	}
 	jobID := r.restoreJobs.newJob()
-	go r.restoreByTimeSync(reader, request, jobID, fullBackups)
+	ctx := context.TODO()
+	go r.restoreByTimeSync(ctx, reader, request, jobID, fullBackups)
+
 	return jobID, nil
 }
 
-func (r *RestoreMemory) restoreByTimeSync(backend BackupListReader,
+func (r *RestoreMemory) restoreByTimeSync(ctx context.Context,
+	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 	jobID int,
 	fullBackups []model.BackupDetails,
 ) {
 	for _, nsBackup := range fullBackups {
-		if err := r.restoreNamespace(backend, request, jobID, nsBackup); err != nil {
+		if err := r.restoreNamespace(ctx, backend, request, jobID, nsBackup); err != nil {
 			slog.Error("Failed to restore by timestamp", "routine", request.Routine, "err", err)
 			r.restoreJobs.setFailed(jobID, err)
 			return
@@ -80,11 +86,12 @@ func (r *RestoreMemory) restoreByTimeSync(backend BackupListReader,
 }
 
 func (r *RestoreMemory) restoreNamespace(
+	ctx context.Context,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 	jobID int, fullBackup model.BackupDetails,
 ) error {
-	result, err := r.restoreFromPath(request, fullBackup.Key)
+	result, err := r.restoreFromPath(ctx, request, fullBackup.Key)
 	if err != nil {
 		return fmt.Errorf("could not restore full backup for namespace %s: %v", fullBackup.Namespace, err)
 	}
@@ -97,7 +104,7 @@ func (r *RestoreMemory) restoreNamespace(
 	}
 	slog.Info("Apply incremental backups", "size", len(incrementalBackups))
 	for _, incrBackup := range incrementalBackups {
-		result, err := r.restoreFromPath(request, incrBackup.Key)
+		result, err := r.restoreFromPath(ctx, request, incrBackup.Key)
 		if err != nil {
 			return fmt.Errorf("could not restore incremental backup %s: %v", *incrBackup.Key, err)
 		}
@@ -107,14 +114,16 @@ func (r *RestoreMemory) restoreNamespace(
 }
 
 func (r *RestoreMemory) restoreFromPath(
+	ctx context.Context,
 	request *model.RestoreTimestampRequest,
 	backupPath *string,
 ) (*model.RestoreResult, error) {
 	restoreRequest := r.toRestoreRequest(request)
-	restoreResult, err := r.restoreService.RestoreRun(&model.RestoreRequestInternal{
-		RestoreRequest: *restoreRequest,
-		Dir:            backupPath,
-	})
+	restoreResult, err := r.restoreService.RestoreRun(ctx,
+		&model.RestoreRequestInternal{
+			RestoreRequest: *restoreRequest,
+			Dir:            backupPath,
+		})
 	if err != nil {
 		return nil, fmt.Errorf("could not restore backup at %s: %w", *backupPath, err)
 	}
