@@ -1779,20 +1779,30 @@ const docTemplate = `{
         "model.CurrentBackup": {
             "type": "object",
             "properties": {
-                "done_records": {
-                    "type": "integer"
+                "done-records": {
+                    "description": "DoneRecords: the number of records that have been successfully backed up.",
+                    "type": "integer",
+                    "example": 50
                 },
-                "estimated_end_time": {
-                    "type": "string"
+                "estimated-end-time": {
+                    "description": "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
                 },
-                "percentage_done": {
-                    "type": "integer"
+                "percentage-done": {
+                    "description": "PercentageDone: the progress of the backup operation as a percentage.",
+                    "type": "integer",
+                    "example": 50
                 },
-                "start_time": {
-                    "type": "string"
+                "start-time": {
+                    "description": "StartTime: the time when the backup operation started.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
                 },
-                "total_records": {
-                    "type": "integer"
+                "total-records": {
+                    "description": "TotalRecords: the total number of records to be backed up.",
+                    "type": "integer",
+                    "example": 100
                 }
             }
         },
@@ -1800,10 +1810,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "full": {
-                    "$ref": "#/definitions/model.CurrentBackup"
+                    "description": "Full represents the state of a full backup. Nil if no full backup is running.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.CurrentBackup"
+                        }
+                    ]
                 },
                 "incremental": {
-                    "$ref": "#/definitions/model.CurrentBackup"
+                    "description": "Incremental represents the state of an incremental backup. Nil if no incremental backup is running.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.CurrentBackup"
+                        }
+                    ]
                 }
             }
         },

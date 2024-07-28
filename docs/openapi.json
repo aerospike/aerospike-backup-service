@@ -1882,19 +1882,29 @@
       },
       "model.CurrentBackup" : {
         "properties" : {
-          "done_records" : {
+          "done-records" : {
+            "description" : "DoneRecords: the number of records that have been successfully backed up.",
+            "example" : 50,
             "type" : "integer"
           },
-          "estimated_end_time" : {
+          "estimated-end-time" : {
+            "description" : "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
+            "example" : "2006-01-02T15:04:05Z07:00",
             "type" : "string"
           },
-          "percentage_done" : {
+          "percentage-done" : {
+            "description" : "PercentageDone: the progress of the backup operation as a percentage.",
+            "example" : 50,
             "type" : "integer"
           },
-          "start_time" : {
+          "start-time" : {
+            "description" : "StartTime: the time when the backup operation started.",
+            "example" : "2006-01-02T15:04:05Z07:00",
             "type" : "string"
           },
-          "total_records" : {
+          "total-records" : {
+            "description" : "TotalRecords: the total number of records to be backed up.",
+            "example" : 100,
             "type" : "integer"
           }
         },
@@ -1903,10 +1913,18 @@
       "model.CurrentBackups" : {
         "properties" : {
           "full" : {
-            "$ref" : "#/components/schemas/model.CurrentBackup"
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/model.CurrentBackup"
+            } ],
+            "description" : "Full represents the state of a full backup. Nil if no full backup is running.",
+            "type" : "object"
           },
           "incremental" : {
-            "$ref" : "#/components/schemas/model.CurrentBackup"
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/model.CurrentBackup"
+            } ],
+            "description" : "Incremental represents the state of an incremental backup. Nil if no incremental backup is running.",
+            "type" : "object"
           }
         },
         "type" : "object"
