@@ -176,7 +176,6 @@ func (h *BackupHandler) writeClusterConfiguration(now time.Time) {
 		return
 	}
 	path := getConfigurationPath(h.backend.fullBackupsPath, h.backupFullPolicy, now)
-	h.backend.CreateFolder(path)
 	for i, info := range infos {
 		confFilePath := fmt.Sprintf("%s/aerospike_%d.conf", path, i)
 		slog.Debug("Write aerospike configuration", "path", confFilePath)

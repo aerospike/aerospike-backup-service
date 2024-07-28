@@ -240,10 +240,6 @@ func (s *S3Context) list(continuationToken *string, prefix, v string) (*s3.ListO
 	return result, nil
 }
 
-func (s *S3Context) CreateFolder(_ string) {
-	// S3 doesn't require to create folders.
-}
-
 func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, error) {
 	metadata, err := s.metadataCache.Get(prefix)
 	if err != nil {
