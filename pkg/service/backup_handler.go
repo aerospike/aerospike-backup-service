@@ -123,7 +123,7 @@ func (h *BackupHandler) runFullBackupInternal(ctx context.Context, now time.Time
 
 	h.cleanIncrementalBackups()
 
-	h.writeClusterConfiguration(now)
+	h.writeClusterConfiguration(client, now)
 	return nil
 }
 
@@ -169,12 +169,13 @@ func (h *BackupHandler) waitForFullBackups(ctx context.Context, backupTimestamp 
 	return nil
 }
 
-func (h *BackupHandler) writeClusterConfiguration(now time.Time) {
-	infos, err := getClusterConfiguration(h.cluster)
-	if err != nil || len(infos) == 0 {
-		slog.Warn("Could not read aerospike configuration", "err", err, "name", h.routineName)
+func (h *BackupHandler) writeClusterConfiguration(client *aerospike.Client, now time.Time) {
+	infos := getClusterConfiguration(client)
+	if len(infos) == 0 {
+		slog.Warn("Could not read aerospike configuration", "name", h.routineName)
 		return
 	}
+
 	path := getConfigurationPath(h.backend.fullBackupsPath, h.backupFullPolicy, now)
 	h.backend.CreateFolder(path)
 	for i, info := range infos {
