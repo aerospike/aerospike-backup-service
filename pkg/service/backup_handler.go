@@ -151,8 +151,8 @@ func (h *BackupHandler) startFullBackupForAllNamespaces(upperBound time.Time, cl
 	return nil
 }
 
-func (h *BackupHandler) waitForFullBackups(ctx context.Context, now time.Time) error {
-	startTime := time.Now()
+func (h *BackupHandler) waitForFullBackups(ctx context.Context, backupTimestamp time.Time) error {
+	startTime := time.Now() // startTime is only used to measure backup time
 	for namespace, handler := range h.fullBackupHandlers {
 		err := handler.Wait(ctx)
 		if err != nil {
@@ -160,8 +160,8 @@ func (h *BackupHandler) waitForFullBackups(ctx context.Context, now time.Time) e
 			return fmt.Errorf("error during backup namespace %s, routine %s: %w", namespace, h.routineName, err)
 		}
 
-		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, now)
-		if err := h.writeBackupMetadata(handler.GetStats(), now, namespace, backupFolder); err != nil {
+		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, backupTimestamp)
+		if err := h.writeBackupMetadata(handler.GetStats(), backupTimestamp, namespace, backupFolder); err != nil {
 			return err
 		}
 	}
@@ -280,8 +280,8 @@ func (h *BackupHandler) startIncrementalBackupForAllNamespaces(client *aerospike
 	}
 }
 
-func (h *BackupHandler) waitForIncrementalBackups(ctx context.Context, upperBound time.Time) {
-	started := time.Now()
+func (h *BackupHandler) waitForIncrementalBackups(ctx context.Context, backupTimestamp time.Time) {
+	startTime := time.Now() // startTime is only used to measure backup time
 	for namespace, handler := range h.incrBackupHandlers {
 		err := handler.Wait(ctx)
 		if err != nil {
@@ -289,19 +289,19 @@ func (h *BackupHandler) waitForIncrementalBackups(ctx context.Context, upperBoun
 			incrBackupFailureCounter.Inc()
 		}
 
-		backupFolder := getIncrementalPath(h.backend.incrementalBackupsPath, namespace, upperBound)
+		backupFolder := getIncrementalPath(h.backend.incrementalBackupsPath, namespace, backupTimestamp)
 		// delete if the backup file is empty
 		if handler.GetStats().IsEmpty() {
 			h.deleteEmptyBackup(backupFolder, h.routineName)
 		} else {
-			if err := h.writeBackupMetadata(handler.GetStats(), upperBound, namespace, backupFolder); err != nil {
+			if err := h.writeBackupMetadata(handler.GetStats(), backupTimestamp, namespace, backupFolder); err != nil {
 				slog.Error("Could not write backup metadata", "name", h.routineName,
 					"folder", backupFolder, "err", err)
 			}
 		}
 	}
 
-	incrBackupDurationGauge.Set(float64(time.Since(started).Milliseconds()))
+	incrBackupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))
 }
 
 func (h *BackupHandler) deleteEmptyBackup(path string, routineName string) {
