@@ -96,6 +96,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/backups/currentBackup/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Get current backup statistics.",
+                "operationId": "getCurrentBackup",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Current backup statistics",
+                        "schema": {
+                            "$ref": "#/definitions/model.CurrentBackups"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/backups/full": {
             "get": {
                 "produces": [
@@ -1741,6 +1776,57 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CurrentBackup": {
+            "type": "object",
+            "properties": {
+                "done-records": {
+                    "description": "DoneRecords: the number of records that have been successfully backed up.",
+                    "type": "integer",
+                    "example": 50
+                },
+                "estimated-end-time": {
+                    "description": "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "percentage-done": {
+                    "description": "PercentageDone: the progress of the backup operation as a percentage.",
+                    "type": "integer",
+                    "example": 50
+                },
+                "start-time": {
+                    "description": "StartTime: the time when the backup operation started.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "total-records": {
+                    "description": "TotalRecords: the total number of records to be backed up.",
+                    "type": "integer",
+                    "example": 100
+                }
+            }
+        },
+        "model.CurrentBackups": {
+            "type": "object",
+            "properties": {
+                "full": {
+                    "description": "Full represents the state of a full backup. Nil if no full backup is running.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.CurrentBackup"
+                        }
+                    ]
+                },
+                "incremental": {
+                    "description": "Incremental represents the state of an incremental backup. Nil if no incremental backup is running.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.CurrentBackup"
+                        }
+                    ]
+                }
+            }
+        },
         "model.EncryptionPolicy": {
             "description": "EncryptionPolicy contains backup encryption information.",
             "type": "object",
@@ -2290,7 +2376,7 @@ const docTemplate = `{
                     "example": "eu-central-1"
                 },
                 "type": {
-                    "description": "The type of the storage provider (0 - Local, 1 - AWS S3).",
+                    "description": "The type of the storage provider",
                     "enum": [
                         "local",
                         "aws-s3"

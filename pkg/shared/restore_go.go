@@ -74,7 +74,12 @@ func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*m
 		config.NoUDFs = true
 	}
 
-	config.Namespace = restoreRequest.Policy.Namespace
+	if restoreRequest.Policy.Namespace != nil {
+		config.Namespace = &models.RestoreNamespace{
+			Source:      restoreRequest.Policy.Namespace.Source,
+			Destination: restoreRequest.Policy.Namespace.Destination,
+		}
+	}
 
 	if restoreRequest.Policy.Parallel != nil {
 		config.Parallel = int(*restoreRequest.Policy.Parallel)
@@ -150,7 +155,8 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	}
 }
 
-func getReader(ctx context.Context, path *string, storage *model.Storage, decoder encoding.DecoderFactory) (backup.StreamingReader, error) {
+func getReader(ctx context.Context, path *string, storage *model.Storage, decoder encoding.DecoderFactory,
+) (backup.StreamingReader, error) {
 	switch storage.Type {
 	case model.Local:
 		return local.NewDirectoryStreamingReader(*path, decoder)

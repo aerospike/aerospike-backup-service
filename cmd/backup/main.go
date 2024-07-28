@@ -72,12 +72,13 @@ func run() int {
 		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// schedule all configured backups
 		backends := service.NewBackupBackends(config)
-		scheduler, err := service.ScheduleBackup(ctx, config, backends)
+		handlers := service.MakeHandlers(config, backends)
+		scheduler, err := service.ScheduleBackup(ctx, config, handlers)
 		if err != nil {
 			return err
 		}
 		// run HTTP server
-		err = runHTTPServer(ctx, backends, config, scheduler)
+		err = runHTTPServer(ctx, backends, config, scheduler, handlers)
 		// shutdown shared resources
 		shared.Shutdown()
 		// stop the scheduler
@@ -119,9 +120,13 @@ func readConfiguration() (*model.Config, error) {
 	return config, nil
 }
 
-func runHTTPServer(ctx context.Context, backends service.BackendsHolder,
-	config *model.Config, scheduler quartz.Scheduler) error {
-	httpServer := server.NewHTTPServer(backends, config, scheduler)
+func runHTTPServer(ctx context.Context,
+	backends service.BackendsHolder,
+	config *model.Config,
+	scheduler quartz.Scheduler,
+	handlerHolder service.BackupHandlerHolder,
+) error {
+	httpServer := server.NewHTTPServer(backends, config, scheduler, handlerHolder)
 	go func() {
 		httpServer.Start()
 	}()
