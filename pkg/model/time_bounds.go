@@ -15,7 +15,7 @@ type TimeBounds struct {
 // NewTimeBounds creates a new TimeBounds using provided fromTime and toTime values.
 func NewTimeBounds(fromTime, toTime *time.Time) (*TimeBounds, error) {
 	if fromTime != nil && toTime != nil && fromTime.After(*toTime) {
-		return nil, errors.New("fromTime should be before toTime")
+		return nil, errors.New("fromTime should be less than toTime")
 	}
 	return &TimeBounds{FromTime: fromTime, ToTime: toTime}, nil
 }
