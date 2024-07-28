@@ -105,7 +105,7 @@ func (h *BackupHandler) runFullBackupInternal(ctx context.Context, now time.Time
 		clear(h.fullBackupHandlers)
 	}()
 
-	err = h.startFullBackupForAllNamespaces(now, client)
+	err = h.startFullBackupForAllNamespaces(ctx, now, client)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,8 @@ func (h *BackupHandler) runFullBackupInternal(ctx context.Context, now time.Time
 	return nil
 }
 
-func (h *BackupHandler) startFullBackupForAllNamespaces(upperBound time.Time, client *aerospike.Client) error {
+func (h *BackupHandler) startFullBackupForAllNamespaces(
+	ctx context.Context, upperBound time.Time, client *aerospike.Client) error {
 	clear(h.fullBackupHandlers)
 
 	options := shared.BackupOptions{}
@@ -138,7 +139,7 @@ func (h *BackupHandler) startFullBackupForAllNamespaces(upperBound time.Time, cl
 	for _, namespace := range h.namespaces {
 		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, upperBound)
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
-		handler, err := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, client,
+		handler, err := backupService.BackupRun(ctx, h.backupRoutine, h.backupFullPolicy, client,
 			h.storage, h.secretAgent, options, &namespace, backupPath)
 		if err != nil {
 			backupFailureCounter.Inc()
@@ -247,7 +248,7 @@ func (h *BackupHandler) runIncrementalBackup(ctx context.Context, now time.Time)
 		clear(h.incrBackupHandlers)
 	}()
 
-	h.startIncrementalBackupForAllNamespaces(client, now)
+	h.startIncrementalBackupForAllNamespaces(ctx, client, now)
 
 	h.waitForIncrementalBackups(ctx, now)
 	// increment incrBackupCounter metric
@@ -257,7 +258,9 @@ func (h *BackupHandler) runIncrementalBackup(ctx context.Context, now time.Time)
 	h.updateIncrementalBackupState(now)
 }
 
-func (h *BackupHandler) startIncrementalBackupForAllNamespaces(client *aerospike.Client, upperBound time.Time) {
+func (h *BackupHandler) startIncrementalBackupForAllNamespaces(
+	ctx context.Context, client *aerospike.Client, upperBound time.Time) {
+
 	fromEpoch := h.state.LastRunEpoch()
 	options := shared.BackupOptions{
 		ModAfter: util.Ptr(time.Unix(0, fromEpoch)),
@@ -270,7 +273,7 @@ func (h *BackupHandler) startIncrementalBackupForAllNamespaces(client *aerospike
 	for _, namespace := range h.namespaces {
 		backupFolder := getIncrementalPath(h.backend.incrementalBackupsPath, namespace, upperBound)
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
-		handler, err := backupService.BackupRun(
+		handler, err := backupService.BackupRun(ctx,
 			h.backupRoutine, h.backupIncrPolicy, client, h.storage, h.secretAgent, options, &namespace, backupPath)
 		if err != nil {
 			incrBackupFailureCounter.Inc()
