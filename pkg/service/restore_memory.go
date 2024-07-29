@@ -44,13 +44,8 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 
 	ctx := context.TODO()
 	go func() {
-		client, aerr := aerospike.NewClientWithPolicyAndHost(
-			request.DestinationCuster.ASClientPolicy(),
-			request.DestinationCuster.ASClientHosts()...)
-		if aerr != nil {
-			err := fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
-			slog.Error("Failed to restore by timestamp", "cluster", request.RestoreRequest.DestinationCuster, "err", err)
-			r.restoreJobs.setFailed(jobID, err)
+		client, err := r.initClient(request.DestinationCuster, jobID)
+		if err != nil {
 			return
 		}
 		defer client.Close()
@@ -65,6 +60,19 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 	}()
 
 	return jobID, nil
+}
+
+func (r *RestoreMemory) initClient(cluster *model.AerospikeCluster, jobID int) (*aerospike.Client, error) {
+	client, aerr := aerospike.NewClientWithPolicyAndHost(
+		cluster.ASClientPolicy(),
+		cluster.ASClientHosts()...)
+	if aerr != nil {
+		err := fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
+		slog.Error("Failed to restore by timestamp", "cluster", cluster, "err", err)
+		r.restoreJobs.setFailed(jobID, err)
+		return nil, err
+	}
+	return client, nil
 }
 
 func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (int, error) {
@@ -90,13 +98,8 @@ func (r *RestoreMemory) restoreByTimeSync(
 	jobID int,
 	fullBackups []model.BackupDetails,
 ) {
-	client, aerr := aerospike.NewClientWithPolicyAndHost(
-		request.DestinationCuster.ASClientPolicy(),
-		request.DestinationCuster.ASClientHosts()...)
-	if aerr != nil {
-		err := fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
-		slog.Error("Failed to restore by timestamp", "routine", request.Routine, "err", err)
-		r.restoreJobs.setFailed(jobID, err)
+	client, err := r.initClient(request.DestinationCuster, jobID)
+	if err != nil {
 		return
 	}
 	defer client.Close()
@@ -280,11 +283,11 @@ func validateStorageContainsBackup(storage *model.Storage) error {
 	case model.Local:
 		return validatePathContainsBackup(*storage.Path)
 	case model.S3:
-		context, err := NewS3Context(storage)
+		s3context, err := NewS3Context(storage)
 		if err != nil {
 			return err
 		}
-		return context.validateStorageContainsBackup()
+		return s3context.validateStorageContainsBackup()
 	}
 	return nil
 }
