@@ -54,6 +54,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 			return
 		}
 		defer client.Close()
+
 		restoreResult, err := r.restoreService.RestoreRun(ctx, client, request)
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
@@ -98,6 +99,7 @@ func (r *RestoreMemory) restoreByTimeSync(
 		r.restoreJobs.setFailed(jobID, err)
 		return
 	}
+	defer client.Close()
 
 	var wg sync.WaitGroup
 
@@ -116,7 +118,6 @@ func (r *RestoreMemory) restoreByTimeSync(
 	wg.Wait()
 
 	r.restoreJobs.setDone(jobID)
-	client.Close()
 }
 
 func (r *RestoreMemory) restoreNamespace(
