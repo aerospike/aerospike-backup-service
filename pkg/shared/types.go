@@ -10,7 +10,8 @@ import (
 
 // Backup represents a backup service.
 type Backup interface {
-	BackupRun(ctx context.Context,
+	BackupRun(
+		ctx context.Context,
 		backupRoutine *model.BackupRoutine,
 		backupPolicy *model.BackupPolicy,
 		client *aerospike.Client,
@@ -24,6 +25,9 @@ type Backup interface {
 
 // Restore represents a restore service.
 type Restore interface {
-	RestoreRun(ctx context.Context, client *aerospike.Client, restoreRequest *model.RestoreRequestInternal,
+	RestoreRun(
+		ctx context.Context,
+		client *aerospike.Client,
+		restoreRequest *model.RestoreRequestInternal,
 	) (*model.RestoreResult, error)
 }

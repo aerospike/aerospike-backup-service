@@ -29,7 +29,10 @@ func NewRestoreGo() *RestoreGo {
 // RestoreRun calls the restore function from the asbackup library.
 //
 //nolint:funlen,gocritic
-func (r *RestoreGo) RestoreRun(ctx context.Context, client *a.Client, restoreRequest *model.RestoreRequestInternal,
+func (r *RestoreGo) RestoreRun(
+	ctx context.Context,
+	client *a.Client,
+	restoreRequest *model.RestoreRequestInternal,
 ) (*model.RestoreResult, error) {
 	var err error
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
@@ -94,8 +97,21 @@ func (r *RestoreGo) RestoreRun(ctx context.Context, client *a.Client, restoreReq
 	}
 	if restoreRequest.Policy.EncryptionPolicy != nil {
 		config.EncryptionPolicy = &models.EncryptionPolicy{
-			Mode:    restoreRequest.Policy.EncryptionPolicy.Mode,
-			KeyFile: restoreRequest.Policy.EncryptionPolicy.KeyFile,
+			Mode:      restoreRequest.Policy.EncryptionPolicy.Mode,
+			KeyFile:   restoreRequest.Policy.EncryptionPolicy.KeyFile,
+			KeySecret: restoreRequest.Policy.EncryptionPolicy.KeySecret,
+			KeyEnv:    restoreRequest.Policy.EncryptionPolicy.KeyEnv,
+		}
+	}
+
+	if restoreRequest.SecretAgent != nil {
+		config.SecretAgent = &models.SecretAgentConfig{
+			ConnectionType:     &restoreRequest.SecretAgent.ConnectionType,
+			Address:            &restoreRequest.SecretAgent.Address,
+			Port:               &restoreRequest.SecretAgent.Port,
+			TimeoutMillisecond: &restoreRequest.SecretAgent.Timeout,
+			CaFile:             &restoreRequest.SecretAgent.TLSCAString,
+			IsBase64:           &restoreRequest.SecretAgent.IsBase64,
 		}
 	}
 

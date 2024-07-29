@@ -28,9 +28,17 @@ func NewBackupGo() *BackupGo {
 // BackupRun calls the backup_run function from the asbackup shared library.
 //
 //nolint:funlen,gocritic
-func (b *BackupGo) BackupRun(ctx context.Context, backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
-	client *a.Client, storage *model.Storage, _ *model.SecretAgent,
-	timebounds model.TimeBounds, namespace *string, path *string) (*backup.BackupHandler, error) {
+func (b *BackupGo) BackupRun(
+	ctx context.Context,
+	backupRoutine *model.BackupRoutine,
+	backupPolicy *model.BackupPolicy,
+	client *a.Client,
+	storage *model.Storage,
+	secretAgent *model.SecretAgent,
+	timebounds model.TimeBounds,
+	namespace *string,
+	path *string,
+) (*backup.BackupHandler, error) {
 
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
@@ -88,8 +96,21 @@ func (b *BackupGo) BackupRun(ctx context.Context, backupRoutine *model.BackupRou
 
 	if backupPolicy.EncryptionPolicy != nil {
 		config.EncryptionPolicy = &models.EncryptionPolicy{
-			Mode:    backupPolicy.EncryptionPolicy.Mode,
-			KeyFile: backupPolicy.EncryptionPolicy.KeyFile,
+			Mode:      backupPolicy.EncryptionPolicy.Mode,
+			KeyFile:   backupPolicy.EncryptionPolicy.KeyFile,
+			KeySecret: backupPolicy.EncryptionPolicy.KeySecret,
+			KeyEnv:    backupPolicy.EncryptionPolicy.KeyEnv,
+		}
+	}
+
+	if secretAgent != nil {
+		config.SecretAgentConfig = &models.SecretAgentConfig{
+			ConnectionType:     &secretAgent.ConnectionType,
+			Address:            &secretAgent.Address,
+			Port:               &secretAgent.Port,
+			TimeoutMillisecond: &secretAgent.Timeout,
+			CaFile:             &secretAgent.TLSCAString,
+			IsBase64:           &secretAgent.IsBase64,
 		}
 	}
 
