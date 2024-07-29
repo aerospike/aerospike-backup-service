@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
@@ -57,6 +58,9 @@ func (r *RestoreGo) RestoreRun(ctx context.Context, client *a.Client, restoreReq
 	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
 	config.WritePolicy.RecordExistsAction = recordExistsAction(restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
 
+	if restoreRequest.Policy.Timeout != nil && *restoreRequest.Policy.Timeout > 0 {
+		config.WritePolicy.TotalTimeout = time.Duration(*restoreRequest.Policy.Timeout) * time.Millisecond
+	}
 	if restoreRequest.Policy.NoRecords != nil && *restoreRequest.Policy.NoRecords {
 		config.NoRecords = true
 	}
