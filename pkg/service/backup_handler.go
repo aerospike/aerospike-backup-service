@@ -180,7 +180,7 @@ func (h *BackupHandler) writeClusterConfiguration(client *aerospike.Client, now 
 	for i, info := range infos {
 		confFilePath := fmt.Sprintf("%s/aerospike_%d.conf", path, i)
 		slog.Debug("Write aerospike configuration", "path", confFilePath)
-		err = h.backend.write(confFilePath, []byte(info))
+		err := h.backend.write(confFilePath, []byte(info))
 		if err != nil {
 			slog.Error("Failed to write configuration for the backup", "name", h.routineName, "err", err)
 		}
