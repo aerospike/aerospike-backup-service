@@ -6,8 +6,10 @@ import (
 	"log/slog"
 	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/util"
@@ -39,9 +41,16 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 	if err := validateStorageContainsBackup(request.SourceStorage); err != nil {
 		return 0, err
 	}
+
 	ctx := context.TODO()
 	go func() {
-		restoreResult, err := r.restoreService.RestoreRun(ctx, request)
+		client, err := r.initClient(request.DestinationCuster, jobID)
+		if err != nil {
+			return
+		}
+		defer client.Close()
+
+		restoreResult, err := r.restoreService.RestoreRun(ctx, client, request)
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
 			return
@@ -51,6 +60,19 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 	}()
 
 	return jobID, nil
+}
+
+func (r *RestoreMemory) initClient(cluster *model.AerospikeCluster, jobID int) (*aerospike.Client, error) {
+	client, aerr := aerospike.NewClientWithPolicyAndHost(
+		cluster.ASClientPolicy(),
+		cluster.ASClientHosts()...)
+	if aerr != nil {
+		err := fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
+		slog.Error("Failed to restore by timestamp", "cluster", cluster, "err", err)
+		r.restoreJobs.setFailed(jobID, err)
+		return nil, err
+	}
+	return client, nil
 }
 
 func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (int, error) {
@@ -69,29 +91,46 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 	return jobID, nil
 }
 
-func (r *RestoreMemory) restoreByTimeSync(ctx context.Context,
+func (r *RestoreMemory) restoreByTimeSync(
+	ctx context.Context,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 	jobID int,
 	fullBackups []model.BackupDetails,
 ) {
-	for _, nsBackup := range fullBackups {
-		if err := r.restoreNamespace(ctx, backend, request, jobID, nsBackup); err != nil {
-			slog.Error("Failed to restore by timestamp", "routine", request.Routine, "err", err)
-			r.restoreJobs.setFailed(jobID, err)
-			return
-		}
+	client, err := r.initClient(request.DestinationCuster, jobID)
+	if err != nil {
+		return
 	}
+	defer client.Close()
+
+	var wg sync.WaitGroup
+
+	for _, nsBackup := range fullBackups {
+		wg.Add(1)
+		go func(nsBackup model.BackupDetails) {
+			defer wg.Done()
+			if err := r.restoreNamespace(ctx, client, backend, request, jobID, nsBackup); err != nil {
+				slog.Error("Failed to restore by timestamp", "routine", request.Routine, "err", err)
+				r.restoreJobs.setFailed(jobID, err)
+				return
+			}
+		}(nsBackup)
+	}
+
+	wg.Wait()
+
 	r.restoreJobs.setDone(jobID)
 }
 
 func (r *RestoreMemory) restoreNamespace(
 	ctx context.Context,
+	client *aerospike.Client,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 	jobID int, fullBackup model.BackupDetails,
 ) error {
-	result, err := r.restoreFromPath(ctx, request, fullBackup.Key)
+	result, err := r.restoreFromPath(ctx, client, request, fullBackup.Key)
 	if err != nil {
 		return fmt.Errorf("could not restore full backup for namespace %s: %v", fullBackup.Namespace, err)
 	}
@@ -104,7 +143,7 @@ func (r *RestoreMemory) restoreNamespace(
 	}
 	slog.Info("Apply incremental backups", "size", len(incrementalBackups))
 	for _, incrBackup := range incrementalBackups {
-		result, err := r.restoreFromPath(ctx, request, incrBackup.Key)
+		result, err := r.restoreFromPath(ctx, client, request, incrBackup.Key)
 		if err != nil {
 			return fmt.Errorf("could not restore incremental backup %s: %v", *incrBackup.Key, err)
 		}
@@ -115,11 +154,13 @@ func (r *RestoreMemory) restoreNamespace(
 
 func (r *RestoreMemory) restoreFromPath(
 	ctx context.Context,
+	client *aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	backupPath *string,
 ) (*model.RestoreResult, error) {
 	restoreRequest := r.toRestoreRequest(request)
 	restoreResult, err := r.restoreService.RestoreRun(ctx,
+		client,
 		&model.RestoreRequestInternal{
 			RestoreRequest: *restoreRequest,
 			Dir:            backupPath,
@@ -242,11 +283,11 @@ func validateStorageContainsBackup(storage *model.Storage) error {
 	case model.Local:
 		return validatePathContainsBackup(*storage.Path)
 	case model.S3:
-		context, err := NewS3Context(storage)
+		s3context, err := NewS3Context(storage)
 		if err != nil {
 			return err
 		}
-		return context.validateStorageContainsBackup()
+		return s3context.validateStorageContainsBackup()
 	}
 	return nil
 }

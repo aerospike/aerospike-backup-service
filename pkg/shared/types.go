@@ -24,5 +24,6 @@ type Backup interface {
 
 // Restore represents a restore service.
 type Restore interface {
-	RestoreRun(ctx context.Context, restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error)
+	RestoreRun(ctx context.Context, client *aerospike.Client, restoreRequest *model.RestoreRequestInternal,
+	) (*model.RestoreResult, error)
 }
