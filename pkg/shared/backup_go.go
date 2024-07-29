@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
@@ -81,6 +82,12 @@ func (b *BackupGo) BackupRun(
 	if backupPolicy.MaxRecords != nil {
 		config.ScanPolicy.MaxRecords = *backupPolicy.MaxRecords
 		config.Parallel = 1
+	}
+	if backupPolicy.TotalTimeout != nil && *backupPolicy.TotalTimeout > 0 {
+		config.ScanPolicy.TotalTimeout = time.Duration(*backupPolicy.TotalTimeout) * time.Millisecond
+	}
+	if backupPolicy.SocketTimeout != nil && *backupPolicy.SocketTimeout > 0 {
+		config.ScanPolicy.SocketTimeout = time.Duration(*backupPolicy.SocketTimeout) * time.Millisecond
 	}
 
 	if backupPolicy.Bandwidth != nil {
