@@ -2,10 +2,10 @@ package shared
 
 import (
 	"fmt"
-	"github.com/aerospike/aerospike-client-go/v7"
 	"log/slog"
 	"time"
 
+	"github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup/pkg/model"
 )
 
@@ -22,7 +22,8 @@ func NewRestoreMock() *RestoreMock {
 }
 
 // RestoreRun mocks the interface method.
-func (r *RestoreMock) RestoreRun(_ *aerospike.Client, restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error) {
+func (r *RestoreMock) RestoreRun(_ *aerospike.Client, restoreRequest *model.RestoreRequestInternal,
+) (*model.RestoreResult, error) {
 	if restoreRequest.DestinationCuster == nil {
 		return nil, fmt.Errorf("RestoreRun mock call without DestinationCuster provided, will fail")
 	}

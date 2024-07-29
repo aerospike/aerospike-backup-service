@@ -2,13 +2,13 @@ package service
 
 import (
 	"fmt"
-	"github.com/aerospike/aerospike-client-go/v7"
 	"log/slog"
 	"path/filepath"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/util"

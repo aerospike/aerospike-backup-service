@@ -26,10 +26,11 @@ func NewRestoreGo() *RestoreGo {
 	return &RestoreGo{}
 }
 
-// RestoreRun calls the restore_run function from the asrestore shared library.
+// RestoreRun calls the restore function from the asbackup library.
 //
 //nolint:funlen,gocritic
-func (r *RestoreGo) RestoreRun(client *a.Client, restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error) {
+func (r *RestoreGo) RestoreRun(client *a.Client, restoreRequest *model.RestoreRequestInternal,
+) (*model.RestoreResult, error) {
 	var err error
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
