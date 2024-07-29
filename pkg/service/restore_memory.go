@@ -42,15 +42,17 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 		return 0, err
 	}
 
-	client, aerr := aerospike.NewClientWithPolicyAndHost(
-		request.DestinationCuster.ASClientPolicy(),
-		request.DestinationCuster.ASClientHosts()...)
-	if aerr != nil {
-		return 0, fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
-	}
-
 	ctx := context.TODO()
 	go func() {
+		client, aerr := aerospike.NewClientWithPolicyAndHost(
+			request.DestinationCuster.ASClientPolicy(),
+			request.DestinationCuster.ASClientHosts()...)
+		if aerr != nil {
+			err := fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
+			slog.Error("Failed to restore by timestamp", "cluster", request.RestoreRequest.DestinationCuster, "err", err)
+			r.restoreJobs.setFailed(jobID, err)
+			return
+		}
 		defer client.Close()
 		restoreResult, err := r.restoreService.RestoreRun(ctx, client, request)
 		if err != nil {
@@ -74,26 +76,29 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 		return 0, fmt.Errorf("last full backup not found: %v", err)
 	}
 	jobID := r.restoreJobs.newJob()
-	client, aerr := aerospike.NewClientWithPolicyAndHost(
-		request.DestinationCuster.ASClientPolicy(),
-		request.DestinationCuster.ASClientHosts()...)
-	if aerr != nil {
-		return 0, fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
-	}
 	ctx := context.TODO()
-	go r.restoreByTimeSync(ctx, client, reader, request, jobID, fullBackups)
+	go r.restoreByTimeSync(ctx, reader, request, jobID, fullBackups)
 
 	return jobID, nil
 }
 
 func (r *RestoreMemory) restoreByTimeSync(
 	ctx context.Context,
-	client *aerospike.Client,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 	jobID int,
 	fullBackups []model.BackupDetails,
 ) {
+	client, aerr := aerospike.NewClientWithPolicyAndHost(
+		request.DestinationCuster.ASClientPolicy(),
+		request.DestinationCuster.ASClientHosts()...)
+	if aerr != nil {
+		err := fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
+		slog.Error("Failed to restore by timestamp", "routine", request.Routine, "err", err)
+		r.restoreJobs.setFailed(jobID, err)
+		return
+	}
+
 	var wg sync.WaitGroup
 
 	for _, nsBackup := range fullBackups {
