@@ -12,7 +12,6 @@ import (
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
-	"github.com/aerospike/backup/pkg/util"
 )
 
 // BackupHandler implements backup logic for single routine.
@@ -105,7 +104,7 @@ func (h *BackupHandler) runFullBackupInternal(ctx context.Context, now time.Time
 		clear(h.fullBackupHandlers)
 	}()
 
-	err = h.startFullBackupForAllNamespaces(now, client)
+	err = h.startFullBackupForAllNamespaces(ctx, now, client)
 	if err != nil {
 		return err
 	}
@@ -127,19 +126,20 @@ func (h *BackupHandler) runFullBackupInternal(ctx context.Context, now time.Time
 	return nil
 }
 
-func (h *BackupHandler) startFullBackupForAllNamespaces(upperBound time.Time, client *aerospike.Client) error {
+func (h *BackupHandler) startFullBackupForAllNamespaces(
+	ctx context.Context, upperBound time.Time, client *aerospike.Client) error {
 	clear(h.fullBackupHandlers)
 
-	options := shared.BackupOptions{}
+	timebounds := model.TimeBounds{}
 	if h.backupFullPolicy.IsSealed() {
-		options.ModBefore = &upperBound
+		timebounds.ToTime = &upperBound
 	}
 
 	for _, namespace := range h.namespaces {
 		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, upperBound)
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
-		handler, err := backupService.BackupRun(h.backupRoutine, h.backupFullPolicy, client,
-			h.storage, h.secretAgent, options, &namespace, backupPath)
+		handler, err := backupService.BackupRun(ctx, h.backupRoutine, h.backupFullPolicy, client,
+			h.storage, h.secretAgent, timebounds, &namespace, backupPath)
 		if err != nil {
 			backupFailureCounter.Inc()
 			return fmt.Errorf("could not start backup of namespace %s, routine %s: %w", namespace, h.routineName, err)
@@ -177,11 +177,10 @@ func (h *BackupHandler) writeClusterConfiguration(client *aerospike.Client, now 
 	}
 
 	path := getConfigurationPath(h.backend.fullBackupsPath, h.backupFullPolicy, now)
-	h.backend.CreateFolder(path)
 	for i, info := range infos {
 		confFilePath := fmt.Sprintf("%s/aerospike_%d.conf", path, i)
 		slog.Debug("Write aerospike configuration", "path", confFilePath)
-		err := h.backend.write(confFilePath, []byte(info))
+		err = h.backend.write(confFilePath, []byte(info))
 		if err != nil {
 			slog.Error("Failed to write configuration for the backup", "name", h.routineName, "err", err)
 		}
@@ -248,7 +247,7 @@ func (h *BackupHandler) runIncrementalBackup(ctx context.Context, now time.Time)
 		clear(h.incrBackupHandlers)
 	}()
 
-	h.startIncrementalBackupForAllNamespaces(client, now)
+	h.startIncrementalBackupForAllNamespaces(ctx, client, now)
 
 	h.waitForIncrementalBackups(ctx, now)
 	// increment incrBackupCounter metric
@@ -258,21 +257,20 @@ func (h *BackupHandler) runIncrementalBackup(ctx context.Context, now time.Time)
 	h.updateIncrementalBackupState(now)
 }
 
-func (h *BackupHandler) startIncrementalBackupForAllNamespaces(client *aerospike.Client, upperBound time.Time) {
-	fromEpoch := h.state.LastRunEpoch()
-	options := shared.BackupOptions{
-		ModAfter: util.Ptr(time.Unix(0, fromEpoch)),
-	}
-	if h.backupIncrPolicy.IsSealed() {
-		options.ModBefore = &upperBound
+func (h *BackupHandler) startIncrementalBackupForAllNamespaces(
+	ctx context.Context, client *aerospike.Client, upperBound time.Time) {
+
+	timebounds := model.NewTimeBoundsFrom(h.state.LastRun())
+	if h.backupFullPolicy.IsSealed() {
+		timebounds.ToTime = &upperBound
 	}
 
 	clear(h.incrBackupHandlers)
 	for _, namespace := range h.namespaces {
 		backupFolder := getIncrementalPath(h.backend.incrementalBackupsPath, namespace, upperBound)
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
-		handler, err := backupService.BackupRun(
-			h.backupRoutine, h.backupIncrPolicy, client, h.storage, h.secretAgent, options, &namespace, backupPath)
+		handler, err := backupService.BackupRun(ctx,
+			h.backupRoutine, h.backupIncrPolicy, client, h.storage, h.secretAgent, *timebounds, &namespace, backupPath)
 		if err != nil {
 			incrBackupFailureCounter.Inc()
 			slog.Warn("could not start backup", "namespace", namespace, "routine", h.routineName, "err", err)

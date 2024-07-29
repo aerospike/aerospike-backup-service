@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -48,9 +49,10 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 		return 0, fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
 	}
 
+	ctx := context.TODO()
 	go func() {
 		defer client.Close()
-		restoreResult, err := r.restoreService.RestoreRun(client, request)
+		restoreResult, err := r.restoreService.RestoreRun(ctx, client, request)
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
 			return
@@ -67,7 +69,7 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 	if !found {
 		return 0, fmt.Errorf("backend '%s' not found for restore", request.Routine)
 	}
-	fullBackups, err := r.findLastFullBackup(reader, request.Time)
+	fullBackups, err := r.findLastFullBackup(reader, time.UnixMilli(request.Time))
 	if err != nil {
 		return 0, fmt.Errorf("last full backup not found: %v", err)
 	}
@@ -78,11 +80,14 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 	if aerr != nil {
 		return 0, fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
 	}
-	go r.restoreByTimeSync(client, reader, request, jobID, fullBackups)
+	ctx := context.TODO()
+	go r.restoreByTimeSync(ctx, client, reader, request, jobID, fullBackups)
+
 	return jobID, nil
 }
 
 func (r *RestoreMemory) restoreByTimeSync(
+	ctx context.Context,
 	client *aerospike.Client,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
@@ -95,7 +100,7 @@ func (r *RestoreMemory) restoreByTimeSync(
 		wg.Add(1)
 		go func(nsBackup model.BackupDetails) {
 			defer wg.Done()
-			if err := r.restoreNamespace(client, backend, request, jobID, nsBackup); err != nil {
+			if err := r.restoreNamespace(ctx, client, backend, request, jobID, nsBackup); err != nil {
 				slog.Error("Failed to restore by timestamp", "routine", request.Routine, "err", err)
 				r.restoreJobs.setFailed(jobID, err)
 				return
@@ -110,25 +115,26 @@ func (r *RestoreMemory) restoreByTimeSync(
 }
 
 func (r *RestoreMemory) restoreNamespace(
+	ctx context.Context,
 	client *aerospike.Client,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 	jobID int, fullBackup model.BackupDetails,
 ) error {
-	result, err := r.restoreFromPath(client, request, fullBackup.Key)
+	result, err := r.restoreFromPath(ctx, client, request, fullBackup.Key)
 	if err != nil {
 		return fmt.Errorf("could not restore full backup for namespace %s: %v", fullBackup.Namespace, err)
 	}
 	r.restoreJobs.increaseStats(jobID, result)
 
 	incrementalBackups, err := r.findIncrementalBackupsForNamespace(
-		backend, fullBackup.Created.UnixMilli(), request.Time, fullBackup.Namespace)
+		backend, fullBackup.Created, time.UnixMilli(request.Time), fullBackup.Namespace)
 	if err != nil {
 		return fmt.Errorf("could not find incremental backups for namespace %s: %v", fullBackup.Namespace, err)
 	}
 	slog.Info("Apply incremental backups", "size", len(incrementalBackups))
 	for _, incrBackup := range incrementalBackups {
-		result, err := r.restoreFromPath(client, request, incrBackup.Key)
+		result, err := r.restoreFromPath(ctx, client, request, incrBackup.Key)
 		if err != nil {
 			return fmt.Errorf("could not restore incremental backup %s: %v", *incrBackup.Key, err)
 		}
@@ -138,12 +144,13 @@ func (r *RestoreMemory) restoreNamespace(
 }
 
 func (r *RestoreMemory) restoreFromPath(
+	ctx context.Context,
 	client *aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	backupPath *string,
 ) (*model.RestoreResult, error) {
 	restoreRequest := r.toRestoreRequest(request)
-	restoreResult, err := r.restoreService.RestoreRun(
+	restoreResult, err := r.restoreService.RestoreRun(ctx,
 		client,
 		&model.RestoreRequestInternal{
 			RestoreRequest: *restoreRequest,
@@ -158,20 +165,16 @@ func (r *RestoreMemory) restoreFromPath(
 
 func (r *RestoreMemory) findLastFullBackup(
 	backend BackupListReader,
-	toTimeMillis int64,
+	toTime time.Time,
 ) ([]model.BackupDetails, error) {
-	to, err := model.NewTimeBoundsTo(toTimeMillis)
-	if err != nil {
-		return nil, err
-	}
-	fullBackupList, err := backend.FullBackupList(to)
+	fullBackupList, err := backend.FullBackupList(model.NewTimeBoundsTo(toTime))
 	if err != nil {
 		return nil, fmt.Errorf("cannot read full backup list: %v", err)
 	}
 
-	fullBackup := latestFullBackupBeforeTime(fullBackupList, time.UnixMilli(toTimeMillis)) // it's a list of namespaces
+	fullBackup := latestFullBackupBeforeTime(fullBackupList, toTime) // it's a list of namespaces
 	if len(fullBackup) == 0 {
-		return nil, fmt.Errorf("no full backup found at %d", toTimeMillis)
+		return nil, fmt.Errorf("no full backup found at %s", toTime)
 	}
 	return fullBackup, nil
 }
@@ -197,7 +200,7 @@ func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound tim
 }
 
 func (r *RestoreMemory) findIncrementalBackupsForNamespace(
-	backend BackupListReader, from, to int64, namespace string) ([]model.BackupDetails, error) {
+	backend BackupListReader, from, to time.Time, namespace string) ([]model.BackupDetails, error) {
 	bounds, err := model.NewTimeBounds(&from, &to)
 	if err != nil {
 		return nil, err
@@ -220,12 +223,12 @@ func (r *RestoreMemory) findIncrementalBackupsForNamespace(
 	return filteredIncrementalBackups, nil
 }
 
-func (r *RestoreMemory) RetrieveConfiguration(routine string, toTimeMillis int64) ([]byte, error) {
+func (r *RestoreMemory) RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error) {
 	backend, found := r.backends.GetReader(routine)
 	if !found {
 		return nil, fmt.Errorf("backend '%s' not found for restore", routine)
 	}
-	fullBackups, err := r.findLastFullBackup(backend, toTimeMillis)
+	fullBackups, err := r.findLastFullBackup(backend, toTime)
 	if err != nil || len(fullBackups) == 0 {
 		return nil, fmt.Errorf("last full backup not found: %v", err)
 	}

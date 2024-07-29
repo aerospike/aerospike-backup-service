@@ -70,6 +70,11 @@ func (o *OSDiskAccessor) read(filePath string) ([]byte, error) {
 }
 
 func (o *OSDiskAccessor) write(filePath string, data []byte) error {
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
 	return os.WriteFile(filePath, data, 0644)
 }
 
@@ -109,18 +114,6 @@ func (o *OSDiskAccessor) lsFiles(path string) ([]string, error) {
 		}
 	}
 	return files, nil
-}
-
-func (o *OSDiskAccessor) CreateFolder(path string) {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		if err = os.MkdirAll(path, 0744); err != nil {
-			slog.Warn("Error creating backup directory", "path", path, "err", err)
-		}
-	}
-	if err = os.Chmod(path, 0744); err != nil {
-		slog.Warn("Failed to Chmod backup directory", "path", path, "err", err)
-	}
 }
 
 func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {

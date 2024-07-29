@@ -29,7 +29,7 @@ func NewRestoreGo() *RestoreGo {
 // RestoreRun calls the restore function from the asbackup library.
 //
 //nolint:funlen,gocritic
-func (r *RestoreGo) RestoreRun(client *a.Client, restoreRequest *model.RestoreRequestInternal,
+func (r *RestoreGo) RestoreRun(ctx context.Context, client *a.Client, restoreRequest *model.RestoreRequestInternal,
 ) (*model.RestoreResult, error) {
 	var err error
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
@@ -99,7 +99,6 @@ func (r *RestoreGo) RestoreRun(client *a.Client, restoreRequest *model.RestoreRe
 		}
 	}
 
-	ctx := context.TODO()
 	reader, err := getReader(ctx, restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
