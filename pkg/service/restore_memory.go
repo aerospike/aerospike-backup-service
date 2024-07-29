@@ -2,9 +2,11 @@ package service
 
 import (
 	"fmt"
+	"github.com/aerospike/aerospike-client-go/v7"
 	"log/slog"
 	"path/filepath"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -38,8 +40,17 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 	if err := validateStorageContainsBackup(request.SourceStorage); err != nil {
 		return 0, err
 	}
+
+	client, aerr := aerospike.NewClientWithPolicyAndHost(
+		request.DestinationCuster.ASClientPolicy(),
+		request.DestinationCuster.ASClientHosts()...)
+	if aerr != nil {
+		return 0, fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
+	}
+
 	go func() {
-		restoreResult, err := r.restoreService.RestoreRun(request)
+		defer client.Close()
+		restoreResult, err := r.restoreService.RestoreRun(client, request)
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
 			return
@@ -47,6 +58,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 		r.restoreJobs.increaseStats(jobID, restoreResult)
 		r.restoreJobs.setDone(jobID)
 	}()
+
 	return jobID, nil
 }
 
@@ -60,31 +72,50 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 		return 0, fmt.Errorf("last full backup not found: %v", err)
 	}
 	jobID := r.restoreJobs.newJob()
-	go r.restoreByTimeSync(reader, request, jobID, fullBackups)
+	client, aerr := aerospike.NewClientWithPolicyAndHost(
+		request.DestinationCuster.ASClientPolicy(),
+		request.DestinationCuster.ASClientHosts()...)
+	if aerr != nil {
+		return 0, fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
+	}
+	go r.restoreByTimeSync(client, reader, request, jobID, fullBackups)
 	return jobID, nil
 }
 
-func (r *RestoreMemory) restoreByTimeSync(backend BackupListReader,
+func (r *RestoreMemory) restoreByTimeSync(
+	client *aerospike.Client,
+	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 	jobID int,
 	fullBackups []model.BackupDetails,
 ) {
+	var wg sync.WaitGroup
+
 	for _, nsBackup := range fullBackups {
-		if err := r.restoreNamespace(backend, request, jobID, nsBackup); err != nil {
-			slog.Error("Failed to restore by timestamp", "routine", request.Routine, "err", err)
-			r.restoreJobs.setFailed(jobID, err)
-			return
-		}
+		wg.Add(1)
+		go func(nsBackup model.BackupDetails) {
+			defer wg.Done()
+			if err := r.restoreNamespace(client, backend, request, jobID, nsBackup); err != nil {
+				slog.Error("Failed to restore by timestamp", "routine", request.Routine, "err", err)
+				r.restoreJobs.setFailed(jobID, err)
+				return
+			}
+		}(nsBackup)
 	}
+
+	wg.Wait()
+
 	r.restoreJobs.setDone(jobID)
+	client.Close()
 }
 
 func (r *RestoreMemory) restoreNamespace(
+	client *aerospike.Client,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 	jobID int, fullBackup model.BackupDetails,
 ) error {
-	result, err := r.restoreFromPath(request, fullBackup.Key)
+	result, err := r.restoreFromPath(client, request, fullBackup.Key)
 	if err != nil {
 		return fmt.Errorf("could not restore full backup for namespace %s: %v", fullBackup.Namespace, err)
 	}
@@ -97,7 +128,7 @@ func (r *RestoreMemory) restoreNamespace(
 	}
 	slog.Info("Apply incremental backups", "size", len(incrementalBackups))
 	for _, incrBackup := range incrementalBackups {
-		result, err := r.restoreFromPath(request, incrBackup.Key)
+		result, err := r.restoreFromPath(client, request, incrBackup.Key)
 		if err != nil {
 			return fmt.Errorf("could not restore incremental backup %s: %v", *incrBackup.Key, err)
 		}
@@ -107,14 +138,17 @@ func (r *RestoreMemory) restoreNamespace(
 }
 
 func (r *RestoreMemory) restoreFromPath(
+	client *aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	backupPath *string,
 ) (*model.RestoreResult, error) {
 	restoreRequest := r.toRestoreRequest(request)
-	restoreResult, err := r.restoreService.RestoreRun(&model.RestoreRequestInternal{
-		RestoreRequest: *restoreRequest,
-		Dir:            backupPath,
-	})
+	restoreResult, err := r.restoreService.RestoreRun(
+		client,
+		&model.RestoreRequestInternal{
+			RestoreRequest: *restoreRequest,
+			Dir:            backupPath,
+		})
 	if err != nil {
 		return nil, fmt.Errorf("could not restore backup at %s: %w", *backupPath, err)
 	}

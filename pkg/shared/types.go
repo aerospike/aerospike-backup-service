@@ -29,5 +29,5 @@ type Backup interface {
 
 // Restore represents a restore service.
 type Restore interface {
-	RestoreRun(restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error)
+	RestoreRun(client *aerospike.Client, restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error)
 }

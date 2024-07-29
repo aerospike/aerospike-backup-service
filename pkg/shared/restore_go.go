@@ -29,16 +29,8 @@ func NewRestoreGo() *RestoreGo {
 // RestoreRun calls the restore_run function from the asrestore shared library.
 //
 //nolint:funlen,gocritic
-func (r *RestoreGo) RestoreRun(restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error) {
+func (r *RestoreGo) RestoreRun(client *a.Client, restoreRequest *model.RestoreRequestInternal) (*model.RestoreResult, error) {
 	var err error
-	client, err := a.NewClientWithPolicyAndHost(
-		restoreRequest.DestinationCuster.ASClientPolicy(),
-		restoreRequest.DestinationCuster.ASClientHosts()...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to aerospike cluster, %w", err)
-	}
-	defer client.Close()
-
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup client, %w", err)
