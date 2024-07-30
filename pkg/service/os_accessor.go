@@ -75,7 +75,7 @@ func (o *OSDiskAccessor) write(filePath string, data []byte) error {
 		return err
 	}
 
-	return os.WriteFile(filePath, data, 0644)
+	return os.WriteFile(filePath, data, 0600)
 }
 
 func (o *OSDiskAccessor) lsDir(path string) ([]string, error) {

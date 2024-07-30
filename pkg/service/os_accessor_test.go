@@ -19,7 +19,7 @@ func TestDeleteFolder(t *testing.T) {
 	parentFolder := tempFolder + "/parent"
 	folderToDelete := parentFolder + "/nested"
 	_ = os.MkdirAll(folderToDelete, 0744)
-	_ = os.WriteFile(folderToDelete+"/file.txt", []byte("hello world"), 0666)
+	_ = os.WriteFile(folderToDelete+"/file.txt", []byte("hello world"), 0600)
 
 	err := NewOSDiskAccessor().DeleteFolder(folderToDelete)
 
@@ -70,7 +70,7 @@ func TestLsDir(t *testing.T) {
 			setup: func() string {
 				dir := t.TempDir()
 				file := filepath.Join(dir, "file")
-				_ = os.WriteFile(file, []byte("test content"), 0644)
+				_ = os.WriteFile(file, []byte("test content"), 0600)
 				return dir
 			},
 			expected: nil,
@@ -124,7 +124,7 @@ func TestLsFiles(t *testing.T) {
 			setup: func() string {
 				dir := t.TempDir()
 				file := filepath.Join(dir, "file")
-				_ = os.WriteFile(file, []byte("test content"), 0644)
+				_ = os.WriteFile(file, []byte("test content"), 0600)
 				return dir
 			},
 			expected: []string{"file"},

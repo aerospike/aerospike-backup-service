@@ -17,7 +17,7 @@ type Backup interface {
 		storage *model.Storage,
 		secretAgent *model.SecretAgent,
 		timebounds model.TimeBounds,
-		namespace *string,
+		namespace string,
 		path *string,
 	) (*backup.BackupHandler, error)
 }
