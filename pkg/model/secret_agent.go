@@ -9,7 +9,7 @@ package model
 // @Description for a backup/restore operation.
 type SecretAgent struct {
 	// Connection type: tcp, unix.
-	ConnectionType string `yaml:"sa-connection-type,omitempty" json:"sa-connection-type,omitempty"`
+	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp"`
 	// Address of the Secret Agent.
 	Address string `yaml:"address,omitempty" json:"address,omitempty" example:"localhost"`
 	// Port the Secret Agent is running on.
@@ -17,7 +17,7 @@ type SecretAgent struct {
 	// Timeout in milliseconds.
 	Timeout int `yaml:"timeout,omitempty" json:"timeout,omitempty" example:"5000"`
 	// The path to a trusted CA certificate file in PEM format.
-	TLSCAString string `yaml:"tls-ca,omitempty" json:"tls-ca,omitempty" example:"/path/to/ca.pem"`
+	TLSCAString string `yaml:"tls-ca-file,omitempty" json:"tls-ca-file,omitempty" example:"/path/to/ca.pem"`
 	// Flag that shows if secret agent responses are encrypted with base64.
-	IsBase64 bool `yaml:"sa-is-base64,omitempty" json:"sa-is-base64,omitempty"`
+	IsBase64 bool `yaml:"is-base64,omitempty" json:"is-base64,omitempty" example:"false"`
 }
