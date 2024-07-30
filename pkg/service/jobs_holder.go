@@ -20,6 +20,7 @@ func NewJobsHolder() *JobsHolder {
 }
 
 func (h *JobsHolder) newJob() int {
+	// #nosec G404
 	jobID := rand.Int()
 	h.Lock()
 	defer h.Unlock()
@@ -38,21 +39,21 @@ func (h *JobsHolder) getStatus(jobID int) (*model.RestoreJobStatus, error) {
 	return &copyJob, nil
 }
 
-func (h *JobsHolder) increaseStats(jobID int, new *model.RestoreResult) {
+func (h *JobsHolder) increaseStats(jobID int, newStats *model.RestoreResult) {
 	h.Lock()
 	defer h.Unlock()
 	current, found := h.restoreJobs[jobID]
 	if found {
-		current.TotalBytes += new.TotalBytes
-		current.TotalRecords += new.TotalRecords
-		current.ExpiredRecords += new.ExpiredRecords
-		current.SkippedRecords += new.SkippedRecords
-		current.IgnoredRecords += new.IgnoredRecords
-		current.InsertedRecords += new.InsertedRecords
-		current.ExistedRecords += new.ExistedRecords
-		current.FresherRecords += new.FresherRecords
-		current.IndexCount += new.IndexCount
-		current.UDFCount += new.UDFCount
+		current.TotalBytes += newStats.TotalBytes
+		current.TotalRecords += newStats.TotalRecords
+		current.ExpiredRecords += newStats.ExpiredRecords
+		current.SkippedRecords += newStats.SkippedRecords
+		current.IgnoredRecords += newStats.IgnoredRecords
+		current.InsertedRecords += newStats.InsertedRecords
+		current.ExistedRecords += newStats.ExistedRecords
+		current.FresherRecords += newStats.FresherRecords
+		current.IndexCount += newStats.IndexCount
+		current.UDFCount += newStats.UDFCount
 	}
 }
 

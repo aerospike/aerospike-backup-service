@@ -1,4 +1,3 @@
-//nolint:dupl
 package server
 
 import (
@@ -69,10 +68,11 @@ func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (ws *HTTPServer) applyConfig(w http.ResponseWriter, _ *http.Request) {
-	err := service.ApplyNewConfig(ws.scheduler, ws.config, ws.backupBackends)
+	handlers, err := service.ApplyNewConfig(ws.scheduler, ws.config, ws.backupBackends)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	ws.handlerHolder = handlers
 	w.WriteHeader(http.StatusOK)
 }

@@ -8,8 +8,6 @@ import (
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/io/local"
-	"github.com/aerospike/backup-go/io/s3"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -27,8 +25,6 @@ func NewBackupGo() *BackupGo {
 }
 
 // BackupRun calls the backup_run function from the asbackup shared library.
-//
-//nolint:funlen,gocritic
 func (b *BackupGo) BackupRun(
 	ctx context.Context,
 	backupRoutine *model.BackupRoutine,
@@ -37,17 +33,39 @@ func (b *BackupGo) BackupRun(
 	storage *model.Storage,
 	secretAgent *model.SecretAgent,
 	timebounds model.TimeBounds,
-	namespace *string,
+	namespace string,
 	path *string,
 ) (*backup.BackupHandler, error) {
-
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup client, %w", err)
 	}
 
+	config := makeBackupConfig(namespace, backupRoutine, backupPolicy, timebounds, secretAgent)
+
+	writerFactory, err := getWriter(ctx, path, storage)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create backup writer, %w", err)
+	}
+
+	handler, err := backupClient.Backup(ctx, config, writerFactory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start backup, %w", err)
+	}
+
+	return handler, nil
+}
+
+//nolint:funlen
+func makeBackupConfig(
+	namespace string,
+	backupRoutine *model.BackupRoutine,
+	backupPolicy *model.BackupPolicy,
+	timebounds model.TimeBounds,
+	secretAgent *model.SecretAgent,
+) *backup.BackupConfig {
 	config := backup.NewBackupConfig()
-	config.Namespace = *namespace
+	config.Namespace = namespace
 	config.BinList = backupRoutine.BinList
 	if backupPolicy.NoRecords != nil && *backupPolicy.NoRecords {
 		config.NoRecords = true
@@ -121,29 +139,19 @@ func (b *BackupGo) BackupRun(
 		}
 	}
 
-	writerFactory, err := getWriter(ctx, path, storage)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create backup writer, %w", err)
-	}
-
-	handler, err := backupClient.Backup(ctx, config, writerFactory)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start backup, %w", err)
-	}
-
-	return handler, nil
+	return config
 }
 
-func getWriter(ctx context.Context, path *string, storage *model.Storage) (backup.WriteFactory, error) {
+func getWriter(ctx context.Context, path *string, storage *model.Storage) (backup.Writer, error) {
 	switch storage.Type {
 	case model.Local:
-		return local.NewDirectoryWriterFactory(*path, true)
+		return backup.NewWriterLocal(*path, true)
 	case model.S3:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err
 		}
-		return s3.NewS3WriterFactory(ctx, &s3.StorageConfig{
+		return backup.NewWriterS3(ctx, &models.S3Config{
 			Bucket:    bucket,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,

@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/encoding"
-	"github.com/aerospike/backup-go/io/local"
-	"github.com/aerospike/backup-go/io/s3"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -27,8 +25,6 @@ func NewRestoreGo() *RestoreGo {
 }
 
 // RestoreRun calls the restore function from the asbackup library.
-//
-//nolint:funlen,gocritic
 func (r *RestoreGo) RestoreRun(
 	ctx context.Context,
 	client *a.Client,
@@ -40,6 +36,39 @@ func (r *RestoreGo) RestoreRun(
 		return nil, fmt.Errorf("failed to create backup client, %w", err)
 	}
 
+	config := makeRestoreConfig(restoreRequest, client)
+
+	reader, err := getReader(ctx, restoreRequest.Dir, restoreRequest.SourceStorage)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create backup reader, %w", err)
+	}
+
+	handler, err := backupClient.Restore(ctx, config, reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start restore, %w", err)
+	}
+
+	err = handler.Wait(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error during restore, %w", err)
+	}
+
+	stats := handler.GetStats()
+	return &model.RestoreResult{
+		TotalRecords:    stats.GetReadRecords(),
+		InsertedRecords: stats.GetRecordsInserted(),
+		IndexCount:      uint64(stats.GetSIndexes()),
+		UDFCount:        uint64(stats.GetUDFs()),
+		FresherRecords:  stats.GetRecordsFresher(),
+		SkippedRecords:  stats.GetRecordsSkipped(),
+		ExistedRecords:  stats.GetRecordsExisted(),
+		ExpiredRecords:  stats.GetRecordsExpired(),
+		TotalBytes:      stats.GetTotalBytesRead(),
+	}, nil
+}
+
+//nolint:funlen
+func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.Client) *backup.RestoreConfig {
 	config := backup.NewRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
@@ -60,6 +89,9 @@ func (r *RestoreGo) RestoreRun(
 	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
 	config.WritePolicy.RecordExistsAction = recordExistsAction(restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
 
+	if restoreRequest.Policy.Timeout != nil && *restoreRequest.Policy.Timeout > 0 {
+		config.WritePolicy.TotalTimeout = time.Duration(*restoreRequest.Policy.Timeout) * time.Millisecond
+	}
 	if restoreRequest.Policy.NoRecords != nil && *restoreRequest.Policy.NoRecords {
 		config.NoRecords = true
 	}
@@ -105,7 +137,7 @@ func (r *RestoreGo) RestoreRun(
 	}
 
 	if restoreRequest.SecretAgent != nil {
-		config.SecretAgent = &models.SecretAgentConfig{
+		config.SecretAgentConfig = &models.SecretAgentConfig{
 			ConnectionType:     &restoreRequest.SecretAgent.ConnectionType,
 			Address:            &restoreRequest.SecretAgent.Address,
 			Port:               &restoreRequest.SecretAgent.Port,
@@ -114,34 +146,7 @@ func (r *RestoreGo) RestoreRun(
 			IsBase64:           &restoreRequest.SecretAgent.IsBase64,
 		}
 	}
-
-	reader, err := getReader(ctx, restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create backup reader, %w", err)
-	}
-
-	handler, err := backupClient.Restore(ctx, config, reader)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start restore, %w", err)
-	}
-
-	err = handler.Wait(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error during restore, %w", err)
-	}
-
-	stats := handler.GetStats()
-	return &model.RestoreResult{
-		TotalRecords:    stats.GetReadRecords(),
-		InsertedRecords: stats.GetRecordsInserted(),
-		IndexCount:      uint64(stats.GetSIndexes()),
-		UDFCount:        uint64(stats.GetUDFs()),
-		FresherRecords:  stats.GetRecordsFresher(),
-		SkippedRecords:  stats.GetRecordsSkipped(),
-		ExistedRecords:  stats.GetRecordsExisted(),
-		ExpiredRecords:  stats.GetRecordsExpired(),
-		TotalBytes:      stats.GetTotalBytesRead(),
-	}, nil
+	return config
 }
 
 func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
@@ -163,24 +168,24 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	}
 }
 
-func getReader(ctx context.Context, path *string, storage *model.Storage, decoder encoding.DecoderFactory,
+func getReader(ctx context.Context, path *string, storage *model.Storage,
 ) (backup.StreamingReader, error) {
 	switch storage.Type {
 	case model.Local:
-		return local.NewDirectoryStreamingReader(*path, decoder)
+		return backup.NewStreamingReaderLocal(*path, backup.EncoderTypeASB)
 	case model.S3:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err
 		}
-		return s3.NewS3StreamingReader(ctx, &s3.StorageConfig{
+		return backup.NewStreamingReaderS3(ctx, &models.S3Config{
 			Bucket:    bucket,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,
 			Profile:   *storage.S3Profile,
 			Prefix:    parsedPath,
 			ChunkSize: 0,
-		}, decoder)
+		}, backup.EncoderTypeASB)
 	}
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
 }

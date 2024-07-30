@@ -2,7 +2,6 @@ package shared
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -23,11 +22,8 @@ func NewRestoreMock() *RestoreMock {
 }
 
 // RestoreRun mocks the interface method.
-func (r *RestoreMock) RestoreRun(_ context.Context, _ *aerospike.Client, restoreRequest *model.RestoreRequestInternal,
+func (r *RestoreMock) RestoreRun(_ context.Context, _ *aerospike.Client, _ *model.RestoreRequestInternal,
 ) (*model.RestoreResult, error) {
-	if restoreRequest.DestinationCuster == nil {
-		return nil, fmt.Errorf("RestoreRun mock call without DestinationCuster provided, will fail")
-	}
 	slog.Info("RestoreRun mock call")
 	time.Sleep(100 * time.Millisecond)
 	result := model.NewRestoreResult()

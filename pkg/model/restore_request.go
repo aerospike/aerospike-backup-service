@@ -79,7 +79,7 @@ func (r *RestoreRequest) Validate() error {
 	if err := r.SourceStorage.Validate(); err != nil {
 		return err
 	}
-	if err := r.Policy.Validate(); err != nil { //nolint:revive
+	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
 	return nil

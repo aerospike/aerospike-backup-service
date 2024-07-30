@@ -118,7 +118,7 @@ func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Reques
 // @Success     200
 // @Failure     400 {string} string
 //
-//nolint:dupl
+
 func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	var updatedCluster model.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&updatedCluster)
