@@ -28,8 +28,6 @@ func NewRestoreGo() *RestoreGo {
 }
 
 // RestoreRun calls the restore function from the asbackup library.
-//
-//nolint:funlen,gocritic
 func (r *RestoreGo) RestoreRun(ctx context.Context, client *a.Client, restoreRequest *model.RestoreRequestInternal,
 ) (*model.RestoreResult, error) {
 	var err error

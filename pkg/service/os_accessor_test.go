@@ -220,7 +220,6 @@ func TestReadBackupDetails(t *testing.T) {
 }
 
 func TestReadBackupDetailsNegative(t *testing.T) {
-
 	accessor := &OSDiskAccessor{}
 	tests := []struct {
 		name  string

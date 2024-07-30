@@ -259,7 +259,6 @@ func (h *BackupHandler) runIncrementalBackup(ctx context.Context, now time.Time)
 
 func (h *BackupHandler) startIncrementalBackupForAllNamespaces(
 	ctx context.Context, client *aerospike.Client, upperBound time.Time) {
-
 	timebounds := model.NewTimeBoundsFrom(h.state.LastRun())
 	if h.backupFullPolicy.IsSealed() {
 		timebounds.ToTime = &upperBound

@@ -9,31 +9,37 @@ run:
 linters:
   disable-all: true
   enable:
+    - gci
+    - bodyclose
+    - unused
+    - dogsled
     - dupl
     - errcheck
     - exportloopref
-    - funlen
-    - gci
     - goconst
     - gocritic
-    - gocyclo
     - gofmt
     - goimports
+    - gocyclo
+    - gosec
     - gosimple
     - govet
     - ineffassign
-    - lll
     - misspell
-    - prealloc
-    - promlinter
+    - nolintlint
+    - nakedret
+    - prealloc # pre-allocate slices with define size if the slice size is known in advance
+    - predeclared
     - revive
-    - sloglint
     - staticcheck
     - stylecheck
+    - thelper
+    - tparallel
     - typecheck
     - unconvert
     - unparam
-    - unused
+    - whitespace
+    - lll
 
 issues:
   exclude-rules:

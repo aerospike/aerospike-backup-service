@@ -27,12 +27,9 @@ func NewBackupGo() *BackupGo {
 }
 
 // BackupRun calls the backup_run function from the asbackup shared library.
-//
-//nolint:funlen,gocritic
 func (b *BackupGo) BackupRun(ctx context.Context, backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	client *a.Client, storage *model.Storage, _ *model.SecretAgent,
 	timebounds model.TimeBounds, namespace *string, path *string) (*backup.BackupHandler, error) {
-
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup client, %w", err)

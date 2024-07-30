@@ -42,6 +42,7 @@ func TestReadWriteState(t *testing.T) {
 }
 
 func runReadWriteState(t *testing.T, context S3Context) {
+	t.Helper()
 	metadataWrite := model.BackupMetadata{
 		Namespace: "testNS",
 		Created:   time.Now(),
@@ -70,6 +71,7 @@ func TestS3Context_DeleteFile(t *testing.T) {
 }
 
 func runDeleteFileTest(t *testing.T, context S3Context) {
+	t.Helper()
 	_ = context.writeYaml("incremental/file.txt", "data")
 	_ = context.writeYaml("incremental/file2.txt", "data")
 
@@ -97,6 +99,7 @@ func TestS3Context_DeleteFolder(t *testing.T) {
 }
 
 func runDeleteFolderTest(t *testing.T, context S3Context) {
+	t.Helper()
 	parent := "storage1/minioIncremental"
 	folder1 := parent + "/source-ns1"
 	folder2 := parent + "/source-ns16"

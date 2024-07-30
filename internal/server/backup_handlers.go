@@ -133,7 +133,6 @@ func readBackupsLogic(routines map[string]*model.BackupRoutine,
 	backends service.BackendsHolder,
 	timeBounds *model.TimeBounds,
 	isFullBackup bool) (map[string][]model.BackupDetails, error) {
-
 	result := make(map[string][]model.BackupDetails)
 	for routine := range routines {
 		reader, _ := backends.GetReader(routine)
@@ -149,7 +148,6 @@ func readBackupsLogic(routines map[string]*model.BackupRoutine,
 
 func backupsReadFunction(
 	backend service.BackupListReader, fullBackup bool) func(*model.TimeBounds) ([]model.BackupDetails, error) {
-
 	if fullBackup {
 		return backend.FullBackupList
 	}
