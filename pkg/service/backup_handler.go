@@ -241,6 +241,7 @@ func (h *BackupHandler) runIncrementalBackup(ctx context.Context, now time.Time)
 	client, aerr := aerospike.NewClientWithPolicyAndHost(h.cluster.ASClientPolicy(), h.cluster.ASClientHosts()...)
 	if aerr != nil {
 		slog.Error("failed to connect to aerospike cluster", "err", aerr)
+		return
 	}
 	defer func() {
 		client.Close()
