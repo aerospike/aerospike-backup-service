@@ -18,10 +18,11 @@ import (
 // RestoreMemory implements the RestoreService interface.
 // Stores job information locally within a map.
 type RestoreMemory struct {
-	config         *model.Config
-	restoreJobs    *JobsHolder
-	restoreService shared.Restore
-	backends       BackendsHolder
+	config          *model.Config
+	restoreJobs     *JobsHolder
+	restoreService  shared.Restore
+	backends        BackendsHolder
+	asClientCreator ASClientCreator
 }
 
 var _ RestoreService = (*RestoreMemory)(nil)
@@ -29,10 +30,11 @@ var _ RestoreService = (*RestoreMemory)(nil)
 // NewRestoreMemory returns a new RestoreMemory instance.
 func NewRestoreMemory(backends BackendsHolder, config *model.Config, restoreService shared.Restore) *RestoreMemory {
 	return &RestoreMemory{
-		restoreJobs:    NewJobsHolder(),
-		restoreService: restoreService,
-		backends:       backends,
-		config:         config,
+		restoreJobs:     NewJobsHolder(),
+		restoreService:  restoreService,
+		backends:        backends,
+		config:          config,
+		asClientCreator: &AerospikeClientCreator{},
 	}
 }
 
@@ -48,7 +50,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 		if err != nil {
 			return
 		}
-		defer client.Close()
+		defer r.asClientCreator.Close(client)
 
 		restoreResult, err := r.restoreService.RestoreRun(ctx, client, request)
 		if err != nil {
@@ -63,7 +65,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 }
 
 func (r *RestoreMemory) initClient(cluster *model.AerospikeCluster, jobID int) (*aerospike.Client, error) {
-	client, aerr := aerospike.NewClientWithPolicyAndHost(
+	client, aerr := r.asClientCreator.NewClient(
 		cluster.ASClientPolicy(),
 		cluster.ASClientHosts()...)
 	if aerr != nil {
@@ -102,7 +104,7 @@ func (r *RestoreMemory) restoreByTimeSync(
 	if err != nil {
 		return
 	}
-	defer client.Close()
+	defer r.asClientCreator.Close(client)
 
 	var wg sync.WaitGroup
 
@@ -290,4 +292,22 @@ func validateStorageContainsBackup(storage *model.Storage) error {
 		return s3context.validateStorageContainsBackup()
 	}
 	return nil
+}
+
+// ASClientCreator manages creation and close of aerospike connection.
+// Required to be able to mock it in tests.
+type ASClientCreator interface {
+	NewClient(policy *aerospike.ClientPolicy, hosts ...*aerospike.Host) (*aerospike.Client, error)
+	Close(client *aerospike.Client)
+}
+
+type AerospikeClientCreator struct{}
+
+func (a *AerospikeClientCreator) Close(client *aerospike.Client) {
+	client.Close()
+}
+
+func (a *AerospikeClientCreator) NewClient(policy *aerospike.ClientPolicy, hosts ...*aerospike.Host,
+) (*aerospike.Client, error) {
+	return aerospike.NewClientWithPolicyAndHost(policy, hosts...)
 }
