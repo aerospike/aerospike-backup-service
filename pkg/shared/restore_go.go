@@ -25,8 +25,6 @@ func NewRestoreGo() *RestoreGo {
 }
 
 // RestoreRun calls the restore function from the asbackup library.
-//
-//nolint:funlen,gocritic
 func (r *RestoreGo) RestoreRun(ctx context.Context, client *a.Client, restoreRequest *model.RestoreRequestInternal,
 ) (*model.RestoreResult, error) {
 	var err error
@@ -35,6 +33,39 @@ func (r *RestoreGo) RestoreRun(ctx context.Context, client *a.Client, restoreReq
 		return nil, fmt.Errorf("failed to create backup client, %w", err)
 	}
 
+	config := makeRestoreConfig(restoreRequest, client)
+
+	reader, err := getReader(ctx, restoreRequest.Dir, restoreRequest.SourceStorage)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create backup reader, %w", err)
+	}
+
+	handler, err := backupClient.Restore(ctx, config, reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start restore, %w", err)
+	}
+
+	err = handler.Wait(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error during restore, %w", err)
+	}
+
+	stats := handler.GetStats()
+	return &model.RestoreResult{
+		TotalRecords:    stats.GetReadRecords(),
+		InsertedRecords: stats.GetRecordsInserted(),
+		IndexCount:      uint64(stats.GetSIndexes()),
+		UDFCount:        uint64(stats.GetUDFs()),
+		FresherRecords:  stats.GetRecordsFresher(),
+		SkippedRecords:  stats.GetRecordsSkipped(),
+		ExistedRecords:  stats.GetRecordsExisted(),
+		ExpiredRecords:  stats.GetRecordsExpired(),
+		TotalBytes:      stats.GetTotalBytesRead(),
+	}, nil
+}
+
+//nolint:funlen
+func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.Client) *backup.RestoreConfig {
 	config := backup.NewRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
@@ -99,34 +130,7 @@ func (r *RestoreGo) RestoreRun(ctx context.Context, client *a.Client, restoreReq
 			KeyFile: restoreRequest.Policy.EncryptionPolicy.KeyFile,
 		}
 	}
-
-	reader, err := getReader(ctx, restoreRequest.Dir, restoreRequest.SourceStorage)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create backup reader, %w", err)
-	}
-
-	handler, err := backupClient.Restore(ctx, config, reader)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start restore, %w", err)
-	}
-
-	err = handler.Wait(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error during restore, %w", err)
-	}
-
-	stats := handler.GetStats()
-	return &model.RestoreResult{
-		TotalRecords:    stats.GetReadRecords(),
-		InsertedRecords: stats.GetRecordsInserted(),
-		IndexCount:      uint64(stats.GetSIndexes()),
-		UDFCount:        uint64(stats.GetUDFs()),
-		FresherRecords:  stats.GetRecordsFresher(),
-		SkippedRecords:  stats.GetRecordsSkipped(),
-		ExistedRecords:  stats.GetRecordsExisted(),
-		ExpiredRecords:  stats.GetRecordsExpired(),
-		TotalBytes:      stats.GetTotalBytesRead(),
-	}, nil
+	return config
 }
 
 func recordExistsAction(replace, unique *bool) a.RecordExistsAction {

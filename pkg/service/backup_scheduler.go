@@ -43,15 +43,22 @@ func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
 	return quartz.NewJobDetail(job.Job(), jobKey)
 }
 
-func ApplyNewConfig(scheduler quartz.Scheduler, config *model.Config, backends BackendsHolder) error {
+func ApplyNewConfig(scheduler quartz.Scheduler, config *model.Config, backends BackendsHolder,
+) (BackupHandlerHolder, error) {
 	err := scheduler.Clear()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	backends.SetData(BuildBackupBackends(config))
 
-	return scheduleRoutines(scheduler, config, MakeHandlers(config, backends))
+	handlers := MakeHandlers(config, backends)
+	err = scheduleRoutines(scheduler, config, handlers)
+	if err != nil {
+		return nil, err
+	}
+
+	return handlers, nil
 }
 
 // ScheduleBackup creates a new quartz.Scheduler, schedules all the configured backup jobs,

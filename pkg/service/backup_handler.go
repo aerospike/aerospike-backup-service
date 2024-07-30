@@ -139,7 +139,7 @@ func (h *BackupHandler) startFullBackupForAllNamespaces(
 		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, upperBound)
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
 		handler, err := backupService.BackupRun(ctx, h.backupRoutine, h.backupFullPolicy, client,
-			h.storage, h.secretAgent, timebounds, &namespace, backupPath)
+			h.storage, h.secretAgent, timebounds, namespace, backupPath)
 		if err != nil {
 			backupFailureCounter.Inc()
 			return fmt.Errorf("could not start backup of namespace %s, routine %s: %w", namespace, h.routineName, err)
@@ -259,7 +259,6 @@ func (h *BackupHandler) runIncrementalBackup(ctx context.Context, now time.Time)
 
 func (h *BackupHandler) startIncrementalBackupForAllNamespaces(
 	ctx context.Context, client *aerospike.Client, upperBound time.Time) {
-
 	timebounds := model.NewTimeBoundsFrom(h.state.LastRun())
 	if h.backupFullPolicy.IsSealed() {
 		timebounds.ToTime = &upperBound
@@ -270,7 +269,7 @@ func (h *BackupHandler) startIncrementalBackupForAllNamespaces(
 		backupFolder := getIncrementalPath(h.backend.incrementalBackupsPath, namespace, upperBound)
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
 		handler, err := backupService.BackupRun(ctx,
-			h.backupRoutine, h.backupIncrPolicy, client, h.storage, h.secretAgent, *timebounds, &namespace, backupPath)
+			h.backupRoutine, h.backupIncrPolicy, client, h.storage, h.secretAgent, *timebounds, namespace, backupPath)
 		if err != nil {
 			incrBackupFailureCounter.Inc()
 			slog.Warn("could not start backup", "namespace", namespace, "routine", h.routineName, "err", err)

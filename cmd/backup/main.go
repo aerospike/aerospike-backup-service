@@ -27,7 +27,7 @@ var (
 
 // run parses the CLI parameters and executes backup.
 //
-//nolint:funlen
+
 func run() int {
 	var (
 		configFile string

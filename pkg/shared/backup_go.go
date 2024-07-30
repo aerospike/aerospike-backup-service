@@ -25,19 +25,39 @@ func NewBackupGo() *BackupGo {
 }
 
 // BackupRun calls the backup_run function from the asbackup shared library.
-//
-//nolint:funlen,gocritic
 func (b *BackupGo) BackupRun(ctx context.Context, backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
 	client *a.Client, storage *model.Storage, _ *model.SecretAgent,
-	timebounds model.TimeBounds, namespace *string, path *string) (*backup.BackupHandler, error) {
-
+	timebounds model.TimeBounds, namespace string, path *string,
+) (*backup.BackupHandler, error) {
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup client, %w", err)
 	}
 
+	config := makeBackupConfig(namespace, backupRoutine, backupPolicy, timebounds)
+
+	writerFactory, err := getWriter(ctx, path, storage)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create backup writer, %w", err)
+	}
+
+	handler, err := backupClient.Backup(ctx, config, writerFactory)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start backup, %w", err)
+	}
+
+	return handler, nil
+}
+
+//nolint:funlen
+func makeBackupConfig(
+	namespace string,
+	backupRoutine *model.BackupRoutine,
+	backupPolicy *model.BackupPolicy,
+	timebounds model.TimeBounds,
+) *backup.BackupConfig {
 	config := backup.NewBackupConfig()
-	config.Namespace = *namespace
+	config.Namespace = namespace
 	config.BinList = backupRoutine.BinList
 	if backupPolicy.NoRecords != nil && *backupPolicy.NoRecords {
 		config.NoRecords = true
@@ -98,17 +118,7 @@ func (b *BackupGo) BackupRun(ctx context.Context, backupRoutine *model.BackupRou
 		}
 	}
 
-	writerFactory, err := getWriter(ctx, path, storage)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create backup writer, %w", err)
-	}
-
-	handler, err := backupClient.Backup(ctx, config, writerFactory)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start backup, %w", err)
-	}
-
-	return handler, nil
+	return config
 }
 
 func getWriter(ctx context.Context, path *string, storage *model.Storage) (backup.Writer, error) {

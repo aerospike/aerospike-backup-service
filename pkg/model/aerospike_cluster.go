@@ -1,4 +1,4 @@
-// nolint:lll
+//nolint:lll
 package model
 
 import (
@@ -174,7 +174,6 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 	var clientPool []tls.Certificate
 	if (t.Certfile != nil && len(*t.Certfile) > 0) ||
 		t.Keyfile != nil && len(*t.Keyfile) > 0 {
-
 		// Read cert file
 		certFileBytes, err := readFromFile(*t.Certfile)
 		if err != nil {
@@ -231,6 +230,7 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 		RootCAs:                  serverPool,
 		InsecureSkipVerify:       false,
 		PreferServerCipherSuites: true,
+		MinVersion:               tls.VersionTLS12,
 	}
 
 	return tlsConfig

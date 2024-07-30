@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/netip"
 	"strings"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
@@ -104,7 +105,8 @@ func NewHTTPServer(
 	return &HTTPServer{
 		config: config,
 		server: &http.Server{
-			Addr: addr,
+			Addr:              addr,
+			ReadHeaderTimeout: 5 * time.Second,
 		},
 		rateLimiter:    rateLimiter,
 		whiteList:      newIPWhiteList(serverConfig.GetRateOrDefault().GetWhiteListOrDefault()),

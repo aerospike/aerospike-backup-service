@@ -23,6 +23,7 @@ type Reader interface {
 type HTTPReader struct{}
 
 func (h HTTPReader) read(url string) ([]byte, error) {
+	// #nosec G107
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
