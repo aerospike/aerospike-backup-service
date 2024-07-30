@@ -8,9 +8,6 @@ import (
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/encoding"
-	"github.com/aerospike/backup-go/io/local"
-	"github.com/aerospike/backup-go/io/s3"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -38,7 +35,7 @@ func (r *RestoreGo) RestoreRun(ctx context.Context, client *a.Client, restoreReq
 
 	config := makeRestoreConfig(restoreRequest, client)
 
-	reader, err := getReader(ctx, restoreRequest.Dir, restoreRequest.SourceStorage, config.DecoderFactory)
+	reader, err := getReader(ctx, restoreRequest.Dir, restoreRequest.SourceStorage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}
@@ -155,24 +152,24 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	}
 }
 
-func getReader(ctx context.Context, path *string, storage *model.Storage, decoder encoding.DecoderFactory,
+func getReader(ctx context.Context, path *string, storage *model.Storage,
 ) (backup.StreamingReader, error) {
 	switch storage.Type {
 	case model.Local:
-		return local.NewDirectoryStreamingReader(*path, decoder)
+		return backup.NewStreamingReaderLocal(*path, backup.EncoderTypeASB)
 	case model.S3:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err
 		}
-		return s3.NewS3StreamingReader(ctx, &s3.StorageConfig{
+		return backup.NewStreamingReaderS3(ctx, &models.S3Config{
 			Bucket:    bucket,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,
 			Profile:   *storage.S3Profile,
 			Prefix:    parsedPath,
 			ChunkSize: 0,
-		}, decoder)
+		}, backup.EncoderTypeASB)
 	}
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
 }
