@@ -90,6 +90,7 @@ func (h *BackupHandler) runFullBackupInternal(ctx context.Context, now time.Time
 		return nil
 	}
 	slog.Debug("Acquire fullBackupInProgress lock", "name", h.routineName)
+	defer h.backend.FullBackupInProgress().Store(false)
 
 	client, aerr := aerospike.NewClientWithPolicyAndHost(h.cluster.ASClientPolicy(), h.cluster.ASClientHosts()...)
 	if aerr != nil {
@@ -98,8 +99,6 @@ func (h *BackupHandler) runFullBackupInternal(ctx context.Context, now time.Time
 
 	// release the lock
 	defer func() {
-		h.backend.FullBackupInProgress().Store(false)
-		slog.Debug("Release fullBackupInProgress lock", "name", h.routineName)
 		client.Close()
 		clear(h.fullBackupHandlers)
 	}()
