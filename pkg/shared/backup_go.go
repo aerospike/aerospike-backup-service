@@ -8,8 +8,6 @@ import (
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/io/local"
-	"github.com/aerospike/backup-go/io/s3"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -123,16 +121,16 @@ func makeBackupConfig(
 	return config
 }
 
-func getWriter(ctx context.Context, path *string, storage *model.Storage) (backup.WriteFactory, error) {
+func getWriter(ctx context.Context, path *string, storage *model.Storage) (backup.Writer, error) {
 	switch storage.Type {
 	case model.Local:
-		return local.NewDirectoryWriterFactory(*path, true)
+		return backup.NewWriterLocal(*path, true)
 	case model.S3:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err
 		}
-		return s3.NewS3WriterFactory(ctx, &s3.StorageConfig{
+		return backup.NewWriterS3(ctx, &models.S3Config{
 			Bucket:    bucket,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,
