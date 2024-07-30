@@ -16,8 +16,11 @@ linters:
     - dupl
     - errcheck
     - exportloopref
+    - funlen
+    - gci
     - goconst
     - gocritic
+    - gocyclo
     - gofmt
     - goimports
     - gocyclo
@@ -26,11 +29,14 @@ linters:
     - govet
     - ineffassign
     - misspell
+    - prealloc
+    - promlinter
     - nolintlint
     - nakedret
     - prealloc # pre-allocate slices with define size if the slice size is known in advance
     - predeclared
     - revive
+    - sloglint
     - staticcheck
     - stylecheck
     - thelper
@@ -38,6 +44,7 @@ linters:
     - typecheck
     - unconvert
     - unparam
+    - unused
     - whitespace
     - lll
 
