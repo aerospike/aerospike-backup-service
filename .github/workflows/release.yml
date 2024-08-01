@@ -57,10 +57,15 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: "1.22.5"
+      - name: Setup access for private go modules
+        run: |
+          git config --global url."ssh://git@github.com/".insteadOf https://github.com/
       - name: Install Dependencies
         run: |
           go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
       - name: Build Packages
+        env:
+          GOPRIVATE: github.com/aerospike/backup-go
         run: |
           make packages
 
