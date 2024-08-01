@@ -8,11 +8,11 @@ on:
 #      - '*'
   workflow_dispatch:
 jobs:
-  create-release:
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create-release.outputs.upload_url }}
-    steps:
+#  create-release:
+#    runs-on: ubuntu-latest
+#    outputs:
+#      upload_url: ${{ steps.create-release.outputs.upload_url }}
+#    steps:
 #      - name: Check if release exists
 #        id: check-release
 #        uses: actions/github-script@v7
