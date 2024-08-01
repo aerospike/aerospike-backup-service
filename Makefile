@@ -4,40 +4,40 @@ WORKSPACE = $(shell pwd)
 UNAME = $(shell uname -sm | tr ' ' '-')
 UNAME_M=$(shell uname -m)
 
-ifeq ($(UNAME_M),x86_64)
-    ARCH:=amd64
-else ifeq ($(UNAME_M),aarch64)
-    ARCH:=arm64
-else
-    $(error Unsupported architecture)
-endif
-
-BINARY_NAME:=aerospike-backup-service
-GIT_COMMIT:=$(shell git rev-parse HEAD)
-VERSION:=$(shell cat VERSION)
-
-# Go parameters
-GO ?= $(shell which go || echo "/usr/local/go/bin/go")
-CGO_CFLAGS=-I $(WORKSPACE)/modules/aerospike-tools-backup/modules/c-client/target/$(UNAME)/include \
--I $(WORKSPACE)/modules/aerospike-tools-backup/modules/secret-agent-client/target/$(UNAME)/include \
--I $(WORKSPACE)/modules/aerospike-tools-backup/include
-GOBUILD = CGO_CFLAGS="$(CGO_CFLAGS)" CGO_ENABLED=1 $(GO) build \
--ldflags="-X main.commit=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
-GOTEST = $(GO) test
-GOCLEAN = $(GO) clean
-GO_VERSION = 1.22.0
-GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
-
-
+BINARY_NAME=aerospike-backup-service
 GIT_TAG = $(shell git describe --tags)
 CMD_DIR = cmd/backup
 TARGET_DIR = target
+PACKAGES_DIR = packages
 LIB_DIR = lib
 PKG_DIR = build/package
 PREP_DIR = $(TARGET_DIR)/pkg_install
 CONFIG_FILES = $(wildcard config/*)
 POST_INSTALL_SCRIPT = $(PKG_DIR)/post-install.sh
 TOOLS_DIR = $(WORKSPACE)/modules/aerospike-tools-backup
+ARCHS=linux/amd64 linux/arm64
+PACKAGERS=deb rpm
+TARGET=$(TARGET_DIR)/$(BINARY_NAME)
+ifneq ($(strip $(OS))$(strip $(ARCH)),)
+	TARGET=$(TARGET_DIR)/$(BINARY_NAME)_$(OS)_$(ARCH)
+endif
+
+
+GIT_COMMIT:=$(shell git rev-parse HEAD)
+VERSION:=$(shell cat VERSION)
+
+# Go parameters
+GO ?= $(shell which go || echo "/usr/local/go/bin/go")
+NFPM ?= $(shell which nfpm)
+OS ?= $($(GO) env GOOS)
+ARCH ?= $($(GO) env GOARCH)
+GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) $(GO) build \
+-ldflags="-X main.commit=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
+GOTEST = $(GO) test
+GOCLEAN = $(GO) clean
+GO_VERSION = 1.22.5
+GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
+
 
 MAINTAINER = "Aerospike"
 DESCRIPTION = "Aerospike Backup Service"
@@ -58,19 +58,35 @@ remove-submodules:
 	git submodule foreach --recursive git clean -fd
 	git submodule deinit --all -f
 
-.PHONY: build-submodules
-build-submodules:
-	./scripts/build-submodules.sh
-	./scripts/copy_shared.sh
-
-.PHONY: clean-submodules
-clean-submodules:
-	$(MAKE) -C $(TOOLS_DIR) clean
+.PHONY: buildx
+buildx:
+	@for arch in $(ARCHS); do \
+  		OS=$$(echo $$arch | cut -d/ -f1); \
+  		ARCH=$$(echo $$arch | cut -d/ -f2); \
+  		OS=$$OS ARCH=$$ARCH $(MAKE) build; \
+  	done
 
 .PHONY: build
 build:
 	mkdir -p $(TARGET_DIR)
-	$(GOBUILD) -o $(TARGET_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
+	$(GOBUILD) -o $(TARGET) ./$(CMD_DIR)
+
+.PHONY: packages
+packages: buildx
+	@for arch in $(ARCHS); do \
+  		OS=$$(echo $$arch | cut -d/ -f1); \
+  		ARCH=$$(echo $$arch | cut -d/ -f2); \
+		OS=$$OS ARCH=$$ARCH \
+		NAME=$(BINARY_NAME) VERSION=$(VERSION) WORKSPACE=$(WORKSPACE) \
+		envsubst '$$OS $$ARCH $$NAME $$VERSION $$WORKSPACE' \
+		< $(PACKAGES_DIR)/nfpm.tmpl.yaml > $(PACKAGES_DIR)/nfpm-$$OS-$$ARCH.yaml; \
+		for packager in $(PACKAGERS); do \
+			$(NFPM) package \
+			--config $(PACKAGES_DIR)/nfpm-$$OS-$$ARCH.yaml \
+			--packager $$(echo $$packager) \
+			--target $(TARGET_DIR); \
+			done; \
+  	done
 .PHONY: test
 test:
 	$(GOTEST) -v ./...

@@ -48,7 +48,7 @@ services:
       retries: 3
 
   aerospike-backup-service:
-    image: aerospike.jfrog.io/ecosystem-container-prod-local/aerospike-backup-service:latest
+    image: aerospike.jfrog.io/ecosystem-container-dev-local/aerospike-backup-service:test1
     container_name: "aerospike-backup-service"
     ports:
       - "8080:8080"

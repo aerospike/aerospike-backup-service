@@ -1,0 +1,55 @@
+name: "${NAME}"
+arch: "${ARCH}"
+version: "${VERSION}"
+platform: "linux"
+section: "default"
+priority: "extra"
+#replaces:
+#- foobar
+#provides:
+#- bar
+#depends:
+#- foo
+#- bar
+#recommends:
+#- whatever
+#suggests:
+#- something-else
+#conflicts:
+#- not-foo
+#- not-bar
+maintainer: "Aerospike <info@aerospike.com>"
+description: |
+  Aerospike Backup Service
+  This package provides backup and restore capabilities
+  for Aerospike Database.!
+vendor: "Aerospike INC"
+homepage: "https://aerospike.com"
+license: "Apache-2.0"
+#changelog: "changelog.yaml"
+contents:
+- src: ${WORKSPACE}/packages/config/${NAME}.service
+  dst: /etc/systemd/system/${NAME}.service
+  type: config
+- src: /etc/systemd/system/${NAME}.service
+  dst: /etc/systemd/system/multi-user.target.wants/${NAME}.service
+  type: symlink
+  packager: deb
+- src: ${WORKSPACE}/packages/config/${NAME}.yml
+  dst: /etc/${NAME}/${NAME}.yml
+  type: config
+- dst: /var/lib/${NAME}
+  file_info:
+    mode: 0755
+  type: dir
+- src: ${WORKSPACE}/target/${NAME}_${OS}_${ARCH}
+  dst: /usr/bin/${NAME}
+scripts:
+  postinstall: ${WORKSPACE}/scripts/postinstall.sh
+  preremove: ${WORKSPACE}/scripts/preremove.sh
+umask: 0o002
+rpm:
+  compression: xz
+deb:
+  compression: xz
+
