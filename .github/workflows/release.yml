@@ -66,6 +66,8 @@ jobs:
         run: |
           git config --global url."https://${PAT}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           make packages
+          
+          
 
 #  make-packages:
 #    needs: create-release
