@@ -73,7 +73,7 @@ jobs:
           args: "*.rpm *.deb *.sha256"
       - name: Print file names
         run: |
-          for file in ${{ ssteps.ff.outputs.files }}; do
+          for file in ${{ steps.ff.outputs.files }}; do
             echo "File found: $file"
           done
 
