@@ -49,6 +49,8 @@ jobs:
 #          draft: true
 #          prerelease: true
   build-artifacts:
+    needs:
+      - create-release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -67,13 +69,15 @@ jobs:
           git config --global url."https://${PAT}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           make packages
       - name: Find files matching "*.rpm" "*.deb" and "*sha256"
-        id: ff
-        uses: jeertmans/filesfinder@latest
-        with:
-          args: "*.rpm *.deb *.sha256"
-      - name: Print file names
-        run: echo "${{ steps.ff.outputs.files }}"
-
+        run: |
+          ASSET_LIST=$(find . -type f \( -name "*.deb" -or -name "*.rpm" -or -name "*.sha256" \) | tr '\n' ',')
+          echo "ASSET_LIST=$ASSET_LIST" >> $GITHUB_ENV
+      - name: Upload Assets
+        run: |
+          IFS=',' read -r -a asset_array <<< "$ASSET_LIST"
+          for file in "${asset_array[@]}"; do
+            echo "$file"
+          done
 #  make-packages:
 #    needs: create-release
 #    strategy:
