@@ -74,7 +74,8 @@ jobs:
           echo "ASSET_LIST=$ASSET_LIST" >> $GITHUB_ENV
       - name: Upload Assets
         run: |
-               echo "${{ needs.create-release.outputs.upload_url }}"
+          upload_url = "$(echo ${{ needs.create-release.outputs.upload_url }} | sed 's/{\?name,label}//')
+               echo "$upload_url"
                IFS=',' read -r -a asset_array <<< "$ASSET_LIST"
                for file in "${asset_array[@]}"; do
                   echo "$file"
