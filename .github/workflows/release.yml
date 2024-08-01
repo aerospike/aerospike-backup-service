@@ -13,8 +13,6 @@ jobs:
     outputs:
       upload_url: ${{ steps.create-release.outputs.upload_url }}
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
 #      - name: Check if release exists
 #        id: check-release
 #        uses: actions/github-script@v7
@@ -53,6 +51,8 @@ jobs:
   build-artifacts:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
@@ -62,7 +62,6 @@ jobs:
           go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
       - name: Build Packages
         run: |
-          ls
           make packages
 
 #  make-packages:
