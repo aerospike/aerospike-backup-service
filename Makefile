@@ -86,7 +86,15 @@ packages: buildx
 			--packager $$(echo $$packager) \
 			--target $(TARGET_DIR); \
 			done; \
-  	done
+  	done; \
+  	$(MAKE) checksums
+
+.PHONY: checksums
+checksums:
+	@find . -type f \
+		\( -name '*.deb' -o -name '*.rpm' \) \
+		-exec sh -c 'sha256sum "$$1" | cut -d" " -f1 > "$$1.sha256"' _ {} \;
+
 .PHONY: test
 test:
 	$(GOTEST) -v ./...

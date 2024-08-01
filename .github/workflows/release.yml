@@ -66,8 +66,17 @@ jobs:
         run: |
           git config --global url."https://${PAT}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           make packages
-          
-          
+      - name: Find package files
+        id: finder
+        uses: actions/glob@v3
+        with:
+          path: '**/*.{rpm,deb,sha256}'
+          patterns: '**/*.{rpm,deb,sha256}'
+      - name: Print file names
+        run: |
+          for file in ${{ steps.finder.outputs.files }}; do
+            echo "File found: $file"
+          done
 
 #  make-packages:
 #    needs: create-release
