@@ -62,6 +62,7 @@ jobs:
           go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
       - name: Build Packages
         run: |
+          ls
           make packages
 
 #  make-packages:
