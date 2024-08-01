@@ -66,14 +66,14 @@ jobs:
         run: |
           git config --global url."https://${PAT}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           make packages
-      - name: Find package files
-        id: finder
-        uses: tj-actions/glob@v22
+      - name: Find files matching "*.rpm" "*.deb" and "*sha256"
+        id: ff
+        uses: jeertmans/filesfinder@latest
         with:
-          files: "**/*.{rpm,deb,sha256}"
+          args: "*.rpm *.deb *.sha256"
       - name: Print file names
         run: |
-          for file in ${{ steps.finder.outputs.files }}; do
+          for file in ${{ ssteps.ff.outputs.files }}; do
             echo "File found: $file"
           done
 
