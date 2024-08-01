@@ -62,9 +62,9 @@ jobs:
           go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
       - name: Build Packages
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          PAT: ${{ secrets.PAT }}
         run: |
-          git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://${PAT}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
           make packages
 
 #  make-packages:
