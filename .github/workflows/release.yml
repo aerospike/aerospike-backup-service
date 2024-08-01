@@ -72,10 +72,7 @@ jobs:
         with:
           args: "*.rpm *.deb *.sha256"
       - name: Print file names
-        run: |
-          for file in ${{ steps.ff.outputs.files }}; do
-            echo "File found: $file"
-          done
+        run: echo "${{ steps.ff.outputs.files }}"
 
 #  make-packages:
 #    needs: create-release
