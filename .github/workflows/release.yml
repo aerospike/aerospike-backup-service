@@ -49,8 +49,8 @@ jobs:
 #          draft: true
 #          prerelease: true
   build-artifacts:
-    needs:
-      - create-release
+#    needs:
+#      - create-release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
