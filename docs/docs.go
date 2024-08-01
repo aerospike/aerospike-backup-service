@@ -534,45 +534,6 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
-                "consumes": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Configuration"
-                ],
-                "summary": "Updates an existing Aerospike cluster in the configuration.",
-                "operationId": "updateCluster",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Aerospike cluster name",
-                        "name": "name",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Aerospike cluster details",
-                        "name": "cluster",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.AerospikeCluster"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -1383,6 +1344,11 @@ const docTemplate = `{
                     "description": "The connection timeout in milliseconds.",
                     "type": "integer",
                     "example": 5000
+                },
+                "connection-queue-size": {
+                    "description": "specifies the size of the Aerospike Connection Queue per node",
+                    "type": "integer",
+                    "example": 100
                 },
                 "credentials": {
                     "description": "The authentication details to the Aerospike cluster.",

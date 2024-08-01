@@ -455,36 +455,6 @@ paths:
       tags:
       - Configuration
       x-codegen-request-body-name: cluster
-    put:
-      operationId: updateCluster
-      parameters:
-      - description: Aerospike cluster name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/model.AerospikeCluster'
-        description: Aerospike cluster details
-        required: true
-      responses:
-        "200":
-          content: {}
-          description: OK
-        "400":
-          content:
-            '*/*':
-              schema:
-                type: string
-          description: Bad Request
-      summary: Updates an existing Aerospike cluster in the configuration.
-      tags:
-      - Configuration
-      x-codegen-request-body-name: cluster
   /v1/config/policies:
     get:
       operationId: readPolicies
@@ -1055,6 +1025,7 @@ components:
       description: AerospikeCluster represents the configuration for an Aerospike
         cluster for backup.
       example:
+        connection-queue-size: 100
         credentials: "{}"
         conn-timeout: 5000
         use-services-alternate: true
@@ -1071,6 +1042,10 @@ components:
         conn-timeout:
           description: The connection timeout in milliseconds.
           example: 5000
+          type: integer
+        connection-queue-size:
+          description: specifies the size of the Aerospike Connection Queue per node
+          example: 100
           type: integer
         credentials:
           allOf:
@@ -1405,6 +1380,7 @@ components:
             max-records: 10000
         aerospike-clusters:
           key:
+            connection-queue-size: 100
             credentials: "{}"
             conn-timeout: 5000
             use-services-alternate: true

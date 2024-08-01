@@ -650,48 +650,6 @@
         "summary" : "Adds an Aerospike cluster to the config.",
         "tags" : [ "Configuration" ],
         "x-codegen-request-body-name" : "cluster"
-      },
-      "put" : {
-        "operationId" : "updateCluster",
-        "parameters" : [ {
-          "description" : "Aerospike cluster name",
-          "in" : "path",
-          "name" : "name",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/model.AerospikeCluster"
-              }
-            }
-          },
-          "description" : "Aerospike cluster details",
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : { },
-            "description" : "OK"
-          },
-          "400" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "Bad Request"
-          }
-        },
-        "summary" : "Updates an existing Aerospike cluster in the configuration.",
-        "tags" : [ "Configuration" ],
-        "x-codegen-request-body-name" : "cluster"
       }
     },
     "/v1/config/policies" : {
@@ -1518,6 +1476,11 @@
           "conn-timeout" : {
             "description" : "The connection timeout in milliseconds.",
             "example" : 5000,
+            "type" : "integer"
+          },
+          "connection-queue-size" : {
+            "description" : "specifies the size of the Aerospike Connection Queue per node",
+            "example" : 100,
             "type" : "integer"
           },
           "credentials" : {
