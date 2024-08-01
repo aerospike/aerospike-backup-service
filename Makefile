@@ -67,7 +67,7 @@ buildx:
   	done
 
 .PHONY: build
-build:
+build: prep-submodules
 	mkdir -p $(TARGET_DIR)
 	$(GOBUILD) -o $(TARGET) ./$(CMD_DIR)
 
