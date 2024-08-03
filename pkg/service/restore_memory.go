@@ -38,7 +38,7 @@ func NewRestoreMemory(backends BackendsHolder, config *model.Config, restoreServ
 	}
 }
 
-func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, error) {
+func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (RestoreJobID, error) {
 	jobID := r.restoreJobs.newJob()
 	if err := validateStorageContainsBackup(request.SourceStorage); err != nil {
 		return 0, err
@@ -64,7 +64,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 	return jobID, nil
 }
 
-func (r *RestoreMemory) initClient(cluster *model.AerospikeCluster, jobID int) (*aerospike.Client, error) {
+func (r *RestoreMemory) initClient(cluster *model.AerospikeCluster, jobID RestoreJobID) (*aerospike.Client, error) {
 	client, aerr := r.asClientCreator.NewClient(
 		cluster.ASClientPolicy(),
 		cluster.ASClientHosts()...)
@@ -77,7 +77,7 @@ func (r *RestoreMemory) initClient(cluster *model.AerospikeCluster, jobID int) (
 	return client, nil
 }
 
-func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (int, error) {
+func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (RestoreJobID, error) {
 	reader, found := r.backends.GetReader(request.Routine)
 	if !found {
 		return 0, fmt.Errorf("backend '%s' not found for restore", request.Routine)
@@ -97,7 +97,7 @@ func (r *RestoreMemory) restoreByTimeSync(
 	ctx context.Context,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
-	jobID int,
+	jobID RestoreJobID,
 	fullBackups []model.BackupDetails,
 ) {
 	client, err := r.initClient(request.DestinationCuster, jobID)
@@ -130,7 +130,7 @@ func (r *RestoreMemory) restoreNamespace(
 	client *aerospike.Client,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
-	jobID int, fullBackup model.BackupDetails,
+	jobID RestoreJobID, fullBackup model.BackupDetails,
 ) error {
 	result, err := r.restoreFromPath(ctx, client, request, fullBackup.Key)
 	if err != nil {
@@ -276,7 +276,7 @@ func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest)
 }
 
 // JobStatus returns the status of the job with the given id.
-func (r *RestoreMemory) JobStatus(jobID int) (*model.RestoreJobStatus, error) {
+func (r *RestoreMemory) JobStatus(jobID RestoreJobID) (*model.RestoreJobStatus, error) {
 	return r.restoreJobs.getStatus(jobID)
 }
 
