@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"gopkg.in/yaml.v3"
@@ -107,6 +109,59 @@ func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.Ba
 	}
 
 	return b.fromSubfolders(timebounds, b.fullBackupsPath)
+}
+
+func (b *BackupBackend) FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error) {
+	fullBackupList, err := b.FullBackupList(model.NewTimeBoundsTo(toTime))
+	if err != nil {
+		return nil, fmt.Errorf("cannot read full backup list: %v", err)
+	}
+
+	fullBackup := latestFullBackupBeforeTime(fullBackupList, toTime) // it's a list of namespaces
+	if len(fullBackup) == 0 {
+		return nil, fmt.Errorf("no full backup found at %s", toTime)
+	}
+	return fullBackup, nil
+}
+
+// latestFullBackupBeforeTime returns list of backups with same creation time, latest before upperBound.
+func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound time.Time) []model.BackupDetails {
+	var result []model.BackupDetails
+	var latestTime time.Time
+	for i := range allBackups {
+		current := &allBackups[i]
+		if current.Created.After(upperBound) {
+			continue
+		}
+
+		if len(result) == 0 || latestTime.Before(current.Created) {
+			latestTime = current.Created
+			result = []model.BackupDetails{*current}
+		} else if current.Created.Equal(latestTime) {
+			result = append(result, *current)
+		}
+	}
+	return result
+}
+
+func (b *BackupBackend) FindIncrementalBackupsForNamespace(bounds *model.TimeBounds, namespace string,
+) ([]model.BackupDetails, error) {
+	allIncrementalBackupList, err := b.IncrementalBackupList(bounds)
+	if err != nil {
+		return nil, err
+	}
+	var filteredIncrementalBackups []model.BackupDetails
+	for _, b := range allIncrementalBackupList {
+		if b.Namespace == namespace {
+			filteredIncrementalBackups = append(filteredIncrementalBackups, b)
+		}
+	}
+	// Sort in place
+	sort.Slice(filteredIncrementalBackups, func(i, j int) bool {
+		return filteredIncrementalBackups[i].Created.Before(filteredIncrementalBackups[j].Created)
+	})
+
+	return filteredIncrementalBackups, nil
 }
 
 func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache bool,

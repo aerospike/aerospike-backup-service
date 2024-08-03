@@ -78,6 +78,10 @@ func makeTestRestoreService() *RestoreMemory {
 type BackendMock struct {
 }
 
+func (m *BackendMock) FindIncrementalBackupsForNamespace(_ *model.TimeBounds, _ string) ([]model.BackupDetails, error) {
+	return nil, nil
+}
+
 func (m *BackendMock) ReadClusterConfiguration(_ string) ([]byte, error) {
 	return []byte{}, nil
 }
@@ -108,7 +112,20 @@ func (*BackendMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDe
 	}}, nil
 }
 
+func (*BackendMock) FindLastFullBackup(_ time.Time) ([]model.BackupDetails, error) {
+	return nil, nil
+}
+
+func (*BackendFailMock) FindLastFullBackup(_ time.Time) ([]model.BackupDetails, error) {
+	return nil, nil
+}
+
 type BackendFailMock struct {
+}
+
+func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ *model.TimeBounds, _ string,
+) ([]model.BackupDetails, error) {
+	return nil, nil
 }
 
 func (m *BackendFailMock) ReadClusterConfiguration(_ string) ([]byte, error) {

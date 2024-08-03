@@ -3,9 +3,10 @@ package shared
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/backup-go/io/aws/s3"
 	"log/slog"
 	"time"
+
+	"github.com/aerospike/backup-go/io/aws/s3"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
