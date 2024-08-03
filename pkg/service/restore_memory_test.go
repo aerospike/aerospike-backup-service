@@ -17,6 +17,7 @@ import (
 )
 
 var restoreService = makeTestRestoreService()
+var retrieveService = NewConfigRetriever(&BackendHolderMock{})
 
 var validBackupPath = "./testout/backup/data/namespace"
 
@@ -405,7 +406,7 @@ func Test_RetrieveConfiguration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := restoreService.RetrieveConfiguration(tt.routine, tt.timestamp)
+			res, err := retrieveService.RetrieveConfiguration(tt.routine, tt.timestamp)
 			assert.Equal(t, tt.wantErr, err != nil, "Unexpected error presence, got: %v", err)
 
 			if !tt.wantErr {

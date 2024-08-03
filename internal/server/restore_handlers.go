@@ -199,7 +199,7 @@ func (ws *HTTPServer) retrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf, err := ws.restoreService.RetrieveConfiguration(name, time.UnixMilli(timestamp))
+	buf, err := ws.configRetriever.RetrieveConfiguration(name, time.UnixMilli(timestamp))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

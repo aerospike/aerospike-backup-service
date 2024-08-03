@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
-	"github.com/aerospike/backup/pkg/util"
 	"github.com/aws/smithy-go/ptr"
 )
 
@@ -177,36 +175,6 @@ func (r *RestoreMemory) restoreFromPath(
 	}
 
 	return restoreResult, nil
-}
-
-func (r *RestoreMemory) RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error) {
-	backend, found := r.backends.GetReader(routine)
-	if !found {
-		return nil, fmt.Errorf("backend '%s' not found for restore", routine)
-	}
-	fullBackups, err := backend.FindLastFullBackup(toTime)
-	if err != nil || len(fullBackups) == 0 {
-		return nil, fmt.Errorf("last full backup not found: %v", err)
-	}
-
-	// fullBackups has backups for multiple namespaces, but same timestamp, they share same configuration.
-	lastFullBackup := fullBackups[0]
-	configPath, err := calculateConfigurationBackupPath(*lastFullBackup.Key)
-	if err != nil {
-		return nil, err
-	}
-	return backend.ReadClusterConfiguration(configPath)
-}
-
-func calculateConfigurationBackupPath(backupKey string) (string, error) {
-	_, path, err := util.ParseS3Path(backupKey)
-	if err != nil {
-		return "", err
-	}
-	// Move up two directories
-	base := filepath.Dir(filepath.Dir(path))
-	// Join new directory 'config' with the new base
-	return filepath.Join(base, model.ConfigurationBackupDirectory), nil
 }
 
 func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
