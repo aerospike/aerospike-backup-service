@@ -43,20 +43,20 @@ jobs:
           workdir: ${{ github.workspace }}
           files: docker-bake.hcl
           targets: default
-#      - name: Promote image with version tag
-#        env:
-#          ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
-#          ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
-#        run: |
-#          jfrog rt docker-promote aerospike-backup-service \
-#          "$ARTIFACTORY_CONTAINER_DEV" \
-#          "$ARTIFACTORY_CONTAINER_PROD" \
-#          --source-tag "${{ github.event.inputs.version }}" \
-#          --target-tag "${{ github.event.inputs.version }}" \
-#          --user "${{ secrets.ARTIFACTORY_USER }}" \
-#          --password "${{ secrets.ARTIFACTORY_TOKEN }}" \
-#          --url "${{ secrets.ARTIFACTORY_PROMOTE_URL }}" \
-#          --copy
+      - name: Promote image with version tag
+        env:
+          ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
+          ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
+        run: |
+          jfrog rt docker-promote aerospike-backup-service \
+          "$ARTIFACTORY_CONTAINER_DEV" \
+          "ecosystem-container-stage-local" \
+          --source-tag "$TAG" \
+          --target-tag "$TAG" \
+          --user "${{ secrets.ARTIFACTORY_USER }}" \
+          --password "${{ secrets.ARTIFACTORY_TOKEN }}" \
+          --url "${{ secrets.ARTIFACTORY_PROMOTE_URL }}" \
+          --copy
 #      - name: Promote image with latest tag
 #        env:
 #          ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}

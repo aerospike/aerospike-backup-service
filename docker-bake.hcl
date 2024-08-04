@@ -89,9 +89,6 @@ target aerospike-backup-service {
         "org.opencontainers.image.revision"="${GIT_COMMIT_SHA}"
         "org.opencontainers.image.created"="${ISO8601}"
     }
-#    secret = [
-#        "type=env,id=GITHUB_TOKEN"
-#    ]
     args = {
         project="${PROJECT}"
     }
@@ -106,5 +103,4 @@ target aerospike-backup-service {
 
     tags = tags("aerospike-backup-service")
     output = ["type=image,push=true"]
-#     output = ["type=image"]
 }
