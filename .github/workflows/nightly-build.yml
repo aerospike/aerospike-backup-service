@@ -52,10 +52,10 @@ jobs:
           echo "ASSET_LIST=$ASSET_LIST" >> $GITHUB_ENV
       - name: Upload Assets
         run: |
-          BASENAME="${filename%.*}"
-          EXT="${file##*.}"
           IFS=',' read -r -a asset_array <<< "$ASSET_LIST"
           for file in "${asset_array[@]}"; do
+            BASENAME="${file%.*}"
+            EXT="${file##*.}"
             echo "curl \
             -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
             -XPUT "https://aerospike.jfrog.io/artifactory/ecosystem-$EXT-dev-local/${{ github.event.repository.name }}/$(cat VERSION)/$BASENAME_$(date +%Y%m%d).$EXT" \
