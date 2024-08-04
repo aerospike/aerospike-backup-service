@@ -105,6 +105,6 @@ target aerospike-backup-service {
     platforms  = split(",", "${PLATFORMS}")
 
     tags = tags("aerospike-backup-service")
-#     output = ["type=image,push=true"]
-    output = ["type=image"]
+    output = ["type=image,push=true"]
+#     output = ["type=image"]
 }
