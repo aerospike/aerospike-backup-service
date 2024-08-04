@@ -117,8 +117,6 @@ func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Reques
 // @Param       cluster body model.AerospikeCluster true "Aerospike cluster details"
 // @Success     200
 // @Failure     400 {string} string
-//
-
 func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	var updatedCluster model.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&updatedCluster)

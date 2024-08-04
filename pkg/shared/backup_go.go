@@ -8,7 +8,7 @@ import (
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/models"
+	"github.com/aerospike/backup-go/io/aws/s3"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 )
@@ -64,7 +64,7 @@ func makeBackupConfig(
 	timebounds model.TimeBounds,
 	secretAgent *model.SecretAgent,
 ) *backup.BackupConfig {
-	config := backup.NewBackupConfig()
+	config := backup.NewDefaultBackupConfig()
 	config.Namespace = namespace
 	config.BinList = backupRoutine.BinList
 	if backupPolicy.NoRecords != nil && *backupPolicy.NoRecords {
@@ -113,14 +113,14 @@ func makeBackupConfig(
 	}
 
 	if backupPolicy.CompressionPolicy != nil {
-		config.CompressionPolicy = &models.CompressionPolicy{
+		config.CompressionPolicy = &backup.CompressionPolicy{
 			Mode:  backupPolicy.CompressionPolicy.Mode,
 			Level: int(backupPolicy.CompressionPolicy.Level),
 		}
 	}
 
 	if backupPolicy.EncryptionPolicy != nil {
-		config.EncryptionPolicy = &models.EncryptionPolicy{
+		config.EncryptionPolicy = &backup.EncryptionPolicy{
 			Mode:      backupPolicy.EncryptionPolicy.Mode,
 			KeyFile:   backupPolicy.EncryptionPolicy.KeyFile,
 			KeySecret: backupPolicy.EncryptionPolicy.KeySecret,
@@ -129,7 +129,7 @@ func makeBackupConfig(
 	}
 
 	if secretAgent != nil {
-		config.SecretAgentConfig = &models.SecretAgentConfig{
+		config.SecretAgentConfig = &backup.SecretAgentConfig{
 			ConnectionType:     &secretAgent.ConnectionType,
 			Address:            &secretAgent.Address,
 			Port:               &secretAgent.Port,
@@ -151,7 +151,7 @@ func getWriter(ctx context.Context, path *string, storage *model.Storage) (backu
 		if err != nil {
 			return nil, err
 		}
-		return backup.NewWriterS3(ctx, &models.S3Config{
+		return backup.NewWriterS3(ctx, &s3.Config{
 			Bucket:    bucket,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,

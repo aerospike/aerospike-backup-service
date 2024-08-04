@@ -1384,6 +1384,11 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 5000
                 },
+                "connection-queue-size": {
+                    "description": "specifies the size of the Aerospike Connection Queue per node",
+                    "type": "integer",
+                    "example": 100
+                },
                 "credentials": {
                     "description": "The authentication details to the Aerospike cluster.",
                     "allOf": [

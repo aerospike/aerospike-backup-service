@@ -1520,6 +1520,11 @@
             "example" : 5000,
             "type" : "integer"
           },
+          "connection-queue-size" : {
+            "description" : "specifies the size of the Aerospike Connection Queue per node",
+            "example" : 100,
+            "type" : "integer"
+          },
           "credentials" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/model.Credentials"

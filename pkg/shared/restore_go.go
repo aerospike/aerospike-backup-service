@@ -8,7 +8,7 @@ import (
 
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/models"
+	"github.com/aerospike/backup-go/io/aws/s3"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 )
@@ -69,7 +69,7 @@ func (r *RestoreGo) RestoreRun(
 
 //nolint:funlen
 func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.Client) *backup.RestoreConfig {
-	config := backup.NewRestoreConfig()
+	config := backup.NewDefaultRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
 	config.WritePolicy = client.DefaultWritePolicy
@@ -103,7 +103,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.C
 	}
 
 	if restoreRequest.Policy.Namespace != nil {
-		config.Namespace = &models.RestoreNamespace{
+		config.Namespace = &backup.RestoreNamespaceConfig{
 			Source:      restoreRequest.Policy.Namespace.Source,
 			Destination: restoreRequest.Policy.Namespace.Destination,
 		}
@@ -122,13 +122,13 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.C
 		config.DisableBatchWrites = *restoreRequest.Policy.DisableBatchWrites
 	}
 	if restoreRequest.Policy.CompressionPolicy != nil {
-		config.CompressionPolicy = &models.CompressionPolicy{
+		config.CompressionPolicy = &backup.CompressionPolicy{
 			Mode:  restoreRequest.Policy.CompressionPolicy.Mode,
 			Level: int(restoreRequest.Policy.CompressionPolicy.Level),
 		}
 	}
 	if restoreRequest.Policy.EncryptionPolicy != nil {
-		config.EncryptionPolicy = &models.EncryptionPolicy{
+		config.EncryptionPolicy = &backup.EncryptionPolicy{
 			Mode:      restoreRequest.Policy.EncryptionPolicy.Mode,
 			KeyFile:   restoreRequest.Policy.EncryptionPolicy.KeyFile,
 			KeySecret: restoreRequest.Policy.EncryptionPolicy.KeySecret,
@@ -137,7 +137,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.C
 	}
 
 	if restoreRequest.SecretAgent != nil {
-		config.SecretAgentConfig = &models.SecretAgentConfig{
+		config.SecretAgentConfig = &backup.SecretAgentConfig{
 			ConnectionType:     &restoreRequest.SecretAgent.ConnectionType,
 			Address:            &restoreRequest.SecretAgent.Address,
 			Port:               &restoreRequest.SecretAgent.Port,
@@ -178,7 +178,7 @@ func getReader(ctx context.Context, path *string, storage *model.Storage,
 		if err != nil {
 			return nil, err
 		}
-		return backup.NewStreamingReaderS3(ctx, &models.S3Config{
+		return backup.NewStreamingReaderS3(ctx, &s3.Config{
 			Bucket:    bucket,
 			Region:    *storage.S3Region,
 			Endpoint:  *storage.S3EndpointOverride,

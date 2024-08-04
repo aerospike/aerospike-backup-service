@@ -1055,6 +1055,7 @@ components:
       description: AerospikeCluster represents the configuration for an Aerospike
         cluster for backup.
       example:
+        connection-queue-size: 100
         credentials: "{}"
         conn-timeout: 5000
         use-services-alternate: true
@@ -1071,6 +1072,10 @@ components:
         conn-timeout:
           description: The connection timeout in milliseconds.
           example: 5000
+          type: integer
+        connection-queue-size:
+          description: specifies the size of the Aerospike Connection Queue per node
+          example: 100
           type: integer
         credentials:
           allOf:
@@ -1405,6 +1410,7 @@ components:
             max-records: 10000
         aerospike-clusters:
           key:
+            connection-queue-size: 100
             credentials: "{}"
             conn-timeout: 5000
             use-services-alternate: true

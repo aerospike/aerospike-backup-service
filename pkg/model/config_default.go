@@ -32,5 +32,6 @@ var defaultConfig = struct {
 	},
 	backupPolicy: backupPolicy{
 		retryDelay: 60_000, // default retry delay is 1 minute
+		maxRetries: 3,
 	},
 }
