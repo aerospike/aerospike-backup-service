@@ -1,5 +1,4 @@
 name: Build
-
 on:
   push:
     branches:
@@ -23,7 +22,7 @@ jobs:
         env:
           PAT: ${{ secrets.PAT }}
         run: |
-            git config --global url."https://${PAT}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://${PAT}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
 
       - name: Checkout code
         uses: actions/checkout@v4

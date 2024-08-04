@@ -4,26 +4,11 @@ version: "${VERSION}"
 platform: "linux"
 section: "default"
 priority: "extra"
-#replaces:
-#- foobar
-#provides:
-#- bar
-#depends:
-#- foo
-#- bar
-#recommends:
-#- whatever
-#suggests:
-#- something-else
-#conflicts:
-#- not-foo
-#- not-bar
 maintainer: "${MAINTAINER}"
 description: "${DESCRIPTION}"
 vendor: "${VENDOR}"
 homepage: "${HOMEPAGE}"
 license: "${LICENSE}"
-#changelog: "changelog.yaml"
 contents:
 - src: ${WORKSPACE}/packages/config/${NAME}.service
   dst: /etc/systemd/system/${NAME}.service

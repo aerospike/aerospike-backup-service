@@ -4,7 +4,7 @@
 
 ### Installation
 ```shell
-sudo dpkg -i aerospike-backup-service_0.3.0-1_amd64.deb
+sudo dpkg -i aerospike-backup-service_1.0.0-1_amd64.deb
 ```
 
 ### Verify Installation
@@ -69,7 +69,7 @@ sudo rm -rf /var/lib/aerospike-backup-service
 
 ### Installation
 ```shell
-sudo rpm -i aerospike-backup-service-0.3.0-1.x86_64.rpm
+sudo rpm -i aerospike-backup-service-1.0.0-1.x86_64.rpm
 ```
 
 ### Verify Installation
