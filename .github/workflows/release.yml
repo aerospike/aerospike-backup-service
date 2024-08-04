@@ -73,6 +73,8 @@ jobs:
           ASSET_LIST=$(find . -type f \( -name "*.deb" -or -name "*.rpm" -or -name "*.sha256" \) | tr '\n' ',')
           echo "ASSET_LIST=$ASSET_LIST" >> $GITHUB_ENV
       - name: Upload Assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           upload_url="$(echo "${{ needs.create-release.outputs.upload_url }}" | sed 's/\(assets\).*/\1/')"
           echo "$upload_url"
