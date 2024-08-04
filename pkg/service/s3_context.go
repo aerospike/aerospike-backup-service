@@ -10,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -173,61 +172,34 @@ func (s *S3Context) write(filePath string, data []byte) error {
 
 // lsFiles returns all files in the given s3 prefix path.
 func (s *S3Context) lsFiles(prefix string) ([]string, error) {
-	var nextContinuationToken *string
-	slog.Debug("list files", "prefix", prefix)
 	var result []string
-	for {
-		// By default, the action returns up to 1,000 key names.
-		// It is necessary to repeat to collect all the items, if there are more.
-		listOutput, err := s.list(nextContinuationToken, prefix, "")
+
+	input := &s3.ListObjectsV2Input{
+		Bucket: aws.String(s.bucket),
+		Prefix: aws.String(strings.TrimSuffix(prefix, "/") + "/"),
+	}
+
+	paginator := s3.NewListObjectsV2Paginator(s.client, input)
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(s.ctx)
 		if err != nil {
-			return nil, err
-		}
-		for _, p := range listOutput.Contents {
-			if p.Key != nil {
-				result = append(result, *p.Key)
-			}
+			slog.Warn("Couldn't list objects in folder", "prefix", prefix, "err", err)
+			return nil, fmt.Errorf("error listing objects: %w", err)
 		}
 
-		nextContinuationToken = listOutput.NextContinuationToken
-		if nextContinuationToken == nil {
-			break
+		for _, item := range page.Contents {
+			if item.Key != nil {
+				result = append(result, *item.Key)
+			}
 		}
 	}
+
 	return result, nil
 }
 
 // lsDir returns all subfolders in the given s3 prefix path.
-func (s *S3Context) lsDir(prefix string) ([]string, error) {
-	var nextContinuationToken *string
-	result := make([]string, 0)
-	for {
-		// By default, the action returns up to 1,000 key names.
-		// It is necessary to repeat to collect all the items, if there are more.
-		listOutput, err := s.list(nextContinuationToken, prefix, "/")
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range listOutput.CommonPrefixes {
-			if p.Prefix == nil {
-				continue
-			}
-			subfolder := strings.TrimSuffix(*p.Prefix, "/")
-			// Check to avoid including the prefix itself in the results
-			if subfolder != prefix {
-				result = append(result, subfolder)
-			}
-		}
-		nextContinuationToken = listOutput.NextContinuationToken
-		if nextContinuationToken == nil {
-			break
-		}
-	}
-	slog.Info("Read dir", "prefix", prefix, "result", result)
-	return result, nil
-}
-
-func (s *S3Context) lsDirAfter(prefix string, after *time.Time) ([]string, error) {
+func (s *S3Context) lsDir(prefix string, after *string) ([]string, error) {
 	var result []string
 
 	input := &s3.ListObjectsV2Input{
@@ -237,13 +209,13 @@ func (s *S3Context) lsDirAfter(prefix string, after *time.Time) ([]string, error
 	}
 
 	if after != nil {
-		startAfter := formatTime(*after)
+		startAfter := *after
 
 		if !strings.HasPrefix(startAfter, prefix) {
 			startAfter = path.Join(prefix, startAfter)
 		}
 
-		input.StartAfter = aws.String(startAfter)
+		input.StartAfter = &startAfter
 	}
 
 	paginator := s3.NewListObjectsV2Paginator(s.client, input)
@@ -265,21 +237,6 @@ func (s *S3Context) lsDirAfter(prefix string, after *time.Time) ([]string, error
 		}
 	}
 
-	return result, nil
-}
-
-func (s *S3Context) list(continuationToken *string, prefix, v string) (*s3.ListObjectsV2Output, error) {
-	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
-		Bucket:            aws.String(s.bucket),
-		Prefix:            aws.String(strings.TrimSuffix(prefix, "/") + "/"),
-		Delimiter:         aws.String(v),
-		ContinuationToken: continuationToken,
-	})
-
-	if err != nil {
-		slog.Warn("Couldn't list objects in folder", "prefix", prefix, "err", err)
-		return nil, err
-	}
 	return result, nil
 }
 

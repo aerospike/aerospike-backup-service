@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 	"gopkg.in/yaml.v3"
 )
 
@@ -169,7 +170,7 @@ func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache 
 	// each path contains a backup of specific time
 	backupDetails := make([]model.BackupDetails, 0, len(paths))
 	for _, path := range paths {
-		namespaces, err := b.lsDir(filepath.Join(path, model.DataDirectory))
+		namespaces, err := b.lsDir(filepath.Join(path, model.DataDirectory), nil)
 		if err != nil {
 			slog.Warn("Cannot list backup dir", "path", path, "err", err)
 			continue
@@ -190,8 +191,12 @@ func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache 
 
 func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds, backupFolder string,
 ) ([]model.BackupDetails, error) {
+	var after *string
+	if timebounds.FromTime != nil {
+		after = util.Ptr(formatTime(*timebounds.FromTime))
+	}
 
-	subfolders, err := b.lsDirAfter(backupFolder, timebounds.FromTime)
+	subfolders, err := b.lsDir(backupFolder, after)
 	if err != nil {
 		return nil, err
 	}

@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/aerospike/backup/pkg/model"
 	"time"
+
+	"github.com/aerospike/backup/pkg/model"
 )
 
 type RestoreManager interface {
