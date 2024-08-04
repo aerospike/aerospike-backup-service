@@ -4,7 +4,6 @@ CHANNEL="dev"
 TAG_LATEST=false
 TAG="test"
 PLATFORMS="linux/amd64,linux/arm64"
-#PLATFORMS="linux/amd64"
 
 
 POSITIONAL_ARGS=()
