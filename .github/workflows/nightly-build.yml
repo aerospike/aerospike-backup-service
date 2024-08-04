@@ -1,100 +1,76 @@
 name: Nightly Build
 
 on:
-  workflow_dispatch: 
-  schedule:
-    - cron: '0 20 * * *'
+  workflow_dispatch:
+  #  schedule:
+  #    - cron: '0 20 * * *'
+  push:
+    branches:
+      - golib-release
 jobs:
-  last-commit:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check if the last commit was today
-        id: check-commit
-        run: |
-          LAST_COMMIT_DATE="$(date -u -d \
-          $(curl -H "Accept: application/vnd.github.v3+json" \
-          "https://api.github.com/repos/aerospike/aerospike-backup-service/commits" | \
-          jq -r '.[0].commit.committer.date') "+%Y-%m-%d")"
-          TODAY="$(date -u +%Y-%m-%d)"
-          if [ "$LAST_COMMIT_DATE" == "$TODAY" ]; then
-            echo "commit_today=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "commit_today=false" >> "$GITHUB_OUTPUT"
-          fi
-    outputs:
-      commit_today: ${{ steps.check-commit.outputs.commit_today }}
+  #  last-commit:
+  #    runs-on: ubuntu-latest
+  #    steps:
+  #      - name: Check if the last commit was today
+  #        id: check-commit
+  #        run: |
+  #          LAST_COMMIT_DATE="$(date -u -d \
+  #          $(curl -H "Accept: application/vnd.github.v3+json" \
+  #          "https://api.github.com/repos/aerospike/aerospike-backup-service/commits" | \
+  #          jq -r '.[0].commit.committer.date') "+%Y-%m-%d")"
+  #          TODAY="$(date -u +%Y-%m-%d)"
+  #          if [ "$LAST_COMMIT_DATE" == "$TODAY" ]; then
+  #            echo "commit_today=true" >> "$GITHUB_OUTPUT"
+  #          else
+  #            echo "commit_today=false" >> "$GITHUB_OUTPUT"
+  #          fi
+  #    outputs:
+  #      commit_today: ${{ steps.check-commit.outputs.commit_today }}
   nightly-build:
-    needs: last-commit
-    if: ${{ needs.last-commit.outputs.commit_today == 'true' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [ "amd64","arm64" ]
-        container: [ "rhel8:latest", "rhel9:latest", "ubuntu2204:latest" ]
-        include:
-          - container: "rhel8:latest"
-            cmd: "make rpm"
-            distro_symbol: "el8"
-            ext: "rpm"
-          - container: "rhel9:latest"
-            cmd: "make rpm"
-            distro_symbol: "el9"
-            ext: "rpm"
-          - container: "ubuntu2204:latest"
-            cmd: "make deb"
-            distro_symbol: "debian"
-            ext: "deb"
+    #    needs: last-commit
+    #    if: ${{ needs.last-commit.outputs.commit_today == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Setup Jfrog
-        uses: jfrog/setup-jfrog-cli@v3
-        env:
-          JF_URL: ${{ secrets.ARTIFACTORY_URL }}
-          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
-      - name: Login to JFrog
-        uses: docker/login-action@v2
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          registry: aerospike.jfrog.io
-          username: ${{ secrets.ARTIFACTORY_USER }}
-          password: ${{ secrets.ARTIFACTORY_TOKEN }}
-      - name: Create target directory
-        run: mkdir -p ${{ github.workspace }}/target
-      - name: Create lib directory
-        run: mkdir -p ${{ github.workspace }}/lib
-      - name: Build artifact
-        id: build-artifact
+          go-version: "1.22.5"
+      - name: Install Dependencies
         run: |
-          docker run \
-          -v ${{ github.workspace }}:/aerospike-backup-service/ \
-          -w /aerospike-backup-service/ \
-          --platform linux/${{ matrix.arch }} \
-          aerospike.jfrog.io/ecosystem-container-dev-local/base-${{ matrix.container }} ${{ matrix.cmd }}
-      - name: Set variable arch variable based on condition
-        id: set-variables
+          go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
+      - name: Build Packages
+        env:
+          PAT: ${{ secrets.PAT }}
         run: |
-          if [ "${{ matrix.arch }}" == "arm64" ]; then
-            echo "arch=aarch64" >> "$GITHUB_OUTPUT"
-          else
-            echo "arch=x86_64" >> "$GITHUB_OUTPUT"
-          fi
-          REPO_NAME="$(echo $GITHUB_REPOSITORY | cut -d '/' -f 2)"
-          echo "repo=$REPO_NAME" >> "$GITHUB_OUTPUT"
-          VERSION="$(cat VERSION)"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-      - name: Deploy Artifact
+          git config --global url."https://${PAT}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          make packages
+      - name: Find files matching "*.rpm" and "*.deb"
         run: |
-          if [ ${{ matrix.ext }} == "rpm" ]; then
+          ASSET_LIST=$(find . -type f \( -name "*.deb" -or -name "*.rpm" \) | tr '\n' ',')
+          echo "ASSET_LIST=$ASSET_LIST" >> $GITHUB_ENV
+      - name: Upload Assets
+        run: |
+          BASENAME="${filename%.*}"
+          EXT="${file##*.}"
+          IFS=',' read -r -a asset_array <<< "$ASSET_LIST"
+          for file in "${asset_array[@]}"; do
             curl \
             -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
-            -XPUT https://aerospike.jfrog.io/artifactory/ecosystem-${{ matrix.ext }}-dev-local/${{ steps.set-variables.outputs.repo }}/${{ steps.set-variables.outputs.version }}/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}_$(date +%Y%m%d).${{ matrix.ext }} \
-            -T ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}.${{ matrix.ext }}
-          else
-            curl \
-            -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
-            -XPUT https://aerospike.jfrog.io/artifactory/ecosystem-${{ matrix.ext }}-dev-local/${{ steps.set-variables.outputs.repo }}/${{ steps.set-variables.outputs.version }}/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}_$(date +%Y%m%d).${{ matrix.ext }} \
-            -T ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}_${{ steps.set-variables.outputs.version }}-1_${{ matrix.arch }}.${{ matrix.ext }}
-          fi
+            -XPUT "https://aerospike.jfrog.io/artifactory/ecosystem-$EXT-dev-local/${{ github.event.repository.name }}/$(cat VERSION)/$BASENAME_$(date +%Y%m%d).$EXT" \
+            -T "${{ github.workspace }}/target/$file"
+          done
+#      - name: Deploy Artifact
+#        run: |
+#          if [ ${{ matrix.ext }} == "rpm" ]; then
+#            curl \
+#            -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
+#            -XPUT https://aerospike.jfrog.io/artifactory/ecosystem-${{ matrix.ext }}-dev-local/${{ steps.set-variables.outputs.repo }}/${{ steps.set-variables.outputs.version }}/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}_$(date +%Y%m%d).${{ matrix.ext }} \
+#            -T ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}.${{ matrix.ext }}
+#          else
+#            curl \
+#            -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
+#            -XPUT https://aerospike.jfrog.io/artifactory/ecosystem-${{ matrix.ext }}-dev-local/${{ steps.set-variables.outputs.repo }}/${{ steps.set-variables.outputs.version }}/${{ steps.set-variables.outputs.repo }}-${{ steps.set-variables.outputs.version }}-1.${{ matrix.distro_symbol }}.${{ steps.set-variables.outputs.arch }}_$(date +%Y%m%d).${{ matrix.ext }} \
+#            -T ${{ github.workspace }}/target/${{ steps.set-variables.outputs.repo }}_${{ steps.set-variables.outputs.version }}-1_${{ matrix.arch }}.${{ matrix.ext }}
+#          fi
