@@ -1,10 +1,11 @@
 name: Create a Release and Push Release assets
 on:
-  push:
-    tags:
-      - "*"
-    branches:
-      - "golib-release-proccess"
+  create:
+    tags: '*'
+#  push:
+#    branches:
+#      - "golib-release-proccess"
+
   workflow_dispatch:
 jobs:
   create-release:
@@ -43,8 +44,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
           draft: true
           prerelease: true
   build-artifacts:
