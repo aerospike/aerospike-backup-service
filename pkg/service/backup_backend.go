@@ -188,12 +188,14 @@ func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache 
 	return backupDetails
 }
 
-func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds,
-	backupFolder string) ([]model.BackupDetails, error) {
-	subfolders, err := b.lsDir(backupFolder)
+func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds, backupFolder string,
+) ([]model.BackupDetails, error) {
+
+	subfolders, err := b.lsDirAfter(backupFolder, timebounds.FromTime)
 	if err != nil {
 		return nil, err
 	}
+
 	return b.detailsFromPaths(timebounds, true, subfolders...), nil
 }
 

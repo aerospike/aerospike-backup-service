@@ -78,15 +78,14 @@ func (wl *ipWhiteList) isAllowed(ip string) bool {
 
 // HTTPServer is the backup service HTTP server wrapper.
 type HTTPServer struct {
-	config          *model.Config
-	server          *http.Server
-	rateLimiter     *IPRateLimiter
-	whiteList       *ipWhiteList
-	scheduler       quartz.Scheduler
-	restoreService  service.RestoreService
-	configRetriever service.ConfigRetriever
-	backupBackends  service.BackendsHolder
-	handlerHolder   service.BackupHandlerHolder
+	config         *model.Config
+	server         *http.Server
+	rateLimiter    *IPRateLimiter
+	whiteList      *ipWhiteList
+	scheduler      quartz.Scheduler
+	restoreManager service.RestoreManager
+	backupBackends service.BackendsHolder
+	handlerHolder  service.BackupHandlerHolder
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
@@ -109,13 +108,12 @@ func NewHTTPServer(
 			Addr:              addr,
 			ReadHeaderTimeout: 5 * time.Second,
 		},
-		rateLimiter:     rateLimiter,
-		whiteList:       newIPWhiteList(serverConfig.GetRateOrDefault().GetWhiteListOrDefault()),
-		scheduler:       scheduler,
-		restoreService:  service.NewRestoreMemory(backends, config, shared.NewRestoreGo()),
-		configRetriever: service.NewConfigRetriever(backends),
-		backupBackends:  backends,
-		handlerHolder:   handlerHolder,
+		rateLimiter:    rateLimiter,
+		whiteList:      newIPWhiteList(serverConfig.GetRateOrDefault().GetWhiteListOrDefault()),
+		scheduler:      scheduler,
+		restoreManager: service.NewRestoreManager(backends, config, shared.NewRestoreGo()),
+		backupBackends: backends,
+		handlerHolder:  handlerHolder,
 	}
 }
 

@@ -39,7 +39,7 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 			Dir:            request.SourceStorage.Path,
 		}
 
-		jobID, err := ws.restoreService.Restore(requestInternal)
+		jobID, err := ws.restoreManager.Restore(requestInternal)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -78,7 +78,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 			RestoreRequest: request,
 			Dir:            request.SourceStorage.Path,
 		}
-		jobID, err := ws.restoreService.Restore(requestInternal)
+		jobID, err := ws.restoreManager.Restore(requestInternal)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -114,7 +114,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		jobID, err := ws.restoreService.RestoreByTime(&request)
+		jobID, err := ws.restoreManager.RestoreByTime(&request)
 		if err != nil {
 			slog.Error("Restore by timestamp failed", "routine", request.Routine, "err", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -149,7 +149,7 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	status, err := ws.restoreService.JobStatus(service.RestoreJobID(jobID))
+	status, err := ws.restoreManager.JobStatus(service.RestoreJobID(jobID))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 	} else {
@@ -199,7 +199,7 @@ func (ws *HTTPServer) retrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf, err := ws.configRetriever.RetrieveConfiguration(name, time.UnixMilli(timestamp))
+	buf, err := ws.restoreManager.RetrieveConfiguration(name, time.UnixMilli(timestamp))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

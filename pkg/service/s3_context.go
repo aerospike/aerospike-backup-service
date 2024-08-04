@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -222,6 +224,47 @@ func (s *S3Context) lsDir(prefix string) ([]string, error) {
 		}
 	}
 	slog.Info("Read dir", "prefix", prefix, "result", result)
+	return result, nil
+}
+
+func (s *S3Context) lsDirAfter(prefix string, after *time.Time) ([]string, error) {
+	var result []string
+
+	input := &s3.ListObjectsV2Input{
+		Bucket:    aws.String(s.bucket),
+		Prefix:    aws.String(strings.TrimSuffix(prefix, "/") + "/"),
+		Delimiter: aws.String("/"),
+	}
+
+	if after != nil {
+		startAfter := formatTime(*after)
+
+		if !strings.HasPrefix(startAfter, prefix) {
+			startAfter = path.Join(prefix, startAfter)
+		}
+
+		input.StartAfter = aws.String(startAfter)
+	}
+
+	paginator := s3.NewListObjectsV2Paginator(s.client, input)
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(s.ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error listing objects: %w", err)
+		}
+
+		for _, p := range page.CommonPrefixes {
+			if p.Prefix == nil {
+				continue
+			}
+			subfolder := strings.TrimSuffix(*p.Prefix, "/")
+			if subfolder != "" {
+				result = append(result, subfolder)
+			}
+		}
+	}
+
 	return result, nil
 }
 

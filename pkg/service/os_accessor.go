@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -76,6 +77,10 @@ func (o *OSDiskAccessor) write(filePath string, data []byte) error {
 	}
 
 	return os.WriteFile(filePath, data, 0600)
+}
+
+func (o *OSDiskAccessor) lsDirAfter(path string, _ *time.Time) ([]string, error) {
+	return o.lsDir(path)
 }
 
 func (o *OSDiskAccessor) lsDir(path string) ([]string, error) {

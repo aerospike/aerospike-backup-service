@@ -9,23 +9,18 @@ import (
 	"github.com/aerospike/backup/pkg/util"
 )
 
-// ConfigRetriever defines the interface for retrieving configuration backups
-type ConfigRetriever interface {
-	RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error)
-}
-
-type ConfigRetrieverImpl struct {
+type configRetriever struct {
 	backends BackendsHolder
 }
 
-func NewConfigRetriever(backends BackendsHolder) *ConfigRetrieverImpl {
-	return &ConfigRetrieverImpl{
+func NewConfigRetriever(backends BackendsHolder) *configRetriever {
+	return &configRetriever{
 		backends: backends,
 	}
 }
 
 // RetrieveConfiguration return backed up Aerospike configuration.
-func (cr *ConfigRetrieverImpl) RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error) {
+func (cr *configRetriever) RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error) {
 	backend, found := cr.backends.GetReader(routine)
 	if !found {
 		return nil, fmt.Errorf("backend '%s' not found for configuration retrieval", routine)

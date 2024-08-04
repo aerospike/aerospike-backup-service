@@ -11,6 +11,7 @@ import (
 )
 
 var contexts []S3Context
+var c *S3Context
 
 func init() {
 	minioContext, _ := NewS3Context(&model.Storage{
@@ -20,6 +21,7 @@ func init() {
 		S3Region:           ptr.String("eu-central-1"),
 		S3EndpointOverride: ptr.String("http://localhost:9000"),
 	})
+	c = minioContext
 	s3Context, _ := NewS3Context(&model.Storage{
 		Type:     model.S3,
 		Path:     ptr.String("s3://as-backup-integration-test/storageAws"),
@@ -129,4 +131,20 @@ func runDeleteFolderTest(t *testing.T, context S3Context) {
 	if len(listFiles3) != 0 {
 		t.Error("file 2 not deleted")
 	}
+}
+
+func TestLsDirS3(t *testing.T) {
+	parent := "backups/incremental"
+	c.DeleteFolder(parent)
+	folder1 := parent + "/" + formatTime(time.UnixMilli(1000))
+	folder2 := parent + "/" + formatTime(time.UnixMilli(2000))
+	folder3 := parent + "/" + formatTime(time.UnixMilli(3000))
+	_ = c.writeYaml(folder1+"/file1.txt", "data")
+	_ = c.writeYaml(folder2+"/file2.txt", "data")
+	_ = c.writeYaml(folder3+"/file2.txt", "data")
+	lsDirAll, _ := c.lsDir(parent)
+	dir, err := c.lsDirAfter(parent, time.UnixMilli(1800))
+	_ = dir
+	_ = err
+	_ = lsDirAll
 }
