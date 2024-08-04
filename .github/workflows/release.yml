@@ -84,7 +84,7 @@ jobs:
                     -H "Authorization: Bearer $GITHUB_TOKEN" \
                     -H "X-GitHub-Api-Version: 2022-11-28" \
                     -H "Content-Type: $(file -b --mime-type $file)" \
-                    "$upload_url/assets?name=$(basename $file)" \
+                    "$upload_url?name=$(basename $file)" \
                     --data-binary "@$file"
                done
 #            curl -H "Authorization: token $GITHUB_TOKEN" \
