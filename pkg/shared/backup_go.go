@@ -6,10 +6,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/aerospike/backup-go/io/aws/s3"
-
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/io/aws/s3"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 )

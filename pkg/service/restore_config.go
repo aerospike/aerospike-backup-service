@@ -13,12 +13,6 @@ type configRetriever struct {
 	backends BackendsHolder
 }
 
-func NewConfigRetriever(backends BackendsHolder) *configRetriever {
-	return &configRetriever{
-		backends: backends,
-	}
-}
-
 // RetrieveConfiguration return backed up Aerospike configuration.
 func (cr *configRetriever) RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error) {
 	backend, found := cr.backends.GetReader(routine)

@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/smithy-go/ptr"
+	"github.com/stretchr/testify/assert"
 )
 
 var contexts []S3Context
@@ -135,16 +136,15 @@ func runDeleteFolderTest(t *testing.T, context S3Context) {
 
 func TestLsDirS3(t *testing.T) {
 	parent := "backups/incremental"
-	c.DeleteFolder(parent)
-	folder1 := parent + "/" + formatTime(time.UnixMilli(1000))
-	folder2 := parent + "/" + formatTime(time.UnixMilli(2000))
-	folder3 := parent + "/" + formatTime(time.UnixMilli(3000))
+	_ = c.DeleteFolder(parent)
+	folder1 := parent + "/1000"
+	folder2 := parent + "/2000"
+	folder3 := parent + "/3000"
 	_ = c.writeYaml(folder1+"/file1.txt", "data")
 	_ = c.writeYaml(folder2+"/file2.txt", "data")
 	_ = c.writeYaml(folder3+"/file2.txt", "data")
-	lsDirAll, _ := c.lsDir(parent)
-	dir, err := c.lsDirAfter(parent, time.UnixMilli(1800))
-	_ = dir
-	_ = err
-	_ = lsDirAll
+	after := "2000"
+	dir, err := c.lsDir(parent, &after)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(dir))
 }

@@ -7,11 +7,13 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,51 +45,83 @@ func TestLsDir(t *testing.T) {
 	testCases := []struct {
 		name     string
 		setup    func() string
+		after    *string
 		expected []string
 	}{
 		{
-			name: "Existing directory",
+			name: "Existing directory without filter",
 			setup: func() string {
 				dir := t.TempDir()
-				subDir1 := filepath.Join(dir, "subDir1")
-				subDir2 := filepath.Join(dir, "subDir2")
-				_ = os.MkdirAll(subDir1, 0755)
-				_ = os.MkdirAll(subDir2, 0755)
+				_ = os.MkdirAll(filepath.Join(dir, "subDir1"), 0755)
+				_ = os.MkdirAll(filepath.Join(dir, "subDir2"), 0755)
+				_ = os.MkdirAll(filepath.Join(dir, "subDir3"), 0755)
 				return dir
 			},
-			expected: []string{"subDir1", "subDir2"},
+			after:    nil,
+			expected: []string{"subDir1", "subDir2", "subDir3"},
+		},
+		{
+			name: "Existing directory with filter",
+			setup: func() string {
+				dir := t.TempDir()
+				_ = os.MkdirAll(filepath.Join(dir, "subDir1"), 0755)
+				_ = os.MkdirAll(filepath.Join(dir, "subDir2"), 0755)
+				_ = os.MkdirAll(filepath.Join(dir, "subDir3"), 0755)
+				return dir
+			},
+			after:    util.Ptr("subDir2"),
+			expected: []string{"subDir2", "subDir3"},
 		},
 		{
 			name: "Non existing directory",
 			setup: func() string {
-				dir := filepath.Join(t.TempDir(), "non-existing-dir")
-				return dir
+				return filepath.Join(t.TempDir(), "non-existing-dir")
 			},
+			after:    nil,
 			expected: []string{},
 		},
 		{
 			name: "File instead of directory",
 			setup: func() string {
 				dir := t.TempDir()
-				file := filepath.Join(dir, "file")
-				_ = os.WriteFile(file, []byte("test content"), 0600)
+				_ = os.WriteFile(filepath.Join(dir, "file"), []byte("test content"), 0600)
 				return dir
 			},
-			expected: nil,
+			after:    nil,
+			expected: []string{},
+		},
+		{
+			name: "Mixed content with filter",
+			setup: func() string {
+				dir := t.TempDir()
+				_ = os.MkdirAll(filepath.Join(dir, "aDir"), 0755)
+				_ = os.MkdirAll(filepath.Join(dir, "bDir"), 0755)
+				_ = os.WriteFile(filepath.Join(dir, "cFile"), []byte("test content"), 0600)
+				_ = os.MkdirAll(filepath.Join(dir, "dDir"), 0755)
+				return dir
+			},
+			after:    util.Ptr("bDir"),
+			expected: []string{"bDir", "dDir"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := tc.setup()
-			result, err := NewOSDiskAccessor().lsDir(dir)
+			result, err := NewOSDiskAccessor().lsDir(dir, tc.after)
 
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
 
 			if len(result) != len(tc.expected) {
-				t.Fatalf("Unexpected results \nExpected: %v \nGot: %v", tc.expected, result)
+				t.Fatalf("Unexpected number of results\nExpected: %v\nGot: %v", tc.expected, result)
+			}
+
+			for i, exp := range tc.expected {
+				if !strings.HasSuffix(result[i], exp) {
+					t.Errorf("Unexpected result at index %d\nExpected suffix: %s\nGot: %s", i, exp, result[i])
+				}
 			}
 		})
 	}
