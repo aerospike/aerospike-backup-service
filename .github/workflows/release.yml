@@ -1,11 +1,10 @@
 name: Create a Release and Push Release assets
 on:
   push:
+    tags:
+      - "*"
     branches:
-      - '**'
-#  push:
-#    tags:
-#      - '*'
+      - "golib-release-proccess"
   workflow_dispatch:
 jobs:
   create-release:
