@@ -1,6 +1,6 @@
 openapi: 3.0.1
 info:
-  contact: {}
+  contact: { }
   description: Aerospike Backup Service
   license:
     name: Apache 2.0
@@ -11,18 +11,18 @@ externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
 servers:
-- url: //localhost:8080/
+  - url: //localhost:8080/
 paths:
   /:
     get:
       operationId: root
       responses:
         "200":
-          content: {}
+          content: { }
           description: OK
       summary: Root endpoint.
       tags:
-      - System
+        - System
   /api-docs/:
     get:
       description: Serves the API documentation in Swagger UI format.
@@ -36,53 +36,53 @@ paths:
           description: OK
       summary: OpenAPI specification endpoint.
       tags:
-      - System
+        - System
   /health:
     get:
       operationId: health
       responses:
         "200":
-          content: {}
+          content: { }
           description: OK
       summary: Health endpoint.
       tags:
-      - System
+        - System
   /metrics:
     get:
       operationId: metrics
       responses:
         "200":
-          content: {}
+          content: { }
           description: OK
       summary: Prometheus metrics endpoint.
       tags:
-      - System
+        - System
   /ready:
     get:
       operationId: ready
       responses:
         "200":
-          content: {}
+          content: { }
           description: OK
       summary: Readiness endpoint.
       tags:
-      - System
+        - System
   /v1/backups/full:
     get:
       operationId: getFullBackups
       parameters:
-      - description: Lower bound timestamp filter
-        in: query
-        name: from
-        schema:
-          format: int64
-          type: integer
-      - description: Upper bound timestamp filter
-        in: query
-        name: to
-        schema:
-          format: int64
-          type: integer
+        - description: Lower bound timestamp filter
+          in: query
+          name: from
+          schema:
+            format: int64
+            type: integer
+        - description: Upper bound timestamp filter
+          in: query
+          name: to
+          schema:
+            format: int64
+            type: integer
       responses:
         "200":
           content:
@@ -102,29 +102,29 @@ paths:
           description: Bad Request
       summary: Get available full backups.
       tags:
-      - Backup
+        - Backup
   /v1/backups/full/{name}:
     get:
       operationId: getFullBackupsForRoutine
       parameters:
-      - description: Backup routine name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
-      - description: Lower bound timestamp filter
-        in: query
-        name: from
-        schema:
-          format: int64
-          type: integer
-      - description: Upper bound timestamp filter
-        in: query
-        name: to
-        schema:
-          format: int64
-          type: integer
+        - description: Backup routine name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
+        - description: Lower bound timestamp filter
+          in: query
+          name: from
+          schema:
+            format: int64
+            type: integer
+        - description: Upper bound timestamp filter
+          in: query
+          name: to
+          schema:
+            format: int64
+            type: integer
       responses:
         "200":
           content:
@@ -148,23 +148,23 @@ paths:
           description: Not Found
       summary: Get available full backups for routine.
       tags:
-      - Backup
+        - Backup
   /v1/backups/incremental:
     get:
       operationId: getIncrementalBackups
       parameters:
-      - description: Lower bound timestamp filter
-        in: query
-        name: from
-        schema:
-          format: int64
-          type: integer
-      - description: Upper bound timestamp filter
-        in: query
-        name: to
-        schema:
-          format: int64
-          type: integer
+        - description: Lower bound timestamp filter
+          in: query
+          name: from
+          schema:
+            format: int64
+            type: integer
+        - description: Upper bound timestamp filter
+          in: query
+          name: to
+          schema:
+            format: int64
+            type: integer
       responses:
         "200":
           content:
@@ -184,29 +184,29 @@ paths:
           description: Bad Request
       summary: Get available incremental backups.
       tags:
-      - Backup
+        - Backup
   /v1/backups/incremental/{name}:
     get:
       operationId: getIncrementalBackupsForRoutine
       parameters:
-      - description: Backup routine name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
-      - description: Lower bound timestamp filter
-        in: query
-        name: from
-        schema:
-          format: int64
-          type: integer
-      - description: Upper bound timestamp filter
-        in: query
-        name: to
-        schema:
-          format: int64
-          type: integer
+        - description: Backup routine name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
+        - description: Lower bound timestamp filter
+          in: query
+          name: from
+          schema:
+            format: int64
+            type: integer
+        - description: Upper bound timestamp filter
+          in: query
+          name: to
+          schema:
+            format: int64
+            type: integer
       responses:
         "200":
           content:
@@ -230,25 +230,25 @@ paths:
           description: Not Found
       summary: Get incremental backups for routine.
       tags:
-      - Backup
+        - Backup
   /v1/backups/schedule/{name}:
     post:
       operationId: scheduleFullBackup
       parameters:
-      - description: Backup routine name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
-      - description: Delay interval in milliseconds
-        in: query
-        name: delay
-        schema:
-          type: integer
+        - description: Backup routine name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
+        - description: Delay interval in milliseconds
+          in: query
+          name: delay
+          schema:
+            type: integer
       responses:
         "202":
-          content: {}
+          content: { }
           description: Accepted
         "400":
           content:
@@ -264,7 +264,7 @@ paths:
           description: Not Found
       summary: Schedule a full backup once per routine name.
       tags:
-      - Backup
+        - Backup
   /v1/config:
     get:
       operationId: readConfig
@@ -283,7 +283,7 @@ paths:
           description: Bad Request
       summary: Returns the configuration for the service.
       tags:
-      - Configuration
+        - Configuration
     put:
       operationId: updateConfig
       requestBody:
@@ -295,7 +295,7 @@ paths:
         required: true
       responses:
         "200":
-          content: {}
+          content: { }
           description: OK
         "400":
           content:
@@ -305,14 +305,14 @@ paths:
           description: Bad Request
       summary: Updates the configuration for the service.
       tags:
-      - Configuration
+        - Configuration
       x-codegen-request-body-name: config
   /v1/config/apply:
     post:
       operationId: applyConfig
       responses:
         "200":
-          content: {}
+          content: { }
           description: OK
         "400":
           content:
@@ -322,7 +322,7 @@ paths:
           description: Bad Request
       summary: Applies the configuration for the service.
       tags:
-      - Configuration
+        - Configuration
   /v1/config/clusters:
     get:
       operationId: readAllClusters
@@ -343,20 +343,20 @@ paths:
           description: Bad Request
       summary: Reads all Aerospike clusters from the configuration.
       tags:
-      - Configuration
+        - Configuration
   /v1/config/clusters/{name}:
     delete:
       operationId: deleteCluster
       parameters:
-      - description: Aerospike cluster name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Aerospike cluster name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       responses:
         "204":
-          content: {}
+          content: { }
           description: No Content
         "400":
           content:
@@ -366,16 +366,16 @@ paths:
           description: Bad Request
       summary: Deletes a cluster from the configuration by name.
       tags:
-      - Configuration
+        - Configuration
     get:
       operationId: readCluster
       parameters:
-      - description: Aerospike cluster name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Aerospike cluster name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           content:
@@ -398,16 +398,16 @@ paths:
       summary: Reads a specific Aerospike cluster from the configuration given its
         name.
       tags:
-      - Configuration
+        - Configuration
     post:
       operationId: addCluster
       parameters:
-      - description: Aerospike cluster name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Aerospike cluster name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -417,7 +417,7 @@ paths:
         required: true
       responses:
         "201":
-          content: {}
+          content: { }
           description: Created
         "400":
           content:
@@ -427,17 +427,17 @@ paths:
           description: Bad Request
       summary: Adds an Aerospike cluster to the config.
       tags:
-      - Configuration
+        - Configuration
       x-codegen-request-body-name: cluster
     put:
       operationId: updateCluster
       parameters:
-      - description: Aerospike cluster name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Aerospike cluster name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -447,7 +447,7 @@ paths:
         required: true
       responses:
         "200":
-          content: {}
+          content: { }
           description: OK
         "400":
           content:
@@ -457,7 +457,7 @@ paths:
           description: Bad Request
       summary: Updates an existing Aerospike cluster in the configuration.
       tags:
-      - Configuration
+        - Configuration
       x-codegen-request-body-name: cluster
   /v1/config/policies:
     get:
@@ -479,20 +479,20 @@ paths:
           description: Bad Request
       summary: Reads all policies from the configuration.
       tags:
-      - Configuration
+        - Configuration
   /v1/config/policies/{name}:
     delete:
       operationId: deletePolicy
       parameters:
-      - description: Backup policy name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup policy name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       responses:
         "204":
-          content: {}
+          content: { }
           description: No Content
         "400":
           content:
@@ -502,16 +502,16 @@ paths:
           description: Bad Request
       summary: Deletes a policy from the configuration by name.
       tags:
-      - Configuration
+        - Configuration
     get:
       operationId: readPolicy
       parameters:
-      - description: Backup policy name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup policy name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           content:
@@ -533,16 +533,16 @@ paths:
           description: The specified policy could not be found
       summary: Reads a backup policy from the configuration given its name.
       tags:
-      - Configuration
+        - Configuration
     post:
       operationId: addPolicy
       parameters:
-      - description: Backup policy name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup policy name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -552,7 +552,7 @@ paths:
         required: true
       responses:
         "201":
-          content: {}
+          content: { }
           description: Created
         "400":
           content:
@@ -562,17 +562,17 @@ paths:
           description: Bad Request
       summary: Adds a policy to the config.
       tags:
-      - Configuration
+        - Configuration
       x-codegen-request-body-name: policy
     put:
       operationId: updatePolicy
       parameters:
-      - description: Backup policy name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup policy name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -582,7 +582,7 @@ paths:
         required: true
       responses:
         "200":
-          content: {}
+          content: { }
           description: OK
         "400":
           content:
@@ -592,7 +592,7 @@ paths:
           description: Bad Request
       summary: Updates an existing policy in the configuration.
       tags:
-      - Configuration
+        - Configuration
       x-codegen-request-body-name: policy
   /v1/config/routines:
     get:
@@ -614,20 +614,20 @@ paths:
           description: Bad Request
       summary: Reads all routines from the configuration.
       tags:
-      - Configuration
+        - Configuration
   /v1/config/routines/{name}:
     delete:
       operationId: deleteRoutine
       parameters:
-      - description: Backup routine name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup routine name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       responses:
         "204":
-          content: {}
+          content: { }
           description: No Content
         "400":
           content:
@@ -637,16 +637,16 @@ paths:
           description: Bad Request
       summary: Deletes a backup routine from the configuration by name.
       tags:
-      - Configuration
+        - Configuration
     get:
       operationId: readRoutine
       parameters:
-      - description: Backup routine name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup routine name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           content:
@@ -668,16 +668,16 @@ paths:
           description: The specified cluster could not be found
       summary: Reads a specific routine from the configuration given its name.
       tags:
-      - Configuration
+        - Configuration
     post:
       operationId: addRoutine
       parameters:
-      - description: Backup routine name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup routine name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -687,7 +687,7 @@ paths:
         required: true
       responses:
         "201":
-          content: {}
+          content: { }
           description: Created
         "400":
           content:
@@ -697,17 +697,17 @@ paths:
           description: Bad Request
       summary: Adds a backup routine to the config.
       tags:
-      - Configuration
+        - Configuration
       x-codegen-request-body-name: routine
     put:
       operationId: updateRoutine
       parameters:
-      - description: Backup routine name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup routine name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -717,7 +717,7 @@ paths:
         required: true
       responses:
         "200":
-          content: {}
+          content: { }
           description: OK
         "400":
           content:
@@ -727,7 +727,7 @@ paths:
           description: Bad Request
       summary: Updates an existing routine in the configuration.
       tags:
-      - Configuration
+        - Configuration
       x-codegen-request-body-name: routine
   /v1/config/storage:
     get:
@@ -749,20 +749,20 @@ paths:
           description: Bad Request
       summary: Reads all storage from the configuration.
       tags:
-      - Configuration
+        - Configuration
   /v1/config/storage/{name}:
     delete:
       operationId: deleteStorage
       parameters:
-      - description: Backup storage name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup storage name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       responses:
         "204":
-          content: {}
+          content: { }
           description: No Content
         "400":
           content:
@@ -772,16 +772,16 @@ paths:
           description: Bad Request
       summary: Deletes a storage from the configuration by name.
       tags:
-      - Configuration
+        - Configuration
     get:
       operationId: readStorage
       parameters:
-      - description: Backup storage name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup storage name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           content:
@@ -803,16 +803,16 @@ paths:
           description: The specified storage could not be found
       summary: Reads a specific storage from the configuration given its name.
       tags:
-      - Configuration
+        - Configuration
     post:
       operationId: addStorage
       parameters:
-      - description: Backup storage name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup storage name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -822,7 +822,7 @@ paths:
         required: true
       responses:
         "201":
-          content: {}
+          content: { }
           description: Created
         "400":
           content:
@@ -832,17 +832,17 @@ paths:
           description: Bad Request
       summary: Adds a storage to the config.
       tags:
-      - Configuration
+        - Configuration
       x-codegen-request-body-name: storage
     put:
       operationId: updateStorage
       parameters:
-      - description: Backup storage name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
+        - description: Backup storage name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -852,7 +852,7 @@ paths:
         required: true
       responses:
         "200":
-          content: {}
+          content: { }
           description: OK
         "400":
           content:
@@ -862,7 +862,7 @@ paths:
           description: Bad Request
       summary: Updates an existing storage in the configuration.
       tags:
-      - Configuration
+        - Configuration
       x-codegen-request-body-name: storage
   /v1/restore/full:
     post:
@@ -890,7 +890,7 @@ paths:
           description: Bad Request
       summary: Trigger an asynchronous full restore operation.
       tags:
-      - Restore
+        - Restore
       x-codegen-request-body-name: request
   /v1/restore/incremental:
     post:
@@ -918,19 +918,19 @@ paths:
           description: Bad Request
       summary: Trigger an asynchronous incremental restore operation.
       tags:
-      - Restore
+        - Restore
       x-codegen-request-body-name: request
   /v1/restore/status/{jobId}:
     get:
       operationId: restoreStatus
       parameters:
-      - description: Job ID to retrieve the status
-        in: path
-        name: jobId
-        required: true
-        schema:
-          format: int64
-          type: integer
+        - description: Job ID to retrieve the status
+          in: path
+          name: jobId
+          required: true
+          schema:
+            format: int64
+            type: integer
       responses:
         "200":
           content:
@@ -946,7 +946,7 @@ paths:
           description: Bad Request
       summary: Retrieve status for a restore job.
       tags:
-      - Restore
+        - Restore
   /v1/restore/timestamp:
     post:
       description: Restores backup from the given point in time.
@@ -974,25 +974,25 @@ paths:
           description: Bad Request
       summary: Trigger an asynchronous restore operation to specific point in time.
       tags:
-      - Restore
+        - Restore
       x-codegen-request-body-name: request
   /v1/retrieve/configuration/{name}/{timestamp}:
     get:
       operationId: retrieveConfiguration
       parameters:
-      - description: Backup routine name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
-      - description: Backup timestamp
-        in: path
-        name: timestamp
-        required: true
-        schema:
-          format: int64
-          type: integer
+        - description: Backup routine name
+          in: path
+          name: name
+          required: true
+          schema:
+            type: string
+        - description: Backup timestamp
+          in: path
+          name: timestamp
+          required: true
+          schema:
+            format: int64
+            type: integer
       responses:
         "200":
           content:
@@ -1009,7 +1009,7 @@ paths:
           description: Bad Request
       summary: Retrieve Aerospike cluster configuration backup
       tags:
-      - Restore
+        - Restore
   /version:
     get:
       operationId: version
@@ -1022,7 +1022,7 @@ paths:
           description: version
       summary: Returns application version.
       tags:
-      - System
+        - System
 components:
   schemas:
     model.AerospikeCluster:
@@ -1033,12 +1033,12 @@ components:
         conn-timeout: 5000
         use-services-alternate: true
         seed-nodes:
-        - port: 3000
-          tls-name: certName
-          host-name: localhost
-        - port: 3000
-          tls-name: certName
-          host-name: localhost
+          - port: 3000
+            tls-name: certName
+            host-name: localhost
+          - port: 3000
+            tls-name: certName
+            host-name: localhost
         tls: "{}"
         label: testCluster
       properties:
@@ -1048,7 +1048,7 @@ components:
           type: integer
         credentials:
           allOf:
-          - $ref: '#/components/schemas/model.Credentials'
+            - $ref: '#/components/schemas/model.Credentials'
           description: The authentication details to the Aerospike cluster.
           type: object
         label:
@@ -1062,7 +1062,7 @@ components:
           type: array
         tls:
           allOf:
-          - $ref: '#/components/schemas/model.TLS'
+            - $ref: '#/components/schemas/model.TLS'
           description: The cluster TLS configuration.
           type: object
         use-services-alternate:
@@ -1156,12 +1156,12 @@ components:
           type: integer
         compression:
           allOf:
-          - $ref: '#/components/schemas/model.CompressionPolicy'
+            - $ref: '#/components/schemas/model.CompressionPolicy'
           description: Compression details.
           type: object
         encryption:
           allOf:
-          - $ref: '#/components/schemas/model.EncryptionPolicy'
+            - $ref: '#/components/schemas/model.EncryptionPolicy'
           description: Encryption details.
           type: object
         file-limit:
@@ -1207,7 +1207,7 @@ components:
           type: boolean
         remove-files:
           allOf:
-          - $ref: '#/components/schemas/model.RemoveFilesType'
+            - $ref: '#/components/schemas/model.RemoveFilesType'
           description: "Whether to clear the output directory (default: KeepAll)."
           type: object
         retry-delay:
@@ -1238,19 +1238,19 @@ components:
       example:
         incr-interval-cron: '*/10 * * * * *'
         set-list:
-        - set1
+          - set1
         interval-cron: 0 0 * * * *
         backup-policy: daily
         prefer-racks:
-        - 0
+          - 0
         bin-list:
-        - dataBin
+          - dataBin
         source-cluster: testCluster
         secret-agent: sa
         storage: aws
         partition-list: 0-1000
         namespaces:
-        - source-ns1
+          - source-ns1
       properties:
         backup-policy:
           description: The name of the corresponding backup policy.
@@ -1260,7 +1260,7 @@ components:
           description: "The list of backup bin names (optional, an empty list implies\
             \ backing up all bins)."
           example:
-          - dataBin
+            - dataBin
           items:
             type: string
           type: array
@@ -1277,7 +1277,7 @@ components:
           description: "The list of the namespaces to back up (optional, empty list\
             \ implies backup up whole cluster)."
           example:
-          - source-ns1
+            - source-ns1
           items:
             type: string
           type: array
@@ -1292,7 +1292,7 @@ components:
           description: A list of Aerospike Server rack IDs to prefer when reading
             records for a backup.
           example:
-          - 0
+            - 0
           items:
             type: integer
           type: array
@@ -1304,7 +1304,7 @@ components:
           description: "The list of backup set names (optional, an empty list implies\
             \ backing up all sets)."
           example:
-          - set1
+            - set1
           items:
             type: string
           type: array
@@ -1317,10 +1317,10 @@ components:
           example: aws
           type: string
       required:
-      - backup-policy
-      - interval-cron
-      - source-cluster
-      - storage
+        - backup-policy
+        - interval-cron
+        - source-cluster
+        - storage
       type: object
     model.BackupServiceConfig:
       description: BackupServiceConfig represents the backup service configuration
@@ -1331,12 +1331,12 @@ components:
       properties:
         http:
           allOf:
-          - $ref: '#/components/schemas/model.HTTPServerConfig'
+            - $ref: '#/components/schemas/model.HTTPServerConfig'
           description: HTTPServer is the backup service HTTP server configuration.
           type: object
         logger:
           allOf:
-          - $ref: '#/components/schemas/model.LoggerConfig'
+            - $ref: '#/components/schemas/model.LoggerConfig'
           description: Logger is the backup service logger configuration.
           type: object
       type: object
@@ -1350,8 +1350,8 @@ components:
           default: NONE
           description: The compression mode to be used (default is NONE).
           enum:
-          - NONE
-          - ZSTD
+            - NONE
+            - ZSTD
           type: string
       type: object
     model.Config:
@@ -1383,12 +1383,12 @@ components:
             conn-timeout: 5000
             use-services-alternate: true
             seed-nodes:
-            - port: 3000
-              tls-name: certName
-              host-name: localhost
-            - port: 3000
-              tls-name: certName
-              host-name: localhost
+              - port: 3000
+                tls-name: certName
+                host-name: localhost
+              - port: 3000
+                tls-name: certName
+                host-name: localhost
             tls: "{}"
             label: testCluster
         service:
@@ -1413,19 +1413,19 @@ components:
           key:
             incr-interval-cron: '*/10 * * * * *'
             set-list:
-            - set1
+              - set1
             interval-cron: 0 0 * * * *
             backup-policy: daily
             prefer-racks:
-            - 0
+              - 0
             bin-list:
-            - dataBin
+              - dataBin
             source-cluster: testCluster
             secret-agent: sa
             storage: aws
             partition-list: 0-1000
             namespaces:
-            - source-ns1
+              - source-ns1
       properties:
         aerospike-clusters:
           additionalProperties:
@@ -1458,10 +1458,10 @@ components:
           description: "The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE,\
             \ PKI)."
           enum:
-          - INTERNAL
-          - EXTERNAL
-          - EXTERNAL_INSECURE
-          - PKI
+            - INTERNAL
+            - EXTERNAL
+            - EXTERNAL_INSECURE
+            - PKI
           type: string
         password:
           description: The password for the cluster authentication.
@@ -1495,9 +1495,9 @@ components:
           default: NONE
           description: "The encryption mode to be used (NONE, AES128, AES256)"
           enum:
-          - NONE
-          - AES128
-          - AES256
+            - NONE
+            - AES128
+            - AES256
           type: string
       type: object
     model.FileLoggerConfig:
@@ -1549,20 +1549,20 @@ components:
           type: integer
         rate:
           allOf:
-          - $ref: '#/components/schemas/model.RateLimiterConfig'
+            - $ref: '#/components/schemas/model.RateLimiterConfig'
           description: HTTP rate limiter configuration.
           type: object
       type: object
     model.JobStatus:
       enum:
-      - Running
-      - Done
-      - Failed
+        - Running
+        - Done
+        - Failed
       type: string
       x-enum-varnames:
-      - JobStatusRunning
-      - JobStatusDone
-      - JobStatusFailed
+        - JobStatusRunning
+        - JobStatusDone
+        - JobStatusFailed
     model.LoggerConfig:
       description: LoggerConfig represents the backup service logger configuration.
       properties:
@@ -1572,26 +1572,26 @@ components:
           type: boolean
         file-writer:
           allOf:
-          - $ref: '#/components/schemas/model.FileLoggerConfig'
+            - $ref: '#/components/schemas/model.FileLoggerConfig'
           description: File writer logging configuration.
           type: object
         format:
           default: PLAIN
           description: "Format is the logger format (PLAIN, JSON)."
           enum:
-          - PLAIN
-          - JSON
+            - PLAIN
+            - JSON
           type: string
         level:
           default: DEBUG
           description: Level is the logger level.
           enum:
-          - TRACE
-          - DEBUG
-          - INFO
-          - WARN
-          - WARNING
-          - ERROR
+            - TRACE
+            - DEBUG
+            - INFO
+            - WARN
+            - WARNING
+            - ERROR
           type: string
         stdout-writer:
           default: true
@@ -1618,14 +1618,14 @@ components:
     model.RemoveFilesType:
       description: RemoveFilesType represents the type of the backup storage.
       enum:
-      - KeepAll
-      - RemoveAll
-      - RemoveIncremental
+        - KeepAll
+        - RemoveAll
+        - RemoveIncremental
       type: string
       x-enum-varnames:
-      - KeepAll
-      - RemoveAll
-      - RemoveIncremental
+        - KeepAll
+        - RemoveAll
+        - RemoveIncremental
     model.RestoreJobStatus:
       description: RestoreJobStatus represents a restore job status.
       example:
@@ -1674,7 +1674,7 @@ components:
           type: integer
         status:
           allOf:
-          - $ref: '#/components/schemas/model.JobStatus'
+            - $ref: '#/components/schemas/model.JobStatus'
           type: object
         total-bytes:
           example: 2000
@@ -1702,8 +1702,8 @@ components:
           example: source-ns
           type: string
       required:
-      - destination
-      - source
+        - destination
+        - source
       type: object
     model.RestorePolicy:
       description: RestorePolicy represents a policy for the restore operation.
@@ -1725,14 +1725,14 @@ components:
           description: "The bins to restore (optional, an empty list implies restoring\
             \ all bins)."
           example:
-          - bin1
-          - bin2
+            - bin1
+            - bin2
           items:
             type: string
           type: array
         compression:
           allOf:
-          - $ref: '#/components/schemas/model.CompressionPolicy'
+            - $ref: '#/components/schemas/model.CompressionPolicy'
           description: Compression details.
           type: object
         disable-batch-writes:
@@ -1742,7 +1742,7 @@ components:
           type: boolean
         encryption:
           allOf:
-          - $ref: '#/components/schemas/model.EncryptionPolicy'
+            - $ref: '#/components/schemas/model.EncryptionPolicy'
           description: Encryption details.
           type: object
         max-async-batches:
@@ -1752,7 +1752,7 @@ components:
           type: integer
         namespace:
           allOf:
-          - $ref: '#/components/schemas/model.RestoreNamespace'
+            - $ref: '#/components/schemas/model.RestoreNamespace'
           description: |-
             Namespace details for the restore operation.
             By default, the data is restored to the namespace from which it was taken.
@@ -1789,8 +1789,8 @@ components:
           description: "The sets to restore (optional, an empty list implies restoring\
             \ all sets)."
           example:
-          - set1
-          - set2
+            - set1
+            - set2
           items:
             type: string
           type: array
@@ -1825,9 +1825,9 @@ components:
         source:
           $ref: '#/components/schemas/model.Storage'
       required:
-      - destination
-      - policy
-      - source
+        - destination
+        - policy
+        - source
       type: object
     model.RestoreTimestampRequest:
       description: RestoreTimestampRequest represents a restore by timestamp operation
@@ -1835,12 +1835,12 @@ components:
       properties:
         destination:
           allOf:
-          - $ref: '#/components/schemas/model.AerospikeCluster'
+            - $ref: '#/components/schemas/model.AerospikeCluster'
           description: The details of the Aerospike destination cluster.
           type: object
         policy:
           allOf:
-          - $ref: '#/components/schemas/model.RestorePolicy'
+            - $ref: '#/components/schemas/model.RestorePolicy'
           description: Restore policy to use in the operation.
           type: object
         routine:
@@ -1849,7 +1849,7 @@ components:
           type: string
         secret-agent:
           allOf:
-          - $ref: '#/components/schemas/model.SecretAgent'
+            - $ref: '#/components/schemas/model.SecretAgent'
           description: Secret Agent configuration (optional).
           type: object
         time:
@@ -1859,10 +1859,10 @@ components:
           format: int64
           type: integer
       required:
-      - destination
-      - policy
-      - routine
-      - time
+        - destination
+        - policy
+        - routine
+        - time
       type: object
     model.SecretAgent:
       description: SecretAgent represents the configuration of an Aerospike Secret
@@ -1914,8 +1914,8 @@ components:
           example: certName
           type: string
       required:
-      - host-name
-      - port
+        - host-name
+        - port
       type: object
     model.Storage:
       description: Storage represents the configuration for a backup storage details.
@@ -1950,22 +1950,22 @@ components:
           type: string
         type:
           allOf:
-          - $ref: '#/components/schemas/model.StorageType'
+            - $ref: '#/components/schemas/model.StorageType'
           description: "The type of the storage provider (0 - Local, 1 - AWS S3)."
           type: object
       required:
-      - path
-      - type
+        - path
+        - type
       type: object
     model.StorageType:
       description: StorageType represents the type of the backup storage.
       enum:
-      - local
-      - aws-s3
+        - local
+        - aws-s3
       type: string
       x-enum-varnames:
-      - Local
-      - S3
+        - Local
+        - S3
     model.TLS:
       description: TLS represents the Aerospike cluster TLS configuration options.
       properties:

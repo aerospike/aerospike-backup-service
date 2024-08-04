@@ -38,7 +38,7 @@ jobs:
           LATEST: false
           TAG: ${{ github.ref_name }}
           CONTEXT: ${{ github.workspace }}
-          PROJECT:  ${{ github.event.repository.name }}
+          PROJECT: ${{ github.event.repository.name }}
         with:
           workdir: ${{ github.workspace }}
           files: docker-bake.hcl

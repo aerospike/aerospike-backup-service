@@ -5,57 +5,57 @@ on:
   schedule:
     - cron: '0 20 * * *'
 jobs:
-    last-commit:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Check if the last commit was today
-          id: check-commit
-          run: |
-            LAST_COMMIT_DATE="$(date -u -d \
-            $(curl -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/aerospike/aerospike-backup-service/commits" | \
-            jq -r '.[0].commit.committer.date') "+%Y-%m-%d")"
-            TODAY="$(date -u +%Y-%m-%d)"
-            if [ "$LAST_COMMIT_DATE" == "$TODAY" ]; then
-              echo "commit_today=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "commit_today=false" >> "$GITHUB_OUTPUT"
-            fi
-      outputs:
-        commit_today: ${{ steps.check-commit.outputs.commit_today }}
+  last-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if the last commit was today
+        id: check-commit
+        run: |
+          LAST_COMMIT_DATE="$(date -u -d \
+          $(curl -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/aerospike/aerospike-backup-service/commits" | \
+          jq -r '.[0].commit.committer.date') "+%Y-%m-%d")"
+          TODAY="$(date -u +%Y-%m-%d)"
+          if [ "$LAST_COMMIT_DATE" == "$TODAY" ]; then
+            echo "commit_today=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "commit_today=false" >> "$GITHUB_OUTPUT"
+          fi
+    outputs:
+      commit_today: ${{ steps.check-commit.outputs.commit_today }}
 
-    nightly-build:
-      needs: last-commit
-      if: ${{ needs.last-commit.outputs.commit_today == 'true' }}
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout Code
-          uses: actions/checkout@v4
-        - name: Set up Go
-          uses: actions/setup-go@v4
-          with:
-            go-version: "1.22.5"
-        - name: Install Dependencies
-          run: |
-            go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
-        - name: Build Packages
-          env:
-            PAT: ${{ secrets.PAT }}
-          run: |
-            git config --global url."https://${PAT}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
-            make packages
-        - name: Find files matching "*.rpm" and "*.deb"
-          run: |
-            ASSET_LIST=$(find . -type f \( -name "*.deb" -or -name "*.rpm" \) | tr '\n' ',')
-            echo "ASSET_LIST=$ASSET_LIST" >> $GITHUB_ENV
-        - name: Upload Assets
-          run: |
-            IFS=',' read -r -a asset_array <<< "$ASSET_LIST"
-            for file in "${asset_array[@]}"; do
-              BASENAME="$(basename ${file%.*})"
-              EXT="${file##*.}"
-              curl \
-              -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
-              -XPUT "https://aerospike.jfrog.io/artifactory/ecosystem-$EXT-dev-local/${{ github.event.repository.name }}/$(cat VERSION)/"$BASENAME"_$(date +%Y%m%d).$EXT" \
-              -T "$file"
-            done
+  nightly-build:
+    needs: last-commit
+    if: ${{ needs.last-commit.outputs.commit_today == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.22.5"
+      - name: Install Dependencies
+        run: |
+          go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
+      - name: Build Packages
+        env:
+          PAT: ${{ secrets.PAT }}
+        run: |
+          git config --global url."https://${PAT}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
+          make packages
+      - name: Find files matching "*.rpm" and "*.deb"
+        run: |
+          ASSET_LIST=$(find . -type f \( -name "*.deb" -or -name "*.rpm" \) | tr '\n' ',')
+          echo "ASSET_LIST=$ASSET_LIST" >> $GITHUB_ENV
+      - name: Upload Assets
+        run: |
+          IFS=',' read -r -a asset_array <<< "$ASSET_LIST"
+          for file in "${asset_array[@]}"; do
+            BASENAME="$(basename ${file%.*})"
+            EXT="${file##*.}"
+            curl \
+            -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
+            -XPUT "https://aerospike.jfrog.io/artifactory/ecosystem-$EXT-dev-local/${{ github.event.repository.name }}/$(cat VERSION)/"$BASENAME"_$(date +%Y%m%d).$EXT" \
+            -T "$file"
+          done

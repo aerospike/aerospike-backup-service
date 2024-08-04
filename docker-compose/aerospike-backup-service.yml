@@ -3,7 +3,7 @@ aerospike-clusters:
     seed-nodes:
       - host-name: "aerospike-cluster"
         port: 3000
-    credentials: 
+    credentials:
       user: admin
       password: admin
 storage:
