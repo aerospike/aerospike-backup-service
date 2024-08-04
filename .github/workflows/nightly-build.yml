@@ -61,7 +61,7 @@ jobs:
             echo "basename: $BASENAME"
             echo "curl \
             -u${{ secrets.ARTIFACTORY_USER }}:${{ secrets.ARTIFACTORY_TOKEN }} \
-            -XPUT "https://aerospike.jfrog.io/artifactory/ecosystem-$EXT-dev-local/${{ github.event.repository.name }}/$(cat VERSION)/$BASENAME_$(date +%Y%m%d).$EXT" \
+            -XPUT "https://aerospike.jfrog.io/artifactory/ecosystem-$EXT-dev-local/${{ github.event.repository.name }}/$(cat VERSION)/"$BASENAME"_$(date +%Y%m%d).$EXT" \
             -T "$file""
           done
 #      - name: Deploy Artifact
