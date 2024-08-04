@@ -6,7 +6,7 @@ on:
   #    - cron: '0 20 * * *'
   push:
     branches:
-      - golib-release
+      - golib-release-proccess
 jobs:
   #  last-commit:
   #    runs-on: ubuntu-latest
