@@ -130,12 +130,12 @@ func makeBackupConfig(
 
 	if secretAgent != nil {
 		config.SecretAgentConfig = &backup.SecretAgentConfig{
-			ConnectionType:     &secretAgent.ConnectionType,
-			Address:            &secretAgent.Address,
-			Port:               &secretAgent.Port,
-			TimeoutMillisecond: &secretAgent.Timeout,
-			CaFile:             &secretAgent.TLSCAString,
-			IsBase64:           &secretAgent.IsBase64,
+			ConnectionType:     secretAgent.ConnectionType,
+			Address:            secretAgent.Address,
+			Port:               secretAgent.Port,
+			TimeoutMillisecond: secretAgent.Timeout,
+			CaFile:             secretAgent.TLSCAString,
+			IsBase64:           secretAgent.IsBase64,
 		}
 	}
 

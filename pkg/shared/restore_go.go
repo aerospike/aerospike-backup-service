@@ -138,12 +138,12 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.C
 
 	if restoreRequest.SecretAgent != nil {
 		config.SecretAgentConfig = &backup.SecretAgentConfig{
-			ConnectionType:     &restoreRequest.SecretAgent.ConnectionType,
-			Address:            &restoreRequest.SecretAgent.Address,
-			Port:               &restoreRequest.SecretAgent.Port,
-			TimeoutMillisecond: &restoreRequest.SecretAgent.Timeout,
-			CaFile:             &restoreRequest.SecretAgent.TLSCAString,
-			IsBase64:           &restoreRequest.SecretAgent.IsBase64,
+			ConnectionType:     restoreRequest.SecretAgent.ConnectionType,
+			Address:            restoreRequest.SecretAgent.Address,
+			Port:               restoreRequest.SecretAgent.Port,
+			TimeoutMillisecond: restoreRequest.SecretAgent.Timeout,
+			CaFile:             restoreRequest.SecretAgent.TLSCAString,
+			IsBase64:           restoreRequest.SecretAgent.IsBase64,
 		}
 	}
 	return config
