@@ -20,15 +20,15 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - name: Setup access for private go modules
+        env:
+          PAT: ${{ secrets.PAT }}
         run: |
-          git config --global url."ssh://git@github.com/".insteadOf https://github.com/
+            git config --global url."https://${PAT}:x-oauth-basic@github.com/".insteadOf "https://github.com/"
 
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Test
-        env:
-          GOPRIVATE: github.com/aerospike/backup-go
         run: |
           go test -race -tags=ci ./... -coverprofile=coverage.out -covermode=atomic
           grep -v -E -f .covignore coverage.out > coverage.filtered.out
