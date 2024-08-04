@@ -1,28 +1,22 @@
 SHELL = bash
-
 WORKSPACE = $(shell pwd)
-UNAME = $(shell uname -sm | tr ' ' '-')
-UNAME_M=$(shell uname -m)
+MAINTAINER = "Aerospike <info@aerospike.com>"
+DESCRIPTION = "Aerospike Backup Service"
+HOMEPAGE = "https://www.aerospike.com"
+VENDOR = "Aerospike INC"
+LICENSE = "Apache License 2.0"
 
 BINARY_NAME=aerospike-backup-service
-GIT_TAG = $(shell git describe --tags)
 CMD_DIR = cmd/backup
 TARGET_DIR = target
 PACKAGES_DIR = packages
-LIB_DIR = lib
 PKG_DIR = build/package
-PREP_DIR = $(TARGET_DIR)/pkg_install
-CONFIG_FILES = $(wildcard config/*)
-POST_INSTALL_SCRIPT = $(PKG_DIR)/post-install.sh
-TOOLS_DIR = $(WORKSPACE)/modules/aerospike-tools-backup
 ARCHS=linux/amd64 linux/arm64
 PACKAGERS=deb rpm
 TARGET=$(TARGET_DIR)/$(BINARY_NAME)
 ifneq ($(strip $(OS))$(strip $(ARCH)),)
 	TARGET=$(TARGET_DIR)/$(BINARY_NAME)_$(OS)_$(ARCH)
 endif
-
-
 GIT_COMMIT:=$(shell git rev-parse HEAD)
 VERSION:=$(shell cat VERSION)
 
@@ -35,19 +29,7 @@ GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) $(GO) build \
 -ldflags="-X main.commit=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
 GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
-GO_VERSION = 1.22.5
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
-
-
-MAINTAINER = "Aerospike"
-DESCRIPTION = "Aerospike Backup Service"
-URL = "https://www.aerospike.com"
-VENDOR = "Aerospike"
-LICENSE = "Apache License 2.0"
-
-.PHONY: install-deps
-install-deps:
-	./scripts/install-deps.sh
 
 .PHONY: prep-submodules
 prep-submodules:
@@ -77,8 +59,15 @@ packages: buildx
   		OS=$$(echo $$arch | cut -d/ -f1); \
   		ARCH=$$(echo $$arch | cut -d/ -f2); \
 		OS=$$OS ARCH=$$ARCH \
-		NAME=$(BINARY_NAME) VERSION=$(VERSION) WORKSPACE=$(WORKSPACE) \
-		envsubst '$$OS $$ARCH $$NAME $$VERSION $$WORKSPACE' \
+		NAME=$(BINARY_NAME) \
+		VERSION=$(VERSION) \
+		WORKSPACE=$(WORKSPACE) \
+		MAINTAINER=$(MAINTAINER) \
+		DESCRIPTION=$(DESCRIPTION) \
+		HOMEPAGE=$(HOMEPAGE) \
+		VENDOR=$(VENDOR) \
+		LICENSE=$(LICENSE) \
+		envsubst '$$OS $$ARCH $$NAME $$VERSION $$WORKSPACE $$MAINTAINER $$DESCRIPTION $$HOMEPAGE $$VENDOR $$LICENSE' \
 		< $(PACKAGES_DIR)/nfpm.tmpl.yaml > $(PACKAGES_DIR)/nfpm-$$OS-$$ARCH.yaml; \
 		for packager in $(PACKAGERS); do \
 			$(NFPM) package \
@@ -99,24 +88,6 @@ checksums:
 test:
 	$(GOTEST) -v ./...
 
-.PHONY: rpm
-rpm: tarball
-	mkdir -p $(WORKSPACE)/target
-	mkdir -p $(WORKSPACE)/packages/rpm/SOURCES
-	mv /tmp/$(BINARY_NAME)-$(VERSION)-$(UNAME_M).tar.gz $(WORKSPACE)/packages/rpm/SOURCES/
-	BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) $(MAKE) -C packages/rpm
-
-.PHONY: deb
-deb: tarball
-	mkdir -p $(WORKSPACE)/target
-	mkdir -p $(WORKSPACE)/packages/deb/$(ARCH)
-	tar -xvf /tmp/$(BINARY_NAME)-$(VERSION)-$(UNAME_M).tar.gz -C $(WORKSPACE)/packages/deb/$(ARCH)
-	BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) ARCH=$(ARCH) $(MAKE) -C packages/deb
-
-.PHONY: tarball
-tarball: prep-submodules
-	cd ./scripts && ./tarball.sh
-
 .PHONY: release
 release:
 	cd ./scripts && ./release.sh $(NEXT_VERSION)
@@ -124,5 +95,4 @@ release:
 .PHONY: clean
 clean:
 	$(GOCLEAN)
-	$(MAKE) clean-submodules
-	rm -rf $(TARGET_DIR) $(LIB_DIR)
+	rm $(TARGET_DIR)/*

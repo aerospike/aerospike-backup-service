@@ -3,8 +3,8 @@ WORKSPACE="$(git rev-parse --show-toplevel)"
 CHANNEL="dev"
 TAG_LATEST=false
 TAG="test"
-#PLATFORMS="linux/amd64,linux/arm64"
-PLATFORMS="linux/amd64"
+PLATFORMS="linux/amd64,linux/arm64"
+#PLATFORMS="linux/amd64"
 
 
 POSITIONAL_ARGS=()
@@ -55,7 +55,7 @@ else
   exit 1
 fi
 
-#docker login aerospike.jfrog.io -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+docker login aerospike.jfrog.io -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 
 PROJECT="$(basename "$WORKSPACE")" \
 PLATFORMS="$PLATFORMS" \

@@ -18,14 +18,11 @@ priority: "extra"
 #conflicts:
 #- not-foo
 #- not-bar
-maintainer: "Aerospike <info@aerospike.com>"
-description: |
-  Aerospike Backup Service
-  This package provides backup and restore capabilities
-  for Aerospike Database.!
-vendor: "Aerospike INC"
-homepage: "https://aerospike.com"
-license: "Apache-2.0"
+maintainer: "${MAINTAINER}"
+description: "${DESCRIPTION}"
+vendor: "${VENDOR}"
+homepage: "${HOMEPAGE}"
+license: "${LICENSE}"
 #changelog: "changelog.yaml"
 contents:
 - src: ${WORKSPACE}/packages/config/${NAME}.service
