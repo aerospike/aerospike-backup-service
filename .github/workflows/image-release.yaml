@@ -1,0 +1,91 @@
+name: Build Release Docker Images
+on:
+  create:
+    tags: '*'
+
+  workflow_dispatch:
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Automation Code
+        uses: actions/checkout@v4
+      - name: Get Metadata
+        run: |
+          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+          echo "ISO8601=$(date "+%Y-%m-%dT%H:%M:%S%z")" >> $GITHUB_ENV
+      - name: Check Metadata
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
+          GIT_COMMIT_SHA: ${{ github.sha }}
+          GIT_BRANCH: main
+          LATEST: true
+          TAG: ${{ github.ref_name }}
+          CONTEXT: ${{ github.workspace }}
+          PROJECT:  ${{ github.event.repository.name }}
+        run: |
+          echo "VERSION: $VERSION"
+          echo "ISO8601: $ISO8601"
+          echo "GIT_COMMIT_SHA: $GIT_COMMIT_SHA"
+          echo "TAG: $TAG"
+          echo "CONTEXT: $CONTEXT"
+          echo "PROJECT: $PROJECT"
+          
+
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#      - name: Set up Docker Buildx
+#        uses: docker/setup-buildx-action@v3
+#      - name: Setup Jfrog
+#        uses: jfrog/setup-jfrog-cli@v3
+#        env:
+#          JF_URL: ${{ secrets.ARTIFACTORY_URL }}
+#          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+#      - name: Login to JFrog
+#        uses: docker/login-action@v2
+#        with:
+#          registry: aerospike.jfrog.io
+#          username: ${{ secrets.ARTIFACTORY_USER }}
+#          password: ${{ secrets.ARTIFACTORY_TOKEN }}
+#      - name: Build and Push
+#        uses: docker/bake-action@v4
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.PAT }}
+#          GIT_COMMIT_SHA: ${{ github.sha }}
+#          GIT_BRANCH: main
+#          LATEST: true
+#          TAG: ${{ github.ref_name }}
+#          CONTEXT: ${{ github.workspace }}
+#          PROJECT:  ${{ github.event.repository.name }}
+#        with:
+#          workdir: ${{ github.workspace }}
+#          files: docker-bake.hcl
+#          targets: default
+#      - name: Promote image with version tag
+#        env:
+#          ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
+#          ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
+#        run: |
+#          jfrog rt docker-promote aerospike-backup-service \
+#          "$ARTIFACTORY_CONTAINER_DEV" \
+#          "$ARTIFACTORY_CONTAINER_PROD" \
+#          --source-tag "${{ github.event.inputs.version }}" \
+#          --target-tag "${{ github.event.inputs.version }}" \
+#          --user "${{ secrets.ARTIFACTORY_USER }}" \
+#          --password "${{ secrets.ARTIFACTORY_TOKEN }}" \
+#          --url "${{ secrets.ARTIFACTORY_PROMOTE_URL }}" \
+#          --copy
+#      - name: Promote image with latest tag
+#        env:
+#          ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
+#          ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
+#        run: |
+#          jfrog rt docker-promote aerospike-backup-service \
+#          "$ARTIFACTORY_CONTAINER_DEV" \
+#          "$ARTIFACTORY_CONTAINER_PROD" \
+#          --source-tag "${{ github.event.inputs.version }}" \
+#          --target-tag "latest" \
+#          --user "${{ secrets.ARTIFACTORY_USER }}" \
+#          --password "${{ secrets.ARTIFACTORY_TOKEN }}" \
+#          --url "${{ secrets.ARTIFACTORY_PROMOTE_URL }}" \
+#          --copy
