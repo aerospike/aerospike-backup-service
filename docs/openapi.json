@@ -2387,6 +2387,16 @@
       "model.Storage" : {
         "description" : "Storage represents the configuration for a backup storage details.",
         "properties" : {
+          "max_async_connections" : {
+            "description" : "The maximum number of simultaneous requests from S3.",
+            "example" : 16,
+            "type" : "integer"
+          },
+          "min_part_size" : {
+            "description" : "The minimum size in bytes of individual S3 UploadParts",
+            "example" : 10,
+            "type" : "integer"
+          },
           "path" : {
             "description" : "The root path for the backup repository.",
             "example" : "backups",

@@ -107,6 +107,9 @@ func makeBackupConfig(
 	if backupPolicy.SocketTimeout != nil && *backupPolicy.SocketTimeout > 0 {
 		config.ScanPolicy.SocketTimeout = time.Duration(*backupPolicy.SocketTimeout) * time.Millisecond
 	}
+	if backupPolicy.NoBins != nil && *backupPolicy.NoBins == true {
+		config.ScanPolicy.IncludeBinData = false
+	}
 
 	if backupPolicy.Bandwidth != nil {
 		config.Bandwidth = int(*backupPolicy.Bandwidth)
@@ -152,12 +155,13 @@ func getWriter(ctx context.Context, path *string, storage *model.Storage) (backu
 			return nil, err
 		}
 		return backup.NewWriterS3(ctx, &s3.Config{
-			Bucket:    bucket,
-			Region:    *storage.S3Region,
-			Endpoint:  *storage.S3EndpointOverride,
-			Profile:   *storage.S3Profile,
-			Prefix:    parsedPath,
-			ChunkSize: 0,
+			Bucket:          bucket,
+			Region:          *storage.S3Region,
+			Endpoint:        *storage.S3EndpointOverride,
+			Profile:         *storage.S3Profile,
+			Prefix:          parsedPath,
+			MaxConnsPerHost: storage.MaxConnsPerHost,
+			MinPartSize:     storage.MinPartSize,
 		}, true)
 	}
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
