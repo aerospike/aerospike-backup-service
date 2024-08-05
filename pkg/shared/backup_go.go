@@ -25,16 +25,23 @@ func NewBackupGo() *BackupGo {
 }
 
 // BackupRun calls the backup_run function from the asbackup shared library.
-func (b *BackupGo) BackupRun(ctx context.Context, backupRoutine *model.BackupRoutine, backupPolicy *model.BackupPolicy,
-	client *a.Client, storage *model.Storage, _ *model.SecretAgent,
-	timebounds model.TimeBounds, namespace string, path *string,
+func (b *BackupGo) BackupRun(
+	ctx context.Context,
+	backupRoutine *model.BackupRoutine,
+	backupPolicy *model.BackupPolicy,
+	client *a.Client,
+	storage *model.Storage,
+	secretAgent *model.SecretAgent,
+	timebounds model.TimeBounds,
+	namespace string,
+	path *string,
 ) (*backup.BackupHandler, error) {
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup client, %w", err)
 	}
 
-	config := makeBackupConfig(namespace, backupRoutine, backupPolicy, timebounds)
+	config := makeBackupConfig(namespace, backupRoutine, backupPolicy, timebounds, secretAgent)
 
 	writerFactory, err := getWriter(ctx, path, storage)
 	if err != nil {
@@ -55,6 +62,7 @@ func makeBackupConfig(
 	backupRoutine *model.BackupRoutine,
 	backupPolicy *model.BackupPolicy,
 	timebounds model.TimeBounds,
+	secretAgent *model.SecretAgent,
 ) *backup.BackupConfig {
 	config := backup.NewDefaultBackupConfig()
 	config.Namespace = namespace
@@ -99,6 +107,9 @@ func makeBackupConfig(
 	if backupPolicy.SocketTimeout != nil && *backupPolicy.SocketTimeout > 0 {
 		config.ScanPolicy.SocketTimeout = time.Duration(*backupPolicy.SocketTimeout) * time.Millisecond
 	}
+	if backupPolicy.NoBins != nil && *backupPolicy.NoBins {
+		config.ScanPolicy.IncludeBinData = false
+	}
 
 	if backupPolicy.Bandwidth != nil {
 		config.Bandwidth = int(*backupPolicy.Bandwidth)
@@ -113,8 +124,21 @@ func makeBackupConfig(
 
 	if backupPolicy.EncryptionPolicy != nil {
 		config.EncryptionPolicy = &backup.EncryptionPolicy{
-			Mode:    backupPolicy.EncryptionPolicy.Mode,
-			KeyFile: backupPolicy.EncryptionPolicy.KeyFile,
+			Mode:      backupPolicy.EncryptionPolicy.Mode,
+			KeyFile:   backupPolicy.EncryptionPolicy.KeyFile,
+			KeySecret: backupPolicy.EncryptionPolicy.KeySecret,
+			KeyEnv:    backupPolicy.EncryptionPolicy.KeyEnv,
+		}
+	}
+
+	if secretAgent != nil {
+		config.SecretAgentConfig = &backup.SecretAgentConfig{
+			ConnectionType:     secretAgent.ConnectionType,
+			Address:            secretAgent.Address,
+			Port:               secretAgent.Port,
+			TimeoutMillisecond: secretAgent.Timeout,
+			CaFile:             secretAgent.TLSCAString,
+			IsBase64:           secretAgent.IsBase64,
 		}
 	}
 
@@ -131,12 +155,13 @@ func getWriter(ctx context.Context, path *string, storage *model.Storage) (backu
 			return nil, err
 		}
 		return backup.NewWriterS3(ctx, &s3.Config{
-			Bucket:    bucket,
-			Region:    *storage.S3Region,
-			Endpoint:  *storage.S3EndpointOverride,
-			Profile:   *storage.S3Profile,
-			Prefix:    parsedPath,
-			ChunkSize: 0,
+			Bucket:          bucket,
+			Region:          *storage.S3Region,
+			Endpoint:        *storage.S3EndpointOverride,
+			Profile:         *storage.S3Profile,
+			Prefix:          parsedPath,
+			MaxConnsPerHost: storage.MaxConnsPerHost,
+			MinPartSize:     storage.MinPartSize,
 		}, true)
 	}
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)

@@ -25,7 +25,10 @@ func NewRestoreGo() *RestoreGo {
 }
 
 // RestoreRun calls the restore function from the asbackup library.
-func (r *RestoreGo) RestoreRun(ctx context.Context, client *a.Client, restoreRequest *model.RestoreRequestInternal,
+func (r *RestoreGo) RestoreRun(
+	ctx context.Context,
+	client *a.Client,
+	restoreRequest *model.RestoreRequestInternal,
 ) (*model.RestoreResult, error) {
 	var err error
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
@@ -126,8 +129,21 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.C
 	}
 	if restoreRequest.Policy.EncryptionPolicy != nil {
 		config.EncryptionPolicy = &backup.EncryptionPolicy{
-			Mode:    restoreRequest.Policy.EncryptionPolicy.Mode,
-			KeyFile: restoreRequest.Policy.EncryptionPolicy.KeyFile,
+			Mode:      restoreRequest.Policy.EncryptionPolicy.Mode,
+			KeyFile:   restoreRequest.Policy.EncryptionPolicy.KeyFile,
+			KeySecret: restoreRequest.Policy.EncryptionPolicy.KeySecret,
+			KeyEnv:    restoreRequest.Policy.EncryptionPolicy.KeyEnv,
+		}
+	}
+
+	if restoreRequest.SecretAgent != nil {
+		config.SecretAgentConfig = &backup.SecretAgentConfig{
+			ConnectionType:     restoreRequest.SecretAgent.ConnectionType,
+			Address:            restoreRequest.SecretAgent.Address,
+			Port:               restoreRequest.SecretAgent.Port,
+			TimeoutMillisecond: restoreRequest.SecretAgent.Timeout,
+			CaFile:             restoreRequest.SecretAgent.TLSCAString,
+			IsBase64:           restoreRequest.SecretAgent.IsBase64,
 		}
 	}
 	return config
@@ -163,12 +179,13 @@ func getReader(ctx context.Context, path *string, storage *model.Storage,
 			return nil, err
 		}
 		return backup.NewStreamingReaderS3(ctx, &s3.Config{
-			Bucket:    bucket,
-			Region:    *storage.S3Region,
-			Endpoint:  *storage.S3EndpointOverride,
-			Profile:   *storage.S3Profile,
-			Prefix:    parsedPath,
-			ChunkSize: 0,
+			Bucket:          bucket,
+			Region:          *storage.S3Region,
+			Endpoint:        *storage.S3EndpointOverride,
+			Profile:         *storage.S3Profile,
+			Prefix:          parsedPath,
+			MaxConnsPerHost: storage.MaxConnsPerHost,
+			MinPartSize:     storage.MinPartSize,
 		}, backup.EncoderTypeASB)
 	}
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
