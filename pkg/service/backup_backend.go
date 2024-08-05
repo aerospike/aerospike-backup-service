@@ -112,10 +112,11 @@ func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.Ba
 	return b.fromSubfolders(timebounds, b.fullBackupsPath)
 }
 
+// FindLastFullBackup returns last full backup prior to given time.
 func (b *BackupBackend) FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error) {
 	fullBackupList, err := b.FullBackupList(model.NewTimeBoundsTo(toTime))
 	if err != nil {
-		return nil, fmt.Errorf("cannot read full backup list: %v", err)
+		return nil, fmt.Errorf("cannot read full backup list: %w", err)
 	}
 
 	fullBackup := latestFullBackupBeforeTime(fullBackupList, toTime) // it's a list of namespaces
@@ -145,6 +146,7 @@ func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound tim
 	return result
 }
 
+// FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
 func (b *BackupBackend) FindIncrementalBackupsForNamespace(bounds *model.TimeBounds, namespace string,
 ) ([]model.BackupDetails, error) {
 	allIncrementalBackupList, err := b.IncrementalBackupList(bounds)

@@ -22,7 +22,7 @@ func (cr *configRetriever) RetrieveConfiguration(routine string, toTime time.Tim
 
 	fullBackups, err := backend.FindLastFullBackup(toTime)
 	if err != nil || len(fullBackups) == 0 {
-		return nil, fmt.Errorf("last full backup not found: %v", err)
+		return nil, fmt.Errorf("last full backup not found: %w", err)
 	}
 
 	// fullBackups has backups for multiple namespaces, but same timestamp, they share same configuration.

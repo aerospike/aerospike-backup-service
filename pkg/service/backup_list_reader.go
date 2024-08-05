@@ -21,9 +21,9 @@ type BackupListReader interface {
 	// ReadClusterConfiguration return backed up cluster configuration as a compressed zip.
 	ReadClusterConfiguration(path string) ([]byte, error)
 
-	// FindLastFullBackup return last full backup prior to given time
+	// FindLastFullBackup returns last full backup prior to given time.
 	FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error)
 
-	// FindIncrementalBackupsForNamespace return all incremental backups in given range, sorted by time
+	// FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
 	FindIncrementalBackupsForNamespace(bounds *model.TimeBounds, namespace string) ([]model.BackupDetails, error)
 }

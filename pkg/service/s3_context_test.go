@@ -4,13 +4,13 @@ package service
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var contexts []S3Context
