@@ -99,7 +99,7 @@ func makeBackupConfig(
 	if backupPolicy.SocketTimeout != nil && *backupPolicy.SocketTimeout > 0 {
 		config.ScanPolicy.SocketTimeout = time.Duration(*backupPolicy.SocketTimeout) * time.Millisecond
 	}
-	if backupPolicy.NoBins != nil && *backupPolicy.NoBins == true {
+	if backupPolicy.NoBins != nil && *backupPolicy.NoBins {
 		config.ScanPolicy.IncludeBinData = false
 	}
 
