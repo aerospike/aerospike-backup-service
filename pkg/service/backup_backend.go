@@ -121,7 +121,7 @@ func (b *BackupBackend) FindLastFullBackup(toTime time.Time) ([]model.BackupDeta
 
 	fullBackup := latestFullBackupBeforeTime(fullBackupList, toTime) // it's a list of namespaces
 	if len(fullBackup) == 0 {
-		return nil, fmt.Errorf("no full backup found at %s", toTime)
+		return nil, NewBackupNotFoundError(toTime)
 	}
 	return fullBackup, nil
 }

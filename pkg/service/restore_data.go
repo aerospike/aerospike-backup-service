@@ -84,9 +84,10 @@ func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest) (Re
 	if !found {
 		return 0, fmt.Errorf("backend '%s' not found for restore", request.Routine)
 	}
-	fullBackups, err := reader.FindLastFullBackup(time.UnixMilli(request.Time))
+	timestamp := time.UnixMilli(request.Time)
+	fullBackups, err := reader.FindLastFullBackup(timestamp)
 	if err != nil {
-		return 0, fmt.Errorf("last full backup not found: %v", err)
+		return 0, fmt.Errorf("restore failed: %v", err)
 	}
 	jobID := r.restoreJobs.newJob()
 	ctx := context.TODO()
