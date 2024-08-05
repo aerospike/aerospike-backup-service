@@ -2334,24 +2334,30 @@
             "example" : "localhost",
             "type" : "string"
           },
+          "connection-type" : {
+            "description" : "Connection type: tcp, unix.",
+            "example" : "tcp",
+            "type" : "string"
+          },
+          "is-base64" : {
+            "description" : "Flag that shows if secret agent responses are encrypted with base64.",
+            "example" : false,
+            "type" : "boolean"
+          },
           "port" : {
             "description" : "Port the Secret Agent is running on.",
-            "example" : "8080",
-            "type" : "string"
+            "example" : 8080,
+            "type" : "integer"
           },
           "timeout" : {
             "description" : "Timeout in milliseconds.",
             "example" : 5000,
             "type" : "integer"
           },
-          "tls-ca" : {
+          "tls-ca-file" : {
             "description" : "The path to a trusted CA certificate file in PEM format.",
             "example" : "/path/to/ca.pem",
             "type" : "string"
-          },
-          "tls-enabled" : {
-            "description" : "Indicates whether TLS is enabled.",
-            "type" : "boolean"
           }
         },
         "type" : "object"
