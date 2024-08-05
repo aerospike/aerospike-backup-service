@@ -163,12 +163,13 @@ func getReader(ctx context.Context, path *string, storage *model.Storage,
 			return nil, err
 		}
 		return backup.NewStreamingReaderS3(ctx, &s3.Config{
-			Bucket:    bucket,
-			Region:    *storage.S3Region,
-			Endpoint:  *storage.S3EndpointOverride,
-			Profile:   *storage.S3Profile,
-			Prefix:    parsedPath,
-			ChunkSize: 0,
+			Bucket:          bucket,
+			Region:          *storage.S3Region,
+			Endpoint:        *storage.S3EndpointOverride,
+			Profile:         *storage.S3Profile,
+			Prefix:          parsedPath,
+			MinPartSize:     storage.MinPartSize,
+			MaxConnsPerHost: storage.MaxConnsPerHost,
 		}, backup.EncoderTypeASB)
 	}
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
