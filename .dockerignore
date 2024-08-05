@@ -6,7 +6,4 @@
 **/*.d
 **/*.dylib
 **/*.so
-
-/docs/
 /examples/
-/modules/

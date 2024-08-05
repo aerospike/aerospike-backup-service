@@ -1,6 +1,6 @@
 ---
 aerospike-clusters:
-  cluster1:
+  cluster:
     use-services-alternate: false
     seed-nodes:
       - host-name: "127.0.0.1"
@@ -10,21 +10,20 @@ aerospike-clusters:
       password: "admin"
 
 storage:
-  local1:
-    type: 0
+  local:
+    type: "local"
     path: "/var/lib/aerospike-backup-service"
 
 backup-policies:
-  policy1:
-    type: 1
+  policy:
     parallel: 1
     remove-files: KeepAll
 
 backup-routines:
-  routine1:
+  routine:
     interval-cron: "1/30 * * * * *" # every 30 seconds
     incr-interval-cron: "1/5 * * * * *" # every 5 seconds
-    backup-policy: "policy1"
-    source-cluster: "cluster1"
-    storage: "local1"
+    backup-policy: "policy"
+    source-cluster: "cluster"
+    storage: "local"
     namespace: "test"
