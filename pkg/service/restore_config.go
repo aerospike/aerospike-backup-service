@@ -17,12 +17,12 @@ type configRetriever struct {
 func (cr *configRetriever) RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error) {
 	backend, found := cr.backends.GetReader(routine)
 	if !found {
-		return nil, fmt.Errorf("backend '%s' not found for configuration retrieval", routine)
+		return nil, fmt.Errorf("%w: routine %s", errBackendNotFound, routine)
 	}
 
 	fullBackups, err := backend.FindLastFullBackup(toTime)
-	if err != nil || len(fullBackups) == 0 {
-		return nil, fmt.Errorf("last full backup not found: %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("failed retrieve configuration: %w", err)
 	}
 
 	// fullBackups has backups for multiple namespaces, but same timestamp, they share same configuration.

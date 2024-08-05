@@ -15,6 +15,7 @@ import (
 )
 
 var errBackendNotFound = errors.New("backend not found")
+var errBackupNotFound = errors.New("backup not found")
 
 // dataRestorer implements the RestoreManager interface.
 // Stores job information locally within a map.
