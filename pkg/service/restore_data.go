@@ -87,7 +87,7 @@ func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest) (Re
 	timestamp := time.UnixMilli(request.Time)
 	fullBackups, err := reader.FindLastFullBackup(timestamp)
 	if err != nil {
-		return 0, fmt.Errorf("restore failed: %v", err)
+		return 0, fmt.Errorf("restore failed: %w", err)
 	}
 	jobID := r.restoreJobs.newJob()
 	ctx := context.TODO()
