@@ -2,11 +2,13 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/util"
@@ -64,8 +66,13 @@ func makeTestRestoreService() *RestoreMemory {
 		},
 	}
 
-	backends := BackendHolderMock{}
-	return NewRestoreMemory(&backends, config, shared.NewRestoreMock())
+	return &RestoreMemory{
+		restoreJobs:     NewJobsHolder(),
+		restoreService:  shared.NewRestoreMock(),
+		backends:        &BackendHolderMock{},
+		config:          config,
+		asClientCreator: &MockAerospikeClientCreator{},
+	}
 }
 
 type BackendMock struct {
@@ -263,7 +270,7 @@ func Test_RestoreFail(t *testing.T) {
 	})
 
 	restoreRequest := &model.RestoreRequest{
-		DestinationCuster: nil,
+		DestinationCuster: &model.AerospikeCluster{},
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
@@ -304,7 +311,7 @@ func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !strings.Contains(err.Error(), "last full backup not found: toTime should be positive") {
+	if err == nil || !strings.Contains(err.Error(), "last full backup not found") {
 		t.Errorf("Expected error 'full backup not found', but got %v", err)
 	}
 }
@@ -315,7 +322,7 @@ func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !(err.Error() == "last full backup not found: no full backup found at 1") {
+	if err == nil || !strings.Contains(err.Error(), "last full backup not found: no full backup found at 1970-01-01") {
 		t.Errorf("Expected error 'full backup not found', but got %v", err)
 	}
 }
@@ -334,8 +341,9 @@ func Test_readBackupsFail(t *testing.T) {
 
 func Test_restoreTimestampFail(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
-		Routine: "routine_fail_restore",
-		Time:    10,
+		Routine:           "routine_fail_restore",
+		Time:              10,
+		DestinationCuster: &model.AerospikeCluster{},
 	}
 
 	jobID, _ := restoreService.RestoreByTime(request)
@@ -350,31 +358,31 @@ func Test_RetrieveConfiguration(t *testing.T) {
 	tests := []struct {
 		name      string
 		routine   string
-		timestamp int64
+		timestamp time.Time
 		wantErr   bool
 	}{
 		{
 			name:      "normal",
 			routine:   "routine",
-			timestamp: 10,
+			timestamp: time.UnixMilli(10),
 			wantErr:   false,
 		},
 		{
 			name:      "wrong time",
 			routine:   "routine",
-			timestamp: 1,
+			timestamp: time.UnixMilli(1),
 			wantErr:   true,
 		},
 		{
 			name:      "wrong routine",
 			routine:   "routine_fail_read",
-			timestamp: 10,
+			timestamp: time.UnixMilli(10),
 			wantErr:   true,
 		},
 		{
 			name:      "routine not found",
 			routine:   "routine not found",
-			timestamp: 10,
+			timestamp: time.UnixMilli(10),
 			wantErr:   true,
 		},
 	}
@@ -425,4 +433,18 @@ func Test_CalculateConfigurationBackupPath(t *testing.T) {
 			}
 		})
 	}
+}
+
+type MockAerospikeClientCreator struct{}
+
+func (a *MockAerospikeClientCreator) Close(_ *aerospike.Client) {
+}
+
+func (a *MockAerospikeClientCreator) NewClient(_ *aerospike.ClientPolicy, hosts ...*aerospike.Host,
+) (*aerospike.Client, error) {
+	if len(hosts) == 0 {
+		return nil, fmt.Errorf("no hosts")
+	}
+
+	return &aerospike.Client{}, nil
 }

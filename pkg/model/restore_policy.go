@@ -2,8 +2,6 @@ package model
 
 import (
 	"fmt"
-
-	"github.com/aerospike/backup-go/models"
 )
 
 // RestorePolicy represents a policy for the restore operation.
@@ -31,7 +29,7 @@ type RestorePolicy struct {
 	BatchSize *int32 `json:"batch-size,omitempty" example:"128"`
 	// Namespace details for the restore operation.
 	// By default, the data is restored to the namespace from which it was taken.
-	Namespace *models.RestoreNamespace `json:"namespace,omitempty"`
+	Namespace *RestoreNamespace `json:"namespace,omitempty"`
 	// The sets to restore (optional, an empty list implies restoring all sets).
 	SetList []string `json:"set-list,omitempty" example:"set1,set2"`
 	// The bins to restore (optional, an empty list implies restoring all bins).

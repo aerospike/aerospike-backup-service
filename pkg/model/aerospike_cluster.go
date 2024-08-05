@@ -1,4 +1,4 @@
-// nolint:lll
+//nolint:lll
 package model
 
 import (
@@ -34,6 +34,8 @@ type AerospikeCluster struct {
 	Credentials *Credentials `yaml:"credentials,omitempty" json:"credentials,omitempty"`
 	// The cluster TLS configuration.
 	TLS *TLS `yaml:"tls,omitempty" json:"tls,omitempty"`
+	// specifies the size of the Aerospike Connection Queue per node
+	ConnectionQueueSize *int `yaml:"connection-queue-size,omitempty" json:"connection-queue-size,omitempty" example:"100"`
 }
 
 // NewLocalAerospikeCluster returns a new AerospikeCluster to be used in tests.
@@ -142,6 +144,9 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	if c.TLS != nil {
 		policy.TlsConfig = initTLS(c.TLS, c.ClusterLabel)
 	}
+	if c.ConnectionQueueSize != nil && *c.ConnectionQueueSize > 0 {
+		policy.ConnectionQueueSize = *c.ConnectionQueueSize
+	}
 	return policy
 }
 
@@ -174,7 +179,6 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 	var clientPool []tls.Certificate
 	if (t.Certfile != nil && len(*t.Certfile) > 0) ||
 		t.Keyfile != nil && len(*t.Keyfile) > 0 {
-
 		// Read cert file
 		certFileBytes, err := readFromFile(*t.Certfile)
 		if err != nil {
@@ -231,6 +235,7 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 		RootCAs:                  serverPool,
 		InsecureSkipVerify:       false,
 		PreferServerCipherSuites: true,
+		MinVersion:               tls.VersionTLS12,
 	}
 
 	return tlsConfig

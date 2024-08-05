@@ -16,6 +16,9 @@ import (
 
 const namespaceInfo = "namespaces"
 
+// getAllNamespacesOfCluster retrieves a list of all namespaces in an Aerospike cluster.
+// this function is called maximum once for each routine (on application startup)
+// so it's ok to create client here.
 func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error) {
 	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
 
@@ -36,15 +39,13 @@ func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error
 	return strings.Split(namespaces, ";"), nil
 }
 
-func getClusterConfiguration(cluster *model.AerospikeCluster) ([]asconfig.DotConf, error) {
-	activeHosts, err := getActiveHosts(cluster)
-	if err != nil {
-		return nil, err
-	}
+func getClusterConfiguration(client *as.Client) []asconfig.DotConf {
+	activeHosts := getActiveHosts(client)
 
 	var outputs = make([]asconfig.DotConf, 0, len(activeHosts))
+	policy := client.Cluster().ClientPolicy()
 	for _, host := range activeHosts {
-		asInfo := info.NewAsInfo(logr.Logger{}, host, cluster.ASClientPolicy())
+		asInfo := info.NewAsInfo(logr.Logger{}, host, &policy)
 
 		conf, err := asconfig.GenerateConf(logr.Discard(), asInfo, true)
 		if err != nil {
@@ -61,22 +62,16 @@ func getClusterConfiguration(cluster *model.AerospikeCluster) ([]asconfig.DotCon
 		outputs = append(outputs, configAsString)
 	}
 
-	return outputs, nil
+	return outputs
 }
 
-func getActiveHosts(cluster *model.AerospikeCluster) ([]*as.Host, error) {
-	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
-	if err != nil {
-		return nil, err
-	}
-
-	defer client.Close()
-
+func getActiveHosts(client *as.Client) []*as.Host {
 	var activeHosts []*as.Host
 	for _, node := range client.GetNodes() {
 		if node.IsActive() {
 			activeHosts = append(activeHosts, node.GetHost())
 		}
 	}
-	return activeHosts, nil
+
+	return activeHosts
 }

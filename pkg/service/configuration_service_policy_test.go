@@ -39,10 +39,10 @@ func TestPolicy_AddErrors(t *testing.T) {
 		Storage:           map[string]*model.Storage{storage: {}},
 	}
 
-	for _, testPolicy := range fails {
-		err := AddPolicy(config, policy, &testPolicy.policy)
+	for i := range fails {
+		err := AddPolicy(config, policy, &fails[i].policy)
 		if err == nil {
-			t.Errorf("Expected an error on %s", testPolicy.name)
+			t.Errorf("Expected an error on %s", fails[i].name)
 		}
 	}
 }

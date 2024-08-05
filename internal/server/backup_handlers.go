@@ -133,7 +133,6 @@ func readBackupsLogic(routines map[string]*model.BackupRoutine,
 	backends service.BackendsHolder,
 	timeBounds *model.TimeBounds,
 	isFullBackup bool) (map[string][]model.BackupDetails, error) {
-
 	result := make(map[string][]model.BackupDetails)
 	for routine := range routines {
 		reader, _ := backends.GetReader(routine)
@@ -149,7 +148,6 @@ func readBackupsLogic(routines map[string]*model.BackupRoutine,
 
 func backupsReadFunction(
 	backend service.BackupListReader, fullBackup bool) func(*model.TimeBounds) ([]model.BackupDetails, error) {
-
 	if fullBackup {
 		return backend.FullBackupList
 	}
@@ -187,7 +185,7 @@ func (ws *HTTPServer) scheduleFullBackup(w http.ResponseWriter, r *http.Request)
 	}
 	fullBackupJobDetail := service.NewAdHocFullBackupJobForRoutine(routineName)
 	if fullBackupJobDetail == nil {
-		http.Error(w, "unknown routine name", http.StatusNotFound)
+		http.Error(w, "unknown routine name "+routineName, http.StatusNotFound)
 		return
 	}
 	trigger := quartz.NewRunOnceTrigger(time.Duration(delayMillis) * time.Millisecond)
@@ -197,4 +195,37 @@ func (ws *HTTPServer) scheduleFullBackup(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// @Summary  Get current backup statistics.
+// @ID       getCurrentBackup
+// @Tags     Backup
+// @Produce  json
+// @Param    name path string true "Backup routine name"
+// @Router   /v1/backups/currentBackup/{name} [get]
+// @Success  200 {object} model.CurrentBackups "Current backup statistics"
+// @Failure  404 {string} string
+func (ws *HTTPServer) getCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
+	routineName := r.PathValue("name")
+	if routineName == "" {
+		http.Error(w, "routine name required", http.StatusBadRequest)
+		return
+	}
+
+	handler, found := ws.handlerHolder[routineName]
+	if !found {
+		http.Error(w, "unknown routine name "+routineName, http.StatusNotFound)
+		return
+	}
+
+	stat := handler.GetCurrentStat()
+	response, err := json.Marshal(stat)
+	if err != nil {
+		http.Error(w, "failed to marshal statistics", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(response)
 }

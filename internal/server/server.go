@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/netip"
 	"strings"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
@@ -84,11 +85,16 @@ type HTTPServer struct {
 	scheduler      quartz.Scheduler
 	restoreService service.RestoreService
 	backupBackends service.BackendsHolder
+	handlerHolder  service.BackupHandlerHolder
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(backends service.BackendsHolder, config *model.Config,
-	scheduler quartz.Scheduler) *HTTPServer {
+func NewHTTPServer(
+	backends service.BackendsHolder,
+	config *model.Config,
+	scheduler quartz.Scheduler,
+	handlerHolder service.BackupHandlerHolder,
+) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
@@ -99,13 +105,15 @@ func NewHTTPServer(backends service.BackendsHolder, config *model.Config,
 	return &HTTPServer{
 		config: config,
 		server: &http.Server{
-			Addr: addr,
+			Addr:              addr,
+			ReadHeaderTimeout: 5 * time.Second,
 		},
 		rateLimiter:    rateLimiter,
 		whiteList:      newIPWhiteList(serverConfig.GetRateOrDefault().GetWhiteListOrDefault()),
 		scheduler:      scheduler,
 		restoreService: service.NewRestoreMemory(backends, config, shared.NewRestoreGo()),
 		backupBackends: backends,
+		handlerHolder:  handlerHolder,
 	}
 }
 
@@ -198,6 +206,9 @@ func (ws *HTTPServer) Start() {
 
 	// Schedules a full backup operation
 	mux.HandleFunc(ws.api("/backups/schedule/{name}"), ws.scheduleFullBackup)
+
+	// Get information on currently running backups
+	mux.HandleFunc(ws.api("/backups/currentBackup/{name}"), ws.getCurrentBackupInfo)
 
 	ws.server.Handler = ws.rateLimiterMiddleware(mux)
 	err := ws.server.ListenAndServe()

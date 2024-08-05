@@ -15,7 +15,6 @@ import (
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
-	"github.com/aerospike/backup/pkg/shared"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
@@ -28,7 +27,7 @@ var (
 
 // run parses the CLI parameters and executes backup.
 //
-//nolint:funlen
+
 func run() int {
 	var (
 		configFile string
@@ -72,14 +71,13 @@ func run() int {
 		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 		// schedule all configured backups
 		backends := service.NewBackupBackends(config)
-		scheduler, err := service.ScheduleBackup(ctx, config, backends)
+		handlers := service.MakeHandlers(config, backends)
+		scheduler, err := service.ScheduleBackup(ctx, config, handlers)
 		if err != nil {
 			return err
 		}
 		// run HTTP server
-		err = runHTTPServer(ctx, backends, config, scheduler)
-		// shutdown shared resources
-		shared.Shutdown()
+		err = runHTTPServer(ctx, backends, config, scheduler, handlers)
 		// stop the scheduler
 		scheduler.Stop()
 		return err
@@ -119,9 +117,13 @@ func readConfiguration() (*model.Config, error) {
 	return config, nil
 }
 
-func runHTTPServer(ctx context.Context, backends service.BackendsHolder,
-	config *model.Config, scheduler quartz.Scheduler) error {
-	httpServer := server.NewHTTPServer(backends, config, scheduler)
+func runHTTPServer(ctx context.Context,
+	backends service.BackendsHolder,
+	config *model.Config,
+	scheduler quartz.Scheduler,
+	handlerHolder service.BackupHandlerHolder,
+) error {
+	httpServer := server.NewHTTPServer(backends, config, scheduler, handlerHolder)
 	go func() {
 		httpServer.Start()
 	}()

@@ -56,10 +56,10 @@ func TestRoutine_AddErrors(t *testing.T) {
 		Storage:           map[string]*model.Storage{storage: {}},
 	}
 
-	for _, testRoutine := range fails {
-		err := AddRoutine(config, routine, &testRoutine.routine)
+	for i := range fails {
+		err := AddRoutine(config, routine, &fails[i].routine)
 		if err == nil {
-			t.Errorf("Expected an error on %s", testRoutine.name)
+			t.Errorf("Expected an error on %s", fails[i].name)
 		}
 	}
 }

@@ -67,6 +67,32 @@ paths:
       summary: Readiness endpoint.
       tags:
       - System
+  /v1/backups/currentBackup/{name}:
+    get:
+      operationId: getCurrentBackup
+      parameters:
+      - description: Backup routine name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/model.CurrentBackups'
+          description: Current backup statistics
+        "404":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Not Found
+      summary: Get current backup statistics.
+      tags:
+      - Backup
   /v1/backups/full:
     get:
       operationId: getFullBackups
@@ -1029,6 +1055,7 @@ components:
       description: AerospikeCluster represents the configuration for an Aerospike
         cluster for backup.
       example:
+        connection-queue-size: 100
         credentials: "{}"
         conn-timeout: 5000
         use-services-alternate: true
@@ -1045,6 +1072,10 @@ components:
         conn-timeout:
           description: The connection timeout in milliseconds.
           example: 5000
+          type: integer
+        connection-queue-size:
+          description: specifies the size of the Aerospike Connection Queue per node
+          example: 100
           type: integer
         credentials:
           allOf:
@@ -1379,6 +1410,7 @@ components:
             max-records: 10000
         aerospike-clusters:
           key:
+            connection-queue-size: 100
             credentials: "{}"
             conn-timeout: 5000
             use-services-alternate: true
@@ -1476,6 +1508,51 @@ components:
           description: The username for the cluster authentication.
           example: testUser
           type: string
+      type: object
+    model.CurrentBackup:
+      properties:
+        done-records:
+          description: "DoneRecords: the number of records that have been successfully\
+            \ backed up."
+          example: 50
+          type: integer
+        estimated-end-time:
+          description: |-
+            EstimatedEndTime: the estimated time when the backup operation will be completed.
+            A nil value indicates that the estimation is not available yet.
+          example: 2006-01-02T15:04:05Z07:00
+          type: string
+        percentage-done:
+          description: "PercentageDone: the progress of the backup operation as a\
+            \ percentage."
+          example: 50
+          type: integer
+        start-time:
+          description: "StartTime: the time when the backup operation started."
+          example: 2006-01-02T15:04:05Z07:00
+          type: string
+        total-records:
+          description: "TotalRecords: the total number of records to be backed up."
+          example: 100
+          type: integer
+      type: object
+    model.CurrentBackups:
+      example:
+        incremental: "{}"
+        full: "{}"
+      properties:
+        full:
+          allOf:
+          - $ref: '#/components/schemas/model.CurrentBackup'
+          description: Full represents the state of a full backup. Nil if no full
+            backup is running.
+          type: object
+        incremental:
+          allOf:
+          - $ref: '#/components/schemas/model.CurrentBackup'
+          description: Incremental represents the state of an incremental backup.
+            Nil if no incremental backup is running.
+          type: object
       type: object
     model.EncryptionPolicy:
       description: EncryptionPolicy contains backup encryption information.
@@ -1951,7 +2028,7 @@ components:
         type:
           allOf:
           - $ref: '#/components/schemas/model.StorageType'
-          description: "The type of the storage provider (0 - Local, 1 - AWS S3)."
+          description: The type of the storage provider
           type: object
       required:
       - path

@@ -19,7 +19,7 @@ func TestDeleteFolder(t *testing.T) {
 	parentFolder := tempFolder + "/parent"
 	folderToDelete := parentFolder + "/nested"
 	_ = os.MkdirAll(folderToDelete, 0744)
-	_ = os.WriteFile(folderToDelete+"/file.txt", []byte("hello world"), 0666)
+	_ = os.WriteFile(folderToDelete+"/file.txt", []byte("hello world"), 0600)
 
 	err := NewOSDiskAccessor().DeleteFolder(folderToDelete)
 
@@ -70,7 +70,7 @@ func TestLsDir(t *testing.T) {
 			setup: func() string {
 				dir := t.TempDir()
 				file := filepath.Join(dir, "file")
-				_ = os.WriteFile(file, []byte("test content"), 0644)
+				_ = os.WriteFile(file, []byte("test content"), 0600)
 				return dir
 			},
 			expected: nil,
@@ -124,7 +124,7 @@ func TestLsFiles(t *testing.T) {
 			setup: func() string {
 				dir := t.TempDir()
 				file := filepath.Join(dir, "file")
-				_ = os.WriteFile(file, []byte("test content"), 0644)
+				_ = os.WriteFile(file, []byte("test content"), 0600)
 				return dir
 			},
 			expected: []string{"file"},
@@ -200,39 +200,6 @@ func TestValidatePathContainsBackup(t *testing.T) {
 	}
 }
 
-func TestOSDiskAccessor_CreateFolder(t *testing.T) {
-	testCases := []struct {
-		name    string
-		parent  string
-		success bool
-	}{
-		{
-			name:    "Successful directory creation",
-			parent:  t.TempDir(),
-			success: true,
-		},
-		{
-			name:    "Attempting to create a directory with invalid path",
-			parent:  "/",
-			success: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			path := tc.parent + "/test"
-			NewOSDiskAccessor().CreateFolder(path)
-			stats, err := os.Stat(path)
-			if stats == nil && tc.success {
-				t.Fatalf("Expected to create folder, got error %v", err)
-			}
-			if stats != nil && !tc.success {
-				t.Fatalf("Expected to faile create folder")
-			}
-		})
-	}
-}
-
 func TestReadBackupDetails(t *testing.T) {
 	accessor := NewOSDiskAccessor()
 
@@ -253,7 +220,6 @@ func TestReadBackupDetails(t *testing.T) {
 }
 
 func TestReadBackupDetailsNegative(t *testing.T) {
-
 	accessor := &OSDiskAccessor{}
 	tests := []struct {
 		name  string
