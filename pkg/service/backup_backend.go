@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/pkg/util"
 	"gopkg.in/yaml.v3"
 )
 
@@ -109,12 +112,67 @@ func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.Ba
 	return b.fromSubfolders(timebounds, b.fullBackupsPath)
 }
 
+// FindLastFullBackup returns last full backup prior to given time.
+func (b *BackupBackend) FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error) {
+	fullBackupList, err := b.FullBackupList(model.NewTimeBoundsTo(toTime))
+	if err != nil {
+		return nil, fmt.Errorf("cannot read full backup list: %w", err)
+	}
+
+	fullBackup := latestFullBackupBeforeTime(fullBackupList, toTime) // it's a list of namespaces
+	if len(fullBackup) == 0 {
+		return nil, fmt.Errorf("%w: %s", errBackupNotFound, toTime)
+	}
+	return fullBackup, nil
+}
+
+// latestFullBackupBeforeTime returns list of backups with same creation time, latest before upperBound.
+func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound time.Time) []model.BackupDetails {
+	var result []model.BackupDetails
+	var latestTime time.Time
+	for i := range allBackups {
+		current := &allBackups[i]
+		if current.Created.After(upperBound) {
+			continue
+		}
+
+		if len(result) == 0 || latestTime.Before(current.Created) {
+			latestTime = current.Created
+			result = []model.BackupDetails{*current}
+		} else if current.Created.Equal(latestTime) {
+			result = append(result, *current)
+		}
+	}
+	return result
+}
+
+// FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
+func (b *BackupBackend) FindIncrementalBackupsForNamespace(bounds *model.TimeBounds, namespace string,
+) ([]model.BackupDetails, error) {
+	allIncrementalBackupList, err := b.IncrementalBackupList(bounds)
+	if err != nil {
+		return nil, err
+	}
+	var filteredIncrementalBackups []model.BackupDetails
+	for _, b := range allIncrementalBackupList {
+		if b.Namespace == namespace {
+			filteredIncrementalBackups = append(filteredIncrementalBackups, b)
+		}
+	}
+	// Sort in place
+	sort.Slice(filteredIncrementalBackups, func(i, j int) bool {
+		return filteredIncrementalBackups[i].Created.Before(filteredIncrementalBackups[j].Created)
+	})
+
+	return filteredIncrementalBackups, nil
+}
+
 func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache bool,
 	paths ...string) []model.BackupDetails {
 	// each path contains a backup of specific time
 	backupDetails := make([]model.BackupDetails, 0, len(paths))
 	for _, path := range paths {
-		namespaces, err := b.lsDir(filepath.Join(path, model.DataDirectory))
+		namespaces, err := b.lsDir(filepath.Join(path, model.DataDirectory), nil)
 		if err != nil {
 			slog.Warn("Cannot list backup dir", "path", path, "err", err)
 			continue
@@ -133,12 +191,18 @@ func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache 
 	return backupDetails
 }
 
-func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds,
-	backupFolder string) ([]model.BackupDetails, error) {
-	subfolders, err := b.lsDir(backupFolder)
+func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds, backupFolder string,
+) ([]model.BackupDetails, error) {
+	var after *string
+	if timebounds.FromTime != nil {
+		after = util.Ptr(formatTime(*timebounds.FromTime))
+	}
+
+	subfolders, err := b.lsDir(backupFolder, after)
 	if err != nil {
 		return nil, err
 	}
+
 	return b.detailsFromPaths(timebounds, true, subfolders...), nil
 }
 

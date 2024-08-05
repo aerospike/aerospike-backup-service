@@ -17,7 +17,6 @@ import (
 )
 
 var restoreService = makeTestRestoreService()
-
 var validBackupPath = "./testout/backup/data/namespace"
 
 func makeTestFolders() {
@@ -51,7 +50,7 @@ func (b *BackendHolderMock) Get(_ string) (*BackupBackend, bool) {
 func (b *BackendHolderMock) SetData(_ map[string]*BackupBackend) {
 }
 
-func makeTestRestoreService() *RestoreMemory {
+func makeTestRestoreService() *dataRestorer {
 	config := model.NewConfigWithDefaultValues()
 	config.Storage["s"] = &model.Storage{
 		Path: ptr.String("/"),
@@ -66,7 +65,10 @@ func makeTestRestoreService() *RestoreMemory {
 		},
 	}
 
-	return &RestoreMemory{
+	return &dataRestorer{
+		configRetriever: configRetriever{
+			backends: &BackendHolderMock{},
+		},
 		restoreJobs:     NewJobsHolder(),
 		restoreService:  shared.NewRestoreMock(),
 		backends:        &BackendHolderMock{},
@@ -76,6 +78,22 @@ func makeTestRestoreService() *RestoreMemory {
 }
 
 type BackendMock struct {
+}
+
+func (m *BackendMock) FindIncrementalBackupsForNamespace(_ *model.TimeBounds, _ string) ([]model.BackupDetails, error) {
+	return []model.BackupDetails{{
+		BackupMetadata: model.BackupMetadata{
+			Created:   time.UnixMilli(10),
+			Namespace: "ns1",
+		},
+		Key: ptr.String("key"),
+	}, {
+		BackupMetadata: model.BackupMetadata{
+			Created:   time.UnixMilli(20),
+			Namespace: "ns1",
+		},
+		Key: ptr.String("key2"),
+	}}, nil
 }
 
 func (m *BackendMock) ReadClusterConfiguration(_ string) ([]byte, error) {
@@ -108,7 +126,32 @@ func (*BackendMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDe
 	}}, nil
 }
 
+func (*BackendMock) FindLastFullBackup(t time.Time) ([]model.BackupDetails, error) {
+	created := time.UnixMilli(5)
+
+	if t.After(created) {
+		return []model.BackupDetails{{
+			BackupMetadata: model.BackupMetadata{
+				Created:   created,
+				Namespace: "ns1",
+			},
+			Key: &validBackupPath,
+		}}, nil
+	}
+
+	return nil, errBackupNotFound
+}
+
+func (*BackendFailMock) FindLastFullBackup(_ time.Time) ([]model.BackupDetails, error) {
+	return nil, errBackupNotFound
+}
+
 type BackendFailMock struct {
+}
+
+func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ *model.TimeBounds, _ string,
+) ([]model.BackupDetails, error) {
+	return nil, nil
 }
 
 func (m *BackendFailMock) ReadClusterConfiguration(_ string) ([]byte, error) {
@@ -300,8 +343,8 @@ func Test_RestoreByTimeFailNoBackend(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !strings.Contains(err.Error(), "backend 'wrongRoutine' not found for restore") {
-		t.Errorf("Expected error 'Backend not found', but got %v", err)
+	if err == nil || !errors.Is(err, errBackendNotFound) {
+		t.Errorf("Expected error %v, but got %v", errBackendNotFound, err)
 	}
 }
 
@@ -311,10 +354,11 @@ func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !strings.Contains(err.Error(), "last full backup not found") {
-		t.Errorf("Expected error 'full backup not found', but got %v", err)
+	if err == nil || !errors.Is(err, errBackupNotFound) {
+		t.Errorf("Expected error %v, but got %v", errBackupNotFound, err)
 	}
 }
+
 func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
 		Routine: "routine",
@@ -322,20 +366,8 @@ func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !strings.Contains(err.Error(), "last full backup not found: no full backup found at 1970-01-01") {
-		t.Errorf("Expected error 'full backup not found', but got %v", err)
-	}
-}
-
-func Test_readBackupsFail(t *testing.T) {
-	request := &model.RestoreTimestampRequest{
-		Routine: "routine_fail_read",
-		Time:    1,
-	}
-
-	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !(err.Error() == "last full backup not found: cannot read full backup list: mock error") {
-		t.Errorf("Expected error 'full backup not found', but got %v", err)
+	if err == nil || !errors.Is(err, errBackupNotFound) {
+		t.Errorf("Expected error %v, but got %v", errBackupNotFound, err)
 	}
 }
 

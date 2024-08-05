@@ -8,27 +8,29 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
+type RestoreJobID int
+
 type JobsHolder struct {
 	sync.Mutex
-	restoreJobs map[int]*model.RestoreJobStatus
+	restoreJobs map[RestoreJobID]*model.RestoreJobStatus
 }
 
 func NewJobsHolder() *JobsHolder {
 	return &JobsHolder{
-		restoreJobs: make(map[int]*model.RestoreJobStatus),
+		restoreJobs: make(map[RestoreJobID]*model.RestoreJobStatus),
 	}
 }
 
-func (h *JobsHolder) newJob() int {
+func (h *JobsHolder) newJob() RestoreJobID {
 	// #nosec G404
-	jobID := rand.Int()
+	jobID := RestoreJobID(rand.Int())
 	h.Lock()
 	defer h.Unlock()
 	h.restoreJobs[jobID] = model.NewRestoreJobStatus()
 	return jobID
 }
 
-func (h *JobsHolder) getStatus(jobID int) (*model.RestoreJobStatus, error) {
+func (h *JobsHolder) getStatus(jobID RestoreJobID) (*model.RestoreJobStatus, error) {
 	h.Lock()
 	defer h.Unlock()
 	jobStatus, exists := h.restoreJobs[jobID]
@@ -39,7 +41,7 @@ func (h *JobsHolder) getStatus(jobID int) (*model.RestoreJobStatus, error) {
 	return &copyJob, nil
 }
 
-func (h *JobsHolder) increaseStats(jobID int, newStats *model.RestoreResult) {
+func (h *JobsHolder) increaseStats(jobID RestoreJobID, newStats *model.RestoreResult) {
 	h.Lock()
 	defer h.Unlock()
 	current, found := h.restoreJobs[jobID]
@@ -57,7 +59,7 @@ func (h *JobsHolder) increaseStats(jobID int, newStats *model.RestoreResult) {
 	}
 }
 
-func (h *JobsHolder) setDone(jobID int) {
+func (h *JobsHolder) setDone(jobID RestoreJobID) {
 	h.Lock()
 	defer h.Unlock()
 	current, found := h.restoreJobs[jobID]
@@ -66,7 +68,7 @@ func (h *JobsHolder) setDone(jobID int) {
 	}
 }
 
-func (h *JobsHolder) setFailed(jobID int, err error) {
+func (h *JobsHolder) setFailed(jobID RestoreJobID, err error) {
 	h.Lock()
 	defer h.Unlock()
 	current, found := h.restoreJobs[jobID]
