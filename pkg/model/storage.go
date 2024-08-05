@@ -64,7 +64,7 @@ func (s *Storage) Validate() error {
 		!slices.Contains(validS3LogLevels, strings.ToUpper(*s.S3LogLevel)) {
 		return errors.New("invalid s3 log level")
 	}
-	if s.MinPartSize < MinAllowedPartSize {
+	if s.MinPartSize != 0 && s.MinPartSize < MinAllowedPartSize {
 		return fmt.Errorf("min_part_size must be at least %d bytes", MinAllowedPartSize)
 	}
 	if s.MaxConnsPerHost < 0 {
