@@ -1437,7 +1437,9 @@ components:
           key:
             path: backups
             s3-endpoint-override: http://host.docker.internal:9000
+            min_part_size: 10
             s3-log-level: FATAL
+            max_async_connections: 16
             s3-region: eu-central-1
             type: "{}"
             s3-profile: default
@@ -1999,11 +2001,21 @@ components:
       example:
         path: backups
         s3-endpoint-override: http://host.docker.internal:9000
+        min_part_size: 10
         s3-log-level: FATAL
+        max_async_connections: 16
         s3-region: eu-central-1
         type: "{}"
         s3-profile: default
       properties:
+        max_async_connections:
+          description: The maximum number of simultaneous requests from S3.
+          example: 16
+          type: integer
+        min_part_size:
+          description: The minimum size in bytes of individual S3 UploadParts
+          example: 10
+          type: integer
         path:
           description: The root path for the backup repository.
           example: backups

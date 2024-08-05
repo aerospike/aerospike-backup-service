@@ -2355,6 +2355,17 @@ const docTemplate = `{
                 "type"
             ],
             "properties": {
+                "max_async_connections": {
+                    "description": "The maximum number of simultaneous requests from S3.",
+                    "type": "integer",
+                    "example": 16
+                },
+                "min_part_size": {
+                    "description": "The minimum size in bytes of individual S3 UploadParts",
+                    "type": "integer",
+                    "default": 5242880,
+                    "example": 10
+                },
                 "path": {
                     "description": "The root path for the backup repository.",
                     "type": "string",
