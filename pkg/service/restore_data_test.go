@@ -139,7 +139,7 @@ func (*BackendMock) FindLastFullBackup(t time.Time) ([]model.BackupDetails, erro
 		}}, nil
 	}
 
-	return nil, NewBackupNotFoundError(t)
+	return nil, errBackendNotFound
 }
 
 func (*BackendFailMock) FindLastFullBackup(_ time.Time) ([]model.BackupDetails, error) {
@@ -343,8 +343,8 @@ func Test_RestoreByTimeFailNoBackend(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !strings.Contains(err.Error(), "backend 'wrongRoutine' not found for restore") {
-		t.Errorf("Expected error 'Backend not found', but got %v", err)
+	if err == nil || !errors.Is(err, errBackendNotFound) {
+		t.Errorf("Expected error %v, but got %v", errBackendNotFound, err)
 	}
 }
 
@@ -354,8 +354,8 @@ func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !errors.As(err, &BackupNotFoundError{}) {
-		t.Errorf("Expected error 'full backup not found', but got %v", err)
+	if err == nil || !errors.Is(err, errBackendNotFound) {
+		t.Errorf("Expected error %v, but got %v", errBackendNotFound, err)
 	}
 }
 
@@ -366,8 +366,8 @@ func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !errors.As(err, &BackupNotFoundError{}) {
-		t.Errorf("Expected error 'full backup not found', but got %v", err)
+	if err == nil || !errors.Is(err, errBackendNotFound) {
+		t.Errorf("Expected error %v, but got %v", errBackendNotFound, err)
 	}
 }
 

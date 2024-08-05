@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -12,6 +13,8 @@ import (
 	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aws/smithy-go/ptr"
 )
+
+var errBackendNotFound = errors.New("backend not found")
 
 // dataRestorer implements the RestoreManager interface.
 // Stores job information locally within a map.
@@ -82,7 +85,7 @@ func (r *dataRestorer) initClient(cluster *model.AerospikeCluster, jobID Restore
 func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest) (RestoreJobID, error) {
 	reader, found := r.backends.GetReader(request.Routine)
 	if !found {
-		return 0, fmt.Errorf("backend '%s' not found for restore", request.Routine)
+		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.Routine)
 	}
 	timestamp := time.UnixMilli(request.Time)
 	fullBackups, err := reader.FindLastFullBackup(timestamp)
