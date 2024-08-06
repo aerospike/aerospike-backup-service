@@ -4,76 +4,82 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
+	"time"
 
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
 )
 
 type RestoreJobID int
 
+type jobInfo struct {
+	handlers     []*backup.RestoreHandler
+	status       model.JobStatus
+	err          error
+	totalRecords uint64
+	startTime    time.Time
+}
+
 type JobsHolder struct {
 	sync.Mutex
-	restoreJobs map[RestoreJobID]*model.RestoreJobStatus
+	restoreJobs map[RestoreJobID]*jobInfo
 }
 
 func NewJobsHolder() *JobsHolder {
 	return &JobsHolder{
-		restoreJobs: make(map[RestoreJobID]*model.RestoreJobStatus),
+		restoreJobs: make(map[RestoreJobID]*jobInfo),
 	}
 }
 
 func (h *JobsHolder) newJob() RestoreJobID {
 	// #nosec G404
-	jobID := RestoreJobID(rand.Int())
+	id := RestoreJobID(rand.Int())
 	h.Lock()
 	defer h.Unlock()
-	h.restoreJobs[jobID] = model.NewRestoreJobStatus()
-	return jobID
-}
-
-func (h *JobsHolder) getStatus(jobID RestoreJobID) (*model.RestoreJobStatus, error) {
-	h.Lock()
-	defer h.Unlock()
-	jobStatus, exists := h.restoreJobs[jobID]
-	if !exists {
-		return nil, fmt.Errorf("job with ID %d not found", jobID)
+	h.restoreJobs[id] = &jobInfo{
+		status: model.JobStatusRunning,
 	}
-	copyJob := *jobStatus
-	return &copyJob, nil
+	return id
 }
 
-func (h *JobsHolder) increaseStats(jobID RestoreJobID, newStats *model.RestoreResult) {
+func (h *JobsHolder) addHandler(id RestoreJobID, handler *backup.RestoreHandler) {
 	h.Lock()
 	defer h.Unlock()
-	current, found := h.restoreJobs[jobID]
-	if found {
-		current.TotalBytes += newStats.TotalBytes
-		current.TotalRecords += newStats.TotalRecords
-		current.ExpiredRecords += newStats.ExpiredRecords
-		current.SkippedRecords += newStats.SkippedRecords
-		current.IgnoredRecords += newStats.IgnoredRecords
-		current.InsertedRecords += newStats.InsertedRecords
-		current.ExistedRecords += newStats.ExistedRecords
-		current.FresherRecords += newStats.FresherRecords
-		current.IndexCount += newStats.IndexCount
-		current.UDFCount += newStats.UDFCount
+	if job, exists := h.restoreJobs[id]; exists {
+		job.handlers = append(job.handlers, handler)
 	}
 }
 
-func (h *JobsHolder) setDone(jobID RestoreJobID) {
+func (h *JobsHolder) addTotalRecords(id RestoreJobID, t uint64) {
 	h.Lock()
 	defer h.Unlock()
-	current, found := h.restoreJobs[jobID]
-	if found {
-		current.Status = model.JobStatusDone
+	if job, exists := h.restoreJobs[id]; exists {
+		job.totalRecords += t
 	}
 }
 
-func (h *JobsHolder) setFailed(jobID RestoreJobID, err error) {
+func (h *JobsHolder) setDone(id RestoreJobID) {
 	h.Lock()
 	defer h.Unlock()
-	current, found := h.restoreJobs[jobID]
-	if found {
-		current.Status = model.JobStatusFailed
-		current.Error = err.Error()
+	if job, exists := h.restoreJobs[id]; exists {
+		job.status = model.JobStatusDone
 	}
+}
+
+func (h *JobsHolder) setFailed(id RestoreJobID, err error) {
+	h.Lock()
+	defer h.Unlock()
+	if job, exists := h.restoreJobs[id]; exists {
+		job.status = model.JobStatusFailed
+		job.err = err
+	}
+}
+
+func (h *JobsHolder) getStatus(id RestoreJobID) (*model.RestoreJobStatus, error) {
+	h.Lock()
+	defer h.Unlock()
+	if job, exists := h.restoreJobs[id]; exists {
+		return CurrentRestoreStatus(job), nil
+	}
+	return nil, fmt.Errorf("job with ID %d not found", id)
 }

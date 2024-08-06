@@ -366,7 +366,7 @@ func formatTime(t time.Time) string {
 
 func (h *BackupHandler) GetCurrentStat() *model.CurrentBackups {
 	return &model.CurrentBackups{
-		Full:        model.NewCurrentBackup(h.fullBackupHandlers),
-		Incremental: model.NewCurrentBackup(h.incrBackupHandlers),
+		Full:        currentBackupStatus(h.fullBackupHandlers),
+		Incremental: currentBackupStatus(h.incrBackupHandlers),
 	}
 }

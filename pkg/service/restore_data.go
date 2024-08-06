@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aerospike/backup-go"
 	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aws/smithy-go/ptr"
@@ -64,6 +64,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJo
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed to start restore operation: %w", err))
 			return
 		}
+		r.restoreJobs.addHandler(jobID, handler)
 
 		// Wait for the restore operation to complete
 		err = handler.Wait(ctx)
@@ -166,31 +167,22 @@ func (r *dataRestorer) restoreNamespace(
 	// Append incremental backups to allBackups
 	allBackups = append(allBackups, incrementalBackups...)
 
-	slog.Info("Preparing to restore backups",
-		"namespace", fullBackup.Namespace,
-		"fullBackup", fullBackup.Created,
-		"incrementalCount", len(incrementalBackups))
+	for _, b := range allBackups {
+		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
+	}
 
 	// Now restore all backups in order
-	for i, backup := range allBackups {
-		slog.Info("Restoring backup",
-			"namespace", backup.Namespace,
-			"created", backup.Created,
-			"progress", fmt.Sprintf("%d/%d", i+1, len(allBackups)))
-
-		handler, err := r.restoreFromPath(ctx, client, request, backup.Key)
+	for _, b := range allBackups {
+		handler, err := r.restoreFromPath(ctx, client, request, b.Key)
 		if err != nil {
-			return fmt.Errorf("could not start restore from backup created at %s: %v", backup.Created, err)
+			return err
 		}
+		r.restoreJobs.addHandler(jobID, handler)
 
-		// Wait for the restore operation to complete
 		err = handler.Wait(ctx)
 		if err != nil {
-			return fmt.Errorf("error during backup restore created at %s: %v", backup.Created, err)
+			return err
 		}
-
-		//result := handler.GetStats()
-		//r.restoreJobs.increaseStats(jobID, &result)
 	}
 
 	return nil
