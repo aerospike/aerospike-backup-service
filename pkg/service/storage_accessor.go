@@ -1,6 +1,8 @@
 package service
 
-import "github.com/aerospike/backup/pkg/model"
+import (
+	"github.com/aerospike/backup/pkg/model"
+)
 
 type StorageAccessor interface {
 	// readBackupState reads backup state for a backup.
@@ -11,9 +13,10 @@ type StorageAccessor interface {
 	read(path string) ([]byte, error)
 	// write writes the given byte array to a file
 	write(filePath string, v []byte) error
-	// lsDir lists all subdirectories in the given path.
-	lsDir(path string) ([]string, error)
-	// lsDir lists all files in the given path.
+	// lsDir lists all subdirectories in the given path
+	// after is an optional filter to return folders after it.
+	lsDir(path string, after *string) ([]string, error)
+	// lsFiles lists all files in the given path.
 	lsFiles(path string) ([]string, error)
 	// DeleteFolder removes the folder and all its contents at the specified path.
 	DeleteFolder(path string) error

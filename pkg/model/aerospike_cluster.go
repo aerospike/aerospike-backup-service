@@ -34,7 +34,7 @@ type AerospikeCluster struct {
 	Credentials *Credentials `yaml:"credentials,omitempty" json:"credentials,omitempty"`
 	// The cluster TLS configuration.
 	TLS *TLS `yaml:"tls,omitempty" json:"tls,omitempty"`
-	// specifies the size of the Aerospike Connection Queue per node
+	// Specifies the size of the Aerospike Connection Queue per node.
 	ConnectionQueueSize *int `yaml:"connection-queue-size,omitempty" json:"connection-queue-size,omitempty" example:"100"`
 }
 

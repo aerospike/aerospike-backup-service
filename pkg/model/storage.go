@@ -26,10 +26,10 @@ type Storage struct {
 	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000"`
 	// The log level of the AWS S3 SDK (AWS S3 optional).
 	S3LogLevel *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enum:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
-	// The minimum size in bytes of individual S3 UploadParts.
-	MinPartSize int `yaml:"min_part_size" json:"min_part_size" example:"10"`
+	// The minimum size in bytes of individual S3 UploadParts
+	MinPartSize int `yaml:"min_part_size,omitempty" json:"min_part_size,omitempty" example:"10" default:"5242880"`
 	// The maximum number of simultaneous requests from S3.
-	MaxConnsPerHost int `yaml:"max_async_connections" json:"max_async_connections" example: "16"`
+	MaxConnsPerHost int `yaml:"max_async_connections,omitempty" json:"max_async_connections,omitempty" example:"16"`
 }
 
 // StorageType represents the type of the backup storage.
@@ -64,7 +64,7 @@ func (s *Storage) Validate() error {
 		!slices.Contains(validS3LogLevels, strings.ToUpper(*s.S3LogLevel)) {
 		return errors.New("invalid s3 log level")
 	}
-	if s.MinPartSize < MinAllowedPartSize {
+	if s.MinPartSize != 0 && s.MinPartSize < MinAllowedPartSize {
 		return fmt.Errorf("min_part_size must be at least %d bytes", MinAllowedPartSize)
 	}
 	if s.MaxConnsPerHost < 0 {

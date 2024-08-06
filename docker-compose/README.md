@@ -7,10 +7,11 @@
 ```
 
 This command sets up:
+
 - An Aerospike container to be used as a data source.
 - A [MinIO](https://min.io/) container for storing backup data.
 - A Backup Service container using a sample [configuration file](./aerospike-backup-service.yml) with a routine
-specifying daily full backups and hourly incremental.
+  specifying daily full backups and hourly incremental.
 
 ## Verify Installation
 

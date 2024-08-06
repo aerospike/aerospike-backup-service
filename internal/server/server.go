@@ -83,7 +83,7 @@ type HTTPServer struct {
 	rateLimiter    *IPRateLimiter
 	whiteList      *ipWhiteList
 	scheduler      quartz.Scheduler
-	restoreService service.RestoreService
+	restoreManager service.RestoreManager
 	backupBackends service.BackendsHolder
 	handlerHolder  service.BackupHandlerHolder
 }
@@ -111,7 +111,7 @@ func NewHTTPServer(
 		rateLimiter:    rateLimiter,
 		whiteList:      newIPWhiteList(serverConfig.GetRateOrDefault().GetWhiteListOrDefault()),
 		scheduler:      scheduler,
-		restoreService: service.NewRestoreMemory(backends, config, shared.NewRestoreGo()),
+		restoreManager: service.NewRestoreManager(backends, config, shared.NewRestoreGo()),
 		backupBackends: backends,
 		handlerHolder:  handlerHolder,
 	}

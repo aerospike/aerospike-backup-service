@@ -2301,24 +2301,30 @@ const docTemplate = `{
                     "type": "string",
                     "example": "localhost"
                 },
+                "connection-type": {
+                    "description": "Connection type: tcp, unix.",
+                    "type": "string",
+                    "example": "tcp"
+                },
+                "is-base64": {
+                    "description": "Flag that shows if secret agent responses are encrypted with base64.",
+                    "type": "boolean",
+                    "example": false
+                },
                 "port": {
                     "description": "Port the Secret Agent is running on.",
-                    "type": "string",
-                    "example": "8080"
+                    "type": "integer",
+                    "example": 8080
                 },
                 "timeout": {
                     "description": "Timeout in milliseconds.",
                     "type": "integer",
                     "example": 5000
                 },
-                "tls-ca": {
+                "tls-ca-file": {
                     "description": "The path to a trusted CA certificate file in PEM format.",
                     "type": "string",
                     "example": "/path/to/ca.pem"
-                },
-                "tls-enabled": {
-                    "description": "Indicates whether TLS is enabled.",
-                    "type": "boolean"
                 }
             }
         },
@@ -2355,6 +2361,17 @@ const docTemplate = `{
                 "type"
             ],
             "properties": {
+                "max_async_connections": {
+                    "description": "The maximum number of simultaneous requests from S3.",
+                    "type": "integer",
+                    "example": 16
+                },
+                "min_part_size": {
+                    "description": "The minimum size in bytes of individual S3 UploadParts",
+                    "type": "integer",
+                    "default": 5242880,
+                    "example": 10
+                },
                 "path": {
                     "description": "The root path for the backup repository.",
                     "type": "string",

@@ -2,22 +2,25 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
-	"sort"
 	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/shared"
-	"github.com/aerospike/backup/pkg/util"
+	"github.com/aws/smithy-go/ptr"
 )
 
-// RestoreMemory implements the RestoreService interface.
+var errBackendNotFound = errors.New("backend not found")
+var errBackupNotFound = errors.New("backup not found")
+
+// dataRestorer implements the RestoreManager interface.
 // Stores job information locally within a map.
-type RestoreMemory struct {
+type dataRestorer struct {
+	configRetriever
 	config          *model.Config
 	restoreJobs     *JobsHolder
 	restoreService  shared.Restore
@@ -25,11 +28,14 @@ type RestoreMemory struct {
 	asClientCreator ASClientCreator
 }
 
-var _ RestoreService = (*RestoreMemory)(nil)
+var _ RestoreManager = (*dataRestorer)(nil)
 
-// NewRestoreMemory returns a new RestoreMemory instance.
-func NewRestoreMemory(backends BackendsHolder, config *model.Config, restoreService shared.Restore) *RestoreMemory {
-	return &RestoreMemory{
+// NewRestoreManager returns a new dataRestorer instance.
+func NewRestoreManager(backends BackendsHolder, config *model.Config, restoreService shared.Restore) RestoreManager {
+	return &dataRestorer{
+		configRetriever: configRetriever{
+			backends,
+		},
 		restoreJobs:     NewJobsHolder(),
 		restoreService:  restoreService,
 		backends:        backends,
@@ -38,7 +44,7 @@ func NewRestoreMemory(backends BackendsHolder, config *model.Config, restoreServ
 	}
 }
 
-func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, error) {
+func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJobID, error) {
 	jobID := r.restoreJobs.newJob()
 	if err := validateStorageContainsBackup(request.SourceStorage); err != nil {
 		return 0, err
@@ -64,7 +70,7 @@ func (r *RestoreMemory) Restore(request *model.RestoreRequestInternal) (int, err
 	return jobID, nil
 }
 
-func (r *RestoreMemory) initClient(cluster *model.AerospikeCluster, jobID int) (*aerospike.Client, error) {
+func (r *dataRestorer) initClient(cluster *model.AerospikeCluster, jobID RestoreJobID) (*aerospike.Client, error) {
 	client, aerr := r.asClientCreator.NewClient(
 		cluster.ASClientPolicy(),
 		cluster.ASClientHosts()...)
@@ -77,14 +83,15 @@ func (r *RestoreMemory) initClient(cluster *model.AerospikeCluster, jobID int) (
 	return client, nil
 }
 
-func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (int, error) {
+func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest) (RestoreJobID, error) {
 	reader, found := r.backends.GetReader(request.Routine)
 	if !found {
-		return 0, fmt.Errorf("backend '%s' not found for restore", request.Routine)
+		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.Routine)
 	}
-	fullBackups, err := r.findLastFullBackup(reader, time.UnixMilli(request.Time))
+	timestamp := time.UnixMilli(request.Time)
+	fullBackups, err := reader.FindLastFullBackup(timestamp)
 	if err != nil {
-		return 0, fmt.Errorf("last full backup not found: %v", err)
+		return 0, fmt.Errorf("restore failed: %w", err)
 	}
 	jobID := r.restoreJobs.newJob()
 	ctx := context.TODO()
@@ -93,11 +100,11 @@ func (r *RestoreMemory) RestoreByTime(request *model.RestoreTimestampRequest) (i
 	return jobID, nil
 }
 
-func (r *RestoreMemory) restoreByTimeSync(
+func (r *dataRestorer) restoreByTimeSync(
 	ctx context.Context,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
-	jobID int,
+	jobID RestoreJobID,
 	fullBackups []model.BackupDetails,
 ) {
 	client, err := r.initClient(request.DestinationCuster, jobID)
@@ -125,12 +132,12 @@ func (r *RestoreMemory) restoreByTimeSync(
 	r.restoreJobs.setDone(jobID)
 }
 
-func (r *RestoreMemory) restoreNamespace(
+func (r *dataRestorer) restoreNamespace(
 	ctx context.Context,
 	client *aerospike.Client,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
-	jobID int, fullBackup model.BackupDetails,
+	jobID RestoreJobID, fullBackup model.BackupDetails,
 ) error {
 	result, err := r.restoreFromPath(ctx, client, request, fullBackup.Key)
 	if err != nil {
@@ -138,8 +145,12 @@ func (r *RestoreMemory) restoreNamespace(
 	}
 	r.restoreJobs.increaseStats(jobID, result)
 
-	incrementalBackups, err := r.findIncrementalBackupsForNamespace(
-		backend, fullBackup.Created, time.UnixMilli(request.Time), fullBackup.Namespace)
+	bounds, err := model.NewTimeBounds(&fullBackup.Created, ptr.Time(time.UnixMilli(request.Time)))
+	if err != nil {
+		return err
+	}
+
+	incrementalBackups, err := backend.FindIncrementalBackupsForNamespace(bounds, fullBackup.Namespace)
 	if err != nil {
 		return fmt.Errorf("could not find incremental backups for namespace %s: %v", fullBackup.Namespace, err)
 	}
@@ -151,10 +162,11 @@ func (r *RestoreMemory) restoreNamespace(
 		}
 		r.restoreJobs.increaseStats(jobID, result)
 	}
+
 	return nil
 }
 
-func (r *RestoreMemory) restoreFromPath(
+func (r *dataRestorer) restoreFromPath(
 	ctx context.Context,
 	client *aerospike.Client,
 	request *model.RestoreTimestampRequest,
@@ -174,97 +186,7 @@ func (r *RestoreMemory) restoreFromPath(
 	return restoreResult, nil
 }
 
-func (r *RestoreMemory) findLastFullBackup(
-	backend BackupListReader,
-	toTime time.Time,
-) ([]model.BackupDetails, error) {
-	fullBackupList, err := backend.FullBackupList(model.NewTimeBoundsTo(toTime))
-	if err != nil {
-		return nil, fmt.Errorf("cannot read full backup list: %v", err)
-	}
-
-	fullBackup := latestFullBackupBeforeTime(fullBackupList, toTime) // it's a list of namespaces
-	if len(fullBackup) == 0 {
-		return nil, fmt.Errorf("no full backup found at %s", toTime)
-	}
-	return fullBackup, nil
-}
-
-// latestFullBackupBeforeTime returns list of backups with same creation time, latest before upperBound.
-func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound time.Time) []model.BackupDetails {
-	var result []model.BackupDetails
-	var latestTime time.Time
-	for i := range allBackups {
-		current := &allBackups[i]
-		if current.Created.After(upperBound) {
-			continue
-		}
-
-		if len(result) == 0 || latestTime.Before(current.Created) {
-			latestTime = current.Created
-			result = []model.BackupDetails{*current}
-		} else if current.Created.Equal(latestTime) {
-			result = append(result, *current)
-		}
-	}
-	return result
-}
-
-func (r *RestoreMemory) findIncrementalBackupsForNamespace(
-	backend BackupListReader, from, to time.Time, namespace string) ([]model.BackupDetails, error) {
-	bounds, err := model.NewTimeBounds(&from, &to)
-	if err != nil {
-		return nil, err
-	}
-	allIncrementalBackupList, err := backend.IncrementalBackupList(bounds)
-	if err != nil {
-		return nil, err
-	}
-	var filteredIncrementalBackups []model.BackupDetails
-	for _, b := range allIncrementalBackupList {
-		if b.Namespace == namespace {
-			filteredIncrementalBackups = append(filteredIncrementalBackups, b)
-		}
-	}
-	// Sort in place
-	sort.Slice(filteredIncrementalBackups, func(i, j int) bool {
-		return filteredIncrementalBackups[i].Created.Before(filteredIncrementalBackups[j].Created)
-	})
-
-	return filteredIncrementalBackups, nil
-}
-
-func (r *RestoreMemory) RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error) {
-	backend, found := r.backends.GetReader(routine)
-	if !found {
-		return nil, fmt.Errorf("backend '%s' not found for restore", routine)
-	}
-	fullBackups, err := r.findLastFullBackup(backend, toTime)
-	if err != nil || len(fullBackups) == 0 {
-		return nil, fmt.Errorf("last full backup not found: %v", err)
-	}
-
-	// fullBackups has backups for multiple namespaces, but same timestamp, they share same configuration.
-	lastFullBackup := fullBackups[0]
-	configPath, err := calculateConfigurationBackupPath(*lastFullBackup.Key)
-	if err != nil {
-		return nil, err
-	}
-	return backend.ReadClusterConfiguration(configPath)
-}
-
-func calculateConfigurationBackupPath(backupKey string) (string, error) {
-	_, path, err := util.ParseS3Path(backupKey)
-	if err != nil {
-		return "", err
-	}
-	// Move up two directories
-	base := filepath.Dir(filepath.Dir(path))
-	// Join new directory 'config' with the new base
-	return filepath.Join(base, model.ConfigurationBackupDirectory), nil
-}
-
-func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
+func (r *dataRestorer) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
 	routine := r.config.BackupRoutines[request.Routine]
 	storage := r.config.Storage[routine.Storage]
 	return model.NewRestoreRequest(
@@ -276,7 +198,7 @@ func (r *RestoreMemory) toRestoreRequest(request *model.RestoreTimestampRequest)
 }
 
 // JobStatus returns the status of the job with the given id.
-func (r *RestoreMemory) JobStatus(jobID int) (*model.RestoreJobStatus, error) {
+func (r *dataRestorer) JobStatus(jobID RestoreJobID) (*model.RestoreJobStatus, error) {
 	return r.restoreJobs.getStatus(jobID)
 }
 

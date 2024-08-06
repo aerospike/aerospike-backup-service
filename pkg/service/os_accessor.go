@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -78,23 +79,48 @@ func (o *OSDiskAccessor) write(filePath string, data []byte) error {
 	return os.WriteFile(filePath, data, 0600)
 }
 
-func (o *OSDiskAccessor) lsDir(path string) ([]string, error) {
-	content, err := os.ReadDir(path)
+func (o *OSDiskAccessor) lsDir(path string, after *string) ([]string, error) {
+	var result []string
+
+	err := filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip the root directory
+		if p == path {
+			return nil
+		}
+
+		// We're only interested in directories
+		if !d.IsDir() {
+			return nil
+		}
+
+		// Get the relative path
+		relPath, err := filepath.Rel(path, p)
+		if err != nil {
+			return fmt.Errorf("error getting relative path: %w", err)
+		}
+
+		// If 'after' is set, skip directories that come before to it lexicographically
+		if after != nil && relPath < *after {
+			return nil
+		}
+
+		result = append(result, p)
+		return filepath.SkipDir // Don't descend into this directory
+	})
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []string{}, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("error walking directory: %w", err)
 	}
 
-	var onlyDirs []string
-	for _, c := range content {
-		if c.IsDir() {
-			fullPath := filepath.Join(path, c.Name())
-			onlyDirs = append(onlyDirs, fullPath)
-		}
-	}
-	return onlyDirs, nil
+	sort.Strings(result) // Ensure consistent ordering
+	return result, nil
 }
 
 func (o *OSDiskAccessor) lsFiles(path string) ([]string, error) {
@@ -124,7 +150,7 @@ func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
 	}
 
 	parentDir := filepath.Dir(pathToDelete)
-	lsDir, err := o.lsDir(parentDir)
+	lsDir, err := o.lsDir(parentDir, nil)
 	if err != nil {
 		return err
 	}
