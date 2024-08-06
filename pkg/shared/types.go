@@ -29,5 +29,5 @@ type Restore interface {
 		ctx context.Context,
 		client *aerospike.Client,
 		restoreRequest *model.RestoreRequestInternal,
-	) (*model.RestoreResult, error)
+	) (*backup.RestoreHandler, error)
 }

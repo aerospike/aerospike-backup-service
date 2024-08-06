@@ -22,6 +22,7 @@ type BackupListReader interface {
 	ReadClusterConfiguration(path string) ([]byte, error)
 
 	// FindLastFullBackup returns last full backup prior to given time.
+	// Each element of an array is backup of a namespace.
 	FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error)
 
 	// FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
