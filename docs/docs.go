@@ -1385,7 +1385,7 @@ const docTemplate = `{
                     "example": 5000
                 },
                 "connection-queue-size": {
-                    "description": "specifies the size of the Aerospike Connection Queue per node",
+                    "description": "Specifies the size of the Aerospike Connection Queue per node.",
                     "type": "integer",
                     "example": 100
                 },
@@ -1781,36 +1781,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CurrentBackup": {
-            "type": "object",
-            "properties": {
-                "done-records": {
-                    "description": "DoneRecords: the number of records that have been successfully backed up.",
-                    "type": "integer",
-                    "example": 50
-                },
-                "estimated-end-time": {
-                    "description": "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
-                    "type": "string",
-                    "example": "2006-01-02T15:04:05Z07:00"
-                },
-                "percentage-done": {
-                    "description": "PercentageDone: the progress of the backup operation as a percentage.",
-                    "type": "integer",
-                    "example": 50
-                },
-                "start-time": {
-                    "description": "StartTime: the time when the backup operation started.",
-                    "type": "string",
-                    "example": "2006-01-02T15:04:05Z07:00"
-                },
-                "total-records": {
-                    "description": "TotalRecords: the total number of records to be backed up.",
-                    "type": "integer",
-                    "example": 100
-                }
-            }
-        },
         "model.CurrentBackups": {
             "type": "object",
             "properties": {
@@ -1818,7 +1788,7 @@ const docTemplate = `{
                     "description": "Full represents the state of a full backup. Nil if no full backup is running.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.CurrentBackup"
+                            "$ref": "#/definitions/model.RunningJob"
                         }
                     ]
                 },
@@ -1826,7 +1796,7 @@ const docTemplate = `{
                     "description": "Incremental represents the state of an incremental backup. Nil if no incremental backup is running.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.CurrentBackup"
+                            "$ref": "#/definitions/model.RunningJob"
                         }
                     ]
                 }
@@ -2025,8 +1995,18 @@ const docTemplate = `{
             "description": "RestoreJobStatus represents a restore job status.",
             "type": "object",
             "properties": {
+                "done-records": {
+                    "description": "DoneRecords: the number of records that have been successfully done.",
+                    "type": "integer",
+                    "example": 50
+                },
                 "error": {
                     "type": "string"
+                },
+                "estimated-end-time": {
+                    "description": "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "existed-records": {
                     "type": "integer",
@@ -2058,10 +2038,25 @@ const docTemplate = `{
                     "format": "int64",
                     "example": 8
                 },
+                "percentage-done": {
+                    "description": "PercentageDone: the progress of the backup operation as a percentage.",
+                    "type": "integer",
+                    "example": 50
+                },
+                "read-records": {
+                    "type": "integer",
+                    "format": "int64",
+                    "example": 10
+                },
                 "skipped-records": {
                     "type": "integer",
                     "format": "int64",
                     "example": 4
+                },
+                "start-time": {
+                    "description": "StartTime: the time when the backup operation started.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "status": {
                     "enum": [
@@ -2081,9 +2076,9 @@ const docTemplate = `{
                     "example": 2000
                 },
                 "total-records": {
+                    "description": "TotalRecords: the total number of records to be processed.",
                     "type": "integer",
-                    "format": "int64",
-                    "example": 10
+                    "example": 100
                 },
                 "udf-count": {
                     "type": "integer",
@@ -2117,7 +2112,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bandwidth": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec",
                     "type": "integer",
                     "example": 50000
                 },
@@ -2212,7 +2207,7 @@ const docTemplate = `{
                     "example": 1000
                 },
                 "tps": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions\nper second.",
                     "type": "integer",
                     "example": 4000
                 },
@@ -2289,6 +2284,36 @@ const docTemplate = `{
                     "type": "integer",
                     "format": "int64",
                     "example": 1739538000000
+                }
+            }
+        },
+        "model.RunningJob": {
+            "type": "object",
+            "properties": {
+                "done-records": {
+                    "description": "DoneRecords: the number of records that have been successfully done.",
+                    "type": "integer",
+                    "example": 50
+                },
+                "estimated-end-time": {
+                    "description": "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "percentage-done": {
+                    "description": "PercentageDone: the progress of the backup operation as a percentage.",
+                    "type": "integer",
+                    "example": 50
+                },
+                "start-time": {
+                    "description": "StartTime: the time when the backup operation started.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "total-records": {
+                    "description": "TotalRecords: the total number of records to be processed.",
+                    "type": "integer",
+                    "example": 100
                 }
             }
         },

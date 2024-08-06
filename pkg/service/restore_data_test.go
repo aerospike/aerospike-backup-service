@@ -260,8 +260,8 @@ func Test_RestoreTimestamp(t *testing.T) {
 	if jobStatus.Status != model.JobStatusDone {
 		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
-	if jobStatus.TotalRecords != 3 {
-		t.Errorf("Expected 3 (one full and 2 incremental backups), got %d", jobStatus.TotalRecords)
+	if jobStatus.ReadRecords != 3 {
+		t.Errorf("Expected 3 (one full and 2 incremental backups), got %d", jobStatus.ReadRecords)
 	}
 }
 

@@ -169,18 +169,24 @@ func (o *OSDiskAccessor) wrapWithPrefix(path string) *string {
 	return &path
 }
 
-func validatePathContainsBackup(path string) error {
+func validatePathContainsBackup(path string) (uint64, error) {
 	_, err := os.Stat(path)
 	if err != nil {
-		return err
+		return 0, err
+	}
+	accessor := OSDiskAccessor{}
+	var count uint64
+	if metadata, err := accessor.readBackupDetails(path, false); err == nil {
+		count = metadata.RecordCount
 	}
 
 	absFiles, err := filepath.Glob(filepath.Join(path, "*.asb"))
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if len(absFiles) == 0 {
-		return fmt.Errorf("no backup files found in %s", path)
+		return count, fmt.Errorf("no backup files found in %s", path)
 	}
-	return nil
+
+	return 0, nil
 }

@@ -1074,7 +1074,7 @@ components:
           example: 5000
           type: integer
         connection-queue-size:
-          description: specifies the size of the Aerospike Connection Queue per node
+          description: Specifies the size of the Aerospike Connection Queue per node.
           example: 100
           type: integer
         credentials:
@@ -1512,33 +1512,6 @@ components:
           example: testUser
           type: string
       type: object
-    model.CurrentBackup:
-      properties:
-        done-records:
-          description: "DoneRecords: the number of records that have been successfully\
-            \ backed up."
-          example: 50
-          type: integer
-        estimated-end-time:
-          description: |-
-            EstimatedEndTime: the estimated time when the backup operation will be completed.
-            A nil value indicates that the estimation is not available yet.
-          example: 2006-01-02T15:04:05Z07:00
-          type: string
-        percentage-done:
-          description: "PercentageDone: the progress of the backup operation as a\
-            \ percentage."
-          example: 50
-          type: integer
-        start-time:
-          description: "StartTime: the time when the backup operation started."
-          example: 2006-01-02T15:04:05Z07:00
-          type: string
-        total-records:
-          description: "TotalRecords: the total number of records to be backed up."
-          example: 100
-          type: integer
-      type: object
     model.CurrentBackups:
       example:
         incremental: "{}"
@@ -1546,13 +1519,13 @@ components:
       properties:
         full:
           allOf:
-          - $ref: '#/components/schemas/model.CurrentBackup'
+          - $ref: '#/components/schemas/model.RunningJob'
           description: Full represents the state of a full backup. Nil if no full
             backup is running.
           type: object
         incremental:
           allOf:
-          - $ref: '#/components/schemas/model.CurrentBackup'
+          - $ref: '#/components/schemas/model.RunningJob'
           description: Incremental represents the state of an incremental backup.
             Nil if no incremental backup is running.
           type: object
@@ -1709,20 +1682,36 @@ components:
     model.RestoreJobStatus:
       description: RestoreJobStatus represents a restore job status.
       example:
+        estimated-end-time: 2006-01-02T15:04:05Z07:00
+        start-time: 2006-01-02T15:04:05Z07:00
+        expired-records: 2
+        read-records: 10
+        error: error
+        total-records: 100
+        done-records: 50
+        existed-records: 15
         udf-count: 1
         ignored-records: 12
         inserted-records: 8
         total-bytes: 2000
-        expired-records: 2
         fresher-records: 5
-        error: error
+        percentage-done: 50
         skipped-records: 4
-        total-records: 10
-        existed-records: 15
         index-count: 3
         status: "{}"
       properties:
+        done-records:
+          description: "DoneRecords: the number of records that have been successfully\
+            \ done."
+          example: 50
+          type: integer
         error:
+          type: string
+        estimated-end-time:
+          description: |-
+            EstimatedEndTime: the estimated time when the backup operation will be completed.
+            A nil value indicates that the estimation is not available yet.
+          example: 2006-01-02T15:04:05Z07:00
           type: string
         existed-records:
           example: 15
@@ -1748,10 +1737,23 @@ components:
           example: 8
           format: int64
           type: integer
+        percentage-done:
+          description: "PercentageDone: the progress of the backup operation as a\
+            \ percentage."
+          example: 50
+          type: integer
+        read-records:
+          example: 10
+          format: int64
+          type: integer
         skipped-records:
           example: 4
           format: int64
           type: integer
+        start-time:
+          description: "StartTime: the time when the backup operation started."
+          example: 2006-01-02T15:04:05Z07:00
+          type: string
         status:
           allOf:
           - $ref: '#/components/schemas/model.JobStatus'
@@ -1761,8 +1763,8 @@ components:
           format: int64
           type: integer
         total-records:
-          example: 10
-          format: int64
+          description: "TotalRecords: the total number of records to be processed."
+          example: 100
           type: integer
         udf-count:
           example: 1
@@ -1789,10 +1791,8 @@ components:
       description: RestorePolicy represents a policy for the restore operation.
       properties:
         bandwidth:
-          description: |-
-            Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
-            in MiB/s and its database write operations to not exceed the given number of transactions
-            per second.
+          description: Throttles read operations from the backup file(s) to not exceed
+            the given I/O bandwidth in bytes/sec
           example: 50000
           type: integer
         batch-size:
@@ -1881,8 +1881,7 @@ components:
           type: integer
         tps:
           description: |-
-            Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
-            in MiB/s and its database write operations to not exceed the given number of transactions
+            Throttles read operations from the backup file(s) to not exceed the given number of transactions
             per second.
           example: 4000
           type: integer
@@ -1943,6 +1942,33 @@ components:
       - policy
       - routine
       - time
+      type: object
+    model.RunningJob:
+      properties:
+        done-records:
+          description: "DoneRecords: the number of records that have been successfully\
+            \ done."
+          example: 50
+          type: integer
+        estimated-end-time:
+          description: |-
+            EstimatedEndTime: the estimated time when the backup operation will be completed.
+            A nil value indicates that the estimation is not available yet.
+          example: 2006-01-02T15:04:05Z07:00
+          type: string
+        percentage-done:
+          description: "PercentageDone: the progress of the backup operation as a\
+            \ percentage."
+          example: 50
+          type: integer
+        start-time:
+          description: "StartTime: the time when the backup operation started."
+          example: 2006-01-02T15:04:05Z07:00
+          type: string
+        total-records:
+          description: "TotalRecords: the total number of records to be processed."
+          example: 100
+          type: integer
       type: object
     model.SecretAgent:
       description: SecretAgent represents the configuration of an Aerospike Secret

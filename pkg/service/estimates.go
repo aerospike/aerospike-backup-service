@@ -1,14 +1,13 @@
 package service
 
 import (
-	"log/slog"
 	"time"
 
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
 )
 
-func currentBackupStatus(handlers map[string]*backup.BackupHandler) *model.CurrentBackup {
+func currentBackupStatus(handlers map[string]*backup.BackupHandler) *model.RunningJob {
 	if len(handlers) == 0 {
 		return nil
 	}
@@ -25,11 +24,11 @@ func currentBackupStatus(handlers map[string]*backup.BackupHandler) *model.Curre
 
 	startTime := getAnyHandler(handlers).GetStats().StartTime
 
-	return &model.CurrentBackup{
+	return &model.RunningJob{
 		TotalRecords:     total,
 		DoneRecords:      done,
 		StartTime:        startTime,
-		PercentageDone:   int(percent * 100),
+		PercentageDone:   uint(percent * 100),
 		EstimatedEndTime: calculateEstimatedEndTime(startTime, percent),
 	}
 }
@@ -57,9 +56,10 @@ func CurrentRestoreStatus(job *jobInfo) *model.RestoreJobStatus {
 	currentStatus := &model.RestoreJobStatus{
 		Status: job.status,
 	}
+
 	for _, handler := range job.handlers {
 		stats := handler.GetStats()
-		currentStatus.TotalRecords += stats.GetReadRecords()
+		currentStatus.ReadRecords += stats.GetReadRecords()
 		currentStatus.InsertedRecords += stats.GetRecordsInserted()
 		currentStatus.IndexCount += uint64(stats.GetSIndexes())
 		currentStatus.UDFCount += uint64(stats.GetUDFs())
@@ -70,9 +70,9 @@ func CurrentRestoreStatus(job *jobInfo) *model.RestoreJobStatus {
 		currentStatus.TotalBytes += stats.GetTotalBytesRead()
 	}
 
-	percentage := float64(currentStatus.TotalRecords) / float64(job.totalRecords)
-	calculateEstimatedEndTime(job.startTime, percentage)
-	percentageInt := uint64(percentage * 100)
-	slog.Info("getStatus", "total", job.totalRecords, "t", currentStatus.TotalRecords, "p", percentageInt)
+	percentage := float64(currentStatus.ReadRecords) / float64(job.totalRecords)
+	currentStatus.EstimatedEndTime = calculateEstimatedEndTime(job.startTime, percentage)
+	currentStatus.PercentageDone = uint(percentage * 100)
+
 	return currentStatus
 }

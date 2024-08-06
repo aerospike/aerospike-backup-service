@@ -47,7 +47,8 @@ func NewRestoreManager(backends BackendsHolder, config *model.Config, restoreSer
 
 func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJobID, error) {
 	jobID := r.restoreJobs.newJob()
-	if err := validateStorageContainsBackup(request.SourceStorage); err != nil {
+	totalRecords, err := validateStorageContainsBackup(request.SourceStorage)
+	if err != nil {
 		return 0, err
 	}
 
@@ -64,6 +65,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJo
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed to start restore operation: %w", err))
 			return
 		}
+		r.restoreJobs.addTotalRecords(jobID, totalRecords)
 		r.restoreJobs.addHandler(jobID, handler)
 
 		// Wait for the restore operation to complete
@@ -73,8 +75,6 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJo
 			return
 		}
 
-		//restoreResult := handler.GetStats()
-		//r.restoreJobs.increaseStats(jobID, restoreResult)
 		r.restoreJobs.setDone(jobID)
 	}()
 
@@ -224,18 +224,18 @@ func (r *dataRestorer) JobStatus(jobID RestoreJobID) (*model.RestoreJobStatus, e
 	return r.restoreJobs.getStatus(jobID)
 }
 
-func validateStorageContainsBackup(storage *model.Storage) error {
+func validateStorageContainsBackup(storage *model.Storage) (uint64, error) {
 	switch storage.Type {
 	case model.Local:
 		return validatePathContainsBackup(*storage.Path)
 	case model.S3:
 		s3context, err := NewS3Context(storage)
 		if err != nil {
-			return err
+			return 0, err
 		}
-		return s3context.validateStorageContainsBackup()
+		return s3context.ValidateStorageContainsBackup()
 	}
-	return nil
+	return 0, nil
 }
 
 // ASClientCreator manages creation and close of aerospike connection.
