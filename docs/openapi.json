@@ -2058,17 +2058,10 @@
       "model.RestoreJobStatus" : {
         "description" : "RestoreJobStatus represents a restore job status.",
         "properties" : {
-          "done-records" : {
-            "description" : "DoneRecords: the number of records that have been successfully done.",
-            "example" : 50,
-            "type" : "integer"
+          "currentRestore" : {
+            "$ref" : "#/components/schemas/model.RunningJob"
           },
           "error" : {
-            "type" : "string"
-          },
-          "estimated-end-time" : {
-            "description" : "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
-            "example" : "2006-01-02T15:04:05Z07:00",
             "type" : "string"
           },
           "existed-records" : {
@@ -2101,11 +2094,6 @@
             "format" : "int64",
             "type" : "integer"
           },
-          "percentage-done" : {
-            "description" : "PercentageDone: the progress of the backup operation as a percentage.",
-            "example" : 50,
-            "type" : "integer"
-          },
           "read-records" : {
             "example" : 10,
             "format" : "int64",
@@ -2116,11 +2104,6 @@
             "format" : "int64",
             "type" : "integer"
           },
-          "start-time" : {
-            "description" : "StartTime: the time when the backup operation started.",
-            "example" : "2006-01-02T15:04:05Z07:00",
-            "type" : "string"
-          },
           "status" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/model.JobStatus"
@@ -2130,11 +2113,6 @@
           "total-bytes" : {
             "example" : 2000,
             "format" : "int64",
-            "type" : "integer"
-          },
-          "total-records" : {
-            "description" : "TotalRecords: the total number of records to be processed.",
-            "example" : 100,
             "type" : "integer"
           },
           "udf-count" : {
