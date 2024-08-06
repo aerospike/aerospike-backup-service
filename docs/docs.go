@@ -1995,18 +1995,11 @@ const docTemplate = `{
             "description": "RestoreJobStatus represents a restore job status.",
             "type": "object",
             "properties": {
-                "done-records": {
-                    "description": "DoneRecords: the number of records that have been successfully done.",
-                    "type": "integer",
-                    "example": 50
+                "currentRestore": {
+                    "$ref": "#/definitions/model.RunningJob"
                 },
                 "error": {
                     "type": "string"
-                },
-                "estimated-end-time": {
-                    "description": "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
-                    "type": "string",
-                    "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "existed-records": {
                     "type": "integer",
@@ -2038,11 +2031,6 @@ const docTemplate = `{
                     "format": "int64",
                     "example": 8
                 },
-                "percentage-done": {
-                    "description": "PercentageDone: the progress of the backup operation as a percentage.",
-                    "type": "integer",
-                    "example": 50
-                },
                 "read-records": {
                     "type": "integer",
                     "format": "int64",
@@ -2052,11 +2040,6 @@ const docTemplate = `{
                     "type": "integer",
                     "format": "int64",
                     "example": 4
-                },
-                "start-time": {
-                    "description": "StartTime: the time when the backup operation started.",
-                    "type": "string",
-                    "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "status": {
                     "enum": [
@@ -2074,11 +2057,6 @@ const docTemplate = `{
                     "type": "integer",
                     "format": "int64",
                     "example": 2000
-                },
-                "total-records": {
-                    "description": "TotalRecords: the total number of records to be processed.",
-                    "type": "integer",
-                    "example": 100
                 },
                 "udf-count": {
                     "type": "integer",

@@ -11,13 +11,13 @@ const (
 // RestoreJobStatus represents a restore job status.
 // @Description RestoreJobStatus represents a restore job status.
 type RestoreJobStatus struct {
-	RestoreStatistics
-	RunningJob
-	Status JobStatus `yaml:"status,omitempty" json:"status,omitempty" enums:"Running,Done,Failed"`
-	Error  string    `yaml:"error,omitempty" json:"error,omitempty"`
+	RestoreStats
+	CurrentRestore *RunningJob
+	Status         JobStatus `yaml:"status,omitempty" json:"status,omitempty" enums:"Running,Done,Failed"`
+	Error          string    `yaml:"error,omitempty" json:"error,omitempty"`
 }
 
-type RestoreStatistics struct {
+type RestoreStats struct {
 	ReadRecords     uint64 `yaml:"read-records,omitempty" json:"read-records,omitempty" format:"int64" example:"10"`
 	TotalBytes      uint64 `yaml:"total-bytes,omitempty" json:"total-bytes,omitempty" format:"int64" example:"2000"`
 	ExpiredRecords  uint64 `yaml:"expired-records,omitempty" json:"expired-records,omitempty" format:"int64" example:"2"`

@@ -52,29 +52,33 @@ func calculateEstimatedEndTime(startTime time.Time, percentDone float64) *time.T
 	return &result
 }
 
-func CurrentRestoreStatus(job *jobInfo) *model.RestoreJobStatus {
-	currentStatus := &model.RestoreJobStatus{
+func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
+	status := &model.RestoreJobStatus{
 		Status: job.status,
 	}
-	currentStatus.StartTime = job.startTime
-	currentStatus.TotalRecords = job.totalRecords
 
 	for _, handler := range job.handlers {
 		stats := handler.GetStats()
-		currentStatus.ReadRecords += stats.GetReadRecords()
-		currentStatus.InsertedRecords += stats.GetRecordsInserted()
-		currentStatus.IndexCount += uint64(stats.GetSIndexes())
-		currentStatus.UDFCount += uint64(stats.GetUDFs())
-		currentStatus.FresherRecords += stats.GetRecordsFresher()
-		currentStatus.SkippedRecords += stats.GetRecordsSkipped()
-		currentStatus.ExistedRecords += stats.GetRecordsExisted()
-		currentStatus.ExpiredRecords += stats.GetRecordsExpired()
-		currentStatus.TotalBytes += stats.GetTotalBytesRead()
+		status.ReadRecords += stats.GetReadRecords()
+		status.InsertedRecords += stats.GetRecordsInserted()
+		status.IndexCount += uint64(stats.GetSIndexes())
+		status.UDFCount += uint64(stats.GetUDFs())
+		status.FresherRecords += stats.GetRecordsFresher()
+		status.SkippedRecords += stats.GetRecordsSkipped()
+		status.ExistedRecords += stats.GetRecordsExisted()
+		status.ExpiredRecords += stats.GetRecordsExpired()
+		status.TotalBytes += stats.GetTotalBytesRead()
 	}
 
-	percentage := float64(currentStatus.ReadRecords) / float64(job.totalRecords)
-	currentStatus.EstimatedEndTime = calculateEstimatedEndTime(job.startTime, percentage)
-	currentStatus.PercentageDone = uint(percentage * 100)
+	percentage := float64(status.ReadRecords) / float64(job.totalRecords)
+	if job.status == model.JobStatusRunning {
+		status.CurrentRestore = &model.RunningJob{
+			StartTime:        job.startTime,
+			TotalRecords:     job.totalRecords,
+			EstimatedEndTime: calculateEstimatedEndTime(job.startTime, percentage),
+			PercentageDone:   uint(percentage * 100),
+		}
+	}
 
-	return currentStatus
+	return status
 }

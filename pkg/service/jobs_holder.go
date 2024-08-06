@@ -80,7 +80,7 @@ func (h *JobsHolder) getStatus(id RestoreJobID) (*model.RestoreJobStatus, error)
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.restoreJobs[id]; exists {
-		return CurrentRestoreStatus(job), nil
+		return RestoreJobStatus(job), nil
 	}
 	return nil, fmt.Errorf("job with ID %d not found", id)
 }
