@@ -73,6 +73,7 @@ func CurrentRestoreStatus(job *jobInfo) *model.RestoreJobStatus {
 	percentage := float64(currentStatus.ReadRecords) / float64(job.totalRecords)
 	currentStatus.EstimatedEndTime = calculateEstimatedEndTime(job.startTime, percentage)
 	currentStatus.PercentageDone = uint(percentage * 100)
+	currentStatus.StartTime = job.startTime
 
 	return currentStatus
 }

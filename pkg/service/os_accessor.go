@@ -185,8 +185,8 @@ func validatePathContainsBackup(path string) (uint64, error) {
 		return 0, err
 	}
 	if len(absFiles) == 0 {
-		return count, fmt.Errorf("no backup files found in %s", path)
+		return 0, fmt.Errorf("no backup files found in %s", path)
 	}
 
-	return 0, nil
+	return count, nil
 }

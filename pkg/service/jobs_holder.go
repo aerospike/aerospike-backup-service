@@ -37,7 +37,8 @@ func (h *JobsHolder) newJob() RestoreJobID {
 	h.Lock()
 	defer h.Unlock()
 	h.restoreJobs[id] = &jobInfo{
-		status: model.JobStatusRunning,
+		status:    model.JobStatusRunning,
+		startTime: time.Now(),
 	}
 	return id
 }
