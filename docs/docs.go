@@ -2266,6 +2266,7 @@ const docTemplate = `{
             }
         },
         "model.RunningJob": {
+            "description": "RunningJob tracks progress of currently running job.",
             "type": "object",
             "properties": {
                 "done-records": {

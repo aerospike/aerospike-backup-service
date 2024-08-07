@@ -13,7 +13,7 @@ type CurrentBackups struct {
 }
 
 // RunningJob tracks progress of currently running job.
-// @DDescription RunningJob tracks progress of currently running job.
+// @Description RunningJob tracks progress of currently running job.
 type RunningJob struct {
 	// TotalRecords: the total number of records to be processed.
 	TotalRecords uint64 `json:"total-records,omitempty" example:"100"`

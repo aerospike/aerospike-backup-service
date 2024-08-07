@@ -2300,6 +2300,7 @@
         "type" : "object"
       },
       "model.RunningJob" : {
+        "description" : "RunningJob tracks progress of currently running job.",
         "properties" : {
           "done-records" : {
             "description" : "DoneRecords: the number of records that have been successfully done.",

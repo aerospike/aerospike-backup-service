@@ -1923,6 +1923,7 @@ components:
       - time
       type: object
     model.RunningJob:
+      description: RunningJob tracks progress of currently running job.
       example:
         estimated-end-time: 2006-01-02T15:04:05Z07:00
         start-time: 2006-01-02T15:04:05Z07:00

@@ -57,6 +57,7 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 	return status
 }
 
+// NewRunningJob created new RunningJob with calculated estimated time and percentage.
 func NewRunningJob(startTime time.Time, done, total uint64) *model.RunningJob {
 	if total == 0 {
 		return nil

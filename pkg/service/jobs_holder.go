@@ -31,6 +31,7 @@ func NewJobsHolder() *JobsHolder {
 	}
 }
 
+// newJob creates new restore job and return its id.
 func (h *JobsHolder) newJob() RestoreJobID {
 	// #nosec G404
 	id := RestoreJobID(rand.Int())
@@ -43,6 +44,7 @@ func (h *JobsHolder) newJob() RestoreJobID {
 	return id
 }
 
+// addHandler should be called for each backup (full or incremental) handler.
 func (h *JobsHolder) addHandler(id RestoreJobID, handler *backup.RestoreHandler) {
 	h.Lock()
 	defer h.Unlock()
@@ -51,6 +53,7 @@ func (h *JobsHolder) addHandler(id RestoreJobID, handler *backup.RestoreHandler)
 	}
 }
 
+// addTotalRecords should be called once for each namespace in the beginning of restore process.
 func (h *JobsHolder) addTotalRecords(id RestoreJobID, t uint64) {
 	h.Lock()
 	defer h.Unlock()
