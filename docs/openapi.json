@@ -2058,7 +2058,7 @@
       "model.RestoreJobStatus" : {
         "description" : "RestoreJobStatus represents a restore job status.",
         "properties" : {
-          "currentRestore" : {
+          "current-job" : {
             "$ref" : "#/components/schemas/model.RunningJob"
           },
           "error" : {

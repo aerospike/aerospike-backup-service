@@ -1685,23 +1685,23 @@ components:
         expired-records: 2
         read-records: 10
         error: error
-        existed-records: 15
-        udf-count: 1
-        ignored-records: 12
-        inserted-records: 8
-        currentRestore:
+        current-job:
           estimated-end-time: 2006-01-02T15:04:05Z07:00
           start-time: 2006-01-02T15:04:05Z07:00
           percentage-done: 50
           total-records: 100
           done-records: 50
+        existed-records: 15
+        udf-count: 1
+        ignored-records: 12
+        inserted-records: 8
         total-bytes: 2000
         fresher-records: 5
         skipped-records: 4
         index-count: 3
         status: "{}"
       properties:
-        currentRestore:
+        current-job:
           $ref: '#/components/schemas/model.RunningJob'
         error:
           type: string

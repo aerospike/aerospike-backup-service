@@ -12,9 +12,9 @@ const (
 // @Description RestoreJobStatus represents a restore job status.
 type RestoreJobStatus struct {
 	RestoreStats
-	CurrentRestore *RunningJob
-	Status         JobStatus `yaml:"status,omitempty" json:"status,omitempty" enums:"Running,Done,Failed"`
-	Error          string    `yaml:"error,omitempty" json:"error,omitempty"`
+	CurrentRestore *RunningJob `yaml:"current-restore,omitempty" json:"current-job,omitempty"`
+	Status         JobStatus   `yaml:"status,omitempty" json:"status,omitempty" enums:"Running,Done,Failed"`
+	Error          string      `yaml:"error,omitempty" json:"error,omitempty"`
 }
 
 type RestoreStats struct {

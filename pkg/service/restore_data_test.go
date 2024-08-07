@@ -192,10 +192,6 @@ func TestRestoreOK(t *testing.T) {
 
 	jobStatus, _ := restoreService.JobStatus(jobID)
 	if jobStatus.Status != model.JobStatusRunning {
-		t.Errorf("Expected jobStatus to be %s", model.JobStatusRunning)
-	}
-	jobStatus, _ = restoreService.JobStatus(jobID)
-	if jobStatus.Status != model.JobStatusRunning {
 		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
 	time.Sleep(1 * time.Second)

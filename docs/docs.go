@@ -1995,7 +1995,7 @@ const docTemplate = `{
             "description": "RestoreJobStatus represents a restore job status.",
             "type": "object",
             "properties": {
-                "currentRestore": {
+                "current-job": {
                     "$ref": "#/definitions/model.RunningJob"
                 },
                 "error": {
