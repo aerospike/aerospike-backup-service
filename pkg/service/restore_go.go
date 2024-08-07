@@ -1,4 +1,4 @@
-package shared
+package service
 
 import (
 	"context"
@@ -17,8 +17,6 @@ import (
 type RestoreGo struct {
 }
 
-var _ Restore = (*RestoreGo)(nil)
-
 // NewRestoreGo returns a new RestoreGo instance.
 func NewRestoreGo() *RestoreGo {
 	return &RestoreGo{}
@@ -29,7 +27,7 @@ func (r *RestoreGo) RestoreRun(
 	ctx context.Context,
 	client *a.Client,
 	restoreRequest *model.RestoreRequestInternal,
-) (*model.RestoreResult, error) {
+) (RestoreHandler, error) {
 	var err error
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
@@ -48,23 +46,7 @@ func (r *RestoreGo) RestoreRun(
 		return nil, fmt.Errorf("failed to start restore, %w", err)
 	}
 
-	err = handler.Wait(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error during restore, %w", err)
-	}
-
-	stats := handler.GetStats()
-	return &model.RestoreResult{
-		TotalRecords:    stats.GetReadRecords(),
-		InsertedRecords: stats.GetRecordsInserted(),
-		IndexCount:      uint64(stats.GetSIndexes()),
-		UDFCount:        uint64(stats.GetUDFs()),
-		FresherRecords:  stats.GetRecordsFresher(),
-		SkippedRecords:  stats.GetRecordsSkipped(),
-		ExistedRecords:  stats.GetRecordsExisted(),
-		ExpiredRecords:  stats.GetRecordsExpired(),
-		TotalBytes:      stats.GetTotalBytesRead(),
-	}, nil
+	return handler, nil
 }
 
 //nolint:funlen

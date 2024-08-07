@@ -79,7 +79,7 @@ func MakeHandlers(config *model.Config, backends BackendsHolder) BackupHandlerHo
 	handlers := make(BackupHandlerHolder)
 	for routineName := range config.BackupRoutines {
 		backend, _ := backends.Get(routineName)
-		handler, err := newBackupHandler(config, routineName, backend)
+		handler, err := newBackupRoutineHandler(config, routineName, backend)
 		if err != nil {
 			slog.Error("failed to create backup handler", "routine", routineName, "err", err)
 			continue
@@ -108,7 +108,7 @@ func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config, handlers
 	return nil
 }
 
-func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
+func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupRoutineHandler,
 	interval string, routineName string) error {
 	fullCronTrigger, err := quartz.NewCronTrigger(interval)
 	if err != nil {
@@ -136,7 +136,7 @@ func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupHandler,
 	return nil
 }
 
-func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupHandler,
+func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupRoutineHandler,
 	interval string, routineName string) error {
 	incrCronTrigger, err := quartz.NewCronTrigger(interval)
 	if err != nil {

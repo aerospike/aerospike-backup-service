@@ -292,18 +292,23 @@ func (s *S3Context) wrapWithPrefix(path string) *string {
 	return &result
 }
 
-func (s *S3Context) validateStorageContainsBackup() error {
+func (s *S3Context) ValidateStorageContainsBackup() (uint64, error) {
 	files, err := s.lsFiles(s.path)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if len(files) == 0 {
-		return fmt.Errorf("given path %s not exist", s.path)
+		return 0, fmt.Errorf("given path %s does not exist", s.path)
+	}
+
+	metadata, err := s.readMetadata(s.path)
+	if err != nil {
+		return 0, err
 	}
 	for _, file := range files {
 		if strings.HasSuffix(file, ".asb") {
-			return nil
+			return metadata.RecordCount, nil
 		}
 	}
-	return fmt.Errorf("no backup files found in %s", s.path)
+	return 0, fmt.Errorf("no backup files found in %s", s.path)
 }

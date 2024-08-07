@@ -10,7 +10,6 @@ import (
 
 	"github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/util"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
@@ -70,7 +69,7 @@ func makeTestRestoreService() *dataRestorer {
 			backends: &BackendHolderMock{},
 		},
 		restoreJobs:     NewJobsHolder(),
-		restoreService:  shared.NewRestoreMock(),
+		restoreService:  NewRestoreMock(),
 		backends:        &BackendHolderMock{},
 		config:          config,
 		asClientCreator: &MockAerospikeClientCreator{},
@@ -192,10 +191,6 @@ func TestRestoreOK(t *testing.T) {
 
 	jobStatus, _ := restoreService.JobStatus(jobID)
 	if jobStatus.Status != model.JobStatusRunning {
-		t.Errorf("Expected jobStatus to be %s", model.JobStatusRunning)
-	}
-	jobStatus, _ = restoreService.JobStatus(jobID)
-	if jobStatus.Status != model.JobStatusRunning {
 		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
 	time.Sleep(1 * time.Second)
@@ -260,8 +255,8 @@ func Test_RestoreTimestamp(t *testing.T) {
 	if jobStatus.Status != model.JobStatusDone {
 		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
-	if jobStatus.TotalRecords != 3 {
-		t.Errorf("Expected 3 (one full and 2 incremental backups), got %d", jobStatus.TotalRecords)
+	if jobStatus.ReadRecords != 3 {
+		t.Errorf("Expected 3 (one full and 2 incremental backups), got %d", jobStatus.ReadRecords)
 	}
 }
 

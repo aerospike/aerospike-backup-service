@@ -1,4 +1,4 @@
-package shared
+package service
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 )
 
@@ -14,19 +15,29 @@ import (
 type RestoreMock struct {
 }
 
-var _ Restore = (*RestoreMock)(nil)
-
 // NewRestoreMock returns a new RestoreMock instance.
 func NewRestoreMock() *RestoreMock {
 	return &RestoreMock{}
 }
 
+// MockRestoreHandler is a mock implementation of the RestoreHandler interface.
+type MockRestoreHandler struct {
+}
+
+func (m *MockRestoreHandler) GetStats() *models.RestoreStats {
+	stats := models.RestoreStats{}
+	stats.ReadRecords.Add(1)
+	return &stats
+}
+
+func (m *MockRestoreHandler) Wait() error {
+	return nil
+}
+
 // RestoreRun mocks the interface method.
 func (r *RestoreMock) RestoreRun(_ context.Context, _ *aerospike.Client, _ *model.RestoreRequestInternal,
-) (*model.RestoreResult, error) {
+) (RestoreHandler, error) {
 	slog.Info("RestoreRun mock call")
 	time.Sleep(100 * time.Millisecond)
-	result := model.NewRestoreResult()
-	result.TotalRecords = 1
-	return result, nil
+	return &MockRestoreHandler{}, nil
 }

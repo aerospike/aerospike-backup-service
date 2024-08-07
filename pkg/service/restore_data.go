@@ -10,8 +10,8 @@ import (
 
 	"github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aws/smithy-go/ptr"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var errBackendNotFound = errors.New("backend not found")
@@ -23,7 +23,7 @@ type dataRestorer struct {
 	configRetriever
 	config          *model.Config
 	restoreJobs     *JobsHolder
-	restoreService  shared.Restore
+	restoreService  Restore
 	backends        BackendsHolder
 	asClientCreator ASClientCreator
 }
@@ -31,7 +31,7 @@ type dataRestorer struct {
 var _ RestoreManager = (*dataRestorer)(nil)
 
 // NewRestoreManager returns a new dataRestorer instance.
-func NewRestoreManager(backends BackendsHolder, config *model.Config, restoreService shared.Restore) RestoreManager {
+func NewRestoreManager(backends BackendsHolder, config *model.Config, restoreService Restore) RestoreManager {
 	return &dataRestorer{
 		configRetriever: configRetriever{
 			backends,
@@ -46,7 +46,8 @@ func NewRestoreManager(backends BackendsHolder, config *model.Config, restoreSer
 
 func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJobID, error) {
 	jobID := r.restoreJobs.newJob()
-	if err := validateStorageContainsBackup(request.SourceStorage); err != nil {
+	totalRecords, err := validateStorageContainsBackup(request.SourceStorage)
+	if err != nil {
 		return 0, err
 	}
 
@@ -58,12 +59,21 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJo
 		}
 		defer r.asClientCreator.Close(client)
 
-		restoreResult, err := r.restoreService.RestoreRun(ctx, client, request)
+		handler, err := r.restoreService.RestoreRun(ctx, client, request)
+		if err != nil {
+			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed to start restore operation: %w", err))
+			return
+		}
+		r.restoreJobs.addTotalRecords(jobID, totalRecords)
+		r.restoreJobs.addHandler(jobID, handler)
+
+		// Wait for the restore operation to complete
+		err = handler.Wait()
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
 			return
 		}
-		r.restoreJobs.increaseStats(jobID, restoreResult)
+
 		r.restoreJobs.setDone(jobID)
 	}()
 
@@ -115,19 +125,26 @@ func (r *dataRestorer) restoreByTimeSync(
 
 	var wg sync.WaitGroup
 
+	multiError := prometheus.MultiError{}
 	for _, nsBackup := range fullBackups {
 		wg.Add(1)
 		go func(nsBackup model.BackupDetails) {
 			defer wg.Done()
 			if err := r.restoreNamespace(ctx, client, backend, request, jobID, nsBackup); err != nil {
-				slog.Error("Failed to restore by timestamp", "routine", request.Routine, "err", err)
-				r.restoreJobs.setFailed(jobID, err)
-				return
+				multiError.Append(
+					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
+						request.Routine, nsBackup.Namespace, err))
 			}
 		}(nsBackup)
 	}
 
 	wg.Wait()
+
+	err = multiError.MaybeUnwrap()
+	if err != nil {
+		r.restoreJobs.setFailed(jobID, err)
+		return
+	}
 
 	r.restoreJobs.setDone(jobID)
 }
@@ -137,14 +154,12 @@ func (r *dataRestorer) restoreNamespace(
 	client *aerospike.Client,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
-	jobID RestoreJobID, fullBackup model.BackupDetails,
+	jobID RestoreJobID,
+	fullBackup model.BackupDetails,
 ) error {
-	result, err := r.restoreFromPath(ctx, client, request, fullBackup.Key)
-	if err != nil {
-		return fmt.Errorf("could not restore full backup for namespace %s: %v", fullBackup.Namespace, err)
-	}
-	r.restoreJobs.increaseStats(jobID, result)
+	allBackups := []model.BackupDetails{fullBackup}
 
+	// Find incremental backups
 	bounds, err := model.NewTimeBounds(&fullBackup.Created, ptr.Time(time.UnixMilli(request.Time)))
 	if err != nil {
 		return err
@@ -154,13 +169,26 @@ func (r *dataRestorer) restoreNamespace(
 	if err != nil {
 		return fmt.Errorf("could not find incremental backups for namespace %s: %v", fullBackup.Namespace, err)
 	}
-	slog.Info("Apply incremental backups", "size", len(incrementalBackups))
-	for _, incrBackup := range incrementalBackups {
-		result, err := r.restoreFromPath(ctx, client, request, incrBackup.Key)
+
+	// Append incremental backups to allBackups
+	allBackups = append(allBackups, incrementalBackups...)
+
+	for _, b := range allBackups {
+		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
+	}
+
+	// Now restore all backups in order
+	for _, b := range allBackups {
+		handler, err := r.restoreFromPath(ctx, client, request, b.Key)
 		if err != nil {
-			return fmt.Errorf("could not restore incremental backup %s: %v", *incrBackup.Key, err)
+			return err
 		}
-		r.restoreJobs.increaseStats(jobID, result)
+		r.restoreJobs.addHandler(jobID, handler)
+
+		err = handler.Wait()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -171,19 +199,19 @@ func (r *dataRestorer) restoreFromPath(
 	client *aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	backupPath *string,
-) (*model.RestoreResult, error) {
+) (RestoreHandler, error) {
 	restoreRequest := r.toRestoreRequest(request)
-	restoreResult, err := r.restoreService.RestoreRun(ctx,
+	handler, err := r.restoreService.RestoreRun(ctx,
 		client,
 		&model.RestoreRequestInternal{
 			RestoreRequest: *restoreRequest,
 			Dir:            backupPath,
 		})
 	if err != nil {
-		return nil, fmt.Errorf("could not restore backup at %s: %w", *backupPath, err)
+		return nil, fmt.Errorf("could not start restore from backup at %s: %w", *backupPath, err)
 	}
 
-	return restoreResult, nil
+	return handler, nil
 }
 
 func (r *dataRestorer) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
@@ -202,18 +230,18 @@ func (r *dataRestorer) JobStatus(jobID RestoreJobID) (*model.RestoreJobStatus, e
 	return r.restoreJobs.getStatus(jobID)
 }
 
-func validateStorageContainsBackup(storage *model.Storage) error {
+func validateStorageContainsBackup(storage *model.Storage) (uint64, error) {
 	switch storage.Type {
 	case model.Local:
 		return validatePathContainsBackup(*storage.Path)
 	case model.S3:
 		s3context, err := NewS3Context(storage)
 		if err != nil {
-			return err
+			return 0, err
 		}
-		return s3context.validateStorageContainsBackup()
+		return s3context.ValidateStorageContainsBackup()
 	}
-	return nil
+	return 0, nil
 }
 
 // ASClientCreator manages creation and close of aerospike connection.

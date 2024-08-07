@@ -12,7 +12,6 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
-	"github.com/aerospike/backup/pkg/shared"
 	"github.com/reugn/go-quartz/quartz"
 	"golang.org/x/time/rate"
 )
@@ -111,7 +110,7 @@ func NewHTTPServer(
 		rateLimiter:    rateLimiter,
 		whiteList:      newIPWhiteList(serverConfig.GetRateOrDefault().GetWhiteListOrDefault()),
 		scheduler:      scheduler,
-		restoreManager: service.NewRestoreManager(backends, config, shared.NewRestoreGo()),
+		restoreManager: service.NewRestoreManager(backends, config, service.NewRestoreGo()),
 		backupBackends: backends,
 		handlerHolder:  handlerHolder,
 	}

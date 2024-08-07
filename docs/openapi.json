@@ -1521,7 +1521,7 @@
             "type" : "integer"
           },
           "connection-queue-size" : {
-            "description" : "specifies the size of the Aerospike Connection Queue per node",
+            "description" : "Specifies the size of the Aerospike Connection Queue per node.",
             "example" : 100,
             "type" : "integer"
           },
@@ -1885,48 +1885,18 @@
         },
         "type" : "object"
       },
-      "model.CurrentBackup" : {
-        "properties" : {
-          "done-records" : {
-            "description" : "DoneRecords: the number of records that have been successfully backed up.",
-            "example" : 50,
-            "type" : "integer"
-          },
-          "estimated-end-time" : {
-            "description" : "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
-            "example" : "2006-01-02T15:04:05Z07:00",
-            "type" : "string"
-          },
-          "percentage-done" : {
-            "description" : "PercentageDone: the progress of the backup operation as a percentage.",
-            "example" : 50,
-            "type" : "integer"
-          },
-          "start-time" : {
-            "description" : "StartTime: the time when the backup operation started.",
-            "example" : "2006-01-02T15:04:05Z07:00",
-            "type" : "string"
-          },
-          "total-records" : {
-            "description" : "TotalRecords: the total number of records to be backed up.",
-            "example" : 100,
-            "type" : "integer"
-          }
-        },
-        "type" : "object"
-      },
       "model.CurrentBackups" : {
         "properties" : {
           "full" : {
             "allOf" : [ {
-              "$ref" : "#/components/schemas/model.CurrentBackup"
+              "$ref" : "#/components/schemas/model.RunningJob"
             } ],
             "description" : "Full represents the state of a full backup. Nil if no full backup is running.",
             "type" : "object"
           },
           "incremental" : {
             "allOf" : [ {
-              "$ref" : "#/components/schemas/model.CurrentBackup"
+              "$ref" : "#/components/schemas/model.RunningJob"
             } ],
             "description" : "Incremental represents the state of an incremental backup. Nil if no incremental backup is running.",
             "type" : "object"
@@ -2088,6 +2058,9 @@
       "model.RestoreJobStatus" : {
         "description" : "RestoreJobStatus represents a restore job status.",
         "properties" : {
+          "current-job" : {
+            "$ref" : "#/components/schemas/model.RunningJob"
+          },
           "error" : {
             "type" : "string"
           },
@@ -2121,6 +2094,11 @@
             "format" : "int64",
             "type" : "integer"
           },
+          "read-records" : {
+            "example" : 10,
+            "format" : "int64",
+            "type" : "integer"
+          },
           "skipped-records" : {
             "example" : 4,
             "format" : "int64",
@@ -2134,11 +2112,6 @@
           },
           "total-bytes" : {
             "example" : 2000,
-            "format" : "int64",
-            "type" : "integer"
-          },
-          "total-records" : {
-            "example" : 10,
             "format" : "int64",
             "type" : "integer"
           },
@@ -2171,7 +2144,7 @@
         "description" : "RestorePolicy represents a policy for the restore operation.",
         "properties" : {
           "bandwidth" : {
-            "description" : "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
+            "description" : "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec",
             "example" : 50000,
             "type" : "integer"
           },
@@ -2257,7 +2230,7 @@
             "type" : "integer"
           },
           "tps" : {
-            "description" : "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
+            "description" : "Throttles read operations from the backup file(s) to not exceed the given number of transactions\nper second.",
             "example" : 4000,
             "type" : "integer"
           },
@@ -2324,6 +2297,37 @@
           }
         },
         "required" : [ "destination", "policy", "routine", "time" ],
+        "type" : "object"
+      },
+      "model.RunningJob" : {
+        "description" : "RunningJob tracks progress of currently running job.",
+        "properties" : {
+          "done-records" : {
+            "description" : "DoneRecords: the number of records that have been successfully done.",
+            "example" : 50,
+            "type" : "integer"
+          },
+          "estimated-end-time" : {
+            "description" : "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
+            "example" : "2006-01-02T15:04:05Z07:00",
+            "type" : "string"
+          },
+          "percentage-done" : {
+            "description" : "PercentageDone: the progress of the backup operation as a percentage.",
+            "example" : 50,
+            "type" : "integer"
+          },
+          "start-time" : {
+            "description" : "StartTime: the time when the backup operation started.",
+            "example" : "2006-01-02T15:04:05Z07:00",
+            "type" : "string"
+          },
+          "total-records" : {
+            "description" : "TotalRecords: the total number of records to be processed.",
+            "example" : 100,
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "model.SecretAgent" : {

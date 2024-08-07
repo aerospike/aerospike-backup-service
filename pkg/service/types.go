@@ -1,10 +1,10 @@
-package shared
+package service
 
 import (
 	"context"
 
 	"github.com/aerospike/aerospike-client-go/v7"
-	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 )
 
@@ -20,7 +20,17 @@ type Backup interface {
 		timebounds model.TimeBounds,
 		namespace string,
 		path *string,
-	) (*backup.BackupHandler, error)
+	) (BackupHandler, error)
+}
+
+type RestoreHandler interface {
+	GetStats() *models.RestoreStats
+	Wait() error
+}
+
+type BackupHandler interface {
+	GetStats() *models.BackupStats
+	Wait() error
 }
 
 // Restore represents a restore service.
@@ -29,5 +39,5 @@ type Restore interface {
 		ctx context.Context,
 		client *aerospike.Client,
 		restoreRequest *model.RestoreRequestInternal,
-	) (*model.RestoreResult, error)
+	) (RestoreHandler, error)
 }

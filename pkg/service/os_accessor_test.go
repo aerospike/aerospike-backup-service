@@ -226,7 +226,7 @@ func TestValidatePathContainsBackup(t *testing.T) {
 			}
 
 			// Run the function and check its output
-			err := validatePathContainsBackup(tc.path)
+			_, err := validatePathContainsBackup(tc.path)
 			if reflect.TypeOf(err) != reflect.TypeOf(tc.err) {
 				t.Errorf("Expected error %v, but got %v", tc.err, err)
 			}

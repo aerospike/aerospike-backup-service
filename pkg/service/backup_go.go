@@ -1,4 +1,4 @@
-package shared
+package service
 
 import (
 	"context"
@@ -17,8 +17,6 @@ import (
 type BackupGo struct {
 }
 
-var _ Backup = (*BackupGo)(nil)
-
 // NewBackupGo returns a new BackupGo instance.
 func NewBackupGo() *BackupGo {
 	return &BackupGo{}
@@ -35,7 +33,7 @@ func (b *BackupGo) BackupRun(
 	timebounds model.TimeBounds,
 	namespace string,
 	path *string,
-) (*backup.BackupHandler, error) {
+) (BackupHandler, error) {
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup client, %w", err)
