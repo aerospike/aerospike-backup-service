@@ -54,6 +54,10 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 		status.CurrentRestore = NewRunningJob(job.startTime, status.ReadRecords, job.totalRecords)
 	}
 
+	if job.err != nil {
+		status.Error = job.err.Error()
+	}
+
 	return status
 }
 
