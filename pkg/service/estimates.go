@@ -17,20 +17,11 @@ func currentBackupStatus(handlers map[string]*backup.BackupHandler) *model.Runni
 		done += handler.GetStats().GetReadRecords()
 		total += handler.GetStats().TotalRecords
 	}
-	if total == 0 {
-		return nil
-	}
-	percent := float64(done) / float64(total)
 
+	// that's backups of multiple namespaces in same routine. They started at the same time.
 	startTime := getAnyHandler(handlers).GetStats().StartTime
 
-	return &model.RunningJob{
-		TotalRecords:     total,
-		DoneRecords:      done,
-		StartTime:        startTime,
-		PercentageDone:   uint(percent * 100),
-		EstimatedEndTime: calculateEstimatedEndTime(startTime, percent),
-	}
+	return NewRunningJob(startTime, done, total)
 }
 
 func getAnyHandler(m map[string]*backup.BackupHandler) *backup.BackupHandler {
@@ -39,17 +30,6 @@ func getAnyHandler(m map[string]*backup.BackupHandler) *backup.BackupHandler {
 	}
 
 	return nil
-}
-
-func calculateEstimatedEndTime(startTime time.Time, percentDone float64) *time.Time {
-	if percentDone < 0.01 { // too early to calculate estimation, or zero done yet.
-		return nil
-	}
-
-	elapsed := time.Since(startTime)
-	totalTime := time.Duration(float64(elapsed) / percentDone)
-	result := startTime.Add(totalTime)
-	return &result
 }
 
 func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
@@ -70,15 +50,34 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 		status.TotalBytes += stats.GetTotalBytesRead()
 	}
 
-	percentage := float64(status.ReadRecords) / float64(job.totalRecords)
 	if job.status == model.JobStatusRunning {
-		status.CurrentRestore = &model.RunningJob{
-			StartTime:        job.startTime,
-			TotalRecords:     job.totalRecords,
-			EstimatedEndTime: calculateEstimatedEndTime(job.startTime, percentage),
-			PercentageDone:   uint(percentage * 100),
-		}
+		status.CurrentRestore = NewRunningJob(job.startTime, status.ReadRecords, job.totalRecords)
 	}
 
 	return status
+}
+
+func NewRunningJob(startTime time.Time, done, total uint64) *model.RunningJob {
+	if total == 0 {
+		return nil
+	}
+
+	percentage := float64(done) / float64(total)
+	return &model.RunningJob{
+		StartTime:        startTime,
+		TotalRecords:     total,
+		EstimatedEndTime: calculateEstimatedEndTime(startTime, percentage),
+		PercentageDone:   uint(percentage * 100),
+	}
+}
+
+func calculateEstimatedEndTime(startTime time.Time, percentDone float64) *time.Time {
+	if percentDone < 0.01 { // too early to calculate estimation, or zero done yet.
+		return nil
+	}
+
+	elapsed := time.Since(startTime)
+	totalTime := time.Duration(float64(elapsed) / percentDone)
+	result := startTime.Add(totalTime)
+	return &result
 }
