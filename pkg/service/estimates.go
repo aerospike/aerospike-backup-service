@@ -65,6 +65,7 @@ func NewRunningJob(startTime time.Time, done, total uint64) *model.RunningJob {
 	percentage := float64(done) / float64(total)
 	return &model.RunningJob{
 		StartTime:        startTime,
+		DoneRecords:      done,
 		TotalRecords:     total,
 		EstimatedEndTime: calculateEstimatedEndTime(startTime, percentage),
 		PercentageDone:   uint(percentage * 100),
