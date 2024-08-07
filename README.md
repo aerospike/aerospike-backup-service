@@ -173,15 +173,6 @@ the [OpenAPI specification](https://aerospike.github.io/aerospike-backup-service
 
 - Go 1.22
 
-### Build the C shared libraries
-
-```bash
-make build-submodules
-```
-
-Read the official documentation for
-the [library build instructions](https://github.com/aerospike/aerospike-tools-backup#build-examples).
-
 ### Build the service
 
 The following command generates a binary under the `target` directory.

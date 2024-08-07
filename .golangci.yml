@@ -57,6 +57,3 @@ issues:
         - prealloc
         - funlen
         - goconst
-    - path: pkg/shared
-      linters:
-        - gci
