@@ -3,11 +3,10 @@ package service
 import (
 	"time"
 
-	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
 )
 
-func currentBackupStatus(handlers map[string]*backup.BackupHandler) *model.RunningJob {
+func currentBackupStatus(handlers map[string]BackupHandler) *model.RunningJob {
 	if len(handlers) == 0 {
 		return nil
 	}
@@ -24,7 +23,7 @@ func currentBackupStatus(handlers map[string]*backup.BackupHandler) *model.Runni
 	return NewRunningJob(startTime, done, total)
 }
 
-func getAnyHandler(m map[string]*backup.BackupHandler) *backup.BackupHandler {
+func getAnyHandler(m map[string]BackupHandler) BackupHandler {
 	for _, value := range m {
 		return value
 	}

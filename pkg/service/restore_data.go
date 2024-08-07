@@ -9,10 +9,9 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-client-go/v7"
-	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aws/smithy-go/ptr"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var errBackendNotFound = errors.New("backend not found")
@@ -24,7 +23,7 @@ type dataRestorer struct {
 	configRetriever
 	config          *model.Config
 	restoreJobs     *JobsHolder
-	restoreService  shared.Restore
+	restoreService  Restore
 	backends        BackendsHolder
 	asClientCreator ASClientCreator
 }
@@ -32,7 +31,7 @@ type dataRestorer struct {
 var _ RestoreManager = (*dataRestorer)(nil)
 
 // NewRestoreManager returns a new dataRestorer instance.
-func NewRestoreManager(backends BackendsHolder, config *model.Config, restoreService shared.Restore) RestoreManager {
+func NewRestoreManager(backends BackendsHolder, config *model.Config, restoreService Restore) RestoreManager {
 	return &dataRestorer{
 		configRetriever: configRetriever{
 			backends,
@@ -69,7 +68,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJo
 		r.restoreJobs.addHandler(jobID, handler)
 
 		// Wait for the restore operation to complete
-		err = handler.Wait(ctx)
+		err = handler.Wait()
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
 			return
@@ -126,19 +125,26 @@ func (r *dataRestorer) restoreByTimeSync(
 
 	var wg sync.WaitGroup
 
+	multiError := prometheus.MultiError{}
 	for _, nsBackup := range fullBackups {
 		wg.Add(1)
 		go func(nsBackup model.BackupDetails) {
 			defer wg.Done()
 			if err := r.restoreNamespace(ctx, client, backend, request, jobID, nsBackup); err != nil {
-				slog.Error("Failed to restore by timestamp", "routine", request.Routine, "err", err)
-				r.restoreJobs.setFailed(jobID, err)
-				return
+				multiError.Append(
+					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
+						request.Routine, nsBackup.Namespace, err))
 			}
 		}(nsBackup)
 	}
 
 	wg.Wait()
+
+	err = multiError.MaybeUnwrap()
+	if err != nil {
+		r.restoreJobs.setFailed(jobID, err)
+		return
+	}
 
 	r.restoreJobs.setDone(jobID)
 }
@@ -179,7 +185,7 @@ func (r *dataRestorer) restoreNamespace(
 		}
 		r.restoreJobs.addHandler(jobID, handler)
 
-		err = handler.Wait(ctx)
+		err = handler.Wait()
 		if err != nil {
 			return err
 		}
@@ -193,7 +199,7 @@ func (r *dataRestorer) restoreFromPath(
 	client *aerospike.Client,
 	request *model.RestoreTimestampRequest,
 	backupPath *string,
-) (*backup.RestoreHandler, error) {
+) (RestoreHandler, error) {
 	restoreRequest := r.toRestoreRequest(request)
 	handler, err := r.restoreService.RestoreRun(ctx,
 		client,

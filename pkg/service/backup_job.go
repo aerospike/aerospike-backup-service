@@ -12,7 +12,7 @@ import (
 
 // backupJob implements the quartz.Job interface.
 type backupJob struct {
-	handler   *BackupHandler
+	handler   *BackupRoutineHandler
 	jobType   string
 	isRunning atomic.Bool
 }
@@ -58,7 +58,7 @@ func (j *backupJob) Description() string {
 }
 
 // newBackupJob creates a new backup job.
-func newBackupJob(handler *BackupHandler, jobType string) quartz.Job {
+func newBackupJob(handler *BackupRoutineHandler, jobType string) quartz.Job {
 	return &backupJob{
 		handler: handler,
 		jobType: jobType,

@@ -1,4 +1,4 @@
-package shared
+package service
 
 import (
 	"context"
@@ -17,8 +17,6 @@ import (
 type RestoreGo struct {
 }
 
-var _ Restore = (*RestoreGo)(nil)
-
 // NewRestoreGo returns a new RestoreGo instance.
 func NewRestoreGo() *RestoreGo {
 	return &RestoreGo{}
@@ -29,7 +27,7 @@ func (r *RestoreGo) RestoreRun(
 	ctx context.Context,
 	client *a.Client,
 	restoreRequest *model.RestoreRequestInternal,
-) (*backup.RestoreHandler, error) {
+) (RestoreHandler, error) {
 	var err error
 	backupClient, err := backup.NewClient(client, "1", slog.Default())
 	if err != nil {

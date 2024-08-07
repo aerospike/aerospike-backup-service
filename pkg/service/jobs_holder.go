@@ -6,14 +6,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
 )
 
 type RestoreJobID int
 
 type jobInfo struct {
-	handlers     []*backup.RestoreHandler
+	handlers     []RestoreHandler
 	status       model.JobStatus
 	err          error
 	totalRecords uint64
@@ -45,7 +44,7 @@ func (h *JobsHolder) newJob() RestoreJobID {
 }
 
 // addHandler should be called for each backup (full or incremental) handler.
-func (h *JobsHolder) addHandler(id RestoreJobID, handler *backup.RestoreHandler) {
+func (h *JobsHolder) addHandler(id RestoreJobID, handler RestoreHandler) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.restoreJobs[id]; exists {

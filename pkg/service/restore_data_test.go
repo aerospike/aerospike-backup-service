@@ -10,7 +10,6 @@ import (
 
 	"github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/shared"
 	"github.com/aerospike/backup/pkg/util"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
@@ -70,7 +69,7 @@ func makeTestRestoreService() *dataRestorer {
 			backends: &BackendHolderMock{},
 		},
 		restoreJobs:     NewJobsHolder(),
-		restoreService:  shared.NewRestoreMock(),
+		restoreService:  NewRestoreMock(),
 		backends:        &BackendHolderMock{},
 		config:          config,
 		asClientCreator: &MockAerospikeClientCreator{},
