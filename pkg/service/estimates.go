@@ -31,6 +31,10 @@ func getAnyHandler(m map[string]BackupHandler) BackupHandler {
 	return nil
 }
 
+// RestoreJobStatus returns status of restore job.
+// For running job: status model.JobStatusRunning, current statistics and estimation.
+// For done job: status model.JobStatusDone, statistics.
+// For failed job: status model.JobStatusFailed, error.
 func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 	status := &model.RestoreJobStatus{
 		Status: job.status,

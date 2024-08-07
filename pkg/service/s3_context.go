@@ -298,7 +298,7 @@ func (s *S3Context) ValidateStorageContainsBackup() (uint64, error) {
 		return 0, err
 	}
 	if len(files) == 0 {
-		return 0, fmt.Errorf("given path %s not exist", s.path)
+		return 0, fmt.Errorf("given path %s does not exist", s.path)
 	}
 
 	metadata, err := s.readMetadata(s.path)

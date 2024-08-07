@@ -17,6 +17,7 @@ type RestoreJobStatus struct {
 	Error          string      `yaml:"error,omitempty" json:"error,omitempty"`
 }
 
+// RestoreStats represents the statistics of a restore operation.
 type RestoreStats struct {
 	ReadRecords     uint64 `yaml:"read-records,omitempty" json:"read-records,omitempty" format:"int64" example:"10"`
 	TotalBytes      uint64 `yaml:"total-bytes,omitempty" json:"total-bytes,omitempty" format:"int64" example:"2000"`
