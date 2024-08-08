@@ -202,7 +202,7 @@ This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`l
 See the quick [guide](build/package/README.md) on how to get started with the Linux packages.
 
 ### Release
-Before releasing new version please run the following commands
+Use the following commands before a release to update the version.
 ```bash
 NEXT_VERSION="<version>" make release
 git add --all
