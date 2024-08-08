@@ -12,17 +12,17 @@ RUN arch=${TARGETARCH:-amd64} \
 
 FROM base as builder
 ENV PATH="$PATH:/usr/local/go/bin"
-ENV GOPATH=/app/${project}
+ENV GOPATH=/app/aerospike-backup-service
 ENV GOCACHE=/app/
 
-WORKDIR /app/${project}
+WORKDIR /app/aerospike-backup-service
 COPY . .
 
 RUN make build
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
-COPY --from=builder /app/${project}/build/target/${project} /usr/bin/${project}
-COPY --from=builder /app/${project}/config/config.yml /etc/${project}/${project}.yml
+COPY --from=builder /app/aerospike-backup-service/build/target/aerospike-backup-service /usr/bin/aerospike-backup-service
+COPY --from=builder /app/aerospike-backup-service/config/config.yml /etc/aerospike-backup-service/aerospike-backup-service.yml
 
 EXPOSE 8080
 
