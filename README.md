@@ -128,7 +128,7 @@ Flags:
 Run as a binary using a configuration file:
 
 ```bash
-./target/aerospike-backup-service -c config/config.yml
+./build/target/aerospike-backup-service -c config/config.yml
 ```
 
 Run in a container with a custom configuration file:
@@ -175,7 +175,7 @@ the [OpenAPI specification](https://aerospike.github.io/aerospike-backup-service
 
 ### Build the service
 
-The following command generates a binary under the `target` directory.
+The following command generates a binary under the `build/target` directory.
 
 ```bash
 make build
@@ -183,23 +183,33 @@ make build
 
 ### Build Docker image
 
-#### AMD64
+#### Multiplatform
 
-```
-docker build --build-arg GOARCH=amd64 -t backup-service .
-```
-
-#### ARM64
-
-```
-docker build --build-arg GOARCH=arm64 -t backup-service .
+```bash
+DOCKER_USERNAME="<jforg-username>" DOCKER_PASSWORD="<jfrog-password>" TAG="<tag>" make docker-buildx 
 ```
 
-### Build Linux package
+#### For local use
 
-Run `make deb` or `make rpm` based on the desired package manager.
-This will generate a package in the `target` directory.
-See the quick [guide](./packages/) on how to get started with the Linux packages.
+```bash
+TAG="<tag>" make docker-build
+```
+
+### Build Linux packages
+
+Run `make packages`
+This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`linux/arm64`) with respective `sha256` checksum file in the `build/target` directory.
+See the quick [guide](build/package/README.md) on how to get started with the Linux packages.
+
+### Release
+Use the following commands before a release to update the version.
+```bash
+NEXT_VERSION="<version>" make release
+git add --all
+git commit -m "Release: "$(cat VERSION)""
+git tag "<version>"
+git push 
+```
 
 ## FAQ
 

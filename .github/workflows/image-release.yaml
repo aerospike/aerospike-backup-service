@@ -13,7 +13,7 @@ jobs:
       - name: Get Metadata
         run: |
           echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
-          echo "ISO8601=$(date "+%Y-%m-%dT%H:%M:%S%z")" >> $GITHUB_ENV
+          echo "ISO8601=$(LC_TIME=en_US.UTF-8 date "+%Y-%m-%dT%H:%M:%S%z")" >> $GITHUB_ENV
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -32,7 +32,6 @@ jobs:
       - name: Build and Push
         uses: docker/bake-action@v4
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
           GIT_COMMIT_SHA: ${{ github.sha }}
           GIT_BRANCH: golib-release-proccess
           LATEST: false
@@ -41,7 +40,7 @@ jobs:
           PROJECT: ${{ github.event.repository.name }}
         with:
           workdir: ${{ github.workspace }}
-          files: docker-bake.hcl
+          files: ${{ github.workspace }}/build/docker-build/docker-bake.hcl
           targets: default
       - name: Promote image with version tag
         env:
