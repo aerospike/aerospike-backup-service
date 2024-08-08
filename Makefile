@@ -87,7 +87,7 @@ checksums:
 
 .PHONY: docker-build
 docker-build:
-	 docker build --tag aerospike/aerospike-backup-service:test --file $(WORKSPACE)/Dockerfile
+	 docker build --tag aerospike/aerospike-backup-service:$(TAG) --file $(WORKSPACE)/Dockerfile
 
 .PHONY: docker-buildx
 docker-buildx:
