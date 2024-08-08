@@ -1,5 +1,5 @@
 //nolint:dupl
-package server
+package handlers
 
 import (
 	"encoding/json"
@@ -13,6 +13,7 @@ import (
 	"github.com/aerospike/backup/pkg/service"
 )
 
+// RestoreFullHandler
 // @Summary     Trigger an asynchronous full restore operation.
 // @ID 	        restoreFull
 // @Tags        Restore
@@ -21,7 +22,7 @@ import (
 // @Param       request body model.RestoreRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
-func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		var request model.RestoreRequest
 
@@ -39,7 +40,7 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 			Dir:            request.SourceStorage.Path,
 		}
 
-		jobID, err := ws.restoreManager.Restore(requestInternal)
+		jobID, err := s.restoreManager.Restore(requestInternal)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -53,6 +54,7 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// RestoreIncrementalHandler
 // @Summary     Trigger an asynchronous incremental restore operation.
 // @ID 	        restoreIncremental
 // @Tags        Restore
@@ -61,7 +63,7 @@ func (ws *HTTPServer) restoreFullHandler(w http.ResponseWriter, r *http.Request)
 // @Param       request body model.RestoreRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
-func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		var request model.RestoreRequest
 
@@ -78,7 +80,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 			RestoreRequest: request,
 			Dir:            request.SourceStorage.Path,
 		}
-		jobID, err := ws.restoreManager.Restore(requestInternal)
+		jobID, err := s.restoreManager.Restore(requestInternal)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -92,6 +94,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 	}
 }
 
+// RestoreByTimeHandler
 // @Summary     Trigger an asynchronous restore operation to specific point in time.
 // @ID 	        restoreTimestamp
 // @Description Restores backup from the given point in time.
@@ -101,7 +104,7 @@ func (ws *HTTPServer) restoreIncrementalHandler(w http.ResponseWriter, r *http.R
 // @Param       request body model.RestoreTimestampRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
-func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		var request model.RestoreTimestampRequest
 
@@ -114,7 +117,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		jobID, err := ws.restoreManager.RestoreByTime(&request)
+		jobID, err := s.restoreManager.RestoreByTime(&request)
 		if err != nil {
 			slog.Error("Restore by timestamp failed", "routine", request.Routine, "err", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -129,6 +132,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// RestoreStatusHandler
 // @Summary     Retrieve status for a restore job.
 // @ID	        restoreStatus
 // @Tags        Restore
@@ -137,7 +141,7 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 // @Router      /v1/restore/status/{jobId} [get]
 // @Success     200 {object} model.RestoreJobStatus "Restore job status details"
 // @Failure     400 {string} string
-func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	jobIDParam := r.PathValue("jobId")
 	if jobIDParam == "" {
 		http.Error(w, "jobId required", http.StatusBadRequest)
@@ -149,7 +153,7 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	status, err := ws.restoreManager.JobStatus(service.RestoreJobID(jobID))
+	status, err := s.restoreManager.JobStatus(service.RestoreJobID(jobID))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 	} else {
@@ -166,6 +170,7 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// RetrieveConfig
 // @Summary     Retrieve Aerospike cluster configuration backup
 // @ID	        retrieveConfiguration
 // @Tags        Restore
@@ -175,7 +180,7 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 // @Router      /v1/retrieve/configuration/{name}/{timestamp} [get]
 // @Success     200 {file} application/zip "configuration backup"
 // @Failure     400 {string} string
-func (ws *HTTPServer) retrieveConfig(w http.ResponseWriter, r *http.Request) {
+func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 	// Check if method is GET
 	if r.Method != http.MethodGet {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
@@ -199,7 +204,7 @@ func (ws *HTTPServer) retrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf, err := ws.restoreManager.RetrieveConfiguration(name, time.UnixMilli(timestamp))
+	buf, err := s.restoreManager.RetrieveConfiguration(name, time.UnixMilli(timestamp))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return

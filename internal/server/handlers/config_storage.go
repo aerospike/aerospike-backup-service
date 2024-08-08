@@ -1,4 +1,4 @@
-package server
+package handlers
 
 import (
 	"encoding/json"
@@ -24,7 +24,7 @@ const storageNameNotSpecifiedMsg = "Storage name is not specified"
 // @Failure     400 {string} string
 //
 //nolint:dupl
-func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
+func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 	var newStorage model.Storage
 	err := json.NewDecoder(r.Body).Decode(&newStorage)
 	if err != nil {
@@ -37,12 +37,12 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddStorage(ws.config, name, &newStorage)
+	err = service.AddStorage(s.config, name, &newStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(ws.config)
+	err = ConfigurationManager.WriteConfiguration(s.config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -50,16 +50,16 @@ func (ws *HTTPServer) addStorage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-// readAllStorage reads all storage from the configuration.
+// ReadAllStorage reads all storage from the configuration.
 // @Summary     Reads all storage from the configuration.
-// @ID 	        readAllStorage
+// @ID 	        ReadAllStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.Storage
 // @Failure     400 {string} string
-func (ws *HTTPServer) readAllStorage(w http.ResponseWriter, _ *http.Request) {
-	storage := ws.config.Storage
+func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
+	storage := s.config.Storage
 	jsonResponse, err := json.Marshal(storage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -83,13 +83,13 @@ func (ws *HTTPServer) readAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} model.Storage
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified storage could not be found"
-func (ws *HTTPServer) readStorage(w http.ResponseWriter, r *http.Request) {
+func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 	storageName := r.PathValue("name")
 	if storageName == "" {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	storage, ok := ws.config.Storage[storageName]
+	storage, ok := s.config.Storage[storageName]
 	if !ok {
 		http.Error(w, fmt.Sprintf("Storage %s could not be found", storageName), http.StatusNotFound)
 		return
@@ -117,7 +117,7 @@ func (ws *HTTPServer) readStorage(w http.ResponseWriter, r *http.Request) {
 // @Param       storage body model.Storage true "Backup storage details"
 // @Success     200
 // @Failure     400 {string} string
-func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
+func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 	var updatedStorage model.Storage
 	err := json.NewDecoder(r.Body).Decode(&updatedStorage)
 	if err != nil {
@@ -129,12 +129,12 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateStorage(ws.config, storageName, &updatedStorage)
+	err = service.UpdateStorage(s.config, storageName, &updatedStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(ws.config)
+	err = ConfigurationManager.WriteConfiguration(s.config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -150,18 +150,18 @@ func (ws *HTTPServer) updateStorage(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup storage name"
 // @Success     204
 // @Failure     400 {string} string
-func (ws *HTTPServer) deleteStorage(w http.ResponseWriter, r *http.Request) {
+func (s *Service) deleteStorage(w http.ResponseWriter, r *http.Request) {
 	storageName := r.PathValue("name")
 	if storageName == "" {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := service.DeleteStorage(ws.config, storageName)
+	err := service.DeleteStorage(s.config, storageName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(ws.config)
+	err = ConfigurationManager.WriteConfiguration(s.config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

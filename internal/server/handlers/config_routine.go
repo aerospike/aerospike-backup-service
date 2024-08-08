@@ -1,4 +1,4 @@
-package server
+package handlers
 
 import (
 	"encoding/json"
@@ -24,7 +24,7 @@ const routineNameNotSpecifiedMsg = "Routine name is not specified"
 // @Failure     400 {string} string
 //
 //nolint:dupl
-func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
+func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 	var newRoutine model.BackupRoutine
 	err := json.NewDecoder(r.Body).Decode(&newRoutine)
 	if err != nil {
@@ -37,12 +37,12 @@ func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddRoutine(ws.config, name, &newRoutine)
+	err = service.AddRoutine(s.config, name, &newRoutine)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(ws.config)
+	err = ConfigurationManager.WriteConfiguration(s.config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -50,16 +50,16 @@ func (ws *HTTPServer) addRoutine(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-// readRoutines reads all backup routines from the configuration.
+// ReadRoutines reads all backup routines from the configuration.
 // @Summary     Reads all routines from the configuration.
-// @ID	        readRoutines
+// @ID	        ReadRoutines
 // @Tags        Configuration
 // @Router      /v1/config/routines [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.BackupRoutine
 // @Failure     400 {string} string
-func (ws *HTTPServer) readRoutines(w http.ResponseWriter, _ *http.Request) {
-	jsonResponse, err := json.Marshal(ws.config.BackupRoutines)
+func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
+	jsonResponse, err := json.Marshal(s.config.BackupRoutines)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -82,13 +82,13 @@ func (ws *HTTPServer) readRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} model.BackupRoutine
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified cluster could not be found"
-func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
+func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
 	if routineName == "" {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	routine, ok := ws.config.BackupRoutines[routineName]
+	routine, ok := s.config.BackupRoutines[routineName]
 	if !ok {
 		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)
 		return
@@ -118,7 +118,7 @@ func (ws *HTTPServer) readRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure      400 {string} string
 //
 //nolint:dupl
-func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
+func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 	var updatedRoutine model.BackupRoutine
 	err := json.NewDecoder(r.Body).Decode(&updatedRoutine)
 	if err != nil {
@@ -131,12 +131,12 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateRoutine(ws.config, name, &updatedRoutine)
+	err = service.UpdateRoutine(s.config, name, &updatedRoutine)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(ws.config)
+	err = ConfigurationManager.WriteConfiguration(s.config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -152,18 +152,18 @@ func (ws *HTTPServer) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup routine name"
 // @Success     204
 // @Failure     400 {string} string
-func (ws *HTTPServer) deleteRoutine(w http.ResponseWriter, r *http.Request) {
+func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
 	if routineName == "" {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := service.DeleteRoutine(ws.config, routineName)
+	err := service.DeleteRoutine(s.config, routineName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(ws.config)
+	err = ConfigurationManager.WriteConfiguration(s.config)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

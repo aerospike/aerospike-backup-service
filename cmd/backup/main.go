@@ -12,6 +12,7 @@ import (
 
 	"github.com/aerospike/backup"
 	"github.com/aerospike/backup/internal/server"
+	"github.com/aerospike/backup/internal/server/handlers"
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
@@ -56,7 +57,7 @@ func run() int {
 		if err != nil {
 			return err
 		}
-		server.ConfigurationManager = manager
+		handlers.ConfigurationManager = manager
 		// read configuration file
 		config, err := readConfiguration()
 		if err != nil {
@@ -77,7 +78,7 @@ func run() int {
 			return err
 		}
 		// run HTTP server
-		err = runHTTPServer(ctx, backends, config, scheduler, handlers)
+		err = runHTTPServer(ctx, config, scheduler, backends, handlers)
 		// stop the scheduler
 		scheduler.Stop()
 		return err
@@ -105,7 +106,7 @@ func systemCtx() context.Context {
 }
 
 func readConfiguration() (*model.Config, error) {
-	config, err := server.ConfigurationManager.ReadConfiguration()
+	config, err := handlers.ConfigurationManager.ReadConfiguration()
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
 		return nil, err
@@ -118,12 +119,12 @@ func readConfiguration() (*model.Config, error) {
 }
 
 func runHTTPServer(ctx context.Context,
-	backends service.BackendsHolder,
 	config *model.Config,
 	scheduler quartz.Scheduler,
+	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
 ) error {
-	httpServer := server.NewHTTPServer(backends, config, scheduler, handlerHolder)
+	httpServer := server.NewHTTPServer(config, scheduler, backends, handlerHolder)
 	go func() {
 		httpServer.Start()
 	}()

@@ -4,10 +4,6 @@ github.com/aerospike/aerospike-client-go/v7 v7.6.0 h1:jAOlsxOaWbmtGzB1yP9x1komh4
 github.com/aerospike/aerospike-client-go/v7 v7.6.0/go.mod h1:uCbSYMpjlRcH/9f26VSF/luzDDXrcDaV8c6/WIcKtT4=
 github.com/aerospike/aerospike-management-lib v1.4.0 h1:wT0l3kwzXv5DV5Cd+hD0BQq3hjSIyaPX1HaUb1304TI=
 github.com/aerospike/aerospike-management-lib v1.4.0/go.mod h1:3JKrmC/mLSV8SygbrPQPNV8T7bFaTMjB8wfnX25gB+4=
-github.com/aerospike/backup-go v0.0.0-20240805094329-d61aafbd315f h1:jAbF1cBuxScs7mtxnR3i79NGWN6xSZxVGYgJj0wC3bQ=
-github.com/aerospike/backup-go v0.0.0-20240805094329-d61aafbd315f/go.mod h1:WfFo03sY4w5qu3IALjqNQaPZVe+0p7GqYPG+qifkm+8=
-github.com/aerospike/backup-go v0.0.0-20240806080522-e85d829bb915 h1:GcDOargWvjp4/3/Ebjhn0S/VTyDPzxBIhHj+KmXs5tA=
-github.com/aerospike/backup-go v0.0.0-20240806080522-e85d829bb915/go.mod h1:WfFo03sY4w5qu3IALjqNQaPZVe+0p7GqYPG+qifkm+8=
 github.com/aerospike/backup-go v0.0.0-20240807095152-c03293a0f8a6 h1:reY5dCdnpwOYgQiwJH7cO7HoYH8mPO+RSYpFqA5U1JA=
 github.com/aerospike/backup-go v0.0.0-20240807095152-c03293a0f8a6/go.mod h1:WfFo03sY4w5qu3IALjqNQaPZVe+0p7GqYPG+qifkm+8=
 github.com/aws/aws-sdk-go-v2 v1.30.3 h1:jUeBtG0Ih+ZIFH0F4UkmL9w3cSpaMv9tYYDbzILP8dY=
@@ -85,6 +81,8 @@ github.com/google/pprof v0.0.0-20240711041743-f6c9dda6c6da h1:xRmpO92tb8y+Z85iUO
 github.com/google/pprof v0.0.0-20240711041743-f6c9dda6c6da/go.mod h1:K1liHPHnj73Fdn/EKuT8nrFqBihUSKXoLYU0BuatOYo=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/gorilla/mux v1.8.1 h1:TuBL49tXwgrFYWhqrNgrUNEY92u81SPhu7sTdzQEiWY=
+github.com/gorilla/mux v1.8.1/go.mod h1:AKf9I4AEqPTmMytcMc0KkNouC66V3BtZ4qD5fmWSiMQ=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/josharian/intern v1.0.0 h1:vlS4z54oSdjm0bgjRigI+G1HpF+tI+9rE5LLzOg8HmY=
