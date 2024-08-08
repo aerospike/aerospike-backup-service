@@ -22,9 +22,9 @@ const storageNameNotSpecifiedMsg = "Storage name is not specified"
 // @Param       storage body model.Storage true "Backup storage details"
 // @Success     201
 // @Failure     400 {string} string
-//
-//nolint:dupl
 func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "addStorage"))
+
 	var newStorage model.Storage
 	err := json.NewDecoder(r.Body).Decode(&newStorage)
 	if err != nil {
@@ -34,16 +34,25 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 	r.Body.Close()
 	name := r.PathValue("name")
 	if name == "" {
+		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err = service.AddStorage(s.config, name, &newStorage)
 	if err != nil {
+		hLogger.Error("failed to add storage",
+			slog.String("name", name),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.String("name", name),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -59,9 +68,14 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 // @Success  	200 {object} map[string]model.Storage
 // @Failure     400 {string} string
 func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "ReadAllStorage"))
+
 	storage := s.config.Storage
 	jsonResponse, err := json.Marshal(storage)
 	if err != nil {
+		hLogger.Error("failed to marshal storage",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -69,7 +83,10 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		hLogger.Error("failed to write response",
+			slog.String("response", string(jsonResponse)),
+			slog.Any("error", err),
+		)
 	}
 }
 
@@ -83,9 +100,14 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} model.Storage
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified storage could not be found"
+//
+//nolint:dupl // Each handler must be in separate func. No duplication.
 func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "readStorage"))
+
 	storageName := r.PathValue("name")
 	if storageName == "" {
+		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
@@ -96,6 +118,9 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse, err := json.Marshal(storage)
 	if err != nil {
+		hLogger.Error("failed to marshal starage",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -103,7 +128,10 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		hLogger.Error("failed to write response",
+			slog.String("response", string(jsonResponse)),
+			slog.Any("error", err),
+		)
 	}
 }
 
@@ -118,6 +146,8 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "updateStorage"))
+
 	var updatedStorage model.Storage
 	err := json.NewDecoder(r.Body).Decode(&updatedStorage)
 	if err != nil {
@@ -126,16 +156,25 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 	}
 	storageName := r.PathValue("name")
 	if storageName == "" {
+		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err = service.UpdateStorage(s.config, storageName, &updatedStorage)
 	if err != nil {
+		hLogger.Error("failed to update storage",
+			slog.String("name", storageName),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.String("name", storageName),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -150,19 +189,32 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup storage name"
 // @Success     204
 // @Failure     400 {string} string
+//
+//nolint:dupl // Each handler must be in separate func. No duplication.
 func (s *Service) deleteStorage(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "deleteStorage"))
+
 	storageName := r.PathValue("name")
 	if storageName == "" {
+		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err := service.DeleteStorage(s.config, storageName)
 	if err != nil {
+		hLogger.Error("failed to delete storage",
+			slog.String("name", storageName),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.String("name", storageName),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

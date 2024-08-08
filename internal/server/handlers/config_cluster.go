@@ -22,8 +22,6 @@ const clusterNameNotSpecifiedMsg = "Cluster name is not specified"
 // @Param       cluster body model.AerospikeCluster true "Aerospike cluster details"
 // @Success     201
 // @Failure     400 {string} string
-//
-//nolint:dupl
 func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addAerospikeCluster"))
 
@@ -91,7 +89,7 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 	_, err = w.Write(jsonResponse)
 	if err != nil {
 		hLogger.Error("failed to write response",
-			slog.Any("response", jsonResponse),
+			slog.String("response", string(jsonResponse)),
 			slog.Any("error", err),
 		)
 		slog.Error("failed to write response", "err", err)
@@ -138,7 +136,7 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	_, err = w.Write(jsonResponse)
 	if err != nil {
 		hLogger.Error("failed to write response",
-			slog.Any("response", jsonResponse),
+			slog.String("response", string(jsonResponse)),
 			slog.Any("error", err),
 		)
 		slog.Error("failed to write response", "err", err)
@@ -199,6 +197,8 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 // @Param       name path string true "Aerospike cluster name"
 // @Success     204
 // @Failure     400 {string} string
+//
+//nolint:dupl // Each handler must be in separate func. No duplication.
 func (s *Service) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deleteAerospikeCluster"))
 

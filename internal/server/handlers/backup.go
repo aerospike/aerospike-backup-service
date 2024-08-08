@@ -112,12 +112,13 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 	_, err = w.Write(response)
 	if err != nil {
 		hLogger.Error("failed to write response",
-			slog.Any("response", response),
+			slog.String("response", string(response)),
 			slog.Any("error", err),
 		)
 	}
 }
 
+//nolint:funlen // Function is long because of logging.
 func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
 	hLogger := s.logger.With(slog.String("handler", "readBackupsForRoutine"))
 
@@ -176,7 +177,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	_, err = w.Write(response)
 	if err != nil {
 		hLogger.Error("failed to write response",
-			slog.Any("response", response),
+			slog.String("response", string(response)),
 			slog.Any("error", err),
 		)
 	}
@@ -311,7 +312,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 	_, err = w.Write(response)
 	if err != nil {
 		hLogger.Error("failed to write response",
-			slog.Any("response", response),
+			slog.String("response", string(response)),
 			slog.Any("error", err),
 		)
 	}

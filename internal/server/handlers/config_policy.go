@@ -88,7 +88,7 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 	_, err = w.Write(jsonResponse)
 	if err != nil {
 		hLogger.Error("failed to write response",
-			slog.Any("response", jsonResponse),
+			slog.String("response", string(jsonResponse)),
 			slog.Any("error", err),
 		)
 	}
@@ -132,7 +132,7 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 	_, err = w.Write(jsonResponse)
 	if err != nil {
 		hLogger.Error("failed to write response",
-			slog.Any("response", jsonResponse),
+			slog.String("response", string(jsonResponse)),
 			slog.Any("error", err),
 		)
 	}
@@ -198,6 +198,8 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup policy name"
 // @Success     204
 // @Failure     400 {string} string
+//
+//nolint:dupl // Each handler must be in separate func. No duplication.
 func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deletePolicy"))
 

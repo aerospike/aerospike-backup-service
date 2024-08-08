@@ -22,36 +22,54 @@ import (
 // @Param       request body model.RestoreRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
+// @Failure     405 {string} string
 func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		var request model.RestoreRequest
+	hLogger := s.logger.With(slog.String("handler", "RestoreFullHandler"))
 
-		err := json.NewDecoder(r.Body).Decode(&request)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err = request.Validate(); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		requestInternal := &model.RestoreRequestInternal{
-			RestoreRequest: request,
-			Dir:            request.SourceStorage.Path,
-		}
-
-		jobID, err := s.restoreManager.Restore(requestInternal)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		slog.Info("Restore full", "jobID", jobID, "request", request)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusAccepted)
-		_, _ = fmt.Fprint(w, jobID)
-	} else {
-		http.Error(w, "", http.StatusNotFound)
+	if r.Method != http.MethodPost {
+		hLogger.Error("method not allowed",
+			slog.String("method", r.Method),
+		)
+		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
+
+	var request model.RestoreRequest
+
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		hLogger.Error("failed to decode request body",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err = request.Validate(); err != nil {
+		hLogger.Error("failed to validate request",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	requestInternal := &model.RestoreRequestInternal{
+		RestoreRequest: request,
+		Dir:            request.SourceStorage.Path,
+	}
+
+	jobID, err := s.restoreManager.Restore(requestInternal)
+	if err != nil {
+		hLogger.Error("failed to restore",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	hLogger.Info("Restore full",
+		slog.Int("jobID", int(jobID)),
+		slog.Any("request", request),
+	)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_, _ = fmt.Fprint(w, jobID)
 }
 
 // RestoreIncrementalHandler
@@ -63,35 +81,53 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 // @Param       request body model.RestoreRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
+// @Failure     405 {string} string
 func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		var request model.RestoreRequest
+	hLogger := s.logger.With(slog.String("handler", "RestoreIncrementalHandler"))
 
-		err := json.NewDecoder(r.Body).Decode(&request)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err = request.Validate(); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		requestInternal := &model.RestoreRequestInternal{
-			RestoreRequest: request,
-			Dir:            request.SourceStorage.Path,
-		}
-		jobID, err := s.restoreManager.Restore(requestInternal)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		slog.Info("RestoreByPath action", "jobID", jobID, "request", request)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusAccepted)
-		_, _ = fmt.Fprint(w, jobID)
-	} else {
-		http.Error(w, "", http.StatusNotFound)
+	if r.Method != http.MethodPost {
+		hLogger.Error("method not allowed",
+			slog.String("method", r.Method),
+		)
+		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
+
+	var request model.RestoreRequest
+
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		hLogger.Error("failed to decode request body",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err = request.Validate(); err != nil {
+		hLogger.Error("failed to validate request",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	requestInternal := &model.RestoreRequestInternal{
+		RestoreRequest: request,
+		Dir:            request.SourceStorage.Path,
+	}
+	jobID, err := s.restoreManager.Restore(requestInternal)
+	if err != nil {
+		hLogger.Error("failed to restore",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	hLogger.Info("RestoreByPath action",
+		slog.Int("jobID", int(jobID)),
+		slog.Any("request", request),
+	)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_, _ = fmt.Fprint(w, jobID)
 }
 
 // RestoreByTimeHandler
@@ -104,32 +140,50 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 // @Param       request body model.RestoreTimestampRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
+// @Failure     405 {string} string
 func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		var request model.RestoreTimestampRequest
+	hLogger := s.logger.With(slog.String("handler", "RestoreByTimeHandler"))
 
-		err := json.NewDecoder(r.Body).Decode(&request)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err = request.Validate(); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		jobID, err := s.restoreManager.RestoreByTime(&request)
-		if err != nil {
-			slog.Error("Restore by timestamp failed", "routine", request.Routine, "err", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		slog.Info("Restore action", "jobID", jobID, "request", request)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusAccepted)
-		_, _ = fmt.Fprint(w, jobID)
-	} else {
-		http.Error(w, "", http.StatusNotFound)
+	if r.Method != http.MethodPost {
+		hLogger.Error("method not allowed",
+			slog.String("method", r.Method),
+		)
+		http.Error(w, "", http.StatusMethodNotAllowed)
 	}
+
+	var request model.RestoreTimestampRequest
+
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		hLogger.Error("failed to decode request body",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err = request.Validate(); err != nil {
+		hLogger.Error("failed to validate request",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	jobID, err := s.restoreManager.RestoreByTime(&request)
+	if err != nil {
+		hLogger.Error("failed to restore by timestamp",
+			slog.Any("routine", request.Routine),
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	hLogger.Info("Restore action",
+		slog.Int("jobID", int(jobID)),
+		slog.Any("request", request),
+	)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	_, _ = fmt.Fprint(w, jobID)
 }
 
 // RestoreStatusHandler
@@ -142,31 +196,47 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 // @Success     200 {object} model.RestoreJobStatus "Restore job status details"
 // @Failure     400 {string} string
 func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "RestoreStatusHandler"))
+
 	jobIDParam := r.PathValue("jobId")
 	if jobIDParam == "" {
+		hLogger.Error("job id required")
 		http.Error(w, "jobId required", http.StatusBadRequest)
 		return
 	}
 	jobID, err := strconv.Atoi(jobIDParam)
 	if err != nil {
+		hLogger.Error("failed to parse job id",
+			slog.String("jobIDParam", jobIDParam),
+			slog.Any("error", err))
 		http.Error(w, "invalid job id", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	status, err := s.restoreManager.JobStatus(service.RestoreJobID(jobID))
 	if err != nil {
+		hLogger.Error("failed to get job status",
+			slog.Int("jobID", jobID),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusNotFound)
-	} else {
-		w.WriteHeader(http.StatusOK)
-		jsonResponse, err := json.MarshalIndent(status, "", "    ") // pretty print
-		if err != nil {
-			http.Error(w, "failed to parse restore status", http.StatusInternalServerError)
-			return
-		}
-		_, err = w.Write(jsonResponse)
-		if err != nil {
-			slog.Error("failed to write response", "err", err)
-		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	jsonResponse, err := json.MarshalIndent(status, "", "    ") // pretty print
+	if err != nil {
+		hLogger.Error("failed to marshal restore result",
+			slog.Any("error", err),
+		)
+		http.Error(w, "failed to parse restore status", http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(jsonResponse)
+	if err != nil {
+		hLogger.Error("failed to write response",
+			slog.String("response", string(jsonResponse)),
+			slog.Any("error", err),
+		)
 	}
 }
 
@@ -180,11 +250,15 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/retrieve/configuration/{name}/{timestamp} [get]
 // @Success     200 {file} application/zip "configuration backup"
 // @Failure     400 {string} string
+// @Failure     405 {string} string
 func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RetrieveConfig"))
 
 	// Check if method is GET
 	if r.Method != http.MethodGet {
+		hLogger.Error("method not allowed",
+			slog.String("method", r.Method),
+		)
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
 	}
@@ -197,18 +271,26 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	timestampStr := r.PathValue("timestamp")
 	if timestampStr == "" {
+		hLogger.Error("timestamp required")
 		http.Error(w, "Timestamp required", http.StatusBadRequest)
 		return
 	}
 
 	timestamp, err := strconv.ParseInt(timestampStr, 10, 64)
 	if err != nil {
+		hLogger.Error("failed to parse timestamp",
+			slog.String("timestamp", timestampStr),
+			slog.Any("error", err))
 		http.Error(w, "Timestamp incorrect", http.StatusBadRequest)
 		return
 	}
 
 	buf, err := s.restoreManager.RetrieveConfiguration(name, time.UnixMilli(timestamp))
 	if err != nil {
+		hLogger.Error("failed to retrieve config",
+			slog.Int64("timestamp", timestamp),
+			slog.String("name", name),
+			slog.Any("error", err))
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
@@ -217,6 +299,9 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", `attachment; filename="archive.zip"`)
 	_, err = w.Write(buf)
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		hLogger.Error("failed to write response",
+			slog.String("response", string(buf)),
+			slog.Any("error", err),
+		)
 	}
 }

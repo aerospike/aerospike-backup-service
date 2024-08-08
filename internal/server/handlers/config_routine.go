@@ -30,7 +30,7 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 	var newRoutine model.BackupRoutine
 	err := json.NewDecoder(r.Body).Decode(&newRoutine)
 	if err != nil {
-		hLogger.Error("failed to decide request body",
+		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -46,6 +46,7 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 	err = service.AddRoutine(s.config, name, &newRoutine)
 	if err != nil {
 		hLogger.Error("failed to add routine",
+			slog.String("name", name),
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -87,7 +88,7 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 	_, err = w.Write(jsonResponse)
 	if err != nil {
 		hLogger.Error("failed to write response",
-			slog.Any("response", jsonResponse),
+			slog.String("response", string(jsonResponse)),
 			slog.Any("error", err),
 		)
 	}
@@ -103,6 +104,8 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} model.BackupRoutine
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified cluster could not be found"
+//
+//nolint:dupl // Each handler must be in separate func. No duplication.
 func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readRoutine"))
 
@@ -130,7 +133,7 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 	_, err = w.Write(jsonResponse)
 	if err != nil {
 		hLogger.Error("failed to write response",
-			slog.Any("response", jsonResponse),
+			slog.String("response", string(jsonResponse)),
 			slog.Any("error", err),
 		)
 	}
@@ -170,6 +173,7 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 	err = service.UpdateRoutine(s.config, name, &updatedRoutine)
 	if err != nil {
 		hLogger.Error("failed to update routine",
+			slog.String("name", name),
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -195,6 +199,8 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup routine name"
 // @Success     204
 // @Failure     400 {string} string
+//
+//nolint:dupl // Each handler must be in separate func. No duplication.
 func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deleteRoutine"))
 
@@ -207,6 +213,7 @@ func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 	err := service.DeleteRoutine(s.config, routineName)
 	if err != nil {
 		hLogger.Error("failed to delete routine",
+			slog.String("name", routineName),
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
