@@ -8,4 +8,4 @@ sed -i "s/$PREV_VERSION/$NEXT_VERSION/g" /local/VERSION
 sed -i "s/$PREV_VERSION/$NEXT_VERSION/" /local/internal/server/info.go
 EOF
 
-bash -c "$WORKSPACE"/scripts/generate-openapi.sh
+bash -c "$WORKSPACE"/build/scripts/generate-openapi.sh

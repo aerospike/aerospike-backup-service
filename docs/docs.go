@@ -1910,11 +1910,6 @@ const docTemplate = `{
             "description": "LoggerConfig represents the backup service logger configuration.",
             "type": "object",
             "properties": {
-                "capture-shared": {
-                    "description": "Whether to capture logs from the shared libraries.",
-                    "type": "boolean",
-                    "default": false
-                },
                 "file-writer": {
                     "description": "File writer logging configuration.",
                     "allOf": [
@@ -2090,7 +2085,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bandwidth": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.",
                     "type": "integer",
                     "example": 50000
                 },
@@ -2482,7 +2477,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "0.3.0",
+	Version:          "1.0.0",
 	Host:             "localhost:8080",
 	BasePath:         "",
 	Schemes:          []string{},

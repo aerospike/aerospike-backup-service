@@ -240,4 +240,3 @@ service:
   logger:
     file-writer:
       filename: "/log/backup-service.log"
-      capture-shared: true

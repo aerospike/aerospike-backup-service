@@ -8,7 +8,7 @@
       "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
     },
     "title" : "Backup Service REST API Specification",
-    "version" : "0.3.0"
+    "version" : "1.0.0"
   },
   "externalDocs" : {
     "description" : "OpenAPI",
@@ -1994,11 +1994,6 @@
       "model.LoggerConfig" : {
         "description" : "LoggerConfig represents the backup service logger configuration.",
         "properties" : {
-          "capture-shared" : {
-            "default" : false,
-            "description" : "Whether to capture logs from the shared libraries.",
-            "type" : "boolean"
-          },
           "file-writer" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/model.FileLoggerConfig"
@@ -2144,7 +2139,7 @@
         "description" : "RestorePolicy represents a policy for the restore operation.",
         "properties" : {
           "bandwidth" : {
-            "description" : "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec",
+            "description" : "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.",
             "example" : 50000,
             "type" : "integer"
           },
