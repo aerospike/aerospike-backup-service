@@ -182,7 +182,7 @@
     },
     "/v1/backups/full/{name}" : {
       "get" : {
-        "operationId" : "getFullBackupsForRoutine",
+        "operationId" : "GetFullBackupsForRoutine",
         "parameters" : [ {
           "description" : "Backup routine name",
           "in" : "path",
@@ -301,7 +301,7 @@
     },
     "/v1/backups/incremental/{name}" : {
       "get" : {
-        "operationId" : "getIncrementalBackupsForRoutine",
+        "operationId" : "GetIncrementalBackupsForRoutine",
         "parameters" : [ {
           "description" : "Backup routine name",
           "in" : "path",
@@ -368,7 +368,7 @@
     },
     "/v1/backups/schedule/{name}" : {
       "post" : {
-        "operationId" : "scheduleFullBackup",
+        "operationId" : "ScheduleFullBackup",
         "parameters" : [ {
           "description" : "Backup routine name",
           "in" : "path",
@@ -696,7 +696,7 @@
     },
     "/v1/config/policies" : {
       "get" : {
-        "operationId" : "readPolicies",
+        "operationId" : "ReadPolicies",
         "responses" : {
           "200" : {
             "content" : {
@@ -890,7 +890,7 @@
     },
     "/v1/config/routines" : {
       "get" : {
-        "operationId" : "readRoutines",
+        "operationId" : "ReadRoutines",
         "responses" : {
           "200" : {
             "content" : {
@@ -1084,7 +1084,7 @@
     },
     "/v1/config/storage" : {
       "get" : {
-        "operationId" : "readAllStorage",
+        "operationId" : "ReadAllStorage",
         "responses" : {
           "200" : {
             "content" : {
@@ -1311,6 +1311,16 @@
               }
             },
             "description" : "Bad Request"
+          },
+          "405" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
           }
         },
         "summary" : "Trigger an asynchronous full restore operation.",
@@ -1353,6 +1363,16 @@
               }
             },
             "description" : "Bad Request"
+          },
+          "405" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
           }
         },
         "summary" : "Trigger an asynchronous incremental restore operation.",
@@ -1435,6 +1455,16 @@
               }
             },
             "description" : "Bad Request"
+          },
+          "405" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
           }
         },
         "summary" : "Trigger an asynchronous restore operation to specific point in time.",
@@ -1484,6 +1514,16 @@
               }
             },
             "description" : "Bad Request"
+          },
+          "405" : {
+            "content" : {
+              "application/zip" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Method Not Allowed"
           }
         },
         "summary" : "Retrieve Aerospike cluster configuration backup",

@@ -1,4 +1,4 @@
-package server
+package handlers
 
 // Annotations to generate OpenAPI description (https://github.com/swaggo/swag)
 // @title           Backup Service REST API Specification

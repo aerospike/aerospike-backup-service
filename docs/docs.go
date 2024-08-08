@@ -188,7 +188,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get available full backups for routine.",
-                "operationId": "getFullBackupsForRoutine",
+                "operationId": "GetFullBackupsForRoutine",
                 "parameters": [
                     {
                         "type": "string",
@@ -294,7 +294,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get incremental backups for routine.",
-                "operationId": "getIncrementalBackupsForRoutine",
+                "operationId": "GetIncrementalBackupsForRoutine",
                 "parameters": [
                     {
                         "type": "string",
@@ -349,7 +349,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Schedule a full backup once per routine name.",
-                "operationId": "scheduleFullBackup",
+                "operationId": "ScheduleFullBackup",
                 "parameters": [
                     {
                         "type": "string",
@@ -649,7 +649,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all policies from the configuration.",
-                "operationId": "readPolicies",
+                "operationId": "ReadPolicies",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -824,7 +824,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all routines from the configuration.",
-                "operationId": "readRoutines",
+                "operationId": "ReadRoutines",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -999,7 +999,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all storage from the configuration.",
-                "operationId": "readAllStorage",
+                "operationId": "ReadAllStorage",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1198,6 +1198,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1232,6 +1238,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
                         "schema": {
                             "type": "string"
                         }
@@ -1309,6 +1321,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1349,6 +1367,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
                         "schema": {
                             "type": "string"
                         }
