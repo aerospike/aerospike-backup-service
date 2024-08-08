@@ -2,13 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 )
-
-var ConfigurationManager service.ConfigurationManager
 
 // readConfig
 // @Summary     Returns the configuration for the service.
@@ -19,14 +18,24 @@ var ConfigurationManager service.ConfigurationManager
 // @Success     200 {object} model.Config
 // @Failure     400 {string} string
 func (s *Service) readConfig(w http.ResponseWriter) {
+	hLogger := s.logger.With(slog.String("handler", "readConfig"))
+
 	configuration, err := json.MarshalIndent(s.config, "", "    ") // pretty print
 	if err != nil {
+		// We won't log config as it is not secure.
+		hLogger.Error("failed to parse service configuration",
+			slog.Any("error", err),
+		)
 		http.Error(w, "failed to parse service configuration", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(configuration)
+	if _, err = w.Write(configuration); err != nil {
+		hLogger.Error("failed to write response",
+			slog.Any("error", err),
+		)
+	}
 }
 
 // updateConfig
@@ -39,20 +48,33 @@ func (s *Service) readConfig(w http.ResponseWriter) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "updateConfig"))
+
 	var newConfig model.Config
 
 	err := json.NewDecoder(r.Body).Decode(&newConfig)
 	if err != nil {
+		// We won't log config as it is not secure.
+		hLogger.Error("failed to decode new configuration",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err = newConfig.Validate(); err != nil {
+		hLogger.Error("invalid configuration",
+			slog.Any("error", err),
+		)
 		http.Error(w, "invalid configuration: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	s.config = &newConfig
-	err = ConfigurationManager.WriteConfiguration(&newConfig)
+	err = s.configurationManager.WriteConfiguration(&newConfig)
 	if err != nil {
+		// We won't log config as it is not secure.
+		hLogger.Error("failed to update configuration",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -68,8 +90,13 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) ApplyConfig(w http.ResponseWriter, _ *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "ApplyConfig"))
+
 	handlers, err := service.ApplyNewConfig(s.scheduler, s.config, s.backupBackends)
 	if err != nil {
+		hLogger.Error("failed to apply new config",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

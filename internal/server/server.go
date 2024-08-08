@@ -33,6 +33,8 @@ func NewHTTPServer(
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
+	configurationManager service.ConfigurationManager,
+	logger *slog.Logger,
 ) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer
 
@@ -49,7 +51,7 @@ func NewHTTPServer(
 
 	restoreMgr := service.NewRestoreManager(backends, config, service.NewRestoreGo())
 
-	h := handlers.NewService(config, scheduler, restoreMgr, backends, handlerHolder)
+	h := handlers.NewService(config, scheduler, restoreMgr, backends, handlerHolder, configurationManager, logger)
 
 	router := NewRouter(
 		fmt.Sprintf("/%s", restAPIVersion),

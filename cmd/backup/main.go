@@ -12,7 +12,6 @@ import (
 
 	"github.com/aerospike/backup"
 	"github.com/aerospike/backup/internal/server"
-	"github.com/aerospike/backup/internal/server/handlers"
 	"github.com/aerospike/backup/internal/util"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
@@ -28,7 +27,7 @@ var (
 
 // run parses the CLI parameters and executes backup.
 //
-
+//nolint:funlen // Initialization function contains a lot of code.
 func run() int {
 	var (
 		configFile string
@@ -57,19 +56,25 @@ func run() int {
 		if err != nil {
 			return err
 		}
-		handlers.ConfigurationManager = manager
+
 		// read configuration file
-		config, err := readConfiguration()
+		config, err := readConfiguration(manager)
 		if err != nil {
 			return err
 		}
+
 		// get system ctx
 		ctx := systemCtx()
+
 		// set default loggers
 		loggerConfig := config.ServiceConfig.Logger
+		appLogger := slog.New(
+			util.LogHandler(loggerConfig),
+		)
 		slog.SetDefault(slog.New(util.LogHandler(loggerConfig)))
 		logger.SetDefault(util.NewQuartzLogger(ctx))
 		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
+
 		// schedule all configured backups
 		backends := service.NewBackupBackends(config)
 		handlers := service.MakeHandlers(config, backends)
@@ -77,10 +82,13 @@ func run() int {
 		if err != nil {
 			return err
 		}
+
 		// run HTTP server
-		err = runHTTPServer(ctx, config, scheduler, backends, handlers)
+		err = runHTTPServer(ctx, config, scheduler, backends, handlers, manager, appLogger)
+
 		// stop the scheduler
 		scheduler.Stop()
+
 		return err
 	}
 
@@ -105,8 +113,8 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func readConfiguration() (*model.Config, error) {
-	config, err := handlers.ConfigurationManager.ReadConfiguration()
+func readConfiguration(configurationManager service.ConfigurationManager) (*model.Config, error) {
+	config, err := configurationManager.ReadConfiguration()
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
 		return nil, err
@@ -123,8 +131,10 @@ func runHTTPServer(ctx context.Context,
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
+	configurationManager service.ConfigurationManager,
+	logger *slog.Logger,
 ) error {
-	httpServer := server.NewHTTPServer(config, scheduler, backends, handlerHolder)
+	httpServer := server.NewHTTPServer(config, scheduler, backends, handlerHolder, configurationManager, logger)
 	go func() {
 		httpServer.Start()
 	}()

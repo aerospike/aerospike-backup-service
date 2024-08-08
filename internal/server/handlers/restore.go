@@ -181,6 +181,8 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 // @Success     200 {file} application/zip "configuration backup"
 // @Failure     400 {string} string
 func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "RetrieveConfig"))
+
 	// Check if method is GET
 	if r.Method != http.MethodGet {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
@@ -189,6 +191,7 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 
 	name := r.PathValue("name")
 	if name == "" {
+		hLogger.Error("routine name required")
 		http.Error(w, "Routine name required", http.StatusBadRequest)
 		return
 	}

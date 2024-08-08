@@ -25,25 +25,39 @@ const policyNameNotSpecifiedMsg = "Policy name is not specified"
 //
 //nolint:dupl
 func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "addPolicy"))
+
 	var newPolicy model.BackupPolicy
 	err := json.NewDecoder(r.Body).Decode(&newPolicy)
 	if err != nil {
+		hLogger.Error("failed to decode request body",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	r.Body.Close()
 	name := r.PathValue("name")
 	if name == "" {
+		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err = service.AddPolicy(s.config, name, &newPolicy)
 	if err != nil {
+		hLogger.Error("failed to add policy",
+			slog.String("name", name),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(s.config)
+	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.String("name", name),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -59,8 +73,13 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Success  	200 {object} map[string]model.BackupPolicy
 // @Failure     400 {string} string
 func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "ReadPolicies"))
+
 	jsonResponse, err := json.Marshal(s.config.BackupPolicies)
 	if err != nil {
+		hLogger.Error("failed to marshal backup policies",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -68,7 +87,10 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		hLogger.Error("failed to write response",
+			slog.Any("response", jsonResponse),
+			slog.Any("error", err),
+		)
 	}
 }
 
@@ -83,18 +105,25 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified policy could not be found"
 func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "readPolicy"))
+
 	policyName := r.PathValue("name")
 	if policyName == "" {
+		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	policy, ok := s.config.BackupPolicies[policyName]
 	if !ok {
-		http.Error(w, fmt.Sprintf("Policy %s could not be found", policyName), http.StatusNotFound)
+		hLogger.Error("policy not found")
+		http.Error(w, fmt.Sprintf("policy %s could not be found", policyName), http.StatusNotFound)
 		return
 	}
 	jsonResponse, err := json.Marshal(policy)
 	if err != nil {
+		hLogger.Error("failed to marshal policy",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -102,7 +131,10 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		hLogger.Error("failed to write response",
+			slog.Any("response", jsonResponse),
+			slog.Any("error", err),
+		)
 	}
 }
 
@@ -119,25 +151,39 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 //
 //nolint:dupl
 func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "updatePolicy"))
+
 	var updatedPolicy model.BackupPolicy
 	err := json.NewDecoder(r.Body).Decode(&updatedPolicy)
 	if err != nil {
+		hLogger.Error("failed to decode request body",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	r.Body.Close()
 	name := r.PathValue("name")
 	if name == "" {
+		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err = service.UpdatePolicy(s.config, name, &updatedPolicy)
 	if err != nil {
+		hLogger.Error("failed to update policy",
+			slog.String("name", name),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(s.config)
+	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.String("name", name),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -153,18 +199,29 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Success     204
 // @Failure     400 {string} string
 func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "deletePolicy"))
+
 	policyName := r.PathValue("name")
 	if policyName == "" {
+		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err := service.DeletePolicy(s.config, policyName)
 	if err != nil {
+		hLogger.Error("failed to delete policy",
+			slog.String("name", policyName),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(s.config)
+	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.String("name", policyName),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

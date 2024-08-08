@@ -25,25 +25,38 @@ const routineNameNotSpecifiedMsg = "Routine name is not specified"
 //
 //nolint:dupl
 func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "addRoutine"))
+
 	var newRoutine model.BackupRoutine
 	err := json.NewDecoder(r.Body).Decode(&newRoutine)
 	if err != nil {
+		hLogger.Error("failed to decide request body",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	r.Body.Close()
 	name := r.PathValue("name")
 	if name == "" {
+		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err = service.AddRoutine(s.config, name, &newRoutine)
 	if err != nil {
+		hLogger.Error("failed to add routine",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(s.config)
+	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.String("name", name),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -59,8 +72,13 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success  	200 {object} map[string]model.BackupRoutine
 // @Failure     400 {string} string
 func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "ReadRoutines"))
+
 	jsonResponse, err := json.Marshal(s.config.BackupRoutines)
 	if err != nil {
+		hLogger.Error("failed to marshal backup routines",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -68,7 +86,10 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		hLogger.Error("failed to write response",
+			slog.Any("response", jsonResponse),
+			slog.Any("error", err),
+		)
 	}
 }
 
@@ -83,8 +104,11 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified cluster could not be found"
 func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "readRoutine"))
+
 	routineName := r.PathValue("name")
 	if routineName == "" {
+		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
@@ -95,6 +119,9 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse, err := json.Marshal(routine)
 	if err != nil {
+		hLogger.Error("failed to marshal backup routines",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -102,7 +129,10 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		hLogger.Error("failed to write response",
+			slog.Any("response", jsonResponse),
+			slog.Any("error", err),
+		)
 	}
 }
 
@@ -119,25 +149,38 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 //
 //nolint:dupl
 func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "updateRoutine"))
+
 	var updatedRoutine model.BackupRoutine
 	err := json.NewDecoder(r.Body).Decode(&updatedRoutine)
 	if err != nil {
+		hLogger.Error("failed to decide request body",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	r.Body.Close()
 	name := r.PathValue("name")
 	if name == "" {
+		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err = service.UpdateRoutine(s.config, name, &updatedRoutine)
 	if err != nil {
+		hLogger.Error("failed to update routine",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(s.config)
+	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.String("name", name),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -153,18 +196,28 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success     204
 // @Failure     400 {string} string
 func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "deleteRoutine"))
+
 	routineName := r.PathValue("name")
 	if routineName == "" {
+		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
 	err := service.DeleteRoutine(s.config, routineName)
 	if err != nil {
+		hLogger.Error("failed to delete routine",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(s.config)
+	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.String("name", routineName),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
