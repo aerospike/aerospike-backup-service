@@ -8,9 +8,10 @@ LICENSE = "Apache License 2.0"
 
 BINARY_NAME=aerospike-backup-service
 CMD_DIR = cmd/backup
-TARGET_DIR = target
-PACKAGES_DIR = packages
-PKG_DIR = build/package
+BUILD_DIR = build
+TARGET_DIR = $(BUILD_DIR)/target
+PACKAGE_DIR = $(BUILD_DIR)/package
+
 ARCHS=linux/amd64 linux/arm64
 PACKAGERS=deb rpm
 TARGET=$(TARGET_DIR)/$(BINARY_NAME)
@@ -68,10 +69,10 @@ packages: buildx
 		VENDOR=$(VENDOR) \
 		LICENSE=$(LICENSE) \
 		envsubst '$$OS $$ARCH $$NAME $$VERSION $$WORKSPACE $$MAINTAINER $$DESCRIPTION $$HOMEPAGE $$VENDOR $$LICENSE' \
-		< $(PACKAGES_DIR)/nfpm.tmpl.yaml > $(PACKAGES_DIR)/nfpm-$$OS-$$ARCH.yaml; \
+		< $(PACKAGE_DIR)/nfpm.tmpl.yaml > $(PACKAGE_DIR)/nfpm-$$OS-$$ARCH.yaml; \
 		for packager in $(PACKAGERS); do \
 			$(NFPM) package \
-			--config $(PACKAGES_DIR)/nfpm-$$OS-$$ARCH.yaml \
+			--config $(PACKAGE_DIR)/nfpm-$$OS-$$ARCH.yaml \
 			--packager $$(echo $$packager) \
 			--target $(TARGET_DIR); \
 			done; \
@@ -84,13 +85,21 @@ checksums:
 		\( -name '*.deb' -o -name '*.rpm' \) \
 		-exec sh -c 'sha256sum "$$1" | cut -d" " -f1 > "$$1.sha256"' _ {} \;
 
+.PHONY: docker-build
+docker-build:
+	 docker build --tag aerospike/aerospike-backup-service:test --file $(WORKSPACE)/Dockerfile
+
+.PHONY: docker-buildx
+docker-buildx:
+	cd ./build/scripts && ./docker-buildx.sh --tag $(TAG)
+
 .PHONY: test
 test:
 	$(GOTEST) -v ./...
 
 .PHONY: release
 release:
-	cd ./scripts && ./release.sh $(NEXT_VERSION)
+	cd ./build/scripts && ./release.sh $(NEXT_VERSION)
 
 .PHONY: clean
 clean:

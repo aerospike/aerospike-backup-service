@@ -4,17 +4,7 @@ group default {
   ]
 }
 
-group local {
-  targets = [
-    "aerospike-backup-service-local"
-  ]
-}
-
 variable CONTEXT {
-  default = null
-}
-
-variable GITHUB_TOKEN {
   default = null
 }
 
@@ -62,20 +52,6 @@ function tags {
   ] : ["${HUB}/${service}:${TAG}"]
 }
 
-target aerospike-backup-service-local {
-  args = {
-    project = "${PROJECT}"
-  }
-
-  secret = [
-    "id=GITHUB_TOKEN,env=GITHUB_TOKEN",
-  ]
-  context    = "${CONTEXT}"
-  dockerfile = "Dockerfile"
-  tags = tags("aerospike-backup-service")
-  output = ["type=image"]
-}
-
 target aerospike-backup-service {
   labels = {
     "org.opencontainers.image.title"         = "Aerospike Backup Service"
@@ -93,10 +69,6 @@ target aerospike-backup-service {
   args = {
     project = "${PROJECT}"
   }
-
-  secret = [
-    "id=GITHUB_TOKEN,env=GITHUB_TOKEN",
-  ]
 
   context    = "${CONTEXT}"
   dockerfile = "Dockerfile"
