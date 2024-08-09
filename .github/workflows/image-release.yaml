@@ -1,7 +1,8 @@
 name: Build Release Docker Images
 on:
-  create:
-    tags: '*'
+  push:
+    tags:
+      - 'v*'
 
   workflow_dispatch:
 jobs:
