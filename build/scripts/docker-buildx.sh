@@ -58,7 +58,6 @@ docker login aerospike.jfrog.io -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 docker buildx rm builder || true
 docker buildx create --name builder --driver docker-container --use
 
-PROJECT="$(basename "$WORKSPACE")" \
 PLATFORMS="$PLATFORMS" \
 TAG="$TAG" \
 HUB="$HUB" \

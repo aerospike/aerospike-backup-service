@@ -8,10 +8,6 @@ variable CONTEXT {
   default = null
 }
 
-variable PROJECT {
-  default = null
-}
-
 variable LATEST {
   default = false
 }
@@ -65,9 +61,6 @@ target aerospike-backup-service {
     "org.opencontainers.image.licenses"      = "Apache-2.0"
     "org.opencontainers.image.revision"      = "${GIT_COMMIT_SHA}"
     "org.opencontainers.image.created"       = "${ISO8601}"
-  }
-  args = {
-    project = "${PROJECT}"
   }
 
   context    = "${CONTEXT}"
