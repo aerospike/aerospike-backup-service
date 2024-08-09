@@ -32,11 +32,12 @@ func ValueOrZero[T any](p *T) T {
 	return zero
 }
 
-// TryAndRecover executes the given function `f` and recovers from any panics that occur.
+// TryAndRecover executes the given function `f` and recovers from any panics
+// that occur.
 func TryAndRecover(f func() string) (output string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("an error occurred: %v", r)
+			err = fmt.Errorf("recovered from: %v", r)
 			output = ""
 		}
 	}()

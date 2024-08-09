@@ -79,7 +79,8 @@ func makeTestRestoreService() *dataRestorer {
 type BackendMock struct {
 }
 
-func (m *BackendMock) FindIncrementalBackupsForNamespace(_ *model.TimeBounds, _ string) ([]model.BackupDetails, error) {
+func (m *BackendMock) FindIncrementalBackupsForNamespace(_ *model.TimeBounds, _ string,
+) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
 		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(10),

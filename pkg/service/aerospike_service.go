@@ -20,20 +20,21 @@ const namespaceInfo = "namespaces"
 // this function is called maximum once for each routine (on application startup)
 // so it's ok to create client here.
 func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error) {
-	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
+	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(),
+		cluster.ASClientHosts()...)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to Aerospike server: %s", err)
+		return nil, fmt.Errorf("failed to connect to Aerospike server: %w", err)
 	}
 	defer client.Close()
 
 	node, err := client.Cluster().GetRandomNode()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get node: %s", err)
+		return nil, fmt.Errorf("failed to get node: %w", err)
 	}
 	infoRes, err := node.RequestInfo(&as.InfoPolicy{}, namespaceInfo)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cluster info: %s", err)
+		return nil, fmt.Errorf("failed to get cluster info: %w", err)
 	}
 	namespaces := infoRes[namespaceInfo]
 	return strings.Split(namespaces, ";"), nil
@@ -49,13 +50,15 @@ func getClusterConfiguration(client *as.Client) []asconfig.DotConf {
 
 		conf, err := asconfig.GenerateConf(logr.Discard(), asInfo, true)
 		if err != nil {
-			slog.Error("Error reading configuration", "host", host, "err", err)
+			slog.Error("Error reading configuration",
+				slog.Any("host", host), slog.Any("err", err))
 			continue
 		}
 		asconf, _ := asconfig.NewMapAsConfig(logr.Discard(), conf.Conf)
 		configAsString, err := util.TryAndRecover(asconf.ToConfFile)
 		if err != nil {
-			slog.Error("Error serialising configuration", "host", host, "err", err)
+			slog.Error("Error serialising configuration",
+				slog.Any("host", host), slog.Any("err", err))
 			continue
 		}
 

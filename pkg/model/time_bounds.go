@@ -40,10 +40,12 @@ func NewTimeBoundsFromString(from, to string) (*TimeBounds, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	toTime, err := parseTimestamp(to)
 	if err != nil {
 		return nil, err
 	}
+
 	return NewTimeBounds(fromTime, toTime)
 }
 
@@ -51,13 +53,16 @@ func parseTimestamp(value string) (*time.Time, error) {
 	if len(value) == 0 {
 		return nil, nil
 	}
+
 	intValue, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
 		return nil, err
 	}
+
 	if intValue < 0 {
 		return nil, fmt.Errorf("timestamp should be positive or zero, got %d", intValue)
 	}
+
 	result := time.UnixMilli(intValue)
 	return &result, nil
 }
@@ -73,4 +78,23 @@ func (tb *TimeBounds) Contains(value time.Time) bool {
 	}
 
 	return true
+}
+
+// String implements the Stringer interface.
+func (tb *TimeBounds) String() string {
+	if tb.FromTime == nil && tb.ToTime == nil {
+		return "NA"
+	}
+
+	from := "NA"
+	if tb.FromTime != nil {
+		from = tb.FromTime.Format("2006-01-02 15:04:05")
+	}
+
+	to := "NA"
+	if tb.ToTime != nil {
+		to = tb.ToTime.Format("2006-01-02 15:04:05")
+	}
+
+	return fmt.Sprintf("%s - %s", from, to)
 }

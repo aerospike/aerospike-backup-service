@@ -30,10 +30,12 @@ func (builder S3ManagerBuilderImpl) NewS3ConfigurationManager(configStorage *mod
 	if err != nil {
 		return nil, err
 	}
+
 	err = configStorage.Validate()
 	if err != nil {
 		return nil, err
 	}
+
 	return &S3ConfigurationManager{
 		s3Context,
 	}, nil
@@ -44,12 +46,14 @@ func (s *S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	config := model.NewConfigWithDefaultValues()
 	err := s.readFile(s.path, config)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read file %s: %v", s.path, err)
+		return nil, fmt.Errorf("cannot read file %s: %w", s.path, err)
 	}
+
 	err = config.Validate()
 	if err != nil {
 		return nil, err
 	}
+
 	return config, nil
 }
 
