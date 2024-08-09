@@ -31,7 +31,8 @@ type dataRestorer struct {
 var _ RestoreManager = (*dataRestorer)(nil)
 
 // NewRestoreManager returns a new dataRestorer instance.
-func NewRestoreManager(backends BackendsHolder, config *model.Config, restoreService Restore) RestoreManager {
+func NewRestoreManager(backends BackendsHolder, config *model.Config,
+	restoreService Restore) RestoreManager {
 	return &dataRestorer{
 		configRetriever: configRetriever{
 			backends,
@@ -80,7 +81,8 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJo
 	return jobID, nil
 }
 
-func (r *dataRestorer) initClient(cluster *model.AerospikeCluster, jobID RestoreJobID) (*aerospike.Client, error) {
+func (r *dataRestorer) initClient(cluster *model.AerospikeCluster, jobID RestoreJobID,
+) (*aerospike.Client, error) {
 	client, aerr := r.asClientCreator.NewClient(
 		cluster.ASClientPolicy(),
 		cluster.ASClientHosts()...)
@@ -165,9 +167,11 @@ func (r *dataRestorer) restoreNamespace(
 		return err
 	}
 
-	incrementalBackups, err := backend.FindIncrementalBackupsForNamespace(bounds, fullBackup.Namespace)
+	incrementalBackups, err := backend.FindIncrementalBackupsForNamespace(bounds,
+		fullBackup.Namespace)
 	if err != nil {
-		return fmt.Errorf("could not find incremental backups for namespace %s: %v", fullBackup.Namespace, err)
+		return fmt.Errorf("could not find incremental backups for namespace %s: %w",
+			fullBackup.Namespace, err)
 	}
 
 	// Append incremental backups to allBackups
@@ -253,10 +257,12 @@ type ASClientCreator interface {
 
 type AerospikeClientCreator struct{}
 
+// Close closes the client.
 func (a *AerospikeClientCreator) Close(client *aerospike.Client) {
 	client.Close()
 }
 
+// NewClient returns a new [aerospike.Client].
 func (a *AerospikeClientCreator) NewClient(policy *aerospike.ClientPolicy, hosts ...*aerospike.Host,
 ) (*aerospike.Client, error) {
 	return aerospike.NewClientWithPolicyAndHost(policy, hosts...)

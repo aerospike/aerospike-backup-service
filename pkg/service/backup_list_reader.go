@@ -6,7 +6,7 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// BackupListReader allows to read list of existing backups
+// BackupListReader allows to read list of existing backups.
 type BackupListReader interface {
 	// FullBackupList returns a list of available full backups.
 	// The parameters are timestamp filters by creation time (epoch millis),

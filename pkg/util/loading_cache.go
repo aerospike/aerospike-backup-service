@@ -19,7 +19,8 @@ type LoadingCache[K comparable, T any] struct {
 }
 
 // NewLoadingCache returns a new LoadingCache instance.
-func NewLoadingCache[K comparable, T any](ctx context.Context, loadFunc LoadFunc[K, T]) *LoadingCache[K, T] {
+func NewLoadingCache[K comparable, T any](ctx context.Context,
+	loadFunc LoadFunc[K, T]) *LoadingCache[K, T] {
 	cache := &LoadingCache[K, T]{
 		ctx:      ctx,
 		data:     make(map[K]T),

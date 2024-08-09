@@ -49,6 +49,7 @@ type ConfigManagerBuilder struct {
 	s3Builder S3ManagerBuilder
 }
 
+// NewConfigManagerBuilder returns a new ConfigManagerBuilder.
 func NewConfigManagerBuilder() *ConfigManagerBuilder {
 	return &ConfigManagerBuilder{
 		http:      HTTPReader{},
@@ -57,7 +58,9 @@ func NewConfigManagerBuilder() *ConfigManagerBuilder {
 	}
 }
 
-func (b *ConfigManagerBuilder) NewConfigManager(configFile string, remote bool) (ConfigurationManager, error) {
+// NewConfigManager returns a new ConfigurationManager.
+func (b *ConfigManagerBuilder) NewConfigManager(configFile string, remote bool,
+) (ConfigurationManager, error) {
 	configStorage, err := b.makeConfigStorage(configFile, remote)
 	if err != nil {
 		return nil, err
@@ -73,7 +76,8 @@ func (b *ConfigManagerBuilder) NewConfigManager(configFile string, remote bool) 
 	}
 }
 
-func newLocalConfigurationManager(configStorage *model.Storage) (ConfigurationManager, error) {
+func newLocalConfigurationManager(configStorage *model.Storage) (
+	ConfigurationManager, error) {
 	isHTTP, err := isHTTPPath(*configStorage.Path)
 	if err != nil {
 		return nil, err
@@ -84,7 +88,8 @@ func newLocalConfigurationManager(configStorage *model.Storage) (ConfigurationMa
 	return NewFileConfigurationManager(*configStorage.Path), nil
 }
 
-func (b *ConfigManagerBuilder) makeConfigStorage(configURI string, remote bool) (*model.Storage, error) {
+func (b *ConfigManagerBuilder) makeConfigStorage(configURI string, remote bool,
+) (*model.Storage, error) {
 	if !remote {
 		return &model.Storage{
 			Type: model.Local,
@@ -121,6 +126,7 @@ func (b *ConfigManagerBuilder) loadFileContent(configFile string) ([]byte, error
 	return b.file.read(configFile)
 }
 
+// isHTTPPath determines whether the specified path is a valid http/https.
 func isHTTPPath(path string) (bool, error) {
 	uri, err := url.Parse(path)
 	if err != nil {

@@ -24,13 +24,14 @@ type JobsHolder struct {
 	restoreJobs map[RestoreJobID]*jobInfo
 }
 
+// NewJobsHolder returns a new JobsHolder.
 func NewJobsHolder() *JobsHolder {
 	return &JobsHolder{
 		restoreJobs: make(map[RestoreJobID]*jobInfo),
 	}
 }
 
-// newJob creates new restore job and return its id.
+// newJob creates a new restore job and return its id.
 func (h *JobsHolder) newJob() RestoreJobID {
 	// #nosec G404
 	id := RestoreJobID(rand.Int())
@@ -52,7 +53,8 @@ func (h *JobsHolder) addHandler(id RestoreJobID, handler RestoreHandler) {
 	}
 }
 
-// addTotalRecords should be called once for each namespace in the beginning of restore process.
+// addTotalRecords should be called once for each namespace in the beginning
+// of the restore process.
 func (h *JobsHolder) addTotalRecords(id RestoreJobID, t uint64) {
 	h.Lock()
 	defer h.Unlock()

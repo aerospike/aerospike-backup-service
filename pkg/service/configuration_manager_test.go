@@ -22,7 +22,8 @@ func (m *MockDownloader) read(configFile string) ([]byte, error) {
 type MockS3Builder struct {
 }
 
-func (m *MockS3Builder) NewS3ConfigurationManager(storage *model.Storage) (ConfigurationManager, error) {
+func (m *MockS3Builder) NewS3ConfigurationManager(storage *model.Storage,
+) (ConfigurationManager, error) {
 	if storage.Type == model.S3 {
 		return &S3ConfigurationManager{}, nil
 	}
@@ -58,7 +59,8 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			expectError:  false,
 			expectedType: reflect.TypeOf(&HTTPConfigurationManager{}),
 		},
-		// Open/download remote config file, and based on it's content open/download backup config.
+		// Open/download remote config file, and based on it's content
+		// open/download backup config.
 		{
 			name:       "local remote local configuration",
 			configFile: "/path/to/remote.yaml",

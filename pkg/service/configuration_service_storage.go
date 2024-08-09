@@ -8,8 +8,8 @@ import (
 	"github.com/aerospike/backup/pkg/util"
 )
 
-// AddStorage
-// adds a new Storage to the configuration if a storage with the same name doesn't already exist.
+// AddStorage adds a new Storage to the configuration if a storage with the same name
+// doesn't already exist.
 func AddStorage(config *model.Config, name string, newStorage *model.Storage) error {
 	_, found := config.Storage[name]
 	if found {
@@ -23,8 +23,7 @@ func AddStorage(config *model.Config, name string, newStorage *model.Storage) er
 	return nil
 }
 
-// UpdateStorage
-// updates an existing Storage in the configuration.
+// UpdateStorage updates an existing Storage in the configuration.
 func UpdateStorage(config *model.Config, name string, updatedStorage *model.Storage) error {
 	_, found := config.Storage[name]
 	if !found {
@@ -38,8 +37,7 @@ func UpdateStorage(config *model.Config, name string, updatedStorage *model.Stor
 	return nil
 }
 
-// DeleteStorage
-// deletes a Storage from the configuration if it is not used in any policy.
+// DeleteStorage deletes a Storage from the configuration if it is not used in any policy.
 func DeleteStorage(config *model.Config, name string) error {
 	_, found := config.Storage[name]
 	if !found {

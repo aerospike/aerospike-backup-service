@@ -33,13 +33,16 @@ func (b *backupJobs) put(key string, value *quartz.JobDetail) {
 func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
 	jobStore.Lock()
 	defer jobStore.Unlock()
+
 	key := quartz.NewJobKeyWithGroup(name, quartzGroupBackupFull).String()
 	job := jobStore.jobs[key]
 	if job == nil {
 		return nil
 	}
+
 	jobKey := quartz.NewJobKeyWithGroup(fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli()),
 		quartzGroupBackupFull)
+
 	return quartz.NewJobDetail(job.Job(), jobKey)
 }
 
@@ -75,13 +78,17 @@ func ScheduleBackup(ctx context.Context, config *model.Config, handlers BackupHa
 	return scheduler, nil
 }
 
+// MakeHandlers creates and returns a map of backup handlers per the configured routines.
 func MakeHandlers(config *model.Config, backends BackendsHolder) BackupHandlerHolder {
 	handlers := make(BackupHandlerHolder)
+	backupService := NewBackupGo()
 	for routineName := range config.BackupRoutines {
 		backend, _ := backends.Get(routineName)
-		handler, err := newBackupRoutineHandler(config, routineName, backend)
+		handler, err := newBackupRoutineHandler(config, routineName, backend, backupService)
 		if err != nil {
-			slog.Error("failed to create backup handler", "routine", routineName, "err", err)
+			slog.Error("failed to create backup handler",
+				slog.String("routine", routineName),
+				slog.Any("err", err))
 			continue
 		}
 		handlers[routineName] = handler
@@ -89,19 +96,23 @@ func MakeHandlers(config *model.Config, backends BackendsHolder) BackupHandlerHo
 	return handlers
 }
 
-func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config, handlers BackupHandlerHolder) error {
+// scheduleRoutines schedules the given handlers using the scheduler.
+func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config,
+	handlers BackupHandlerHolder) error {
 	for routineName, routine := range config.BackupRoutines {
 		handler := handlers[routineName]
 
-		// schedule full backup job for the routine
-		if err := scheduleFullBackup(scheduler, handler, routine.IntervalCron, routineName); err != nil {
-			return err
+		// schedule a full backup job for the routine
+		if err := scheduleFullBackup(scheduler, handler, routine.IntervalCron,
+			routineName); err != nil {
+			return fmt.Errorf("failed to schedule full backup: %w", err)
 		}
 
 		if routine.IncrIntervalCron != "" {
-			// schedule incremental backup job for the routine
-			if err := scheduleIncrementalBackup(scheduler, handler, routine.IncrIntervalCron, routineName); err != nil {
-				return err
+			// schedule an incremental backup job for the routine
+			if err := scheduleIncrementalBackup(scheduler, handler,
+				routine.IncrIntervalCron, routineName); err != nil {
+				return fmt.Errorf("failed to schedule incremental backup: %w", err)
 			}
 		}
 	}
@@ -114,14 +125,17 @@ func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupRoutineHandle
 	if err != nil {
 		return err
 	}
+
 	fullJob := newBackupJob(handler, quartzGroupBackupFull)
 	fullJobDetail := quartz.NewJobDetail(
 		fullJob,
 		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupFull),
 	)
+
 	if err = scheduler.ScheduleJob(fullJobDetail, fullCronTrigger); err != nil {
 		return err
 	}
+
 	jobStore.put(fullJobDetail.JobKey().String(), fullJobDetail)
 	if needToRunFullBackupNow(handler.state.LastFullRun, fullCronTrigger) {
 		slog.Debug("Schedule initial full backup", "name", routineName)
@@ -142,14 +156,17 @@ func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupRoutin
 	if err != nil {
 		return err
 	}
+
 	incrementalJob := newBackupJob(handler, quartzGroupBackupIncremental)
 	incrJobDetail := quartz.NewJobDetail(
 		incrementalJob,
 		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupIncremental),
 	)
+
 	if err = scheduler.ScheduleJob(incrJobDetail, incrCronTrigger); err != nil {
 		return err
 	}
+
 	jobStore.put(incrJobDetail.JobKey().String(), incrJobDetail)
 	return nil
 }
@@ -164,7 +181,7 @@ func needToRunFullBackupNow(lastFullRun time.Time, trigger *quartz.CronTrigger) 
 		return true // some error, run backup to be safe
 	}
 	if time.Unix(0, fireTimeNano).Before(time.Now()) {
-		return true // next scheduled backup is in past
+		return true // next scheduled backup is in the past
 	}
 
 	return false

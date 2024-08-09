@@ -13,7 +13,7 @@ import (
 	"github.com/aerospike/backup/pkg/util"
 )
 
-// RestoreGo implements the Restore interface.
+// RestoreGo implements the [Restore] interface.
 type RestoreGo struct {
 }
 
@@ -22,7 +22,8 @@ func NewRestoreGo() *RestoreGo {
 	return &RestoreGo{}
 }
 
-// RestoreRun calls the restore function from the asbackup library.
+// RestoreRun creates a [backup.Client] and initiates the restore operation.
+// A restore handler is returned to monitor the job status.
 func (r *RestoreGo) RestoreRun(
 	ctx context.Context,
 	client *a.Client,
@@ -50,7 +51,8 @@ func (r *RestoreGo) RestoreRun(
 }
 
 //nolint:funlen
-func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.Client) *backup.RestoreConfig {
+func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.Client,
+) *backup.RestoreConfig {
 	config := backup.NewDefaultRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
@@ -69,10 +71,12 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.C
 	}
 
 	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
-	config.WritePolicy.RecordExistsAction = recordExistsAction(restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
+	config.WritePolicy.RecordExistsAction = recordExistsAction(
+		restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
 
 	if restoreRequest.Policy.Timeout != nil && *restoreRequest.Policy.Timeout > 0 {
-		config.WritePolicy.TotalTimeout = time.Duration(*restoreRequest.Policy.Timeout) * time.Millisecond
+		config.WritePolicy.TotalTimeout = time.Duration(*restoreRequest.Policy.Timeout) *
+			time.Millisecond
 	}
 	if restoreRequest.Policy.NoRecords != nil && *restoreRequest.Policy.NoRecords {
 		config.NoRecords = true
@@ -144,12 +148,15 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	case unique != nil && *unique:
 		return a.CREATE_ONLY
 
-	// default behaviour: merge bins with existing record, or create a new record if it does not exist
+	// default behaviour: merge bins with existing record, or create a new
+	// record if it does not exist
 	default:
 		return a.UPDATE
 	}
 }
 
+// getReader instantiates and returns a reader for the restore operation
+// according to the specified storage type.
 func getReader(ctx context.Context, path *string, storage *model.Storage,
 ) (backup.StreamingReader, error) {
 	switch storage.Type {
