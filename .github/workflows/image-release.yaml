@@ -49,7 +49,7 @@ jobs:
         run: |
           jfrog rt docker-promote aerospike-backup-service \
           "$ARTIFACTORY_CONTAINER_DEV" \
-          "$ARTIFACTORY_CONTAINER_PROD" \
+          "ecosystem-container-stage-local" \
           --source-tag "$TAG" \
           --target-tag "$TAG" \
           --user "${{ secrets.ARTIFACTORY_USER }}" \
@@ -63,7 +63,7 @@ jobs:
         run: |
           jfrog rt docker-promote aerospike-backup-service \
           "$ARTIFACTORY_CONTAINER_DEV" \
-          "$ARTIFACTORY_CONTAINER_PROD" \
+          "ecosystem-container-stage-local" \
           --source-tag "${{ github.event.inputs.version }}" \
           --target-tag "latest" \
           --user "${{ secrets.ARTIFACTORY_USER }}" \
