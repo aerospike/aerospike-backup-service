@@ -5,6 +5,9 @@ import (
 	"errors"
 )
 
+// RestoreJobID represents the restore operation job id.
+type RestoreJobID int
+
 // RestoreRequest represents a restore operation request.
 // @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/service"
 )
 
 // @Summary     Trigger an asynchronous full restore operation.
@@ -149,7 +148,7 @@ func (ws *HTTPServer) restoreStatusHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	status, err := ws.restoreManager.JobStatus(service.RestoreJobID(jobID))
+	status, err := ws.restoreManager.JobStatus(model.RestoreJobID(jobID))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 	} else {

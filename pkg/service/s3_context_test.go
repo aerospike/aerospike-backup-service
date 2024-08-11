@@ -56,10 +56,12 @@ func runReadWriteState(t *testing.T, context S3Context) {
 
 	_ = context.readFile("backup_path/"+metadataFile, &metadataRead)
 	if metadataWrite.Namespace != metadataRead.Namespace {
-		t.Errorf("namespace different, expected %s, got %s", metadataWrite.Namespace, metadataRead.Namespace)
+		t.Errorf("namespace different, expected %s, got %s",
+			metadataWrite.Namespace, metadataRead.Namespace)
 	}
 	if !metadataWrite.Created.Equal(metadataRead.Created) {
-		t.Errorf("created different, expected %v, got %v", metadataWrite.Created, metadataRead.Created)
+		t.Errorf("created different, expected %v, got %v",
+			metadataWrite.Created, metadataRead.Created)
 	}
 }
 
@@ -176,8 +178,10 @@ func TestS3Context_lsFiles(t *testing.T) {
 				}
 				return minioContext.writeYaml("test-prefix/subdir/file3.txt", "content")
 			},
-			prefix:        "test-prefix",
-			expectedFiles: []string{"test-prefix/file1.txt", "test-prefix/file2.txt", "test-prefix/subdir/file3.txt"},
+			prefix: "test-prefix",
+			expectedFiles: []string{"test-prefix/file1.txt",
+				"test-prefix/file2.txt",
+				"test-prefix/subdir/file3.txt"},
 		},
 		{
 			name: "Many files",
