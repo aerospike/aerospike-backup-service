@@ -13,6 +13,19 @@ import (
 
 const policyNameNotSpecifiedMsg = "Policy name is not specified"
 
+func (s *Service) ConfigPolicyActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		s.addPolicy(w, r)
+	case http.MethodGet:
+		s.readPolicy(w, r)
+	case http.MethodPut:
+		s.updatePolicy(w, r)
+	case http.MethodDelete:
+		s.deletePolicy(w, r)
+	}
+}
+
 // addPolicy
 // @Summary     Adds a policy to the config.
 // @ID          addPolicy

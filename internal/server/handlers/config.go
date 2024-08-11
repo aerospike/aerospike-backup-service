@@ -16,7 +16,7 @@ import (
 // @Router      /v1/config [get]
 // @Produce     json
 // @Success     200 {object} model.Config
-// @Failure     400 {string} string
+// @Failure     500 {string} string
 func (s *Service) readConfig(w http.ResponseWriter) {
 	hLogger := s.logger.With(slog.String("handler", "readConfig"))
 
@@ -50,6 +50,7 @@ func (s *Service) readConfig(w http.ResponseWriter) {
 func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateConfig"))
 
+	// TODO: make DTO validation, and replace this
 	var newConfig model.Config
 
 	err := json.NewDecoder(r.Body).Decode(&newConfig)
@@ -110,67 +111,5 @@ func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {
 		s.readConfig(w)
 	case http.MethodPut:
 		s.updateConfig(w, r)
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Service) ConfigClusterActionHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		s.addAerospikeCluster(w, r)
-	case http.MethodGet:
-		s.readAerospikeCluster(w, r)
-	case http.MethodPut:
-		s.updateAerospikeCluster(w, r)
-	case http.MethodDelete:
-		s.deleteAerospikeCluster(w, r)
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		s.addStorage(w, r)
-	case http.MethodGet:
-		s.readStorage(w, r)
-	case http.MethodPut:
-		s.updateStorage(w, r)
-	case http.MethodDelete:
-		s.deleteStorage(w, r)
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Service) ConfigPolicyActionHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		s.addPolicy(w, r)
-	case http.MethodGet:
-		s.readPolicy(w, r)
-	case http.MethodPut:
-		s.updatePolicy(w, r)
-	case http.MethodDelete:
-		s.deletePolicy(w, r)
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func (s *Service) ConfigRoutineActionHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		s.addRoutine(w, r)
-	case http.MethodGet:
-		s.readRoutine(w, r)
-	case http.MethodPut:
-		s.updateRoutine(w, r)
-	case http.MethodDelete:
-		s.deleteRoutine(w, r)
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }

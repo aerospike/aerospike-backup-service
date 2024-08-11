@@ -39,12 +39,13 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 	sysRouter.Handle("/api-docs/", handlers.APIDocsActionHandler())
 
 	// whole config route
-	apiRouter.HandleFunc("/config", h.ConfigActionHandler)
+	apiRouter.HandleFunc("/config", h.ConfigActionHandler).Methods(http.MethodGet, http.MethodPut)
 	// apply config after update
-	apiRouter.HandleFunc("/config/apply", h.ApplyConfig)
+	apiRouter.HandleFunc("/config/apply", h.ApplyConfig).Methods(http.MethodPost)
 
 	// cluster config routes
-	apiRouter.HandleFunc("/config/clusters/{name}", h.ConfigClusterActionHandler)
+	apiRouter.HandleFunc("/config/clusters/{name}", h.ConfigClusterActionHandler).
+		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
 	apiRouter.HandleFunc("/config/clusters", h.ReadAerospikeClusters)
 
 	// storage config routes
@@ -52,7 +53,8 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 	apiRouter.HandleFunc("/config/storage", h.ReadAllStorage)
 
 	// policy config routes
-	apiRouter.HandleFunc("/config/policies/{name}", h.ConfigPolicyActionHandler)
+	apiRouter.HandleFunc("/config/policies/{name}", h.ConfigPolicyActionHandler).
+		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
 	apiRouter.HandleFunc("/config/policies", h.ReadPolicies)
 
 	// routine config routes

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aerospike/backup/internal/server/handlers/dto"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/gorilla/mux"
@@ -101,7 +102,8 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	response, err := json.Marshal(backups)
+	result := dto.MapBackupDetailsMapsToDTOs(backups)
+	response, err := json.Marshal(result)
 	if err != nil {
 		hLogger.Error("failed to marshal backup list",
 			slog.Any("error", err),
@@ -166,7 +168,8 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	response, err := json.Marshal(backups)
+	result := dto.MapBackupDetailsToDTOs(backups)
+	response, err := json.Marshal(result)
 	if err != nil {
 		hLogger.Error("failed to marshal backup list",
 			slog.Any("error", err),
@@ -220,6 +223,7 @@ func backupsReadFunction(
 // @Router   /v1/backups/schedule/{name} [post]
 // @Success  202
 // @Failure  400 {string} string
+// @Failure  404 {string} string
 // @Failure  500 {string} string
 func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ScheduleFullBackup"))
@@ -281,6 +285,8 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Router   /v1/backups/currentBackup/{name} [get]
 // @Success  200 {object} model.CurrentBackups "Current backup statistics"
 // @Failure  404 {string} string
+// @Failure  400 {string} string
+// @Failure  500 {string} string
 func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "GetCurrentBackupInfo"))
 
@@ -301,7 +307,8 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stat := handler.GetCurrentStat()
-	response, err := json.Marshal(stat)
+	result := dto.MapCurrentBackupsToDTO(stat)
+	response, err := json.Marshal(result)
 	if err != nil {
 		hLogger.Error("failed to marshal statistics",
 			slog.Any("error", err),

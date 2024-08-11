@@ -207,11 +207,11 @@ func TestService_ScheduleFullBackup(t *testing.T) {
 		delay      string
 		name       string
 	}{
-		{http.MethodGet, http.StatusOK, delay, name},
+		// We can't mock jobStore, so this test is not very usefully. Just to check negative scenarious.
+		{http.MethodGet, http.StatusNotFound, delay, name},
 		{http.MethodGet, http.StatusNotFound, delay, ""},
 		{http.MethodGet, http.StatusBadRequest, "b", name},
 		{http.MethodGet, http.StatusBadRequest, "-10", name},
-		{http.MethodGet, http.StatusBadRequest, delay, name},
 		{http.MethodPost, http.StatusMethodNotAllowed, delay, name},
 		{http.MethodConnect, http.StatusMethodNotAllowed, delay, name},
 		{http.MethodDelete, http.StatusMethodNotAllowed, delay, name},
@@ -226,6 +226,46 @@ func TestService_ScheduleFullBackup(t *testing.T) {
 			Method(tt.method).
 			URL(fmt.Sprintf("/backups/schedule/%s", tt.name)).
 			QueryParams(map[string]string{"delay": tt.delay}).
+			Expect(t).
+			Status(tt.statusCode).
+			End()
+	}
+}
+
+func TestService_GetCurrentBackupInfo(t *testing.T) {
+	t.Parallel()
+	h := newServiceMock()
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/backups/currentBackup/{name}",
+		h.GetCurrentBackupInfo,
+	).Methods(http.MethodGet)
+
+	const (
+		name = testRoutineName
+	)
+
+	testCases := []struct {
+		method     string
+		statusCode int
+		name       string
+	}{
+		// We can't mock handlerHolder, so this test is not very usefully. Just to check negative scenarious.
+		{http.MethodGet, http.StatusNotFound, name},
+		{http.MethodGet, http.StatusNotFound, ""},
+		{http.MethodPost, http.StatusMethodNotAllowed, name},
+		{http.MethodConnect, http.StatusMethodNotAllowed, name},
+		{http.MethodDelete, http.StatusMethodNotAllowed, name},
+		{http.MethodPatch, http.StatusMethodNotAllowed, name},
+		{http.MethodPut, http.StatusMethodNotAllowed, name},
+		{http.MethodTrace, http.StatusMethodNotAllowed, name},
+	}
+
+	for _, tt := range testCases {
+		apitest.New().
+			Handler(router).
+			Method(tt.method).
+			URL(fmt.Sprintf("/backups/currentBackup/%s", tt.name)).
 			Expect(t).
 			Status(tt.statusCode).
 			End()

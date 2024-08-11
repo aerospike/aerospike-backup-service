@@ -13,6 +13,19 @@ import (
 
 const routineNameNotSpecifiedMsg = "Routine name is not specified"
 
+func (s *Service) ConfigRoutineActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		s.addRoutine(w, r)
+	case http.MethodGet:
+		s.readRoutine(w, r)
+	case http.MethodPut:
+		s.updateRoutine(w, r)
+	case http.MethodDelete:
+		s.deleteRoutine(w, r)
+	}
+}
+
 // addRoutine
 // @Summary     Adds a backup routine to the config.
 // @ID          addRoutine
@@ -158,7 +171,7 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 	var updatedRoutine model.BackupRoutine
 	err := json.NewDecoder(r.Body).Decode(&updatedRoutine)
 	if err != nil {
-		hLogger.Error("failed to decide request body",
+		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)

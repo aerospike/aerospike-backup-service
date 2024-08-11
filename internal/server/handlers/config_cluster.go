@@ -6,12 +6,26 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/aerospike/backup/internal/server/handlers/dto"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/gorilla/mux"
 )
 
 const clusterNameNotSpecifiedMsg = "Cluster name is not specified"
+
+func (s *Service) ConfigClusterActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		s.addAerospikeCluster(w, r)
+	case http.MethodGet:
+		s.readAerospikeCluster(w, r)
+	case http.MethodPut:
+		s.updateAerospikeCluster(w, r)
+	case http.MethodDelete:
+		s.deleteAerospikeCluster(w, r)
+	}
+}
 
 // addAerospikeCluster
 // @Summary     Adds an Aerospike cluster to the config.
@@ -23,13 +37,14 @@ const clusterNameNotSpecifiedMsg = "Cluster name is not specified"
 // @Param       cluster body model.AerospikeCluster true "Aerospike cluster details"
 // @Success     201
 // @Failure     400 {string} string
+// @Failure     500 {string} string
 func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addAerospikeCluster"))
 
-	var newCluster model.AerospikeCluster
+	var newCluster dto.AerospikeClusterDTO
 	err := json.NewDecoder(r.Body).Decode(&newCluster)
 	if err != nil {
-		hLogger.Error("failed to decide request body",
+		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -45,13 +60,14 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddCluster(s.config, name, &newCluster)
+	cluster := dto.MapAerospikeClusterFromDTO(newCluster)
+	err = service.AddCluster(s.config, name, &cluster)
 	if err != nil {
 		hLogger.Error("failed to add cluster",
 			slog.String("name", name),
 			slog.Any("error", err),
 		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	err = s.configurationManager.WriteConfiguration(s.config)
@@ -72,12 +88,13 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/clusters [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.AerospikeCluster
-// @Failure     400 {string} string
+// @Failure     500 {string} string
 func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAerospikeClusters"))
 
 	clusters := s.config.AerospikeClusters
-	jsonResponse, err := json.Marshal(clusters)
+	result := dto.MapAerospikeClusterMapsToDTO(clusters)
+	jsonResponse, err := json.Marshal(result)
 	if err != nil {
 		hLogger.Error("failed to marshal clusters",
 			slog.Any("error", err),
@@ -105,8 +122,9 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 // @Param       name path string true "Aerospike cluster name"
 // @Produce     json
 // @Success  	200 {object} model.AerospikeCluster
-// @Response    400 {string} string
+// @Failure     400 {string} string
 // @Failure     404 {string} string "The specified cluster could not be found"
+// @Failure     500 {string} string "The specified cluster could not be found"
 func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readAerospikeCluster"))
 
@@ -124,7 +142,8 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cluster %s could not be found", clusterName), http.StatusNotFound)
 		return
 	}
-	jsonResponse, err := json.Marshal(cluster)
+	result := dto.MapAerospikeClusterToDTO(*cluster)
+	jsonResponse, err := json.Marshal(result)
 	if err != nil {
 		hLogger.Error("failed to marshal cluster",
 			slog.Any("error", err),

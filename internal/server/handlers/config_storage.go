@@ -13,6 +13,19 @@ import (
 
 const storageNameNotSpecifiedMsg = "Storage name is not specified"
 
+func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		s.addStorage(w, r)
+	case http.MethodGet:
+		s.readStorage(w, r)
+	case http.MethodPut:
+		s.updateStorage(w, r)
+	case http.MethodDelete:
+		s.deleteStorage(w, r)
+	}
+}
+
 // addStorage
 // @Summary     Adds a storage to the config.
 // @ID	        addStorage

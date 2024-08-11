@@ -9,6 +9,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/reugn/go-quartz/quartz"
 )
 
 const (
@@ -53,10 +54,19 @@ func testBackupDetails() model.BackupDetails {
 }
 
 func testConfig() *model.Config {
+	aCluster := make(map[string]*model.AerospikeCluster)
+	label := "testLabel"
+	aCluster[testCluster] = &model.AerospikeCluster{
+		ClusterLabel: &label,
+	}
 	return &model.Config{
-		AerospikeClusters: nil,
-		Storage:           nil,
-		BackupPolicies:    nil,
+		ServiceConfig: &model.BackupServiceConfig{
+			HTTPServer: &model.HTTPServerConfig{},
+			Logger:     &model.LoggerConfig{},
+		},
+		AerospikeClusters: aCluster,
+		Storage:           make(map[string]*model.Storage),
+		BackupPolicies:    make(map[string]*model.BackupPolicy),
 	}
 }
 
@@ -161,7 +171,7 @@ func (mock configurationManagerMock) WriteConfiguration(config *model.Config) er
 func newServiceMock() *Service {
 	return &Service{
 		config:               testConfig(),
-		scheduler:            nil,
+		scheduler:            quartz.NewStdScheduler(),
 		restoreManager:       restoreManagerMock{},
 		backupBackends:       backendsHolderMock{},
 		handlerHolder:        nil,
