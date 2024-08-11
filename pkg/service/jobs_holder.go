@@ -9,8 +9,6 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-type RestoreJobID int
-
 type jobInfo struct {
 	handlers     []RestoreHandler
 	status       model.JobStatus
@@ -21,20 +19,20 @@ type jobInfo struct {
 
 type JobsHolder struct {
 	sync.Mutex
-	restoreJobs map[RestoreJobID]*jobInfo
+	restoreJobs map[model.RestoreJobID]*jobInfo
 }
 
 // NewJobsHolder returns a new JobsHolder.
 func NewJobsHolder() *JobsHolder {
 	return &JobsHolder{
-		restoreJobs: make(map[RestoreJobID]*jobInfo),
+		restoreJobs: make(map[model.RestoreJobID]*jobInfo),
 	}
 }
 
 // newJob creates a new restore job and return its id.
-func (h *JobsHolder) newJob() RestoreJobID {
+func (h *JobsHolder) newJob() model.RestoreJobID {
 	// #nosec G404
-	id := RestoreJobID(rand.Int())
+	id := model.RestoreJobID(rand.Int())
 	h.Lock()
 	defer h.Unlock()
 	h.restoreJobs[id] = &jobInfo{
@@ -45,7 +43,7 @@ func (h *JobsHolder) newJob() RestoreJobID {
 }
 
 // addHandler should be called for each backup (full or incremental) handler.
-func (h *JobsHolder) addHandler(id RestoreJobID, handler RestoreHandler) {
+func (h *JobsHolder) addHandler(id model.RestoreJobID, handler RestoreHandler) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.restoreJobs[id]; exists {
@@ -55,7 +53,7 @@ func (h *JobsHolder) addHandler(id RestoreJobID, handler RestoreHandler) {
 
 // addTotalRecords should be called once for each namespace in the beginning
 // of the restore process.
-func (h *JobsHolder) addTotalRecords(id RestoreJobID, t uint64) {
+func (h *JobsHolder) addTotalRecords(id model.RestoreJobID, t uint64) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.restoreJobs[id]; exists {
@@ -63,7 +61,7 @@ func (h *JobsHolder) addTotalRecords(id RestoreJobID, t uint64) {
 	}
 }
 
-func (h *JobsHolder) setDone(id RestoreJobID) {
+func (h *JobsHolder) setDone(id model.RestoreJobID) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.restoreJobs[id]; exists {
@@ -71,7 +69,7 @@ func (h *JobsHolder) setDone(id RestoreJobID) {
 	}
 }
 
-func (h *JobsHolder) setFailed(id RestoreJobID, err error) {
+func (h *JobsHolder) setFailed(id model.RestoreJobID, err error) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.restoreJobs[id]; exists {
@@ -80,7 +78,7 @@ func (h *JobsHolder) setFailed(id RestoreJobID, err error) {
 	}
 }
 
-func (h *JobsHolder) getStatus(id RestoreJobID) (*model.RestoreJobStatus, error) {
+func (h *JobsHolder) getStatus(id model.RestoreJobID) (*model.RestoreJobStatus, error) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.restoreJobs[id]; exists {

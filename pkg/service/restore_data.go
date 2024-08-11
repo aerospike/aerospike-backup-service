@@ -45,7 +45,8 @@ func NewRestoreManager(backends BackendsHolder, config *model.Config,
 	}
 }
 
-func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJobID, error) {
+func (r *dataRestorer) Restore(request *model.RestoreRequestInternal,
+) (model.RestoreJobID, error) {
 	jobID := r.restoreJobs.newJob()
 	totalRecords, err := validateStorageContainsBackup(request.SourceStorage)
 	if err != nil {
@@ -81,7 +82,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJo
 	return jobID, nil
 }
 
-func (r *dataRestorer) initClient(cluster *model.AerospikeCluster, jobID RestoreJobID,
+func (r *dataRestorer) initClient(cluster *model.AerospikeCluster, jobID model.RestoreJobID,
 ) (*aerospike.Client, error) {
 	client, aerr := r.asClientCreator.NewClient(
 		cluster.ASClientPolicy(),
@@ -95,7 +96,8 @@ func (r *dataRestorer) initClient(cluster *model.AerospikeCluster, jobID Restore
 	return client, nil
 }
 
-func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest) (RestoreJobID, error) {
+func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
+) (model.RestoreJobID, error) {
 	reader, found := r.backends.GetReader(request.Routine)
 	if !found {
 		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.Routine)
@@ -116,7 +118,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	ctx context.Context,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
-	jobID RestoreJobID,
+	jobID model.RestoreJobID,
 	fullBackups []model.BackupDetails,
 ) {
 	client, err := r.initClient(request.DestinationCuster, jobID)
@@ -156,7 +158,7 @@ func (r *dataRestorer) restoreNamespace(
 	client *aerospike.Client,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
-	jobID RestoreJobID,
+	jobID model.RestoreJobID,
 	fullBackup model.BackupDetails,
 ) error {
 	allBackups := []model.BackupDetails{fullBackup}
@@ -230,7 +232,7 @@ func (r *dataRestorer) toRestoreRequest(request *model.RestoreTimestampRequest) 
 }
 
 // JobStatus returns the status of the job with the given id.
-func (r *dataRestorer) JobStatus(jobID RestoreJobID) (*model.RestoreJobStatus, error) {
+func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
 	return r.restoreJobs.getStatus(jobID)
 }
 
