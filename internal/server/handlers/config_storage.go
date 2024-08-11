@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/gorilla/mux"
 )
 
 const storageNameNotSpecifiedMsg = "Storage name is not specified"
@@ -32,7 +33,7 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := r.PathValue("name")
+	name := mux.Vars(r)["name"]
 	if name == "" {
 		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -105,7 +106,7 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readStorage"))
 
-	storageName := r.PathValue("name")
+	storageName := mux.Vars(r)["name"]
 	if storageName == "" {
 		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -154,7 +155,7 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	storageName := r.PathValue("name")
+	storageName := mux.Vars(r)["name"]
 	if storageName == "" {
 		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -194,7 +195,7 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 func (s *Service) deleteStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deleteStorage"))
 
-	storageName := r.PathValue("name")
+	storageName := mux.Vars(r)["name"]
 	if storageName == "" {
 		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)

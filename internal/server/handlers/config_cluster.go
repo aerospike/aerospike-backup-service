@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/gorilla/mux"
 )
 
 const clusterNameNotSpecifiedMsg = "Cluster name is not specified"
@@ -36,7 +37,7 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body.Close()
 
-	name := r.PathValue("name")
+	name := mux.Vars(r)["name"]
 	if name == "" {
 		hLogger.Error(clusterNameNotSpecifiedMsg,
 			slog.String("name", name),
@@ -109,7 +110,7 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readAerospikeCluster"))
 
-	clusterName := r.PathValue("name")
+	clusterName := mux.Vars(r)["name"]
 	if clusterName == "" {
 		hLogger.Error("cluster name required")
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -163,7 +164,7 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	r.Body.Close()
-	clusterName := r.PathValue("name")
+	clusterName := mux.Vars(r)["name"]
 	if clusterName == "" {
 		hLogger.Error("cluster name required")
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -202,7 +203,7 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 func (s *Service) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deleteAerospikeCluster"))
 
-	clusterName := r.PathValue("name")
+	clusterName := mux.Vars(r)["name"]
 	if clusterName == "" {
 		hLogger.Error("cluster name required")
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)

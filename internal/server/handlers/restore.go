@@ -11,6 +11,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/gorilla/mux"
 )
 
 // RestoreFullHandler
@@ -198,7 +199,8 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreStatusHandler"))
 
-	jobIDParam := r.PathValue("jobId")
+	jobIDParam := mux.Vars(r)["jobId"]
+
 	if jobIDParam == "" {
 		hLogger.Error("job id required")
 		http.Error(w, "jobId required", http.StatusBadRequest)
@@ -263,13 +265,13 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := r.PathValue("name")
+	name := mux.Vars(r)["name"]
 	if name == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, "Routine name required", http.StatusBadRequest)
 		return
 	}
-	timestampStr := r.PathValue("timestamp")
+	timestampStr := mux.Vars(r)["timestamp"]
 	if timestampStr == "" {
 		hLogger.Error("timestamp required")
 		http.Error(w, "Timestamp required", http.StatusBadRequest)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/gorilla/mux"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -22,6 +23,7 @@ import (
 // @Router   /v1/backups/full [get]
 // @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
 // @Failure  400 {string} string
+// @Failure  500 {string} string
 func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 	s.readAllBackups(w, r, true)
 }
@@ -36,8 +38,8 @@ func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/full/{name} [get]
 // @Success  200 {object} []model.BackupDetails "Full backups for routine"
-// @Response 400 {string} string
-// @Failure  404 {string} string
+// @Failure  400 {string} string
+// @Failure  500 {string} string
 func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
 	s.readBackupsForRoutine(w, r, true)
 }
@@ -52,6 +54,7 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 // @Router   /v1/backups/incremental [get]
 // @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
 // @Failure  400 {string} string
+// @Failure  500 {string} string
 func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Request) {
 	s.readAllBackups(w, r, false)
 }
@@ -66,8 +69,8 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/incremental/{name} [get]
 // @Success  200 {object} []model.BackupDetails "Incremental backups for routine"
-// @Response 400 {string} string
-// @Failure  404 {string} string
+// @Failure  400 {string} string
+// @Failure  500 {string} string
 func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
 	s.readBackupsForRoutine(w, r, false)
 }
@@ -136,7 +139,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	routine := r.PathValue("name")
+	routine := mux.Vars(r)["name"]
 	if routine == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, "routine name required", http.StatusBadRequest)
@@ -216,12 +219,12 @@ func backupsReadFunction(
 // @Param    delay query int false "Delay interval in milliseconds"
 // @Router   /v1/backups/schedule/{name} [post]
 // @Success  202
-// @Response 400 {string} string
-// @Failure  404 {string} string
+// @Failure  400 {string} string
+// @Failure  500 {string} string
 func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ScheduleFullBackup"))
 
-	routineName := r.PathValue("name")
+	routineName := mux.Vars(r)["name"]
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, "routine name required", http.StatusBadRequest)
@@ -281,7 +284,7 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "GetCurrentBackupInfo"))
 
-	routineName := r.PathValue("name")
+	routineName := mux.Vars(r)["name"]
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, "routine name required", http.StatusBadRequest)

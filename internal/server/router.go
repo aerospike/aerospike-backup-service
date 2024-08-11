@@ -1,6 +1,8 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/aerospike/backup/internal/server/handlers"
 	"github.com/gorilla/mux"
 )
@@ -74,16 +76,16 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 	apiRouter.HandleFunc("/retrieve/configuration/{name}/{timestamp}", h.RetrieveConfig)
 
 	// Read available backups
-	apiRouter.HandleFunc("/backups/full/{name}", h.GetFullBackupsForRoutine)
-	apiRouter.HandleFunc("/backups/full", h.GetAllFullBackups)
-	apiRouter.HandleFunc("/backups/incremental/{name}", h.GetIncrementalBackupsForRoutine)
-	apiRouter.HandleFunc("/backups/incremental", h.GetAllIncrementalBackups)
+	apiRouter.HandleFunc("/backups/full/{name}", h.GetFullBackupsForRoutine).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/backups/full", h.GetAllFullBackups).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/backups/incremental/{name}", h.GetIncrementalBackupsForRoutine).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/backups/incremental", h.GetAllIncrementalBackups).Methods(http.MethodGet)
 
 	// Schedules a full backup operation
-	apiRouter.HandleFunc("/backups/schedule/{name}", h.ScheduleFullBackup)
+	apiRouter.HandleFunc("/backups/schedule/{name}", h.ScheduleFullBackup).Methods(http.MethodPost)
 
 	// Get information on currently running backups
-	apiRouter.HandleFunc("/backups/currentBackup/{name}", h.GetCurrentBackupInfo)
+	apiRouter.HandleFunc("/backups/currentBackup/{name}", h.GetCurrentBackupInfo).Methods(http.MethodGet)
 
 	return r
 }

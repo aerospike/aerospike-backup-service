@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/gorilla/mux"
 )
 
 const policyNameNotSpecifiedMsg = "Policy name is not specified"
@@ -37,7 +38,7 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := r.PathValue("name")
+	name := mux.Vars(r)["name"]
 	if name == "" {
 		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -107,7 +108,7 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readPolicy"))
 
-	policyName := r.PathValue("name")
+	policyName := mux.Vars(r)["name"]
 	if policyName == "" {
 		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -163,7 +164,7 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := r.PathValue("name")
+	name := mux.Vars(r)["name"]
 	if name == "" {
 		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -203,7 +204,7 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deletePolicy"))
 
-	policyName := r.PathValue("name")
+	policyName := mux.Vars(r)["name"]
 	if policyName == "" {
 		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)

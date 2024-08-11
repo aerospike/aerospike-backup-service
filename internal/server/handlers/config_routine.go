@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/gorilla/mux"
 )
 
 const routineNameNotSpecifiedMsg = "Routine name is not specified"
@@ -37,7 +38,7 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := r.PathValue("name")
+	name := mux.Vars(r)["name"]
 	if name == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -109,7 +110,7 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readRoutine"))
 
-	routineName := r.PathValue("name")
+	routineName := mux.Vars(r)["name"]
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -164,7 +165,7 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := r.PathValue("name")
+	name := mux.Vars(r)["name"]
 	if name == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -204,7 +205,7 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deleteRoutine"))
 
-	routineName := r.PathValue("name")
+	routineName := mux.Vars(r)["name"]
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
