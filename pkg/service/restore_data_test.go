@@ -2,12 +2,12 @@ package service
 
 import (
 	"errors"
-	"github.com/aerospike/backup-go"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 	"github.com/aws/smithy-go/ptr"

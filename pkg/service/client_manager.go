@@ -98,7 +98,10 @@ func (cm *BackupClientManager) Close(client *backup.Client) {
 
 // ClientManager defines the interface for BackupClientManager
 type ClientManager interface {
+	// GetClient return backup client by aerospike cluster name (new or from cache)
 	GetClient(string) (*backup.Client, error)
+	// CreateClient creates new backup client
 	CreateClient(*model.AerospikeCluster) (*backup.Client, error)
+	// Close closes the client if it is not in use anymore
 	Close(*backup.Client)
 }
