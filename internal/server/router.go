@@ -36,7 +36,7 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 	sysRouter.Handle("/metrics", handlers.MetricsActionHandler()).Methods(http.MethodGet)
 
 	// OpenAPI specification endpoint
-	sysRouter.Handle("/api-docs/", handlers.APIDocsActionHandler()).Methods(http.MethodGet)
+	sysRouter.PathPrefix("/api-docs/").Handler(handlers.APIDocsActionHandler()).Methods(http.MethodGet)
 
 	// whole config route
 	apiRouter.HandleFunc("/config", h.ConfigActionHandler).Methods(http.MethodGet, http.MethodPut)
