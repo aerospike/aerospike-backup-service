@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create-release.outputs.upload_url }}
-#    if: ${{ github.ref == 'refs/heads/release-test' }}
     steps:
       - name: Check if release exists
         id: check-release
@@ -51,7 +50,6 @@ jobs:
     needs:
       - create-release
     runs-on: ubuntu-latest
-#    if: ${{ github.ref == 'refs/heads/release-test' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -60,7 +58,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.22.6"
+          go-version: "1.22.x"
       - name: Install Dependencies
         run: |
           go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
