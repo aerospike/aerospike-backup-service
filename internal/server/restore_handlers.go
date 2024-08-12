@@ -115,7 +115,9 @@ func (ws *HTTPServer) restoreByTimeHandler(w http.ResponseWriter, r *http.Reques
 		}
 		jobID, err := ws.restoreManager.RestoreByTime(&request)
 		if err != nil {
-			slog.Error("Restore by timestamp failed", "routine", request.Routine, "err", err)
+			slog.Error("Restore by timestamp failed",
+				slog.String("routine", request.Routine),
+				slog.Any("err", err))
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}

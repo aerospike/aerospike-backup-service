@@ -8,6 +8,7 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
 	"github.com/aerospike/aerospike-management-lib/info"
+	"github.com/aerospike/backup-go"
 	_ "github.com/aerospike/backup/modules/schema" // it's required to load configuration schemas in init method
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
@@ -40,7 +41,7 @@ func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error
 	return strings.Split(namespaces, ";"), nil
 }
 
-func getClusterConfiguration(client *as.Client) []asconfig.DotConf {
+func getClusterConfiguration(client backup.AerospikeClient) []asconfig.DotConf {
 	activeHosts := getActiveHosts(client)
 
 	var outputs = make([]asconfig.DotConf, 0, len(activeHosts))
@@ -68,7 +69,7 @@ func getClusterConfiguration(client *as.Client) []asconfig.DotConf {
 	return outputs
 }
 
-func getActiveHosts(client *as.Client) []*as.Host {
+func getActiveHosts(client backup.AerospikeClient) []*as.Host {
 	var activeHosts []*as.Host
 	for _, node := range client.GetNodes() {
 		if node.IsActive() {

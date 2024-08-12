@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
@@ -28,18 +27,13 @@ func (b *BackupGo) BackupRun(
 	ctx context.Context,
 	backupRoutine *model.BackupRoutine,
 	backupPolicy *model.BackupPolicy,
-	client *a.Client,
+	client *backup.Client,
 	storage *model.Storage,
 	secretAgent *model.SecretAgent,
 	timebounds model.TimeBounds,
 	namespace string,
 	path *string,
 ) (BackupHandler, error) {
-	backupClient, err := backup.NewClient(client, "1", slog.Default())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create backup client, %w", err)
-	}
-
 	config := makeBackupConfig(namespace, backupRoutine, backupPolicy,
 		timebounds, secretAgent)
 
@@ -48,7 +42,7 @@ func (b *BackupGo) BackupRun(
 		return nil, fmt.Errorf("failed to create backup writer, %w", err)
 	}
 
-	handler, err := backupClient.Backup(ctx, config, writerFactory)
+	handler, err := client.Backup(ctx, config, writerFactory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start backup, %w", err)
 	}
