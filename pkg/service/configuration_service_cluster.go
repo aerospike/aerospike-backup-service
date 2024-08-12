@@ -8,8 +8,8 @@ import (
 	"github.com/aerospike/backup/pkg/util"
 )
 
-// AddCluster
-// adds a new AerospikeCluster to the configuration if a cluster with the same name doesn't already exist.
+// AddCluster adds a new AerospikeCluster to the configuration if a cluster with the same name
+// doesn't already exist.
 func AddCluster(config *model.Config, name string, newCluster *model.AerospikeCluster) error {
 	_, found := config.AerospikeClusters[name]
 	if found {
@@ -23,8 +23,7 @@ func AddCluster(config *model.Config, name string, newCluster *model.AerospikeCl
 	return nil
 }
 
-// UpdateCluster
-// updates an existing AerospikeCluster in the configuration.
+// UpdateCluster updates an existing AerospikeCluster in the configuration.
 func UpdateCluster(config *model.Config, name string, updatedCluster *model.AerospikeCluster) error {
 	_, found := config.AerospikeClusters[name]
 	if !found {
@@ -38,8 +37,8 @@ func UpdateCluster(config *model.Config, name string, updatedCluster *model.Aero
 	return nil
 }
 
-// DeleteCluster
-// deletes an AerospikeCluster from the configuration if it is not used in any backup routine.
+// DeleteCluster deletes an AerospikeCluster from the configuration if it is not used in
+// any backup routine.
 func DeleteCluster(config *model.Config, name string) error {
 	_, found := config.AerospikeClusters[name]
 	if !found {

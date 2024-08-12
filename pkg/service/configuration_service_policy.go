@@ -6,8 +6,8 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// AddPolicy
-// adds a new BackupPolicy to the configuration if a policy with the same name doesn't already exist.
+// AddPolicy adds a new BackupPolicy to the configuration if a policy with the same name
+// doesn't already exist.
 func AddPolicy(config *model.Config, name string, newPolicy *model.BackupPolicy) error {
 	_, found := config.BackupPolicies[name]
 	if found {
@@ -21,8 +21,7 @@ func AddPolicy(config *model.Config, name string, newPolicy *model.BackupPolicy)
 	return nil
 }
 
-// UpdatePolicy
-// updates an existing BackupPolicy in the configuration.
+// UpdatePolicy updates an existing BackupPolicy in the configuration.
 func UpdatePolicy(config *model.Config, name string, updatedPolicy *model.BackupPolicy) error {
 	_, found := config.BackupPolicies[name]
 	if !found {
@@ -35,8 +34,7 @@ func UpdatePolicy(config *model.Config, name string, updatedPolicy *model.Backup
 	return nil
 }
 
-// DeletePolicy
-// deletes a BackupPolicy from the configuration.
+// DeletePolicy deletes a BackupPolicy from the configuration.
 func DeletePolicy(config *model.Config, name string) error {
 	_, found := config.BackupPolicies[name]
 	if !found {

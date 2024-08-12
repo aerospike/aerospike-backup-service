@@ -21,6 +21,9 @@ var _ quartz.Job = (*backupJob)(nil)
 
 // Execute is called by a Scheduler when the Trigger associated with this job fires.
 func (j *backupJob) Execute(ctx context.Context) error {
+	logger := slog.Default().With(slog.String("routine", j.handler.routineName),
+		slog.String("type", j.jobType))
+
 	if j.isRunning.CompareAndSwap(false, true) {
 		defer j.isRunning.Store(false)
 		switch j.jobType {
@@ -29,17 +32,13 @@ func (j *backupJob) Execute(ctx context.Context) error {
 		case quartzGroupBackupIncremental:
 			j.handler.runIncrementalBackup(ctx, time.Now())
 		default:
-			slog.Error("Unsupported backup type",
-				"type", j.jobType,
-				"name", j.handler.routineName)
+			logger.Error("Unsupported backup type")
 		}
 	} else {
-		slog.Debug(
-			"Backup is currently in progress, skipping it",
-			"type", j.jobType,
-			"name", j.handler.routineName)
+		logger.Debug("Backup is currently in progress, skipping it")
 		incrementSkippedCounters(j.jobType)
 	}
+
 	return nil
 }
 

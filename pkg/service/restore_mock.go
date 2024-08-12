@@ -35,8 +35,8 @@ func (m *MockRestoreHandler) Wait() error {
 }
 
 // RestoreRun mocks the interface method.
-func (r *RestoreMock) RestoreRun(_ context.Context, _ *aerospike.Client, _ *model.RestoreRequestInternal,
-) (RestoreHandler, error) {
+func (r *RestoreMock) RestoreRun(_ context.Context, _ *aerospike.Client,
+	_ *model.RestoreRequestInternal) (RestoreHandler, error) {
 	slog.Info("RestoreRun mock call")
 	time.Sleep(100 * time.Millisecond)
 	return &MockRestoreHandler{}, nil

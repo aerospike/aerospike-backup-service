@@ -17,7 +17,9 @@ func currentBackupStatus(handlers map[string]BackupHandler) *model.RunningJob {
 		total += handler.GetStats().TotalRecords
 	}
 
-	// that's backups of multiple namespaces in same routine. They started at the same time.
+	// These are the backups of multiple namespaces in the same routine.
+	// Therefore, picking any of those is valid, since they started at
+	// the same time.
 	startTime := getAnyHandler(handlers).GetStats().StartTime
 
 	return NewRunningJob(startTime, done, total)
@@ -31,10 +33,11 @@ func getAnyHandler(m map[string]BackupHandler) BackupHandler {
 	return nil
 }
 
-// RestoreJobStatus returns status of restore job.
-// For running job: status model.JobStatusRunning, current statistics and estimation.
-// For done job: status model.JobStatusDone, statistics.
-// For failed job: status model.JobStatusFailed, error.
+// RestoreJobStatus returns the status of a restore job.
+// The information included in the response depends on the job status:
+//   - model.JobStatusRunning -> current statistics and estimation.
+//   - model.JobStatusDone -> statistics.
+//   - status model.JobStatusFailed -> error.
 func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 	status := &model.RestoreJobStatus{
 		Status: job.status,
@@ -54,7 +57,8 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 	}
 
 	if job.status == model.JobStatusRunning {
-		status.CurrentRestore = NewRunningJob(job.startTime, status.ReadRecords, job.totalRecords)
+		status.CurrentRestore = NewRunningJob(job.startTime, status.ReadRecords,
+			job.totalRecords)
 	}
 
 	if job.err != nil {
