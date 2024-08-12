@@ -105,7 +105,6 @@ func TestService_ConfigRoutineActionHandlerGet(t *testing.T) {
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigRoutineActionHandlerPut(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()

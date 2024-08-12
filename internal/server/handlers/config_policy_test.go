@@ -16,7 +16,9 @@ const testPolicy = "testPolicy"
 
 func testConfigBackupPolicy() model.BackupPolicy {
 	testIn32 := int32(10)
+	keepFiles := model.KeepAll
 	return model.BackupPolicy{
+		RemoveFiles:   &keepFiles,
 		Parallel:      &testIn32,
 		SocketTimeout: &testIn32,
 		TotalTimeout:  &testIn32,
@@ -25,7 +27,6 @@ func testConfigBackupPolicy() model.BackupPolicy {
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigPolicyActionHandlerPost(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -106,7 +107,6 @@ func TestService_ConfigPolicyActionHandlerGet(t *testing.T) {
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigPolicyActionHandlerPut(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()

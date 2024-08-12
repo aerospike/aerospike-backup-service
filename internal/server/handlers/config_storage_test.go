@@ -106,7 +106,6 @@ func TestService_ConfigStorageActionHandlerGet(t *testing.T) {
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigStorageActionHandlerPut(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()

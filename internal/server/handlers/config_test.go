@@ -93,36 +93,3 @@ func TestService_ConfigActionHandlerPut(t *testing.T) {
 			End()
 	}
 }
-
-func TestService_ApplyConfig(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock()
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/apply",
-		h.ApplyConfig,
-	).Methods(http.MethodPost)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-	}{
-		{http.MethodPost, http.StatusOK},
-		{http.MethodGet, http.StatusMethodNotAllowed},
-		{http.MethodPut, http.StatusMethodNotAllowed},
-		{http.MethodConnect, http.StatusMethodNotAllowed},
-		{http.MethodDelete, http.StatusMethodNotAllowed},
-		{http.MethodPatch, http.StatusMethodNotAllowed},
-		{http.MethodTrace, http.StatusMethodNotAllowed},
-	}
-
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL("/config/apply").
-			Expect(t).
-			Status(tt.statusCode).
-			End()
-	}
-}

@@ -38,7 +38,6 @@ func testConfigCluster() model.AerospikeCluster {
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigClusterActionHandlerPost(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -119,7 +118,6 @@ func TestService_ConfigClusterActionHandlerGet(t *testing.T) {
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigClusterActionHandlerPut(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
