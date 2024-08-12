@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create-release.outputs.upload_url }}
-    if: ${{ github.ref == 'refs/heads/release-test' }}
+#    if: ${{ github.ref == 'refs/heads/release-test' }}
     steps:
       - name: Check if release exists
         id: check-release
@@ -51,10 +51,12 @@ jobs:
     needs:
       - create-release
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/release-test' }}
+#    if: ${{ github.ref == 'refs/heads/release-test' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: "release-test"
       - name: Set up Go
         uses: actions/setup-go@v4
         with:

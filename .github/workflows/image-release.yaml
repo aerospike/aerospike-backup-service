@@ -8,10 +8,12 @@ on:
 jobs:
   build-images:
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/release-test' }}
+#    if: ${{ github.ref == 'refs/heads/release-test' }}
     steps:
       - name: Checkout Automation Code
         uses: actions/checkout@v4
+        with:
+          ref: "release-test"
       - name: Get Metadata
         run: |
           echo "VERSION=$(cat VERSION | cut -c 2-)" >> $GITHUB_ENV
