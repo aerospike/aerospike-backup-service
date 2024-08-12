@@ -11,9 +11,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.58.3
 	github.com/aws/smithy-go v1.20.3
 	github.com/go-logr/logr v1.4.2
+	github.com/gorilla/mux v1.8.1
 	github.com/prometheus/client_golang v1.19.1
 	github.com/reugn/go-quartz v0.12.0
 	github.com/spf13/cobra v1.8.1
+	github.com/steinfletcher/apitest v1.5.16
 	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.3
