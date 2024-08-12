@@ -35,6 +35,8 @@ func TestService_ConfigPolicyActionHandlerPost(t *testing.T) {
 		h.ConfigPolicyActionHandler,
 	).Methods(http.MethodPost)
 
+	const newTestPolicy = "newTestPolicy"
+
 	body := testConfigBackupPolicy()
 	bodyBytes, err := json.Marshal(body)
 	require.NoError(t, err)
@@ -45,15 +47,15 @@ func TestService_ConfigPolicyActionHandlerPost(t *testing.T) {
 		name       string
 		body       string
 	}{
-		{http.MethodPost, http.StatusCreated, testPolicy, string(bodyBytes)},
+		{http.MethodPost, http.StatusCreated, newTestPolicy, string(bodyBytes)},
 		{http.MethodPost, http.StatusBadRequest, testPolicy, ""},
 		{http.MethodPost, http.StatusNotFound, "", string(bodyBytes)},
-		{http.MethodGet, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
-		{http.MethodDelete, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
-		{http.MethodPut, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
+		{http.MethodGet, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
+		{http.MethodConnect, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
+		{http.MethodDelete, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
+		{http.MethodPatch, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
+		{http.MethodPut, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
+		{http.MethodTrace, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
 	}
 
 	for _, tt := range testCases {

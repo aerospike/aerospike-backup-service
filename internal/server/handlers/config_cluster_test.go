@@ -48,6 +48,8 @@ func TestService_ConfigClusterActionHandlerPost(t *testing.T) {
 		h.ConfigClusterActionHandler,
 	).Methods(http.MethodPost)
 
+	const newCluster = "newCluster"
+
 	body := testConfigCluster()
 	bodyBytes, err := json.Marshal(&body)
 	require.NoError(t, err)
@@ -58,15 +60,15 @@ func TestService_ConfigClusterActionHandlerPost(t *testing.T) {
 		name       string
 		body       string
 	}{
-		{http.MethodPost, http.StatusCreated, testCluster, string(bodyBytes)},
+		{http.MethodPost, http.StatusCreated, newCluster, string(bodyBytes)},
 		{http.MethodPost, http.StatusBadRequest, testCluster, ""},
 		{http.MethodPost, http.StatusNotFound, "", string(bodyBytes)},
-		{http.MethodGet, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
-		{http.MethodDelete, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
-		{http.MethodPut, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{http.MethodGet, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
+		{http.MethodConnect, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
+		{http.MethodDelete, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
+		{http.MethodPatch, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
+		{http.MethodPut, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
+		{http.MethodTrace, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
 	}
 
 	for _, tt := range testCases {
