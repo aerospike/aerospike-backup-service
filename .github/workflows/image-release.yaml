@@ -8,13 +8,13 @@ on:
 jobs:
   build-images:
     runs-on: ubuntu-latest
-#    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/release-test' }}
     steps:
       - name: Checkout Automation Code
         uses: actions/checkout@v4
       - name: Get Metadata
         run: |
-          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+          echo "VERSION=$(cat VERSION | cut -c 2-)" >> $GITHUB_ENV
           echo "ISO8601=$(LC_TIME=en_US.UTF-8 date "+%Y-%m-%dT%H:%M:%S%z")" >> $GITHUB_ENV
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -47,12 +47,13 @@ jobs:
         env:
           ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
           ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
+          VERSION: ${{env.VERSION}}
         run: |
           jfrog rt docker-promote aerospike-backup-service \
           "$ARTIFACTORY_CONTAINER_DEV" \
           "ecosystem-container-stage-local" \
-          --source-tag "$TAG" \
-          --target-tag "$TAG" \
+          --source-tag "$VERSION" \
+          --target-tag "$VERSION" \
           --user "${{ secrets.ARTIFACTORY_USER }}" \
           --password "${{ secrets.ARTIFACTORY_TOKEN }}" \
           --url "${{ secrets.ARTIFACTORY_PROMOTE_URL }}" \
@@ -61,11 +62,12 @@ jobs:
         env:
           ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
           ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
+          VERSION: ${{env.VERSION}}
         run: |
           jfrog rt docker-promote aerospike-backup-service \
           "$ARTIFACTORY_CONTAINER_DEV" \
           "ecosystem-container-stage-local" \
-          --source-tag "${{ github.event.inputs.version }}" \
+          --source-tag "$VERSION" \
           --target-tag "latest" \
           --user "${{ secrets.ARTIFACTORY_USER }}" \
           --password "${{ secrets.ARTIFACTORY_TOKEN }}" \

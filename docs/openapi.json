@@ -8,7 +8,7 @@
       "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
     },
     "title" : "Backup Service REST API Specification",
-    "version" : "1.0.0"
+    "version" : "v2.2.2"
   },
   "externalDocs" : {
     "description" : "OpenAPI",
