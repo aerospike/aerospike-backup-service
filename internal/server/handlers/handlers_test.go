@@ -83,22 +83,22 @@ func testConfig() *model.Config {
 
 type restoreManagerMock struct{}
 
-func (mock restoreManagerMock) Restore(request *model.RestoreRequestInternal) (service.RestoreJobID, error) {
+func (mock restoreManagerMock) Restore(request *model.RestoreRequestInternal) (model.RestoreJobID, error) {
 	if *request.Dir != testDir {
 		return 0, errTest
 	}
-	return service.RestoreJobID(testJobID), nil
+	return model.RestoreJobID(testJobID), nil
 }
 
-func (mock restoreManagerMock) RestoreByTime(request *model.RestoreTimestampRequest) (service.RestoreJobID, error) {
+func (mock restoreManagerMock) RestoreByTime(request *model.RestoreTimestampRequest) (model.RestoreJobID, error) {
 	if request.Time == 0 {
 		return 0, errTest
 	}
-	return service.RestoreJobID(testJobID), nil
+	return model.RestoreJobID(testJobID), nil
 }
 
-func (mock restoreManagerMock) JobStatus(jobID service.RestoreJobID) (*model.RestoreJobStatus, error) {
-	if jobID != service.RestoreJobID(testJobID) {
+func (mock restoreManagerMock) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
+	if jobID != model.RestoreJobID(testJobID) {
 		return nil, errTest
 	}
 	return testRestoreJobStatus(), nil

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/service"
 	"github.com/gorilla/mux"
 )
 
@@ -193,7 +192,7 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	status, err := s.restoreManager.JobStatus(service.RestoreJobID(jobID))
+	status, err := s.restoreManager.JobStatus(model.RestoreJobID(jobID))
 	if err != nil {
 		hLogger.Error("failed to get job status",
 			slog.Int("jobID", jobID),
