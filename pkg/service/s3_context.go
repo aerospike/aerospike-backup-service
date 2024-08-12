@@ -41,7 +41,7 @@ func NewS3Context(storage *model.Storage) (*S3Context, error) {
 	ctx := context.TODO()
 	cfg, err := createConfig(ctx, storage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load S3 SDK configuration: %v", err)
+		return nil, fmt.Errorf("failed to load S3 SDK configuration: %w", err)
 	}
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
@@ -53,7 +53,7 @@ func NewS3Context(storage *model.Storage) (*S3Context, error) {
 
 	bucket, path, err := util.ParseS3Path(*storage.Path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse S3 storage path: %v", err)
+		return nil, fmt.Errorf("failed to parse S3 storage path: %w", err)
 	}
 
 	// Check if the bucket exists
@@ -61,7 +61,7 @@ func NewS3Context(storage *model.Storage) (*S3Context, error) {
 		Bucket: aws.String(bucket),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error checking S3 bucket %s existence: %v", bucket, err)
+		return nil, fmt.Errorf("error checking S3 bucket %s existence: %w", bucket, err)
 	}
 
 	s := &S3Context{
@@ -115,7 +115,8 @@ func (s *S3Context) read(filePath string) ([]byte, error) {
 	if err != nil {
 		var opErr *smithy.OperationError
 		if errors.As(err, &opErr) &&
-			(strings.Contains(filePath, model.StateFileName) || strings.Contains(filePath, metadataFile)) &&
+			(strings.Contains(filePath, model.StateFileName) ||
+				strings.Contains(filePath, metadataFile)) &&
 			strings.Contains(opErr.Unwrap().Error(), "StatusCode: 404") {
 			return nil, err
 		}
@@ -156,17 +157,18 @@ func (s *S3Context) writeYaml(filePath string, v any) error {
 }
 
 func (s *S3Context) write(filePath string, data []byte) error {
+	logger := slog.Default().With(slog.String("path", filePath),
+		slog.String("bucket", s.bucket))
 	_, err := s.client.PutObject(s.ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(filePath),
 		Body:   bytes.NewReader(data),
 	})
 	if err != nil {
-		slog.Warn("Couldn't upload file", "path", filePath,
-			"bucket", s.bucket, "err", err)
+		logger.Warn("Couldn't upload file", slog.Any("err", err))
 		return err
 	}
-	slog.Debug("File written", "path", filePath, "bucket", s.bucket)
+	logger.Debug("File written")
 	return nil
 }
 
@@ -184,7 +186,9 @@ func (s *S3Context) lsFiles(prefix string) ([]string, error) {
 	for paginator.HasMorePages() {
 		page, err := paginator.NextPage(s.ctx)
 		if err != nil {
-			slog.Warn("Couldn't list objects in folder", "prefix", prefix, "err", err)
+			slog.Warn("Couldn't list objects in folder",
+				slog.String("prefix", prefix),
+				slog.Any("err", err))
 			return nil, fmt.Errorf("error listing objects: %w", err)
 		}
 
@@ -260,18 +264,20 @@ func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 }
 
 func (s *S3Context) DeleteFolder(folder string) error {
-	slog.Debug("Delete folder", "path", folder)
+	logger := slog.Default().With(slog.String("path", folder))
+	logger.Debug("Delete folder")
+
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket: aws.String(s.bucket),
 		Prefix: aws.String(strings.TrimSuffix(folder, "/") + "/"),
 	})
 	if err != nil {
-		slog.Warn("Couldn't list files in directory", "path", folder, "err", err)
+		logger.Warn("Couldn't list files in directory", slog.Any("err", err))
 		return err
 	}
 
 	if len(result.Contents) == 0 {
-		slog.Debug("No files to delete")
+		logger.Debug("No files to delete")
 		return nil
 	}
 
@@ -281,7 +287,9 @@ func (s *S3Context) DeleteFolder(folder string) error {
 			Key:    file.Key,
 		})
 		if err != nil {
-			slog.Debug("Couldn't delete file", "path", *file.Key, "err", err)
+			slog.Debug("Couldn't delete file",
+				slog.String("path", *file.Key),
+				slog.Any("err", err))
 		}
 	}
 	return nil

@@ -31,7 +31,8 @@ type dataRestorer struct {
 var _ RestoreManager = (*dataRestorer)(nil)
 
 // NewRestoreManager returns a new dataRestorer instance.
-func NewRestoreManager(backends BackendsHolder, config *model.Config, restoreService Restore) RestoreManager {
+func NewRestoreManager(backends BackendsHolder, config *model.Config,
+	restoreService Restore) RestoreManager {
 	return &dataRestorer{
 		configRetriever: configRetriever{
 			backends,
@@ -44,7 +45,8 @@ func NewRestoreManager(backends BackendsHolder, config *model.Config, restoreSer
 	}
 }
 
-func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJobID, error) {
+func (r *dataRestorer) Restore(request *model.RestoreRequestInternal,
+) (model.RestoreJobID, error) {
 	jobID := r.restoreJobs.newJob()
 	totalRecords, err := validateStorageContainsBackup(request.SourceStorage)
 	if err != nil {
@@ -80,7 +82,8 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal) (RestoreJo
 	return jobID, nil
 }
 
-func (r *dataRestorer) initClient(cluster *model.AerospikeCluster, jobID RestoreJobID) (*aerospike.Client, error) {
+func (r *dataRestorer) initClient(cluster *model.AerospikeCluster, jobID model.RestoreJobID,
+) (*aerospike.Client, error) {
 	client, aerr := r.asClientCreator.NewClient(
 		cluster.ASClientPolicy(),
 		cluster.ASClientHosts()...)
@@ -93,7 +96,8 @@ func (r *dataRestorer) initClient(cluster *model.AerospikeCluster, jobID Restore
 	return client, nil
 }
 
-func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest) (RestoreJobID, error) {
+func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
+) (model.RestoreJobID, error) {
 	reader, found := r.backends.GetReader(request.Routine)
 	if !found {
 		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.Routine)
@@ -114,7 +118,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	ctx context.Context,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
-	jobID RestoreJobID,
+	jobID model.RestoreJobID,
 	fullBackups []model.BackupDetails,
 ) {
 	client, err := r.initClient(request.DestinationCuster, jobID)
@@ -154,7 +158,7 @@ func (r *dataRestorer) restoreNamespace(
 	client *aerospike.Client,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
-	jobID RestoreJobID,
+	jobID model.RestoreJobID,
 	fullBackup model.BackupDetails,
 ) error {
 	allBackups := []model.BackupDetails{fullBackup}
@@ -165,9 +169,11 @@ func (r *dataRestorer) restoreNamespace(
 		return err
 	}
 
-	incrementalBackups, err := backend.FindIncrementalBackupsForNamespace(bounds, fullBackup.Namespace)
+	incrementalBackups, err := backend.FindIncrementalBackupsForNamespace(bounds,
+		fullBackup.Namespace)
 	if err != nil {
-		return fmt.Errorf("could not find incremental backups for namespace %s: %v", fullBackup.Namespace, err)
+		return fmt.Errorf("could not find incremental backups for namespace %s: %w",
+			fullBackup.Namespace, err)
 	}
 
 	// Append incremental backups to allBackups
@@ -226,7 +232,7 @@ func (r *dataRestorer) toRestoreRequest(request *model.RestoreTimestampRequest) 
 }
 
 // JobStatus returns the status of the job with the given id.
-func (r *dataRestorer) JobStatus(jobID RestoreJobID) (*model.RestoreJobStatus, error) {
+func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
 	return r.restoreJobs.getStatus(jobID)
 }
 
@@ -253,10 +259,12 @@ type ASClientCreator interface {
 
 type AerospikeClientCreator struct{}
 
+// Close closes the client.
 func (a *AerospikeClientCreator) Close(client *aerospike.Client) {
 	client.Close()
 }
 
+// NewClient returns a new [aerospike.Client].
 func (a *AerospikeClientCreator) NewClient(policy *aerospike.ClientPolicy, hosts ...*aerospike.Host,
 ) (*aerospike.Client, error) {
 	return aerospike.NewClientWithPolicyAndHost(policy, hosts...)

@@ -14,7 +14,8 @@ type configRetriever struct {
 }
 
 // RetrieveConfiguration return backed up Aerospike configuration.
-func (cr *configRetriever) RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error) {
+func (cr *configRetriever) RetrieveConfiguration(routine string, toTime time.Time,
+) ([]byte, error) {
 	backend, found := cr.backends.GetReader(routine)
 	if !found {
 		return nil, fmt.Errorf("%w: routine %s", errBackendNotFound, routine)
@@ -25,7 +26,8 @@ func (cr *configRetriever) RetrieveConfiguration(routine string, toTime time.Tim
 		return nil, fmt.Errorf("failed retrieve configuration: %w", err)
 	}
 
-	// fullBackups has backups for multiple namespaces, but same timestamp, they share same configuration.
+	// fullBackups has backups for multiple namespaces, but same timestamp,
+	// they share the same configuration.
 	lastFullBackup := fullBackups[0]
 	configPath, err := calculateConfigurationBackupPath(*lastFullBackup.Key)
 	if err != nil {

@@ -87,7 +87,7 @@ checksums:
 
 .PHONY: docker-build
 docker-build:
-	 docker build --tag aerospike/aerospike-backup-service:$(TAG) --file $(WORKSPACE)/Dockerfile
+	 docker build --tag aerospike/aerospike-backup-service:$(TAG) --file $(WORKSPACE)/Dockerfile .
 
 .PHONY: docker-buildx
 docker-buildx:
@@ -102,6 +102,7 @@ release:
 	cd ./build/scripts && ./release.sh $(NEXT_VERSION)
 
 .PHONY: clean
-clean:
+clean: remove-submodules
 	$(GOCLEAN)
 	rm $(TARGET_DIR)/*
+	@find . -type f -name 'nfpm-*-*.yaml' -exec rm -f {} +

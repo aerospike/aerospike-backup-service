@@ -6,8 +6,8 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// AddRoutine
-// adds a new BackupRoutine to the configuration if a routine with the same name doesn't already exist.
+// AddRoutine adds a new BackupRoutine to the configuration if a routine with the same name
+// doesn't already exist.
 func AddRoutine(config *model.Config, name string, newRoutine *model.BackupRoutine) error {
 	_, found := config.BackupRoutines[name]
 	if found {
@@ -21,8 +21,7 @@ func AddRoutine(config *model.Config, name string, newRoutine *model.BackupRouti
 	return nil
 }
 
-// UpdateRoutine
-// updates an existing BackupRoutine in the configuration.
+// UpdateRoutine updates an existing BackupRoutine in the configuration.
 func UpdateRoutine(config *model.Config, name string, updatedRoutine *model.BackupRoutine) error {
 	_, found := config.BackupRoutines[name]
 	if !found {
@@ -36,8 +35,7 @@ func UpdateRoutine(config *model.Config, name string, updatedRoutine *model.Back
 	return nil
 }
 
-// DeleteRoutine
-// deletes a BackupRoutine from the configuration.
+// DeleteRoutine deletes a BackupRoutine from the configuration.
 func DeleteRoutine(config *model.Config, name string) error {
 	_, found := config.BackupRoutines[name]
 	if !found {

@@ -1,7 +1,8 @@
 name: Create a Release and Push Release assets
 on:
-  create:
-    tags: '*'
+  push:
+    tags:
+      - 'v*'
 
   workflow_dispatch:
 jobs:
@@ -9,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create-release.outputs.upload_url }}
+    if: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - name: Check if release exists
         id: check-release
@@ -49,6 +51,7 @@ jobs:
     needs:
       - create-release
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4

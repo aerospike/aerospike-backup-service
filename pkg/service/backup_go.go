@@ -13,7 +13,7 @@ import (
 	"github.com/aerospike/backup/pkg/util"
 )
 
-// BackupGo implements the Backup interface.
+// BackupGo implements the [Backup] interface.
 type BackupGo struct {
 }
 
@@ -22,7 +22,8 @@ func NewBackupGo() *BackupGo {
 	return &BackupGo{}
 }
 
-// BackupRun calls the backup_run function from the asbackup shared library.
+// BackupRun creates a [backup.Client] and initiates the backup operation.
+// A backup handler is returned to monitor the job status.
 func (b *BackupGo) BackupRun(
 	ctx context.Context,
 	backupRoutine *model.BackupRoutine,
@@ -39,7 +40,8 @@ func (b *BackupGo) BackupRun(
 		return nil, fmt.Errorf("failed to create backup client, %w", err)
 	}
 
-	config := makeBackupConfig(namespace, backupRoutine, backupPolicy, timebounds, secretAgent)
+	config := makeBackupConfig(namespace, backupRoutine, backupPolicy,
+		timebounds, secretAgent)
 
 	writerFactory, err := getWriter(ctx, path, storage)
 	if err != nil {
@@ -100,10 +102,12 @@ func makeBackupConfig(
 		config.Parallel = 1
 	}
 	if backupPolicy.TotalTimeout != nil && *backupPolicy.TotalTimeout > 0 {
-		config.ScanPolicy.TotalTimeout = time.Duration(*backupPolicy.TotalTimeout) * time.Millisecond
+		config.ScanPolicy.TotalTimeout = time.Duration(*backupPolicy.TotalTimeout) *
+			time.Millisecond
 	}
 	if backupPolicy.SocketTimeout != nil && *backupPolicy.SocketTimeout > 0 {
-		config.ScanPolicy.SocketTimeout = time.Duration(*backupPolicy.SocketTimeout) * time.Millisecond
+		config.ScanPolicy.SocketTimeout = time.Duration(*backupPolicy.SocketTimeout) *
+			time.Millisecond
 	}
 	if backupPolicy.NoBins != nil && *backupPolicy.NoBins {
 		config.ScanPolicy.IncludeBinData = false
@@ -143,7 +147,10 @@ func makeBackupConfig(
 	return config
 }
 
-func getWriter(ctx context.Context, path *string, storage *model.Storage) (backup.Writer, error) {
+// getWriter instantiates and returns a writer for the backup operation
+// according to the specified storage type.
+func getWriter(ctx context.Context, path *string, storage *model.Storage,
+) (backup.Writer, error) {
 	switch storage.Type {
 	case model.Local:
 		return backup.NewWriterLocal(*path, true)
