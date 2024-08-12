@@ -60,7 +60,9 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal,
 	go func() {
 		client, err := r.clientManager.CreateClient(request.DestinationCuster)
 		if err != nil {
-			slog.Error("Failed to restore by path", "cluster", request.DestinationCuster, "err", err)
+			slog.Error("Failed to restore by path",
+				slog.Any("cluster", request.DestinationCuster),
+				slog.Any("err", err))
 			r.restoreJobs.setFailed(jobID, err)
 			return
 		}
