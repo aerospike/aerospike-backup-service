@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/aerospike/backup/pkg/model"
 )
@@ -26,6 +26,7 @@ type BackupRoutineHandler struct {
 	secretAgent      *model.SecretAgent
 	state            *model.BackupState
 	retry            *RetryService
+	clientManager    ClientManagerInterface
 
 	// backup handlers by namespace
 	fullBackupHandlers map[string]BackupHandler
@@ -36,8 +37,13 @@ type BackupRoutineHandler struct {
 type BackupHandlerHolder map[string]*BackupRoutineHandler
 
 // newBackupRoutineHandler returns a new BackupRoutineHandler instance.
-func newBackupRoutineHandler(config *model.Config, routineName string, backupBackend *BackupBackend,
-	backupService Backup) (*BackupRoutineHandler, error) {
+func newBackupRoutineHandler(
+	config *model.Config,
+	clientManager ClientManagerInterface,
+	backupService Backup,
+	routineName string,
+	backupBackend *BackupBackend,
+) (*BackupRoutineHandler, error) {
 	backupRoutine := config.BackupRoutines[routineName]
 	cluster := config.AerospikeClusters[backupRoutine.SourceCluster]
 	storage := config.Storage[backupRoutine.Storage]
@@ -68,6 +74,7 @@ func newBackupRoutineHandler(config *model.Config, routineName string, backupBac
 		retry:              NewRetryService(routineName),
 		fullBackupHandlers: make(map[string]BackupHandler),
 		incrBackupHandlers: make(map[string]BackupHandler),
+		clientManager:      clientManager,
 	}, nil
 }
 
@@ -98,15 +105,14 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 	logger.Debug("Acquire fullBackupInProgress lock")
 	defer h.backend.FullBackupInProgress().Store(false)
 
-	client, aerr := aerospike.NewClientWithPolicyAndHost(h.cluster.ASClientPolicy(),
-		h.cluster.ASClientHosts()...)
-	if aerr != nil {
-		return fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
+	client, err := h.clientManager.GetClient(h.backupRoutine.SourceCluster)
+	if err != nil {
+		return err
 	}
 
 	// release the lock
 	defer func() {
-		client.Close()
+		h.clientManager.Close(client)
 		clear(h.fullBackupHandlers)
 	}()
 
@@ -128,12 +134,12 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 
 	h.cleanIncrementalBackups()
 
-	h.writeClusterConfiguration(client, now)
+	h.writeClusterConfiguration(client.AerospikeClient(), now)
 	return nil
 }
 
 func (h *BackupRoutineHandler) startFullBackupForAllNamespaces(
-	ctx context.Context, upperBound time.Time, client *aerospike.Client) error {
+	ctx context.Context, upperBound time.Time, client *backup.Client) error {
 	clear(h.fullBackupHandlers)
 
 	timebounds := model.TimeBounds{}
@@ -180,7 +186,7 @@ func (h *BackupRoutineHandler) waitForFullBackups(backupTimestamp time.Time) err
 	return nil
 }
 
-func (h *BackupRoutineHandler) writeClusterConfiguration(client *aerospike.Client, now time.Time) {
+func (h *BackupRoutineHandler) writeClusterConfiguration(client backup.AerospikeClient, now time.Time) {
 	logger := slog.Default().With(slog.String("routine", h.routineName))
 
 	infos := getClusterConfiguration(client)
@@ -254,14 +260,14 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 		return
 	}
 
-	client, aerr := aerospike.NewClientWithPolicyAndHost(h.cluster.ASClientPolicy(),
-		h.cluster.ASClientHosts()...)
-	if aerr != nil {
-		logger.Error("failed to connect to aerospike cluster", slog.Any("err", aerr))
+	client, err := h.clientManager.GetClient(h.backupRoutine.SourceCluster)
+	if err != nil {
+		logger.Error("cannot create backup client", slog.Any("err", err))
 		return
 	}
+
 	defer func() {
-		client.Close()
+		h.clientManager.Close(client)
 		clear(h.incrBackupHandlers)
 	}()
 
@@ -276,7 +282,7 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 }
 
 func (h *BackupRoutineHandler) startIncrementalBackupForAllNamespaces(
-	ctx context.Context, client *aerospike.Client, upperBound time.Time) {
+	ctx context.Context, client *backup.Client, upperBound time.Time) {
 	timebounds := model.NewTimeBoundsFrom(h.state.LastRun())
 	if h.backupFullPolicy.IsSealed() {
 		timebounds.ToTime = &upperBound

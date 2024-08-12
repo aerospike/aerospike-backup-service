@@ -48,9 +48,17 @@ func (r *BackupRoutine) Validate(c *Config) error {
 	if r.SourceCluster == "" {
 		return emptyFieldValidationError("source-cluster")
 	}
-	if _, exists := c.AerospikeClusters[r.SourceCluster]; !exists {
+	cluster, exists := c.AerospikeClusters[r.SourceCluster]
+	if !exists {
 		return notFoundValidationError("Aerospike cluster", r.SourceCluster)
 	}
+
+	if cluster.MaxParallelScans != nil {
+		if len(r.SetList) > *cluster.MaxParallelScans {
+			return fmt.Errorf("max parallel scans should not be less then set-list")
+		}
+	}
+
 	if r.Storage == "" {
 		return emptyFieldValidationError("storage")
 	}

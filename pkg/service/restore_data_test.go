@@ -68,11 +68,11 @@ func makeTestRestoreService() *dataRestorer {
 		configRetriever: configRetriever{
 			backends: &BackendHolderMock{},
 		},
-		restoreJobs:     NewJobsHolder(),
-		restoreService:  NewRestoreMock(),
-		backends:        &BackendHolderMock{},
-		config:          config,
-		asClientCreator: &MockAerospikeClientCreator{},
+		restoreJobs:    NewJobsHolder(),
+		restoreService: NewRestoreMock(),
+		backends:       &BackendHolderMock{},
+		config:         config,
+		clientManager:  &MockClientManager{},
 	}
 }
 

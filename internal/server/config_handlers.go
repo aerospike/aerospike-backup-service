@@ -68,7 +68,7 @@ func (ws *HTTPServer) updateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (ws *HTTPServer) applyConfig(w http.ResponseWriter, _ *http.Request) {
-	handlers, err := service.ApplyNewConfig(ws.scheduler, ws.config, ws.backupBackends)
+	handlers, err := service.ApplyNewConfig(ws.scheduler, ws.config, ws.backupBackends, ws.clientManager)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

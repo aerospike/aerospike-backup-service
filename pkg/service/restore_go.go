@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	a "github.com/aerospike/aerospike-client-go/v7"
@@ -26,23 +25,19 @@ func NewRestoreGo() *RestoreGo {
 // A restore handler is returned to monitor the job status.
 func (r *RestoreGo) RestoreRun(
 	ctx context.Context,
-	client *a.Client,
+	client *backup.Client,
 	restoreRequest *model.RestoreRequestInternal,
 ) (RestoreHandler, error) {
 	var err error
-	backupClient, err := backup.NewClient(client, "1", slog.Default())
-	if err != nil {
-		return nil, fmt.Errorf("failed to create backup client, %w", err)
-	}
 
-	config := makeRestoreConfig(restoreRequest, client)
+	config := makeRestoreConfig(restoreRequest)
 
 	reader, err := getReader(ctx, restoreRequest.Dir, restoreRequest.SourceStorage)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}
 
-	handler, err := backupClient.Restore(ctx, config, reader)
+	handler, err := client.Restore(ctx, config, reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start restore, %w", err)
 	}
@@ -51,12 +46,12 @@ func (r *RestoreGo) RestoreRun(
 }
 
 //nolint:funlen
-func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal, client *a.Client,
+func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 ) *backup.RestoreConfig {
 	config := backup.NewDefaultRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
-	config.WritePolicy = client.DefaultWritePolicy
+	config.WritePolicy = a.NewWritePolicy(0, 0)
 	config.WritePolicy.MaxRetries = 100
 	if restoreRequest.Policy.Tps != nil {
 		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)

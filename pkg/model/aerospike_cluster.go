@@ -34,8 +34,8 @@ type AerospikeCluster struct {
 	Credentials *Credentials `yaml:"credentials,omitempty" json:"credentials,omitempty"`
 	// The cluster TLS configuration.
 	TLS *TLS `yaml:"tls,omitempty" json:"tls,omitempty"`
-	// Specifies the size of the Aerospike Connection Queue per node.
-	ConnectionQueueSize *int `yaml:"connection-queue-size,omitempty" json:"connection-queue-size,omitempty" example:"100"`
+	// Specifies the maximum number of parallel scans
+	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100" validate:"optional"`
 }
 
 // NewLocalAerospikeCluster returns a new AerospikeCluster to be used in tests.
@@ -144,8 +144,8 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	if c.TLS != nil {
 		policy.TlsConfig = initTLS(c.TLS, c.ClusterLabel)
 	}
-	if c.ConnectionQueueSize != nil && *c.ConnectionQueueSize > 0 {
-		policy.ConnectionQueueSize = *c.ConnectionQueueSize
+	if c.MaxParallelScans != nil && *c.MaxParallelScans > 0 {
+		policy.ConnectionQueueSize = *c.MaxParallelScans
 	}
 	return policy
 }
