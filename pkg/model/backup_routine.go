@@ -55,7 +55,7 @@ func (r *BackupRoutine) Validate(c *Config) error {
 
 	if cluster.MaxParallelScans != nil {
 		if len(r.SetList) > *cluster.MaxParallelScans {
-			return fmt.Errorf("max parallel scans should not be less then set-list")
+			return fmt.Errorf("max parallel scans must be at least the cardinality of set-list")
 		}
 	}
 

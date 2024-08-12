@@ -35,6 +35,8 @@ func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
 	return as.NewClientWithPolicyAndHost(policy, hosts...)
 }
 
+// ClientManagerImpl implements ClientManager.
+// Is responsible for creating and closing backup clients.
 type ClientManagerImpl struct {
 	clusters      map[string]*model.AerospikeCluster
 	clients       map[string]*clientInfo
