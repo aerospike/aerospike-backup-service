@@ -2,13 +2,12 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/util"
 	"github.com/aws/smithy-go/ptr"
@@ -68,11 +67,11 @@ func makeTestRestoreService() *dataRestorer {
 		configRetriever: configRetriever{
 			backends: &BackendHolderMock{},
 		},
-		restoreJobs:     NewJobsHolder(),
-		restoreService:  NewRestoreMock(),
-		backends:        &BackendHolderMock{},
-		config:          config,
-		asClientCreator: &MockAerospikeClientCreator{},
+		restoreJobs:    NewJobsHolder(),
+		restoreService: NewRestoreMock(),
+		backends:       &BackendHolderMock{},
+		config:         config,
+		clientManager:  &MockClientManager{},
 	}
 }
 
@@ -463,16 +462,21 @@ func Test_CalculateConfigurationBackupPath(t *testing.T) {
 	}
 }
 
-type MockAerospikeClientCreator struct{}
-
-func (a *MockAerospikeClientCreator) Close(_ *aerospike.Client) {
+// MockClientManager is a mock implementation of ClientManager for testing
+type MockClientManager struct {
 }
 
-func (a *MockAerospikeClientCreator) NewClient(_ *aerospike.ClientPolicy, hosts ...*aerospike.Host,
-) (*aerospike.Client, error) {
-	if len(hosts) == 0 {
-		return nil, fmt.Errorf("no hosts")
+func (m *MockClientManager) GetClient(string) (*backup.Client, error) {
+	return &backup.Client{}, nil
+}
+
+func (m *MockClientManager) Close(*backup.Client) {
+}
+
+func (m *MockClientManager) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
+	if len(cluster.ASClientHosts()) == 0 {
+		return nil, errors.New("no hosts provided")
 	}
 
-	return &aerospike.Client{}, nil
+	return &backup.Client{}, nil
 }
