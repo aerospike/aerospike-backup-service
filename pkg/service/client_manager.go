@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 
@@ -11,7 +10,7 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-type ClientManager struct {
+type BackupClientManager struct {
 	clusters map[string]*model.AerospikeCluster
 	clients  map[string]*clientInfo
 	mu       sync.Mutex
@@ -22,14 +21,14 @@ type clientInfo struct {
 	count  int
 }
 
-func NewClientManager(clusters map[string]*model.AerospikeCluster) *ClientManager {
-	return &ClientManager{
+func NewClientManager(clusters map[string]*model.AerospikeCluster) *BackupClientManager {
+	return &BackupClientManager{
 		clusters: clusters,
 		clients:  make(map[string]*clientInfo),
 	}
 }
 
-func (cm *ClientManager) GetClient(clusterName string) (*backup.Client, error) {
+func (cm *BackupClientManager) GetClient(clusterName string) (*backup.Client, error) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -56,7 +55,7 @@ func (cm *ClientManager) GetClient(clusterName string) (*backup.Client, error) {
 	return client, nil
 }
 
-func (cm *ClientManager) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
+func (cm *BackupClientManager) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
 	aClient, aerr := aerospike.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
 	if aerr != nil {
 		return nil, fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
@@ -78,7 +77,7 @@ func (cm *ClientManager) CreateClient(cluster *model.AerospikeCluster) (*backup.
 	return client, nil
 }
 
-func (cm *ClientManager) Close(client *backup.Client) {
+func (cm *BackupClientManager) Close(client *backup.Client) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -97,28 +96,9 @@ func (cm *ClientManager) Close(client *backup.Client) {
 	client.AerospikeClient().Close()
 }
 
-// ClientManagerInterface defines the interface for ClientManager
-type ClientManagerInterface interface {
+// ClientManager defines the interface for BackupClientManager
+type ClientManager interface {
 	GetClient(string) (*backup.Client, error)
 	CreateClient(*model.AerospikeCluster) (*backup.Client, error)
 	Close(*backup.Client)
-}
-
-// MockClientManager is a mock implementation of ClientManagerInterface for testing
-type MockClientManager struct {
-}
-
-func (m *MockClientManager) GetClient(string) (*backup.Client, error) {
-	return &backup.Client{}, nil
-}
-
-func (m *MockClientManager) Close(*backup.Client) {
-}
-
-func (m *MockClientManager) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
-	if len(cluster.ASClientHosts()) == 0 {
-		return nil, errors.New("no hosts provided")
-	}
-
-	return &backup.Client{}, nil
 }

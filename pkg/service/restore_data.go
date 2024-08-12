@@ -25,7 +25,7 @@ type dataRestorer struct {
 	restoreJobs    *JobsHolder
 	restoreService Restore
 	backends       BackendsHolder
-	clientManager  ClientManagerInterface
+	clientManager  ClientManager
 }
 
 var _ RestoreManager = (*dataRestorer)(nil)
@@ -34,7 +34,7 @@ var _ RestoreManager = (*dataRestorer)(nil)
 func NewRestoreManager(backends BackendsHolder,
 	config *model.Config,
 	restoreService Restore,
-	clientManager ClientManagerInterface,
+	clientManager ClientManager,
 ) RestoreManager {
 	return &dataRestorer{
 		configRetriever: configRetriever{

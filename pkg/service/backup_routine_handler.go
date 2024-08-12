@@ -26,7 +26,7 @@ type BackupRoutineHandler struct {
 	secretAgent      *model.SecretAgent
 	state            *model.BackupState
 	retry            *RetryService
-	clientManager    ClientManagerInterface
+	clientManager    ClientManager
 
 	// backup handlers by namespace
 	fullBackupHandlers map[string]BackupHandler
@@ -39,7 +39,7 @@ type BackupHandlerHolder map[string]*BackupRoutineHandler
 // newBackupRoutineHandler returns a new BackupRoutineHandler instance.
 func newBackupRoutineHandler(
 	config *model.Config,
-	clientManager ClientManagerInterface,
+	clientManager ClientManager,
 	backupService Backup,
 	routineName string,
 	backupBackend *BackupBackend,

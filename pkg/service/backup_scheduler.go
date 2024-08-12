@@ -49,7 +49,7 @@ func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
 func ApplyNewConfig(scheduler quartz.Scheduler,
 	config *model.Config,
 	backends BackendsHolder,
-	manager ClientManagerInterface,
+	manager ClientManager,
 ) (BackupHandlerHolder, error) {
 	err := scheduler.Clear()
 	if err != nil {
@@ -82,7 +82,7 @@ func ScheduleBackup(ctx context.Context, config *model.Config, handlers BackupHa
 }
 
 // MakeHandlers creates and returns a map of backup handlers per the configured routines.
-func MakeHandlers(clientManager ClientManagerInterface,
+func MakeHandlers(clientManager ClientManager,
 	config *model.Config,
 	backends BackendsHolder,
 ) BackupHandlerHolder {
