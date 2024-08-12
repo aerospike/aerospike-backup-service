@@ -93,7 +93,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ApplyConfig"))
 
 	// Because of this part, we have noo tests for this method.
-	handlers, err := service.ApplyNewConfig(s.scheduler, s.config, s.backupBackends)
+	handlers, err := service.ApplyNewConfig(s.scheduler, s.config, s.backupBackends, s.clientManger)
 	if err != nil {
 		hLogger.Error("failed to apply new config",
 			slog.Any("error", err),

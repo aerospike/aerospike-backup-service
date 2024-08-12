@@ -34,7 +34,7 @@ func testConfigCluster() model.AerospikeCluster {
 		UseServicesAlternate: &useAlternate,
 		Credentials:          &model.Credentials{},
 		TLS:                  &model.TLS{},
-		ConnectionQueueSize:  &queueSize,
+		MaxParallelScans:     &queueSize,
 	}
 }
 

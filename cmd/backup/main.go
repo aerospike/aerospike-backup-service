@@ -16,6 +16,7 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/reugn/go-quartz/logger"
+	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
 
@@ -25,8 +26,6 @@ var (
 )
 
 // run parses the CLI parameters and executes backup.
-//
-//nolint:funlen // Initialization function contains a lot of code.
 func run() int {
 	var (
 		configFile string
@@ -67,19 +66,25 @@ func startService(configFile string, remote bool) error {
 	if err != nil {
 		return err
 	}
-	server.ConfigurationManager = manager
+
 	// read configuration file
-	config, err := readConfiguration()
+	config, err := readConfiguration(manager)
 	if err != nil {
 		return err
 	}
+
 	// get system ctx
 	ctx := systemCtx()
+
 	// set default loggers
 	loggerConfig := config.ServiceConfig.Logger
+	appLogger := slog.New(
+		util.LogHandler(loggerConfig),
+	)
 	slog.SetDefault(slog.New(util.LogHandler(loggerConfig)))
 	logger.SetDefault(util.NewQuartzLogger(ctx))
 	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
+
 	// schedule all configured backups
 	backends := service.NewBackupBackends(config)
 	clientManager := service.NewClientManager(config.AerospikeClusters, &service.DefaultClientFactory{})
@@ -88,11 +93,13 @@ func startService(configFile string, remote bool) error {
 	if err != nil {
 		return err
 	}
+
 	// run HTTP server
-	httpServer := server.NewHTTPServer(backends, config, scheduler, handlers, clientManager)
-	err = runHTTPServer(ctx, httpServer)
+	err = runHTTPServer(ctx, config, scheduler, backends, handlers, manager, clientManager, appLogger)
+
 	// stop the scheduler
 	scheduler.Stop()
+
 	return err
 }
 
@@ -109,8 +116,8 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func readConfiguration() (*model.Config, error) {
-	config, err := server.ConfigurationManager.ReadConfiguration()
+func readConfiguration(configurationManager service.ConfigurationManager) (*model.Config, error) {
+	config, err := configurationManager.ReadConfiguration()
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
 		return nil, err
@@ -122,7 +129,24 @@ func readConfiguration() (*model.Config, error) {
 	return config, nil
 }
 
-func runHTTPServer(ctx context.Context, httpServer *server.HTTPServer) error {
+func runHTTPServer(ctx context.Context,
+	config *model.Config,
+	scheduler quartz.Scheduler,
+	backends service.BackendsHolder,
+	handlerHolder service.BackupHandlerHolder,
+	configurationManager service.ConfigurationManager,
+	clientManger service.ClientManager,
+	logger *slog.Logger,
+) error {
+	httpServer := server.NewHTTPServer(
+		config,
+		scheduler,
+		backends,
+		handlerHolder,
+		configurationManager,
+		clientManger,
+		logger,
+	)
 	go func() {
 		httpServer.Start()
 	}()
