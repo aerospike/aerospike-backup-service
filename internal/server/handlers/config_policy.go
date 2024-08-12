@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/backup/internal/server/handlers/dto"
+	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/gorilla/mux"
 )
@@ -41,7 +41,7 @@ func (s *Service) ConfigPolicyActionHandler(w http.ResponseWriter, r *http.Reque
 func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addPolicy"))
 
-	var request dto.BackupPolicy
+	var request model.BackupPolicy
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
@@ -57,8 +57,7 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	newPolicy := dto.MapBackupPolicyFromDTO(request)
-	err = service.AddPolicy(s.config, name, &newPolicy)
+	err = service.AddPolicy(s.config, name, &request)
 	if err != nil {
 		hLogger.Error("failed to add policy",
 			slog.String("name", name),
@@ -169,7 +168,7 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updatePolicy"))
 
-	var request dto.BackupPolicy
+	var request model.BackupPolicy
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
@@ -185,8 +184,7 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	updatedPolicy := dto.MapBackupPolicyFromDTO(request)
-	err = service.UpdatePolicy(s.config, name, &updatedPolicy)
+	err = service.UpdatePolicy(s.config, name, &request)
 	if err != nil {
 		hLogger.Error("failed to update policy",
 			slog.String("name", name),

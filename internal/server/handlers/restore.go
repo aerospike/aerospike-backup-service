@@ -78,13 +78,6 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreIncrementalHandler"))
 
-	if r.Method != http.MethodPost {
-		hLogger.Error("method not allowed",
-			slog.String("method", r.Method),
-		)
-		http.Error(w, "", http.StatusMethodNotAllowed)
-	}
-
 	var request model.RestoreRequest
 
 	err := json.NewDecoder(r.Body).Decode(&request)
@@ -136,13 +129,6 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 // @Failure     405 {string} string
 func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreByTimeHandler"))
-
-	if r.Method != http.MethodPost {
-		hLogger.Error("method not allowed",
-			slog.String("method", r.Method),
-		)
-		http.Error(w, "", http.StatusMethodNotAllowed)
-	}
 
 	var request model.RestoreTimestampRequest
 
@@ -247,15 +233,6 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure     405 {string} string
 func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RetrieveConfig"))
-
-	// Check if method is GET
-	if r.Method != http.MethodGet {
-		hLogger.Error("method not allowed",
-			slog.String("method", r.Method),
-		)
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
 
 	name := mux.Vars(r)["name"]
 	if name == "" {

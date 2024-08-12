@@ -5,21 +5,21 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aerospike/backup/internal/server/handlers/dto"
+	"github.com/aerospike/backup/pkg/model"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
 )
 
-func testConfigDTO() *dto.Config {
-	return &dto.Config{
-		ServiceConfig: &dto.BackupServiceConfig{
-			HTTPServer: &dto.HTTPServerConfig{},
-			Logger:     &dto.LoggerConfig{},
+func testConfigDTO() *model.Config {
+	return &model.Config{
+		ServiceConfig: &model.BackupServiceConfig{
+			HTTPServer: &model.HTTPServerConfig{},
+			Logger:     &model.LoggerConfig{},
 		},
-		AerospikeClusters: make(map[string]*dto.AerospikeCluster),
-		Storage:           make(map[string]*dto.Storage),
-		BackupPolicies:    make(map[string]*dto.BackupPolicy),
+		AerospikeClusters: make(map[string]*model.AerospikeCluster),
+		Storage:           make(map[string]*model.Storage),
+		BackupPolicies:    make(map[string]*model.BackupPolicy),
 	}
 }
 

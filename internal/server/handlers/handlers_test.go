@@ -3,8 +3,8 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -104,7 +104,7 @@ func (mock restoreManagerMock) JobStatus(jobID service.RestoreJobID) (*model.Res
 	return testRestoreJobStatus(), nil
 }
 
-func (mock restoreManagerMock) RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error) {
+func (mock restoreManagerMock) RetrieveConfiguration(routine string, _ time.Time) ([]byte, error) {
 	if routine == "" {
 		return nil, errTest
 	}
@@ -133,11 +133,11 @@ func (mock backupListReaderMock) ReadClusterConfiguration(path string) ([]byte, 
 	return []byte(fmt.Sprintf(`{ "dir": "%s" }`, testDir)), nil
 }
 
-func (mock backupListReaderMock) FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error) {
+func (mock backupListReaderMock) FindLastFullBackup(_ time.Time) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{testBackupDetails()}, nil
 }
 
-func (mock backupListReaderMock) FindIncrementalBackupsForNamespace(bounds *model.TimeBounds, namespace string,
+func (mock backupListReaderMock) FindIncrementalBackupsForNamespace(bounds *model.TimeBounds, _ string,
 ) ([]model.BackupDetails, error) {
 	if bounds == nil {
 		return nil, errTest
@@ -162,8 +162,7 @@ func (mock backendsHolderMock) Get(routineName string) (*service.BackupBackend, 
 	return &service.BackupBackend{}, true
 }
 
-func (mock backendsHolderMock) SetData(backends map[string]*service.BackupBackend) {
-	return
+func (mock backendsHolderMock) SetData(_ map[string]*service.BackupBackend) {
 }
 
 type configurationManagerMock struct{}
@@ -187,7 +186,6 @@ func newServiceMock() *Service {
 		backupBackends:       backendsHolderMock{},
 		handlerHolder:        nil,
 		configurationManager: configurationManagerMock{},
-		// TODO: change to io.Discard when finish tests.
-		logger: slog.New(slog.NewJSONHandler(os.Stdout, nil)),
+		logger:               slog.New(slog.NewJSONHandler(io.Discard, nil)),
 	}
 }

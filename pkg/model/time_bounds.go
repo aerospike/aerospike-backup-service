@@ -2,6 +2,8 @@ package model
 
 import (
 	"errors"
+	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -31,6 +33,40 @@ func NewTimeBoundsFrom(fromTime time.Time) *TimeBounds {
 	return timeBounds
 }
 
+// NewTimeBoundsFromString creates a TimeBounds from the string representation of
+// time boundaries (string is given as epoch time millis).
+func NewTimeBoundsFromString(from, to string) (*TimeBounds, error) {
+	fromTime, err := parseTimestamp(from)
+	if err != nil {
+		return nil, err
+	}
+
+	toTime, err := parseTimestamp(to)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTimeBounds(fromTime, toTime)
+}
+
+func parseTimestamp(value string) (*time.Time, error) {
+	if len(value) == 0 {
+		return nil, nil
+	}
+
+	intValue, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	if intValue < 0 {
+		return nil, fmt.Errorf("timestamp should be positive or zero, got %d", intValue)
+	}
+
+	result := time.UnixMilli(intValue)
+	return &result, nil
+}
+
 // Contains verifies if the given value lies within FromTime (inclusive) and ToTime (exclusive).
 func (tb *TimeBounds) Contains(value time.Time) bool {
 	if tb.FromTime != nil && value.Before(*tb.FromTime) {
@@ -42,4 +78,23 @@ func (tb *TimeBounds) Contains(value time.Time) bool {
 	}
 
 	return true
+}
+
+// String implements the Stringer interface.
+func (tb *TimeBounds) String() string {
+	if tb.FromTime == nil && tb.ToTime == nil {
+		return "NA"
+	}
+
+	from := "NA"
+	if tb.FromTime != nil {
+		from = tb.FromTime.Format("2006-01-02 15:04:05")
+	}
+
+	to := "NA"
+	if tb.ToTime != nil {
+		to = tb.ToTime.Format("2006-01-02 15:04:05")
+	}
+
+	return fmt.Sprintf("%s - %s", from, to)
 }

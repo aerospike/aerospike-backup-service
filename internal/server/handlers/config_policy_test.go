@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aerospike/backup/internal/server/handlers/dto"
+	"github.com/aerospike/backup/pkg/model"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
@@ -14,9 +14,9 @@ import (
 
 const testPolicy = "testPolicy"
 
-func testConfigPolicy() dto.BackupPolicy {
+func testConfigBackupPolicy() model.BackupPolicy {
 	testIn32 := int32(10)
-	return dto.BackupPolicy{
+	return model.BackupPolicy{
 		Parallel:      &testIn32,
 		SocketTimeout: &testIn32,
 		TotalTimeout:  &testIn32,
@@ -25,6 +25,7 @@ func testConfigPolicy() dto.BackupPolicy {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigPolicyActionHandlerPost(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -34,7 +35,7 @@ func TestService_ConfigPolicyActionHandlerPost(t *testing.T) {
 		h.ConfigPolicyActionHandler,
 	).Methods(http.MethodPost)
 
-	body := testConfigPolicy()
+	body := testConfigBackupPolicy()
 	bodyBytes, err := json.Marshal(body)
 	require.NoError(t, err)
 
@@ -67,6 +68,7 @@ func TestService_ConfigPolicyActionHandlerPost(t *testing.T) {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigPolicyActionHandlerGet(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -102,6 +104,7 @@ func TestService_ConfigPolicyActionHandlerGet(t *testing.T) {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigPolicyActionHandlerPut(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -111,7 +114,7 @@ func TestService_ConfigPolicyActionHandlerPut(t *testing.T) {
 		h.ConfigPolicyActionHandler,
 	).Methods(http.MethodPut)
 
-	body := testConfigPolicy()
+	body := testConfigBackupPolicy()
 	bodyBytes, err := json.Marshal(body)
 	require.NoError(t, err)
 
@@ -144,6 +147,7 @@ func TestService_ConfigPolicyActionHandlerPut(t *testing.T) {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigPolicyActionHandlerDelete(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()

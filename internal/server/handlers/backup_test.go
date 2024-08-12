@@ -9,6 +9,7 @@ import (
 	"github.com/steinfletcher/apitest"
 )
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_GetAllFullBackups(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -98,6 +99,7 @@ func TestService_GetFullBackupsForRoutine(t *testing.T) {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_GetAllIncrementalBackups(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -207,7 +209,7 @@ func TestService_ScheduleFullBackup(t *testing.T) {
 		delay      string
 		name       string
 	}{
-		// We can't mock jobStore, so this test is not very usefully. Just to check negative scenarious.
+		// We can't mock jobStore, so this test is not very usefully. Just to check negative scenarios.
 		{http.MethodGet, http.StatusNotFound, delay, name},
 		{http.MethodGet, http.StatusNotFound, delay, ""},
 		{http.MethodGet, http.StatusBadRequest, "b", name},
@@ -250,7 +252,7 @@ func TestService_GetCurrentBackupInfo(t *testing.T) {
 		statusCode int
 		name       string
 	}{
-		// We can't mock handlerHolder, so this test is not very usefully. Just to check negative scenarious.
+		// We can't mock handlerHolder, so this test is not very usefully. Just to check negative scenarios.
 		{http.MethodGet, http.StatusNotFound, name},
 		{http.MethodGet, http.StatusNotFound, ""},
 		{http.MethodPost, http.StatusMethodNotAllowed, name},

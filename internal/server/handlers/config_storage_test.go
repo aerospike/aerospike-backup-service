@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aerospike/backup/internal/server/handlers/dto"
+	"github.com/aerospike/backup/pkg/model"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
@@ -14,9 +14,9 @@ import (
 
 const testStorage = "testStorage"
 
-func testConfigStorage() dto.Storage {
-	path := "/temp"
-	return dto.Storage{
+func testConfigStorage() model.Storage {
+	path := testDir
+	return model.Storage{
 		Type:            "local",
 		Path:            &path,
 		MinPartSize:     5242880,
@@ -24,6 +24,7 @@ func testConfigStorage() dto.Storage {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigStorageActionHandlerPost(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -69,6 +70,7 @@ func TestService_ConfigStorageActionHandlerPost(t *testing.T) {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigStorageActionHandlerGet(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -104,6 +106,7 @@ func TestService_ConfigStorageActionHandlerGet(t *testing.T) {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigStorageActionHandlerPut(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -146,6 +149,7 @@ func TestService_ConfigStorageActionHandlerPut(t *testing.T) {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigStorageActionHandlerDelete(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()

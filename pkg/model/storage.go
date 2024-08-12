@@ -15,21 +15,21 @@ import (
 //nolint:lll
 type Storage struct {
 	// The type of the storage provider
-	Type StorageType `yaml:"type" enums:"local,aws-s3" validate:"required"`
+	Type StorageType `yaml:"type" json:"type" enums:"local,aws-s3" validate:"required"`
 	// The root path for the backup repository.
-	Path *string `yaml:"path,omitempty" example:"backups" validate:"required"`
+	Path *string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" validate:"required"`
 	// The S3 region string (AWS S3 optional).
-	S3Region *string `yaml:"s3-region,omitempty" example:"eu-central-1"`
+	S3Region *string `yaml:"s3-region,omitempty" json:"s3-region,omitempty" example:"eu-central-1"`
 	// The S3 profile name (AWS S3 optional).
-	S3Profile *string `yaml:"s3-profile,omitempty" example:"default"`
+	S3Profile *string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty" example:"default"`
 	// An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).
-	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000"`
+	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000"`
 	// The log level of the AWS S3 SDK (AWS S3 optional).
-	S3LogLevel *string `yaml:"s3-log-level,omitempty" default:"FATAL" enum:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
+	S3LogLevel *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enum:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
 	// The minimum size in bytes of individual S3 UploadParts
-	MinPartSize int `yaml:"min_part_size,omitempty" example:"10" default:"5242880"`
+	MinPartSize int `yaml:"min_part_size,omitempty" json:"min_part_size,omitempty" example:"10" default:"5242880"`
 	// The maximum number of simultaneous requests from S3.
-	MaxConnsPerHost int `yaml:"max_async_connections,omitempty" example:"16"`
+	MaxConnsPerHost int `yaml:"max_async_connections,omitempty" json:"max_async_connections,omitempty" example:"16"`
 }
 
 // StorageType represents the type of the backup storage.

@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/backup/internal/server/handlers/dto"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/gorilla/mux"
@@ -41,7 +40,7 @@ func (s *Service) ConfigClusterActionHandler(w http.ResponseWriter, r *http.Requ
 func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addAerospikeCluster"))
 
-	var newCluster dto.AerospikeCluster
+	var newCluster model.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&newCluster)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
@@ -60,8 +59,7 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	cluster := dto.MapAerospikeClusterFromDTO(newCluster)
-	err = service.AddCluster(s.config, name, &cluster)
+	err = service.AddCluster(s.config, name, &newCluster)
 	if err != nil {
 		hLogger.Error("failed to add cluster",
 			slog.String("name", name),
@@ -93,8 +91,7 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 	hLogger := s.logger.With(slog.String("handler", "ReadAerospikeClusters"))
 
 	clusters := s.config.AerospikeClusters
-	result := dto.MapAerospikeClusterMapsToDTO(clusters)
-	jsonResponse, err := json.Marshal(result)
+	jsonResponse, err := json.Marshal(clusters)
 	if err != nil {
 		hLogger.Error("failed to marshal clusters",
 			slog.Any("error", err),
@@ -142,8 +139,7 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cluster %s could not be found", clusterName), http.StatusNotFound)
 		return
 	}
-	result := dto.MapAerospikeClusterToDTO(*cluster)
-	jsonResponse, err := json.Marshal(result)
+	jsonResponse, err := json.Marshal(cluster)
 	if err != nil {
 		hLogger.Error("failed to marshal cluster",
 			slog.Any("error", err),

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aerospike/backup/internal/server/handlers/dto"
+	"github.com/aerospike/backup/pkg/model"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
@@ -14,30 +14,31 @@ import (
 
 const testCluster = "testCluster"
 
-func testSeedNode() dto.SeedNode {
-	return dto.SeedNode{
+func testSeedNode() model.SeedNode {
+	return model.SeedNode{
 		HostName: "host",
 		Port:     3000,
 		TLSName:  "tls",
 	}
 }
 
-func testConfigCluster() dto.AerospikeCluster {
+func testConfigCluster() model.AerospikeCluster {
 	label := "label"
 	timeout := int32(10)
 	useAlternate := false
 	queueSize := 1
-	return dto.AerospikeCluster{
+	return model.AerospikeCluster{
 		ClusterLabel:         &label,
-		SeedNodes:            []dto.SeedNode{testSeedNode()},
+		SeedNodes:            []model.SeedNode{testSeedNode()},
 		ConnTimeout:          &timeout,
 		UseServicesAlternate: &useAlternate,
-		Credentials:          &dto.Credentials{},
-		TLS:                  &dto.TLS{},
+		Credentials:          &model.Credentials{},
+		TLS:                  &model.TLS{},
 		ConnectionQueueSize:  &queueSize,
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigClusterActionHandlerPost(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -48,7 +49,7 @@ func TestService_ConfigClusterActionHandlerPost(t *testing.T) {
 	).Methods(http.MethodPost)
 
 	body := testConfigCluster()
-	bodyBytes, err := json.Marshal(body)
+	bodyBytes, err := json.Marshal(&body)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -80,6 +81,7 @@ func TestService_ConfigClusterActionHandlerPost(t *testing.T) {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigClusterActionHandlerGet(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -115,6 +117,7 @@ func TestService_ConfigClusterActionHandlerGet(t *testing.T) {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigClusterActionHandlerPut(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -125,7 +128,7 @@ func TestService_ConfigClusterActionHandlerPut(t *testing.T) {
 	).Methods(http.MethodPut)
 
 	body := testConfigCluster()
-	bodyBytes, err := json.Marshal(body)
+	bodyBytes, err := json.Marshal(&body)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -157,6 +160,7 @@ func TestService_ConfigClusterActionHandlerPut(t *testing.T) {
 	}
 }
 
+//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigClusterActionHandlerDelete(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()

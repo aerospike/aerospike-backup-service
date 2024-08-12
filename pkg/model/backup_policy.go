@@ -23,47 +23,47 @@ type RemoveFilesType string
 //nolint:lll
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel.
-	Parallel *int32 `yaml:"parallel,omitempty" example:"1"`
+	Parallel *int32 `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
 	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int32 `yaml:"socket-timeout,omitempty" example:"1000"`
+	SocketTimeout *int32 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
-	TotalTimeout *int32 `yaml:"total-timeout,omitempty" example:"2000"`
+	TotalTimeout *int32 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`
 	// Maximum number of retries before aborting the current transaction.
-	MaxRetries *int32 `yaml:"max-retries,omitempty" example:"3"`
+	MaxRetries *int32 `yaml:"max-retries,omitempty" json:"max-retries,omitempty" example:"3"`
 	// RetryDelay defines the delay in milliseconds before retrying a failed operation.
-	RetryDelay *int32 `yaml:"retry-delay,omitempty" example:"500"`
+	RetryDelay *int32 `yaml:"retry-delay,omitempty" json:"retry-delay,omitempty" example:"500"`
 	// Whether to clear the output directory (default: KeepAll).
-	RemoveFiles *RemoveFilesType `yaml:"remove-files,omitempty" enums:"KeepAll,RemoveAll,RemoveIncremental"`
+	RemoveFiles *RemoveFilesType `yaml:"remove-files,omitempty" json:"remove-files,omitempty" enums:"KeepAll,RemoveAll,RemoveIncremental"`
 	// Clear directory or remove output file.
-	RemoveArtifacts *bool `yaml:"remove-artifacts,omitempty"`
+	RemoveArtifacts *bool `yaml:"remove-artifacts,omitempty" json:"remove-artifacts,omitempty"`
 	// Only backup record metadata (digest, TTL, generation count, key).
-	NoBins *bool `yaml:"no-bins,omitempty"`
+	NoBins *bool `yaml:"no-bins,omitempty" json:"no-bins,omitempty"`
 	// Do not back up any record data (metadata or bin data).
-	NoRecords *bool `yaml:"no-records,omitempty"`
+	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty"`
 	// Do not back up any secondary index definitions.
-	NoIndexes *bool `yaml:"no-indexes,omitempty"`
+	NoIndexes *bool `yaml:"no-indexes,omitempty" json:"no-indexes,omitempty"`
 	// Do not back up any UDF modules.
-	NoUdfs *bool `yaml:"no-udfs,omitempty"`
+	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty"`
 	// Throttles backup write operations to the backup file(s) to not exceed the given
 	// bandwidth in MiB/s.
-	Bandwidth *int64 `yaml:"bandwidth,omitempty" example:"10000"`
+	Bandwidth *int64 `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
 	// An approximate limit for the number of records to process. Available in server 4.9 and above.
-	MaxRecords *int64 `yaml:"max-records,omitempty" example:"10000"`
+	MaxRecords *int64 `yaml:"max-records,omitempty" json:"max-records,omitempty" example:"10000"`
 	// Limit total returned records per second (RPS). If RPS is zero (the default),
 	// the records-per-second limit is not applied.
-	RecordsPerSecond *int32 `yaml:"records-per-second,omitempty" example:"1000"`
+	RecordsPerSecond *int32 `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000"`
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created.
-	FileLimit *int64 `yaml:"file-limit,omitempty" example:"1024"`
+	FileLimit *int64 `yaml:"file-limit,omitempty" json:"file-limit,omitempty" example:"1024"`
 	// Encryption details.
-	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty"`
+	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details.
-	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty"`
+	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
 	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
-	Sealed *bool `yaml:"sealed,omitempty"`
+	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
 }
 
 // GetMaxRetriesOrDefault returns the value of the MaxRetries property.

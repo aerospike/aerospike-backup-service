@@ -21,22 +21,22 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 	applyMiddleware(apiRouter, middlewares...)
 
 	// root route
-	sysRouter.HandleFunc("/", handlers.RootActionHandler)
+	sysRouter.HandleFunc("/", handlers.RootActionHandler).Methods(http.MethodGet)
 
 	// health route
-	sysRouter.HandleFunc("/health", handlers.HealthActionHandler)
+	sysRouter.HandleFunc("/health", handlers.HealthActionHandler).Methods(http.MethodGet)
 
 	// readiness route
-	sysRouter.HandleFunc("/ready", handlers.ReadyActionHandler)
+	sysRouter.HandleFunc("/ready", handlers.ReadyActionHandler).Methods(http.MethodGet)
 
 	// version route
-	sysRouter.HandleFunc("/version", handlers.VersionActionHandler)
+	sysRouter.HandleFunc("/version", handlers.VersionActionHandler).Methods(http.MethodGet)
 
 	// Prometheus endpoint
-	sysRouter.Handle("/metrics", handlers.MetricsActionHandler())
+	sysRouter.Handle("/metrics", handlers.MetricsActionHandler()).Methods(http.MethodGet)
 
 	// OpenAPI specification endpoint
-	sysRouter.Handle("/api-docs/", handlers.APIDocsActionHandler())
+	sysRouter.Handle("/api-docs/", handlers.APIDocsActionHandler()).Methods(http.MethodGet)
 
 	// whole config route
 	apiRouter.HandleFunc("/config", h.ConfigActionHandler).Methods(http.MethodGet, http.MethodPut)
@@ -68,16 +68,16 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 	apiRouter.HandleFunc("/restore/full", h.RestoreFullHandler).Methods(http.MethodPost)
 
 	// Restore from incremental backup (by file)
-	apiRouter.HandleFunc("/restore/incremental", h.RestoreIncrementalHandler)
+	apiRouter.HandleFunc("/restore/incremental", h.RestoreIncrementalHandler).Methods(http.MethodPost)
 
 	// Restore to specific point in time (by timestamp and routine)
-	apiRouter.HandleFunc("/restore/timestamp", h.RestoreByTimeHandler)
+	apiRouter.HandleFunc("/restore/timestamp", h.RestoreByTimeHandler).Methods(http.MethodPost)
 
 	// Restore job status endpoint
-	apiRouter.HandleFunc("/restore/status/{jobId}", h.RestoreStatusHandler)
+	apiRouter.HandleFunc("/restore/status/{jobId}", h.RestoreStatusHandler).Methods(http.MethodGet)
 
 	// Return backed up Aerospike configuration
-	apiRouter.HandleFunc("/retrieve/configuration/{name}/{timestamp}", h.RetrieveConfig)
+	apiRouter.HandleFunc("/retrieve/configuration/{name}/{timestamp}", h.RetrieveConfig).Methods(http.MethodGet)
 
 	// Read available backups
 	apiRouter.HandleFunc("/backups/full/{name}", h.GetFullBackupsForRoutine).Methods(http.MethodGet)
