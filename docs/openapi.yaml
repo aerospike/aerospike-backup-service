@@ -1055,8 +1055,8 @@ components:
       description: AerospikeCluster represents the configuration for an Aerospike
         cluster for backup.
       example:
-        connection-queue-size: 100
         credentials: "{}"
+        max-parallel-scans: 100
         conn-timeout: 5000
         use-services-alternate: true
         seed-nodes:
@@ -1073,10 +1073,6 @@ components:
           description: The connection timeout in milliseconds.
           example: 5000
           type: integer
-        connection-queue-size:
-          description: Specifies the size of the Aerospike Connection Queue per node.
-          example: 100
-          type: integer
         credentials:
           allOf:
           - $ref: '#/components/schemas/model.Credentials'
@@ -1086,6 +1082,10 @@ components:
           description: The cluster name.
           example: testCluster
           type: string
+        max-parallel-scans:
+          description: Specifies the maximum number of parallel scans
+          example: 100
+          type: integer
         seed-nodes:
           description: The seed nodes details.
           items:
@@ -1410,8 +1410,8 @@ components:
             max-records: 10000
         aerospike-clusters:
           key:
-            connection-queue-size: 100
             credentials: "{}"
+            max-parallel-scans: 100
             conn-timeout: 5000
             use-services-alternate: true
             seed-nodes:

@@ -1384,11 +1384,6 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 5000
                 },
-                "connection-queue-size": {
-                    "description": "Specifies the size of the Aerospike Connection Queue per node.",
-                    "type": "integer",
-                    "example": 100
-                },
                 "credentials": {
                     "description": "The authentication details to the Aerospike cluster.",
                     "allOf": [
@@ -1401,6 +1396,11 @@ const docTemplate = `{
                     "description": "The cluster name.",
                     "type": "string",
                     "example": "testCluster"
+                },
+                "max-parallel-scans": {
+                    "description": "Specifies the maximum number of parallel scans",
+                    "type": "integer",
+                    "example": 100
                 },
                 "seed-nodes": {
                     "description": "The seed nodes details.",

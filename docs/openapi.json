@@ -1520,11 +1520,6 @@
             "example" : 5000,
             "type" : "integer"
           },
-          "connection-queue-size" : {
-            "description" : "Specifies the size of the Aerospike Connection Queue per node.",
-            "example" : 100,
-            "type" : "integer"
-          },
           "credentials" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/model.Credentials"
@@ -1536,6 +1531,11 @@
             "description" : "The cluster name.",
             "example" : "testCluster",
             "type" : "string"
+          },
+          "max-parallel-scans" : {
+            "description" : "Specifies the maximum number of parallel scans",
+            "example" : 100,
+            "type" : "integer"
           },
           "seed-nodes" : {
             "description" : "The seed nodes details.",
