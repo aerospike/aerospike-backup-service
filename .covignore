@@ -8,3 +8,6 @@
 /pkg/service/backup_.*\.go
 /pkg/service/configuration_manager.*\.go
 /pkg/service/s3_context.go
+/pkg/service/backup_go.go
+/pkg/service/restore_go.go
+/pkg/service/estimates.go

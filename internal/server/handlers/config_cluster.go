@@ -1,4 +1,4 @@
-package server
+package handlers
 
 import (
 	"encoding/json"
@@ -8,9 +8,23 @@ import (
 
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aerospike/backup/pkg/service"
+	"github.com/gorilla/mux"
 )
 
 const clusterNameNotSpecifiedMsg = "Cluster name is not specified"
+
+func (s *Service) ConfigClusterActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		s.addAerospikeCluster(w, r)
+	case http.MethodGet:
+		s.readAerospikeCluster(w, r)
+	case http.MethodPut:
+		s.updateAerospikeCluster(w, r)
+	case http.MethodDelete:
+		s.deleteAerospikeCluster(w, r)
+	}
+}
 
 // addAerospikeCluster
 // @Summary     Adds an Aerospike cluster to the config.
@@ -22,46 +36,66 @@ const clusterNameNotSpecifiedMsg = "Cluster name is not specified"
 // @Param       cluster body model.AerospikeCluster true "Aerospike cluster details"
 // @Success     201
 // @Failure     400 {string} string
-//
-//nolint:dupl
-func (ws *HTTPServer) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+// @Failure     500 {string} string
+func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "addAerospikeCluster"))
+
 	var newCluster model.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&newCluster)
 	if err != nil {
+		hLogger.Error("failed to decode request body",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	r.Body.Close()
-	name := r.PathValue("name")
+
+	name := mux.Vars(r)["name"]
 	if name == "" {
+		hLogger.Error(clusterNameNotSpecifiedMsg,
+			slog.String("name", name),
+		)
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddCluster(ws.config, name, &newCluster)
+	err = service.AddCluster(s.config, name, &newCluster)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		hLogger.Error("failed to add cluster",
+			slog.String("name", name),
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(ws.config)
+	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
 }
 
-// readAerospikeClusters reads all Aerospike clusters from the configuration.
+// ReadAerospikeClusters reads all Aerospike clusters from the configuration.
 // @Summary     Reads all Aerospike clusters from the configuration.
 // @ID	        readAllClusters
 // @Tags        Configuration
 // @Router      /v1/config/clusters [get]
 // @Produce     json
 // @Success  	200 {object} map[string]model.AerospikeCluster
-// @Failure     400 {string} string
-func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
-	clusters := ws.config.AerospikeClusters
+// @Failure     500 {string} string
+func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "ReadAerospikeClusters"))
+
+	clusters := s.config.AerospikeClusters
 	jsonResponse, err := json.Marshal(clusters)
 	if err != nil {
+		hLogger.Error("failed to marshal clusters",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -69,6 +103,10 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter, _ *http.Reque
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
+		hLogger.Error("failed to write response",
+			slog.String("response", string(jsonResponse)),
+			slog.Any("error", err),
+		)
 		slog.Error("failed to write response", "err", err)
 	}
 }
@@ -81,21 +119,31 @@ func (ws *HTTPServer) readAerospikeClusters(w http.ResponseWriter, _ *http.Reque
 // @Param       name path string true "Aerospike cluster name"
 // @Produce     json
 // @Success  	200 {object} model.AerospikeCluster
-// @Response    400 {string} string
+// @Failure     400 {string} string
 // @Failure     404 {string} string "The specified cluster could not be found"
-func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	clusterName := r.PathValue("name")
+// @Failure     500 {string} string "The specified cluster could not be found"
+func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "readAerospikeCluster"))
+
+	clusterName := mux.Vars(r)["name"]
 	if clusterName == "" {
+		hLogger.Error("cluster name required")
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	cluster, ok := ws.config.AerospikeClusters[clusterName]
+	cluster, ok := s.config.AerospikeClusters[clusterName]
 	if !ok {
-		http.Error(w, fmt.Sprintf("Cluster %s could not be found", clusterName), http.StatusNotFound)
+		hLogger.Error("cluster not found",
+			slog.String("name", clusterName),
+		)
+		http.Error(w, fmt.Sprintf("cluster %s could not be found", clusterName), http.StatusNotFound)
 		return
 	}
 	jsonResponse, err := json.Marshal(cluster)
 	if err != nil {
+		hLogger.Error("failed to marshal cluster",
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -103,6 +151,10 @@ func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(jsonResponse)
 	if err != nil {
+		hLogger.Error("failed to write response",
+			slog.String("response", string(jsonResponse)),
+			slog.Any("error", err),
+		)
 		slog.Error("failed to write response", "err", err)
 	}
 }
@@ -117,7 +169,9 @@ func (ws *HTTPServer) readAerospikeCluster(w http.ResponseWriter, r *http.Reques
 // @Param       cluster body model.AerospikeCluster true "Aerospike cluster details"
 // @Success     200
 // @Failure     400 {string} string
-func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "updateAerospikeCluster"))
+
 	var updatedCluster model.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&updatedCluster)
 	if err != nil {
@@ -125,18 +179,27 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	r.Body.Close()
-	clusterName := r.PathValue("name")
+	clusterName := mux.Vars(r)["name"]
 	if clusterName == "" {
+		hLogger.Error("cluster name required")
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateCluster(ws.config, clusterName, &updatedCluster)
+	err = service.UpdateCluster(s.config, clusterName, &updatedCluster)
 	if err != nil {
+		hLogger.Error("failed to update cluster",
+			slog.String("name", clusterName),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(ws.config)
+	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.String("name", clusterName),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	w.WriteHeader(http.StatusOK)
@@ -150,19 +213,32 @@ func (ws *HTTPServer) updateAerospikeCluster(w http.ResponseWriter, r *http.Requ
 // @Param       name path string true "Aerospike cluster name"
 // @Success     204
 // @Failure     400 {string} string
-func (ws *HTTPServer) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	clusterName := r.PathValue("name")
+//
+//nolint:dupl // Each handler must be in separate func. No duplication.
+func (s *Service) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "deleteAerospikeCluster"))
+
+	clusterName := mux.Vars(r)["name"]
 	if clusterName == "" {
+		hLogger.Error("cluster name required")
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := service.DeleteCluster(ws.config, clusterName)
+	err := service.DeleteCluster(s.config, clusterName)
 	if err != nil {
+		hLogger.Error("failed to delete cluster",
+			slog.String("name", clusterName),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = ConfigurationManager.WriteConfiguration(ws.config)
+	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
+		hLogger.Error("failed to write configuration",
+			slog.String("name", clusterName),
+			slog.Any("error", err),
+		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

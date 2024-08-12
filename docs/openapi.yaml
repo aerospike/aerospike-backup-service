@@ -84,12 +84,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/model.CurrentBackups'
           description: Current backup statistics
+        "400":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Bad Request
         "404":
           content:
             application/json:
               schema:
                 type: string
           description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
       summary: Get current backup statistics.
       tags:
       - Backup
@@ -126,12 +138,18 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
       summary: Get available full backups.
       tags:
       - Backup
   /v1/backups/full/{name}:
     get:
-      operationId: getFullBackupsForRoutine
+      operationId: GetFullBackupsForRoutine
       parameters:
       - description: Backup routine name
         in: path
@@ -166,12 +184,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
-        "404":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Not Found
+          description: Internal Server Error
       summary: Get available full backups for routine.
       tags:
       - Backup
@@ -208,12 +226,18 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
       summary: Get available incremental backups.
       tags:
       - Backup
   /v1/backups/incremental/{name}:
     get:
-      operationId: getIncrementalBackupsForRoutine
+      operationId: GetIncrementalBackupsForRoutine
       parameters:
       - description: Backup routine name
         in: path
@@ -248,18 +272,18 @@ paths:
               schema:
                 type: string
           description: Bad Request
-        "404":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Not Found
+          description: Internal Server Error
       summary: Get incremental backups for routine.
       tags:
       - Backup
   /v1/backups/schedule/{name}:
     post:
-      operationId: scheduleFullBackup
+      operationId: ScheduleFullBackup
       parameters:
       - description: Backup routine name
         in: path
@@ -288,6 +312,12 @@ paths:
               schema:
                 type: string
           description: Not Found
+        "500":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Internal Server Error
       summary: Schedule a full backup once per routine name.
       tags:
       - Backup
@@ -301,12 +331,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/model.Config'
           description: OK
-        "400":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Bad Request
+          description: Internal Server Error
       summary: Returns the configuration for the service.
       tags:
       - Configuration
@@ -361,12 +391,12 @@ paths:
                   $ref: '#/components/schemas/model.AerospikeCluster'
                 type: object
           description: OK
-        "400":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Bad Request
+          description: Internal Server Error
       summary: Reads all Aerospike clusters from the configuration.
       tags:
       - Configuration
@@ -421,6 +451,12 @@ paths:
               schema:
                 type: string
           description: The specified cluster could not be found
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: The specified cluster could not be found
       summary: Reads a specific Aerospike cluster from the configuration given its
         name.
       tags:
@@ -451,6 +487,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "500":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Internal Server Error
       summary: Adds an Aerospike cluster to the config.
       tags:
       - Configuration
@@ -487,7 +529,7 @@ paths:
       x-codegen-request-body-name: cluster
   /v1/config/policies:
     get:
-      operationId: readPolicies
+      operationId: ReadPolicies
       responses:
         "200":
           content:
@@ -497,12 +539,12 @@ paths:
                   $ref: '#/components/schemas/model.BackupPolicy'
                 type: object
           description: OK
-        "400":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Bad Request
+          description: Internal Server Error
       summary: Reads all policies from the configuration.
       tags:
       - Configuration
@@ -552,6 +594,12 @@ paths:
                 type: string
           description: Bad Request
         "404":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: The specified policy could not be found
+        "500":
           content:
             application/json:
               schema:
@@ -622,7 +670,7 @@ paths:
       x-codegen-request-body-name: policy
   /v1/config/routines:
     get:
-      operationId: readRoutines
+      operationId: ReadRoutines
       responses:
         "200":
           content:
@@ -757,7 +805,7 @@ paths:
       x-codegen-request-body-name: routine
   /v1/config/storage:
     get:
-      operationId: readAllStorage
+      operationId: ReadAllStorage
       responses:
         "200":
           content:
@@ -767,12 +815,12 @@ paths:
                   $ref: '#/components/schemas/model.Storage'
                 type: object
           description: OK
-        "400":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Bad Request
+          description: Internal Server Error
       summary: Reads all storage from the configuration.
       tags:
       - Configuration
@@ -827,6 +875,12 @@ paths:
               schema:
                 type: string
           description: The specified storage could not be found
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
       summary: Reads a specific storage from the configuration given its name.
       tags:
       - Configuration
@@ -914,6 +968,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "405":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Method Not Allowed
       summary: Trigger an asynchronous full restore operation.
       tags:
       - Restore
@@ -942,6 +1002,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "405":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Method Not Allowed
       summary: Trigger an asynchronous incremental restore operation.
       tags:
       - Restore
@@ -998,6 +1064,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "405":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Method Not Allowed
       summary: Trigger an asynchronous restore operation to specific point in time.
       tags:
       - Restore
@@ -1033,6 +1105,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "405":
+          content:
+            application/zip:
+              schema:
+                type: string
+          description: Method Not Allowed
       summary: Retrieve Aerospike cluster configuration backup
       tags:
       - Restore
@@ -1055,8 +1133,8 @@ components:
       description: AerospikeCluster represents the configuration for an Aerospike
         cluster for backup.
       example:
-        connection-queue-size: 100
         credentials: "{}"
+        max-parallel-scans: 100
         conn-timeout: 5000
         use-services-alternate: true
         seed-nodes:
@@ -1073,10 +1151,6 @@ components:
           description: The connection timeout in milliseconds.
           example: 5000
           type: integer
-        connection-queue-size:
-          description: Specifies the size of the Aerospike Connection Queue per node.
-          example: 100
-          type: integer
         credentials:
           allOf:
           - $ref: '#/components/schemas/model.Credentials'
@@ -1086,6 +1160,10 @@ components:
           description: The cluster name.
           example: testCluster
           type: string
+        max-parallel-scans:
+          description: Specifies the maximum number of parallel scans
+          example: 100
+          type: integer
         seed-nodes:
           description: The seed nodes details.
           items:
@@ -1410,8 +1488,8 @@ components:
             max-records: 10000
         aerospike-clusters:
           key:
-            connection-queue-size: 100
             credentials: "{}"
+            max-parallel-scans: 100
             conn-timeout: 5000
             use-services-alternate: true
             seed-nodes:

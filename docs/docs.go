@@ -122,8 +122,20 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.CurrentBackups"
                         }
                     },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -175,6 +187,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -188,7 +206,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get available full backups for routine.",
-                "operationId": "getFullBackupsForRoutine",
+                "operationId": "GetFullBackupsForRoutine",
                 "parameters": [
                     {
                         "type": "string",
@@ -228,8 +246,8 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -281,6 +299,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -294,7 +318,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get incremental backups for routine.",
-                "operationId": "getIncrementalBackupsForRoutine",
+                "operationId": "GetIncrementalBackupsForRoutine",
                 "parameters": [
                     {
                         "type": "string",
@@ -334,8 +358,8 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -349,7 +373,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Schedule a full backup once per routine name.",
-                "operationId": "scheduleFullBackup",
+                "operationId": "ScheduleFullBackup",
                 "parameters": [
                     {
                         "type": "string",
@@ -380,6 +404,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -401,8 +431,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.Config"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -485,8 +515,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -527,6 +557,12 @@ const docTemplate = `{
                         }
                     },
                     "404": {
+                        "description": "The specified cluster could not be found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
                         "description": "The specified cluster could not be found",
                         "schema": {
                             "type": "string"
@@ -609,6 +645,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -649,7 +691,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all policies from the configuration.",
-                "operationId": "readPolicies",
+                "operationId": "ReadPolicies",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -660,8 +702,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -702,6 +744,12 @@ const docTemplate = `{
                         }
                     },
                     "404": {
+                        "description": "The specified policy could not be found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
                         "description": "The specified policy could not be found",
                         "schema": {
                             "type": "string"
@@ -824,7 +872,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all routines from the configuration.",
-                "operationId": "readRoutines",
+                "operationId": "ReadRoutines",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -999,7 +1047,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all storage from the configuration.",
-                "operationId": "readAllStorage",
+                "operationId": "ReadAllStorage",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1010,8 +1058,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -1053,6 +1101,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "The specified storage could not be found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -1198,6 +1252,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1232,6 +1292,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
                         "schema": {
                             "type": "string"
                         }
@@ -1309,6 +1375,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1352,6 +1424,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1384,11 +1462,6 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 5000
                 },
-                "connection-queue-size": {
-                    "description": "Specifies the size of the Aerospike Connection Queue per node.",
-                    "type": "integer",
-                    "example": 100
-                },
                 "credentials": {
                     "description": "The authentication details to the Aerospike cluster.",
                     "allOf": [
@@ -1401,6 +1474,11 @@ const docTemplate = `{
                     "description": "The cluster name.",
                     "type": "string",
                     "example": "testCluster"
+                },
+                "max-parallel-scans": {
+                    "description": "Specifies the maximum number of parallel scans",
+                    "type": "integer",
+                    "example": 100
                 },
                 "seed-nodes": {
                     "description": "The seed nodes details.",

@@ -26,8 +26,6 @@ var (
 )
 
 // run parses the CLI parameters and executes backup.
-//
-
 func run() int {
 	var (
 		configFile string
@@ -52,35 +50,7 @@ func run() int {
 	rootCmd.Flags().BoolVarP(&remote, "remote", "r", false, "use remote config file")
 
 	rootCmd.RunE = func(_ *cobra.Command, _ []string) error {
-		manager, err := service.NewConfigManagerBuilder().NewConfigManager(configFile, remote)
-		if err != nil {
-			return err
-		}
-		server.ConfigurationManager = manager
-		// read configuration file
-		config, err := readConfiguration()
-		if err != nil {
-			return err
-		}
-		// get system ctx
-		ctx := systemCtx()
-		// set default loggers
-		loggerConfig := config.ServiceConfig.Logger
-		slog.SetDefault(slog.New(util.LogHandler(loggerConfig)))
-		logger.SetDefault(util.NewQuartzLogger(ctx))
-		slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
-		// schedule all configured backups
-		backends := service.NewBackupBackends(config)
-		handlers := service.MakeHandlers(config, backends)
-		scheduler, err := service.ScheduleBackup(ctx, config, handlers)
-		if err != nil {
-			return err
-		}
-		// run HTTP server
-		err = runHTTPServer(ctx, backends, config, scheduler, handlers)
-		// stop the scheduler
-		scheduler.Stop()
-		return err
+		return startService(configFile, remote)
 	}
 
 	err := rootCmd.Execute()
@@ -89,6 +59,48 @@ func run() int {
 	}
 
 	return util.ToExitVal(err)
+}
+
+func startService(configFile string, remote bool) error {
+	manager, err := service.NewConfigManagerBuilder().NewConfigManager(configFile, remote)
+	if err != nil {
+		return err
+	}
+
+	// read configuration file
+	config, err := readConfiguration(manager)
+	if err != nil {
+		return err
+	}
+
+	// get system ctx
+	ctx := systemCtx()
+
+	// set default loggers
+	loggerConfig := config.ServiceConfig.Logger
+	appLogger := slog.New(
+		util.LogHandler(loggerConfig),
+	)
+	slog.SetDefault(slog.New(util.LogHandler(loggerConfig)))
+	logger.SetDefault(util.NewQuartzLogger(ctx))
+	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
+
+	// schedule all configured backups
+	backends := service.NewBackupBackends(config)
+	clientManager := service.NewClientManager(config.AerospikeClusters, &service.DefaultClientFactory{})
+	handlers := service.MakeHandlers(clientManager, config, backends)
+	scheduler, err := service.ScheduleBackup(ctx, config, handlers)
+	if err != nil {
+		return err
+	}
+
+	// run HTTP server
+	err = runHTTPServer(ctx, config, scheduler, backends, handlers, manager, clientManager, appLogger)
+
+	// stop the scheduler
+	scheduler.Stop()
+
+	return err
 }
 
 func systemCtx() context.Context {
@@ -104,8 +116,8 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func readConfiguration() (*model.Config, error) {
-	config, err := server.ConfigurationManager.ReadConfiguration()
+func readConfiguration(configurationManager service.ConfigurationManager) (*model.Config, error) {
+	config, err := configurationManager.ReadConfiguration()
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
 		return nil, err
@@ -118,12 +130,23 @@ func readConfiguration() (*model.Config, error) {
 }
 
 func runHTTPServer(ctx context.Context,
-	backends service.BackendsHolder,
 	config *model.Config,
 	scheduler quartz.Scheduler,
+	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
+	configurationManager service.ConfigurationManager,
+	clientManger service.ClientManager,
+	logger *slog.Logger,
 ) error {
-	httpServer := server.NewHTTPServer(backends, config, scheduler, handlerHolder)
+	httpServer := server.NewHTTPServer(
+		config,
+		scheduler,
+		backends,
+		handlerHolder,
+		configurationManager,
+		clientManger,
+		logger,
+	)
 	go func() {
 		httpServer.Start()
 	}()

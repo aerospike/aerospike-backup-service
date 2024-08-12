@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/prometheus/client_golang/prometheus"
@@ -21,27 +21,30 @@ var errBackupNotFound = errors.New("backup not found")
 // Stores job information locally within a map.
 type dataRestorer struct {
 	configRetriever
-	config          *model.Config
-	restoreJobs     *JobsHolder
-	restoreService  Restore
-	backends        BackendsHolder
-	asClientCreator ASClientCreator
+	config         *model.Config
+	restoreJobs    *JobsHolder
+	restoreService Restore
+	backends       BackendsHolder
+	clientManager  ClientManager
 }
 
 var _ RestoreManager = (*dataRestorer)(nil)
 
 // NewRestoreManager returns a new dataRestorer instance.
-func NewRestoreManager(backends BackendsHolder, config *model.Config,
-	restoreService Restore) RestoreManager {
+func NewRestoreManager(backends BackendsHolder,
+	config *model.Config,
+	restoreService Restore,
+	clientManager ClientManager,
+) RestoreManager {
 	return &dataRestorer{
 		configRetriever: configRetriever{
 			backends,
 		},
-		restoreJobs:     NewJobsHolder(),
-		restoreService:  restoreService,
-		backends:        backends,
-		config:          config,
-		asClientCreator: &AerospikeClientCreator{},
+		restoreJobs:    NewJobsHolder(),
+		restoreService: restoreService,
+		backends:       backends,
+		config:         config,
+		clientManager:  clientManager,
 	}
 }
 
@@ -55,11 +58,15 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal,
 
 	ctx := context.TODO()
 	go func() {
-		client, err := r.initClient(request.DestinationCuster, jobID)
+		client, err := r.clientManager.CreateClient(request.DestinationCuster)
 		if err != nil {
+			slog.Error("Failed to restore by path",
+				slog.Any("cluster", request.DestinationCuster),
+				slog.Any("err", err))
+			r.restoreJobs.setFailed(jobID, err)
 			return
 		}
-		defer r.asClientCreator.Close(client)
+		defer r.clientManager.Close(client)
 
 		handler, err := r.restoreService.RestoreRun(ctx, client, request)
 		if err != nil {
@@ -80,20 +87,6 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal,
 	}()
 
 	return jobID, nil
-}
-
-func (r *dataRestorer) initClient(cluster *model.AerospikeCluster, jobID model.RestoreJobID,
-) (*aerospike.Client, error) {
-	client, aerr := r.asClientCreator.NewClient(
-		cluster.ASClientPolicy(),
-		cluster.ASClientHosts()...)
-	if aerr != nil {
-		err := fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
-		slog.Error("Failed to restore by timestamp", "cluster", cluster, "err", err)
-		r.restoreJobs.setFailed(jobID, err)
-		return nil, err
-	}
-	return client, nil
 }
 
 func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
@@ -121,11 +114,15 @@ func (r *dataRestorer) restoreByTimeSync(
 	jobID model.RestoreJobID,
 	fullBackups []model.BackupDetails,
 ) {
-	client, err := r.initClient(request.DestinationCuster, jobID)
+	client, err := r.clientManager.CreateClient(request.DestinationCuster)
 	if err != nil {
+		slog.Error("Failed to restore by timestamp",
+			slog.Any("cluster", request.DestinationCuster),
+			slog.Any("err", err))
+		r.restoreJobs.setFailed(jobID, err)
 		return
 	}
-	defer r.asClientCreator.Close(client)
+	defer r.clientManager.Close(client)
 
 	var wg sync.WaitGroup
 
@@ -155,7 +152,7 @@ func (r *dataRestorer) restoreByTimeSync(
 
 func (r *dataRestorer) restoreNamespace(
 	ctx context.Context,
-	client *aerospike.Client,
+	client *backup.Client,
 	backend BackupListReader,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
@@ -202,7 +199,7 @@ func (r *dataRestorer) restoreNamespace(
 
 func (r *dataRestorer) restoreFromPath(
 	ctx context.Context,
-	client *aerospike.Client,
+	client *backup.Client,
 	request *model.RestoreTimestampRequest,
 	backupPath *string,
 ) (RestoreHandler, error) {
@@ -248,24 +245,4 @@ func validateStorageContainsBackup(storage *model.Storage) (uint64, error) {
 		return s3context.ValidateStorageContainsBackup()
 	}
 	return 0, nil
-}
-
-// ASClientCreator manages creation and close of aerospike connection.
-// Required to be able to mock it in tests.
-type ASClientCreator interface {
-	NewClient(policy *aerospike.ClientPolicy, hosts ...*aerospike.Host) (*aerospike.Client, error)
-	Close(client *aerospike.Client)
-}
-
-type AerospikeClientCreator struct{}
-
-// Close closes the client.
-func (a *AerospikeClientCreator) Close(client *aerospike.Client) {
-	client.Close()
-}
-
-// NewClient returns a new [aerospike.Client].
-func (a *AerospikeClientCreator) NewClient(policy *aerospike.ClientPolicy, hosts ...*aerospike.Host,
-) (*aerospike.Client, error) {
-	return aerospike.NewClientWithPolicyAndHost(policy, hosts...)
 }
