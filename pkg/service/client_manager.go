@@ -10,7 +10,17 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-type BackupClientManager struct {
+// ClientManager is responsible for creating and closing backup clients.
+type ClientManager interface {
+	// GetClient return backup client by aerospike cluster name (new or from cache)
+	GetClient(string) (*backup.Client, error)
+	// CreateClient creates new backup client
+	CreateClient(*model.AerospikeCluster) (*backup.Client, error)
+	// Close closes the client if it is not in use anymore
+	Close(*backup.Client)
+}
+
+type ClientManagerImpl struct {
 	clusters map[string]*model.AerospikeCluster
 	clients  map[string]*clientInfo
 	mu       sync.Mutex
@@ -21,14 +31,14 @@ type clientInfo struct {
 	count  int
 }
 
-func NewClientManager(clusters map[string]*model.AerospikeCluster) *BackupClientManager {
-	return &BackupClientManager{
+func NewClientManager(clusters map[string]*model.AerospikeCluster) ClientManager {
+	return &ClientManagerImpl{
 		clusters: clusters,
 		clients:  make(map[string]*clientInfo),
 	}
 }
 
-func (cm *BackupClientManager) GetClient(clusterName string) (*backup.Client, error) {
+func (cm *ClientManagerImpl) GetClient(clusterName string) (*backup.Client, error) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -55,7 +65,7 @@ func (cm *BackupClientManager) GetClient(clusterName string) (*backup.Client, er
 	return client, nil
 }
 
-func (cm *BackupClientManager) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
+func (cm *ClientManagerImpl) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
 	aClient, aerr := aerospike.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
 	if aerr != nil {
 		return nil, fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
@@ -77,7 +87,7 @@ func (cm *BackupClientManager) CreateClient(cluster *model.AerospikeCluster) (*b
 	return client, nil
 }
 
-func (cm *BackupClientManager) Close(client *backup.Client) {
+func (cm *ClientManagerImpl) Close(client *backup.Client) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -94,14 +104,4 @@ func (cm *BackupClientManager) Close(client *backup.Client) {
 
 	// close client even it was not found
 	client.AerospikeClient().Close()
-}
-
-// ClientManager defines the interface for BackupClientManager
-type ClientManager interface {
-	// GetClient return backup client by aerospike cluster name (new or from cache)
-	GetClient(string) (*backup.Client, error)
-	// CreateClient creates new backup client
-	CreateClient(*model.AerospikeCluster) (*backup.Client, error)
-	// Close closes the client if it is not in use anymore
-	Close(*backup.Client)
 }
