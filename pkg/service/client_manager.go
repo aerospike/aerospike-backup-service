@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup/pkg/model"
 	"golang.org/x/sync/semaphore"
@@ -20,10 +20,26 @@ type ClientManager interface {
 	Close(*backup.Client)
 }
 
+// AerospikeClientFactory defines an interface for creating new clients.
+type AerospikeClientFactory interface {
+	NewClientWithPolicyAndHost(policy *as.ClientPolicy, hosts ...*as.Host) (backup.AerospikeClient, error)
+}
+
+// DefaultClientFactory is the default implementation of AerospikeClientFactory.
+type DefaultClientFactory struct{}
+
+// NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
+func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
+	policy *as.ClientPolicy, hosts ...*as.Host,
+) (backup.AerospikeClient, error) {
+	return as.NewClientWithPolicyAndHost(policy, hosts...)
+}
+
 type ClientManagerImpl struct {
-	clusters map[string]*model.AerospikeCluster
-	clients  map[string]*clientInfo
-	mu       sync.Mutex
+	clusters      map[string]*model.AerospikeCluster
+	clients       map[string]*clientInfo
+	mu            sync.Mutex
+	clientFactory AerospikeClientFactory
 }
 
 type clientInfo struct {
@@ -31,10 +47,13 @@ type clientInfo struct {
 	count  int
 }
 
-func NewClientManager(clusters map[string]*model.AerospikeCluster) ClientManager {
+func NewClientManager(clusters map[string]*model.AerospikeCluster,
+	aerospikeClientFactory AerospikeClientFactory,
+) ClientManager {
 	return &ClientManagerImpl{
-		clusters: clusters,
-		clients:  make(map[string]*clientInfo),
+		clusters:      clusters,
+		clients:       make(map[string]*clientInfo),
+		clientFactory: aerospikeClientFactory,
 	}
 }
 
@@ -66,9 +85,9 @@ func (cm *ClientManagerImpl) GetClient(clusterName string) (*backup.Client, erro
 }
 
 func (cm *ClientManagerImpl) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
-	aClient, aerr := aerospike.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
-	if aerr != nil {
-		return nil, fmt.Errorf("failed to connect to aerospike cluster, %w", aerr)
+	aeroClient, err := cm.clientFactory.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to aerospike cluster, %w", err)
 	}
 
 	var options []backup.ClientOpt
@@ -79,7 +98,7 @@ func (cm *ClientManagerImpl) CreateClient(cluster *model.AerospikeCluster) (*bac
 		options = append(options, backup.WithID(*cluster.ClusterLabel))
 	}
 
-	client, err := backup.NewClient(aClient, options...)
+	client, err := backup.NewClient(aeroClient, options...)
 	if err != nil {
 		return nil, err
 	}
