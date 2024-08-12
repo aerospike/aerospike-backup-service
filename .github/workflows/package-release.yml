@@ -53,8 +53,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          ref: "release-test"
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
