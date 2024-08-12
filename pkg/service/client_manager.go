@@ -49,7 +49,7 @@ type clientInfo struct {
 
 func NewClientManager(clusters map[string]*model.AerospikeCluster,
 	aerospikeClientFactory AerospikeClientFactory,
-) ClientManager {
+) *ClientManagerImpl {
 	return &ClientManagerImpl{
 		clusters:      clusters,
 		clients:       make(map[string]*clientInfo),
