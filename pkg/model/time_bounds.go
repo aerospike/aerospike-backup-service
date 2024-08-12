@@ -2,8 +2,6 @@ package model
 
 import (
 	"errors"
-	"fmt"
-	"strconv"
 	"time"
 )
 
@@ -31,35 +29,6 @@ func NewTimeBoundsTo(toTime time.Time) *TimeBounds {
 func NewTimeBoundsFrom(fromTime time.Time) *TimeBounds {
 	timeBounds, _ := NewTimeBounds(&fromTime, nil) // validation only makes sense with two parameters.
 	return timeBounds
-}
-
-// NewTimeBoundsFromString creates a TimeBounds from the string representation of
-// time boundaries (string is given as epoch time millis).
-func NewTimeBoundsFromString(from, to string) (*TimeBounds, error) {
-	fromTime, err := parseTimestamp(from)
-	if err != nil {
-		return nil, err
-	}
-	toTime, err := parseTimestamp(to)
-	if err != nil {
-		return nil, err
-	}
-	return NewTimeBounds(fromTime, toTime)
-}
-
-func parseTimestamp(value string) (*time.Time, error) {
-	if len(value) == 0 {
-		return nil, nil
-	}
-	intValue, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	if intValue < 0 {
-		return nil, fmt.Errorf("timestamp should be positive or zero, got %d", intValue)
-	}
-	result := time.UnixMilli(intValue)
-	return &result, nil
 }
 
 // Contains verifies if the given value lies within FromTime (inclusive) and ToTime (exclusive).

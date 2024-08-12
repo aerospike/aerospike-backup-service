@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/internal/server/handlers/dto"
 	"github.com/aerospike/backup/pkg/service"
 	"github.com/gorilla/mux"
 )
@@ -33,13 +33,13 @@ func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Requ
 // @Router      /v1/config/storage/{name} [post]
 // @Accept      json
 // @Param       name path string true "Backup storage name"
-// @Param       storage body model.Storage true "Backup storage details"
+// @Param       storage body dto.Storage true "Backup storage details"
 // @Success     201
 // @Failure     400 {string} string
 func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addStorage"))
 
-	var newStorage model.Storage
+	var newStorage dto.Storage
 	err := json.NewDecoder(r.Body).Decode(&newStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -52,7 +52,8 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddStorage(s.config, name, &newStorage)
+	storage := dto.MapStorageFromDTO(newStorage)
+	err = service.AddStorage(s.config, name, &storage)
 	if err != nil {
 		hLogger.Error("failed to add storage",
 			slog.String("name", name),
@@ -79,8 +80,8 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /v1/config/storage [get]
 // @Produce     json
-// @Success  	200 {object} map[string]model.Storage
-// @Failure     400 {string} string
+// @Success  	200 {object} map[string]dto.Storage
+// @Failure     500 {string} string
 func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAllStorage"))
 
@@ -111,9 +112,10 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Router      /v1/config/storage/{name} [get]
 // @Param       name path string true "Backup storage name"
 // @Produce     json
-// @Success  	200 {object} model.Storage
+// @Success  	200 {object} dto.Storage
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified storage could not be found"
+// @Failure     500 {string} string
 //
 //nolint:dupl // Each handler must be in separate func. No duplication.
 func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
@@ -156,13 +158,13 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/storage/{name} [put]
 // @Accept      json
 // @Param       name path string true "Backup storage name"
-// @Param       storage body model.Storage true "Backup storage details"
+// @Param       storage body dto.Storage true "Backup storage details"
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateStorage"))
 
-	var updatedStorage model.Storage
+	var updatedStorage dto.Storage
 	err := json.NewDecoder(r.Body).Decode(&updatedStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -174,7 +176,8 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateStorage(s.config, storageName, &updatedStorage)
+	storage := dto.MapStorageFromDTO(updatedStorage)
+	err = service.UpdateStorage(s.config, storageName, &storage)
 	if err != nil {
 		hLogger.Error("failed to update storage",
 			slog.String("name", storageName),

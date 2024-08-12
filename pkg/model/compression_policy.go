@@ -1,8 +1,6 @@
 package model
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // Compression modes
 const (
@@ -14,9 +12,9 @@ const (
 // @Description CompressionPolicy contains backup compression information.
 type CompressionPolicy struct {
 	// The compression mode to be used (default is NONE).
-	Mode string `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE" enums:"NONE,ZSTD"`
+	Mode string `yaml:"mode,omitempty" default:"NONE" enums:"NONE,ZSTD"`
 	// The compression level to use (or -1 if unspecified).
-	Level int32 `yaml:"level,omitempty" json:"level,omitempty"`
+	Level int32 `yaml:"level,omitempty"`
 }
 
 // Validate validates the compression policy.

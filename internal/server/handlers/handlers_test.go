@@ -54,19 +54,30 @@ func testBackupDetails() model.BackupDetails {
 }
 
 func testConfig() *model.Config {
-	aCluster := make(map[string]*model.AerospikeCluster)
+	clusters := make(map[string]*model.AerospikeCluster)
 	label := "testLabel"
-	aCluster[testCluster] = &model.AerospikeCluster{
+	clusters[testCluster] = &model.AerospikeCluster{
 		ClusterLabel: &label,
 	}
+
+	policies := make(map[string]*model.BackupPolicy)
+	policies[testPolicy] = &model.BackupPolicy{}
+
+	storages := make(map[string]*model.Storage)
+	storages[testStorage] = &model.Storage{}
+
+	routines := make(map[string]*model.BackupRoutine)
+	routines[testRoutineName] = &model.BackupRoutine{}
+
 	return &model.Config{
 		ServiceConfig: &model.BackupServiceConfig{
 			HTTPServer: &model.HTTPServerConfig{},
 			Logger:     &model.LoggerConfig{},
 		},
-		AerospikeClusters: aCluster,
-		Storage:           make(map[string]*model.Storage),
-		BackupPolicies:    make(map[string]*model.BackupPolicy),
+		AerospikeClusters: clusters,
+		Storage:           storages,
+		BackupPolicies:    policies,
+		BackupRoutines:    routines,
 	}
 }
 

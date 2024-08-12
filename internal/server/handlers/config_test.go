@@ -11,15 +11,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testConfigDTO() *dto.ConfigDTO {
-	return &dto.ConfigDTO{
-		ServiceConfig: &dto.BackupServiceConfigDTO{
-			HTTPServer: &dto.HTTPServerConfigDTO{},
-			Logger:     &dto.LoggerConfigDTO{},
+func testConfigDTO() *dto.Config {
+	return &dto.Config{
+		ServiceConfig: &dto.BackupServiceConfig{
+			HTTPServer: &dto.HTTPServerConfig{},
+			Logger:     &dto.LoggerConfig{},
 		},
-		AerospikeClusters: make(map[string]*dto.AerospikeClusterDTO),
-		Storage:           make(map[string]*dto.StorageDTO),
-		BackupPolicies:    make(map[string]*dto.BackupPolicyDTO),
+		AerospikeClusters: make(map[string]*dto.AerospikeCluster),
+		Storage:           make(map[string]*dto.Storage),
+		BackupPolicies:    make(map[string]*dto.BackupPolicy),
 	}
 }
 

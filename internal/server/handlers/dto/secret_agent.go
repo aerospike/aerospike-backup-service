@@ -1,13 +1,15 @@
 package dto
 
-// SecretAgentDTO represents the configuration of an Aerospike Secret Agent
+import "github.com/aerospike/backup/pkg/model"
+
+// SecretAgent represents the configuration of an Aerospike Secret Agent
 // for a backup/restore operation.
 // Aerospike Secret Agent acts as a proxy layer between Aerospike server and one or more
 // external secrets management services, fetching secrets on behalf of the server.
 //
-// @Description SecretAgentDTO represents the configuration of an Aerospike Secret Agent
+// @Description SecretAgent represents the configuration of an Aerospike Secret Agent
 // @Description for a backup/restore operation.
-type SecretAgentDTO struct {
+type SecretAgent struct {
 	// Connection type: tcp, unix.
 	ConnectionType *string `json:"connection-type,omitempty" example:"tcp"`
 	// Address of the Secret Agent.
@@ -20,4 +22,15 @@ type SecretAgentDTO struct {
 	TLSCAString *string `json:"tls-ca-file,omitempty" example:"/path/to/ca.pem"`
 	// Flag that shows if secret agent responses are encrypted with base64.
 	IsBase64 *bool `json:"is-base64,omitempty" example:"false"`
+}
+
+func MapSecretAgentFromDTO(dto SecretAgent) model.SecretAgent {
+	return model.SecretAgent{
+		ConnectionType: dto.ConnectionType,
+		Address:        dto.Address,
+		Port:           dto.Port,
+		Timeout:        dto.Timeout,
+		TLSCAString:    dto.TLSCAString,
+		IsBase64:       dto.IsBase64,
+	}
 }

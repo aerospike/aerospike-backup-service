@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/backup/internal/server/handlers/dto"
 	"github.com/aerospike/backup/pkg/service"
 )
 
@@ -50,8 +50,7 @@ func (s *Service) readConfig(w http.ResponseWriter) {
 func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateConfig"))
 
-	// TODO: make DTO validation, and replace this
-	var newConfig model.Config
+	var newConfig dto.Config
 
 	err := json.NewDecoder(r.Body).Decode(&newConfig)
 	if err != nil {
@@ -69,8 +68,9 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid configuration: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	s.config = &newConfig
-	err = s.configurationManager.WriteConfiguration(&newConfig)
+	cfg := dto.MapConfigFromDTO(newConfig)
+	s.config = &cfg
+	err = s.configurationManager.WriteConfiguration(&cfg)
 	if err != nil {
 		// We won't log config as it is not secure.
 		hLogger.Error("failed to update configuration",

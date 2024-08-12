@@ -14,26 +14,26 @@ import (
 
 const testCluster = "testCluster"
 
-func testSeedNode() dto.SeedNodeDTO {
-	return dto.SeedNodeDTO{
+func testSeedNode() dto.SeedNode {
+	return dto.SeedNode{
 		HostName: "host",
 		Port:     3000,
 		TLSName:  "tls",
 	}
 }
 
-func testConfigCluster() dto.AerospikeClusterDTO {
+func testConfigCluster() dto.AerospikeCluster {
 	label := "label"
 	timeout := int32(10)
 	useAlternate := false
 	queueSize := 1
-	return dto.AerospikeClusterDTO{
+	return dto.AerospikeCluster{
 		ClusterLabel:         &label,
-		SeedNodes:            []dto.SeedNodeDTO{testSeedNode()},
+		SeedNodes:            []dto.SeedNode{testSeedNode()},
 		ConnTimeout:          &timeout,
 		UseServicesAlternate: &useAlternate,
-		Credentials:          &dto.CredentialsDTO{},
-		TLS:                  &dto.TLSDTO{},
+		Credentials:          &dto.Credentials{},
+		TLS:                  &dto.TLS{},
 		ConnectionQueueSize:  &queueSize,
 	}
 }
@@ -47,8 +47,8 @@ func TestService_ConfigClusterActionHandlerPost(t *testing.T) {
 		h.ConfigClusterActionHandler,
 	).Methods(http.MethodPost)
 
-	cfg := testConfigCluster()
-	cfgBytes, err := json.Marshal(cfg)
+	body := testConfigCluster()
+	bodyBytes, err := json.Marshal(body)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -57,15 +57,15 @@ func TestService_ConfigClusterActionHandlerPost(t *testing.T) {
 		name       string
 		body       string
 	}{
-		{http.MethodPost, http.StatusCreated, testCluster, string(cfgBytes)},
+		{http.MethodPost, http.StatusCreated, testCluster, string(bodyBytes)},
 		{http.MethodPost, http.StatusBadRequest, testCluster, ""},
-		{http.MethodPost, http.StatusNotFound, "", string(cfgBytes)},
-		{http.MethodGet, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
-		{http.MethodDelete, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
-		{http.MethodPut, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
+		{http.MethodPost, http.StatusNotFound, "", string(bodyBytes)},
+		{http.MethodGet, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{http.MethodConnect, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{http.MethodDelete, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{http.MethodPatch, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{http.MethodPut, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{http.MethodTrace, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
 	}
 
 	for _, tt := range testCases {
@@ -124,8 +124,8 @@ func TestService_ConfigClusterActionHandlerPut(t *testing.T) {
 		h.ConfigClusterActionHandler,
 	).Methods(http.MethodPut)
 
-	cfg := testConfigCluster()
-	cfgBytes, err := json.Marshal(cfg)
+	body := testConfigCluster()
+	bodyBytes, err := json.Marshal(body)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -134,15 +134,15 @@ func TestService_ConfigClusterActionHandlerPut(t *testing.T) {
 		name       string
 		body       string
 	}{
-		{http.MethodPut, http.StatusOK, testCluster, string(cfgBytes)},
+		{http.MethodPut, http.StatusOK, testCluster, string(bodyBytes)},
 		{http.MethodPut, http.StatusBadRequest, testCluster, ""},
-		{http.MethodPut, http.StatusNotFound, "", string(cfgBytes)},
-		{http.MethodGet, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
-		{http.MethodDelete, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
-		{http.MethodPost, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testCluster, string(cfgBytes)},
+		{http.MethodPut, http.StatusNotFound, "", string(bodyBytes)},
+		{http.MethodGet, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{http.MethodConnect, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{http.MethodDelete, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{http.MethodPatch, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{http.MethodPost, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{http.MethodTrace, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
 	}
 
 	for _, tt := range testCases {
@@ -186,6 +186,39 @@ func TestService_ConfigClusterActionHandlerDelete(t *testing.T) {
 			Handler(router).
 			Method(tt.method).
 			URL(fmt.Sprintf("/config/clusters/%s", tt.name)).
+			Expect(t).
+			Status(tt.statusCode).
+			End()
+	}
+}
+
+func TestService_ReadAerospikeClusters(t *testing.T) {
+	t.Parallel()
+	h := newServiceMock()
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/config/clusters",
+		h.ReadAerospikeClusters,
+	).Methods(http.MethodGet)
+
+	testCases := []struct {
+		method     string
+		statusCode int
+	}{
+		{http.MethodGet, http.StatusOK},
+		{http.MethodPost, http.StatusMethodNotAllowed},
+		{http.MethodConnect, http.StatusMethodNotAllowed},
+		{http.MethodDelete, http.StatusMethodNotAllowed},
+		{http.MethodPatch, http.StatusMethodNotAllowed},
+		{http.MethodPut, http.StatusMethodNotAllowed},
+		{http.MethodTrace, http.StatusMethodNotAllowed},
+	}
+
+	for _, tt := range testCases {
+		apitest.New().
+			Handler(router).
+			Method(tt.method).
+			URL("/config/clusters").
 			Expect(t).
 			Status(tt.statusCode).
 			End()

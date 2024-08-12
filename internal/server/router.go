@@ -46,24 +46,26 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 	// cluster config routes
 	apiRouter.HandleFunc("/config/clusters/{name}", h.ConfigClusterActionHandler).
 		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
-	apiRouter.HandleFunc("/config/clusters", h.ReadAerospikeClusters)
+	apiRouter.HandleFunc("/config/clusters", h.ReadAerospikeClusters).Methods(http.MethodGet)
 
 	// storage config routes
-	apiRouter.HandleFunc("/config/storage/{name}", h.ConfigStorageActionHandler)
-	apiRouter.HandleFunc("/config/storage", h.ReadAllStorage)
+	apiRouter.HandleFunc("/config/storage/{name}", h.ConfigStorageActionHandler).
+		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
+	apiRouter.HandleFunc("/config/storage", h.ReadAllStorage).Methods(http.MethodGet)
 
 	// policy config routes
 	apiRouter.HandleFunc("/config/policies/{name}", h.ConfigPolicyActionHandler).
 		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
-	apiRouter.HandleFunc("/config/policies", h.ReadPolicies)
+	apiRouter.HandleFunc("/config/policies", h.ReadPolicies).Methods(http.MethodGet)
 
 	// routine config routes
-	apiRouter.HandleFunc("/config/routines/{name}", h.ConfigRoutineActionHandler)
-	apiRouter.HandleFunc("/config/routines", h.ReadRoutines)
+	apiRouter.HandleFunc("/config/routines/{name}", h.ConfigRoutineActionHandler).
+		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
+	apiRouter.HandleFunc("/config/routines", h.ReadRoutines).Methods(http.MethodGet)
 
 	// Restore job endpoints
 	// Restore from full backup (by folder)
-	apiRouter.HandleFunc("/restore/full", h.RestoreFullHandler)
+	apiRouter.HandleFunc("/restore/full", h.RestoreFullHandler).Methods(http.MethodPost)
 
 	// Restore from incremental backup (by file)
 	apiRouter.HandleFunc("/restore/incremental", h.RestoreIncrementalHandler)

@@ -41,7 +41,7 @@ func (s *Service) ConfigClusterActionHandler(w http.ResponseWriter, r *http.Requ
 func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addAerospikeCluster"))
 
-	var newCluster dto.AerospikeClusterDTO
+	var newCluster dto.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&newCluster)
 	if err != nil {
 		hLogger.Error("failed to decode request body",

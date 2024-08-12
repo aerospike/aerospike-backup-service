@@ -6,17 +6,17 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// CurrentBackupsDTO represent the current state of backups (full and incremental)
-type CurrentBackupsDTO struct {
+// CurrentBackups represent the current state of backups (full and incremental)
+type CurrentBackups struct {
 	// Full represents the state of a full backup. Nil if no full backup is running.
-	Full *RunningJobDTO `json:"full,omitempty"`
+	Full *RunningJob `json:"full,omitempty"`
 	// Incremental represents the state of an incremental backup. Nil if no incremental backup is running.
-	Incremental *RunningJobDTO `json:"incremental,omitempty"`
+	Incremental *RunningJob `json:"incremental,omitempty"`
 }
 
-// RunningJobDTO tracks progress of currently running job.
-// @Description RunningJobDTO tracks progress of currently running job.
-type RunningJobDTO struct {
+// RunningJob tracks progress of currently running job.
+// @Description RunningJob tracks progress of currently running job.
+type RunningJob struct {
 	// TotalRecords: the total number of records to be processed.
 	TotalRecords *uint64 `json:"total-records,omitempty" example:"100"`
 	// DoneRecords: the number of records that have been successfully done.
@@ -30,11 +30,11 @@ type RunningJobDTO struct {
 	EstimatedEndTime *time.Time `json:"estimated-end-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
 }
 
-func MapCurrentBackupsToDTO(b *model.CurrentBackups) CurrentBackupsDTO {
+func MapCurrentBackupsToDTO(b *model.CurrentBackups) CurrentBackups {
 	if b == nil {
-		return CurrentBackupsDTO{}
+		return CurrentBackups{}
 	}
-	var dto CurrentBackupsDTO
+	var dto CurrentBackups
 	if b.Full != nil {
 		dto.Full = mapRunningJobToDTO(*b.Full)
 	}
@@ -44,8 +44,8 @@ func MapCurrentBackupsToDTO(b *model.CurrentBackups) CurrentBackupsDTO {
 	return dto
 }
 
-func mapRunningJobToDTO(j model.RunningJob) *RunningJobDTO {
-	return &RunningJobDTO{
+func mapRunningJobToDTO(j model.RunningJob) *RunningJob {
+	return &RunningJob{
 		TotalRecords:     &j.TotalRecords,
 		DoneRecords:      &j.DoneRecords,
 		StartTime:        &j.StartTime,

@@ -22,7 +22,7 @@ import (
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/full [get]
-// @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
+// @Success  200 {object} map[string][]dto.BackupDetails "Full backups by routine"
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +38,7 @@ func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/full/{name} [get]
-// @Success  200 {object} []model.BackupDetails "Full backups for routine"
+// @Success  200 {object} []dto.BackupDetails "Full backups for routine"
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +53,7 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/incremental [get]
-// @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
+// @Success  200 {object} map[string][]dto.BackupDetails "Incremental backups by routine"
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +69,7 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/incremental/{name} [get]
-// @Success  200 {object} []model.BackupDetails "Incremental backups for routine"
+// @Success  200 {object} []dto.BackupDetails "Incremental backups for routine"
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +82,7 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
-	timeBounds, err := model.NewTimeBoundsFromString(from, to)
+	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
 	if err != nil {
 		hLogger.Error("failed parse time limits",
 			slog.String("from", from),
@@ -130,7 +130,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
-	timeBounds, err := model.NewTimeBoundsFromString(from, to)
+	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
 	if err != nil {
 		hLogger.Error("failed parse time limits",
 			slog.String("from", from),
@@ -189,15 +189,16 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-func readBackupsLogic(routines map[string]*model.BackupRoutine,
+func readBackupsLogic(routines map[string]*dto.BackupRoutine,
 	backends service.BackendsHolder,
-	timeBounds *model.TimeBounds,
-	isFullBackup bool) (map[string][]model.BackupDetails, error) {
-	result := make(map[string][]model.BackupDetails)
+	timeBounds *dto.TimeBounds,
+	isFullBackup bool) (map[string][]dto.BackupDetails, error) {
+	result := make(map[string][]dto.BackupDetails)
 	for routine := range routines {
 		reader, _ := backends.GetReader(routine)
 		backupListFunction := backupsReadFunction(reader, isFullBackup)
-		list, err := backupListFunction(timeBounds)
+		tb := dto.MapTimeBoundsFromDTO(*timeBounds)
+		list, err := backupListFunction(&tb)
 		if err != nil {
 			return nil, err
 		}

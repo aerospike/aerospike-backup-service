@@ -1,41 +1,177 @@
 package dto
 
-// ConfigDTO represents the service configuration file.
-// @Description ConfigDTO represents the service configuration file.
-type ConfigDTO struct {
-	ServiceConfig     *BackupServiceConfigDTO         `json:"service,omitempty"`
-	AerospikeClusters map[string]*AerospikeClusterDTO `json:"aerospike-clusters,omitempty"`
-	Storage           map[string]*StorageDTO          `json:"storage,omitempty"`
-	BackupPolicies    map[string]*BackupPolicyDTO     `json:"backup-policies,omitempty"`
-	BackupRoutines    map[string]*BackupRoutineDTO    `json:"backup-routines,omitempty"`
-	SecretAgents      map[string]*SecretAgentDTO      `json:"secret-agent,omitempty"`
+import (
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/aerospike/backup/pkg/model"
+)
+
+// Config represents the service configuration file.
+// @Description Config represents the service configuration file.
+type Config struct {
+	ServiceConfig     *BackupServiceConfig         `json:"service,omitempty"`
+	AerospikeClusters map[string]*AerospikeCluster `json:"aerospike-clusters,omitempty"`
+	Storage           map[string]*Storage          `json:"storage,omitempty"`
+	BackupPolicies    map[string]*BackupPolicy     `json:"backup-policies,omitempty"`
+	BackupRoutines    map[string]*BackupRoutine    `json:"backup-routines,omitempty"`
+	SecretAgents      map[string]*SecretAgent      `json:"secret-agent,omitempty"`
 }
 
-// BackupServiceConfigDTO represents the backup service configuration properties.
-// @Description BackupServiceConfigDTO represents the backup service configuration properties.
-type BackupServiceConfigDTO struct {
+func MapConfigFromDTO(dto Config) model.Config {
+	c := model.Config{}
+	if dto.ServiceConfig != nil {
+		srvConf := MapBackupServiceConfigFromDTO(*dto.ServiceConfig)
+		c.ServiceConfig = &srvConf
+	}
+	if dto.AerospikeClusters != nil {
+		clusters := make(map[string]*model.AerospikeCluster, len(dto.AerospikeClusters))
+		for k, v := range dto.AerospikeClusters {
+			cluster := MapAerospikeClusterFromDTO(*v)
+			clusters[k] = &cluster
+		}
+	}
+	if dto.Storage != nil {
+		storages := make(map[string]*model.Storage, len(dto.Storage))
+		for k, v := range dto.Storage {
+			storage := MapStorageFromDTO(*v)
+			storages[k] = &storage
+		}
+	}
+	if dto.BackupPolicies != nil {
+		policies := make(map[string]*model.BackupPolicy, len(dto.BackupPolicies))
+		for k, v := range dto.BackupPolicies {
+			policy := MapBackupPolicyFromDTO(*v)
+			policies[k] = &policy
+		}
+	}
+	if dto.BackupRoutines != nil {
+		routines := make(map[string]*model.BackupRoutine, len(dto.BackupRoutines))
+		for k, v := range dto.BackupRoutines {
+			routine := MapBackupRoutineFromDTO(*v)
+			routines[k] = &routine
+		}
+	}
+	if dto.SecretAgents != nil {
+		sas := make(map[string]*model.SecretAgent, len(dto.SecretAgents))
+		for k, v := range dto.SecretAgents {
+			sa := MapSecretAgentFromDTO(*v)
+			sas[k] = &sa
+		}
+	}
+
+	return c
+}
+
+// Validate validates the configuration.
+func (c *Config) Validate() error {
+	for name, routine := range c.BackupRoutines {
+		if name == "" {
+			return emptyFieldValidationError("routine name")
+		}
+		if err := routine.Validate(c); err != nil {
+			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
+		}
+	}
+
+	for name, storage := range c.Storage {
+		if name == "" {
+			return emptyFieldValidationError("storage name")
+		}
+		if err := storage.Validate(); err != nil {
+			return fmt.Errorf("storage '%s' validation error: %s", name, err.Error())
+		}
+	}
+
+	for name, cluster := range c.AerospikeClusters {
+		if name == "" {
+			return emptyFieldValidationError("cluster name")
+		}
+		if err := cluster.Validate(); err != nil {
+			return fmt.Errorf("cluster '%s' validation error: %s", name, err.Error())
+		}
+	}
+
+	for name, policy := range c.BackupPolicies {
+		if name == "" {
+			return emptyFieldValidationError("policy name")
+		}
+		if err := policy.Validate(); err != nil {
+			return err
+		}
+	}
+
+	if err := c.ServiceConfig.HTTPServer.Validate(); err != nil {
+		return err
+	}
+
+	if err := c.ServiceConfig.Logger.Validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// BackupServiceConfig represents the backup service configuration properties.
+// @Description BackupServiceConfig represents the backup service configuration properties.
+type BackupServiceConfig struct {
 	// HTTPServer is the backup service HTTP server configuration.
-	HTTPServer *HTTPServerConfigDTO `json:"http,omitempty"`
+	HTTPServer *HTTPServerConfig `json:"http,omitempty"`
 	// Logger is the backup service logger configuration.
-	Logger *LoggerConfigDTO `json:"logger,omitempty"`
+	Logger *LoggerConfig `json:"logger,omitempty"`
 }
 
-// HTTPServerConfigDTO represents the service's HTTP server configuration.
-// @Description HTTPServerConfigDTO represents the service's HTTP server configuration.
-type HTTPServerConfigDTO struct {
+func MapBackupServiceConfigFromDTO(dto BackupServiceConfig) model.BackupServiceConfig {
+	c := model.BackupServiceConfig{}
+	if dto.HTTPServer != nil {
+		httpConfig := MapHTTPServerConfigFromDTO(*dto.HTTPServer)
+		c.HTTPServer = &httpConfig
+	}
+	if dto.Logger != nil {
+		loggerConfig := MapLoggerConfigFromDTO(*dto.Logger)
+		c.Logger = &loggerConfig
+	}
+	return c
+}
+
+// HTTPServerConfig represents the service's HTTP server configuration.
+// @Description HTTPServerConfig represents the service's HTTP server configuration.
+type HTTPServerConfig struct {
 	// The address to listen on.
 	Address *string `json:"address,omitempty" default:"0.0.0.0" example:"0.0.0.0"`
 	// The port to listen on.
 	Port *int `json:"port,omitempty" default:"8080" example:"8080"`
 	// HTTP rate limiter configuration.
-	Rate *RateLimiterConfigDTO `json:"rate,omitempty"`
+	Rate *RateLimiterConfig `json:"rate,omitempty"`
 	// ContextPath customizes path for the API endpoints.
 	ContextPath *string `json:"context-path,omitempty" default:"/"`
 }
 
-// RateLimiterConfigDTO represents the service's HTTP server rate limiter configuration.
-// @Description RateLimiterConfigDTO is the HTTP server rate limiter configuration.
-type RateLimiterConfigDTO struct {
+func MapHTTPServerConfigFromDTO(dto HTTPServerConfig) model.HTTPServerConfig {
+	c := model.HTTPServerConfig{
+		Address:     dto.Address,
+		Port:        dto.Port,
+		ContextPath: dto.ContextPath,
+	}
+	if dto.Rate != nil {
+		rate := MapRateLimiterConfigFromDTO(*dto.Rate)
+		c.Rate = &rate
+	}
+	return c
+}
+
+// Validate validates the HTTP server configuration.
+func (s *HTTPServerConfig) Validate() error {
+	if s.ContextPath != nil && !strings.HasPrefix(*s.ContextPath, "/") {
+		return fmt.Errorf("context-path must start with a slash: %s", *s.ContextPath)
+	}
+	return nil
+}
+
+// RateLimiterConfig represents the service's HTTP server rate limiter configuration.
+// @Description RateLimiterConfig is the HTTP server rate limiter configuration.
+type RateLimiterConfig struct {
 	// Rate limiter tokens per second threshold.
 	Tps *int `json:"tps,omitempty" default:"1024" example:"1024"`
 	// Rate limiter token bucket size (bursts threshold).
@@ -44,9 +180,17 @@ type RateLimiterConfigDTO struct {
 	WhiteList []string `json:"white-list,omitempty" default:""`
 }
 
-// LoggerConfigDTO represents the backup service logger configuration.
-// @Description LoggerConfigDTO represents the backup service logger configuration.
-type LoggerConfigDTO struct {
+func MapRateLimiterConfigFromDTO(dto RateLimiterConfig) model.RateLimiterConfig {
+	return model.RateLimiterConfig{
+		Tps:       dto.Tps,
+		Size:      dto.Size,
+		WhiteList: dto.WhiteList,
+	}
+}
+
+// LoggerConfig represents the backup service logger configuration.
+// @Description LoggerConfig represents the backup service logger configuration.
+type LoggerConfig struct {
 	// Level is the logger level.
 	Level *string `yaml:"level,omitempty" json:"level,omitempty" default:"DEBUG" enums:"TRACE,DEBUG,INFO,WARN,WARNING,ERROR"`
 	// Format is the logger format (PLAIN, JSON).
@@ -54,12 +198,45 @@ type LoggerConfigDTO struct {
 	// Whether to enable logging to the standard output.
 	StdoutWriter *bool `yaml:"stdout-writer,omitempty" json:"stdout-writer,omitempty" default:"true"`
 	// File writer logging configuration.
-	FileWriter *FileLoggerConfigDTO `yaml:"file-writer,omitempty" json:"file-writer,omitempty" default:""`
+	FileWriter *FileLoggerConfig `yaml:"file-writer,omitempty" json:"file-writer,omitempty" default:""`
 }
 
-// FileLoggerConfigDTO represents the configuration for the file logger writer.
-// @Description FileLoggerConfigDTO represents the configuration for the file logger writer.
-type FileLoggerConfigDTO struct {
+func MapLoggerConfigFromDTO(dto LoggerConfig) model.LoggerConfig {
+	c := model.LoggerConfig{
+		Level:        dto.Level,
+		Format:       dto.Format,
+		StdoutWriter: dto.StdoutWriter,
+	}
+	if dto.FileWriter != nil {
+		file := MapFileLoggerConfigFromDTO(*dto.FileWriter)
+		c.FileWriter = &file
+	}
+
+	return c
+}
+
+var (
+	validLoggerLevels      = []string{"TRACE", "DEBUG", "INFO", "WARN", "WARNING", "ERROR"}
+	supportedLoggerFormats = []string{"PLAIN", "JSON"}
+)
+
+// Validate validates the logger configuration.
+func (l *LoggerConfig) Validate() error {
+	if l.Level != nil && !slices.Contains(validLoggerLevels, *l.Level) {
+		return fmt.Errorf("invalid logger level: %s", *l.Level)
+	}
+	if l.Format != nil && !slices.Contains(supportedLoggerFormats, *l.Format) {
+		return fmt.Errorf("invalid logger format: %s", *l.Format)
+	}
+	if err := l.FileWriter.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// FileLoggerConfig represents the configuration for the file logger writer.
+// @Description FileLoggerConfig represents the configuration for the file logger writer.
+type FileLoggerConfig struct {
 	// Filename is the file to write logs to.
 	Filename string `json:"filename" example:"log.txt"`
 	// MaxSize is the maximum size in megabytes of the log file before it gets rotated.
@@ -74,4 +251,37 @@ type FileLoggerConfigDTO struct {
 	// Compress determines if the rotated log files should be compressed
 	// using gzip. The default is not to perform compression.
 	Compress bool `json:"compress" default:"false"`
+}
+
+func MapFileLoggerConfigFromDTO(dto FileLoggerConfig) model.FileLoggerConfig {
+	return model.FileLoggerConfig{
+		Filename:   dto.Filename,
+		MaxSize:    dto.MaxSize,
+		MaxAge:     dto.MaxAge,
+		MaxBackups: dto.MaxBackups,
+		Compress:   dto.Compress,
+	}
+}
+
+// Validate validates the file logger configuration.
+func (f *FileLoggerConfig) Validate() error {
+	if f == nil {
+		return nil
+	}
+	if f.Filename == "" {
+		return emptyFieldValidationError("logger file")
+	}
+	if f.MaxSize < 0 {
+		return fmt.Errorf("negative logger MaxSize: %d", f.MaxSize)
+	}
+	if f.MaxSize == 0 {
+		f.MaxSize = 100 // set default in Mb
+	}
+	if f.MaxAge < 0 {
+		return fmt.Errorf("negative logger MaxAge: %d", f.MaxAge)
+	}
+	if f.MaxBackups < 0 {
+		return fmt.Errorf("negative logger MaxBackups: %d", f.MaxBackups)
+	}
+	return nil
 }

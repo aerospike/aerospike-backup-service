@@ -6,9 +6,9 @@ import (
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// BackupDetailsDTO contains information about a backup.
-// @Description BackupDetailsDTO contains information about a backup.
-type BackupDetailsDTO struct {
+// BackupDetails contains information about a backup.
+// @Description BackupDetails contains information about a backup.
+type BackupDetails struct {
 	// The path to the backup files.
 	Key *string `json:"key,omitempty" example:"storage/daily/backup/1707915600000/source-ns1"`
 	// The backup time in the ISO 8601 format.
@@ -29,8 +29,8 @@ type BackupDetailsDTO struct {
 	UDFCount *uint64 `json:"udf-count,omitempty" format:"int64" example:"2"`
 }
 
-func mapBackupDetailsToDTO(b model.BackupDetails) BackupDetailsDTO {
-	return BackupDetailsDTO{
+func mapBackupDetailsToDTO(b model.BackupDetails) BackupDetails {
+	return BackupDetails{
 		Key:                 b.Key,
 		Created:             &b.Created,
 		From:                &b.From,
@@ -43,18 +43,18 @@ func mapBackupDetailsToDTO(b model.BackupDetails) BackupDetailsDTO {
 	}
 }
 
-// MapBackupDetailsToDTOs maps slice of model.BackupDetails to slice of BackupDetailsDTO.
-func MapBackupDetailsToDTOs(bs []model.BackupDetails) []BackupDetailsDTO {
-	dtos := make([]BackupDetailsDTO, 0, len(bs))
+// MapBackupDetailsToDTOs maps slice of model.BackupDetails to slice of BackupDetails.
+func MapBackupDetailsToDTOs(bs []model.BackupDetails) []BackupDetails {
+	dtos := make([]BackupDetails, 0, len(bs))
 	for i := range bs {
 		dtos = append(dtos, mapBackupDetailsToDTO(bs[i]))
 	}
 	return dtos
 }
 
-// MapBackupDetailsMapsToDTOs maps map[string][]model.BackupDetails to map[string][]BackupDetailsDTO.
-func MapBackupDetailsMapsToDTOs(m map[string][]model.BackupDetails) map[string][]BackupDetailsDTO {
-	result := make(map[string][]BackupDetailsDTO, len(m))
+// MapBackupDetailsMapsToDTOs maps map[string][]model.BackupDetails to map[string][]BackupDetails.
+func MapBackupDetailsMapsToDTOs(m map[string][]model.BackupDetails) map[string][]BackupDetails {
+	result := make(map[string][]BackupDetails, len(m))
 	for k, v := range m {
 		result[k] = MapBackupDetailsToDTOs(v)
 	}

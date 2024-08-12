@@ -27,15 +27,7 @@ import (
 func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreFullHandler"))
 
-	if r.Method != http.MethodPost {
-		hLogger.Error("method not allowed",
-			slog.String("method", r.Method),
-		)
-		http.Error(w, "", http.StatusMethodNotAllowed)
-	}
-
 	var request model.RestoreRequest
-
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		hLogger.Error("failed to decode request body",

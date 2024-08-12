@@ -1,31 +1,49 @@
 package dto
 
 import (
+	"errors"
+
 	"github.com/aerospike/backup/pkg/model"
 )
 
-// AerospikeClusterDTO represents the configuration for an Aerospike cluster for backup.
-// @Description AerospikeClusterDTO represents the configuration for an Aerospike cluster for backup.
-type AerospikeClusterDTO struct {
+// AerospikeCluster represents the configuration for an Aerospike cluster for backup.
+// @Description AerospikeCluster represents the configuration for an Aerospike cluster for backup.
+type AerospikeCluster struct {
 	// The cluster name.
 	ClusterLabel *string `json:"label,omitempty" example:"testCluster"`
 	// The seed nodes details.
-	SeedNodes []SeedNodeDTO `json:"seed-nodes,omitempty"`
+	SeedNodes []SeedNode `json:"seed-nodes,omitempty"`
 	// The connection timeout in milliseconds.
 	ConnTimeout *int32 `json:"conn-timeout,omitempty" example:"5000"`
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
 	UseServicesAlternate *bool `json:"use-services-alternate,omitempty"`
 	// The authentication details to the Aerospike cluster.
-	Credentials *CredentialsDTO `json:"credentials,omitempty"`
+	Credentials *Credentials `json:"credentials,omitempty"`
 	// The cluster TLS configuration.
-	TLS *TLSDTO `json:"tls,omitempty"`
+	TLS *TLS `json:"tls,omitempty"`
 	// Specifies the size of the Aerospike Connection Queue per node.
 	ConnectionQueueSize *int `json:"connection-queue-size,omitempty" example:"100"`
 }
 
-// SeedNodeDTO represents details of a node in the Aerospike cluster.
-// @Description SeedNodeDTO represents details of a node in the Aerospike cluster.
-type SeedNodeDTO struct {
+// Validate validates the Aerospike cluster entity.
+func (c *AerospikeCluster) Validate() error {
+	if c == nil {
+		return errors.New("cluster is not specified")
+	}
+	if len(c.SeedNodes) == 0 {
+		return errors.New("seed nodes are not specified")
+	}
+	for _, node := range c.SeedNodes {
+		if err := node.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SeedNode represents details of a node in the Aerospike cluster.
+// @Description SeedNode represents details of a node in the Aerospike cluster.
+type SeedNode struct {
 	// The host name of the node.
 	HostName string `json:"host-name,omitempty" example:"localhost" validate:"required"`
 	// The port of the node.
@@ -34,9 +52,20 @@ type SeedNodeDTO struct {
 	TLSName string `json:"tls-name,omitempty" example:"certName" validate:"optional"`
 }
 
-// CredentialsDTO represents authentication details to the Aerospike cluster.
-// @Description CredentialsDTO represents authentication details to the Aerospike cluster.
-type CredentialsDTO struct {
+// Validate validates the SeedNode entity.
+func (node *SeedNode) Validate() error {
+	if node.HostName == "" {
+		return errors.New("empty hostname is not allowed")
+	}
+	if node.Port < 1 || node.Port > 65535 {
+		return errors.New("invalid port number")
+	}
+	return nil
+}
+
+// Credentials represents authentication details to the Aerospike cluster.
+// @Description Credentials represents authentication details to the Aerospike cluster.
+type Credentials struct {
 	// The username for the cluster authentication.
 	User *string `json:"user,omitempty" example:"testUser"`
 	// The password for the cluster authentication.
@@ -47,9 +76,9 @@ type CredentialsDTO struct {
 	AuthMode *string `json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
 }
 
-// TLSDTO represents the Aerospike cluster TLS configuration options.
-// @Description TLSDTO represents the Aerospike cluster TLS configuration options.
-type TLSDTO struct {
+// TLS represents the Aerospike cluster TLS configuration options.
+// @Description TLS represents the Aerospike cluster TLS configuration options.
+type TLS struct {
 	// Path to a trusted CA certificate file.
 	CAFile *string `json:"cafile,omitempty" example:"/path/to/cafile.pem"`
 	// Path to a directory of trusted CA certificates.
@@ -68,34 +97,7 @@ type TLSDTO struct {
 	Certfile *string `json:"certfile,omitempty" example:"/path/to/certfile.pem"`
 }
 
-// MapAerospikeClusterFromDTO maps AerospikeClusterDTO to model.AerospikeCluster.
-func MapAerospikeClusterFromDTO(dto AerospikeClusterDTO) model.AerospikeCluster {
-	return model.AerospikeCluster{
-		ClusterLabel:         dto.ClusterLabel,
-		SeedNodes:            mapSeedNodesFromDTOs(dto.SeedNodes),
-		ConnTimeout:          dto.ConnTimeout,
-		UseServicesAlternate: dto.UseServicesAlternate,
-		Credentials: &model.Credentials{
-			User:         dto.Credentials.User,
-			Password:     dto.Credentials.Password,
-			PasswordPath: dto.Credentials.PasswordPath,
-			AuthMode:     dto.Credentials.AuthMode,
-		},
-		TLS: &model.TLS{
-			CAFile:          dto.TLS.CAFile,
-			CAPath:          dto.TLS.CAPath,
-			Name:            dto.TLS.Name,
-			Protocols:       dto.TLS.Protocols,
-			CipherSuite:     dto.TLS.CipherSuite,
-			Keyfile:         dto.TLS.Keyfile,
-			KeyfilePassword: dto.TLS.KeyfilePassword,
-			Certfile:        dto.TLS.Certfile,
-		},
-		ConnectionQueueSize: dto.ConnectionQueueSize,
-	}
-}
-
-func mapSeedNodesFromDTO(dto SeedNodeDTO) model.SeedNode {
+func mapSeedNodesFromDTO(dto SeedNode) model.SeedNode {
 	return model.SeedNode{
 		HostName: dto.HostName,
 		Port:     dto.Port,
@@ -103,7 +105,7 @@ func mapSeedNodesFromDTO(dto SeedNodeDTO) model.SeedNode {
 	}
 }
 
-func mapSeedNodesFromDTOs(dtos []SeedNodeDTO) []model.SeedNode {
+func mapSeedNodesFromDTOs(dtos []SeedNode) []model.SeedNode {
 	result := make([]model.SeedNode, 0, len(dtos))
 	for i := range dtos {
 		result = append(result, mapSeedNodesFromDTO(dtos[i]))
@@ -111,9 +113,9 @@ func mapSeedNodesFromDTOs(dtos []SeedNodeDTO) []model.SeedNode {
 	return result
 }
 
-// MapAerospikeClusterToDTO maps  model.AerospikeCluster to AerospikeClusterDTO.
-func MapAerospikeClusterToDTO(c model.AerospikeCluster) AerospikeClusterDTO {
-	dto := AerospikeClusterDTO{
+// MapAerospikeClusterToDTO maps  model.AerospikeCluster to AerospikeCluster.
+func MapAerospikeClusterToDTO(c model.AerospikeCluster) AerospikeCluster {
+	dto := AerospikeCluster{
 		ClusterLabel:         c.ClusterLabel,
 		SeedNodes:            mapSeedNodesToDTOs(c.SeedNodes),
 		ConnTimeout:          c.ConnTimeout,
@@ -122,7 +124,7 @@ func MapAerospikeClusterToDTO(c model.AerospikeCluster) AerospikeClusterDTO {
 	}
 
 	if c.Credentials != nil {
-		dto.Credentials = &CredentialsDTO{
+		dto.Credentials = &Credentials{
 			User:         c.Credentials.User,
 			Password:     c.Credentials.Password,
 			PasswordPath: c.Credentials.PasswordPath,
@@ -131,7 +133,7 @@ func MapAerospikeClusterToDTO(c model.AerospikeCluster) AerospikeClusterDTO {
 	}
 
 	if c.TLS != nil {
-		dto.TLS = &TLSDTO{
+		dto.TLS = &TLS{
 			CAFile:          c.TLS.CAFile,
 			CAPath:          c.TLS.CAPath,
 			Name:            c.TLS.Name,
@@ -146,25 +148,60 @@ func MapAerospikeClusterToDTO(c model.AerospikeCluster) AerospikeClusterDTO {
 	return dto
 }
 
-func mapSeedNodesToDTO(n model.SeedNode) SeedNodeDTO {
-	return SeedNodeDTO{
+// MapAerospikeClusterFromDTO maps AerospikeCluster to model.AerospikeCluster.
+func MapAerospikeClusterFromDTO(dto AerospikeCluster) model.AerospikeCluster {
+	c := model.AerospikeCluster{
+		ClusterLabel:         dto.ClusterLabel,
+		SeedNodes:            mapSeedNodesFromDTOs(dto.SeedNodes),
+		ConnTimeout:          dto.ConnTimeout,
+		UseServicesAlternate: dto.UseServicesAlternate,
+		ConnectionQueueSize:  dto.ConnectionQueueSize,
+	}
+
+	if dto.Credentials != nil {
+		c.Credentials = &model.Credentials{
+			User:         dto.Credentials.User,
+			Password:     dto.Credentials.Password,
+			PasswordPath: dto.Credentials.PasswordPath,
+			AuthMode:     dto.Credentials.AuthMode,
+		}
+	}
+
+	if dto.TLS != nil {
+		c.TLS = &model.TLS{
+			CAFile:          dto.TLS.CAFile,
+			CAPath:          dto.TLS.CAPath,
+			Name:            dto.TLS.Name,
+			Protocols:       dto.TLS.Protocols,
+			CipherSuite:     dto.TLS.CipherSuite,
+			Keyfile:         dto.TLS.Keyfile,
+			KeyfilePassword: dto.TLS.KeyfilePassword,
+			Certfile:        dto.TLS.Certfile,
+		}
+	}
+
+	return c
+}
+
+func mapSeedNodesToDTO(n model.SeedNode) SeedNode {
+	return SeedNode{
 		HostName: n.HostName,
 		Port:     n.Port,
 		TLSName:  n.TLSName,
 	}
 }
 
-func mapSeedNodesToDTOs(ns []model.SeedNode) []SeedNodeDTO {
-	result := make([]SeedNodeDTO, 0, len(ns))
+func mapSeedNodesToDTOs(ns []model.SeedNode) []SeedNode {
+	result := make([]SeedNode, 0, len(ns))
 	for i := range ns {
 		result = append(result, mapSeedNodesToDTO(ns[i]))
 	}
 	return result
 }
 
-// MapAerospikeClusterMapsToDTO maps map[string]*model.AerospikeCluster to map[string]*AerospikeClusterDTO.
-func MapAerospikeClusterMapsToDTO(m map[string]*model.AerospikeCluster) map[string]*AerospikeClusterDTO {
-	result := make(map[string]*AerospikeClusterDTO, len(m))
+// MapAerospikeClusterMapsToDTO maps map[string]*model.AerospikeCluster to map[string]*AerospikeCluster.
+func MapAerospikeClusterMapsToDTO(m map[string]*model.AerospikeCluster) map[string]*AerospikeCluster {
+	result := make(map[string]*AerospikeCluster, len(m))
 	for k, v := range m {
 		c := MapAerospikeClusterToDTO(*v)
 		result[k] = &c
