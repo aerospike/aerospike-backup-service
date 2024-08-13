@@ -77,7 +77,9 @@ func checkBucket(ctx context.Context, client *s3.Client, bucket string) {
 	})
 
 	if err != nil {
-		slog.Warn("AWS S3 Bucket don't exist", slog.String("bucket", bucket), "err", err)
+		slog.Warn("AWS S3 Bucket don't exist",
+			slog.String("bucket", bucket),
+			slog.Any("err", err))
 	}
 }
 

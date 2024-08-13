@@ -26,7 +26,6 @@ var _ S3ManagerBuilder = &S3ManagerBuilderImpl{}
 
 func (builder S3ManagerBuilderImpl) NewS3ConfigurationManager(configStorage *model.Storage,
 ) (ConfigurationManager, error) {
-
 	err := configStorage.Validate()
 	if err != nil {
 		return nil, err
