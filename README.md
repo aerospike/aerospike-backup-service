@@ -207,7 +207,7 @@ Use the following commands before a release to update the version.
 NEXT_VERSION="<version>" make release
 git add --all
 git commit -m "Release: "$(cat VERSION)""
-git tag "<version>"
+git tag "$(cat VERSION)"
 git push 
 ```
 

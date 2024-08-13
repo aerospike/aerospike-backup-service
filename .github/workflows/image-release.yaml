@@ -8,13 +8,13 @@ on:
 jobs:
   build-images:
     runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout Automation Code
         uses: actions/checkout@v4
       - name: Get Metadata
         run: |
           echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+          echo "TAG=$(cat VERSION | cut -c 2-)" >> $GITHUB_ENV
           echo "ISO8601=$(LC_TIME=en_US.UTF-8 date "+%Y-%m-%dT%H:%M:%S%z")" >> $GITHUB_ENV
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -35,10 +35,12 @@ jobs:
         uses: docker/bake-action@v4
         env:
           GIT_COMMIT_SHA: ${{ github.sha }}
-          GIT_BRANCH: golib-release-proccess
+          GIT_BRANCH: ${{ github.ref }}
           LATEST: false
-          TAG: ${{ github.ref_name }}
+          TAG: ${{env.TAG}}
+          VERSION: ${{env.VERSION}}
           CONTEXT: ${{ github.workspace }}
+          ISO8601: ${{env.ISO8601}}
         with:
           workdir: ${{ github.workspace }}
           files: ${{ github.workspace }}/build/docker-build/docker-bake.hcl
@@ -47,6 +49,7 @@ jobs:
         env:
           ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
           ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
+          TAG: ${{env.TAG}}
         run: |
           jfrog rt docker-promote aerospike-backup-service \
           "$ARTIFACTORY_CONTAINER_DEV" \
@@ -61,11 +64,12 @@ jobs:
         env:
           ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
           ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
+          TAG: ${{env.TAG}}
         run: |
           jfrog rt docker-promote aerospike-backup-service \
           "$ARTIFACTORY_CONTAINER_DEV" \
           "$ARTIFACTORY_CONTAINER_PROD" \
-          --source-tag "${{ github.event.inputs.version }}" \
+          --source-tag "$TAG" \
           --target-tag "latest" \
           --user "${{ secrets.ARTIFACTORY_USER }}" \
           --password "${{ secrets.ARTIFACTORY_TOKEN }}" \

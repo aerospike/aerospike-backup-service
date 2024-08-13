@@ -32,14 +32,9 @@ GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
 
-.PHONY: prep-submodules
-prep-submodules:
+.PHONY: submodules
+submodules:
 	git submodule update --init --recursive
-
-.PHONY: remove-submodules
-remove-submodules:
-	git submodule foreach --recursive git clean -fd
-	git submodule deinit --all -f
 
 .PHONY: buildx
 buildx:
@@ -50,7 +45,7 @@ buildx:
   	done
 
 .PHONY: build
-build: prep-submodules
+build: submodules
 	mkdir -p $(TARGET_DIR)
 	$(GOBUILD) -o $(TARGET) ./$(CMD_DIR)
 
@@ -102,7 +97,9 @@ release:
 	cd ./build/scripts && ./release.sh $(NEXT_VERSION)
 
 .PHONY: clean
-clean: remove-submodules
+clean:
 	$(GOCLEAN)
 	rm $(TARGET_DIR)/*
 	@find . -type f -name 'nfpm-*-*.yaml' -exec rm -f {} +
+	git submodule foreach --recursive git clean -fd; \
+    git submodule deinit --all -f
