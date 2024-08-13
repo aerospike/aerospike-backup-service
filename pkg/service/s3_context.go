@@ -91,7 +91,7 @@ func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
 		config.WithRegion(*storage.S3Region),
 	)
 
-	if err != nil {
+	if err != nil { //TODO: handle panic
 		panic(fmt.Sprintf("failed loading config, %v", err))
 	}
 
