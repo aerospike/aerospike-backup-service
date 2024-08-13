@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"slices"
 	"strings"
 
@@ -58,6 +59,11 @@ func (s *Storage) Validate() error {
 	if s.Type == S3 {
 		if s.S3Region == nil || len(*s.S3Region) == 0 {
 			return errors.New("s3 region is not specified")
+		}
+
+		_, err := url.Parse(*s.Path)
+		if err != nil {
+			return fmt.Errorf("failed to parse S3 storage path: %w", err)
 		}
 	}
 	if s.S3LogLevel != nil &&

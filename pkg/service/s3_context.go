@@ -34,15 +34,11 @@ type S3Context struct {
 var _ StorageAccessor = (*S3Context)(nil)
 
 // NewS3Context returns a new S3Context.
-// Panics on any error during initialization.
-func NewS3Context(storage *model.Storage) (*S3Context, error) {
+func NewS3Context(storage *model.Storage) *S3Context {
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
 	ctx := context.TODO()
-	cfg, err := createConfig(ctx, storage)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load S3 SDK configuration: %w", err)
-	}
+	cfg := createConfig(ctx, storage)
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		if storage.S3EndpointOverride != nil && *storage.S3EndpointOverride != "" {
@@ -51,39 +47,55 @@ func NewS3Context(storage *model.Storage) (*S3Context, error) {
 		o.UsePathStyle = true
 	})
 
-	bucket, path, err := util.ParseS3Path(*storage.Path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse S3 storage path: %w", err)
-	}
+	// storage path is already validated.
+	bucket, parsedPath, _ := util.ParseS3Path(*storage.Path)
 
-	// Check if the bucket exists
-	_, err = client.HeadBucket(ctx, &s3.HeadBucketInput{
-		Bucket: aws.String(bucket),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error checking S3 bucket %s existence: %w", bucket, err)
-	}
+	go checkBucket(ctx, client, bucket)
 
 	s := &S3Context{
 		ctx:    ctx,
 		client: client,
 		bucket: bucket,
-		path:   path,
+		path:   parsedPath,
 	}
 
 	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*model.BackupMetadata, error) {
 		return s.readMetadata(path)
 	})
-	return s, nil
+	return s
 }
 
-func createConfig(ctx context.Context, storage *model.Storage) (aws.Config, error) {
+// checkBucket verifies if the S3 bucket exists.
+// As a side effect, it also ensures that the S3 service is available (network connectivity)
+// and the provided credentials are valid.
+// If the bucket doesn't exist at startup or AWS is unavailable, a warning is logged.
+// However, it's not critical as the bucket only needs to be available during backup/restore operations.
+// This function is executed in a goroutine to avoid blocking the initialization process.
+func checkBucket(ctx context.Context, client *s3.Client, bucket string) {
+	_, err := client.HeadBucket(ctx, &s3.HeadBucketInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if err != nil {
+		slog.Warn("AWS S3 Bucket don't exist",
+			slog.String("bucket", bucket),
+			slog.Any("err", err))
+	}
+}
+
+func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
 	storage.SetDefaultProfile()
-	return config.LoadDefaultConfig(
+	cfg, err := config.LoadDefaultConfig(
 		ctx,
 		config.WithSharedConfigProfile(*storage.S3Profile),
 		config.WithRegion(*storage.S3Region),
 	)
+
+	if err != nil { //TODO: handle panic
+		panic(fmt.Sprintf("failed loading config, %v", err))
+	}
+
+	return cfg
 }
 
 func (s *S3Context) readBackupState(stateFilePath string, state *model.BackupState) error {

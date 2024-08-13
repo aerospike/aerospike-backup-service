@@ -32,7 +32,7 @@ type RestoreHandler interface {
 	Wait() error
 }
 
-// RestoreHandler represents a backup handler returned by the backup client.
+// BackupHandler represents a backup handler returned by the backup client.
 type BackupHandler interface {
 	// GetStats returns the statistics of the backup job.
 	GetStats() *models.BackupStats
