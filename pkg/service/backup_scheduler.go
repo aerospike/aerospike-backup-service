@@ -90,14 +90,7 @@ func MakeHandlers(clientManager ClientManager,
 	backupService := NewBackupGo()
 	for routineName := range config.BackupRoutines {
 		backend, _ := backends.Get(routineName)
-		handler, err := newBackupRoutineHandler(config, clientManager, backupService, routineName, backend)
-		if err != nil {
-			slog.Error("failed to create backup handler",
-				slog.String("routine", routineName),
-				slog.Any("err", err))
-			continue
-		}
-		handlers[routineName] = handler
+		handlers[routineName] = newBackupRoutineHandler(config, clientManager, backupService, routineName, backend)
 	}
 	return handlers
 }
