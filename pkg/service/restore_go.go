@@ -132,9 +132,6 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 
 func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	switch {
-	case replace != nil && *replace && unique != nil && *unique:
-		panic("Replace and Unique options are contradictory")
-
 	// overwrite all bins of an existing record
 	case replace != nil && *replace:
 		return a.REPLACE
