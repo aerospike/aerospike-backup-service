@@ -238,11 +238,7 @@ func validateStorageContainsBackup(storage *model.Storage) (uint64, error) {
 	case model.Local:
 		return validatePathContainsBackup(*storage.Path)
 	case model.S3:
-		s3context, err := NewS3Context(storage)
-		if err != nil {
-			return 0, err
-		}
-		return s3context.ValidateStorageContainsBackup()
+		return NewS3Context(storage).ValidateStorageContainsBackup()
 	}
 	return 0, nil
 }

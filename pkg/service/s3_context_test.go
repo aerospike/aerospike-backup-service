@@ -17,14 +17,14 @@ var contexts []S3Context
 var minioContext *S3Context
 
 func init() {
-	minioContext, _ = NewS3Context(&model.Storage{
+	minioContext = NewS3Context(&model.Storage{
 		Type:               model.S3,
 		Path:               ptr.String("s3://as-backup-bucket/storageMinio"),
 		S3Profile:          ptr.String("minio"),
 		S3Region:           ptr.String("eu-central-1"),
 		S3EndpointOverride: ptr.String("http://localhost:9000"),
 	})
-	s3Context, _ := NewS3Context(&model.Storage{
+	s3Context := NewS3Context(&model.Storage{
 		Type:     model.S3,
 		Path:     ptr.String("s3://as-backup-integration-test/storageAws"),
 		S3Region: ptr.String("eu-central-1"),

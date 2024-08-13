@@ -51,11 +51,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 			fullBackupInProgress:   &atomic.Bool{},
 		}
 	case model.S3:
-		s3Context, err := NewS3Context(storage)
-		if err != nil {
-			panic(err)
-		}
-
+		s3Context := NewS3Context(storage)
 		routinePath := filepath.Join(s3Context.path, routineName)
 		return &BackupBackend{
 			StorageAccessor:        s3Context,
