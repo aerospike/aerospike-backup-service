@@ -43,7 +43,7 @@ func newBackupRoutineHandler(
 	backupService Backup,
 	routineName string,
 	backupBackend *BackupBackend,
-) (*BackupRoutineHandler, error) {
+) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
 	cluster := config.AerospikeClusters[backupRoutine.SourceCluster]
 	storage := config.Storage[backupRoutine.Storage]
@@ -54,11 +54,6 @@ func newBackupRoutineHandler(
 		secretAgent = config.SecretAgents[*backupRoutine.SecretAgent]
 	}
 
-	namespaces, err := getNamespacesToBackup(backupRoutine.Namespaces, cluster)
-	if err != nil {
-		return nil, err
-	}
-
 	return &BackupRoutineHandler{
 		backupService:      backupService,
 		backend:            backupBackend,
@@ -66,7 +61,7 @@ func newBackupRoutineHandler(
 		backupFullPolicy:   backupPolicy,
 		backupIncrPolicy:   backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
 		routineName:        routineName,
-		namespaces:         namespaces,
+		namespaces:         backupRoutine.Namespaces,
 		cluster:            cluster,
 		storage:            storage,
 		secretAgent:        secretAgent,
@@ -75,7 +70,7 @@ func newBackupRoutineHandler(
 		fullBackupHandlers: make(map[string]BackupHandler),
 		incrBackupHandlers: make(map[string]BackupHandler),
 		clientManager:      clientManager,
-	}, nil
+	}
 }
 
 func getNamespacesToBackup(namespaces []string, cluster *model.AerospikeCluster) ([]string, error) {
@@ -147,7 +142,12 @@ func (h *BackupRoutineHandler) startFullBackupForAllNamespaces(
 		timebounds.ToTime = &upperBound
 	}
 
-	for _, namespace := range h.namespaces {
+	namespaces, err := getNamespacesToBackup(h.namespaces, h.cluster)
+	if err != nil {
+		return err
+	}
+
+	for _, namespace := range namespaces {
 		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy,
 			namespace, upperBound)
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
@@ -289,7 +289,13 @@ func (h *BackupRoutineHandler) startIncrementalBackupForAllNamespaces(
 	}
 
 	clear(h.incrBackupHandlers)
-	for _, namespace := range h.namespaces {
+
+	namespaces, err := getNamespacesToBackup(h.namespaces, h.cluster)
+	if err != nil {
+		return
+	}
+
+	for _, namespace := range namespaces {
 		backupFolder := getIncrementalPathForNamespace(h.backend.incrementalBackupsPath,
 			namespace, upperBound)
 		backupPath := h.backend.wrapWithPrefix(backupFolder)
