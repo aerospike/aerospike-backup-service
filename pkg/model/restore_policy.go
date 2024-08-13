@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -79,6 +80,9 @@ func (p *RestorePolicy) Validate() error {
 	}
 	if p.Tps != nil && *p.Tps <= 0 {
 		return fmt.Errorf("tps %d invalid, should be positive number", *p.Tps)
+	}
+	if p.Replace != nil && *p.Replace && p.Unique != nil && *p.Unique {
+		return errors.New("replace and unique options are contradictory")
 	}
 
 	if p.Namespace != nil { // namespace is optional.

@@ -34,7 +34,7 @@ type AerospikeCluster struct {
 	Credentials *Credentials `yaml:"credentials,omitempty" json:"credentials,omitempty"`
 	// The cluster TLS configuration.
 	TLS *TLS `yaml:"tls,omitempty" json:"tls,omitempty"`
-	// Specifies the maximum number of parallel scans
+	// Specifies the maximum number of parallel scans per the cluster.
 	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100" validate:"optional"`
 }
 
