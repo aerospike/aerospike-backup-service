@@ -1476,7 +1476,7 @@ const docTemplate = `{
                     "example": "testCluster"
                 },
                 "max-parallel-scans": {
-                    "description": "Specifies the maximum number of parallel scans",
+                    "description": "Specifies the maximum number of parallel scans per the cluster.",
                     "type": "integer",
                     "example": 100
                 },
