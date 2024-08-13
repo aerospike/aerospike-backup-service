@@ -2233,7 +2233,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "parallel": {
-                    "description": "The number of client threads to spawn for writing to the cluster.",
+                    "description": "The number of concurrent record readers from backup files.",
                     "type": "integer",
                     "example": 8
                 },

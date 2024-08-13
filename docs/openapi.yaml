@@ -1909,7 +1909,7 @@ components:
           description: Do not restore any UDF modules.
           type: boolean
         parallel:
-          description: The number of client threads to spawn for writing to the cluster.
+          description: The number of concurrent record readers from backup files.
           example: 8
           type: integer
         replace:
