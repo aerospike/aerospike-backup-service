@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
-	"github.com/aerospike/backup/pkg/model"
 )
 
 // RestoreMock mocks the Restore interface.

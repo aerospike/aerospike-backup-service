@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/gorilla/mux"
 	"github.com/reugn/go-quartz/quartz"
 )

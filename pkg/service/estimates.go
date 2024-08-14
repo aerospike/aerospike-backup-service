@@ -3,7 +3,7 @@ package service
 import (
 	"time"
 
-	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
 
 func currentBackupStatus(handlers map[string]BackupHandler) *model.RunningJob {

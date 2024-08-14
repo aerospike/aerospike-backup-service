@@ -1,6 +1,6 @@
 package model
 
-import "github.com/aerospike/backup/pkg/util"
+import "github.com/aerospike/aerospike-backup-service/pkg/util"
 
 type backupPolicy struct {
 	maxRetries int32

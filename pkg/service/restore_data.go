@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup/pkg/model"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/prometheus/client_golang/prometheus"
 )

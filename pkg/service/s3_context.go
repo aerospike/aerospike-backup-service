@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -91,7 +91,7 @@ func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
 		config.WithRegion(*storage.S3Region),
 	)
 
-	if err != nil { //TODO: handle panic
+	if err != nil { // TODO: handle panic
 		panic(fmt.Sprintf("failed loading config, %v", err))
 	}
 

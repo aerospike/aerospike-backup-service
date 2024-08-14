@@ -4,8 +4,8 @@ package service
 import (
 	"fmt"
 
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/util"
 )
 
 // AddCluster adds a new AerospikeCluster to the configuration if a cluster with the same name

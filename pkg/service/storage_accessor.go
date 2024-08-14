@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
 
 type StorageAccessor interface {

@@ -3,8 +3,8 @@ package service
 import (
 	"testing"
 
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/util"
 )
 
 func TestCluster_Add(t *testing.T) {

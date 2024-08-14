@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/backup"
-	_ "github.com/aerospike/backup/docs" // auto-generated Swagger spec
+	backup "github.com/aerospike/aerospike-backup-service"
+	_ "github.com/aerospike/aerospike-backup-service/docs" // auto-generated Swagger spec
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
