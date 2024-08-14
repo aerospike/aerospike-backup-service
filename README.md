@@ -3,11 +3,6 @@
 [![Build](https://github.com/aerospike/aerospike-backup-service/actions/workflows/build.yml/badge.svg)](https://github.com/aerospike/aerospike-backup-service/actions/workflows/build.yml)
 [![codecov](https://codecov.io/gh/aerospike/aerospike-backup-service/branch/main/graph/badge.svg)](https://codecov.io/gh/aerospike/aerospike-backup-service)
 
-> [!NOTE]  
-> Aerospike Backup Service is currently in Beta and not supported by Aerospike. Production usage is not recommended and
-> changes may occur.
-> Enterprise customers, please contact support to sign a Beta agreement.
-
 The Aerospike Backup Service provides a set of REST API endpoints to back up and restore a cluster.
 You can perform full and incremental backups and set different backup policies and schedules.
 There are also several monitoring endpoints to check backup information.
