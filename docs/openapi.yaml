@@ -1245,7 +1245,6 @@ components:
         sealed: true
         max-retries: 3
         remove-files: "{}"
-        remove-artifacts: true
         encryption: "{}"
         parallel: 1
         no-indexes: true
@@ -1300,9 +1299,6 @@ components:
             the records-per-second limit is not applied.
           example: 1000
           type: integer
-        remove-artifacts:
-          description: Clear directory or remove output file.
-          type: boolean
         remove-files:
           allOf:
           - $ref: '#/components/schemas/model.RemoveFilesType'
@@ -1464,7 +1460,6 @@ components:
             sealed: true
             max-retries: 3
             remove-files: "{}"
-            remove-artifacts: true
             encryption: "{}"
             parallel: 1
             no-indexes: true

@@ -35,8 +35,6 @@ type BackupPolicy struct {
 	RetryDelay *int32 `yaml:"retry-delay,omitempty" json:"retry-delay,omitempty" example:"500"`
 	// Whether to clear the output directory (default: KeepAll).
 	RemoveFiles *RemoveFilesType `yaml:"remove-files,omitempty" json:"remove-files,omitempty" enums:"KeepAll,RemoveAll,RemoveIncremental"`
-	// Clear directory or remove output file.
-	RemoveArtifacts *bool `yaml:"remove-artifacts,omitempty" json:"remove-artifacts,omitempty"`
 	// Do not back up any record data (metadata or bin data).
 	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty"`
 	// Do not back up any secondary index definitions.
@@ -99,7 +97,6 @@ func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
 		MaxRetries:       p.MaxRetries,
 		RetryDelay:       p.RetryDelay,
 		RemoveFiles:      p.RemoveFiles,
-		RemoveArtifacts:  p.RemoveArtifacts,
 		NoRecords:        p.NoRecords,
 		NoIndexes:        util.Ptr(true),
 		NoUdfs:           util.Ptr(true),

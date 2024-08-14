@@ -1614,10 +1614,6 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 1000
                 },
-                "remove-artifacts": {
-                    "description": "Clear directory or remove output file.",
-                    "type": "boolean"
-                },
                 "remove-files": {
                     "description": "Whether to clear the output directory (default: KeepAll).",
                     "enum": [

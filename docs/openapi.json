@@ -1798,10 +1798,6 @@
             "example" : 1000,
             "type" : "integer"
           },
-          "remove-artifacts" : {
-            "description" : "Clear directory or remove output file.",
-            "type" : "boolean"
-          },
           "remove-files" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/model.RemoveFilesType"
