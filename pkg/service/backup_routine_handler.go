@@ -21,7 +21,6 @@ type BackupRoutineHandler struct {
 	backupRoutine    *model.BackupRoutine
 	routineName      string
 	namespaces       []string
-	cluster          *model.AerospikeCluster
 	storage          *model.Storage
 	secretAgent      *model.SecretAgent
 	state            *model.BackupState
@@ -45,7 +44,6 @@ func newBackupRoutineHandler(
 	backupBackend *BackupBackend,
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
-	cluster := config.AerospikeClusters[backupRoutine.SourceCluster]
 	storage := config.Storage[backupRoutine.Storage]
 	backupPolicy := config.BackupPolicies[backupRoutine.BackupPolicy]
 
@@ -62,7 +60,6 @@ func newBackupRoutineHandler(
 		backupIncrPolicy:   backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
 		routineName:        routineName,
 		namespaces:         backupRoutine.Namespaces,
-		cluster:            cluster,
 		storage:            storage,
 		secretAgent:        secretAgent,
 		state:              backupBackend.readState(),
@@ -73,9 +70,9 @@ func newBackupRoutineHandler(
 	}
 }
 
-func getNamespacesToBackup(namespaces []string, cluster *model.AerospikeCluster) ([]string, error) {
+func getNamespacesToBackup(namespaces []string, client backup.AerospikeClient) ([]string, error) {
 	if len(namespaces) == 0 {
-		return getAllNamespacesOfCluster(cluster)
+		return getAllNamespacesOfCluster(client)
 	}
 
 	return namespaces, nil
@@ -142,7 +139,7 @@ func (h *BackupRoutineHandler) startFullBackupForAllNamespaces(
 		timebounds.ToTime = &upperBound
 	}
 
-	namespaces, err := getNamespacesToBackup(h.namespaces, h.cluster)
+	namespaces, err := getNamespacesToBackup(h.namespaces, client.AerospikeClient())
 	if err != nil {
 		return err
 	}
@@ -290,7 +287,7 @@ func (h *BackupRoutineHandler) startIncrementalBackupForAllNamespaces(
 
 	clear(h.incrBackupHandlers)
 
-	namespaces, err := getNamespacesToBackup(h.namespaces, h.cluster)
+	namespaces, err := getNamespacesToBackup(h.namespaces, client.AerospikeClient())
 	if err != nil {
 		return
 	}
