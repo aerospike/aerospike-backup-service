@@ -91,10 +91,6 @@ func makeBackupConfig(
 	config.ModAfter = timebounds.FromTime
 
 	config.ScanPolicy = a.NewScanPolicy()
-	if backupPolicy.MaxRecords != nil {
-		config.ScanPolicy.MaxRecords = *backupPolicy.MaxRecords
-		config.Parallel = 1
-	}
 	if backupPolicy.TotalTimeout != nil && *backupPolicy.TotalTimeout > 0 {
 		config.ScanPolicy.TotalTimeout = time.Duration(*backupPolicy.TotalTimeout) *
 			time.Millisecond
@@ -103,10 +99,6 @@ func makeBackupConfig(
 		config.ScanPolicy.SocketTimeout = time.Duration(*backupPolicy.SocketTimeout) *
 			time.Millisecond
 	}
-	if backupPolicy.NoBins != nil && *backupPolicy.NoBins {
-		config.ScanPolicy.IncludeBinData = false
-	}
-
 	if backupPolicy.Bandwidth != nil {
 		config.Bandwidth = int(*backupPolicy.Bandwidth)
 	}

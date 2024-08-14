@@ -1771,19 +1771,10 @@
             "example" : 1024,
             "type" : "integer"
           },
-          "max-records" : {
-            "description" : "An approximate limit for the number of records to process. Available in server 4.9 and above.",
-            "example" : 10000,
-            "type" : "integer"
-          },
           "max-retries" : {
             "description" : "Maximum number of retries before aborting the current transaction.",
             "example" : 3,
             "type" : "integer"
-          },
-          "no-bins" : {
-            "description" : "Only backup record metadata (digest, TTL, generation count, key).",
-            "type" : "boolean"
           },
           "no-indexes" : {
             "description" : "Do not back up any secondary index definitions.",

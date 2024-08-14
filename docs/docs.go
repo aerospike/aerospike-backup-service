@@ -1587,19 +1587,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 1024
                 },
-                "max-records": {
-                    "description": "An approximate limit for the number of records to process. Available in server 4.9 and above.",
-                    "type": "integer",
-                    "example": 10000
-                },
                 "max-retries": {
                     "description": "Maximum number of retries before aborting the current transaction.",
                     "type": "integer",
                     "example": 3
-                },
-                "no-bins": {
-                    "description": "Only backup record metadata (digest, TTL, generation count, key).",
-                    "type": "boolean"
                 },
                 "no-indexes": {
                     "description": "Do not back up any secondary index definitions.",
