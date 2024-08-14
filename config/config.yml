@@ -23,7 +23,6 @@ backup-policies:
   keepFilesMaxRecordsPolicy:
     parallel: 8
     remove-files: KeepAll
-    max-records: 100
     sealed: true
     retry-delay: 10_000
     max-retries: 10
