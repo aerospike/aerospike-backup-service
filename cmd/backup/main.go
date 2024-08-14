@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service"
+	backup "github.com/aerospike/aerospike-backup-service"
 	"github.com/aerospike/aerospike-backup-service/internal/server"
 	"github.com/aerospike/aerospike-backup-service/internal/util"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
