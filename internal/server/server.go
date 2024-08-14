@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/internal/server/middleware"
@@ -39,7 +40,7 @@ func NewHTTPServer(
 	serverConfig := config.ServiceConfig.HTTPServer
 
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
-	httpTimeout := serverConfig.GetTimout()
+	httpTimeout := time.Duration(serverConfig.GetTimeout()) * time.Millisecond
 
 	rateLimiter := util.NewIPRateLimiter(
 		rate.Limit(serverConfig.GetRateOrDefault().GetTpsOrDefault()),

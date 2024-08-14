@@ -3,7 +3,6 @@ package model
 import (
 	"fmt"
 	"strings"
-	"time"
 )
 
 // HTTPServerConfig represents the service's HTTP server configuration.
@@ -17,8 +16,8 @@ type HTTPServerConfig struct {
 	Rate *RateLimiterConfig `yaml:"rate,omitempty" json:"rate,omitempty"`
 	// ContextPath customizes path for the API endpoints.
 	ContextPath *string `yaml:"context-path,omitempty" json:"context-path,omitempty" default:"/"`
-	// Timeout for http server operations.
-	Timeout *time.Duration `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"5s"`
+	// Timeout for http server operations in milliseconds.
+	Timeout *int `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"5000"`
 }
 
 // GetAddressOrDefault returns the value of the Address property.
@@ -39,9 +38,9 @@ func (s *HTTPServerConfig) GetPortOrDefault() int {
 	return *defaultConfig.http.Port
 }
 
-// GetTimout returns the value of the Timeout property.
+// GetTimeout returns the value of the Timeout property.
 // If the property is not set, it returns the default value = 5s.
-func (s *HTTPServerConfig) GetTimout() time.Duration {
+func (s *HTTPServerConfig) GetTimeout() int {
 	if s.Timeout != nil {
 		return *s.Timeout
 	}

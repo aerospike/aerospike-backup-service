@@ -1,8 +1,6 @@
 package model
 
 import (
-	"time"
-
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 )
 
@@ -27,7 +25,7 @@ var defaultConfig = struct {
 			WhiteList: []string{},
 		},
 		ContextPath: util.Ptr("/"),
-		Timeout:     util.Ptr(5 * time.Second),
+		Timeout:     util.Ptr(5000),
 	},
 	logger: LoggerConfig{
 		Level:        util.Ptr("DEBUG"),
