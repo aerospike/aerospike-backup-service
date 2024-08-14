@@ -24,6 +24,8 @@
 lib/
 target/
 testout/
+tmp/
+**/nfpm-*-*.yaml
 
 # Go workspace file
 go.work

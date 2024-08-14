@@ -63,7 +63,7 @@ func (cm *FileConfigurationManager) WriteConfiguration(config *model.Config) err
 		return fmt.Errorf("failed to marshal configuration data: %w", err)
 	}
 
-	err = os.WriteFile(filePath, data, 0644)
+	err = os.WriteFile(filePath, data, 0600)
 	if err != nil {
 		return fmt.Errorf("failed to write configuration to file %q: %w", filePath, err)
 	}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/aerospike/backup/pkg/util"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -30,12 +29,12 @@ func NewQuartzLogger(ctx context.Context) logger.Logger {
 
 // Trace logs at LevelTrace.
 func (l *QuartzLogger) Trace(msg any) {
-	slog.Log(l.ctx, util.LevelTrace, fmt.Sprint(msg))
+	slog.Log(l.ctx, slog.LevelDebug, fmt.Sprint(msg))
 }
 
 // Tracef logs at LevelTrace.
 func (l *QuartzLogger) Tracef(format string, args ...any) {
-	slog.Log(l.ctx, util.LevelTrace, fmt.Sprintf(format, args...))
+	slog.Log(l.ctx, slog.LevelDebug, fmt.Sprintf(format, args...))
 }
 
 // Debug logs at LevelDebug.

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net/url"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -34,15 +34,11 @@ type S3Context struct {
 var _ StorageAccessor = (*S3Context)(nil)
 
 // NewS3Context returns a new S3Context.
-// Panics on any error during initialization.
-func NewS3Context(storage *model.Storage) (*S3Context, error) {
+func NewS3Context(storage *model.Storage) *S3Context {
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
 	ctx := context.TODO()
-	cfg, err := createConfig(ctx, storage)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load S3 SDK configuration: %v", err)
-	}
+	cfg := createConfig(ctx, storage)
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		if storage.S3EndpointOverride != nil && *storage.S3EndpointOverride != "" {
@@ -51,40 +47,55 @@ func NewS3Context(storage *model.Storage) (*S3Context, error) {
 		o.UsePathStyle = true
 	})
 
-	parsed, err := url.Parse(*storage.Path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse S3 storage path: %v", err)
-	}
+	// storage path is already validated.
+	bucket, parsedPath, _ := util.ParseS3Path(*storage.Path)
 
-	bucketName := parsed.Host
-	// Check if the bucket exists
-	_, err = client.HeadBucket(ctx, &s3.HeadBucketInput{
-		Bucket: aws.String(bucketName),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error checking S3 bucket %s existence: %v", bucketName, err)
-	}
+	go checkBucket(ctx, client, bucket)
 
 	s := &S3Context{
 		ctx:    ctx,
 		client: client,
-		bucket: bucketName,
-		path:   strings.TrimPrefix(parsed.Path, "/"),
+		bucket: bucket,
+		path:   parsedPath,
 	}
 
 	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*model.BackupMetadata, error) {
 		return s.readMetadata(path)
 	})
-	return s, nil
+	return s
 }
 
-func createConfig(ctx context.Context, storage *model.Storage) (aws.Config, error) {
+// checkBucket verifies if the S3 bucket exists.
+// As a side effect, it also ensures that the S3 service is available (network connectivity)
+// and the provided credentials are valid.
+// If the bucket doesn't exist at startup or AWS is unavailable, a warning is logged.
+// However, it's not critical as the bucket only needs to be available during backup/restore operations.
+// This function is executed in a goroutine to avoid blocking the initialization process.
+func checkBucket(ctx context.Context, client *s3.Client, bucket string) {
+	_, err := client.HeadBucket(ctx, &s3.HeadBucketInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if err != nil {
+		slog.Warn("AWS S3 Bucket don't exist",
+			slog.String("bucket", bucket),
+			slog.Any("err", err))
+	}
+}
+
+func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
 	storage.SetDefaultProfile()
-	return config.LoadDefaultConfig(
+	cfg, err := config.LoadDefaultConfig(
 		ctx,
 		config.WithSharedConfigProfile(*storage.S3Profile),
 		config.WithRegion(*storage.S3Region),
 	)
+
+	if err != nil { //TODO: handle panic
+		panic(fmt.Sprintf("failed loading config, %v", err))
+	}
+
+	return cfg
 }
 
 func (s *S3Context) readBackupState(stateFilePath string, state *model.BackupState) error {
@@ -116,7 +127,8 @@ func (s *S3Context) read(filePath string) ([]byte, error) {
 	if err != nil {
 		var opErr *smithy.OperationError
 		if errors.As(err, &opErr) &&
-			(strings.Contains(filePath, model.StateFileName) || strings.Contains(filePath, metadataFile)) &&
+			(strings.Contains(filePath, model.StateFileName) ||
+				strings.Contains(filePath, metadataFile)) &&
 			strings.Contains(opErr.Unwrap().Error(), "StatusCode: 404") {
 			return nil, err
 		}
@@ -157,93 +169,91 @@ func (s *S3Context) writeYaml(filePath string, v any) error {
 }
 
 func (s *S3Context) write(filePath string, data []byte) error {
+	logger := slog.Default().With(slog.String("path", filePath),
+		slog.String("bucket", s.bucket))
 	_, err := s.client.PutObject(s.ctx, &s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(filePath),
 		Body:   bytes.NewReader(data),
 	})
 	if err != nil {
-		slog.Warn("Couldn't upload file", "path", filePath,
-			"bucket", s.bucket, "err", err)
+		logger.Warn("Couldn't upload file", slog.Any("err", err))
 		return err
 	}
-	slog.Debug("File written", "path", filePath, "bucket", s.bucket)
+	logger.Debug("File written")
 	return nil
 }
 
 // lsFiles returns all files in the given s3 prefix path.
 func (s *S3Context) lsFiles(prefix string) ([]string, error) {
-	var nextContinuationToken *string
-	slog.Debug("list files", "prefix", prefix)
 	var result []string
-	for {
-		// By default, the action returns up to 1,000 key names.
-		// It is necessary to repeat to collect all the items, if there are more.
-		listOutput, err := s.list(nextContinuationToken, prefix, "")
+
+	input := &s3.ListObjectsV2Input{
+		Bucket: aws.String(s.bucket),
+		Prefix: aws.String(strings.TrimSuffix(prefix, "/") + "/"),
+	}
+
+	paginator := s3.NewListObjectsV2Paginator(s.client, input)
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(s.ctx)
 		if err != nil {
-			return nil, err
-		}
-		for _, p := range listOutput.Contents {
-			if p.Key != nil {
-				result = append(result, *p.Key)
-			}
+			slog.Warn("Couldn't list objects in folder",
+				slog.String("prefix", prefix),
+				slog.Any("err", err))
+			return nil, fmt.Errorf("error listing objects: %w", err)
 		}
 
-		nextContinuationToken = listOutput.NextContinuationToken
-		if nextContinuationToken == nil {
-			break
+		for _, item := range page.Contents {
+			if item.Key != nil {
+				result = append(result, *item.Key)
+			}
 		}
 	}
+
 	return result, nil
 }
 
 // lsDir returns all subfolders in the given s3 prefix path.
-func (s *S3Context) lsDir(prefix string) ([]string, error) {
-	var nextContinuationToken *string
-	result := make([]string, 0)
-	for {
-		// By default, the action returns up to 1,000 key names.
-		// It is necessary to repeat to collect all the items, if there are more.
-		listOutput, err := s.list(nextContinuationToken, prefix, "/")
-		if err != nil {
-			return nil, err
+func (s *S3Context) lsDir(prefix string, after *string) ([]string, error) {
+	var result []string
+
+	input := &s3.ListObjectsV2Input{
+		Bucket:    aws.String(s.bucket),
+		Prefix:    aws.String(strings.TrimSuffix(prefix, "/") + "/"),
+		Delimiter: aws.String("/"),
+	}
+
+	if after != nil {
+		startAfter := *after
+
+		if !strings.HasPrefix(startAfter, prefix) {
+			startAfter = path.Join(prefix, startAfter)
 		}
-		for _, p := range listOutput.CommonPrefixes {
+
+		input.StartAfter = &startAfter
+	}
+
+	paginator := s3.NewListObjectsV2Paginator(s.client, input)
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(s.ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error listing objects: %w", err)
+		}
+
+		for _, p := range page.CommonPrefixes {
 			if p.Prefix == nil {
 				continue
 			}
 			subfolder := strings.TrimSuffix(*p.Prefix, "/")
-			// Check to avoid including the prefix itself in the results
-			if subfolder != prefix {
+			if subfolder != "" {
 				result = append(result, subfolder)
 			}
 		}
-		nextContinuationToken = listOutput.NextContinuationToken
-		if nextContinuationToken == nil {
-			break
-		}
 	}
-	slog.Info("Read dir", "prefix", prefix, "result", result)
+
 	return result, nil
-}
-
-func (s *S3Context) list(continuationToken *string, prefix, v string) (*s3.ListObjectsV2Output, error) {
-	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
-		Bucket:            aws.String(s.bucket),
-		Prefix:            aws.String(strings.TrimSuffix(prefix, "/") + "/"),
-		Delimiter:         aws.String(v),
-		ContinuationToken: continuationToken,
-	})
-
-	if err != nil {
-		slog.Warn("Couldn't list objects in folder", "prefix", prefix, "err", err)
-		return nil, err
-	}
-	return result, nil
-}
-
-func (s *S3Context) CreateFolder(_ string) {
-	// S3 doesn't require to create folders.
 }
 
 func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, error) {
@@ -266,18 +276,20 @@ func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 }
 
 func (s *S3Context) DeleteFolder(folder string) error {
-	slog.Debug("Delete folder", "path", folder)
+	logger := slog.Default().With(slog.String("path", folder))
+	logger.Debug("Delete folder")
+
 	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
 		Bucket: aws.String(s.bucket),
 		Prefix: aws.String(strings.TrimSuffix(folder, "/") + "/"),
 	})
 	if err != nil {
-		slog.Warn("Couldn't list files in directory", "path", folder, "err", err)
+		logger.Warn("Couldn't list files in directory", slog.Any("err", err))
 		return err
 	}
 
 	if len(result.Contents) == 0 {
-		slog.Debug("No files to delete")
+		logger.Debug("No files to delete")
 		return nil
 	}
 
@@ -287,7 +299,9 @@ func (s *S3Context) DeleteFolder(folder string) error {
 			Key:    file.Key,
 		})
 		if err != nil {
-			slog.Debug("Couldn't delete file", "path", *file.Key, "err", err)
+			slog.Debug("Couldn't delete file",
+				slog.String("path", *file.Key),
+				slog.Any("err", err))
 		}
 	}
 	return nil
@@ -298,18 +312,23 @@ func (s *S3Context) wrapWithPrefix(path string) *string {
 	return &result
 }
 
-func (s *S3Context) validateStorageContainsBackup() error {
+func (s *S3Context) ValidateStorageContainsBackup() (uint64, error) {
 	files, err := s.lsFiles(s.path)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if len(files) == 0 {
-		return fmt.Errorf("given path %s not exist", s.path)
+		return 0, fmt.Errorf("given path %s does not exist", s.path)
+	}
+
+	metadata, err := s.readMetadata(s.path)
+	if err != nil {
+		return 0, err
 	}
 	for _, file := range files {
 		if strings.HasSuffix(file, ".asb") {
-			return nil
+			return metadata.RecordCount, nil
 		}
 	}
-	return fmt.Errorf("no backup files found in %s", s.path)
+	return 0, fmt.Errorf("no backup files found in %s", s.path)
 }

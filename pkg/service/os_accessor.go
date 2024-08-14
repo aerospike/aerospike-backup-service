@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/aerospike/backup/pkg/model"
@@ -26,22 +27,24 @@ func NewOSDiskAccessor() *OSDiskAccessor {
 }
 
 func (o *OSDiskAccessor) readBackupState(filepath string, state *model.BackupState) error {
+	logger := slog.Default().With(slog.String("path", filepath))
 	bytes, err := os.ReadFile(filepath)
 	if err != nil {
 		var pathErr *fs.PathError
 		if errors.As(err, &pathErr) &&
 			strings.Contains(pathErr.Error(), "no such file or directory") {
-			slog.Debug("State file does not exist for backup", "path", filepath,
-				"err", err)
+			logger.Debug("State file does not exist for backup",
+				slog.Any("err", err))
 			return nil
 		}
-		slog.Warn("Failed to read state file for backup", "path", filepath,
-			"err", err)
-		return err
+		logger.Warn("Failed to read state file for backup",
+			slog.Any("err", err))
+		return fmt.Errorf("failed read backup state: %w", err)
 	}
 	if err = yaml.Unmarshal(bytes, state); err != nil {
-		slog.Warn("Failed unmarshal state file for backup", "path", filepath,
-			"err", err, "content", string(bytes))
+		logger.Warn("Failed unmarshal state file for backup",
+			slog.String("content", string(bytes)),
+			slog.Any("err", err))
 	}
 	return nil
 }
@@ -70,26 +73,56 @@ func (o *OSDiskAccessor) read(filePath string) ([]byte, error) {
 }
 
 func (o *OSDiskAccessor) write(filePath string, data []byte) error {
-	return os.WriteFile(filePath, data, 0644)
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	return os.WriteFile(filePath, data, 0600)
 }
 
-func (o *OSDiskAccessor) lsDir(path string) ([]string, error) {
-	content, err := os.ReadDir(path)
+func (o *OSDiskAccessor) lsDir(path string, after *string) ([]string, error) {
+	var result []string
+
+	err := filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip the root directory
+		if p == path {
+			return nil
+		}
+
+		// We're only interested in directories
+		if !d.IsDir() {
+			return nil
+		}
+
+		// Get the relative path
+		relPath, err := filepath.Rel(path, p)
+		if err != nil {
+			return fmt.Errorf("error getting relative path: %w", err)
+		}
+
+		// If 'after' is set, skip directories that come before to it lexicographically
+		if after != nil && relPath < *after {
+			return nil
+		}
+
+		result = append(result, p)
+		return filepath.SkipDir // Don't descend into this directory
+	})
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []string{}, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("error walking directory: %w", err)
 	}
 
-	var onlyDirs []string
-	for _, c := range content {
-		if c.IsDir() {
-			fullPath := filepath.Join(path, c.Name())
-			onlyDirs = append(onlyDirs, fullPath)
-		}
-	}
-	return onlyDirs, nil
+	sort.Strings(result) // Ensure consistent ordering
+	return result, nil
 }
 
 func (o *OSDiskAccessor) lsFiles(path string) ([]string, error) {
@@ -111,18 +144,6 @@ func (o *OSDiskAccessor) lsFiles(path string) ([]string, error) {
 	return files, nil
 }
 
-func (o *OSDiskAccessor) CreateFolder(path string) {
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		if err = os.MkdirAll(path, 0744); err != nil {
-			slog.Warn("Error creating backup directory", "path", path, "err", err)
-		}
-	}
-	if err = os.Chmod(path, 0744); err != nil {
-		slog.Warn("Failed to Chmod backup directory", "path", path, "err", err)
-	}
-}
-
 func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
 	slog.Debug("Delete folder", "path", pathToDelete)
 	err := os.RemoveAll(pathToDelete)
@@ -131,7 +152,7 @@ func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
 	}
 
 	parentDir := filepath.Dir(pathToDelete)
-	lsDir, err := o.lsDir(parentDir)
+	lsDir, err := o.lsDir(parentDir, nil)
 	if err != nil {
 		return err
 	}
@@ -150,18 +171,24 @@ func (o *OSDiskAccessor) wrapWithPrefix(path string) *string {
 	return &path
 }
 
-func validatePathContainsBackup(path string) error {
+func validatePathContainsBackup(path string) (uint64, error) {
 	_, err := os.Stat(path)
 	if err != nil {
-		return err
+		return 0, err
+	}
+	accessor := OSDiskAccessor{}
+	var count uint64
+	if metadata, err := accessor.readBackupDetails(path, false); err == nil {
+		count = metadata.RecordCount
 	}
 
 	absFiles, err := filepath.Glob(filepath.Join(path, "*.asb"))
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if len(absFiles) == 0 {
-		return fmt.Errorf("no backup files found in %s", path)
+		return 0, fmt.Errorf("no backup files found in %s", path)
 	}
-	return nil
+
+	return count, nil
 }

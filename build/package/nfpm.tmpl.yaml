@@ -1,0 +1,37 @@
+name: "${NAME}"
+arch: "${ARCH}"
+version: "${VERSION}"
+platform: "linux"
+section: "default"
+priority: "extra"
+maintainer: "${MAINTAINER}"
+description: "${DESCRIPTION}"
+vendor: "${VENDOR}"
+homepage: "${HOMEPAGE}"
+license: "${LICENSE}"
+contents:
+  - src: ${WORKSPACE}/build/package/config/${NAME}.service
+    dst: /etc/systemd/system/${NAME}.service
+    type: config
+  - src: /etc/systemd/system/${NAME}.service
+    dst: /etc/systemd/system/multi-user.target.wants/${NAME}.service
+    type: symlink
+    packager: deb
+  - src: ${WORKSPACE}/build/package/config/${NAME}.yml
+    dst: /etc/${NAME}/${NAME}.yml
+    type: config
+  - dst: /var/lib/${NAME}
+    file_info:
+      mode: 0755
+    type: dir
+  - src: ${WORKSPACE}/build/target/${NAME}_${OS}_${ARCH}
+    dst: /usr/bin/${NAME}
+scripts:
+  postinstall: ${WORKSPACE}/build/package/scripts/postinstall.sh
+  preremove: ${WORKSPACE}/build/package/scripts/preremove.sh
+umask: 0o002
+rpm:
+  compression: xz
+deb:
+  compression: xz
+

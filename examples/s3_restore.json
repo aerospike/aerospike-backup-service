@@ -1,16 +1,18 @@
 {
-    "destination": {
-        "host": "localhost",
-        "port": 3000
-    },
-    "policy": {
-        "set_list": ["set1"],
-        "no-generation": true
-    },
-    "source": {
-        "path": "s3://as-backup-bucket/minioStorage",
-        "s3_region": "eu-central-1",
-        "s3_profile": "minio",
-        "s3_endpoint_override": "http://localhost:9000"
-    }
+  "destination": {
+    "host": "localhost",
+    "port": 3000
+  },
+  "policy": {
+    "set_list": [
+      "set1"
+    ],
+    "no-generation": true
+  },
+  "source": {
+    "path": "s3://as-backup-bucket/minioStorage",
+    "s3_region": "eu-central-1",
+    "s3_profile": "minio",
+    "s3_endpoint_override": "http://localhost:9000"
+  }
 }
