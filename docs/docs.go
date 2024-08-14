@@ -2504,17 +2504,17 @@ const docTemplate = `{
             "description": "TLS represents the Aerospike cluster TLS configuration options.",
             "type": "object",
             "properties": {
-                "cafile": {
+                "ca-file": {
                     "description": "Path to a trusted CA certificate file.",
                     "type": "string",
                     "example": "/path/to/cafile.pem"
                 },
-                "capath": {
+                "ca-path": {
                     "description": "Path to a directory of trusted CA certificates.",
                     "type": "string",
                     "example": "/path/to/ca"
                 },
-                "certfile": {
+                "cert-file": {
                     "description": "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
                     "type": "string",
                     "example": "/path/to/certfile.pem"
@@ -2524,12 +2524,12 @@ const docTemplate = `{
                     "type": "string",
                     "example": "ECDHE-ECDSA-AES256-GCM-SHA384"
                 },
-                "keyfile": {
+                "key-file": {
                     "description": "Path to the key for mutual authentication (if Aerospike cluster supports it).",
                     "type": "string",
                     "example": "/path/to/keyfile.pem"
                 },
-                "keyfile-password": {
+                "key-file-password": {
                     "description": "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
                     "type": "string",
                     "example": "file:/path/to/password"
