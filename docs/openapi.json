@@ -2571,17 +2571,17 @@
       "model.TLS" : {
         "description" : "TLS represents the Aerospike cluster TLS configuration options.",
         "properties" : {
-          "cafile" : {
+          "ca-file" : {
             "description" : "Path to a trusted CA certificate file.",
             "example" : "/path/to/cafile.pem",
             "type" : "string"
           },
-          "capath" : {
+          "ca-path" : {
             "description" : "Path to a directory of trusted CA certificates.",
             "example" : "/path/to/ca",
             "type" : "string"
           },
-          "certfile" : {
+          "cert-file" : {
             "description" : "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
             "example" : "/path/to/certfile.pem",
             "type" : "string"
@@ -2591,12 +2591,12 @@
             "example" : "ECDHE-ECDSA-AES256-GCM-SHA384",
             "type" : "string"
           },
-          "keyfile" : {
+          "key-file" : {
             "description" : "Path to the key for mutual authentication (if Aerospike cluster supports it).",
             "example" : "/path/to/keyfile.pem",
             "type" : "string"
           },
-          "keyfile-password" : {
+          "key-file-password" : {
             "description" : "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
             "example" : "file:/path/to/password",
             "type" : "string"
