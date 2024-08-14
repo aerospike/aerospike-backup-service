@@ -29,16 +29,6 @@ func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error
 	}
 	defer client.Close()
 
-	// warm up the client by filling the connection pool with connections
-	// for all nodes
-	cn := max(2, cluster.ASClientPolicy().ConnectionQueueSize/2)
-	_, err = client.WarmUp(cn)
-	if err != nil {
-		slog.Warn("Failed to warm up the client",
-			slog.Int("connections", cn),
-			slog.Any("err", err))
-	}
-
 	node, err := client.Cluster().GetRandomNode()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get node: %w", err)
