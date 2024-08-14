@@ -108,5 +108,8 @@ func (s *HTTPServerConfig) Validate() error {
 	if s.ContextPath != nil && !strings.HasPrefix(*s.ContextPath, "/") {
 		return fmt.Errorf("context-path must start with a slash: %s", *s.ContextPath)
 	}
+	if s.Timeout != nil && *s.Timeout < 0 {
+		return fmt.Errorf("timeout cannot be negative: %d", *s.Timeout)
+	}
 	return nil
 }
