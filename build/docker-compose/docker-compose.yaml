@@ -1,0 +1,67 @@
+version: "3.9"
+services:
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    expose:
+      - "9001"
+    healthcheck:
+      test: [ "CMD", "mc", "ready", "local" ]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data/ --console-address :9001
+
+  minio-client:
+    image: minio/mc
+    container_name: minio-client
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/as-backup-bucket;
+      /usr/bin/mc anonymous set public myminio/as-backup-bucket;
+      exit 0;
+      "
+
+  aerospike-cluster:
+    image: aerospike/aerospike-server-enterprise:6.4.0.10
+    container_name: "aerospike-cluster"
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "3002:3002"
+      - "3003:3003"
+    healthcheck:
+      test: [ "CMD", "asinfo", "-p", "3000", "-v", "build" ]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  aerospike-backup-service:
+    image: aerospike.jfrog.io/ecosystem-container-prod-local/aerospike-backup-service:latest
+    container_name: "aerospike-backup-service"
+    ports:
+      - "8080:8080"
+    depends_on:
+      aerospike-cluster:
+        condition: service_healthy
+      minio-client:
+        condition: service_completed_successfully
+    volumes:
+      - ./credentials:/root/.aws/credentials
+      - ./aerospike-backup-service.yml:/etc/aerospike-backup-service/aerospike-backup-service.yml
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 20s
+      retries: 3

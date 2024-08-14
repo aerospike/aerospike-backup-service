@@ -1,0 +1,33 @@
+aerospike-clusters:
+  absCluster1:
+    seed-nodes:
+      - host-name: "aerospike-cluster"
+        port: 3000
+    credentials:
+      user: admin
+      password: admin
+storage:
+  minioStorage:
+    # Use 1 for S3 or compatible and 0 for local storage.
+    type: "aws-s3"
+    # as-backup-bucket is expected to exist in MinIO.
+    path: s3://as-backup-bucket/minioStorage
+    s3-region: eu-central-1
+    s3-profile: minio
+    s3-endpoint-override: http://minio:9000
+backup-policies:
+  keepFilesPolicy:
+    # Run backup operations in a single thread.
+    parallel: 1
+    # Previous full backups are not deleted when a new one is created.
+    remove-files: KeepAll
+backup-routines:
+  minioKeepFilesRoutine:
+    # 24 hours interval for full backups.
+    interval-cron: "@daily"
+    # 1 hour interval for incremental backups.
+    incr-interval-cron: "@hourly"
+    source-cluster: absCluster1
+    storage: minioStorage
+    namespace: test
+    backup-policy: keepFilesPolicy

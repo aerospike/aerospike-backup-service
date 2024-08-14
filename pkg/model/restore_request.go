@@ -5,6 +5,9 @@ import (
 	"errors"
 )
 
+// RestoreJobID represents the restore operation job id.
+type RestoreJobID int
+
 // RestoreRequest represents a restore operation request.
 // @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
@@ -79,7 +82,7 @@ func (r *RestoreRequest) Validate() error {
 	if err := r.SourceStorage.Validate(); err != nil {
 		return err
 	}
-	if err := r.Policy.Validate(); err != nil { //nolint:revive
+	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
 	return nil

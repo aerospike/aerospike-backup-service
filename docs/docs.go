@@ -96,6 +96,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/backups/currentBackup/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Get current backup statistics.",
+                "operationId": "getCurrentBackup",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Current backup statistics",
+                        "schema": {
+                            "$ref": "#/definitions/model.CurrentBackups"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/backups/full": {
             "get": {
                 "produces": [
@@ -140,6 +187,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -153,7 +206,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get available full backups for routine.",
-                "operationId": "getFullBackupsForRoutine",
+                "operationId": "GetFullBackupsForRoutine",
                 "parameters": [
                     {
                         "type": "string",
@@ -193,8 +246,8 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -246,6 +299,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -259,7 +318,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get incremental backups for routine.",
-                "operationId": "getIncrementalBackupsForRoutine",
+                "operationId": "GetIncrementalBackupsForRoutine",
                 "parameters": [
                     {
                         "type": "string",
@@ -299,8 +358,8 @@ const docTemplate = `{
                             "type": "string"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -314,7 +373,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Schedule a full backup once per routine name.",
-                "operationId": "scheduleFullBackup",
+                "operationId": "ScheduleFullBackup",
                 "parameters": [
                     {
                         "type": "string",
@@ -345,6 +404,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -366,8 +431,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.Config"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -450,8 +515,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -492,6 +557,12 @@ const docTemplate = `{
                         }
                     },
                     "404": {
+                        "description": "The specified cluster could not be found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
                         "description": "The specified cluster could not be found",
                         "schema": {
                             "type": "string"
@@ -574,6 +645,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             },
@@ -614,7 +691,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all policies from the configuration.",
-                "operationId": "readPolicies",
+                "operationId": "ReadPolicies",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -625,8 +702,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -667,6 +744,12 @@ const docTemplate = `{
                         }
                     },
                     "404": {
+                        "description": "The specified policy could not be found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
                         "description": "The specified policy could not be found",
                         "schema": {
                             "type": "string"
@@ -789,7 +872,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all routines from the configuration.",
-                "operationId": "readRoutines",
+                "operationId": "ReadRoutines",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -964,7 +1047,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all storage from the configuration.",
-                "operationId": "readAllStorage",
+                "operationId": "ReadAllStorage",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -975,8 +1058,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -1018,6 +1101,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "The specified storage could not be found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "string"
                         }
@@ -1163,6 +1252,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1197,6 +1292,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
                         "schema": {
                             "type": "string"
                         }
@@ -1274,6 +1375,12 @@ const docTemplate = `{
                         "schema": {
                             "type": "string"
                         }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
+                        "schema": {
+                            "type": "string"
+                        }
                     }
                 }
             }
@@ -1314,6 +1421,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "405": {
+                        "description": "Method Not Allowed",
                         "schema": {
                             "type": "string"
                         }
@@ -1361,6 +1474,11 @@ const docTemplate = `{
                     "description": "The cluster name.",
                     "type": "string",
                     "example": "testCluster"
+                },
+                "max-parallel-scans": {
+                    "description": "Specifies the maximum number of parallel scans per the cluster.",
+                    "type": "integer",
+                    "example": 100
                 },
                 "seed-nodes": {
                     "description": "The seed nodes details.",
@@ -1741,6 +1859,27 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CurrentBackups": {
+            "type": "object",
+            "properties": {
+                "full": {
+                    "description": "Full represents the state of a full backup. Nil if no full backup is running.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.RunningJob"
+                        }
+                    ]
+                },
+                "incremental": {
+                    "description": "Incremental represents the state of an incremental backup. Nil if no incremental backup is running.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.RunningJob"
+                        }
+                    ]
+                }
+            }
+        },
         "model.EncryptionPolicy": {
             "description": "EncryptionPolicy contains backup encryption information.",
             "type": "object",
@@ -1849,11 +1988,6 @@ const docTemplate = `{
             "description": "LoggerConfig represents the backup service logger configuration.",
             "type": "object",
             "properties": {
-                "capture-shared": {
-                    "description": "Whether to capture logs from the shared libraries.",
-                    "type": "boolean",
-                    "default": false
-                },
                 "file-writer": {
                     "description": "File writer logging configuration.",
                     "allOf": [
@@ -1934,6 +2068,9 @@ const docTemplate = `{
             "description": "RestoreJobStatus represents a restore job status.",
             "type": "object",
             "properties": {
+                "current-job": {
+                    "$ref": "#/definitions/model.RunningJob"
+                },
                 "error": {
                     "type": "string"
                 },
@@ -1967,6 +2104,11 @@ const docTemplate = `{
                     "format": "int64",
                     "example": 8
                 },
+                "read-records": {
+                    "type": "integer",
+                    "format": "int64",
+                    "example": 10
+                },
                 "skipped-records": {
                     "type": "integer",
                     "format": "int64",
@@ -1988,11 +2130,6 @@ const docTemplate = `{
                     "type": "integer",
                     "format": "int64",
                     "example": 2000
-                },
-                "total-records": {
-                    "type": "integer",
-                    "format": "int64",
-                    "example": 10
                 },
                 "udf-count": {
                     "type": "integer",
@@ -2026,7 +2163,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bandwidth": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.",
                     "type": "integer",
                     "example": 50000
                 },
@@ -2096,7 +2233,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "parallel": {
-                    "description": "The number of client threads to spawn for writing to the cluster.",
+                    "description": "The number of concurrent record readers from backup files.",
                     "type": "integer",
                     "example": 8
                 },
@@ -2121,7 +2258,7 @@ const docTemplate = `{
                     "example": 1000
                 },
                 "tps": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth\nin MiB/s and its database write operations to not exceed the given number of transactions\nper second.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions\nper second.",
                     "type": "integer",
                     "example": 4000
                 },
@@ -2201,6 +2338,37 @@ const docTemplate = `{
                 }
             }
         },
+        "model.RunningJob": {
+            "description": "RunningJob tracks progress of currently running job.",
+            "type": "object",
+            "properties": {
+                "done-records": {
+                    "description": "DoneRecords: the number of records that have been successfully done.",
+                    "type": "integer",
+                    "example": 50
+                },
+                "estimated-end-time": {
+                    "description": "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "percentage-done": {
+                    "description": "PercentageDone: the progress of the backup operation as a percentage.",
+                    "type": "integer",
+                    "example": 50
+                },
+                "start-time": {
+                    "description": "StartTime: the time when the backup operation started.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "total-records": {
+                    "description": "TotalRecords: the total number of records to be processed.",
+                    "type": "integer",
+                    "example": 100
+                }
+            }
+        },
         "model.SecretAgent": {
             "description": "SecretAgent represents the configuration of an Aerospike Secret Agent for a backup/restore operation.",
             "type": "object",
@@ -2210,24 +2378,30 @@ const docTemplate = `{
                     "type": "string",
                     "example": "localhost"
                 },
+                "connection-type": {
+                    "description": "Connection type: tcp, unix.",
+                    "type": "string",
+                    "example": "tcp"
+                },
+                "is-base64": {
+                    "description": "Flag that shows if secret agent responses are encrypted with base64.",
+                    "type": "boolean",
+                    "example": false
+                },
                 "port": {
                     "description": "Port the Secret Agent is running on.",
-                    "type": "string",
-                    "example": "8080"
+                    "type": "integer",
+                    "example": 8080
                 },
                 "timeout": {
                     "description": "Timeout in milliseconds.",
                     "type": "integer",
                     "example": 5000
                 },
-                "tls-ca": {
+                "tls-ca-file": {
                     "description": "The path to a trusted CA certificate file in PEM format.",
                     "type": "string",
                     "example": "/path/to/ca.pem"
-                },
-                "tls-enabled": {
-                    "description": "Indicates whether TLS is enabled.",
-                    "type": "boolean"
                 }
             }
         },
@@ -2264,6 +2438,17 @@ const docTemplate = `{
                 "type"
             ],
             "properties": {
+                "max_async_connections": {
+                    "description": "The maximum number of simultaneous requests from S3.",
+                    "type": "integer",
+                    "example": 16
+                },
+                "min_part_size": {
+                    "description": "The minimum size in bytes of individual S3 UploadParts",
+                    "type": "integer",
+                    "default": 5242880,
+                    "example": 10
+                },
                 "path": {
                     "description": "The root path for the backup repository.",
                     "type": "string",
@@ -2290,7 +2475,7 @@ const docTemplate = `{
                     "example": "eu-central-1"
                 },
                 "type": {
-                    "description": "The type of the storage provider (0 - Local, 1 - AWS S3).",
+                    "description": "The type of the storage provider",
                     "enum": [
                         "local",
                         "aws-s3"

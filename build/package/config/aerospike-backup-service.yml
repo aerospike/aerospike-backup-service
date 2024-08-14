@@ -1,0 +1,29 @@
+---
+aerospike-clusters:
+  cluster:
+    use-services-alternate: false
+    seed-nodes:
+      - host-name: "127.0.0.1"
+        port: 3000
+    credentials:
+      user: "admin"
+      password: "admin"
+
+storage:
+  local:
+    type: "local"
+    path: "/var/lib/aerospike-backup-service"
+
+backup-policies:
+  policy:
+    parallel: 1
+    remove-files: KeepAll
+
+backup-routines:
+  routine:
+    interval-cron: "1/30 * * * * *" # every 30 seconds
+    incr-interval-cron: "1/5 * * * * *" # every 5 seconds
+    backup-policy: "policy"
+    source-cluster: "cluster"
+    storage: "local"
+    namespace: "test"

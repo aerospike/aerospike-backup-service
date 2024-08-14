@@ -1,11 +1,14 @@
 package model
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // RestorePolicy represents a policy for the restore operation.
 // @Description RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
-	// The number of client threads to spawn for writing to the cluster.
+	// The number of concurrent record readers from backup files.
 	Parallel *int32 `json:"parallel,omitempty" example:"8"`
 	// Do not restore any record data (metadata or bin data).
 	// By default, record data, secondary index definitions, and UDF modules
@@ -44,31 +47,15 @@ type RestorePolicy struct {
 	// With this option, records from the backup always overwrite records that already exist in
 	// the namespace, regardless of generation numbers.
 	NoGeneration *bool `json:"no-generation,omitempty"`
-	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
-	// in MiB/s and its database write operations to not exceed the given number of transactions
-	// per second.
+	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.
 	Bandwidth *int64 `json:"bandwidth,omitempty" example:"50000"`
-	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
-	// in MiB/s and its database write operations to not exceed the given number of transactions
+	// Throttles read operations from the backup file(s) to not exceed the given number of transactions
 	// per second.
 	Tps *int32 `json:"tps,omitempty" example:"4000"`
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details.
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
-}
-
-// RestoreNamespace specifies an alternative namespace name for the restore
-// operation, where Source is the original namespace name and Destination is
-// the namespace name to which the backup data is to be restored.
-//
-// @Description RestoreNamespace specifies an alternative namespace name for the restore
-// @Description operation.
-type RestoreNamespace struct {
-	// Original namespace name.
-	Source *string `json:"source,omitempty" example:"source-ns" validate:"required"`
-	// Destination namespace name.
-	Destination *string `json:"destination,omitempty" example:"destination-ns" validate:"required"`
 }
 
 // Validate validates the restore policy.
@@ -94,6 +81,9 @@ func (p *RestorePolicy) Validate() error {
 	if p.Tps != nil && *p.Tps <= 0 {
 		return fmt.Errorf("tps %d invalid, should be positive number", *p.Tps)
 	}
+	if p.Replace != nil && *p.Replace && p.Unique != nil && *p.Unique {
+		return errors.New("replace and unique options are contradictory")
+	}
 
 	if p.Namespace != nil { // namespace is optional.
 		if err := p.Namespace.Validate(); err != nil {
@@ -105,17 +95,6 @@ func (p *RestorePolicy) Validate() error {
 	}
 	if err := p.CompressionPolicy.Validate(); err != nil {
 		return err
-	}
-	return nil
-}
-
-// Validate validates the restore namespace.
-func (n *RestoreNamespace) Validate() error {
-	if n.Source == nil {
-		return fmt.Errorf("source namespace is not specified")
-	}
-	if n.Destination == nil {
-		return fmt.Errorf("destination namespace is not specified")
 	}
 	return nil
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/aerospike/backup/pkg/model"
-	pkgutil "github.com/aerospike/backup/pkg/util"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -65,7 +64,7 @@ func (*ignoreWriter) Write(_ []byte) (n int, err error) {
 func logLevel(level string) slog.Level {
 	switch strings.ToUpper(level) {
 	case "TRACE":
-		return pkgutil.LevelTrace
+		return slog.LevelDebug
 	case "DEBUG":
 		return slog.LevelDebug
 	case "INFO":

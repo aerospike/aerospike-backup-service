@@ -67,6 +67,44 @@ paths:
       summary: Readiness endpoint.
       tags:
       - System
+  /v1/backups/currentBackup/{name}:
+    get:
+      operationId: getCurrentBackup
+      parameters:
+      - description: Backup routine name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/model.CurrentBackups'
+          description: Current backup statistics
+        "400":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Bad Request
+        "404":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Not Found
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
+      summary: Get current backup statistics.
+      tags:
+      - Backup
   /v1/backups/full:
     get:
       operationId: getFullBackups
@@ -100,12 +138,18 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
       summary: Get available full backups.
       tags:
       - Backup
   /v1/backups/full/{name}:
     get:
-      operationId: getFullBackupsForRoutine
+      operationId: GetFullBackupsForRoutine
       parameters:
       - description: Backup routine name
         in: path
@@ -140,12 +184,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
-        "404":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Not Found
+          description: Internal Server Error
       summary: Get available full backups for routine.
       tags:
       - Backup
@@ -182,12 +226,18 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
       summary: Get available incremental backups.
       tags:
       - Backup
   /v1/backups/incremental/{name}:
     get:
-      operationId: getIncrementalBackupsForRoutine
+      operationId: GetIncrementalBackupsForRoutine
       parameters:
       - description: Backup routine name
         in: path
@@ -222,18 +272,18 @@ paths:
               schema:
                 type: string
           description: Bad Request
-        "404":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Not Found
+          description: Internal Server Error
       summary: Get incremental backups for routine.
       tags:
       - Backup
   /v1/backups/schedule/{name}:
     post:
-      operationId: scheduleFullBackup
+      operationId: ScheduleFullBackup
       parameters:
       - description: Backup routine name
         in: path
@@ -262,6 +312,12 @@ paths:
               schema:
                 type: string
           description: Not Found
+        "500":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Internal Server Error
       summary: Schedule a full backup once per routine name.
       tags:
       - Backup
@@ -275,12 +331,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/model.Config'
           description: OK
-        "400":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Bad Request
+          description: Internal Server Error
       summary: Returns the configuration for the service.
       tags:
       - Configuration
@@ -335,12 +391,12 @@ paths:
                   $ref: '#/components/schemas/model.AerospikeCluster'
                 type: object
           description: OK
-        "400":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Bad Request
+          description: Internal Server Error
       summary: Reads all Aerospike clusters from the configuration.
       tags:
       - Configuration
@@ -395,6 +451,12 @@ paths:
               schema:
                 type: string
           description: The specified cluster could not be found
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: The specified cluster could not be found
       summary: Reads a specific Aerospike cluster from the configuration given its
         name.
       tags:
@@ -425,6 +487,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "500":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Internal Server Error
       summary: Adds an Aerospike cluster to the config.
       tags:
       - Configuration
@@ -461,7 +529,7 @@ paths:
       x-codegen-request-body-name: cluster
   /v1/config/policies:
     get:
-      operationId: readPolicies
+      operationId: ReadPolicies
       responses:
         "200":
           content:
@@ -471,12 +539,12 @@ paths:
                   $ref: '#/components/schemas/model.BackupPolicy'
                 type: object
           description: OK
-        "400":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Bad Request
+          description: Internal Server Error
       summary: Reads all policies from the configuration.
       tags:
       - Configuration
@@ -526,6 +594,12 @@ paths:
                 type: string
           description: Bad Request
         "404":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: The specified policy could not be found
+        "500":
           content:
             application/json:
               schema:
@@ -596,7 +670,7 @@ paths:
       x-codegen-request-body-name: policy
   /v1/config/routines:
     get:
-      operationId: readRoutines
+      operationId: ReadRoutines
       responses:
         "200":
           content:
@@ -731,7 +805,7 @@ paths:
       x-codegen-request-body-name: routine
   /v1/config/storage:
     get:
-      operationId: readAllStorage
+      operationId: ReadAllStorage
       responses:
         "200":
           content:
@@ -741,12 +815,12 @@ paths:
                   $ref: '#/components/schemas/model.Storage'
                 type: object
           description: OK
-        "400":
+        "500":
           content:
             application/json:
               schema:
                 type: string
-          description: Bad Request
+          description: Internal Server Error
       summary: Reads all storage from the configuration.
       tags:
       - Configuration
@@ -801,6 +875,12 @@ paths:
               schema:
                 type: string
           description: The specified storage could not be found
+        "500":
+          content:
+            application/json:
+              schema:
+                type: string
+          description: Internal Server Error
       summary: Reads a specific storage from the configuration given its name.
       tags:
       - Configuration
@@ -888,6 +968,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "405":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Method Not Allowed
       summary: Trigger an asynchronous full restore operation.
       tags:
       - Restore
@@ -916,6 +1002,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "405":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Method Not Allowed
       summary: Trigger an asynchronous incremental restore operation.
       tags:
       - Restore
@@ -972,6 +1064,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "405":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Method Not Allowed
       summary: Trigger an asynchronous restore operation to specific point in time.
       tags:
       - Restore
@@ -1007,6 +1105,12 @@ paths:
               schema:
                 type: string
           description: Bad Request
+        "405":
+          content:
+            application/zip:
+              schema:
+                type: string
+          description: Method Not Allowed
       summary: Retrieve Aerospike cluster configuration backup
       tags:
       - Restore
@@ -1030,6 +1134,7 @@ components:
         cluster for backup.
       example:
         credentials: "{}"
+        max-parallel-scans: 100
         conn-timeout: 5000
         use-services-alternate: true
         seed-nodes:
@@ -1055,6 +1160,10 @@ components:
           description: The cluster name.
           example: testCluster
           type: string
+        max-parallel-scans:
+          description: Specifies the maximum number of parallel scans per the cluster.
+          example: 100
+          type: integer
         seed-nodes:
           description: The seed nodes details.
           items:
@@ -1380,6 +1489,7 @@ components:
         aerospike-clusters:
           key:
             credentials: "{}"
+            max-parallel-scans: 100
             conn-timeout: 5000
             use-services-alternate: true
             seed-nodes:
@@ -1396,16 +1506,19 @@ components:
           http: "{}"
         secret-agent:
           key:
-            tls-enabled: true
+            tls-ca-file: /path/to/ca.pem
             address: localhost
-            port: "8080"
-            tls-ca: /path/to/ca.pem
+            port: 8080
+            connection-type: tcp
+            is-base64: false
             timeout: 5000
         storage:
           key:
             path: backups
             s3-endpoint-override: http://host.docker.internal:9000
+            min_part_size: 10
             s3-log-level: FATAL
+            max_async_connections: 16
             s3-region: eu-central-1
             type: "{}"
             s3-profile: default
@@ -1476,6 +1589,24 @@ components:
           description: The username for the cluster authentication.
           example: testUser
           type: string
+      type: object
+    model.CurrentBackups:
+      example:
+        incremental: "{}"
+        full: "{}"
+      properties:
+        full:
+          allOf:
+          - $ref: '#/components/schemas/model.RunningJob'
+          description: Full represents the state of a full backup. Nil if no full
+            backup is running.
+          type: object
+        incremental:
+          allOf:
+          - $ref: '#/components/schemas/model.RunningJob'
+          description: Incremental represents the state of an incremental backup.
+            Nil if no incremental backup is running.
+          type: object
       type: object
     model.EncryptionPolicy:
       description: EncryptionPolicy contains backup encryption information.
@@ -1566,10 +1697,6 @@ components:
     model.LoggerConfig:
       description: LoggerConfig represents the backup service logger configuration.
       properties:
-        capture-shared:
-          default: false
-          description: Whether to capture logs from the shared libraries.
-          type: boolean
         file-writer:
           allOf:
           - $ref: '#/components/schemas/model.FileLoggerConfig'
@@ -1629,19 +1756,27 @@ components:
     model.RestoreJobStatus:
       description: RestoreJobStatus represents a restore job status.
       example:
+        expired-records: 2
+        read-records: 10
+        error: error
+        current-job:
+          estimated-end-time: 2006-01-02T15:04:05Z07:00
+          start-time: 2006-01-02T15:04:05Z07:00
+          percentage-done: 50
+          total-records: 100
+          done-records: 50
+        existed-records: 15
         udf-count: 1
         ignored-records: 12
         inserted-records: 8
         total-bytes: 2000
-        expired-records: 2
         fresher-records: 5
-        error: error
         skipped-records: 4
-        total-records: 10
-        existed-records: 15
         index-count: 3
         status: "{}"
       properties:
+        current-job:
+          $ref: '#/components/schemas/model.RunningJob'
         error:
           type: string
         existed-records:
@@ -1668,6 +1803,10 @@ components:
           example: 8
           format: int64
           type: integer
+        read-records:
+          example: 10
+          format: int64
+          type: integer
         skipped-records:
           example: 4
           format: int64
@@ -1678,10 +1817,6 @@ components:
           type: object
         total-bytes:
           example: 2000
-          format: int64
-          type: integer
-        total-records:
-          example: 10
           format: int64
           type: integer
         udf-count:
@@ -1709,10 +1844,8 @@ components:
       description: RestorePolicy represents a policy for the restore operation.
       properties:
         bandwidth:
-          description: |-
-            Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
-            in MiB/s and its database write operations to not exceed the given number of transactions
-            per second.
+          description: Throttles read operations from the backup file(s) to not exceed
+            the given I/O bandwidth in bytes/sec.
           example: 50000
           type: integer
         batch-size:
@@ -1776,7 +1909,7 @@ components:
           description: Do not restore any UDF modules.
           type: boolean
         parallel:
-          description: The number of client threads to spawn for writing to the cluster.
+          description: The number of concurrent record readers from backup files.
           example: 8
           type: integer
         replace:
@@ -1801,8 +1934,7 @@ components:
           type: integer
         tps:
           description: |-
-            Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth
-            in MiB/s and its database write operations to not exceed the given number of transactions
+            Throttles read operations from the backup file(s) to not exceed the given number of transactions
             per second.
           example: 4000
           type: integer
@@ -1864,35 +1996,76 @@ components:
       - routine
       - time
       type: object
+    model.RunningJob:
+      description: RunningJob tracks progress of currently running job.
+      example:
+        estimated-end-time: 2006-01-02T15:04:05Z07:00
+        start-time: 2006-01-02T15:04:05Z07:00
+        percentage-done: 50
+        total-records: 100
+        done-records: 50
+      properties:
+        done-records:
+          description: "DoneRecords: the number of records that have been successfully\
+            \ done."
+          example: 50
+          type: integer
+        estimated-end-time:
+          description: |-
+            EstimatedEndTime: the estimated time when the backup operation will be completed.
+            A nil value indicates that the estimation is not available yet.
+          example: 2006-01-02T15:04:05Z07:00
+          type: string
+        percentage-done:
+          description: "PercentageDone: the progress of the backup operation as a\
+            \ percentage."
+          example: 50
+          type: integer
+        start-time:
+          description: "StartTime: the time when the backup operation started."
+          example: 2006-01-02T15:04:05Z07:00
+          type: string
+        total-records:
+          description: "TotalRecords: the total number of records to be processed."
+          example: 100
+          type: integer
+      type: object
     model.SecretAgent:
       description: SecretAgent represents the configuration of an Aerospike Secret
         Agent for a backup/restore operation.
       example:
-        tls-enabled: true
+        tls-ca-file: /path/to/ca.pem
         address: localhost
-        port: "8080"
-        tls-ca: /path/to/ca.pem
+        port: 8080
+        connection-type: tcp
+        is-base64: false
         timeout: 5000
       properties:
         address:
           description: Address of the Secret Agent.
           example: localhost
           type: string
+        connection-type:
+          description: "Connection type: tcp, unix."
+          example: tcp
+          type: string
+        is-base64:
+          description: Flag that shows if secret agent responses are encrypted with
+            base64.
+          example: false
+          type: boolean
         port:
           description: Port the Secret Agent is running on.
-          example: "8080"
-          type: string
+          example: 8080
+          type: integer
         timeout:
           description: Timeout in milliseconds.
           example: 5000
           type: integer
-        tls-ca:
+        tls-ca-file:
           description: The path to a trusted CA certificate file in PEM format.
           example: /path/to/ca.pem
           type: string
-        tls-enabled:
-          description: Indicates whether TLS is enabled.
-          type: boolean
       type: object
     model.SeedNode:
       description: SeedNode represents details of a node in the Aerospike cluster.
@@ -1922,11 +2095,21 @@ components:
       example:
         path: backups
         s3-endpoint-override: http://host.docker.internal:9000
+        min_part_size: 10
         s3-log-level: FATAL
+        max_async_connections: 16
         s3-region: eu-central-1
         type: "{}"
         s3-profile: default
       properties:
+        max_async_connections:
+          description: The maximum number of simultaneous requests from S3.
+          example: 16
+          type: integer
+        min_part_size:
+          description: The minimum size in bytes of individual S3 UploadParts
+          example: 10
+          type: integer
         path:
           description: The root path for the backup repository.
           example: backups
@@ -1951,7 +2134,7 @@ components:
         type:
           allOf:
           - $ref: '#/components/schemas/model.StorageType'
-          description: "The type of the storage provider (0 - Local, 1 - AWS S3)."
+          description: The type of the storage provider
           type: object
       required:
       - path

@@ -3,7 +3,7 @@ aerospike-clusters:
     seed-nodes:
       - host-name: "localhost"
         port: 3000
-    credentials:    
+    credentials:
       user: tester
       password: psw
 storage:
@@ -29,5 +29,5 @@ backup-routines:
     incr-interval-cron: "@hourly"
     source-cluster: absCluster1
     storage: minioStorage
-    namespaces: ["source-ns1"]
+    namespaces: [ "source-ns1" ]
     backup-policy: keepFilesPolicy

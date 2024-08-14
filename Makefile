@@ -1,105 +1,105 @@
 SHELL = bash
-
 WORKSPACE = $(shell pwd)
-UNAME = $(shell uname -sm | tr ' ' '-')
-UNAME_M=$(shell uname -m)
+MAINTAINER = "Aerospike <info@aerospike.com>"
+DESCRIPTION = "Aerospike Backup Service"
+HOMEPAGE = "https://www.aerospike.com"
+VENDOR = "Aerospike INC"
+LICENSE = "Apache License 2.0"
 
-ifeq ($(UNAME_M),x86_64)
-    ARCH:=amd64
-else ifeq ($(UNAME_M),aarch64)
-    ARCH:=arm64
-else
-    $(error Unsupported architecture)
+BINARY_NAME=aerospike-backup-service
+CMD_DIR = cmd/backup
+BUILD_DIR = build
+TARGET_DIR = $(BUILD_DIR)/target
+PACKAGE_DIR = $(BUILD_DIR)/package
+
+ARCHS=linux/amd64 linux/arm64
+PACKAGERS=deb rpm
+TARGET=$(TARGET_DIR)/$(BINARY_NAME)
+ifneq ($(strip $(OS))$(strip $(ARCH)),)
+	TARGET=$(TARGET_DIR)/$(BINARY_NAME)_$(OS)_$(ARCH)
 endif
-
-BINARY_NAME:=aerospike-backup-service
 GIT_COMMIT:=$(shell git rev-parse HEAD)
 VERSION:=$(shell cat VERSION)
 
 # Go parameters
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
-CGO_CFLAGS=-I $(WORKSPACE)/modules/aerospike-tools-backup/modules/c-client/target/$(UNAME)/include \
--I $(WORKSPACE)/modules/aerospike-tools-backup/modules/secret-agent-client/target/$(UNAME)/include \
--I $(WORKSPACE)/modules/aerospike-tools-backup/include
-GOBUILD = CGO_CFLAGS="$(CGO_CFLAGS)" CGO_ENABLED=1 $(GO) build \
+NFPM ?= $(shell which nfpm)
+OS ?= $($(GO) env GOOS)
+ARCH ?= $($(GO) env GOARCH)
+GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) $(GO) build \
 -ldflags="-X main.commit=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
 GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
-GO_VERSION = 1.22.0
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
 
-
-GIT_TAG = $(shell git describe --tags)
-CMD_DIR = cmd/backup
-TARGET_DIR = target
-LIB_DIR = lib
-PKG_DIR = build/package
-PREP_DIR = $(TARGET_DIR)/pkg_install
-CONFIG_FILES = $(wildcard config/*)
-POST_INSTALL_SCRIPT = $(PKG_DIR)/post-install.sh
-TOOLS_DIR = $(WORKSPACE)/modules/aerospike-tools-backup
-
-MAINTAINER = "Aerospike"
-DESCRIPTION = "Aerospike Backup Service"
-URL = "https://www.aerospike.com"
-VENDOR = "Aerospike"
-LICENSE = "Apache License 2.0"
-
-.PHONY: install-deps
-install-deps:
-	./scripts/install-deps.sh
-
-.PHONY: prep-submodules
-prep-submodules:
+.PHONY: submodules
+submodules:
 	git submodule update --init --recursive
 
-.PHONY: remove-submodules
-remove-submodules:
-	git submodule foreach --recursive git clean -fd
-	git submodule deinit --all -f
-
-.PHONY: build-submodules
-build-submodules:
-	./scripts/build-submodules.sh
-	./scripts/copy_shared.sh
-
-.PHONY: clean-submodules
-clean-submodules:
-	$(MAKE) -C $(TOOLS_DIR) clean
+.PHONY: buildx
+buildx:
+	@for arch in $(ARCHS); do \
+  		OS=$$(echo $$arch | cut -d/ -f1); \
+  		ARCH=$$(echo $$arch | cut -d/ -f2); \
+  		OS=$$OS ARCH=$$ARCH $(MAKE) build; \
+  	done
 
 .PHONY: build
-build:
+build: submodules
 	mkdir -p $(TARGET_DIR)
-	$(GOBUILD) -o $(TARGET_DIR)/$(BINARY_NAME) ./$(CMD_DIR)
+	$(GOBUILD) -o $(TARGET) ./$(CMD_DIR)
+
+.PHONY: packages
+packages: buildx
+	@for arch in $(ARCHS); do \
+  		OS=$$(echo $$arch | cut -d/ -f1); \
+  		ARCH=$$(echo $$arch | cut -d/ -f2); \
+		OS=$$OS ARCH=$$ARCH \
+		NAME=$(BINARY_NAME) \
+		VERSION=$(VERSION) \
+		WORKSPACE=$(WORKSPACE) \
+		MAINTAINER=$(MAINTAINER) \
+		DESCRIPTION=$(DESCRIPTION) \
+		HOMEPAGE=$(HOMEPAGE) \
+		VENDOR=$(VENDOR) \
+		LICENSE=$(LICENSE) \
+		envsubst '$$OS $$ARCH $$NAME $$VERSION $$WORKSPACE $$MAINTAINER $$DESCRIPTION $$HOMEPAGE $$VENDOR $$LICENSE' \
+		< $(PACKAGE_DIR)/nfpm.tmpl.yaml > $(PACKAGE_DIR)/nfpm-$$OS-$$ARCH.yaml; \
+		for packager in $(PACKAGERS); do \
+			$(NFPM) package \
+			--config $(PACKAGE_DIR)/nfpm-$$OS-$$ARCH.yaml \
+			--packager $$(echo $$packager) \
+			--target $(TARGET_DIR); \
+			done; \
+  	done; \
+  	$(MAKE) checksums
+
+.PHONY: checksums
+checksums:
+	@find . -type f \
+		\( -name '*.deb' -o -name '*.rpm' \) \
+		-exec sh -c 'sha256sum "$$1" | cut -d" " -f1 > "$$1.sha256"' _ {} \;
+
+.PHONY: docker-build
+docker-build:
+	 docker build --tag aerospike/aerospike-backup-service:$(TAG) --file $(WORKSPACE)/Dockerfile .
+
+.PHONY: docker-buildx
+docker-buildx:
+	cd ./build/scripts && ./docker-buildx.sh --tag $(TAG)
+
 .PHONY: test
 test:
 	$(GOTEST) -v ./...
 
-.PHONY: rpm
-rpm: tarball
-	mkdir -p $(WORKSPACE)/target
-	mkdir -p $(WORKSPACE)/packages/rpm/SOURCES
-	mv /tmp/$(BINARY_NAME)-$(VERSION)-$(UNAME_M).tar.gz $(WORKSPACE)/packages/rpm/SOURCES/
-	BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) $(MAKE) -C packages/rpm
-
-.PHONY: deb
-deb: tarball
-	apt-get install --only-upgrade build-essential
-	mkdir -p $(WORKSPACE)/target
-	mkdir -p $(WORKSPACE)/packages/deb/$(ARCH)
-	tar -xvf /tmp/$(BINARY_NAME)-$(VERSION)-$(UNAME_M).tar.gz -C $(WORKSPACE)/packages/deb/$(ARCH)
-	BINARY_NAME=$(BINARY_NAME) GIT_COMMIT=$(GIT_COMMIT) VERSION=$(VERSION) ARCH=$(ARCH) $(MAKE) -C packages/deb
-
-.PHONY: tarball
-tarball: prep-submodules
-	cd ./scripts && ./tarball.sh
-
 .PHONY: release
 release:
-	cd ./scripts && ./release.sh $(NEXT_VERSION)
+	cd ./build/scripts && ./release.sh $(NEXT_VERSION)
 
 .PHONY: clean
 clean:
 	$(GOCLEAN)
-	$(MAKE) clean-submodules
-	rm -rf $(TARGET_DIR) $(LIB_DIR)
+	rm $(TARGET_DIR)/*
+	@find . -type f -name 'nfpm-*-*.yaml' -exec rm -f {} +
+	git submodule foreach --recursive git clean -fd; \
+    git submodule deinit --all -f

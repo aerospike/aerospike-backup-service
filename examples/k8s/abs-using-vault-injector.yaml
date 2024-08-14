@@ -109,8 +109,8 @@ data:
           "password": "psw"
           "user": "tester"
         "seed-nodes":
-        - "host-name": "abs-cluster.internal"
-          "port": 3000
+          - "host-name": "abs-cluster.internal"
+            "port": 3000
     "backup-policies":
       "keepFilesPolicy":
         "parallel": 1

@@ -1,9 +1,9 @@
-//nolint:typecheck
 package util
 
 import (
 	"fmt"
-	"os"
+	"net/url"
+	"strings"
 )
 
 // Ptr returns a pointer to the given object.
@@ -22,11 +22,6 @@ func Find[T any](items map[string]T, f func(T) bool) *string {
 	return nil
 }
 
-func isRunningInDockerContainer() bool {
-	_, found := os.LookupEnv("DOCKER_CONTAINER")
-	return found
-}
-
 // ValueOrZero dereferences a pointer and returns the value.
 // Zero value is returned if the pointer is nil.
 func ValueOrZero[T any](p *T) T {
@@ -37,13 +32,26 @@ func ValueOrZero[T any](p *T) T {
 	return zero
 }
 
-// TryAndRecover executes the given function `f` and recovers from any panics that occur.
+// TryAndRecover executes the given function `f` and recovers from any panics
+// that occur.
 func TryAndRecover(f func() string) (output string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("an error occurred: %v", r)
+			err = fmt.Errorf("recovered from: %v", r)
 			output = ""
 		}
 	}()
 	return f(), err
+}
+
+// ParseS3Path parses an S3 path and returns the bucket and path components.
+// The path is trimmed of the leading slash (/).
+// Amazon S3 require paths to be without slashes.
+func ParseS3Path(s string) (bucket string, path string, err error) {
+	parsed, err := url.Parse(s)
+	if err != nil {
+		return "", "", err
+	}
+
+	return parsed.Host, strings.TrimPrefix(parsed.Path, "/"), nil
 }
