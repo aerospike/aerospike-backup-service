@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )

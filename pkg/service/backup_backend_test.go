@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
 
 const tempFolder = "./tmp"

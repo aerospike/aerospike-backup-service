@@ -4,8 +4,8 @@ package service
 import (
 	"fmt"
 
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/util"
 )
 
 // AddStorage adds a new Storage to the configuration if a storage with the same name

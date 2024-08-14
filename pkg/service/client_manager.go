@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup/pkg/model"
 	"golang.org/x/sync/semaphore"
 )
 

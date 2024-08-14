@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
-	"github.com/aerospike/backup/pkg/model"
 )
 
 // BackupRoutineHandler implements backup logic for single routine.

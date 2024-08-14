@@ -14,8 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v7"
-	"github.com/aerospike/backup/pkg/util"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.

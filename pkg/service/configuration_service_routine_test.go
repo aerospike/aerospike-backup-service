@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"github.com/aerospike/backup/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
 
 func TestRoutine_Add(t *testing.T) {

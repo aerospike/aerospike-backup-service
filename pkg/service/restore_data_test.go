@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup/pkg/model"
-	"github.com/aerospike/backup/pkg/util"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
 )

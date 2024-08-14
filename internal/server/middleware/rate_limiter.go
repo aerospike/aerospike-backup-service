@@ -4,7 +4,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/aerospike/backup/internal/util"
+	"github.com/aerospike/aerospike-backup-service/internal/util"
 )
 
 func RateLimiter(rateLimiter *util.IPRateLimiter, whiteList *util.IPWhiteList,
