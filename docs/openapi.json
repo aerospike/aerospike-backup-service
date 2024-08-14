@@ -1771,19 +1771,10 @@
             "example" : 1024,
             "type" : "integer"
           },
-          "max-records" : {
-            "description" : "An approximate limit for the number of records to process. Available in server 4.9 and above.",
-            "example" : 10000,
-            "type" : "integer"
-          },
           "max-retries" : {
             "description" : "Maximum number of retries before aborting the current transaction.",
             "example" : 3,
             "type" : "integer"
-          },
-          "no-bins" : {
-            "description" : "Only backup record metadata (digest, TTL, generation count, key).",
-            "type" : "boolean"
           },
           "no-indexes" : {
             "description" : "Do not back up any secondary index definitions.",
@@ -1806,10 +1797,6 @@
             "description" : "Limit total returned records per second (RPS). If RPS is zero (the default),\nthe records-per-second limit is not applied.",
             "example" : 1000,
             "type" : "integer"
-          },
-          "remove-artifacts" : {
-            "description" : "Clear directory or remove output file.",
-            "type" : "boolean"
           },
           "remove-files" : {
             "allOf" : [ {
@@ -2571,17 +2558,17 @@
       "model.TLS" : {
         "description" : "TLS represents the Aerospike cluster TLS configuration options.",
         "properties" : {
-          "cafile" : {
+          "ca-file" : {
             "description" : "Path to a trusted CA certificate file.",
             "example" : "/path/to/cafile.pem",
             "type" : "string"
           },
-          "capath" : {
+          "ca-path" : {
             "description" : "Path to a directory of trusted CA certificates.",
             "example" : "/path/to/ca",
             "type" : "string"
           },
-          "certfile" : {
+          "cert-file" : {
             "description" : "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
             "example" : "/path/to/certfile.pem",
             "type" : "string"
@@ -2591,12 +2578,12 @@
             "example" : "ECDHE-ECDSA-AES256-GCM-SHA384",
             "type" : "string"
           },
-          "keyfile" : {
+          "key-file" : {
             "description" : "Path to the key for mutual authentication (if Aerospike cluster supports it).",
             "example" : "/path/to/keyfile.pem",
             "type" : "string"
           },
-          "keyfile-password" : {
+          "key-file-password" : {
             "description" : "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
             "example" : "file:/path/to/password",
             "type" : "string"

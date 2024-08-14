@@ -35,10 +35,6 @@ type BackupPolicy struct {
 	RetryDelay *int32 `yaml:"retry-delay,omitempty" json:"retry-delay,omitempty" example:"500"`
 	// Whether to clear the output directory (default: KeepAll).
 	RemoveFiles *RemoveFilesType `yaml:"remove-files,omitempty" json:"remove-files,omitempty" enums:"KeepAll,RemoveAll,RemoveIncremental"`
-	// Clear directory or remove output file.
-	RemoveArtifacts *bool `yaml:"remove-artifacts,omitempty" json:"remove-artifacts,omitempty"`
-	// Only backup record metadata (digest, TTL, generation count, key).
-	NoBins *bool `yaml:"no-bins,omitempty" json:"no-bins,omitempty"`
 	// Do not back up any record data (metadata or bin data).
 	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty"`
 	// Do not back up any secondary index definitions.
@@ -48,8 +44,6 @@ type BackupPolicy struct {
 	// Throttles backup write operations to the backup file(s) to not exceed the given
 	// bandwidth in MiB/s.
 	Bandwidth *int64 `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
-	// An approximate limit for the number of records to process. Available in server 4.9 and above.
-	MaxRecords *int64 `yaml:"max-records,omitempty" json:"max-records,omitempty" example:"10000"`
 	// Limit total returned records per second (RPS). If RPS is zero (the default),
 	// the records-per-second limit is not applied.
 	RecordsPerSecond *int32 `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000"`
@@ -103,13 +97,10 @@ func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
 		MaxRetries:       p.MaxRetries,
 		RetryDelay:       p.RetryDelay,
 		RemoveFiles:      p.RemoveFiles,
-		RemoveArtifacts:  p.RemoveArtifacts,
-		NoBins:           p.NoBins,
 		NoRecords:        p.NoRecords,
 		NoIndexes:        util.Ptr(true),
 		NoUdfs:           util.Ptr(true),
 		Bandwidth:        p.Bandwidth,
-		MaxRecords:       p.MaxRecords,
 		RecordsPerSecond: p.RecordsPerSecond,
 		FileLimit:        p.FileLimit,
 		Sealed:           p.Sealed,
@@ -148,9 +139,6 @@ func (p *BackupPolicy) Validate() error {
 	}
 	if p.Bandwidth != nil && *p.Bandwidth <= 0 {
 		return fmt.Errorf("bandwidth %d invalid, should be positive number", *p.Bandwidth)
-	}
-	if p.MaxRecords != nil && *p.MaxRecords <= 0 {
-		return fmt.Errorf("maxRecords %d invalid, should be positive number", *p.MaxRecords)
 	}
 	if p.RecordsPerSecond != nil && *p.RecordsPerSecond <= 0 {
 		return fmt.Errorf("recordsPerSecond %d invalid, should be positive number", *p.RecordsPerSecond)

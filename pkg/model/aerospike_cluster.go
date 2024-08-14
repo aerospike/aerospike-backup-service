@@ -269,9 +269,9 @@ func (c *AerospikeCluster) ASClientHosts() []*as.Host {
 // @Description TLS represents the Aerospike cluster TLS configuration options.
 type TLS struct {
 	// Path to a trusted CA certificate file.
-	CAFile *string `yaml:"cafile,omitempty" json:"cafile,omitempty" example:"/path/to/cafile.pem"`
+	CAFile *string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/cafile.pem"`
 	// Path to a directory of trusted CA certificates.
-	CAPath *string `yaml:"capath,omitempty" json:"capath,omitempty" example:"/path/to/ca"`
+	CAPath *string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca"`
 	// The default TLS name used to authenticate each TLS socket connection.
 	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name"`
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
@@ -279,11 +279,11 @@ type TLS struct {
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
 	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"ECDHE-ECDSA-AES256-GCM-SHA384"`
 	// Path to the key for mutual authentication (if Aerospike cluster supports it).
-	Keyfile *string `yaml:"keyfile,omitempty" json:"keyfile,omitempty" example:"/path/to/keyfile.pem"`
+	Keyfile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/keyfile.pem"`
 	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
-	KeyfilePassword *string `yaml:"keyfile-password,omitempty" json:"keyfile-password,omitempty" example:"file:/path/to/password"`
+	KeyfilePassword *string `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" example:"file:/path/to/password"`
 	// Path to the chain file for mutual authentication (if Aerospike Cluster supports it).
-	Certfile *string `yaml:"certfile,omitempty" json:"certfile,omitempty" example:"/path/to/certfile.pem"`
+	Certfile *string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/certfile.pem"`
 }
 
 // Credentials represents authentication details to the Aerospike cluster.

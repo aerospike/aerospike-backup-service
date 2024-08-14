@@ -1587,19 +1587,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 1024
                 },
-                "max-records": {
-                    "description": "An approximate limit for the number of records to process. Available in server 4.9 and above.",
-                    "type": "integer",
-                    "example": 10000
-                },
                 "max-retries": {
                     "description": "Maximum number of retries before aborting the current transaction.",
                     "type": "integer",
                     "example": 3
-                },
-                "no-bins": {
-                    "description": "Only backup record metadata (digest, TTL, generation count, key).",
-                    "type": "boolean"
                 },
                 "no-indexes": {
                     "description": "Do not back up any secondary index definitions.",
@@ -1622,10 +1613,6 @@ const docTemplate = `{
                     "description": "Limit total returned records per second (RPS). If RPS is zero (the default),\nthe records-per-second limit is not applied.",
                     "type": "integer",
                     "example": 1000
-                },
-                "remove-artifacts": {
-                    "description": "Clear directory or remove output file.",
-                    "type": "boolean"
                 },
                 "remove-files": {
                     "description": "Whether to clear the output directory (default: KeepAll).",
@@ -2504,17 +2491,17 @@ const docTemplate = `{
             "description": "TLS represents the Aerospike cluster TLS configuration options.",
             "type": "object",
             "properties": {
-                "cafile": {
+                "ca-file": {
                     "description": "Path to a trusted CA certificate file.",
                     "type": "string",
                     "example": "/path/to/cafile.pem"
                 },
-                "capath": {
+                "ca-path": {
                     "description": "Path to a directory of trusted CA certificates.",
                     "type": "string",
                     "example": "/path/to/ca"
                 },
-                "certfile": {
+                "cert-file": {
                     "description": "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
                     "type": "string",
                     "example": "/path/to/certfile.pem"
@@ -2524,12 +2511,12 @@ const docTemplate = `{
                     "type": "string",
                     "example": "ECDHE-ECDSA-AES256-GCM-SHA384"
                 },
-                "keyfile": {
+                "key-file": {
                     "description": "Path to the key for mutual authentication (if Aerospike cluster supports it).",
                     "type": "string",
                     "example": "/path/to/keyfile.pem"
                 },
-                "keyfile-password": {
+                "key-file-password": {
                     "description": "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
                     "type": "string",
                     "example": "file:/path/to/password"

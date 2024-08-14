@@ -1,6 +1,8 @@
 package model
 
-import "github.com/aerospike/aerospike-backup-service/pkg/util"
+import (
+	"github.com/aerospike/aerospike-backup-service/pkg/util"
+)
 
 type backupPolicy struct {
 	maxRetries int32
@@ -23,6 +25,7 @@ var defaultConfig = struct {
 			WhiteList: []string{},
 		},
 		ContextPath: util.Ptr("/"),
+		Timeout:     util.Ptr(5000),
 	},
 	logger: LoggerConfig{
 		Level:        util.Ptr("DEBUG"),

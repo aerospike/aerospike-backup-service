@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	_ "github.com/aerospike/aerospike-backup-service/modules/schema" // it's required to load configuration schemas in init method
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
@@ -18,17 +17,7 @@ import (
 const namespaceInfo = "namespaces"
 
 // getAllNamespacesOfCluster retrieves a list of all namespaces in an Aerospike cluster.
-// this function is called maximum once for each routine (on application startup)
-// so it's ok to create client here.
-func getAllNamespacesOfCluster(cluster *model.AerospikeCluster) ([]string, error) {
-	client, err := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(),
-		cluster.ASClientHosts()...)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to Aerospike server: %w", err)
-	}
-	defer client.Close()
-
+func getAllNamespacesOfCluster(client backup.AerospikeClient) ([]string, error) {
 	node, err := client.Cluster().GetRandomNode()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get node: %w", err)

@@ -40,6 +40,7 @@ func NewHTTPServer(
 	serverConfig := config.ServiceConfig.HTTPServer
 
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
+	httpTimeout := time.Duration(serverConfig.GetTimeout()) * time.Millisecond
 
 	rateLimiter := util.NewIPRateLimiter(
 		rate.Limit(serverConfig.GetRateOrDefault().GetTpsOrDefault()),
@@ -73,7 +74,7 @@ func NewHTTPServer(
 		config: config,
 		server: &http.Server{
 			Addr:              addr,
-			ReadHeaderTimeout: 5 * time.Second,
+			ReadHeaderTimeout: httpTimeout,
 			Handler:           router,
 		},
 	}

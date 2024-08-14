@@ -16,6 +16,8 @@ type HTTPServerConfig struct {
 	Rate *RateLimiterConfig `yaml:"rate,omitempty" json:"rate,omitempty"`
 	// ContextPath customizes path for the API endpoints.
 	ContextPath *string `yaml:"context-path,omitempty" json:"context-path,omitempty" default:"/"`
+	// Timeout for http server operations in milliseconds.
+	Timeout *int `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"5000"`
 }
 
 // GetAddressOrDefault returns the value of the Address property.
@@ -34,6 +36,15 @@ func (s *HTTPServerConfig) GetPortOrDefault() int {
 		return *s.Port
 	}
 	return *defaultConfig.http.Port
+}
+
+// GetTimeout returns the value of the Timeout property.
+// If the property is not set, it returns the default value = 5s.
+func (s *HTTPServerConfig) GetTimeout() int {
+	if s.Timeout != nil {
+		return *s.Timeout
+	}
+	return *defaultConfig.http.Timeout
 }
 
 // GetRateOrDefault returns the value of the Rate property.
@@ -96,6 +107,9 @@ func (r *RateLimiterConfig) GetWhiteListOrDefault() []string {
 func (s *HTTPServerConfig) Validate() error {
 	if s.ContextPath != nil && !strings.HasPrefix(*s.ContextPath, "/") {
 		return fmt.Errorf("context-path must start with a slash: %s", *s.ContextPath)
+	}
+	if s.Timeout != nil && *s.Timeout < 0 {
+		return fmt.Errorf("timeout cannot be negative: %d", *s.Timeout)
 	}
 	return nil
 }
