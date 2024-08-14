@@ -1665,6 +1665,9 @@ components:
           - $ref: '#/components/schemas/model.RateLimiterConfig'
           description: HTTP rate limiter configuration.
           type: object
+        timeout:
+          description: Timeout for http server operations in milliseconds.
+          type: integer
       type: object
     model.JobStatus:
       enum:

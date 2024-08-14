@@ -1955,6 +1955,11 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.RateLimiterConfig"
                         }
                     ]
+                },
+                "timeout": {
+                    "description": "Timeout for http server operations in milliseconds.",
+                    "type": "integer",
+                    "default": 5000
                 }
             }
         },
