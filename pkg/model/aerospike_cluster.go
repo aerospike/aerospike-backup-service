@@ -147,6 +147,7 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	if c.MaxParallelScans != nil && *c.MaxParallelScans > 0 {
 		policy.ConnectionQueueSize = max(100, *c.MaxParallelScans*4+10)
 	}
+	policy.LimitConnectionsToQueueSize = false
 	return policy
 }
 
