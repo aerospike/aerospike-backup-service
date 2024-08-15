@@ -59,7 +59,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 		config.Bandwidth = int(*restoreRequest.Policy.Bandwidth)
 	}
 
-	config.WritePolicy = makeWritePolicy(restoreRequest, config)
+	config.WritePolicy = makeWritePolicy(restoreRequest)
 	if restoreRequest.Policy.NoRecords != nil && *restoreRequest.Policy.NoRecords {
 		config.NoRecords = true
 	}
@@ -117,7 +117,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 	return config
 }
 
-func makeWritePolicy(restoreRequest *model.RestoreRequestInternal, config *backup.RestoreConfig) *a.WritePolicy {
+func makeWritePolicy(restoreRequest *model.RestoreRequestInternal) *a.WritePolicy {
 	writePolicy := a.NewWritePolicy(0, 0)
 	writePolicy.GenerationPolicy = a.EXPECT_GEN_GT
 	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
