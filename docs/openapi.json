@@ -2332,7 +2332,7 @@
             "description" : "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
             "type" : "boolean"
           },
-          "retryPolicy" : {
+          "retry-policy" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/model.RetryPolicy"
             } ],

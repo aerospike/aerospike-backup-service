@@ -1903,7 +1903,7 @@ components:
             the namespace. By default, restoring a record from a backup only replaces the bins
             contained in the backup; all other bins of an existing record remain untouched.
           type: boolean
-        retryPolicy:
+        retry-policy:
           allOf:
           - $ref: '#/components/schemas/model.RetryPolicy'
           description: |-
