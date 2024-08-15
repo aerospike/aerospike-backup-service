@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/backup-go/models"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
@@ -51,7 +52,11 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 	config := backup.NewDefaultRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
-	config.Retries = 10 //TODO: pass param
+	config.RetryPolicy = &models.RetryPolicy{
+		BaseTimeout: time.Second,
+		Multiplier:  2,
+		MaxRetries:  10,
+	}
 	if restoreRequest.Policy.Tps != nil {
 		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)
 	}
