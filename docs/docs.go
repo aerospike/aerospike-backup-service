@@ -2233,7 +2233,7 @@ const docTemplate = `{
                     "description": "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
                     "type": "boolean"
                 },
-                "retryPolicy": {
+                "retry-policy": {
                     "description": "Configuration of retries for each restore write operation.\nIf nil, no retries will be performed.",
                     "allOf": [
                         {

@@ -58,7 +58,7 @@ type RestorePolicy struct {
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
 	// Configuration of retries for each restore write operation.
 	// If nil, no retries will be performed.
-	RetryPolicy *RetryPolicy
+	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 }
 
 // Validate validates the restore policy.
