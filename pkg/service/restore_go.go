@@ -121,7 +121,7 @@ func makeWritePolicy(restoreRequest *model.RestoreRequestInternal, config *backu
 	writePolicy := a.NewWritePolicy(0, 0)
 	writePolicy.GenerationPolicy = a.EXPECT_GEN_GT
 	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
-		config.WritePolicy.GenerationPolicy = a.NONE
+		writePolicy.GenerationPolicy = a.NONE
 	}
 
 	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
