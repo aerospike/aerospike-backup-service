@@ -1955,6 +1955,11 @@ const docTemplate = `{
                             "$ref": "#/definitions/model.RateLimiterConfig"
                         }
                     ]
+                },
+                "timeout": {
+                    "description": "Timeout for http server operations in milliseconds.",
+                    "type": "integer",
+                    "default": 5000
                 }
             }
         },
@@ -2228,6 +2233,14 @@ const docTemplate = `{
                     "description": "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
                     "type": "boolean"
                 },
+                "retryPolicy": {
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, no retries will be performed.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.RetryPolicy"
+                        }
+                    ]
+                },
                 "set-list": {
                     "description": "The sets to restore (optional, an empty list implies restoring all sets).",
                     "type": "array",
@@ -2322,6 +2335,24 @@ const docTemplate = `{
                     "type": "integer",
                     "format": "int64",
                     "example": 1739538000000
+                }
+            }
+        },
+        "model.RetryPolicy": {
+            "description": "RetryPolicy defines the configuration for retry attempts in case of failures.",
+            "type": "object",
+            "properties": {
+                "baseTimeout": {
+                    "description": "BaseTimeout is the initial delay between retry attempts, in milliseconds.",
+                    "type": "integer"
+                },
+                "maxRetries": {
+                    "description": "MaxRetries is the maximum number of retry attempts that will be made.\nIf set to 0, no retries will be performed.",
+                    "type": "integer"
+                },
+                "multiplier": {
+                    "description": "Multiplier is used to increase the delay between subsequent retry attempts.\nThe actual delay is calculated as: BaseTimeout * (Multiplier ^ attemptNumber)",
+                    "type": "number"
                 }
             }
         },

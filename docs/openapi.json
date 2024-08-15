@@ -2099,6 +2099,10 @@
             } ],
             "description" : "HTTP rate limiter configuration.",
             "type" : "object"
+          },
+          "timeout" : {
+            "description" : "Timeout for http server operations in milliseconds.",
+            "type" : "integer"
           }
         },
         "type" : "object"
@@ -2328,6 +2332,13 @@
             "description" : "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
             "type" : "boolean"
           },
+          "retryPolicy" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/model.RetryPolicy"
+            } ],
+            "description" : "Configuration of retries for each restore write operation.\nIf nil, no retries will be performed.",
+            "type" : "object"
+          },
           "set-list" : {
             "description" : "The sets to restore (optional, an empty list implies restoring all sets).",
             "example" : [ "set1", "set2" ],
@@ -2409,6 +2420,24 @@
           }
         },
         "required" : [ "destination", "policy", "routine", "time" ],
+        "type" : "object"
+      },
+      "model.RetryPolicy" : {
+        "description" : "RetryPolicy defines the configuration for retry attempts in case of failures.",
+        "properties" : {
+          "baseTimeout" : {
+            "description" : "BaseTimeout is the initial delay between retry attempts, in milliseconds.",
+            "type" : "integer"
+          },
+          "maxRetries" : {
+            "description" : "MaxRetries is the maximum number of retry attempts that will be made.\nIf set to 0, no retries will be performed.",
+            "type" : "integer"
+          },
+          "multiplier" : {
+            "description" : "Multiplier is used to increase the delay between subsequent retry attempts.\nThe actual delay is calculated as: BaseTimeout * (Multiplier ^ attemptNumber)",
+            "type" : "number"
+          }
+        },
         "type" : "object"
       },
       "model.RunningJob" : {
