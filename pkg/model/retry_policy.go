@@ -30,8 +30,8 @@ func (rp *RetryPolicy) Validate() error {
 		return fmt.Errorf("BaseTimeout must be greater than 0")
 	}
 
-	if rp.Multiplier <= 0 {
-		return fmt.Errorf("multiplier must be greater than 0")
+	if rp.Multiplier < 1 {
+		return fmt.Errorf("multiplier must be greater or equal than 1")
 	}
 
 	if rp.MaxRetries < 0 {
