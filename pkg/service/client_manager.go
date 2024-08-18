@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"log/slog"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
@@ -36,16 +35,6 @@ func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
 	client, err := as.NewClientWithPolicyAndHost(policy, hosts...)
 	if err != nil {
 		return nil, err
-	}
-
-	// warm up the client by filling the connection pool with connections
-	// for all nodes
-	cn := max(2, policy.ConnectionQueueSize/2)
-	_, err = client.WarmUp(cn)
-	if err != nil {
-		slog.Warn("Failed to warm up the client",
-			slog.Int("connections", cn),
-			slog.Any("err", err))
 	}
 
 	return client, nil
