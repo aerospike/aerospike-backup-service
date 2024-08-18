@@ -56,7 +56,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 		config.RetryPolicy = &models.RetryPolicy{
 			BaseTimeout: restoreRequest.Policy.RetryPolicy.GetBaseTimeout(),
 			Multiplier:  restoreRequest.Policy.RetryPolicy.Multiplier,
-			MaxRetries:  restoreRequest.Policy.RetryPolicy.MaxRetries,
+			MaxRetries:  uint(restoreRequest.Policy.RetryPolicy.MaxRetries),
 		}
 	}
 	if restoreRequest.Policy.Tps != nil {
