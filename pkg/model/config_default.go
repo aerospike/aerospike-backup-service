@@ -37,3 +37,9 @@ var defaultConfig = struct {
 		maxRetries: 3,
 	},
 }
+
+var defaultRetry = &RetryPolicy{
+	BaseTimeout: 1000,
+	MaxRetries:  2,
+	Multiplier:  1.5,
+}

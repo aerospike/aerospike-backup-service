@@ -104,3 +104,11 @@ func (p *RestorePolicy) Validate() error {
 	}
 	return nil
 }
+
+func (p *RestorePolicy) GetRetryPolicyOrDefault() *RetryPolicy {
+	if p.RetryPolicy != nil {
+		return p.RetryPolicy
+	}
+
+	return defaultRetry
+}

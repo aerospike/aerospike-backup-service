@@ -52,12 +52,12 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 	config := backup.NewDefaultRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
-	if restoreRequest.Policy.RetryPolicy != nil {
-		config.RetryPolicy = &models.RetryPolicy{
-			BaseTimeout: restoreRequest.Policy.RetryPolicy.GetBaseTimeout(),
-			Multiplier:  restoreRequest.Policy.RetryPolicy.Multiplier,
-			MaxRetries:  uint(restoreRequest.Policy.RetryPolicy.MaxRetries),
-		}
+
+	retryPolicy := restoreRequest.Policy.GetRetryPolicyOrDefault()
+	config.RetryPolicy = &models.RetryPolicy{
+		BaseTimeout: retryPolicy.GetBaseTimeout(),
+		Multiplier:  retryPolicy.Multiplier,
+		MaxRetries:  uint(retryPolicy.MaxRetries),
 	}
 	if restoreRequest.Policy.Tps != nil {
 		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)
