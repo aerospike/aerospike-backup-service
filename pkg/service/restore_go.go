@@ -10,6 +10,7 @@ import (
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/aws/s3"
+	"github.com/aerospike/backup-go/models"
 )
 
 // RestoreGo implements the [Restore] interface.
@@ -51,8 +52,13 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 	config := backup.NewDefaultRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
-	config.WritePolicy = a.NewWritePolicy(0, 0)
-	config.WritePolicy.MaxRetries = 100
+
+	retryPolicy := restoreRequest.Policy.GetRetryPolicyOrDefault()
+	config.RetryPolicy = &models.RetryPolicy{
+		BaseTimeout: retryPolicy.GetBaseTimeout(),
+		Multiplier:  retryPolicy.Multiplier,
+		MaxRetries:  uint(retryPolicy.MaxRetries),
+	}
 	if restoreRequest.Policy.Tps != nil {
 		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)
 	}
@@ -60,19 +66,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 		config.Bandwidth = int(*restoreRequest.Policy.Bandwidth)
 	}
 
-	config.WritePolicy.GenerationPolicy = a.EXPECT_GEN_GT
-	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
-		config.WritePolicy.GenerationPolicy = a.NONE
-	}
-
-	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
-	config.WritePolicy.RecordExistsAction = recordExistsAction(
-		restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
-
-	if restoreRequest.Policy.Timeout != nil && *restoreRequest.Policy.Timeout > 0 {
-		config.WritePolicy.TotalTimeout = time.Duration(*restoreRequest.Policy.Timeout) *
-			time.Millisecond
-	}
+	config.WritePolicy = makeWritePolicy(restoreRequest)
 	if restoreRequest.Policy.NoRecords != nil && *restoreRequest.Policy.NoRecords {
 		config.NoRecords = true
 	}
@@ -128,6 +122,25 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 		}
 	}
 	return config
+}
+
+func makeWritePolicy(restoreRequest *model.RestoreRequestInternal) *a.WritePolicy {
+	writePolicy := a.NewWritePolicy(0, 0)
+	writePolicy.GenerationPolicy = a.EXPECT_GEN_GT
+	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
+		writePolicy.GenerationPolicy = a.NONE
+	}
+
+	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
+	writePolicy.RecordExistsAction = recordExistsAction(
+		restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
+
+	if restoreRequest.Policy.Timeout != nil && *restoreRequest.Policy.Timeout > 0 {
+		writePolicy.TotalTimeout = time.Duration(*restoreRequest.Policy.Timeout) *
+			time.Millisecond
+	}
+
+	return writePolicy
 }
 
 func recordExistsAction(replace, unique *bool) a.RecordExistsAction {

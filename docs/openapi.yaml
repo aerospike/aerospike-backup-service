@@ -1903,6 +1903,13 @@ components:
             the namespace. By default, restoring a record from a backup only replaces the bins
             contained in the backup; all other bins of an existing record remain untouched.
           type: boolean
+        retry-policy:
+          allOf:
+          - $ref: '#/components/schemas/model.RetryPolicy'
+          description: |-
+            Configuration of retries for each restore write operation.
+            If nil, no retries will be performed.
+          type: object
         set-list:
           description: "The sets to restore (optional, an empty list implies restoring\
             \ all sets)."
@@ -1980,6 +1987,25 @@ components:
       - policy
       - routine
       - time
+      type: object
+    model.RetryPolicy:
+      description: RetryPolicy defines the configuration for retry attempts in case
+        of failures.
+      properties:
+        baseTimeout:
+          description: "BaseTimeout is the initial delay between retry attempts, in\
+            \ milliseconds."
+          type: integer
+        maxRetries:
+          description: |-
+            MaxRetries is the maximum number of retry attempts that will be made.
+            If set to 0, no retries will be performed.
+          type: integer
+        multiplier:
+          description: |-
+            Multiplier is used to increase the delay between subsequent retry attempts.
+            The actual delay is calculated as: BaseTimeout * (Multiplier ^ attemptNumber)
+          type: number
       type: object
     model.RunningJob:
       description: RunningJob tracks progress of currently running job.

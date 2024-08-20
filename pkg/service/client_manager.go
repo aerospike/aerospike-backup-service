@@ -105,12 +105,7 @@ func (cm *ClientManagerImpl) CreateClient(cluster *model.AerospikeCluster) (*bac
 		options = append(options, backup.WithID(*cluster.ClusterLabel))
 	}
 
-	client, err := backup.NewClient(aeroClient, options...)
-	if err != nil {
-		return nil, err
-	}
-
-	return client, nil
+	return backup.NewClient(aeroClient, options...)
 }
 
 // Close ensures that the specified backup client is closed.

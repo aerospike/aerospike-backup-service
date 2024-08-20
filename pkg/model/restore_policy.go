@@ -56,6 +56,9 @@ type RestorePolicy struct {
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details.
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
+	// Configuration of retries for each restore write operation.
+	// If nil, no retries will be performed.
+	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 }
 
 // Validate validates the restore policy.
@@ -96,5 +99,16 @@ func (p *RestorePolicy) Validate() error {
 	if err := p.CompressionPolicy.Validate(); err != nil {
 		return err
 	}
+	if err := p.RetryPolicy.Validate(); err != nil {
+		return fmt.Errorf("retry policy invalid: %w", err)
+	}
 	return nil
+}
+
+func (p *RestorePolicy) GetRetryPolicyOrDefault() *RetryPolicy {
+	if p.RetryPolicy != nil {
+		return p.RetryPolicy
+	}
+
+	return defaultRetry
 }
