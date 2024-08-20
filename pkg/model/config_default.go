@@ -39,7 +39,7 @@ var defaultConfig = struct {
 }
 
 var defaultRetry = &RetryPolicy{
-	BaseTimeout: 1000,
-	MaxRetries:  2,
-	Multiplier:  1.5,
+	BaseTimeout: 2000,
+	MaxRetries:  3,
+	Multiplier:  2,
 }
