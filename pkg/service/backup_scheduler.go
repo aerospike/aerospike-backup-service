@@ -71,7 +71,11 @@ func ApplyNewConfig(scheduler quartz.Scheduler,
 // starts and returns the scheduler.
 func ScheduleBackup(ctx context.Context, config *model.Config, handlers BackupHandlerHolder,
 ) (quartz.Scheduler, error) {
-	scheduler := quartz.NewStdScheduler()
+	scheduler := quartz.NewStdSchedulerWithOptions(quartz.StdSchedulerOptions{
+		OutdatedThreshold: 1 * time.Second,
+		RetryInterval:     100 * time.Millisecond,
+	}, nil, nil)
+
 	scheduler.Start(ctx)
 
 	err := scheduleRoutines(scheduler, config, handlers)
