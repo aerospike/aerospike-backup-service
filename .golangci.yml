@@ -1,10 +1,5 @@
 run:
   timeout: 2m
-  exclude-dirs:
-    - examples
-    - modules
-    - docs
-    - docker
 
 linters:
   disable-all: true
@@ -15,7 +10,6 @@ linters:
     - dogsled
     - dupl
     - errcheck
-    - exportloopref
     - funlen
     - gci
     - goconst
@@ -57,3 +51,9 @@ issues:
         - prealloc
         - funlen
         - goconst
+
+  exclude-dirs:
+    - examples
+    - modules
+    - docs
+    - docker
