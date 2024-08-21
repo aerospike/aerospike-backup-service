@@ -6,7 +6,7 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   title: Backup Service REST API Specification
-  version: v2.0.0-rc1
+  version: v2.0.0-rc2
 externalDocs:
   description: OpenAPI
   url: https://swagger.io/resources/open-api/
