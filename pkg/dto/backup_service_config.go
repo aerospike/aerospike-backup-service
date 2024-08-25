@@ -1,4 +1,4 @@
-package model
+package dto
 
 // BackupServiceConfig represents the backup service configuration properties.
 // @Description BackupServiceConfig represents the backup service configuration properties.

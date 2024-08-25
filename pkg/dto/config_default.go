@@ -1,4 +1,4 @@
-package model
+package dto
 
 import (
 	"github.com/aerospike/aerospike-backup-service/pkg/util"

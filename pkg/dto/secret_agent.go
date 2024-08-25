@@ -1,4 +1,4 @@
-package model
+package dto
 
 // SecretAgent represents the configuration of an Aerospike Secret Agent
 // for a backup/restore operation.

@@ -5,7 +5,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/pkg/service/configuration"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -15,7 +14,7 @@ type Service struct {
 	restoreManager       service.RestoreManager
 	backupBackends       service.BackendsHolder
 	handlerHolder        service.BackupHandlerHolder
-	configurationManager configuration.ConfigurationManager
+	configurationManager service.ConfigurationManager
 	clientManger         service.ClientManager
 	logger               *slog.Logger
 }
@@ -26,7 +25,7 @@ func NewService(
 	restoreManager service.RestoreManager,
 	backupBackends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
-	configurationManager configuration.ConfigurationManager,
+	configurationManager service.ConfigurationManager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) *Service {

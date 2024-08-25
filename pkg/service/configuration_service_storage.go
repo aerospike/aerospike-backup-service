@@ -1,5 +1,5 @@
 //nolint:dupl
-package configuration
+package service
 
 import (
 	"fmt"

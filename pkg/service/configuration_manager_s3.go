@@ -1,16 +1,15 @@
-package configuration
+package service
 
 import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/pkg/service"
 )
 
 // S3ConfigurationManager implements the ConfigurationManager interface,
 // performing I/O operations on AWS S3.
 type S3ConfigurationManager struct {
-	*service.S3Context
+	*S3Context
 }
 
 var _ ConfigurationManager = (*S3ConfigurationManager)(nil)
@@ -33,7 +32,7 @@ func (builder S3ManagerBuilderImpl) NewS3ConfigurationManager(configStorage *mod
 	}
 
 	return &S3ConfigurationManager{
-		service.NewS3Context(configStorage),
+		NewS3Context(configStorage),
 	}, nil
 }
 

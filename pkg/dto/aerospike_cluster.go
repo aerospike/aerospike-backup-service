@@ -1,5 +1,5 @@
 //nolint:lll
-package model
+package dto
 
 import (
 	"bytes"

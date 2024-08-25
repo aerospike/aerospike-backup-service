@@ -1,4 +1,4 @@
-package model
+package dto
 
 const (
 	StateFileName                = "state.yaml"

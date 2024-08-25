@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/pkg/service/configuration"
+	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/gorilla/mux"
 )
 
@@ -52,7 +52,7 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = configuration.AddStorage(s.config, name, &newStorage)
+	err = service.AddStorage(s.config, name, &newStorage)
 	if err != nil {
 		hLogger.Error("failed to add storage",
 			slog.String("name", name),
@@ -175,7 +175,7 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = configuration.UpdateStorage(s.config, storageName, &updatedStorage)
+	err = service.UpdateStorage(s.config, storageName, &updatedStorage)
 	if err != nil {
 		hLogger.Error("failed to update storage",
 			slog.String("name", storageName),
@@ -215,7 +215,7 @@ func (s *Service) deleteStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := configuration.DeleteStorage(s.config, storageName)
+	err := service.DeleteStorage(s.config, storageName)
 	if err != nil {
 		hLogger.Error("failed to delete storage",
 			slog.String("name", storageName),
