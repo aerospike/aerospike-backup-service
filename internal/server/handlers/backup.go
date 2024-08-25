@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/gorilla/mux"
@@ -81,7 +82,7 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
-	timeBounds, err := model.NewTimeBoundsFromString(from, to)
+	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
 	if err != nil {
 		hLogger.Error("failed parse time limits",
 			slog.String("from", from),
@@ -91,7 +92,7 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	backups, err := readBackupsLogic(s.config.BackupRoutines, s.backupBackends, timeBounds, isFullBackup)
+	backups, err := readBackupsLogic(s.config.BackupRoutines, s.backupBackends, timeBounds.ToModel(), isFullBackup)
 	if err != nil {
 		hLogger.Error("failed to retrieve backup list",
 			slog.Any("timeBounds", timeBounds),
@@ -101,7 +102,8 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	response, err := json.Marshal(backups)
+
+	response, err := dto.Serialize(dto.ConvertBackupDetailsMap(backups), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal backup list",
 			slog.Any("error", err),
@@ -128,7 +130,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
-	timeBounds, err := model.NewTimeBoundsFromString(from, to)
+	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
 	if err != nil {
 		hLogger.Error("failed parse time limits",
 			slog.String("from", from),
@@ -156,7 +158,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	}
 
 	backupListFunction := backupsReadFunction(reader, isFullBackup)
-	backups, err := backupListFunction(timeBounds)
+	backups, err := backupListFunction(timeBounds.ToModel())
 	if err != nil {
 		hLogger.Error("failed to retrieve backup list",
 			slog.Bool("isFullBackup", isFullBackup),
@@ -166,7 +168,8 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	response, err := json.Marshal(backups)
+	backupDetails := dto.ConvertModelsToDTO(backups, dto.NewBackupDetailsFromModel)
+	response, err := dto.Serialize(backupDetails, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal backup list",
 			slog.Any("error", err),
@@ -280,7 +283,7 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Produce  json
 // @Param    name path string true "Backup routine name"
 // @Router   /v1/backups/currentBackup/{name} [get]
-// @Success  200 {object} model.CurrentBackups "Current backup statistics"
+// @Success  200 {object} dto.CurrentBackups "Current backup statistics"
 // @Failure  404 {string} string
 // @Failure  400 {string} string
 // @Failure  500 {string} string

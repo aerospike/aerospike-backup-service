@@ -4,12 +4,13 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/gorilla/mux"
 )
 
@@ -19,14 +20,14 @@ import (
 // @Tags        Restore
 // @Router      /v1/restore/full [post]
 // @Accept      json
-// @Param       request body model.RestoreRequest true "Restore request details"
+// @Param       request body dto.RestoreRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreFullHandler"))
 
-	var request model.RestoreRequest
+	var request dto.RestoreRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
@@ -42,12 +43,12 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	requestInternal := &model.RestoreRequestInternal{
+	requestInternal := &dto.RestoreRequestInternal{
 		RestoreRequest: request,
 		Dir:            request.SourceStorage.Path,
 	}
 
-	jobID, err := s.restoreManager.Restore(requestInternal)
+	jobID, err := s.restoreManager.Restore(requestInternal.ToModel())
 	if err != nil {
 		hLogger.Error("failed to restore",
 			slog.Any("error", err),
@@ -70,14 +71,14 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 // @Tags        Restore
 // @Router      /v1/restore/incremental [post]
 // @Accept      json
-// @Param       request body model.RestoreRequest true "Restore request details"
+// @Param       request body dto.RestoreRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreIncrementalHandler"))
 
-	var request model.RestoreRequest
+	var request dto.RestoreRequest
 
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -94,11 +95,11 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	requestInternal := &model.RestoreRequestInternal{
+	requestInternal := &dto.RestoreRequestInternal{
 		RestoreRequest: request,
 		Dir:            request.SourceStorage.Path,
 	}
-	jobID, err := s.restoreManager.Restore(requestInternal)
+	jobID, err := s.restoreManager.Restore(requestInternal.ToModel())
 	if err != nil {
 		hLogger.Error("failed to restore",
 			slog.Any("error", err),
@@ -122,14 +123,14 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 // @Tags        Restore
 // @Router      /v1/restore/timestamp [post]
 // @Accept      json
-// @Param       request body model.RestoreTimestampRequest true "Restore request details"
+// @Param       request body dto.RestoreTimestampRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreByTimeHandler"))
 
-	var request model.RestoreTimestampRequest
+	var request dto.RestoreTimestampRequest
 
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -146,7 +147,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	jobID, err := s.restoreManager.RestoreByTime(&request)
+	jobID, err := s.restoreManager.RestoreByTime(request.ToModel())
 	if err != nil {
 		hLogger.Error("failed to restore by timestamp",
 			slog.Any("routine", request.Routine),
@@ -171,7 +172,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 // @Produce     json
 // @Param       jobId path int true "Job ID to retrieve the status" format(int64)
 // @Router      /v1/restore/status/{jobId} [get]
-// @Success     200 {object} model.RestoreJobStatus "Restore job status details"
+// @Success     200 {object} dto.RestoreJobStatus "Restore job status details"
 // @Failure     400 {string} string
 func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreStatusHandler"))

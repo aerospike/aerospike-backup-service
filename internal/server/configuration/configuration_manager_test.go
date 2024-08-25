@@ -1,4 +1,4 @@
-package service
+package configuration
 
 import (
 	"errors"
@@ -140,13 +140,8 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockLocal = new(MockDownloader)
 			mockHTTP = new(MockDownloader)
-			builder := &ConfigManagerBuilder{
-				http:      mockHTTP,
-				file:      mockLocal,
-				s3Builder: &MockS3Builder{},
-			}
 			tt.setMock()
-			config, err := builder.NewConfigManager(tt.configFile, tt.remote)
+			config, err := NewConfigManager(tt.configFile, tt.remote)
 			if tt.expectError {
 				require.Error(t, err)
 			} else {

@@ -2,10 +2,10 @@ package service
 
 import (
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"path/filepath"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 )
 

@@ -1,13 +1,14 @@
-package service
+package configuration
 
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
-	"gopkg.in/yaml.v3"
 )
 
 // FileConfigurationManager implements the ConfigurationManager interface,
@@ -24,8 +25,8 @@ func NewFileConfigurationManager(path string) ConfigurationManager {
 	return &FileConfigurationManager{FilePath: path}
 }
 
-// ReadConfiguration reads the configuration from the given file path.
-func (cm *FileConfigurationManager) ReadConfiguration() (*model.Config, error) {
+// ReadConfiguration returns a reader for the configuration file.
+func (cm *FileConfigurationManager) ReadConfiguration() (io.ReadCloser, error) {
 	cm.Lock()
 	defer cm.Unlock()
 
@@ -33,19 +34,13 @@ func (cm *FileConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	if filePath == "" {
 		return nil, errors.New("configuration file is missing")
 	}
-	buf, err := os.ReadFile(filePath)
+
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	config := model.NewConfigWithDefaultValues()
-	err = yaml.Unmarshal(buf, config)
-	if err != nil {
-		return nil, fmt.Errorf("in file %q: %w", filePath, err)
-	}
-
-	err = config.Validate()
-	return config, err
+	return file, nil
 }
 
 // WriteConfiguration writes the configuration to the given file path.
@@ -58,7 +53,8 @@ func (cm *FileConfigurationManager) WriteConfiguration(config *model.Config) err
 		return errors.New("configuration file path is missing")
 	}
 
-	data, err := yaml.Marshal(config)
+	configDto := dto.NewConfigFromModel(config)
+	data, err := configDto.Serialize(dto.YAML)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration data: %w", err)
 	}

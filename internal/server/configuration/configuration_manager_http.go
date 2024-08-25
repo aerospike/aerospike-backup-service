@@ -1,13 +1,12 @@
-package service
+package configuration
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
-	"gopkg.in/yaml.v3"
 )
 
 // HTTPConfigurationManager implements the ConfigurationManager interface,
@@ -23,27 +22,14 @@ func NewHTTPConfigurationManager(uri string) ConfigurationManager {
 	return &HTTPConfigurationManager{configURL: uri}
 }
 
-// ReadConfiguration reads and returns the configuration using a URL.
-func (h *HTTPConfigurationManager) ReadConfiguration() (*model.Config, error) {
+// ReadConfiguration returns a reader for the configuration using a URL.
+func (h *HTTPConfigurationManager) ReadConfiguration() (io.ReadCloser, error) {
 	resp, err := http.Get(h.configURL)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
-	config := model.NewConfigWithDefaultValues()
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	respByte := buf.Bytes()
-	if err := yaml.Unmarshal(respByte, config); err != nil {
-		return nil, err
-	}
-
-	return config, nil
+	return resp.Body, nil
 }
 
 // WriteConfiguration is unsupported for HTTPConfigurationManager.

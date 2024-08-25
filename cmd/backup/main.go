@@ -12,6 +12,8 @@ import (
 
 	backup "github.com/aerospike/aerospike-backup-service"
 	"github.com/aerospike/aerospike-backup-service/internal/server"
+	"github.com/aerospike/aerospike-backup-service/internal/server/configuration"
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/internal/util"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
@@ -62,7 +64,7 @@ func run() int {
 }
 
 func startService(configFile string, remote bool) error {
-	manager, err := service.NewConfigManagerBuilder().NewConfigManager(configFile, remote)
+	manager, err := configuration.NewConfigManager(configFile, remote)
 	if err != nil {
 		return err
 	}
@@ -116,17 +118,19 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func readConfiguration(configurationManager service.ConfigurationManager) (*model.Config, error) {
-	config, err := configurationManager.ReadConfiguration()
+func readConfiguration(configurationManager configuration.ConfigurationManager) (*model.Config, error) {
+	r, err := configurationManager.ReadConfiguration()
+
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
 		return nil, err
 	}
-	if err = config.Validate(); err != nil {
-		return nil, err
-	}
-	slog.Info(fmt.Sprintf("Configuration: %v", *config))
-	return config, nil
+
+	config := dto.NewConfigWithDefaultValues()
+	err = config.Deserialize(r, dto.YAML)
+	r.Close()
+	slog.Info(fmt.Sprintf("Configuration: %v", config))
+	return config.ToModel(), nil
 }
 
 func runHTTPServer(ctx context.Context,
@@ -134,7 +138,7 @@ func runHTTPServer(ctx context.Context,
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
-	configurationManager service.ConfigurationManager,
+	configurationManager configuration.ConfigurationManager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) error {

@@ -13,7 +13,7 @@ import (
 // ClientManager is responsible for creating and closing backup clients.
 type ClientManager interface {
 	// GetClient returns a backup client by aerospike cluster name (new or cached).
-	GetClient(string) (*backup.Client, error)
+	GetClient(*model.AerospikeCluster) (*backup.Client, error)
 	// CreateClient creates a new backup client.
 	CreateClient(*model.AerospikeCluster) (*backup.Client, error)
 	// Close ensures that the specified backup client is closed.
@@ -39,8 +39,7 @@ func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
 // Is responsible for creating and closing backup clients.
 type ClientManagerImpl struct {
 	mu            sync.Mutex
-	clusters      map[string]*model.AerospikeCluster
-	clients       map[string]*clientInfo
+	clients       map[*model.AerospikeCluster]*clientInfo
 	clientFactory AerospikeClientFactory
 }
 
@@ -54,25 +53,19 @@ func NewClientManager(clusters map[string]*model.AerospikeCluster,
 	aerospikeClientFactory AerospikeClientFactory,
 ) *ClientManagerImpl {
 	return &ClientManagerImpl{
-		clusters:      clusters,
-		clients:       make(map[string]*clientInfo),
+		clients:       make(map[*model.AerospikeCluster]*clientInfo),
 		clientFactory: aerospikeClientFactory,
 	}
 }
 
 // GetClient returns a backup client by aerospike cluster name (new or cached).
-func (cm *ClientManagerImpl) GetClient(clusterName string) (*backup.Client, error) {
+func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	if info, exists := cm.clients[clusterName]; exists {
+	if info, exists := cm.clients[cluster]; exists {
 		info.count++
 		return info.client, nil
-	}
-
-	cluster, found := cm.clusters[clusterName]
-	if !found {
-		return nil, fmt.Errorf("cluster %s not found", clusterName)
 	}
 
 	client, err := cm.CreateClient(cluster)
@@ -80,7 +73,7 @@ func (cm *ClientManagerImpl) GetClient(clusterName string) (*backup.Client, erro
 		return nil, fmt.Errorf("cannot create backup client: %w", err)
 	}
 
-	cm.clients[clusterName] = &clientInfo{
+	cm.clients[cluster] = &clientInfo{
 		client: client,
 		count:  1,
 	}

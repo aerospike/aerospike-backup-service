@@ -2,11 +2,10 @@ package service
 
 import (
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"math/rand"
 	"sync"
 	"time"
-
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
 
 type jobInfo struct {

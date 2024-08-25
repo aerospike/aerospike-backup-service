@@ -2,9 +2,9 @@ package service
 
 import (
 	"context"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"log/slog"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 )
@@ -29,7 +29,7 @@ func (m *MockRestoreHandler) GetStats() *models.RestoreStats {
 	return &stats
 }
 
-func (m *MockRestoreHandler) Wait() error {
+func (m *MockRestoreHandler) Wait(_ context.Context) error {
 	return nil
 }
 

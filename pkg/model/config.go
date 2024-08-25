@@ -1,96 +1,204 @@
 package model
 
 import (
-	"encoding/json"
 	"fmt"
+	"sync"
 )
 
-// Config represents the service configuration file.
-// @Description Config represents the service configuration file.
-//
-//nolint:lll
+// Config represents the service configuration.
 type Config struct {
-	ServiceConfig     *BackupServiceConfig         `yaml:"service,omitempty" json:"service,omitempty"`
-	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
-	Storage           map[string]*Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
-	BackupPolicies    map[string]*BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
-	BackupRoutines    map[string]*BackupRoutine    `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
-	SecretAgents      map[string]*SecretAgent      `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
+	mu                sync.Mutex
+	ServiceConfig     BackupServiceConfig
+	AerospikeClusters map[string]*AerospikeCluster
+	Storage           map[string]*Storage
+	BackupPolicies    map[string]*BackupPolicy
+	BackupRoutines    map[string]*BackupRoutine
+	SecretAgents      map[string]*SecretAgent
 }
 
-// NewConfigWithDefaultValues returns a new Config with default values.
-func NewConfigWithDefaultValues() *Config {
+func NewConfig() *Config {
 	return &Config{
-		ServiceConfig:     NewBackupServiceConfigWithDefaultValues(),
-		Storage:           map[string]*Storage{},
-		BackupRoutines:    map[string]*BackupRoutine{},
-		BackupPolicies:    map[string]*BackupPolicy{},
-		AerospikeClusters: map[string]*AerospikeCluster{},
+		AerospikeClusters: make(map[string]*AerospikeCluster),
+		Storage:           make(map[string]*Storage),
+		BackupPolicies:    make(map[string]*BackupPolicy),
+		BackupRoutines:    make(map[string]*BackupRoutine),
+		SecretAgents:      make(map[string]*SecretAgent),
 	}
 }
 
-// String satisfies the fmt.Stringer interface.
-func (c Config) String() string {
-	cfg, err := json.Marshal(c)
-	if err != nil {
-		return err.Error()
-	}
-	return string(cfg)
-}
+var (
+	ErrAlreadyExists = fmt.Errorf("item already exists")
+	ErrNotFound      = fmt.Errorf("item not found")
+	ErrInUse         = fmt.Errorf("item is in use")
+)
 
-// Validate validates the configuration.
-func (c *Config) Validate() error {
-	for name, routine := range c.BackupRoutines {
-		if name == "" {
-			return emptyFieldValidationError("routine name")
-		}
-		if err := routine.Validate(c); err != nil {
-			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
-		}
-	}
+func (c *Config) AddStorage(name string, s *Storage) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	for name, storage := range c.Storage {
-		if name == "" {
-			return emptyFieldValidationError("storage name")
-		}
-		if err := storage.Validate(); err != nil {
-			return fmt.Errorf("storage '%s' validation error: %s", name, err.Error())
-		}
+	if _, exists := c.Storage[name]; exists {
+		return fmt.Errorf("add storage %q: %w", name, ErrAlreadyExists)
 	}
-
-	for name, cluster := range c.AerospikeClusters {
-		if name == "" {
-			return emptyFieldValidationError("cluster name")
-		}
-		if err := cluster.Validate(); err != nil {
-			return fmt.Errorf("cluster '%s' validation error: %s", name, err.Error())
-		}
-	}
-
-	for name, policy := range c.BackupPolicies {
-		if name == "" {
-			return emptyFieldValidationError("policy name")
-		}
-		if err := policy.Validate(); err != nil {
-			return err
-		}
-	}
-
-	if err := c.ServiceConfig.HTTPServer.Validate(); err != nil {
-		return err
-	}
-
-	if err := c.ServiceConfig.Logger.Validate(); err != nil {
-		return err
-	}
-
+	c.Storage[name] = s
 	return nil
 }
 
-func emptyFieldValidationError(field string) error {
-	return fmt.Errorf("empty %s is not allowed", field)
+func (c *Config) DeleteStorage(name string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	s, exists := c.Storage[name]
+	if !exists {
+		return fmt.Errorf("delete storage %q: %w", name, ErrNotFound)
+	}
+	if routine := c.routineUsesStorage(s); routine != "" {
+		return fmt.Errorf("delete storage %q: %w: it is used in routine %q", name, ErrInUse, routine)
+	}
+	delete(c.Storage, name)
+	return nil
 }
 
-func notFoundValidationError(field string, value string) error {
-	return fmt.Errorf("%s '%s' not found", field, value)
+func (c *Config) UpdateStorage(name string, s *Storage) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.Storage[name]; !exists {
+		return fmt.Errorf("update storage %q: %w", name, ErrNotFound)
+	}
+	c.Storage[name] = s
+	return nil
+}
+
+func (c *Config) routineUsesStorage(s *Storage) string {
+	for name, r := range c.BackupRoutines {
+		if r.Storage == s {
+			return name
+		}
+	}
+	return ""
+}
+
+func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.BackupPolicies[name]; exists {
+		return fmt.Errorf("add backup policy %q: %w", name, ErrAlreadyExists)
+	}
+	c.BackupPolicies[name] = p
+	return nil
+}
+
+func (c *Config) DeletePolicy(name string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	p, exists := c.BackupPolicies[name]
+	if !exists {
+		return fmt.Errorf("delete backup policy %q: %w", name, ErrNotFound)
+	}
+	if routine := c.routineUsesPolicy(p); routine != "" {
+		return fmt.Errorf("delete backup policy %q: %w: it is used in routine %q", name, ErrInUse, routine)
+	}
+	delete(c.BackupPolicies, name)
+	return nil
+}
+
+func (c *Config) UpdatePolicy(name string, p *BackupPolicy) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.BackupPolicies[name]; !exists {
+		return fmt.Errorf("update backup policy %q: %w", name, ErrNotFound)
+	}
+	c.BackupPolicies[name] = p
+	return nil
+}
+
+func (c *Config) routineUsesPolicy(p *BackupPolicy) string {
+	for name, r := range c.BackupRoutines {
+		if r.BackupPolicy == p {
+			return name
+		}
+	}
+	return ""
+}
+
+func (c *Config) AddRoutine(name string, r *BackupRoutine) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.BackupRoutines[name]; exists {
+		return fmt.Errorf("add backup routine %q: %w", name, ErrAlreadyExists)
+	}
+	c.BackupRoutines[name] = r
+	return nil
+}
+
+func (c *Config) DeleteRoutine(name string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.BackupRoutines[name]; !exists {
+		return fmt.Errorf("delete backup routine %q: %w", name, ErrNotFound)
+	}
+	delete(c.BackupRoutines, name)
+	return nil
+}
+
+func (c *Config) UpdateRoutine(name string, r *BackupRoutine) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.BackupRoutines[name]; !exists {
+		return fmt.Errorf("update backup routine %q: %w", name, ErrNotFound)
+	}
+	c.BackupRoutines[name] = r
+	return nil
+}
+
+func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.AerospikeClusters[name]; exists {
+		return fmt.Errorf("add Aerospike cluster %q: %w", name, ErrAlreadyExists)
+	}
+	c.AerospikeClusters[name] = cluster
+	return nil
+}
+
+func (c *Config) DeleteCluster(name string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	cluster, exists := c.AerospikeClusters[name]
+	if !exists {
+		return fmt.Errorf("delete Aerospike cluster %q: %w", name, ErrNotFound)
+	}
+	if routine := c.routineUsesCluster(cluster); routine != "" {
+		return fmt.Errorf("delete Aerospike cluster %q: %w: it is used in routine %q", name, ErrInUse, routine)
+	}
+	delete(c.AerospikeClusters, name)
+	return nil
+}
+
+func (c *Config) UpdateCluster(name string, cluster *AerospikeCluster) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.AerospikeClusters[name]; !exists {
+		return fmt.Errorf("update Aerospike cluster %q: %w", name, ErrNotFound)
+	}
+	c.AerospikeClusters[name] = cluster
+	return nil
+}
+
+func (c *Config) routineUsesCluster(cluster *AerospikeCluster) string {
+	for name, r := range c.BackupRoutines {
+		if r.SourceCluster == cluster {
+			return name
+		}
+	}
+	return ""
 }

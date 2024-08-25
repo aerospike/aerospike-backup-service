@@ -1,10 +1,5 @@
 package model
 
-import (
-	"fmt"
-	"strings"
-)
-
 // HTTPServerConfig represents the service's HTTP server configuration.
 // @Description HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
@@ -69,11 +64,11 @@ func (s *HTTPServerConfig) GetContextPathOrDefault() string {
 // @Description RateLimiterConfig is the HTTP server rate limiter configuration.
 type RateLimiterConfig struct {
 	// Rate limiter tokens per second threshold.
-	Tps *int `yaml:"tps,omitempty" json:"tps,omitempty" default:"1024" example:"1024"`
+	Tps *int
 	// Rate limiter token bucket size (bursts threshold).
-	Size *int `yaml:"size,omitempty" json:"size,omitempty" default:"1024" example:"1024"`
+	Size *int
 	// The list of ips to whitelist in rate limiting.
-	WhiteList []string `yaml:"white-list,omitempty" json:"white-list,omitempty" default:""`
+	WhiteList []string
 }
 
 // GetTpsOrDefault returns the value of the Tps property.
@@ -101,15 +96,4 @@ func (r *RateLimiterConfig) GetWhiteListOrDefault() []string {
 		return r.WhiteList
 	}
 	return defaultConfig.http.Rate.WhiteList
-}
-
-// Validate validates the HTTP server configuration.
-func (s *HTTPServerConfig) Validate() error {
-	if s.ContextPath != nil && !strings.HasPrefix(*s.ContextPath, "/") {
-		return fmt.Errorf("context-path must start with a slash: %s", *s.ContextPath)
-	}
-	if s.Timeout != nil && *s.Timeout < 0 {
-		return fmt.Errorf("timeout cannot be negative: %d", *s.Timeout)
-	}
-	return nil
 }

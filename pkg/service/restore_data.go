@@ -4,14 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-	"sync"
-	"time"
-
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
-	"github.com/aws/smithy-go/ptr"
 	"github.com/prometheus/client_golang/prometheus"
+	"log/slog"
+	"sync"
 )
 
 var errBackendNotFound = errors.New("backend not found")
@@ -77,7 +74,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal,
 		r.restoreJobs.addHandler(jobID, handler)
 
 		// Wait for the restore operation to complete
-		err = handler.Wait()
+		err = handler.Wait(ctx)
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
 			return
@@ -95,8 +92,7 @@ func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
 	if !found {
 		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.Routine)
 	}
-	timestamp := time.UnixMilli(request.Time)
-	fullBackups, err := reader.FindLastFullBackup(timestamp)
+	fullBackups, err := reader.FindLastFullBackup(request.Time)
 	if err != nil {
 		return 0, fmt.Errorf("restore failed: %w", err)
 	}
@@ -161,7 +157,7 @@ func (r *dataRestorer) restoreNamespace(
 	allBackups := []model.BackupDetails{fullBackup}
 
 	// Find incremental backups
-	bounds, err := model.NewTimeBounds(&fullBackup.Created, ptr.Time(time.UnixMilli(request.Time)))
+	bounds, err := model.NewTimeBounds(&fullBackup.Created, &request.Time)
 	if err != nil {
 		return err
 	}
@@ -188,7 +184,7 @@ func (r *dataRestorer) restoreNamespace(
 		}
 		r.restoreJobs.addHandler(jobID, handler)
 
-		err = handler.Wait()
+		err = handler.Wait(ctx)
 		if err != nil {
 			return err
 		}
@@ -219,11 +215,10 @@ func (r *dataRestorer) restoreFromPath(
 
 func (r *dataRestorer) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
 	routine := r.config.BackupRoutines[request.Routine]
-	storage := r.config.Storage[routine.Storage]
 	return model.NewRestoreRequest(
 		request.DestinationCuster,
 		request.Policy,
-		storage,
+		routine.Storage,
 		request.SecretAgent,
 	)
 }

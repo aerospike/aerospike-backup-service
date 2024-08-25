@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -10,7 +12,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"gopkg.in/yaml.v3"
 )
@@ -68,8 +69,8 @@ func (o *OSDiskAccessor) readBackupDetails(path string, _ bool) (model.BackupDet
 	}, nil
 }
 
-func (o *OSDiskAccessor) read(filePath string) ([]byte, error) {
-	return os.ReadFile(filePath)
+func (o *OSDiskAccessor) Read(path string) (io.ReadCloser, error) {
+	return os.Open(path)
 }
 
 func (o *OSDiskAccessor) write(filePath string, data []byte) error {
