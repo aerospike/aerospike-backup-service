@@ -13,6 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/internal/util"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/pkg/service/configuration"
 	"github.com/reugn/go-quartz/quartz"
 	"golang.org/x/time/rate"
 )
@@ -33,7 +34,7 @@ func NewHTTPServer(
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
-	configurationManager service.ConfigurationManager,
+	configurationManager configuration.ConfigurationManager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) *HTTPServer {

@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/pkg/service/configuration"
 	"github.com/gorilla/mux"
 )
 
@@ -59,7 +59,7 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddCluster(s.config, name, &newCluster)
+	err = configuration.AddCluster(s.config, name, &newCluster)
 	if err != nil {
 		hLogger.Error("failed to add cluster",
 			slog.String("name", name),
@@ -185,7 +185,7 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateCluster(s.config, clusterName, &updatedCluster)
+	err = configuration.UpdateCluster(s.config, clusterName, &updatedCluster)
 	if err != nil {
 		hLogger.Error("failed to update cluster",
 			slog.String("name", clusterName),
@@ -224,7 +224,7 @@ func (s *Service) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := service.DeleteCluster(s.config, clusterName)
+	err := configuration.DeleteCluster(s.config, clusterName)
 	if err != nil {
 		hLogger.Error("failed to delete cluster",
 			slog.String("name", clusterName),

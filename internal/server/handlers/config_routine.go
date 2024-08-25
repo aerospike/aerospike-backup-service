@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/pkg/service/configuration"
 	"github.com/gorilla/mux"
 )
 
@@ -57,7 +57,7 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddRoutine(s.config, name, &newRoutine)
+	err = configuration.AddRoutine(s.config, name, &newRoutine)
 	if err != nil {
 		hLogger.Error("failed to add routine",
 			slog.String("name", name),
@@ -184,7 +184,7 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateRoutine(s.config, name, &updatedRoutine)
+	err = configuration.UpdateRoutine(s.config, name, &updatedRoutine)
 	if err != nil {
 		hLogger.Error("failed to update routine",
 			slog.String("name", name),
@@ -224,7 +224,7 @@ func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := service.DeleteRoutine(s.config, routineName)
+	err := configuration.DeleteRoutine(s.config, routineName)
 	if err != nil {
 		hLogger.Error("failed to delete routine",
 			slog.String("name", routineName),

@@ -15,6 +15,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/internal/util"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/pkg/service/configuration"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
@@ -62,7 +63,7 @@ func run() int {
 }
 
 func startService(configFile string, remote bool) error {
-	manager, err := service.NewConfigManagerBuilder().NewConfigManager(configFile, remote)
+	manager, err := configuration.NewConfigManagerBuilder().NewConfigManager(configFile, remote)
 	if err != nil {
 		return err
 	}
@@ -116,7 +117,7 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func readConfiguration(configurationManager service.ConfigurationManager) (*model.Config, error) {
+func readConfiguration(configurationManager configuration.ConfigurationManager) (*model.Config, error) {
 	config, err := configurationManager.ReadConfiguration()
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
@@ -134,7 +135,7 @@ func runHTTPServer(ctx context.Context,
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
-	configurationManager service.ConfigurationManager,
+	configurationManager configuration.ConfigurationManager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) error {
