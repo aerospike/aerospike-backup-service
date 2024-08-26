@@ -7,6 +7,8 @@ aerospike-clusters:
     credentials:
       user: "tester"
       password: "psw"
+    max-parallel-scans: 5
+
 
 storage:
   local:
@@ -238,4 +240,4 @@ backup-routines:
 service:
   logger:
     file-writer:
-      filename: "/log/backup-service.log"
+      filename: "log/backup-service.log"
