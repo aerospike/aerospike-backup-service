@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/converter"
 	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
@@ -52,7 +53,7 @@ func NewRestoreManager(backends BackendsHolder,
 func (r *dataRestorer) Restore(request *dto.RestoreRequestInternal,
 ) (dto.RestoreJobID, error) {
 	jobID := r.restoreJobs.newJob()
-	totalRecords, err := validateStorageContainsBackup(DTOToModelStorage(request.SourceStorage))
+	totalRecords, err := validateStorageContainsBackup(converter.DTOToModelStorage(request.SourceStorage))
 	if err != nil {
 		return 0, err
 	}

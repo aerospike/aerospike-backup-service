@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/converter"
 	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 )
@@ -93,7 +94,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ApplyConfig"))
 
 	// Because of this part, we have noo tests for this method.
-	modelConfig := service.DTOToModelConfig(s.config)
+	modelConfig := converter.DTOToModelConfig(s.config)
 	handlers, err := service.ApplyNewConfig(s.scheduler, modelConfig, s.backupBackends, s.clientManger)
 	if err != nil {
 		hLogger.Error("failed to apply new config",

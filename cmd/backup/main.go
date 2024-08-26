@@ -13,6 +13,7 @@ import (
 	backup "github.com/aerospike/aerospike-backup-service"
 	"github.com/aerospike/aerospike-backup-service/internal/server"
 	"github.com/aerospike/aerospike-backup-service/internal/util"
+	"github.com/aerospike/aerospike-backup-service/pkg/converter"
 	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/reugn/go-quartz/logger"
@@ -86,7 +87,7 @@ func startService(configFile string, remote bool) error {
 	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 
 	// schedule all configured backups
-	modelConfig := service.DTOToModelConfig(config)
+	modelConfig := converter.DTOToModelConfig(config)
 	backends := service.NewBackupBackends(modelConfig)
 	clientManager := service.NewClientManager(config.AerospikeClusters, &service.DefaultClientFactory{})
 	handlers := service.MakeHandlers(clientManager, modelConfig, backends)
