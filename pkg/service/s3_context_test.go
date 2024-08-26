@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,15 +17,15 @@ var contexts []S3Context
 var minioContext *S3Context
 
 func init() {
-	minioContext = NewS3Context(&model.Storage{
-		Type:               model.S3,
+	minioContext = NewS3Context(&dto.Storage{
+		Type:               dto.S3,
 		Path:               ptr.String("s3://as-backup-bucket/storageMinio"),
 		S3Profile:          ptr.String("minio"),
 		S3Region:           ptr.String("eu-central-1"),
 		S3EndpointOverride: ptr.String("http://localhost:9000"),
 	})
-	s3Context := NewS3Context(&model.Storage{
-		Type:     model.S3,
+	s3Context := NewS3Context(&dto.Storage{
+		Type:     dto.S3,
 		Path:     ptr.String("s3://as-backup-integration-test/storageAws"),
 		S3Region: ptr.String("eu-central-1"),
 	})
@@ -47,12 +47,12 @@ func TestReadWriteState(t *testing.T) {
 
 func runReadWriteState(t *testing.T, context S3Context) {
 	t.Helper()
-	metadataWrite := model.BackupMetadata{
+	metadataWrite := dto.BackupMetadata{
 		Namespace: "testNS",
 		Created:   time.Now(),
 	}
 	_ = context.writeYaml("backup_path/"+metadataFile, metadataWrite)
-	metadataRead := model.BackupMetadata{}
+	metadataRead := dto.BackupMetadata{}
 
 	_ = context.readFile("backup_path/"+metadataFile, &metadataRead)
 	if metadataWrite.Namespace != metadataRead.Namespace {

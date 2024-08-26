@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/gorilla/mux"
 )
 
@@ -26,7 +26,7 @@ import (
 func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreFullHandler"))
 
-	var request model.RestoreRequest
+	var request dto.RestoreRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
@@ -42,7 +42,7 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	requestInternal := &model.RestoreRequestInternal{
+	requestInternal := &dto.RestoreRequestInternal{
 		RestoreRequest: request,
 		Dir:            request.SourceStorage.Path,
 	}
@@ -77,7 +77,7 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreIncrementalHandler"))
 
-	var request model.RestoreRequest
+	var request dto.RestoreRequest
 
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -94,7 +94,7 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	requestInternal := &model.RestoreRequestInternal{
+	requestInternal := &dto.RestoreRequestInternal{
 		RestoreRequest: request,
 		Dir:            request.SourceStorage.Path,
 	}
@@ -129,7 +129,7 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreByTimeHandler"))
 
-	var request model.RestoreTimestampRequest
+	var request dto.RestoreTimestampRequest
 
 	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
@@ -192,7 +192,7 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	status, err := s.restoreManager.JobStatus(model.RestoreJobID(jobID))
+	status, err := s.restoreManager.JobStatus(dto.RestoreJobID(jobID))
 	if err != nil {
 		hLogger.Error("failed to get job status",
 			slog.Int("jobID", jobID),

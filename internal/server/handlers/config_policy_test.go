@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
@@ -14,10 +14,10 @@ import (
 
 const testPolicy = "testPolicy"
 
-func testConfigBackupPolicy() model.BackupPolicy {
+func testConfigBackupPolicy() dto.BackupPolicy {
 	testIn32 := int32(10)
-	keepFiles := model.KeepAll
-	return model.BackupPolicy{
+	keepFiles := dto.KeepAll
+	return dto.BackupPolicy{
 		RemoveFiles:   &keepFiles,
 		Parallel:      &testIn32,
 		SocketTimeout: &testIn32,

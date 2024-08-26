@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/gorilla/mux"
 )
@@ -39,7 +39,7 @@ func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Requ
 func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addStorage"))
 
-	var newStorage model.Storage
+	var newStorage dto.Storage
 	err := json.NewDecoder(r.Body).Decode(&newStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -163,7 +163,7 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateStorage"))
 
-	var updatedStorage model.Storage
+	var updatedStorage dto.Storage
 	err := json.NewDecoder(r.Body).Decode(&updatedStorage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

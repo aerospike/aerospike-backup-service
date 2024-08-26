@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -28,13 +28,13 @@ type S3Context struct {
 	client        *s3.Client
 	bucket        string
 	path          string
-	metadataCache *util.LoadingCache[string, *model.BackupMetadata]
+	metadataCache *util.LoadingCache[string, *dto.BackupMetadata]
 }
 
 var _ StorageAccessor = (*S3Context)(nil)
 
 // NewS3Context returns a new S3Context.
-func NewS3Context(storage *model.Storage) *S3Context {
+func NewS3Context(storage *dto.Storage) *S3Context {
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
 	ctx := context.TODO()
@@ -59,7 +59,7 @@ func NewS3Context(storage *model.Storage) *S3Context {
 		path:   parsedPath,
 	}
 
-	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*model.BackupMetadata, error) {
+	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*dto.BackupMetadata, error) {
 		return s.readMetadata(path)
 	})
 	return s
@@ -83,7 +83,7 @@ func checkBucket(ctx context.Context, client *s3.Client, bucket string) {
 	}
 }
 
-func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
+func createConfig(ctx context.Context, storage *dto.Storage) aws.Config {
 	storage.SetDefaultProfile()
 	cfg, err := config.LoadDefaultConfig(
 		ctx,
@@ -98,12 +98,12 @@ func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
 	return cfg
 }
 
-func (s *S3Context) readBackupState(stateFilePath string, state *model.BackupState) error {
+func (s *S3Context) readBackupState(stateFilePath string, state *dto.BackupState) error {
 	return s.readFile(stateFilePath, state)
 }
 
-func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupDetails, error) {
-	var metadata *model.BackupMetadata
+func (s *S3Context) readBackupDetails(path string, useCache bool) (dto.BackupDetails, error) {
+	var metadata *dto.BackupMetadata
 	var err error
 	if useCache {
 		metadata, err = s.getMetadataFromCache(path)
@@ -111,9 +111,9 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupD
 		metadata, err = s.readMetadata(path)
 	}
 	if err != nil {
-		return model.BackupDetails{}, err
+		return dto.BackupDetails{}, err
 	}
-	return model.BackupDetails{
+	return dto.BackupDetails{
 		BackupMetadata: *metadata,
 		Key:            util.Ptr(s3Protocol + s.bucket + "/" + path),
 	}, nil
@@ -127,7 +127,7 @@ func (s *S3Context) read(filePath string) ([]byte, error) {
 	if err != nil {
 		var opErr *smithy.OperationError
 		if errors.As(err, &opErr) &&
-			(strings.Contains(filePath, model.StateFileName) ||
+			(strings.Contains(filePath, dto.StateFileName) ||
 				strings.Contains(filePath, metadataFile)) &&
 			strings.Contains(opErr.Unwrap().Error(), "StatusCode: 404") {
 			return nil, err
@@ -256,7 +256,7 @@ func (s *S3Context) lsDir(prefix string, after *string) ([]string, error) {
 	return result, nil
 }
 
-func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, error) {
+func (s *S3Context) getMetadataFromCache(prefix string) (*dto.BackupMetadata, error) {
 	metadata, err := s.metadataCache.Get(prefix)
 	if err != nil {
 		return nil, err
@@ -264,8 +264,8 @@ func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, 
 	return metadata, nil
 }
 
-func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
-	metadata := &model.BackupMetadata{}
+func (s *S3Context) readMetadata(path string) (*dto.BackupMetadata, error) {
+	metadata := &dto.BackupMetadata{}
 	metadataFilePath := filepath.Join(path, metadataFile)
 	err := s.readFile(metadataFilePath, metadata)
 	if err != nil {

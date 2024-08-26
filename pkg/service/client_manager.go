@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"golang.org/x/sync/semaphore"
@@ -15,7 +15,7 @@ type ClientManager interface {
 	// GetClient returns a backup client by aerospike cluster name (new or cached).
 	GetClient(string) (*backup.Client, error)
 	// CreateClient creates a new backup client.
-	CreateClient(*model.AerospikeCluster) (*backup.Client, error)
+	CreateClient(*dto.AerospikeCluster) (*backup.Client, error)
 	// Close ensures that the specified backup client is closed.
 	Close(*backup.Client)
 }
@@ -39,7 +39,7 @@ func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
 // Is responsible for creating and closing backup clients.
 type ClientManagerImpl struct {
 	mu            sync.Mutex
-	clusters      map[string]*model.AerospikeCluster
+	clusters      map[string]*dto.AerospikeCluster
 	clients       map[string]*clientInfo
 	clientFactory AerospikeClientFactory
 }
@@ -50,7 +50,7 @@ type clientInfo struct {
 }
 
 // NewClientManager creates a new ClientManagerImpl.
-func NewClientManager(clusters map[string]*model.AerospikeCluster,
+func NewClientManager(clusters map[string]*dto.AerospikeCluster,
 	aerospikeClientFactory AerospikeClientFactory,
 ) *ClientManagerImpl {
 	return &ClientManagerImpl{
@@ -89,7 +89,7 @@ func (cm *ClientManagerImpl) GetClient(clusterName string) (*backup.Client, erro
 }
 
 // CreateClient creates a new backup client given the aerospike cluster configuration.
-func (cm *ClientManagerImpl) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
+func (cm *ClientManagerImpl) CreateClient(cluster *dto.AerospikeCluster) (*backup.Client, error) {
 	aeroClient, err := cm.clientFactory.NewClientWithPolicyAndHost(cluster.ASClientPolicy(),
 		cluster.ASClientHosts()...)
 	if err != nil {

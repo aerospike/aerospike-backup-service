@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
@@ -239,7 +239,7 @@ func TestReadBackupDetails(t *testing.T) {
 
 	path := filepath.Join(os.TempDir(), "test.yaml")
 	_ = os.MkdirAll(path, fs.ModePerm)
-	metadata := model.BackupMetadata{
+	metadata := dto.BackupMetadata{
 		Created:   time.Now(),
 		Namespace: "test-backup",
 	}
@@ -296,13 +296,13 @@ func TestReadState(t *testing.T) {
 	dir := os.TempDir()
 	_ = os.MkdirAll(dir, fs.ModePerm)
 	path := filepath.Join(dir, "test_state.yaml")
-	expected := &model.BackupState{
+	expected := &dto.BackupState{
 		Performed: 10,
 	}
 	data, _ := json.Marshal(expected)
 	_ = accessor.write(path, data)
 
-	state := &model.BackupState{}
+	state := &dto.BackupState{}
 	err := accessor.readBackupState(path, state)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, state)
@@ -343,7 +343,7 @@ func TestReadStateNegative(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := tt.setup()
-			state := &model.BackupState{}
+			state := &dto.BackupState{}
 			err := accessor.readBackupState(dir, state)
 			if tt.ignoreErr {
 				assert.NoError(t, err)

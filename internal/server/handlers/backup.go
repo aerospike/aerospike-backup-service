@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/gorilla/mux"
 	"github.com/reugn/go-quartz/quartz"
@@ -81,7 +81,7 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
-	timeBounds, err := model.NewTimeBoundsFromString(from, to)
+	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
 	if err != nil {
 		hLogger.Error("failed parse time limits",
 			slog.String("from", from),
@@ -128,7 +128,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
-	timeBounds, err := model.NewTimeBoundsFromString(from, to)
+	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
 	if err != nil {
 		hLogger.Error("failed parse time limits",
 			slog.String("from", from),
@@ -186,11 +186,11 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-func readBackupsLogic(routines map[string]*model.BackupRoutine,
+func readBackupsLogic(routines map[string]*dto.BackupRoutine,
 	backends service.BackendsHolder,
-	timeBounds *model.TimeBounds,
-	isFullBackup bool) (map[string][]model.BackupDetails, error) {
-	result := make(map[string][]model.BackupDetails)
+	timeBounds *dto.TimeBounds,
+	isFullBackup bool) (map[string][]dto.BackupDetails, error) {
+	result := make(map[string][]dto.BackupDetails)
 	for routine := range routines {
 		reader, _ := backends.GetReader(routine)
 		backupListFunction := backupsReadFunction(reader, isFullBackup)
@@ -204,7 +204,7 @@ func readBackupsLogic(routines map[string]*model.BackupRoutine,
 }
 
 func backupsReadFunction(
-	backend service.BackupListReader, fullBackup bool) func(*model.TimeBounds) ([]model.BackupDetails, error) {
+	backend service.BackupListReader, fullBackup bool) func(*dto.TimeBounds) ([]dto.BackupDetails, error) {
 	if fullBackup {
 		return backend.FullBackupList
 	}

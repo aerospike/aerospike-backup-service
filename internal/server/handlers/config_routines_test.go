@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
@@ -14,8 +14,8 @@ import (
 
 const testRoutine = "testRoutine"
 
-func testBackupRoutine() model.BackupRoutine {
-	return model.BackupRoutine{
+func testBackupRoutine() dto.BackupRoutine {
+	return dto.BackupRoutine{
 		BackupPolicy:  testPolicy,
 		SourceCluster: testCluster,
 		Storage:       testStorage,

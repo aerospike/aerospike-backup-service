@@ -3,20 +3,20 @@ package service
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aws/smithy-go/ptr"
 )
 
 func TestPolicy_AddOK(t *testing.T) {
 	cluster := "cluster"
 	storage := "storage"
-	config := &model.Config{
-		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {}},
-		Storage:           map[string]*model.Storage{storage: {}},
-		BackupPolicies:    map[string]*model.BackupPolicy{},
+	config := &dto.Config{
+		AerospikeClusters: map[string]*dto.AerospikeCluster{cluster: {}},
+		Storage:           map[string]*dto.Storage{storage: {}},
+		BackupPolicies:    map[string]*dto.BackupPolicy{},
 	}
 
-	err := AddPolicy(config, "newName", &model.BackupPolicy{})
+	err := AddPolicy(config, "newName", &dto.BackupPolicy{})
 	if err != nil {
 		t.Errorf("Expected nil error, got %v", err)
 	}
@@ -28,15 +28,15 @@ func TestPolicy_AddErrors(t *testing.T) {
 	storage := "storage"
 	fails := []struct {
 		name   string
-		policy model.BackupPolicy
+		policy dto.BackupPolicy
 	}{
-		{name: "existing policy", policy: model.BackupPolicy{}},
+		{name: "existing policy", policy: dto.BackupPolicy{}},
 	}
 
-	config := &model.Config{
-		BackupPolicies:    map[string]*model.BackupPolicy{policy: {}},
-		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {}},
-		Storage:           map[string]*model.Storage{storage: {}},
+	config := &dto.Config{
+		BackupPolicies:    map[string]*dto.BackupPolicy{policy: {}},
+		AerospikeClusters: map[string]*dto.AerospikeCluster{cluster: {}},
+		Storage:           map[string]*dto.Storage{storage: {}},
 	}
 
 	for i := range fails {
@@ -49,16 +49,16 @@ func TestPolicy_AddErrors(t *testing.T) {
 
 func TestPolicy_Update(t *testing.T) {
 	name := "policy1"
-	config := &model.Config{
-		BackupPolicies: map[string]*model.BackupPolicy{name: {}},
+	config := &dto.Config{
+		BackupPolicies: map[string]*dto.BackupPolicy{name: {}},
 	}
 
-	err := UpdatePolicy(config, "policy2", &model.BackupPolicy{})
+	err := UpdatePolicy(config, "policy2", &dto.BackupPolicy{})
 	if err == nil {
 		t.Errorf("UpdatePolicy failed, expected policy not found error")
 	}
 
-	err = UpdatePolicy(config, name, &model.BackupPolicy{
+	err = UpdatePolicy(config, name, &dto.BackupPolicy{
 		MaxRetries: ptr.Int32(10),
 	})
 	if err != nil {
@@ -73,8 +73,8 @@ func TestPolicy_Update(t *testing.T) {
 
 func TestPolicy_Delete(t *testing.T) {
 	name := "policy1"
-	config := &model.Config{
-		BackupPolicies: map[string]*model.BackupPolicy{name: {}},
+	config := &dto.Config{
+		BackupPolicies: map[string]*dto.BackupPolicy{name: {}},
 	}
 
 	err := DeletePolicy(config, "policy2")

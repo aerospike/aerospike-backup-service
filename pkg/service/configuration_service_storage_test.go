@@ -3,18 +3,18 @@ package service
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aws/smithy-go/ptr"
 )
 
 func TestStorage_Add(t *testing.T) {
-	config := &model.Config{
-		Storage: map[string]*model.Storage{},
+	config := &dto.Config{
+		Storage: map[string]*dto.Storage{},
 	}
 
 	name := "storage"
-	newStorage := &model.Storage{
-		Type: model.Local,
+	newStorage := &dto.Storage{
+		Type: dto.Local,
 		Path: ptr.String("path"),
 	}
 
@@ -32,11 +32,11 @@ func TestStorage_Add(t *testing.T) {
 }
 
 func TestStorage_AddFailure(t *testing.T) {
-	config := &model.Config{
-		Storage: map[string]*model.Storage{},
+	config := &dto.Config{
+		Storage: map[string]*dto.Storage{},
 	}
 
-	err := AddStorage(config, "storage", &model.Storage{})
+	err := AddStorage(config, "storage", &dto.Storage{})
 	if err == nil {
 		t.Errorf("Expected validation error")
 	}
@@ -44,13 +44,13 @@ func TestStorage_AddFailure(t *testing.T) {
 
 func TestStorage_Update(t *testing.T) {
 	name := "name"
-	config := &model.Config{
-		Storage: map[string]*model.Storage{name: {}},
+	config := &dto.Config{
+		Storage: map[string]*dto.Storage{name: {}},
 	}
 
-	newStorage := &model.Storage{
+	newStorage := &dto.Storage{
 		Path: ptr.String("path"),
-		Type: model.Local,
+		Type: dto.Local,
 	}
 
 	err := UpdateStorage(config, name, newStorage)
@@ -63,7 +63,7 @@ func TestStorage_Update(t *testing.T) {
 	}
 
 	// Updating a non-existent name should result in an error
-	err = UpdateStorage(config, "newStorage", &model.Storage{})
+	err = UpdateStorage(config, "newStorage", &dto.Storage{})
 	if err == nil {
 		t.Errorf("Expected an error, got nil")
 	}
@@ -71,11 +71,11 @@ func TestStorage_Update(t *testing.T) {
 
 func TestStorage_UpdateFailure(t *testing.T) {
 	storage := "storage"
-	config := &model.Config{
-		Storage: map[string]*model.Storage{storage: {}},
+	config := &dto.Config{
+		Storage: map[string]*dto.Storage{storage: {}},
 	}
 
-	err := UpdateStorage(config, storage, &model.Storage{})
+	err := UpdateStorage(config, storage, &dto.Storage{})
 	if err == nil {
 		t.Errorf("Expected validation error")
 	}
@@ -86,10 +86,10 @@ func TestStorage_Delete(t *testing.T) {
 	storage2 := "storage2"
 	policy := "policy"
 	routine := "routine"
-	config := &model.Config{
-		BackupPolicies: map[string]*model.BackupPolicy{policy: {}},
-		Storage:        map[string]*model.Storage{storage: {}, storage2: {}},
-		BackupRoutines: map[string]*model.BackupRoutine{routine: {Storage: storage}},
+	config := &dto.Config{
+		BackupPolicies: map[string]*dto.BackupPolicy{policy: {}},
+		Storage:        map[string]*dto.Storage{storage: {}, storage2: {}},
+		BackupRoutines: map[string]*dto.BackupRoutine{routine: {Storage: storage}},
 	}
 
 	// Deleting a storage that is being used by a policy should result in an error

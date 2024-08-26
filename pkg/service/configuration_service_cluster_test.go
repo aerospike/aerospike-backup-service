@@ -3,18 +3,18 @@ package service
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 )
 
 func TestCluster_Add(t *testing.T) {
 	name := "cluster1"
-	config := &model.Config{
-		AerospikeClusters: map[string]*model.AerospikeCluster{
-			name: model.NewLocalAerospikeCluster(),
+	config := &dto.Config{
+		AerospikeClusters: map[string]*dto.AerospikeCluster{
+			name: dto.NewLocalAerospikeCluster(),
 		},
 	}
-	newCluster := model.NewLocalAerospikeCluster()
+	newCluster := dto.NewLocalAerospikeCluster()
 	err := AddCluster(config, "cluster2", newCluster)
 	if err != nil {
 		t.Errorf("Error in adding cluster: %s", err.Error())
@@ -29,14 +29,14 @@ func TestCluster_Add(t *testing.T) {
 
 func TestCluster_Update(t *testing.T) {
 	name := "cluster1"
-	config := &model.Config{
-		AerospikeClusters: map[string]*model.AerospikeCluster{
-			name: model.NewLocalAerospikeCluster(),
+	config := &dto.Config{
+		AerospikeClusters: map[string]*dto.AerospikeCluster{
+			name: dto.NewLocalAerospikeCluster(),
 		},
 	}
-	updatedCluster := model.NewLocalAerospikeCluster()
+	updatedCluster := dto.NewLocalAerospikeCluster()
 	if updatedCluster.Credentials == nil {
-		updatedCluster.Credentials = &model.Credentials{}
+		updatedCluster.Credentials = &dto.Credentials{}
 	}
 	updatedCluster.Credentials.User = util.Ptr("user")
 	err := UpdateCluster(config, name, updatedCluster)
@@ -48,7 +48,7 @@ func TestCluster_Update(t *testing.T) {
 	}
 
 	// Try updating a non-existent cluster, should return an error
-	err = UpdateCluster(config, "cluster2", &model.AerospikeCluster{})
+	err = UpdateCluster(config, "cluster2", &dto.AerospikeCluster{})
 	if err == nil {
 		t.Error("Expected an error while updating a non-existent cluster, but got nil")
 	}
@@ -59,10 +59,10 @@ func TestCluster_Delete(t *testing.T) {
 	name2 := "cluster2"
 	policy := "policy"
 	routine := "routine"
-	config := &model.Config{
-		AerospikeClusters: map[string]*model.AerospikeCluster{name: {}, name2: {}},
-		BackupPolicies:    map[string]*model.BackupPolicy{policy: {}},
-		BackupRoutines:    map[string]*model.BackupRoutine{routine: {SourceCluster: name}},
+	config := &dto.Config{
+		AerospikeClusters: map[string]*dto.AerospikeCluster{name: {}, name2: {}},
+		BackupPolicies:    map[string]*dto.BackupPolicy{policy: {}},
+		BackupRoutines:    map[string]*dto.BackupRoutine{routine: {SourceCluster: name}},
 	}
 	err := DeleteCluster(config, name)
 	if err == nil {

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/mocks"
@@ -29,7 +29,7 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 
 func Test_GetClient(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{"testCluster": {}},
+		map[string]*dto.AerospikeCluster{"testCluster": {}},
 		&MockClientFactory{},
 	)
 
@@ -47,7 +47,7 @@ func Test_GetClient(t *testing.T) {
 
 func Test_GetClient_ClusterNotFound(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{},
+		map[string]*dto.AerospikeCluster{},
 		&MockClientFactory{},
 	)
 
@@ -58,21 +58,21 @@ func Test_GetClient_ClusterNotFound(t *testing.T) {
 
 func Test_CreateClient(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{},
+		map[string]*dto.AerospikeCluster{},
 		&MockClientFactory{},
 	)
 
-	client, err := clientManager.CreateClient(&model.AerospikeCluster{})
+	client, err := clientManager.CreateClient(&dto.AerospikeCluster{})
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 }
 
 func Test_CreateClient_Errors(t *testing.T) {
 	mockClientFactory := &MockClientFactory{ShouldFail: true}
-	aeroCluster := &model.AerospikeCluster{}
+	aeroCluster := &dto.AerospikeCluster{}
 
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{},
+		map[string]*dto.AerospikeCluster{},
 		mockClientFactory,
 	)
 
@@ -83,7 +83,7 @@ func Test_CreateClient_Errors(t *testing.T) {
 
 func Test_Close(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{"testCluster": {}},
+		map[string]*dto.AerospikeCluster{"testCluster": {}},
 		&MockClientFactory{},
 	)
 
@@ -100,7 +100,7 @@ func Test_Close(t *testing.T) {
 
 func Test_Close_Multiple(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{"testCluster": {}},
+		map[string]*dto.AerospikeCluster{"testCluster": {}},
 		&MockClientFactory{},
 	)
 
@@ -124,7 +124,7 @@ func Test_Close_Multiple(t *testing.T) {
 
 func Test_Close_NotExisting(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{},
+		map[string]*dto.AerospikeCluster{},
 		&MockClientFactory{},
 	)
 	aeroClient := &mocks.MockAerospikeClient{}

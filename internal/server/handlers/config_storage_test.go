@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
@@ -14,9 +14,9 @@ import (
 
 const testStorage = "testStorage"
 
-func testConfigStorage() model.Storage {
+func testConfigStorage() dto.Storage {
 	path := testDir
-	return model.Storage{
+	return dto.Storage{
 		Type:            "local",
 		Path:            &path,
 		MinPartSize:     5242880,

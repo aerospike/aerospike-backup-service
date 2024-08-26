@@ -1,10 +1,5 @@
 package model
 
-import (
-	"fmt"
-	"slices"
-)
-
 // LoggerConfig represents the backup service logger configuration.
 // @Description LoggerConfig represents the backup service logger configuration.
 //
@@ -52,20 +47,6 @@ func (l *LoggerConfig) GetStdoutWriterOrDefault() bool {
 	return *defaultConfig.logger.StdoutWriter
 }
 
-// Validate validates the logger configuration.
-func (l *LoggerConfig) Validate() error {
-	if l.Level != nil && !slices.Contains(validLoggerLevels, *l.Level) {
-		return fmt.Errorf("invalid logger level: %s", *l.Level)
-	}
-	if l.Format != nil && !slices.Contains(supportedLoggerFormats, *l.Format) {
-		return fmt.Errorf("invalid logger format: %s", *l.Format)
-	}
-	if err := l.FileWriter.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
 // FileLoggerConfig represents the configuration for the file logger writer.
 // @Description FileLoggerConfig represents the configuration for the file logger writer.
 type FileLoggerConfig struct {
@@ -83,27 +64,4 @@ type FileLoggerConfig struct {
 	// Compress determines if the rotated log files should be compressed
 	// using gzip. The default is not to perform compression.
 	Compress bool `yaml:"compress" json:"compress" default:"false"`
-}
-
-// Validate validates the file logger configuration.
-func (f *FileLoggerConfig) Validate() error {
-	if f == nil {
-		return nil
-	}
-	if f.Filename == "" {
-		return emptyFieldValidationError("logger file")
-	}
-	if f.MaxSize < 0 {
-		return fmt.Errorf("negative logger MaxSize: %d", f.MaxSize)
-	}
-	if f.MaxSize == 0 {
-		f.MaxSize = 100 // set default in Mb
-	}
-	if f.MaxAge < 0 {
-		return fmt.Errorf("negative logger MaxAge: %d", f.MaxAge)
-	}
-	if f.MaxBackups < 0 {
-		return fmt.Errorf("negative logger MaxBackups: %d", f.MaxBackups)
-	}
-	return nil
 }

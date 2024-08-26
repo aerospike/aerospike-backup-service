@@ -93,10 +93,3 @@ func (r *BackupRoutine) Validate(c *Config) error {
 	}
 	return nil
 }
-
-// Node represents the Aerospike node details.
-// @Description Node represents the Aerospike node details.
-type Node struct {
-	IP   string `yaml:"ip" json:"ip" example:"192.168.0.2"`
-	Port int    `yaml:"port" json:"port" example:"3000"`
-}

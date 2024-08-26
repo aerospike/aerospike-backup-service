@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
@@ -14,26 +14,26 @@ import (
 
 const testCluster = "testCluster"
 
-func testSeedNode() model.SeedNode {
-	return model.SeedNode{
+func testSeedNode() dto.SeedNode {
+	return dto.SeedNode{
 		HostName: "host",
 		Port:     3000,
 		TLSName:  "tls",
 	}
 }
 
-func testConfigCluster() model.AerospikeCluster {
+func testConfigCluster() dto.AerospikeCluster {
 	label := "label"
 	timeout := int32(10)
 	useAlternate := false
 	queueSize := 1
-	return model.AerospikeCluster{
+	return dto.AerospikeCluster{
 		ClusterLabel:         &label,
-		SeedNodes:            []model.SeedNode{testSeedNode()},
+		SeedNodes:            []dto.SeedNode{testSeedNode()},
 		ConnTimeout:          &timeout,
 		UseServicesAlternate: &useAlternate,
-		Credentials:          &model.Credentials{},
-		TLS:                  &model.TLS{},
+		Credentials:          &dto.Credentials{},
+		TLS:                  &dto.TLS{},
 		MaxParallelScans:     &queueSize,
 	}
 }

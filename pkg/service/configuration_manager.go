@@ -7,13 +7,13 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"gopkg.in/yaml.v3"
 )
 
 type ConfigurationManager interface {
-	ReadConfiguration() (*model.Config, error)
-	WriteConfiguration(config *model.Config) error
+	ReadConfiguration() (*dto.Config, error)
+	WriteConfiguration(config *dto.Config) error
 }
 
 type Reader interface {
@@ -67,16 +67,16 @@ func (b *ConfigManagerBuilder) NewConfigManager(configFile string, remote bool,
 	}
 
 	switch configStorage.Type {
-	case model.S3:
+	case dto.S3:
 		return b.s3Builder.NewS3ConfigurationManager(configStorage)
-	case model.Local:
+	case dto.Local:
 		return newLocalConfigurationManager(configStorage)
 	default:
 		return nil, fmt.Errorf("unknown type %s", configStorage.Type)
 	}
 }
 
-func newLocalConfigurationManager(configStorage *model.Storage) (
+func newLocalConfigurationManager(configStorage *dto.Storage) (
 	ConfigurationManager, error) {
 	isHTTP, err := isHTTPPath(*configStorage.Path)
 	if err != nil {
@@ -89,10 +89,10 @@ func newLocalConfigurationManager(configStorage *model.Storage) (
 }
 
 func (b *ConfigManagerBuilder) makeConfigStorage(configURI string, remote bool,
-) (*model.Storage, error) {
+) (*dto.Storage, error) {
 	if !remote {
-		return &model.Storage{
-			Type: model.Local,
+		return &dto.Storage{
+			Type: dto.Local,
 			Path: &configURI,
 		}, nil
 	}
@@ -102,7 +102,7 @@ func (b *ConfigManagerBuilder) makeConfigStorage(configURI string, remote bool,
 		return nil, err
 	}
 
-	configStorage := &model.Storage{}
+	configStorage := &dto.Storage{}
 	err = yaml.Unmarshal(content, configStorage)
 	if err != nil {
 		return nil, err

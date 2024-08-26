@@ -3,12 +3,12 @@ package service
 import (
 	"fmt"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 )
 
 // AddPolicy adds a new BackupPolicy to the configuration if a policy with the same name
 // doesn't already exist.
-func AddPolicy(config *model.Config, name string, newPolicy *model.BackupPolicy) error {
+func AddPolicy(config *dto.Config, name string, newPolicy *dto.BackupPolicy) error {
 	_, found := config.BackupPolicies[name]
 	if found {
 		return fmt.Errorf("backup policy with the same name %s already exists", name)
@@ -22,7 +22,7 @@ func AddPolicy(config *model.Config, name string, newPolicy *model.BackupPolicy)
 }
 
 // UpdatePolicy updates an existing BackupPolicy in the configuration.
-func UpdatePolicy(config *model.Config, name string, updatedPolicy *model.BackupPolicy) error {
+func UpdatePolicy(config *dto.Config, name string, updatedPolicy *dto.BackupPolicy) error {
 	_, found := config.BackupPolicies[name]
 	if !found {
 		return fmt.Errorf("backup policy %s not found", name)
@@ -35,7 +35,7 @@ func UpdatePolicy(config *model.Config, name string, updatedPolicy *model.Backup
 }
 
 // DeletePolicy deletes a BackupPolicy from the configuration.
-func DeletePolicy(config *model.Config, name string) error {
+func DeletePolicy(config *dto.Config, name string) error {
 	_, found := config.BackupPolicies[name]
 	if !found {
 		return fmt.Errorf("backup policy %s not found", name)

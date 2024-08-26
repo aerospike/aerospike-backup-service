@@ -1,10 +1,5 @@
 package model
 
-import (
-	"errors"
-	"fmt"
-)
-
 // RestorePolicy represents a policy for the restore operation.
 // @Description RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
@@ -59,50 +54,6 @@ type RestorePolicy struct {
 	// Configuration of retries for each restore write operation.
 	// If nil, no retries will be performed.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
-}
-
-// Validate validates the restore policy.
-func (p *RestorePolicy) Validate() error {
-	if p == nil {
-		return fmt.Errorf("restore policy is not specified")
-	}
-	if p.Parallel != nil && *p.Parallel <= 0 {
-		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
-	}
-	if p.Timeout != nil && *p.Timeout <= 0 {
-		return fmt.Errorf("timeout %d invalid, should be positive number", *p.Timeout)
-	}
-	if p.MaxAsyncBatches != nil && *p.MaxAsyncBatches <= 0 {
-		return fmt.Errorf("maxAsyncBatches %d invalid, should be positive number", *p.MaxAsyncBatches)
-	}
-	if p.BatchSize != nil && *p.BatchSize <= 0 {
-		return fmt.Errorf("batchSize %d invalid, should be positive number", *p.BatchSize)
-	}
-	if p.Bandwidth != nil && *p.Bandwidth <= 0 {
-		return fmt.Errorf("bandwidth %d invalid, should be positive number", *p.Bandwidth)
-	}
-	if p.Tps != nil && *p.Tps <= 0 {
-		return fmt.Errorf("tps %d invalid, should be positive number", *p.Tps)
-	}
-	if p.Replace != nil && *p.Replace && p.Unique != nil && *p.Unique {
-		return errors.New("replace and unique options are contradictory")
-	}
-
-	if p.Namespace != nil { // namespace is optional.
-		if err := p.Namespace.Validate(); err != nil {
-			return err
-		}
-	}
-	if err := p.EncryptionPolicy.Validate(); err != nil {
-		return err
-	}
-	if err := p.CompressionPolicy.Validate(); err != nil {
-		return err
-	}
-	if err := p.RetryPolicy.Validate(); err != nil {
-		return fmt.Errorf("retry policy invalid: %w", err)
-	}
-	return nil
 }
 
 func (p *RestorePolicy) GetRetryPolicyOrDefault() *RetryPolicy {

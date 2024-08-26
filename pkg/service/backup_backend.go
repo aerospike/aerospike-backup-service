@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"gopkg.in/yaml.v3"
 )
@@ -34,30 +34,30 @@ var _ BackupListReader = (*BackupBackend)(nil)
 
 const metadataFile = "metadata.yaml"
 
-func newBackend(config *model.Config, routineName string) *BackupBackend {
+func newBackend(config *dto.Config, routineName string) *BackupBackend {
 	backupRoutine := config.BackupRoutines[routineName]
 	storage := config.Storage[backupRoutine.Storage]
 	backupPolicy := config.BackupPolicies[backupRoutine.BackupPolicy]
 	removeFullBackup := backupPolicy.RemoveFiles.RemoveFullBackup()
 	switch storage.Type {
-	case model.Local:
+	case dto.Local:
 		routinePath := filepath.Join(*storage.Path, routineName)
 		return &BackupBackend{
 			StorageAccessor:        NewOSDiskAccessor(),
-			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
-			incrementalBackupsPath: filepath.Join(routinePath, model.IncrementalBackupDirectory),
-			stateFilePath:          filepath.Join(routinePath, model.StateFileName),
+			fullBackupsPath:        filepath.Join(routinePath, dto.FullBackupDirectory),
+			incrementalBackupsPath: filepath.Join(routinePath, dto.IncrementalBackupDirectory),
+			stateFilePath:          filepath.Join(routinePath, dto.StateFileName),
 			removeFullBackup:       removeFullBackup,
 			fullBackupInProgress:   &atomic.Bool{},
 		}
-	case model.S3:
+	case dto.S3:
 		s3Context := NewS3Context(storage)
 		routinePath := filepath.Join(s3Context.path, routineName)
 		return &BackupBackend{
 			StorageAccessor:        s3Context,
-			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
-			incrementalBackupsPath: filepath.Join(routinePath, model.IncrementalBackupDirectory),
-			stateFilePath:          filepath.Join(routinePath, model.StateFileName),
+			fullBackupsPath:        filepath.Join(routinePath, dto.FullBackupDirectory),
+			incrementalBackupsPath: filepath.Join(routinePath, dto.IncrementalBackupDirectory),
+			stateFilePath:          filepath.Join(routinePath, dto.StateFileName),
 			removeFullBackup:       removeFullBackup,
 			fullBackupInProgress:   &atomic.Bool{},
 		}
@@ -66,10 +66,10 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 	}
 }
 
-func (b *BackupBackend) readState() *model.BackupState {
+func (b *BackupBackend) readState() *dto.BackupState {
 	b.stateFileMutex.RLock()
 	defer b.stateFileMutex.RUnlock()
-	state := model.NewBackupState()
+	state := dto.NewBackupState()
 	err := b.readBackupState(b.stateFilePath, state)
 	if err != nil {
 		slog.Warn("Failed to read backup state",
@@ -79,13 +79,13 @@ func (b *BackupBackend) readState() *model.BackupState {
 	return state
 }
 
-func (b *BackupBackend) writeState(state *model.BackupState) error {
+func (b *BackupBackend) writeState(state *dto.BackupState) error {
 	b.stateFileMutex.Lock()
 	defer b.stateFileMutex.Unlock()
 	return b.writeYaml(b.stateFilePath, state)
 }
 
-func (b *BackupBackend) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
+func (b *BackupBackend) writeBackupMetadata(path string, metadata dto.BackupMetadata) error {
 	metadataFilePath := filepath.Join(path, metadataFile)
 	return b.writeYaml(metadataFilePath, metadata)
 }
@@ -100,7 +100,7 @@ func (b *BackupBackend) writeYaml(path string, data any) error {
 }
 
 // FullBackupList returns a list of available full backups.
-func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
+func (b *BackupBackend) FullBackupList(timebounds *dto.TimeBounds) ([]dto.BackupDetails, error) {
 	slog.Info("Get full backups",
 		slog.String("backupFolder", b.fullBackupsPath),
 		slog.Any("timebounds", timebounds),
@@ -116,8 +116,8 @@ func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.Ba
 }
 
 // FindLastFullBackup returns last full backup prior to given time.
-func (b *BackupBackend) FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error) {
-	fullBackupList, err := b.FullBackupList(model.NewTimeBoundsTo(toTime))
+func (b *BackupBackend) FindLastFullBackup(toTime time.Time) ([]dto.BackupDetails, error) {
+	fullBackupList, err := b.FullBackupList(dto.NewTimeBoundsTo(toTime))
 	if err != nil {
 		return nil, fmt.Errorf("cannot read full backup list: %w", err)
 	}
@@ -131,9 +131,9 @@ func (b *BackupBackend) FindLastFullBackup(toTime time.Time) ([]model.BackupDeta
 
 // latestFullBackupBeforeTime returns list of backups with same creation time,
 // latest before upperBound.
-func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound time.Time,
-) []model.BackupDetails {
-	var result []model.BackupDetails
+func latestFullBackupBeforeTime(allBackups []dto.BackupDetails, upperBound time.Time,
+) []dto.BackupDetails {
+	var result []dto.BackupDetails
 	var latestTime time.Time
 	for i := range allBackups {
 		current := &allBackups[i]
@@ -143,7 +143,7 @@ func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound tim
 
 		if len(result) == 0 || latestTime.Before(current.Created) {
 			latestTime = current.Created
-			result = []model.BackupDetails{*current}
+			result = []dto.BackupDetails{*current}
 		} else if current.Created.Equal(latestTime) {
 			result = append(result, *current)
 		}
@@ -152,14 +152,14 @@ func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound tim
 }
 
 // FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
-func (b *BackupBackend) FindIncrementalBackupsForNamespace(bounds *model.TimeBounds, namespace string,
-) ([]model.BackupDetails, error) {
+func (b *BackupBackend) FindIncrementalBackupsForNamespace(bounds *dto.TimeBounds, namespace string,
+) ([]dto.BackupDetails, error) {
 	allIncrementalBackupList, err := b.IncrementalBackupList(bounds)
 	if err != nil {
 		return nil, err
 	}
 
-	var filteredIncrementalBackups []model.BackupDetails
+	var filteredIncrementalBackups []dto.BackupDetails
 	for _, b := range allIncrementalBackupList {
 		if b.Namespace == namespace {
 			filteredIncrementalBackups = append(filteredIncrementalBackups, b)
@@ -173,12 +173,12 @@ func (b *BackupBackend) FindIncrementalBackupsForNamespace(bounds *model.TimeBou
 	return filteredIncrementalBackups, nil
 }
 
-func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache bool,
-	paths ...string) []model.BackupDetails {
+func (b *BackupBackend) detailsFromPaths(timebounds *dto.TimeBounds, useCache bool,
+	paths ...string) []dto.BackupDetails {
 	// each path contains a backup of specific time
-	backupDetails := make([]model.BackupDetails, 0, len(paths))
+	backupDetails := make([]dto.BackupDetails, 0, len(paths))
 	for _, path := range paths {
-		namespaces, err := b.lsDir(filepath.Join(path, model.DataDirectory), nil)
+		namespaces, err := b.lsDir(filepath.Join(path, dto.DataDirectory), nil)
 		if err != nil {
 			slog.Warn("Cannot list backup dir", "path", path, "err", err)
 			continue
@@ -197,8 +197,8 @@ func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache 
 	return backupDetails
 }
 
-func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds, backupFolder string,
-) ([]model.BackupDetails, error) {
+func (b *BackupBackend) fromSubfolders(timebounds *dto.TimeBounds, backupFolder string,
+) ([]dto.BackupDetails, error) {
 	var after *string
 	if timebounds.FromTime != nil {
 		after = util.Ptr(formatTime(*timebounds.FromTime))
@@ -213,8 +213,8 @@ func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds, backupFolde
 }
 
 // IncrementalBackupList returns a list of available incremental backups.
-func (b *BackupBackend) IncrementalBackupList(timebounds *model.TimeBounds,
-) ([]model.BackupDetails, error) {
+func (b *BackupBackend) IncrementalBackupList(timebounds *dto.TimeBounds,
+) ([]dto.BackupDetails, error) {
 	return b.fromSubfolders(timebounds, b.incrementalBackupsPath)
 }
 

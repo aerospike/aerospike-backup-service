@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/gorilla/mux"
 )
@@ -40,7 +40,7 @@ func (s *Service) ConfigClusterActionHandler(w http.ResponseWriter, r *http.Requ
 func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addAerospikeCluster"))
 
-	var newCluster model.AerospikeCluster
+	var newCluster dto.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&newCluster)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
@@ -172,7 +172,7 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateAerospikeCluster"))
 
-	var updatedCluster model.AerospikeCluster
+	var updatedCluster dto.AerospikeCluster
 	err := json.NewDecoder(r.Body).Decode(&updatedCluster)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"gopkg.in/yaml.v3"
 )
@@ -26,7 +26,7 @@ func NewOSDiskAccessor() *OSDiskAccessor {
 	return &OSDiskAccessor{}
 }
 
-func (o *OSDiskAccessor) readBackupState(filepath string, state *model.BackupState) error {
+func (o *OSDiskAccessor) readBackupState(filepath string, state *dto.BackupState) error {
 	logger := slog.Default().With(slog.String("path", filepath))
 	bytes, err := os.ReadFile(filepath)
 	if err != nil {
@@ -49,20 +49,20 @@ func (o *OSDiskAccessor) readBackupState(filepath string, state *model.BackupSta
 	return nil
 }
 
-func (o *OSDiskAccessor) readBackupDetails(path string, _ bool) (model.BackupDetails, error) {
+func (o *OSDiskAccessor) readBackupDetails(path string, _ bool) (dto.BackupDetails, error) {
 	filePath := filepath.Join(path, metadataFile)
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
-		return model.BackupDetails{}, err
+		return dto.BackupDetails{}, err
 	}
 
-	metadata := &model.BackupMetadata{}
+	metadata := &dto.BackupMetadata{}
 	if err = yaml.Unmarshal(bytes, metadata); err != nil {
 		slog.Warn("Failed unmarshal metadata file", "path", filePath, "err", err,
 			"content", string(bytes))
-		return model.BackupDetails{}, err
+		return dto.BackupDetails{}, err
 	}
-	return model.BackupDetails{
+	return dto.BackupDetails{
 		BackupMetadata: *metadata,
 		Key:            util.Ptr(path),
 	}, nil

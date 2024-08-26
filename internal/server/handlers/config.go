@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 )
 
@@ -50,7 +50,7 @@ func (s *Service) readConfig(w http.ResponseWriter) {
 func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateConfig"))
 
-	var newConfig model.Config
+	var newConfig dto.Config
 
 	err := json.NewDecoder(r.Body).Decode(&newConfig)
 	if err != nil {

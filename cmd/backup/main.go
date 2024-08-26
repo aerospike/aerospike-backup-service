@@ -13,7 +13,7 @@ import (
 	backup "github.com/aerospike/aerospike-backup-service"
 	"github.com/aerospike/aerospike-backup-service/internal/server"
 	"github.com/aerospike/aerospike-backup-service/internal/util"
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
@@ -116,7 +116,7 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func readConfiguration(configurationManager service.ConfigurationManager) (*model.Config, error) {
+func readConfiguration(configurationManager service.ConfigurationManager) (*dto.Config, error) {
 	config, err := configurationManager.ReadConfiguration()
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
@@ -130,7 +130,7 @@ func readConfiguration(configurationManager service.ConfigurationManager) (*mode
 }
 
 func runHTTPServer(ctx context.Context,
-	config *model.Config,
+	config *dto.Config,
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,

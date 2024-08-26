@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 )
@@ -12,12 +12,12 @@ import (
 type Backup interface {
 	BackupRun(
 		ctx context.Context,
-		backupRoutine *model.BackupRoutine,
-		backupPolicy *model.BackupPolicy,
+		backupRoutine *dto.BackupRoutine,
+		backupPolicy *dto.BackupPolicy,
 		client *backup.Client,
-		storage *model.Storage,
-		secretAgent *model.SecretAgent,
-		timebounds model.TimeBounds,
+		storage *dto.Storage,
+		secretAgent *dto.SecretAgent,
+		timebounds dto.TimeBounds,
 		namespace string,
 		path *string,
 	) (BackupHandler, error)
@@ -46,6 +46,6 @@ type Restore interface {
 	RestoreRun(
 		ctx context.Context,
 		client *backup.Client,
-		restoreRequest *model.RestoreRequestInternal,
+		restoreRequest *dto.RestoreRequestInternal,
 	) (RestoreHandler, error)
 }

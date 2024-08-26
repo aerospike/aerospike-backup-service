@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"gopkg.in/yaml.v3"
 )
 
@@ -24,14 +24,14 @@ func NewHTTPConfigurationManager(uri string) ConfigurationManager {
 }
 
 // ReadConfiguration reads and returns the configuration using a URL.
-func (h *HTTPConfigurationManager) ReadConfiguration() (*model.Config, error) {
+func (h *HTTPConfigurationManager) ReadConfiguration() (*dto.Config, error) {
 	resp, err := http.Get(h.configURL)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	config := model.NewConfigWithDefaultValues()
+	config := dto.NewConfigWithDefaultValues()
 	buf := new(bytes.Buffer)
 	_, err = buf.ReadFrom(resp.Body)
 	if err != nil {
@@ -47,7 +47,7 @@ func (h *HTTPConfigurationManager) ReadConfiguration() (*model.Config, error) {
 }
 
 // WriteConfiguration is unsupported for HTTPConfigurationManager.
-func (h *HTTPConfigurationManager) WriteConfiguration(_ *model.Config) error {
+func (h *HTTPConfigurationManager) WriteConfiguration(_ *dto.Config) error {
 	return fmt.Errorf("%w: HTTPConfigurationManager.WriteConfiguration",
 		errors.ErrUnsupported)
 }

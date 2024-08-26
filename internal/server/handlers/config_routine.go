@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/gorilla/mux"
 )
@@ -41,7 +41,7 @@ func (s *Service) ConfigRoutineActionHandler(w http.ResponseWriter, r *http.Requ
 func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addRoutine"))
 
-	var newRoutine model.BackupRoutine
+	var newRoutine dto.BackupRoutine
 	err := json.NewDecoder(r.Body).Decode(&newRoutine)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
@@ -168,7 +168,7 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateRoutine"))
 
-	var updatedRoutine model.BackupRoutine
+	var updatedRoutine dto.BackupRoutine
 	err := json.NewDecoder(r.Body).Decode(&updatedRoutine)
 	if err != nil {
 		hLogger.Error("failed to decode request body",

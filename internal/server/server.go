@@ -11,7 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/internal/server/middleware"
 	"github.com/aerospike/aerospike-backup-service/internal/util"
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/reugn/go-quartz/quartz"
 	"golang.org/x/time/rate"
@@ -23,13 +23,13 @@ const (
 
 // HTTPServer is the backup service HTTP server wrapper.
 type HTTPServer struct {
-	config *model.Config
+	config *dto.Config
 	server *http.Server
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
 func NewHTTPServer(
-	config *model.Config,
+	config *dto.Config,
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,

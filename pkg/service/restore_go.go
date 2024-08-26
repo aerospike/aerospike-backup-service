@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
@@ -27,7 +27,7 @@ func NewRestoreGo() *RestoreGo {
 func (r *RestoreGo) RestoreRun(
 	ctx context.Context,
 	client *backup.Client,
-	restoreRequest *model.RestoreRequestInternal,
+	restoreRequest *dto.RestoreRequestInternal,
 ) (RestoreHandler, error) {
 	var err error
 
@@ -47,7 +47,7 @@ func (r *RestoreGo) RestoreRun(
 }
 
 //nolint:funlen
-func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
+func makeRestoreConfig(restoreRequest *dto.RestoreRequestInternal,
 ) *backup.RestoreConfig {
 	config := backup.NewDefaultRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
@@ -124,7 +124,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 	return config
 }
 
-func makeWritePolicy(restoreRequest *model.RestoreRequestInternal) *a.WritePolicy {
+func makeWritePolicy(restoreRequest *dto.RestoreRequestInternal) *a.WritePolicy {
 	writePolicy := a.NewWritePolicy(0, 0)
 	writePolicy.GenerationPolicy = a.EXPECT_GEN_GT
 	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
@@ -162,12 +162,12 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 
 // getReader instantiates and returns a reader for the restore operation
 // according to the specified storage type.
-func getReader(ctx context.Context, path *string, storage *model.Storage,
+func getReader(ctx context.Context, path *string, storage *dto.Storage,
 ) (backup.StreamingReader, error) {
 	switch storage.Type {
-	case model.Local:
+	case dto.Local:
 		return backup.NewStreamingReaderLocal(*path, backup.EncoderTypeASB)
-	case model.S3:
+	case dto.S3:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err

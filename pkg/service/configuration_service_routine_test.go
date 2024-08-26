@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 )
 
 func TestRoutine_Add(t *testing.T) {
@@ -11,14 +11,14 @@ func TestRoutine_Add(t *testing.T) {
 	cluster := "cluster"
 	storage := "storage"
 	routineName := "routine"
-	config := &model.Config{
-		BackupRoutines:    make(map[string]*model.BackupRoutine),
-		BackupPolicies:    map[string]*model.BackupPolicy{policy: {}},
-		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {}},
-		Storage:           map[string]*model.Storage{storage: {}},
+	config := &dto.Config{
+		BackupRoutines:    make(map[string]*dto.BackupRoutine),
+		BackupPolicies:    map[string]*dto.BackupPolicy{policy: {}},
+		AerospikeClusters: map[string]*dto.AerospikeCluster{cluster: {}},
+		Storage:           map[string]*dto.Storage{storage: {}},
 	}
 
-	routine := model.BackupRoutine{
+	routine := dto.BackupRoutine{
 		Storage:       storage,
 		SourceCluster: cluster,
 		BackupPolicy:  policy,
@@ -38,22 +38,22 @@ func TestRoutine_AddErrors(t *testing.T) {
 	wrong := "-"
 	fails := []struct {
 		name    string
-		routine model.BackupRoutine
+		routine dto.BackupRoutine
 	}{
-		{name: "empty", routine: model.BackupRoutine{}},
-		{name: "existing", routine: model.BackupRoutine{Storage: storage, SourceCluster: cluster}},
-		{name: "no storage", routine: model.BackupRoutine{SourceCluster: cluster}},
-		{name: "no cluster", routine: model.BackupRoutine{Storage: storage}},
-		{name: "wrong storage", routine: model.BackupRoutine{Storage: wrong, SourceCluster: cluster}},
-		{name: "wrong cluster", routine: model.BackupRoutine{Storage: storage, SourceCluster: wrong}},
-		{name: "existing policy", routine: model.BackupRoutine{}},
+		{name: "empty", routine: dto.BackupRoutine{}},
+		{name: "existing", routine: dto.BackupRoutine{Storage: storage, SourceCluster: cluster}},
+		{name: "no storage", routine: dto.BackupRoutine{SourceCluster: cluster}},
+		{name: "no cluster", routine: dto.BackupRoutine{Storage: storage}},
+		{name: "wrong storage", routine: dto.BackupRoutine{Storage: wrong, SourceCluster: cluster}},
+		{name: "wrong cluster", routine: dto.BackupRoutine{Storage: storage, SourceCluster: wrong}},
+		{name: "existing policy", routine: dto.BackupRoutine{}},
 	}
 
-	config := &model.Config{
-		BackupRoutines:    map[string]*model.BackupRoutine{routine: {}},
-		BackupPolicies:    map[string]*model.BackupPolicy{policy: {}},
-		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {}},
-		Storage:           map[string]*model.Storage{storage: {}},
+	config := &dto.Config{
+		BackupRoutines:    map[string]*dto.BackupRoutine{routine: {}},
+		BackupPolicies:    map[string]*dto.BackupPolicy{policy: {}},
+		AerospikeClusters: map[string]*dto.AerospikeCluster{cluster: {}},
+		Storage:           map[string]*dto.Storage{storage: {}},
 	}
 
 	for i := range fails {
@@ -70,14 +70,14 @@ func TestRoutine_Update(t *testing.T) {
 	policy := "policy"
 	cluster := "cluster"
 	storage := "storage"
-	config := &model.Config{
-		BackupRoutines:    map[string]*model.BackupRoutine{name: {}},
-		BackupPolicies:    map[string]*model.BackupPolicy{policy: {}},
-		AerospikeClusters: map[string]*model.AerospikeCluster{cluster: {}},
-		Storage:           map[string]*model.Storage{storage: {}},
+	config := &dto.Config{
+		BackupRoutines:    map[string]*dto.BackupRoutine{name: {}},
+		BackupPolicies:    map[string]*dto.BackupPolicy{policy: {}},
+		AerospikeClusters: map[string]*dto.AerospikeCluster{cluster: {}},
+		Storage:           map[string]*dto.Storage{storage: {}},
 	}
 
-	updatedRoutine := &model.BackupRoutine{
+	updatedRoutine := &dto.BackupRoutine{
 		IntervalCron:  "* * * * * *",
 		BackupPolicy:  policy,
 		SourceCluster: cluster,
@@ -101,8 +101,8 @@ func TestRoutine_Update(t *testing.T) {
 
 func TestRoutine_Delete(t *testing.T) {
 	name := "routine1"
-	config := &model.Config{
-		BackupRoutines: map[string]*model.BackupRoutine{name: {}},
+	config := &dto.Config{
+		BackupRoutines: map[string]*dto.BackupRoutine{name: {}},
 	}
 
 	err := DeleteRoutine(config, "routine2")

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
@@ -25,12 +25,12 @@ func NewBackupGo() *BackupGo {
 // A backup handler is returned to monitor the job status.
 func (b *BackupGo) BackupRun(
 	ctx context.Context,
-	backupRoutine *model.BackupRoutine,
-	backupPolicy *model.BackupPolicy,
+	backupRoutine *dto.BackupRoutine,
+	backupPolicy *dto.BackupPolicy,
 	client *backup.Client,
-	storage *model.Storage,
-	secretAgent *model.SecretAgent,
-	timebounds model.TimeBounds,
+	storage *dto.Storage,
+	secretAgent *dto.SecretAgent,
+	timebounds dto.TimeBounds,
 	namespace string,
 	path *string,
 ) (BackupHandler, error) {
@@ -53,10 +53,10 @@ func (b *BackupGo) BackupRun(
 //nolint:funlen
 func makeBackupConfig(
 	namespace string,
-	backupRoutine *model.BackupRoutine,
-	backupPolicy *model.BackupPolicy,
-	timebounds model.TimeBounds,
-	secretAgent *model.SecretAgent,
+	backupRoutine *dto.BackupRoutine,
+	backupPolicy *dto.BackupPolicy,
+	timebounds dto.TimeBounds,
+	secretAgent *dto.SecretAgent,
 ) *backup.BackupConfig {
 	config := backup.NewDefaultBackupConfig()
 	config.Namespace = namespace
@@ -135,12 +135,12 @@ func makeBackupConfig(
 
 // getWriter instantiates and returns a writer for the backup operation
 // according to the specified storage type.
-func getWriter(ctx context.Context, path *string, storage *model.Storage,
+func getWriter(ctx context.Context, path *string, storage *dto.Storage,
 ) (backup.Writer, error) {
 	switch storage.Type {
-	case model.Local:
+	case dto.Local:
 		return backup.NewWriterLocal(*path, true)
-	case model.S3:
+	case dto.S3:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err

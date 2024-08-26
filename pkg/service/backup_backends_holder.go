@@ -3,7 +3,7 @@ package service
 import (
 	"sync"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 )
 
 // BackendsHolder is an interface for storing backup backends.
@@ -44,13 +44,13 @@ func (b *BackendHolderImpl) Get(name string) (*BackupBackend, bool) {
 	return backend, found
 }
 
-func NewBackupBackends(config *model.Config) *BackendHolderImpl {
+func NewBackupBackends(config *dto.Config) *BackendHolderImpl {
 	return &BackendHolderImpl{
 		data: BuildBackupBackends(config),
 	}
 }
 
-func BuildBackupBackends(config *model.Config) map[string]*BackupBackend {
+func BuildBackupBackends(config *dto.Config) map[string]*BackupBackend {
 	backends := make(map[string]*BackupBackend, len(config.BackupRoutines))
 	for routineName := range config.BackupRoutines {
 		backends[routineName] = newBackend(config, routineName)

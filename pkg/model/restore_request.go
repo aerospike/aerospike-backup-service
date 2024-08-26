@@ -2,7 +2,6 @@ package model
 
 import (
 	"encoding/json"
-	"errors"
 )
 
 // RestoreJobID represents the restore operation job id.
@@ -69,38 +68,4 @@ func NewRestoreRequest(
 		SourceStorage:     sourceStorage,
 		SecretAgent:       secretAgent,
 	}
-}
-
-// Validate validates the restore operation request.
-func (r *RestoreRequest) Validate() error {
-	if err := r.DestinationCuster.Validate(); err != nil {
-		return err
-	}
-	if err := r.Policy.Validate(); err != nil {
-		return err
-	}
-	if err := r.SourceStorage.Validate(); err != nil {
-		return err
-	}
-	if err := r.Policy.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Validate validates the restore operation request.
-func (r *RestoreTimestampRequest) Validate() error {
-	if err := r.DestinationCuster.Validate(); err != nil {
-		return err
-	}
-	if err := r.Policy.Validate(); err != nil {
-		return err
-	}
-	if r.Time <= 0 {
-		return errors.New("restore point in time should be positive")
-	}
-	if r.Routine == "" {
-		return emptyFieldValidationError(r.Routine)
-	}
-	return nil
 }
