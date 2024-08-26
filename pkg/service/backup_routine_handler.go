@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 )
@@ -16,13 +17,13 @@ import (
 type BackupRoutineHandler struct {
 	backupService    Backup
 	backend          *BackupBackend
-	backupFullPolicy *dto.BackupPolicy
-	backupIncrPolicy *dto.BackupPolicy
-	backupRoutine    *dto.BackupRoutine
+	backupFullPolicy *model.BackupPolicy
+	backupIncrPolicy *model.BackupPolicy
+	backupRoutine    *model.BackupRoutine
 	routineName      string
 	namespaces       []string
-	storage          *dto.Storage
-	secretAgent      *dto.SecretAgent
+	storage          *model.Storage
+	secretAgent      *model.SecretAgent
 	state            *dto.BackupState
 	retry            *RetryService
 	clientManager    ClientManager
@@ -37,20 +38,16 @@ type BackupHandlerHolder map[string]*BackupRoutineHandler
 
 // newBackupRoutineHandler returns a new BackupRoutineHandler instance.
 func newBackupRoutineHandler(
-	config *dto.Config,
+	config *model.Config,
 	clientManager ClientManager,
 	backupService Backup,
 	routineName string,
 	backupBackend *BackupBackend,
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
-	storage := config.Storage[backupRoutine.Storage]
-	backupPolicy := config.BackupPolicies[backupRoutine.BackupPolicy]
-
-	var secretAgent *dto.SecretAgent
-	if backupRoutine.SecretAgent != nil {
-		secretAgent = config.SecretAgents[*backupRoutine.SecretAgent]
-	}
+	storage := backupRoutine.Storage
+	backupPolicy := backupRoutine.BackupPolicy
+	secretAgent := backupRoutine.SecretAgent
 
 	return &BackupRoutineHandler{
 		backupService:      backupService,
@@ -134,7 +131,7 @@ func (h *BackupRoutineHandler) startFullBackupForAllNamespaces(
 	ctx context.Context, upperBound time.Time, client *backup.Client) error {
 	clear(h.fullBackupHandlers)
 
-	timebounds := dto.TimeBounds{}
+	timebounds := model.TimeBounds{}
 	if h.backupFullPolicy.IsSealed() {
 		timebounds.ToTime = &upperBound
 	}
@@ -280,7 +277,7 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 
 func (h *BackupRoutineHandler) startIncrementalBackupForAllNamespaces(
 	ctx context.Context, client *backup.Client, upperBound time.Time) {
-	timebounds := dto.NewTimeBoundsFrom(h.state.LastRun())
+	timebounds := model.NewTimeBoundsFrom(h.state.LastRun())
 	if h.backupFullPolicy.IsSealed() {
 		timebounds.ToTime = &upperBound
 	}
@@ -374,7 +371,7 @@ func (h *BackupRoutineHandler) writeState() {
 	}
 }
 
-func getFullPath(fullBackupsPath string, backupPolicy *dto.BackupPolicy, namespace string,
+func getFullPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, namespace string,
 	now time.Time) string {
 	if backupPolicy.RemoveFiles.RemoveFullBackup() {
 		return fmt.Sprintf("%s/%s/%s", fullBackupsPath, dto.DataDirectory, namespace)
@@ -391,7 +388,7 @@ func getIncrementalPathForNamespace(incrBackupsPath string, namespace string, t 
 	return fmt.Sprintf("%s/%s/%s", getIncrementalPath(incrBackupsPath, t), dto.DataDirectory, namespace)
 }
 
-func getConfigurationPath(fullBackupsPath string, backupPolicy *dto.BackupPolicy, t time.Time) string {
+func getConfigurationPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, t time.Time) string {
 	if backupPolicy.RemoveFiles.RemoveFullBackup() {
 		path := fmt.Sprintf("%s/%s", fullBackupsPath, dto.ConfigurationBackupDirectory)
 		return path

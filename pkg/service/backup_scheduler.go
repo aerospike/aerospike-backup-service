@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -47,7 +47,7 @@ func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
 }
 
 func ApplyNewConfig(scheduler quartz.Scheduler,
-	config *dto.Config,
+	config *model.Config,
 	backends BackendsHolder,
 	manager ClientManager,
 ) (BackupHandlerHolder, error) {
@@ -69,7 +69,7 @@ func ApplyNewConfig(scheduler quartz.Scheduler,
 
 // ScheduleBackup creates a new quartz.Scheduler, schedules all the configured backup jobs,
 // starts and returns the scheduler.
-func ScheduleBackup(ctx context.Context, config *dto.Config, handlers BackupHandlerHolder,
+func ScheduleBackup(ctx context.Context, config *model.Config, handlers BackupHandlerHolder,
 ) (quartz.Scheduler, error) {
 	scheduler := quartz.NewStdSchedulerWithOptions(quartz.StdSchedulerOptions{
 		OutdatedThreshold: 1 * time.Second,
@@ -87,7 +87,7 @@ func ScheduleBackup(ctx context.Context, config *dto.Config, handlers BackupHand
 
 // MakeHandlers creates and returns a map of backup handlers per the configured routines.
 func MakeHandlers(clientManager ClientManager,
-	config *dto.Config,
+	config *model.Config,
 	backends BackendsHolder,
 ) BackupHandlerHolder {
 	handlers := make(BackupHandlerHolder)
@@ -100,7 +100,7 @@ func MakeHandlers(clientManager ClientManager,
 }
 
 // scheduleRoutines schedules the given handlers using the scheduler.
-func scheduleRoutines(scheduler quartz.Scheduler, config *dto.Config,
+func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config,
 	handlers BackupHandlerHolder) error {
 	for routineName, routine := range config.BackupRoutines {
 		handler := handlers[routineName]

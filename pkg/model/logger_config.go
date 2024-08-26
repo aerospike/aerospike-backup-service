@@ -15,11 +15,6 @@ type LoggerConfig struct {
 	FileWriter *FileLoggerConfig `yaml:"file-writer,omitempty" json:"file-writer,omitempty" default:""`
 }
 
-var (
-	validLoggerLevels      = []string{"TRACE", "DEBUG", "INFO", "WARN", "WARNING", "ERROR"}
-	supportedLoggerFormats = []string{"PLAIN", "JSON"}
-)
-
 // GetLevelOrDefault returns the value of the Level property.
 // If the property is not set, it returns the default value.
 func (l *LoggerConfig) GetLevelOrDefault() string {

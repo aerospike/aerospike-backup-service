@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,15 +18,15 @@ var contexts []S3Context
 var minioContext *S3Context
 
 func init() {
-	minioContext = NewS3Context(&dto.Storage{
-		Type:               dto.S3,
+	minioContext = NewS3Context(&model.Storage{
+		Type:               model.S3,
 		Path:               ptr.String("s3://as-backup-bucket/storageMinio"),
 		S3Profile:          ptr.String("minio"),
 		S3Region:           ptr.String("eu-central-1"),
 		S3EndpointOverride: ptr.String("http://localhost:9000"),
 	})
-	s3Context := NewS3Context(&dto.Storage{
-		Type:     dto.S3,
+	s3Context := NewS3Context(&model.Storage{
+		Type:     model.S3,
 		Path:     ptr.String("s3://as-backup-integration-test/storageAws"),
 		S3Region: ptr.String("eu-central-1"),
 	})

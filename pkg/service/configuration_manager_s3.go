@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
 
 // S3ConfigurationManager implements the ConfigurationManager interface,
@@ -17,14 +18,14 @@ var _ ConfigurationManager = (*S3ConfigurationManager)(nil)
 // S3ManagerBuilder defines the interface for building S3ConfigurationManager.
 type S3ManagerBuilder interface {
 	// NewS3ConfigurationManager returns a new S3ConfigurationManager.
-	NewS3ConfigurationManager(configStorage *dto.Storage) (ConfigurationManager, error)
+	NewS3ConfigurationManager(configStorage *model.Storage) (ConfigurationManager, error)
 }
 
 type S3ManagerBuilderImpl struct{}
 
 var _ S3ManagerBuilder = &S3ManagerBuilderImpl{}
 
-func (builder S3ManagerBuilderImpl) NewS3ConfigurationManager(configStorage *dto.Storage,
+func (builder S3ManagerBuilderImpl) NewS3ConfigurationManager(configStorage *model.Storage,
 ) (ConfigurationManager, error) {
 	err := configStorage.Validate()
 	if err != nil {

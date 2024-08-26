@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/prometheus/client_golang/prometheus"
@@ -51,7 +52,7 @@ func NewRestoreManager(backends BackendsHolder,
 func (r *dataRestorer) Restore(request *dto.RestoreRequestInternal,
 ) (dto.RestoreJobID, error) {
 	jobID := r.restoreJobs.newJob()
-	totalRecords, err := validateStorageContainsBackup(request.SourceStorage)
+	totalRecords, err := validateStorageContainsBackup(DTOToModelStorage(request.SourceStorage))
 	if err != nil {
 		return 0, err
 	}
@@ -233,11 +234,11 @@ func (r *dataRestorer) JobStatus(jobID dto.RestoreJobID) (*dto.RestoreJobStatus,
 	return r.restoreJobs.getStatus(jobID)
 }
 
-func validateStorageContainsBackup(storage *dto.Storage) (uint64, error) {
+func validateStorageContainsBackup(storage *model.Storage) (uint64, error) {
 	switch storage.Type {
-	case dto.Local:
+	case model.Local:
 		return validatePathContainsBackup(*storage.Path)
-	case dto.S3:
+	case model.S3:
 		return NewS3Context(storage).ValidateStorageContainsBackup()
 	}
 	return 0, nil

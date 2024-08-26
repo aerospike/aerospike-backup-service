@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -34,7 +35,7 @@ type S3Context struct {
 var _ StorageAccessor = (*S3Context)(nil)
 
 // NewS3Context returns a new S3Context.
-func NewS3Context(storage *dto.Storage) *S3Context {
+func NewS3Context(storage *model.Storage) *S3Context {
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
 	ctx := context.TODO()
@@ -83,7 +84,7 @@ func checkBucket(ctx context.Context, client *s3.Client, bucket string) {
 	}
 }
 
-func createConfig(ctx context.Context, storage *dto.Storage) aws.Config {
+func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
 	storage.SetDefaultProfile()
 	cfg, err := config.LoadDefaultConfig(
 		ctx,

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 )
@@ -12,12 +13,12 @@ import (
 type Backup interface {
 	BackupRun(
 		ctx context.Context,
-		backupRoutine *dto.BackupRoutine,
-		backupPolicy *dto.BackupPolicy,
+		backupRoutine *model.BackupRoutine,
+		backupPolicy *model.BackupPolicy,
 		client *backup.Client,
-		storage *dto.Storage,
-		secretAgent *dto.SecretAgent,
-		timebounds dto.TimeBounds,
+		storage *model.Storage,
+		secretAgent *model.SecretAgent,
+		timebounds model.TimeBounds,
 		namespace string,
 		path *string,
 	) (BackupHandler, error)

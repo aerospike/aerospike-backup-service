@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"gopkg.in/yaml.v3"
 )
@@ -34,13 +35,13 @@ var _ BackupListReader = (*BackupBackend)(nil)
 
 const metadataFile = "metadata.yaml"
 
-func newBackend(config *dto.Config, routineName string) *BackupBackend {
+func newBackend(config *model.Config, routineName string) *BackupBackend {
 	backupRoutine := config.BackupRoutines[routineName]
-	storage := config.Storage[backupRoutine.Storage]
-	backupPolicy := config.BackupPolicies[backupRoutine.BackupPolicy]
+	storage := backupRoutine.Storage
+	backupPolicy := backupRoutine.BackupPolicy
 	removeFullBackup := backupPolicy.RemoveFiles.RemoveFullBackup()
 	switch storage.Type {
-	case dto.Local:
+	case model.Local:
 		routinePath := filepath.Join(*storage.Path, routineName)
 		return &BackupBackend{
 			StorageAccessor:        NewOSDiskAccessor(),
@@ -50,7 +51,7 @@ func newBackend(config *dto.Config, routineName string) *BackupBackend {
 			removeFullBackup:       removeFullBackup,
 			fullBackupInProgress:   &atomic.Bool{},
 		}
-	case dto.S3:
+	case model.S3:
 		s3Context := NewS3Context(storage)
 		routinePath := filepath.Join(s3Context.path, routineName)
 		return &BackupBackend{

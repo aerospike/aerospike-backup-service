@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -22,9 +22,9 @@ func (m *MockDownloader) read(configFile string) ([]byte, error) {
 type MockS3Builder struct {
 }
 
-func (m *MockS3Builder) NewS3ConfigurationManager(storage *dto.Storage,
+func (m *MockS3Builder) NewS3ConfigurationManager(storage *model.Storage,
 ) (ConfigurationManager, error) {
-	if storage.Type == dto.S3 {
+	if storage.Type == model.S3 {
 		return &S3ConfigurationManager{}, nil
 	}
 	return nil, errors.New("wrong type")
