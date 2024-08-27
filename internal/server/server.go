@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/internal/server/middleware"
 	"github.com/aerospike/aerospike-backup-service/internal/util"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/reugn/go-quartz/quartz"
 	"golang.org/x/time/rate"
@@ -23,13 +23,13 @@ const (
 
 // HTTPServer is the backup service HTTP server wrapper.
 type HTTPServer struct {
-	config *dto.Config
+	config *model.Config
 	server *http.Server
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
 func NewHTTPServer(
-	config *dto.Config,
+	config *model.Config,
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
@@ -51,7 +51,7 @@ func NewHTTPServer(
 
 	mw := middleware.RateLimiter(rateLimiter, whitelist)
 
-	restoreMgr := service.NewRestoreManager(backends, config, service.NewRestoreGo(), clientManger)
+	restoreMgr := service.NewRestoreManager(backends, nil, service.NewRestoreGo(), clientManger) //TODO
 
 	h := handlers.NewService(
 		config,
