@@ -3,7 +3,7 @@ package server
 import (
 	"net/http"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/handlers"
+	"github.com/aerospike/aerospike-backup-service/v2/internal/server/handlers"
 	"github.com/gorilla/mux"
 )
 
