@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 )
 
 type jobInfo struct {

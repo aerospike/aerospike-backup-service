@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"gopkg.in/yaml.v3"
 )
 

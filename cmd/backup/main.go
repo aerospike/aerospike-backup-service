@@ -12,9 +12,9 @@ import (
 
 	backup "github.com/aerospike/aerospike-backup-service"
 	"github.com/aerospike/aerospike-backup-service/internal/server"
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/internal/util"
 	"github.com/aerospike/aerospike-backup-service/pkg/converter"
-	"github.com/aerospike/aerospike-backup-service/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"

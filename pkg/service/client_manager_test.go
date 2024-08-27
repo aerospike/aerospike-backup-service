@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/mocks"

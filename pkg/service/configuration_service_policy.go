@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 )
 
 // AddPolicy adds a new BackupPolicy to the configuration if a policy with the same name

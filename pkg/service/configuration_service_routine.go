@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 )
 
 // AddRoutine adds a new BackupRoutine to the configuration if a routine with the same name

@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 )
 
 func TestRoutine_Add(t *testing.T) {
