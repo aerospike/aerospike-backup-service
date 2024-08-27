@@ -1,4 +1,4 @@
-module github.com/aerospike/aerospike-backup-service
+module github.com/aerospike/aerospike-backup-service/v2
 
 go 1.22
 
