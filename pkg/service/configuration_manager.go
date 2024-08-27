@@ -13,8 +13,8 @@ import (
 )
 
 type ConfigurationManager interface {
-	ReadConfiguration() (*dto.Config, error)
-	WriteConfiguration(config *dto.Config) error
+	ReadConfiguration() (*model.Config, error)
+	WriteConfiguration(config *model.Config) error
 }
 
 type Reader interface {
@@ -103,7 +103,7 @@ func (b *ConfigManagerBuilder) makeConfigStorage(configURI string, remote bool,
 		return nil, err
 	}
 
-	configStorage := &model.Storage{}
+	configStorage := &dto.Storage{}
 	err = yaml.Unmarshal(content, configStorage)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (b *ConfigManagerBuilder) makeConfigStorage(configURI string, remote bool,
 	if err != nil {
 		return nil, err
 	}
-	return configStorage, nil
+	return configStorage.ToModel(), nil
 }
 
 func (b *ConfigManagerBuilder) loadFileContent(configFile string) ([]byte, error) {

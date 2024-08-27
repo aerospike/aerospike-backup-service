@@ -24,7 +24,7 @@ func DTOToModelConfig(dtoConfig *dto.Config) *model.Config {
 	}
 
 	for k, v := range dtoConfig.Storage {
-		modelConfig.Storage[k] = DTOToModelStorage(v)
+		modelConfig.Storage[k] = v.ToModel()
 	}
 
 	for k, v := range dtoConfig.BackupPolicies {
@@ -154,22 +154,6 @@ func DTOToModelTLS(dto *dto.TLS) *model.TLS {
 		Keyfile:         dto.Keyfile,
 		KeyfilePassword: dto.KeyfilePassword,
 		Certfile:        dto.Certfile,
-	}
-}
-
-func DTOToModelStorage(dto *dto.Storage) *model.Storage {
-	if dto == nil {
-		return nil
-	}
-	return &model.Storage{
-		Type:               model.StorageType(dto.Type),
-		Path:               dto.Path,
-		S3Region:           dto.S3Region,
-		S3Profile:          dto.S3Profile,
-		S3EndpointOverride: dto.S3EndpointOverride,
-		S3LogLevel:         dto.S3LogLevel,
-		MinPartSize:        dto.MinPartSize,
-		MaxConnsPerHost:    dto.MaxConnsPerHost,
 	}
 }
 
@@ -319,7 +303,7 @@ func DTOToModelRestoreRequest(dto *dto.RestoreRequest) *model.RestoreRequest {
 	return &model.RestoreRequest{
 		DestinationCuster: DTOToModelAerospikeCluster(dto.DestinationCuster),
 		Policy:            DTOToModelRestorePolicy(dto.Policy),
-		SourceStorage:     DTOToModelStorage(dto.SourceStorage),
+		SourceStorage:     dto.SourceStorage.ToModel(),
 		SecretAgent:       DTOToModelSecretAgent(dto.SecretAgent),
 	}
 }

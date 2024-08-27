@@ -12,9 +12,8 @@ import (
 
 	backup "github.com/aerospike/aerospike-backup-service"
 	"github.com/aerospike/aerospike-backup-service/internal/server"
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/internal/util"
-	"github.com/aerospike/aerospike-backup-service/pkg/converter"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
@@ -87,11 +86,10 @@ func startService(configFile string, remote bool) error {
 	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 
 	// schedule all configured backups
-	modelConfig := converter.DTOToModelConfig(config)
-	backends := service.NewBackupBackends(modelConfig)
+	backends := service.NewBackupBackends(config)
 	clientManager := service.NewClientManager(config.AerospikeClusters, &service.DefaultClientFactory{})
-	handlers := service.MakeHandlers(clientManager, modelConfig, backends)
-	scheduler, err := service.ScheduleBackup(ctx, modelConfig, handlers)
+	handlers := service.MakeHandlers(clientManager, config, backends)
+	scheduler, err := service.ScheduleBackup(ctx, config, handlers)
 	if err != nil {
 		return err
 	}
@@ -118,13 +116,10 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func readConfiguration(configurationManager service.ConfigurationManager) (*dto.Config, error) {
+func readConfiguration(configurationManager service.ConfigurationManager) (*model.Config, error) {
 	config, err := configurationManager.ReadConfiguration()
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
-		return nil, err
-	}
-	if err = config.Validate(); err != nil {
 		return nil, err
 	}
 	slog.Info(fmt.Sprintf("Configuration: %v", *config))
@@ -132,7 +127,7 @@ func readConfiguration(configurationManager service.ConfigurationManager) (*dto.
 }
 
 func runHTTPServer(ctx context.Context,
-	config *dto.Config,
+	config *model.Config,
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
-	"github.com/aerospike/aerospike-backup-service/pkg/converter"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/aws/smithy-go/ptr"
@@ -53,14 +52,14 @@ func NewRestoreManager(backends BackendsHolder,
 func (r *dataRestorer) Restore(request *dto.RestoreRequestInternal,
 ) (dto.RestoreJobID, error) {
 	jobID := r.restoreJobs.newJob()
-	totalRecords, err := validateStorageContainsBackup(converter.DTOToModelStorage(request.SourceStorage))
+	totalRecords, err := validateStorageContainsBackup(request.SourceStorage.ToModel())
 	if err != nil {
 		return 0, err
 	}
 
 	ctx := context.TODO()
 	go func() {
-		client, err := r.clientManager.CreateClient(request.DestinationCuster)
+		client, err := r.clientManager.CreateClient(request.DestinationCuster.ToModel())
 		if err != nil {
 			slog.Error("Failed to restore by path",
 				slog.Any("cluster", request.DestinationCuster),
@@ -116,7 +115,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	jobID dto.RestoreJobID,
 	fullBackups []dto.BackupDetails,
 ) {
-	client, err := r.clientManager.CreateClient(request.DestinationCuster)
+	client, err := r.clientManager.CreateClient(request.DestinationCuster.ToModel())
 	if err != nil {
 		slog.Error("Failed to restore by timestamp",
 			slog.Any("cluster", request.DestinationCuster),

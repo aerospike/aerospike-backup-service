@@ -4,13 +4,13 @@ package service
 import (
 	"fmt"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 )
 
 // AddCluster adds a new AerospikeCluster to the configuration if a cluster with the same name
 // doesn't already exist.
-func AddCluster(config *dto.Config, name string, newCluster *dto.AerospikeCluster) error {
+func AddCluster(config *model.Config, name string, newCluster *model.AerospikeCluster) error {
 	_, found := config.AerospikeClusters[name]
 	if found {
 		return fmt.Errorf("aerospike cluster with the same name %s already exists", name)
@@ -24,7 +24,7 @@ func AddCluster(config *dto.Config, name string, newCluster *dto.AerospikeCluste
 }
 
 // UpdateCluster updates an existing AerospikeCluster in the configuration.
-func UpdateCluster(config *dto.Config, name string, updatedCluster *dto.AerospikeCluster) error {
+func UpdateCluster(config *model.Config, name string, updatedCluster *model.AerospikeCluster) error {
 	_, found := config.AerospikeClusters[name]
 	if !found {
 		return fmt.Errorf("cluster %s not found", name)
@@ -39,13 +39,13 @@ func UpdateCluster(config *dto.Config, name string, updatedCluster *dto.Aerospik
 
 // DeleteCluster deletes an AerospikeCluster from the configuration if it is not used in
 // any backup routine.
-func DeleteCluster(config *dto.Config, name string) error {
+func DeleteCluster(config *model.Config, name string) error {
 	_, found := config.AerospikeClusters[name]
 	if !found {
 		return fmt.Errorf("cluster %s not found", name)
 	}
 
-	routine := util.Find(config.BackupRoutines, func(policy *dto.BackupRoutine) bool {
+	routine := util.Find(config.BackupRoutines, func(policy *model.BackupRoutine) bool {
 		return policy.SourceCluster == name
 	})
 	if routine != nil {

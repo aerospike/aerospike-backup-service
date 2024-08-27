@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,7 +26,7 @@ func NewFileConfigurationManager(path string) ConfigurationManager {
 }
 
 // ReadConfiguration reads the configuration from the given file path.
-func (cm *FileConfigurationManager) ReadConfiguration() (*dto.Config, error) {
+func (cm *FileConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	cm.Lock()
 	defer cm.Unlock()
 
@@ -45,11 +46,11 @@ func (cm *FileConfigurationManager) ReadConfiguration() (*dto.Config, error) {
 	}
 
 	err = config.Validate()
-	return config, err
+	return config.ToModel(), err
 }
 
 // WriteConfiguration writes the configuration to the given file path.
-func (cm *FileConfigurationManager) WriteConfiguration(config *dto.Config) error {
+func (cm *FileConfigurationManager) WriteConfiguration(config *model.Config) error {
 	cm.Lock()
 	defer cm.Unlock()
 

@@ -27,18 +27,13 @@ var _ S3ManagerBuilder = &S3ManagerBuilderImpl{}
 
 func (builder S3ManagerBuilderImpl) NewS3ConfigurationManager(configStorage *model.Storage,
 ) (ConfigurationManager, error) {
-	err := configStorage.Validate()
-	if err != nil {
-		return nil, err
-	}
-
 	return &S3ConfigurationManager{
 		NewS3Context(configStorage),
 	}, nil
 }
 
 // ReadConfiguration reads and returns the configuration from S3.
-func (s *S3ConfigurationManager) ReadConfiguration() (*dto.Config, error) {
+func (s *S3ConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	config := dto.NewConfigWithDefaultValues()
 	err := s.readFile(s.path, config)
 	if err != nil {
@@ -50,10 +45,10 @@ func (s *S3ConfigurationManager) ReadConfiguration() (*dto.Config, error) {
 		return nil, err
 	}
 
-	return config, nil
+	return config.ToModel(), nil
 }
 
 // WriteConfiguration writes the configuration to S3.
-func (s *S3ConfigurationManager) WriteConfiguration(config *dto.Config) error {
+func (s *S3ConfigurationManager) WriteConfiguration(config *model.Config) error {
 	return s.writeYaml(s.path, config)
 }

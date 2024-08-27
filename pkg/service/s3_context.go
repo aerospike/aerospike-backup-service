@@ -85,7 +85,7 @@ func checkBucket(ctx context.Context, client *s3.Client, bucket string) {
 }
 
 func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
-	storage.SetDefaultProfile()
+	//storage.SetDefaultProfile()
 	cfg, err := config.LoadDefaultConfig(
 		ctx,
 		config.WithSharedConfigProfile(*storage.S3Profile),
