@@ -7,13 +7,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // LogHandler returns the application log handler with the
 // configured level.
-func LogHandler(config *dto.LoggerConfig) slog.Handler {
+func LogHandler(config *model.LoggerConfig) slog.Handler {
 	const addSource = true
 	writer := logWriter(config)
 	switch strings.ToUpper(config.GetFormatOrDefault()) {
@@ -32,7 +32,7 @@ func LogHandler(config *dto.LoggerConfig) slog.Handler {
 	}
 }
 
-func logWriter(config *dto.LoggerConfig) io.Writer {
+func logWriter(config *model.LoggerConfig) io.Writer {
 	if config.FileWriter != nil {
 		fileWriter := &lumberjack.Logger{
 			Filename:   config.FileWriter.Filename,
