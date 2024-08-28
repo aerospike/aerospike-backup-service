@@ -1,9 +1,13 @@
 package dto
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
+
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
+
+var _ ReadWriteDTO[model.Config] = (*Config)(nil)
 
 // Config represents the service configuration file.
 // @Description Config represents the service configuration file.
@@ -18,6 +22,21 @@ type Config struct {
 	SecretAgents      map[string]*SecretAgent      `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 }
 
+func (c *Config) Serialize(format SerializationFormat) ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Config) Deserialize(r io.Reader, format SerializationFormat) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Config) fromModel(m *model.Config) {
+	//TODO implement me
+	panic("implement me")
+}
+
 // NewConfigWithDefaultValues returns a new Config with default values.
 func NewConfigWithDefaultValues() *Config {
 	return &Config{
@@ -27,15 +46,6 @@ func NewConfigWithDefaultValues() *Config {
 		BackupPolicies:    map[string]*BackupPolicy{},
 		AerospikeClusters: map[string]*AerospikeCluster{},
 	}
-}
-
-// String satisfies the fmt.Stringer interface.
-func (c Config) String() string {
-	cfg, err := json.Marshal(c)
-	if err != nil {
-		return err.Error()
-	}
-	return string(cfg)
 }
 
 // Validate validates the configuration.
@@ -87,6 +97,38 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+func (c *Config) ToModel() *model.Config {
+	modelConfig := &model.Config{
+		ServiceConfig:     c.ServiceConfig.ToModel(),
+		AerospikeClusters: make(map[string]*model.AerospikeCluster),
+		Storage:           make(map[string]*model.Storage),
+		BackupPolicies:    make(map[string]*model.BackupPolicy),
+		BackupRoutines:    make(map[string]*model.BackupRoutine),
+		SecretAgents:      make(map[string]*model.SecretAgent),
+	}
+
+	for k, v := range c.AerospikeClusters {
+		modelConfig.AerospikeClusters[k] = v.ToModel()
+	}
+
+	for k, v := range c.Storage {
+		modelConfig.Storage[k] = v.ToModel()
+	}
+
+	for k, v := range c.BackupPolicies {
+		modelConfig.BackupPolicies[k] = v.ToModel()
+	}
+
+	for k, v := range c.SecretAgents {
+		modelConfig.SecretAgents[k] = v.ToModel()
+	}
+
+	for k, v := range c.BackupRoutines {
+		modelConfig.BackupRoutines[k] = v.ToModel(modelConfig)
+	}
+
+	return modelConfig
+}
 func emptyFieldValidationError(field string) error {
 	return fmt.Errorf("empty %s is not allowed", field)
 }

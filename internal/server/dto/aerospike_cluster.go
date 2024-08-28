@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v7"
 )
@@ -263,6 +264,10 @@ func (c *AerospikeCluster) ASClientHosts() []*as.Host {
 		})
 	}
 	return hosts
+}
+
+func (c *AerospikeCluster) ToModel() *model.AerospikeCluster {
+	return nil
 }
 
 // TLS represents the Aerospike cluster TLS configuration options.

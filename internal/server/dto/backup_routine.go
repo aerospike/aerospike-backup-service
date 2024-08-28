@@ -3,6 +3,7 @@ package dto
 import (
 	"fmt"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -92,4 +93,25 @@ func (r *BackupRoutine) Validate(c *Config) error {
 		}
 	}
 	return nil
+}
+
+func (r *BackupRoutine) ToModel(config *model.Config) *model.BackupRoutine {
+	var secretAgent *model.SecretAgent
+	if r.SecretAgent != nil {
+		secretAgent = config.SecretAgents[*r.SecretAgent]
+	}
+
+	return &model.BackupRoutine{
+		BackupPolicy:     config.BackupPolicies[r.BackupPolicy],
+		SourceCluster:    config.AerospikeClusters[r.SourceCluster],
+		Storage:          config.Storage[r.Storage],
+		SecretAgent:      secretAgent,
+		IntervalCron:     r.IntervalCron,
+		IncrIntervalCron: r.IncrIntervalCron,
+		Namespaces:       r.Namespaces,
+		SetList:          r.SetList,
+		BinList:          r.BinList,
+		PreferRacks:      r.PreferRacks,
+		PartitionList:    r.PartitionList,
+	}
 }

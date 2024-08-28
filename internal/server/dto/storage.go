@@ -3,18 +3,24 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"slices"
 	"strings"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aws/smithy-go/ptr"
 )
+
+var _ ReadWriteDTO[model.Storage] = (*Storage)(nil)
 
 // Storage represents the configuration for a backup storage details.
 // @Description Storage represents the configuration for a backup storage details.
 //
 //nolint:lll
 type Storage struct {
+	BaseSerializableDTO
+	BaseDeserializableDTO
 	// The type of the storage provider
 	Type StorageType `yaml:"type" json:"type" enums:"local,aws-s3" validate:"required"`
 	// The root path for the backup repository.
@@ -94,5 +100,49 @@ func (s *Storage) validateType() error {
 func (s *Storage) SetDefaultProfile() {
 	if s.Type == S3 && s.S3Profile == nil {
 		s.S3Profile = ptr.String("default")
+	}
+}
+
+// NewStorage creates a new Storage object from a byte slice
+func NewStorage(r io.Reader, format SerializationFormat) (*Storage, error) {
+	s := &Storage{}
+	if err := s.Deserialize(r, format); err != nil {
+		return nil, err
+	}
+
+	if err := s.Validate(); err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func (s *Storage) fromModel(m *model.Storage) {
+	s.Type = StorageType(m.Type)
+	s.Path = m.Path
+	s.S3Region = m.S3Region
+	s.S3Profile = m.S3Profile
+	s.S3EndpointOverride = m.S3EndpointOverride
+	s.S3LogLevel = m.S3LogLevel
+	s.MinPartSize = m.MinPartSize
+	s.MaxConnsPerHost = m.MaxConnsPerHost
+}
+
+func NewStorageFromModel(m *model.Storage) *Storage {
+	var s Storage
+	s.fromModel(m)
+	return &s
+}
+
+func (s *Storage) ToModel() *model.Storage {
+	return &model.Storage{
+		Type:               model.StorageType(s.Type),
+		Path:               s.Path,
+		S3Region:           s.S3Region,
+		S3Profile:          s.S3Profile,
+		S3EndpointOverride: s.S3EndpointOverride,
+		S3LogLevel:         s.S3LogLevel,
+		MinPartSize:        s.MinPartSize,
+		MaxConnsPerHost:    s.MaxConnsPerHost,
 	}
 }

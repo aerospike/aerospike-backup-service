@@ -3,6 +3,8 @@ package dto
 import (
 	"fmt"
 	"slices"
+
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
 
 // LoggerConfig represents the backup service logger configuration.
@@ -66,6 +68,15 @@ func (l *LoggerConfig) Validate() error {
 	return nil
 }
 
+func (l *LoggerConfig) ToModel() *model.LoggerConfig {
+	return &model.LoggerConfig{
+		Level:        l.Level,
+		Format:       l.Format,
+		StdoutWriter: l.StdoutWriter,
+		FileWriter:   l.FileWriter.ToModel(),
+	}
+}
+
 // FileLoggerConfig represents the configuration for the file logger writer.
 // @Description FileLoggerConfig represents the configuration for the file logger writer.
 type FileLoggerConfig struct {
@@ -106,4 +117,14 @@ func (f *FileLoggerConfig) Validate() error {
 		return fmt.Errorf("negative logger MaxBackups: %d", f.MaxBackups)
 	}
 	return nil
+}
+
+func (l *FileLoggerConfig) ToModel() *model.FileLoggerConfig {
+	return &model.FileLoggerConfig{
+		Filename:   l.Filename,
+		MaxSize:    l.MaxSize,
+		MaxAge:     l.MaxAge,
+		MaxBackups: l.MaxBackups,
+		Compress:   l.Compress,
+	}
 }

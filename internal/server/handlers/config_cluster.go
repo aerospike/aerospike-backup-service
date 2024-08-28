@@ -59,7 +59,7 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddCluster(s.config, name, &newCluster)
+	err = service.AddCluster(s.config, name, newCluster.ToModel())
 	if err != nil {
 		hLogger.Error("failed to add cluster",
 			slog.String("name", name),
@@ -185,7 +185,7 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateCluster(s.config, clusterName, &updatedCluster)
+	err = service.UpdateCluster(s.config, clusterName, updatedCluster.ToModel())
 	if err != nil {
 		hLogger.Error("failed to update cluster",
 			slog.String("name", clusterName),

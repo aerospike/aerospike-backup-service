@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -53,28 +54,28 @@ func testBackupDetails() dto.BackupDetails {
 	}
 }
 
-func testConfig() *dto.Config {
-	clusters := make(map[string]*dto.AerospikeCluster)
+func testConfig() *model.Config {
+	clusters := make(map[string]*model.AerospikeCluster)
 	cluster := testConfigCluster()
 	clusters[testCluster] = &cluster
 
-	policies := make(map[string]*dto.BackupPolicy)
+	policies := make(map[string]*model.BackupPolicy)
 	policy := testConfigBackupPolicy()
 	policies[testPolicy] = &policy
 
-	storages := make(map[string]*dto.Storage)
+	storages := make(map[string]*model.Storage)
 	storage := testConfigStorage()
 	storages[testStorage] = &storage
 
-	routines := make(map[string]*dto.BackupRoutine)
-	routines[testRoutineName] = &dto.BackupRoutine{
+	routines := make(map[string]*model.BackupRoutine)
+	routines[testRoutineName] = &model.BackupRoutine{
 		IntervalCron: "0 0 * * * *",
 	}
 
-	return &dto.Config{
-		ServiceConfig: &dto.BackupServiceConfig{
-			HTTPServer: &dto.HTTPServerConfig{},
-			Logger:     &dto.LoggerConfig{},
+	return &model.Config{
+		ServiceConfig: &model.BackupServiceConfig{
+			HTTPServer: &model.HTTPServerConfig{},
+			Logger:     &model.LoggerConfig{},
 		},
 		AerospikeClusters: clusters,
 		Storage:           storages,
@@ -169,7 +170,7 @@ func (mock backendsHolderMock) SetData(_ map[string]*service.BackupBackend) {
 
 type configurationManagerMock struct{}
 
-func (mock configurationManagerMock) ReadConfiguration() (*dto.Config, error) {
+func (mock configurationManagerMock) ReadConfiguration() (*model.Config, error) {
 	return testConfig(), nil
 }
 

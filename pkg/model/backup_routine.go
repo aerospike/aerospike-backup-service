@@ -8,7 +8,7 @@ type BackupRoutine struct {
 	// The name of the corresponding backup policy.
 	BackupPolicy *BackupPolicy
 	// The name of the corresponding source cluster.
-	SourceCluster string `yaml:"source-cluster,omitempty" json:"source-cluster,omitempty" example:"testCluster" validate:"required"`
+	SourceCluster *AerospikeCluster `yaml:"source-cluster,omitempty" json:"source-cluster,omitempty" example:"testCluster" validate:"required"`
 	// The name of the corresponding storage provider configuration.
 	Storage *Storage
 	// The Secret Agent configuration for the routine (optional).

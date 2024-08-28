@@ -3,13 +3,13 @@ package handlers
 import (
 	"log/slog"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/reugn/go-quartz/quartz"
 )
 
 type Service struct {
-	config               *dto.Config
+	config               *model.Config
 	scheduler            quartz.Scheduler
 	restoreManager       service.RestoreManager
 	backupBackends       service.BackendsHolder
@@ -20,7 +20,7 @@ type Service struct {
 }
 
 func NewService(
-	config *dto.Config,
+	config *model.Config,
 	scheduler quartz.Scheduler,
 	restoreManager service.RestoreManager,
 	backupBackends service.BackendsHolder,

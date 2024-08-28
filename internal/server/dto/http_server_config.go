@@ -3,6 +3,8 @@ package dto
 import (
 	"fmt"
 	"strings"
+
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
 
 // HTTPServerConfig represents the service's HTTP server configuration.
@@ -65,6 +67,27 @@ func (s *HTTPServerConfig) GetContextPathOrDefault() string {
 	return *defaultConfig.http.ContextPath
 }
 
+// Validate validates the HTTP server configuration.
+func (s *HTTPServerConfig) Validate() error {
+	if s.ContextPath != nil && !strings.HasPrefix(*s.ContextPath, "/") {
+		return fmt.Errorf("context-path must start with a slash: %s", *s.ContextPath)
+	}
+	if s.Timeout != nil && *s.Timeout < 0 {
+		return fmt.Errorf("timeout cannot be negative: %d", *s.Timeout)
+	}
+	return nil
+}
+
+func (s *HTTPServerConfig) ToModel() *model.HTTPServerConfig {
+	return &model.HTTPServerConfig{
+		Address:     s.Address,
+		Port:        s.Port,
+		Rate:        s.Rate.ToModel(),
+		ContextPath: s.ContextPath,
+		Timeout:     s.Timeout,
+	}
+}
+
 // RateLimiterConfig represents the service's HTTP server rate limiter configuration.
 // @Description RateLimiterConfig is the HTTP server rate limiter configuration.
 type RateLimiterConfig struct {
@@ -103,13 +126,14 @@ func (r *RateLimiterConfig) GetWhiteListOrDefault() []string {
 	return defaultConfig.http.Rate.WhiteList
 }
 
-// Validate validates the HTTP server configuration.
-func (s *HTTPServerConfig) Validate() error {
-	if s.ContextPath != nil && !strings.HasPrefix(*s.ContextPath, "/") {
-		return fmt.Errorf("context-path must start with a slash: %s", *s.ContextPath)
+func (r *RateLimiterConfig) ToModel() *model.RateLimiterConfig {
+	if r == nil {
+		return nil
 	}
-	if s.Timeout != nil && *s.Timeout < 0 {
-		return fmt.Errorf("timeout cannot be negative: %d", *s.Timeout)
+
+	return &model.RateLimiterConfig{
+		Tps:       r.Tps,
+		Size:      r.Size,
+		WhiteList: r.WhiteList,
 	}
-	return nil
 }

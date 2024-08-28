@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
-	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/gorilla/mux"
 )
 
@@ -39,8 +38,7 @@ func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Requ
 func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addStorage"))
 
-	var newStorage dto.Storage
-	err := json.NewDecoder(r.Body).Decode(&newStorage)
+	newStorage, err := dto.NewStorage(r.Body, dto.JSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -52,7 +50,7 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddStorage(s.config, name, &newStorage)
+	err = s.config.AddStorage(name, newStorage.ToModel())
 	if err != nil {
 		hLogger.Error("failed to add storage",
 			slog.String("name", name),
@@ -131,7 +129,8 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Storage %s could not be found", storageName), http.StatusNotFound)
 		return
 	}
-	jsonResponse, err := json.Marshal(storage)
+
+	jsonResponse, err := dto.NewStorageFromModel(storage).Serialize(dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal starage",
 			slog.Any("error", err),
@@ -175,7 +174,7 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateStorage(s.config, storageName, &updatedStorage)
+	err = s.config.UpdateStorage(storageName, updatedStorage.ToModel())
 	if err != nil {
 		hLogger.Error("failed to update storage",
 			slog.String("name", storageName),
@@ -215,7 +214,7 @@ func (s *Service) deleteStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := service.DeleteStorage(s.config, storageName)
+	err := s.config.DeleteStorage(storageName)
 	if err != nil {
 		hLogger.Error("failed to delete storage",
 			slog.String("name", storageName),

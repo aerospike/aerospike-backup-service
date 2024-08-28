@@ -3,6 +3,8 @@ package dto
 import (
 	"encoding/json"
 	"errors"
+
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
 
 // RestoreJobID represents the restore operation job id.
@@ -102,5 +104,13 @@ func (r *RestoreTimestampRequest) Validate() error {
 	if r.Routine == "" {
 		return emptyFieldValidationError(r.Routine)
 	}
+	return nil
+}
+
+func (r RestoreTimestampRequest) ToModel() *model.RestoreTimestampRequest {
+	return nil
+}
+
+func (i RestoreRequestInternal) ToModel() *model.RestoreRequestInternal {
 	return nil
 }

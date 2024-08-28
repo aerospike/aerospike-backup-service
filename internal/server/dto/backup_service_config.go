@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/aerospike/aerospike-backup-service/pkg/model"
+
 // BackupServiceConfig represents the backup service configuration properties.
 // @Description BackupServiceConfig represents the backup service configuration properties.
 type BackupServiceConfig struct {
@@ -14,5 +16,12 @@ func NewBackupServiceConfigWithDefaultValues() *BackupServiceConfig {
 	return &BackupServiceConfig{
 		HTTPServer: &HTTPServerConfig{},
 		Logger:     &LoggerConfig{},
+	}
+}
+
+func (dto *BackupServiceConfig) ToModel() *model.BackupServiceConfig {
+	return &model.BackupServiceConfig{
+		HTTPServer: dto.HTTPServer.ToModel(),
+		Logger:     dto.Logger.ToModel(),
 	}
 }

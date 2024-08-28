@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
-	"github.com/aerospike/aerospike-backup-service/pkg/converter"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 )
 
@@ -69,8 +68,8 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid configuration: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	s.config = &newConfig
-	err = s.configurationManager.WriteConfiguration(&newConfig)
+	s.config = newConfig.ToModel()
+	err = s.configurationManager.WriteConfiguration(s.config)
 	if err != nil {
 		// We won't log config as it is not secure.
 		hLogger.Error("failed to update configuration",
@@ -93,9 +92,7 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ApplyConfig(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ApplyConfig"))
 
-	// Because of this part, we have noo tests for this method.
-	modelConfig := converter.DTOToModelConfig(s.config)
-	handlers, err := service.ApplyNewConfig(s.scheduler, modelConfig, s.backupBackends, s.clientManger)
+	handlers, err := service.ApplyNewConfig(s.scheduler, s.config, s.backupBackends, s.clientManger)
 	if err != nil {
 		hLogger.Error("failed to apply new config",
 			slog.Any("error", err),

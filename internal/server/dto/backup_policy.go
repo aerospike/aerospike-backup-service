@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 )
 
@@ -157,4 +158,24 @@ func (p *BackupPolicy) Validate() error {
 		return err
 	}
 	return nil
+}
+
+func (p *BackupPolicy) ToModel() *model.BackupPolicy {
+	return &model.BackupPolicy{
+		Parallel:          p.Parallel,
+		SocketTimeout:     p.SocketTimeout,
+		TotalTimeout:      p.TotalTimeout,
+		MaxRetries:        p.MaxRetries,
+		RetryDelay:        p.RetryDelay,
+		RemoveFiles:       (*model.RemoveFilesType)(p.RemoveFiles),
+		NoRecords:         p.NoRecords,
+		NoIndexes:         p.NoIndexes,
+		NoUdfs:            p.NoUdfs,
+		Bandwidth:         p.Bandwidth,
+		RecordsPerSecond:  p.RecordsPerSecond,
+		FileLimit:         p.FileLimit,
+		EncryptionPolicy:  p.EncryptionPolicy.ToModel(),
+		CompressionPolicy: p.CompressionPolicy.ToModel(),
+		Sealed:            p.Sealed,
+	}
 }

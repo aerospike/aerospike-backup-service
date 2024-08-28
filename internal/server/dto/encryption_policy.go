@@ -3,6 +3,8 @@ package dto
 import (
 	"errors"
 	"fmt"
+
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
 
 // Encryption modes
@@ -37,4 +39,17 @@ func (p *EncryptionPolicy) Validate() error {
 		return errors.New("encryption key location not specified")
 	}
 	return nil
+}
+
+func (p *EncryptionPolicy) ToModel() *model.EncryptionPolicy {
+	if p == nil {
+		return nil
+	}
+
+	return &model.EncryptionPolicy{
+		Mode:      p.Mode,
+		KeyFile:   p.KeyFile,
+		KeyEnv:    p.KeyEnv,
+		KeySecret: p.KeySecret,
+	}
 }

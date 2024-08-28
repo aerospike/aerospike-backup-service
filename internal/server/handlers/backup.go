@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/gorilla/mux"
 	"github.com/reugn/go-quartz/quartz"
@@ -186,7 +187,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-func readBackupsLogic(routines map[string]*dto.BackupRoutine,
+func readBackupsLogic(routines map[string]*model.BackupRoutine,
 	backends service.BackendsHolder,
 	timeBounds *dto.TimeBounds,
 	isFullBackup bool) (map[string][]dto.BackupDetails, error) {

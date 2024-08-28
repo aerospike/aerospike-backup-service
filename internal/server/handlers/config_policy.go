@@ -57,7 +57,7 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddPolicy(s.config, name, &request)
+	err = service.AddPolicy(s.config, name, request.ToModel())
 	if err != nil {
 		hLogger.Error("failed to add policy",
 			slog.String("name", name),
@@ -184,7 +184,7 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdatePolicy(s.config, name, &request)
+	err = service.UpdatePolicy(s.config, name, request.ToModel())
 	if err != nil {
 		hLogger.Error("failed to update policy",
 			slog.String("name", name),

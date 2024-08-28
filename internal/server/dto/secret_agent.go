@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/aerospike/aerospike-backup-service/pkg/model"
+
 // SecretAgent represents the configuration of an Aerospike Secret Agent
 // for a backup/restore operation.
 // Aerospike Secret Agent acts as a proxy layer between Aerospike server and one or more
@@ -20,4 +22,15 @@ type SecretAgent struct {
 	TLSCAString *string `yaml:"tls-ca-file,omitempty" json:"tls-ca-file,omitempty" example:"/path/to/ca.pem"`
 	// Flag that shows if secret agent responses are encrypted with base64.
 	IsBase64 *bool `yaml:"is-base64,omitempty" json:"is-base64,omitempty" example:"false"`
+}
+
+func (s *SecretAgent) ToModel() *model.SecretAgent {
+	return &model.SecretAgent{
+		ConnectionType: s.ConnectionType,
+		Address:        s.Address,
+		Port:           s.Port,
+		Timeout:        s.Timeout,
+		TLSCAString:    s.TLSCAString,
+		IsBase64:       s.IsBase64,
+	}
 }

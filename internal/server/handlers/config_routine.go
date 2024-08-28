@@ -58,7 +58,7 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// convert
-	err = service.AddRoutine(s.config, name, &newRoutine)
+	err = service.AddRoutine(s.config, name, newRoutine.ToModel(s.config))
 	if err != nil {
 		hLogger.Error("failed to add routine",
 			slog.String("name", name),
@@ -185,7 +185,7 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdateRoutine(s.config, name, &updatedRoutine)
+	err = service.UpdateRoutine(s.config, name, updatedRoutine.ToModel(s.config))
 	if err != nil {
 		hLogger.Error("failed to update routine",
 			slog.String("name", name),
