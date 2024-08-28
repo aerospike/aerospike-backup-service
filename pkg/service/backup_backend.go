@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
+	"io"
 	"log/slog"
 	"path/filepath"
 	"sort"
@@ -53,7 +54,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 		}
 	case model.S3:
 		s3Context := NewS3Context(storage)
-		routinePath := filepath.Join(s3Context.path, routineName)
+		routinePath := filepath.Join(s3Context.Path, routineName)
 		return &BackupBackend{
 			StorageAccessor:        s3Context,
 			fullBackupsPath:        filepath.Join(routinePath, dto.FullBackupDirectory),
@@ -244,7 +245,7 @@ func (b *BackupBackend) packageFiles(files []string) ([]byte, error) {
 	w := zip.NewWriter(buf)
 
 	for _, file := range files {
-		data, err := b.read(file)
+		data, err := b.Read(file)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read file %s: %w", file, err)
 		}
@@ -254,7 +255,7 @@ func (b *BackupBackend) packageFiles(files []string) ([]byte, error) {
 			return nil, fmt.Errorf("failed to create entry for filename %s: %w", file, err)
 		}
 
-		_, err = f.Write(data)
+		_, err = io.Copy(f, data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to write file %s: %w", file, err)
 		}

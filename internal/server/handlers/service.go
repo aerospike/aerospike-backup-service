@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/aerospike/aerospike-backup-service/internal/server/configuration"
 	"log/slog"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
@@ -14,7 +15,7 @@ type Service struct {
 	restoreManager       service.RestoreManager
 	backupBackends       service.BackendsHolder
 	handlerHolder        service.BackupHandlerHolder
-	configurationManager service.ConfigurationManager
+	configurationManager configuration.ConfigurationManager
 	clientManger         service.ClientManager
 	logger               *slog.Logger
 }
@@ -25,7 +26,7 @@ func NewService(
 	restoreManager service.RestoreManager,
 	backupBackends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
-	configurationManager service.ConfigurationManager,
+	configurationManager configuration.ConfigurationManager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) *Service {

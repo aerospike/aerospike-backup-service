@@ -2,12 +2,12 @@ package model
 
 import (
 	"fmt"
-
-	"github.com/aerospike/aerospike-backup-service/pkg/util"
+	"sync"
 )
 
 // Config represents the service configuration.
 type Config struct {
+	mu                sync.Mutex
 	ServiceConfig     *BackupServiceConfig
 	AerospikeClusters map[string]*AerospikeCluster
 	Storage           map[string]*Storage
@@ -16,50 +16,179 @@ type Config struct {
 	SecretAgents      map[string]*SecretAgent
 }
 
-// NewConfigWithDefaultValues returns a new Config with default values.
-func NewConfigWithDefaultValues() *Config {
-	return &Config{
-		ServiceConfig:     NewBackupServiceConfigWithDefaultValues(),
-		Storage:           map[string]*Storage{},
-		BackupRoutines:    map[string]*BackupRoutine{},
-		BackupPolicies:    map[string]*BackupPolicy{},
-		AerospikeClusters: map[string]*AerospikeCluster{},
-	}
-}
+var (
+	ErrAlreadyExists = fmt.Errorf("item already exists")
+	ErrNotFound      = fmt.Errorf("item not found")
+	ErrInUse         = fmt.Errorf("item is in use")
+)
 
-func (c *Config) AddStorage(name string, newStorage *Storage) error {
-	_, found := c.Storage[name]
-	if found {
-		return fmt.Errorf("storage %s already exists", name)
-	}
+func (c *Config) AddStorage(name string, s *Storage) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	c.Storage[name] = newStorage
+	if _, exists := c.Storage[name]; exists {
+		return fmt.Errorf("add storage %q: %w", name, ErrAlreadyExists)
+	}
+	c.Storage[name] = s
 	return nil
 }
 
 func (c *Config) DeleteStorage(name string) error {
-	toDelete, found := c.Storage[name]
-	if !found {
-		return fmt.Errorf("storage %s not found", name)
-	}
-	routine := util.Find(c.BackupRoutines, func(routine *BackupRoutine) bool {
-		return routine.Storage == toDelete
-	})
-	if routine != nil {
-		return fmt.Errorf("cannot delete storage as it is used in a routine %s", *routine)
-	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
+	s, exists := c.Storage[name]
+	if !exists {
+		return fmt.Errorf("delete storage %q: %w", name, ErrNotFound)
+	}
+	if routine := c.routineUsesStorage(s); routine != "" {
+		return fmt.Errorf("delete storage %q: %w: it is used in routine %q", name, ErrInUse, routine)
+	}
 	delete(c.Storage, name)
 	return nil
 }
 
-// UpdateStorage updates an existing Storage in the configuration.
-func (c *Config) UpdateStorage(name string, updatedStorage *Storage) error {
-	_, found := c.Storage[name]
-	if !found {
-		return fmt.Errorf("storage %s not found", name)
-	}
+func (c *Config) UpdateStorage(name string, s *Storage) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	c.Storage[name] = updatedStorage
+	if _, exists := c.Storage[name]; !exists {
+		return fmt.Errorf("update storage %q: %w", name, ErrNotFound)
+	}
+	c.Storage[name] = s
 	return nil
+}
+
+func (c *Config) routineUsesStorage(s *Storage) string {
+	for name, r := range c.BackupRoutines {
+		if r.Storage == s {
+			return name
+		}
+	}
+	return ""
+}
+
+func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.BackupPolicies[name]; exists {
+		return fmt.Errorf("add backup policy %q: %w", name, ErrAlreadyExists)
+	}
+	c.BackupPolicies[name] = p
+	return nil
+}
+
+func (c *Config) DeletePolicy(name string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	p, exists := c.BackupPolicies[name]
+	if !exists {
+		return fmt.Errorf("delete backup policy %q: %w", name, ErrNotFound)
+	}
+	if routine := c.routineUsesPolicy(p); routine != "" {
+		return fmt.Errorf("delete backup policy %q: %w: it is used in routine %q", name, ErrInUse, routine)
+	}
+	delete(c.BackupPolicies, name)
+	return nil
+}
+
+func (c *Config) UpdatePolicy(name string, p *BackupPolicy) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.BackupPolicies[name]; !exists {
+		return fmt.Errorf("update backup policy %q: %w", name, ErrNotFound)
+	}
+	c.BackupPolicies[name] = p
+	return nil
+}
+
+func (c *Config) routineUsesPolicy(p *BackupPolicy) string {
+	for name, r := range c.BackupRoutines {
+		if r.BackupPolicy == p {
+			return name
+		}
+	}
+	return ""
+}
+
+func (c *Config) AddRoutine(name string, r *BackupRoutine) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.BackupRoutines[name]; exists {
+		return fmt.Errorf("add backup routine %q: %w", name, ErrAlreadyExists)
+	}
+	c.BackupRoutines[name] = r
+	return nil
+}
+
+func (c *Config) DeleteRoutine(name string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.BackupRoutines[name]; !exists {
+		return fmt.Errorf("delete backup routine %q: %w", name, ErrNotFound)
+	}
+	delete(c.BackupRoutines, name)
+	return nil
+}
+
+func (c *Config) UpdateRoutine(name string, r *BackupRoutine) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.BackupRoutines[name]; !exists {
+		return fmt.Errorf("update backup routine %q: %w", name, ErrNotFound)
+	}
+	c.BackupRoutines[name] = r
+	return nil
+}
+
+func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.AerospikeClusters[name]; exists {
+		return fmt.Errorf("add Aerospike cluster %q: %w", name, ErrAlreadyExists)
+	}
+	c.AerospikeClusters[name] = cluster
+	return nil
+}
+
+func (c *Config) DeleteCluster(name string) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	cluster, exists := c.AerospikeClusters[name]
+	if !exists {
+		return fmt.Errorf("delete Aerospike cluster %q: %w", name, ErrNotFound)
+	}
+	if routine := c.routineUsesCluster(cluster); routine != "" {
+		return fmt.Errorf("delete Aerospike cluster %q: %w: it is used in routine %q", name, ErrInUse, routine)
+	}
+	delete(c.AerospikeClusters, name)
+	return nil
+}
+
+func (c *Config) UpdateCluster(name string, cluster *AerospikeCluster) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.AerospikeClusters[name]; !exists {
+		return fmt.Errorf("update Aerospike cluster %q: %w", name, ErrNotFound)
+	}
+	c.AerospikeClusters[name] = cluster
+	return nil
+}
+
+func (c *Config) routineUsesCluster(cluster *AerospikeCluster) string {
+	for name, r := range c.BackupRoutines {
+		if r.SourceCluster == cluster {
+			return name
+		}
+	}
+	return ""
 }

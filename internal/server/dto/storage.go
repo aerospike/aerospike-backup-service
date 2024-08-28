@@ -146,3 +146,11 @@ func (s *Storage) ToModel() *model.Storage {
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 	}
 }
+
+func (s *Storage) Deserialize(r io.Reader, format SerializationFormat) error {
+	return Deserialize(s, r, format)
+}
+
+func (s *Storage) Serialize(format SerializationFormat) ([]byte, error) {
+	return Serialize(s, format)
+}

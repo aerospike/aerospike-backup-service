@@ -40,7 +40,7 @@ func init() {
 
 func TestReadWriteState(t *testing.T) {
 	for _, context := range contexts {
-		t.Run(context.path, func(t *testing.T) {
+		t.Run(context.Path, func(t *testing.T) {
 			runReadWriteState(t, context)
 		})
 	}
@@ -52,7 +52,7 @@ func runReadWriteState(t *testing.T, context S3Context) {
 		Namespace: "testNS",
 		Created:   time.Now(),
 	}
-	_ = context.writeYaml("backup_path/"+metadataFile, metadataWrite)
+	_ = context.WriteYaml("backup_path/"+metadataFile, metadataWrite)
 	metadataRead := dto.BackupMetadata{}
 
 	_ = context.readFile("backup_path/"+metadataFile, &metadataRead)
@@ -71,7 +71,7 @@ func TestS3Context_DeleteFile(t *testing.T) {
 		t.Skip("contexts is nil")
 	}
 	for _, context := range contexts {
-		t.Run(context.path, func(t *testing.T) {
+		t.Run(context.Path, func(t *testing.T) {
 			runDeleteFileTest(t, context)
 		})
 	}
@@ -79,8 +79,8 @@ func TestS3Context_DeleteFile(t *testing.T) {
 
 func runDeleteFileTest(t *testing.T, context S3Context) {
 	t.Helper()
-	_ = context.writeYaml("incremental/file.txt", "data")
-	_ = context.writeYaml("incremental/file2.txt", "data")
+	_ = context.WriteYaml("incremental/file.txt", "data")
+	_ = context.WriteYaml("incremental/file2.txt", "data")
 
 	if files, _ := context.lsFiles("incremental"); len(files) != 2 {
 		t.Error("files not created")
@@ -99,7 +99,7 @@ func TestS3Context_DeleteFolder(t *testing.T) {
 		t.Skip("contexts is nil")
 	}
 	for _, context := range contexts {
-		t.Run(context.path, func(t *testing.T) {
+		t.Run(context.Path, func(t *testing.T) {
 			runDeleteFolderTest(t, context)
 		})
 	}
@@ -110,8 +110,8 @@ func runDeleteFolderTest(t *testing.T, context S3Context) {
 	parent := "storage1/minioIncremental"
 	folder1 := parent + "/source-ns1"
 	folder2 := parent + "/source-ns16"
-	_ = context.writeYaml(folder1+"/file1.txt", "data")
-	_ = context.writeYaml(folder2+"/file2.txt", "data")
+	_ = context.WriteYaml(folder1+"/file1.txt", "data")
+	_ = context.WriteYaml(folder2+"/file2.txt", "data")
 
 	err := context.DeleteFolder(folder1)
 	if err != nil {
@@ -144,9 +144,9 @@ func TestS3Context_LsDir(t *testing.T) {
 	folder1 := parent + "/1000"
 	folder2 := parent + "/2000"
 	folder3 := parent + "/3000"
-	_ = minioContext.writeYaml(folder1+"/file1.txt", "data")
-	_ = minioContext.writeYaml(folder2+"/file2.txt", "data")
-	_ = minioContext.writeYaml(folder3+"/file2.txt", "data")
+	_ = minioContext.WriteYaml(folder1+"/file1.txt", "data")
+	_ = minioContext.WriteYaml(folder2+"/file2.txt", "data")
+	_ = minioContext.WriteYaml(folder3+"/file2.txt", "data")
 	after := "2000"
 	dir, err := minioContext.lsDir(parent, &after)
 	assert.Nil(t, err)
@@ -163,7 +163,7 @@ func TestS3Context_lsFiles(t *testing.T) {
 		{
 			name: "Single file",
 			setup: func() error {
-				return minioContext.writeYaml("test-prefix/file1.txt", "content")
+				return minioContext.WriteYaml("test-prefix/file1.txt", "content")
 			},
 			prefix:        "test-prefix",
 			expectedFiles: []string{"test-prefix/file1.txt"},
@@ -171,13 +171,13 @@ func TestS3Context_lsFiles(t *testing.T) {
 		{
 			name: "Multiple files",
 			setup: func() error {
-				if err := minioContext.writeYaml("test-prefix/file1.txt", "content"); err != nil {
+				if err := minioContext.WriteYaml("test-prefix/file1.txt", "content"); err != nil {
 					return err
 				}
-				if err := minioContext.writeYaml("test-prefix/file2.txt", "content"); err != nil {
+				if err := minioContext.WriteYaml("test-prefix/file2.txt", "content"); err != nil {
 					return err
 				}
-				return minioContext.writeYaml("test-prefix/subdir/file3.txt", "content")
+				return minioContext.WriteYaml("test-prefix/subdir/file3.txt", "content")
 			},
 			prefix: "test-prefix",
 			expectedFiles: []string{"test-prefix/file1.txt",
@@ -189,7 +189,7 @@ func TestS3Context_lsFiles(t *testing.T) {
 			setup: func() error {
 				for i := 0; i < 3000; i++ {
 					filename := fmt.Sprintf("test-prefix/file%04d.txt", i)
-					if err := minioContext.writeYaml(filename, "content"); err != nil {
+					if err := minioContext.WriteYaml(filename, "content"); err != nil {
 						return err
 					}
 				}

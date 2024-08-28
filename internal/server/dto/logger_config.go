@@ -120,6 +120,10 @@ func (f *FileLoggerConfig) Validate() error {
 }
 
 func (l *FileLoggerConfig) ToModel() *model.FileLoggerConfig {
+	if l == nil {
+		return nil
+	}
+
 	return &model.FileLoggerConfig{
 		Filename:   l.Filename,
 		MaxSize:    l.MaxSize,

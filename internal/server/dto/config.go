@@ -14,22 +14,20 @@ var _ ReadWriteDTO[model.Config] = (*Config)(nil)
 //
 //nolint:lll
 type Config struct {
-	ServiceConfig     *BackupServiceConfig         `yaml:"service,omitempty" json:"service,omitempty"`
-	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
-	Storage           map[string]*Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
-	BackupPolicies    map[string]*BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
-	BackupRoutines    map[string]*BackupRoutine    `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
-	SecretAgents      map[string]*SecretAgent      `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
+	ServiceConfig     *BackupServiceConfig        `yaml:"service,omitempty" json:"service,omitempty"`
+	AerospikeClusters map[string]AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
+	Storage           map[string]Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
+	BackupPolicies    map[string]BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
+	BackupRoutines    map[string]BackupRoutine    `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
+	SecretAgents      map[string]SecretAgent      `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 }
 
 func (c *Config) Serialize(format SerializationFormat) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
+	return Serialize(c, format)
 }
 
 func (c *Config) Deserialize(r io.Reader, format SerializationFormat) error {
-	//TODO implement me
-	panic("implement me")
+	return Deserialize(c, r, format)
 }
 
 func (c *Config) fromModel(m *model.Config) {
@@ -41,10 +39,10 @@ func (c *Config) fromModel(m *model.Config) {
 func NewConfigWithDefaultValues() *Config {
 	return &Config{
 		ServiceConfig:     NewBackupServiceConfigWithDefaultValues(),
-		Storage:           map[string]*Storage{},
-		BackupRoutines:    map[string]*BackupRoutine{},
-		BackupPolicies:    map[string]*BackupPolicy{},
-		AerospikeClusters: map[string]*AerospikeCluster{},
+		Storage:           map[string]Storage{},
+		BackupRoutines:    map[string]BackupRoutine{},
+		BackupPolicies:    map[string]BackupPolicy{},
+		AerospikeClusters: map[string]AerospikeCluster{},
 	}
 }
 

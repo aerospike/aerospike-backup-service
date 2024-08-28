@@ -28,7 +28,7 @@ type S3Context struct {
 	ctx           context.Context
 	client        *s3.Client
 	bucket        string
-	path          string
+	Path          string
 	metadataCache *util.LoadingCache[string, *dto.BackupMetadata]
 }
 
@@ -57,7 +57,7 @@ func NewS3Context(storage *model.Storage) *S3Context {
 		ctx:    ctx,
 		client: client,
 		bucket: bucket,
-		path:   parsedPath,
+		Path:   parsedPath,
 	}
 
 	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*dto.BackupMetadata, error) {
@@ -120,7 +120,7 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (dto.BackupDet
 	}, nil
 }
 
-func (s *S3Context) read(filePath string) ([]byte, error) {
+func (s *S3Context) Read(filePath string) (io.ReadCloser, error) {
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(filePath),
@@ -136,32 +136,27 @@ func (s *S3Context) read(filePath string) ([]byte, error) {
 		slog.Warn("Failed to read file", "path", filePath, "err", err)
 		return nil, err
 	}
-	defer result.Body.Close()
-	content, err := io.ReadAll(result.Body)
-	if err != nil {
-		slog.Warn("Couldn't read object body of a file",
-			"path", filePath, "err", err)
-		return nil, err
-	}
-	return content, nil
+
+	return result.Body, nil
 }
 
 // readFile reads and decodes the YAML content from the given filePath into v.
-func (s *S3Context) readFile(filePath string, v any) error {
-	content, err := s.read(filePath)
+func (s *S3Context) readFile(filePath string, v any) error { //TODO CHANGE TO DTO
+	content, err := s.Read(filePath)
 	if err != nil {
 		return err
 	}
-	if err = yaml.Unmarshal(content, v); err != nil {
+	all, _ := io.ReadAll(content)
+	if err = yaml.Unmarshal(all, v); err != nil {
 		slog.Warn("Failed unmarshal state file for backup",
-			"path", filePath, "err", err, "content", string(content))
+			"path", filePath, "err", err, "content", string(all))
 		return err
 	}
 	return nil
 }
 
 // WriteYaml writes v into filepath using the YAML format.
-func (s *S3Context) writeYaml(filePath string, v any) error {
+func (s *S3Context) WriteYaml(filePath string, v any) error {
 	yamlData, err := yaml.Marshal(v)
 	if err != nil {
 		return err
@@ -185,7 +180,7 @@ func (s *S3Context) write(filePath string, data []byte) error {
 	return nil
 }
 
-// lsFiles returns all files in the given s3 prefix path.
+// lsFiles returns all files in the given s3 prefix Path.
 func (s *S3Context) lsFiles(prefix string) ([]string, error) {
 	var result []string
 
@@ -215,7 +210,7 @@ func (s *S3Context) lsFiles(prefix string) ([]string, error) {
 	return result, nil
 }
 
-// lsDir returns all subfolders in the given s3 prefix path.
+// lsDir returns all subfolders in the given s3 prefix Path.
 func (s *S3Context) lsDir(prefix string, after *string) ([]string, error) {
 	var result []string
 
@@ -314,15 +309,15 @@ func (s *S3Context) wrapWithPrefix(path string) *string {
 }
 
 func (s *S3Context) ValidateStorageContainsBackup() (uint64, error) {
-	files, err := s.lsFiles(s.path)
+	files, err := s.lsFiles(s.Path)
 	if err != nil {
 		return 0, err
 	}
 	if len(files) == 0 {
-		return 0, fmt.Errorf("given path %s does not exist", s.path)
+		return 0, fmt.Errorf("given path %s does not exist", s.Path)
 	}
 
-	metadata, err := s.readMetadata(s.path)
+	metadata, err := s.readMetadata(s.Path)
 	if err != nil {
 		return 0, err
 	}
@@ -331,5 +326,5 @@ func (s *S3Context) ValidateStorageContainsBackup() (uint64, error) {
 			return metadata.RecordCount, nil
 		}
 	}
-	return 0, fmt.Errorf("no backup files found in %s", s.path)
+	return 0, fmt.Errorf("no backup files found in %s", s.Path)
 }

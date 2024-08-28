@@ -224,7 +224,7 @@ func (r *dataRestorer) toRestoreRequest(request *dto.RestoreTimestampRequest) *d
 	return dto.NewRestoreRequest(
 		request.DestinationCuster,
 		request.Policy,
-		storage,
+		&storage,
 		request.SecretAgent,
 	)
 }

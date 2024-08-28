@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -68,8 +69,8 @@ func (o *OSDiskAccessor) readBackupDetails(path string, _ bool) (dto.BackupDetai
 	}, nil
 }
 
-func (o *OSDiskAccessor) read(filePath string) ([]byte, error) {
-	return os.ReadFile(filePath)
+func (o *OSDiskAccessor) Read(path string) (io.ReadCloser, error) {
+	return os.Open(path)
 }
 
 func (o *OSDiskAccessor) write(filePath string, data []byte) error {

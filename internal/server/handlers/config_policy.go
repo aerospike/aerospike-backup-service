@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
-	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/gorilla/mux"
 )
 
@@ -57,7 +56,7 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddPolicy(s.config, name, request.ToModel())
+	err = s.config.AddPolicy(name, request.ToModel())
 	if err != nil {
 		hLogger.Error("failed to add policy",
 			slog.String("name", name),
@@ -184,7 +183,7 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdatePolicy(s.config, name, request.ToModel())
+	err = s.config.UpdatePolicy(name, request.ToModel())
 	if err != nil {
 		hLogger.Error("failed to update policy",
 			slog.String("name", name),
@@ -224,7 +223,7 @@ func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := service.DeletePolicy(s.config, policyName)
+	err := s.config.DeletePolicy(policyName)
 	if err != nil {
 		hLogger.Error("failed to delete policy",
 			slog.String("name", policyName),

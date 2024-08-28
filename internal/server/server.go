@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/internal/server/configuration"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -33,7 +34,7 @@ func NewHTTPServer(
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
-	configurationManager service.ConfigurationManager,
+	configurationManager configuration.ConfigurationManager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) *HTTPServer {
