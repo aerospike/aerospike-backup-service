@@ -15,7 +15,7 @@ import (
 // @Tags        Configuration
 // @Router      /v1/config [get]
 // @Produce     json
-// @Success     200 {object} model.Config
+// @Success     200 {object} dto.Config
 // @Failure     500 {string} string
 func (s *Service) readConfig(w http.ResponseWriter) {
 	hLogger := s.logger.With(slog.String("handler", "readConfig"))
@@ -44,7 +44,7 @@ func (s *Service) readConfig(w http.ResponseWriter) {
 // @Tags        Configuration
 // @Router      /v1/config [put]
 // @Accept      json
-// @Param       config body model.Config true "Configuration details"
+// @Param       config body dto.Config true "Configuration details"
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {

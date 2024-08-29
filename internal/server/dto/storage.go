@@ -19,8 +19,6 @@ var _ ReadWriteDTO[model.Storage] = (*Storage)(nil)
 //
 //nolint:lll
 type Storage struct {
-	BaseSerializableDTO
-	BaseDeserializableDTO
 	// The type of the storage provider
 	Type StorageType `yaml:"type" json:"type" enums:"local,aws-s3" validate:"required"`
 	// The root path for the backup repository.

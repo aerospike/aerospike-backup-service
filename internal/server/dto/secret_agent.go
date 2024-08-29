@@ -34,3 +34,12 @@ func (s *SecretAgent) ToModel() *model.SecretAgent {
 		IsBase64:       s.IsBase64,
 	}
 }
+
+func (s *SecretAgent) fromModel(m *model.SecretAgent) {
+	s.ConnectionType = m.ConnectionType
+	s.Address = m.Address
+	s.Port = m.Port
+	s.Timeout = m.Timeout
+	s.TLSCAString = m.TLSCAString
+	s.IsBase64 = m.IsBase64
+}

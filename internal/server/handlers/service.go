@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"github.com/aerospike/aerospike-backup-service/internal/server/configuration"
 	"log/slog"
 
+	"github.com/aerospike/aerospike-backup-service/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"
 	"github.com/reugn/go-quartz/quartz"

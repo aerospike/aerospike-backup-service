@@ -2,8 +2,10 @@ package dto
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aws/smithy-go/ptr"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -39,34 +41,16 @@ type BackupRoutine struct {
 }
 
 // Validate validates the backup routine configuration.
-func (r *BackupRoutine) Validate(c *Config) error {
+func (r *BackupRoutine) Validate() error {
 	if r.BackupPolicy == "" {
 		return emptyFieldValidationError("backup policy")
-	}
-	if _, exists := c.BackupPolicies[r.BackupPolicy]; !exists {
-		return notFoundValidationError("backup policy", r.BackupPolicy)
 	}
 	if r.SourceCluster == "" {
 		return emptyFieldValidationError("source-cluster")
 	}
-	cluster, exists := c.AerospikeClusters[r.SourceCluster]
-	if !exists {
-		return notFoundValidationError("Aerospike cluster", r.SourceCluster)
-	}
-
-	if cluster.MaxParallelScans != nil {
-		if len(r.SetList) > *cluster.MaxParallelScans {
-			return fmt.Errorf("max parallel scans must be at least the cardinality of set-list")
-		}
-	}
-
 	if r.Storage == "" {
 		return emptyFieldValidationError("storage")
 	}
-	if _, exists := c.Storage[r.Storage]; !exists {
-		return notFoundValidationError("storage", r.Storage)
-	}
-
 	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
 		return fmt.Errorf("backup interval string '%s' invalid: %v", r.IntervalCron, err)
 	}
@@ -86,10 +70,6 @@ func (r *BackupRoutine) Validate(c *Config) error {
 	if r.SecretAgent != nil {
 		if *r.SecretAgent == "" {
 			return emptyFieldValidationError("secret-agent")
-		}
-
-		if _, exists := c.SecretAgents[*r.SecretAgent]; !exists {
-			return notFoundValidationError("secret agent", *r.SecretAgent)
 		}
 	}
 	return nil
@@ -114,4 +94,57 @@ func (r *BackupRoutine) ToModel(config *model.Config) *model.BackupRoutine {
 		PreferRacks:      r.PreferRacks,
 		PartitionList:    r.PartitionList,
 	}
+}
+
+// NewRoutine creates a new BackupRoutine object from a byte slice
+func NewRoutine(r io.Reader, format SerializationFormat) (*BackupRoutine, error) {
+	b := &BackupRoutine{}
+	if err := b.Deserialize(r, format); err != nil {
+		return nil, err
+	}
+
+	if err := b.Validate(); err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRoutine {
+	b := &BackupRoutine{}
+	b.fromModel(m, config)
+	return b
+}
+
+func (r *BackupRoutine) Deserialize(reader io.Reader, format SerializationFormat) error {
+	return Deserialize(r, reader, format)
+}
+
+func (r *BackupRoutine) Serialize(format SerializationFormat) ([]byte, error) {
+	return Serialize(r, format)
+}
+
+func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.Config) {
+	r.BackupPolicy = findKeyByValue(config.BackupPolicies, m.BackupPolicy)
+	r.SourceCluster = findKeyByValue(config.AerospikeClusters, m.SourceCluster)
+	r.Storage = findKeyByValue(config.Storage, m.Storage)
+	if m.SecretAgent != nil {
+		r.SecretAgent = ptr.String(findKeyByValue(config.SecretAgents, m.SecretAgent))
+	}
+	r.IntervalCron = m.IntervalCron
+	r.IncrIntervalCron = m.IncrIntervalCron
+	r.Namespaces = m.Namespaces
+	r.SetList = m.SetList
+	r.BinList = m.BinList
+	r.PreferRacks = m.PreferRacks
+	r.PartitionList = m.PartitionList
+}
+
+func findKeyByValue[V any](m map[string]*V, value *V) string {
+	for k, v := range m {
+		if v == value {
+			return k
+		}
+	}
+	return ""
 }

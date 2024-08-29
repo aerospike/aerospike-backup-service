@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/gorilla/mux"
 )
 
@@ -32,7 +32,7 @@ func (s *Service) ConfigRoutineActionHandler(w http.ResponseWriter, r *http.Requ
 // @Router      /v1/config/routines/{name} [post]
 // @Accept      json
 // @Param       name path string true "Backup routine name"
-// @Param       routine body model.BackupRoutine true "Backup routine details"
+// @Param       routine body dto.BackupRoutine true "Backup routine details"
 // @Success     201
 // @Failure     400 {string} string
 //
@@ -40,8 +40,7 @@ func (s *Service) ConfigRoutineActionHandler(w http.ResponseWriter, r *http.Requ
 func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addRoutine"))
 
-	var newRoutine dto.BackupRoutine
-	err := json.NewDecoder(r.Body).Decode(&newRoutine)
+	newRoutine, err := dto.NewRoutine(r.Body, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),
@@ -83,12 +82,16 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /v1/config/routines [get]
 // @Produce     json
-// @Success  	200 {object} map[string]model.BackupRoutine
+// @Success  	200 {object} map[string]dto.BackupRoutine
 // @Failure     400 {string} string
 func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadRoutines"))
 
-	jsonResponse, err := json.Marshal(s.config.BackupRoutines)
+	toDTO := dto.ConvertModelMapToDTO(s.config.BackupRoutines, func(m *model.BackupRoutine) *dto.BackupRoutine {
+		return dto.NewRoutineFromModel(m, s.config)
+	})
+
+	jsonResponse, err := dto.Serialize(toDTO, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal backup routines",
 			slog.Any("error", err),
@@ -114,7 +117,7 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Router      /v1/config/routines/{name} [get]
 // @Param       name path string true "Backup routine name"
 // @Produce     json
-// @Success  	200 {object} model.BackupRoutine
+// @Success  	200 {object} dto.BackupRoutine
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified cluster could not be found"
 //
@@ -133,7 +136,7 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)
 		return
 	}
-	jsonResponse, err := json.Marshal(routine)
+	jsonResponse, err := dto.NewRoutineFromModel(routine, s.config).Serialize(dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal backup routines",
 			slog.Any("error", err),
@@ -159,7 +162,7 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 // @Router       /v1/config/routines/{name} [put]
 // @Accept       json
 // @Param        name path string true "Backup routine name"
-// @Param        routine body model.BackupRoutine true "Backup routine details"
+// @Param        routine body dto.BackupRoutine true "Backup routine details"
 // @Success      200
 // @Failure      400 {string} string
 //
@@ -167,8 +170,7 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateRoutine"))
 
-	var updatedRoutine dto.BackupRoutine
-	err := json.NewDecoder(r.Body).Decode(&updatedRoutine)
+	updatedRoutine, err := dto.NewRoutine(r.Body, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),

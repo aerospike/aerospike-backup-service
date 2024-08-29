@@ -69,6 +69,10 @@ func (s *HTTPServerConfig) GetContextPathOrDefault() string {
 
 // Validate validates the HTTP server configuration.
 func (s *HTTPServerConfig) Validate() error {
+	if s == nil {
+		return nil
+	}
+
 	if s.ContextPath != nil && !strings.HasPrefix(*s.ContextPath, "/") {
 		return fmt.Errorf("context-path must start with a slash: %s", *s.ContextPath)
 	}
@@ -79,6 +83,10 @@ func (s *HTTPServerConfig) Validate() error {
 }
 
 func (s *HTTPServerConfig) ToModel() *model.HTTPServerConfig {
+	if s == nil {
+		return nil
+	}
+
 	return &model.HTTPServerConfig{
 		Address:     s.Address,
 		Port:        s.Port,
@@ -86,6 +94,18 @@ func (s *HTTPServerConfig) ToModel() *model.HTTPServerConfig {
 		ContextPath: s.ContextPath,
 		Timeout:     s.Timeout,
 	}
+}
+
+func (s *HTTPServerConfig) fromModel(m *model.HTTPServerConfig) {
+	if m == nil {
+		return
+	}
+	s.Address = m.Address
+	s.Port = m.Port
+	s.Rate = &RateLimiterConfig{}
+	s.Rate.fromModel(m.Rate)
+	s.ContextPath = m.ContextPath
+	s.Timeout = m.Timeout
 }
 
 // RateLimiterConfig represents the service's HTTP server rate limiter configuration.
@@ -136,4 +156,13 @@ func (r *RateLimiterConfig) ToModel() *model.RateLimiterConfig {
 		Size:      r.Size,
 		WhiteList: r.WhiteList,
 	}
+}
+
+func (r *RateLimiterConfig) fromModel(m *model.RateLimiterConfig) {
+	if m == nil {
+		return
+	}
+	r.Tps = m.Tps
+	r.Size = m.Size
+	r.WhiteList = m.WhiteList
 }

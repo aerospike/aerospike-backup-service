@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/internal/server/configuration"
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -14,6 +12,8 @@ import (
 
 	backup "github.com/aerospike/aerospike-backup-service"
 	"github.com/aerospike/aerospike-backup-service/internal/server"
+	"github.com/aerospike/aerospike-backup-service/internal/server/configuration"
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/internal/util"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/service"

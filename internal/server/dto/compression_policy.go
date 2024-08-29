@@ -48,3 +48,8 @@ func (p *CompressionPolicy) ToModel() *model.CompressionPolicy {
 		Level: p.Level,
 	}
 }
+
+func (p *CompressionPolicy) fromModel(m *model.CompressionPolicy) {
+	p.Mode = m.Mode
+	p.Level = m.Level
+}

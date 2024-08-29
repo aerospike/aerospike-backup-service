@@ -179,3 +179,27 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		Sealed:            p.Sealed,
 	}
 }
+
+func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
+	p.Parallel = m.Parallel
+	p.SocketTimeout = m.SocketTimeout
+	p.TotalTimeout = m.TotalTimeout
+	p.MaxRetries = m.MaxRetries
+	p.RetryDelay = m.RetryDelay
+	p.RemoveFiles = (*RemoveFilesType)(m.RemoveFiles)
+	p.NoRecords = m.NoRecords
+	p.NoIndexes = m.NoIndexes
+	p.NoUdfs = m.NoUdfs
+	p.Bandwidth = m.Bandwidth
+	p.RecordsPerSecond = m.RecordsPerSecond
+	p.FileLimit = m.FileLimit
+	if m.EncryptionPolicy != nil {
+		p.EncryptionPolicy = &EncryptionPolicy{}
+		p.EncryptionPolicy.FromModel(m.EncryptionPolicy)
+	}
+	if p.CompressionPolicy != nil {
+		p.CompressionPolicy = &CompressionPolicy{}
+		p.CompressionPolicy.fromModel(m.CompressionPolicy)
+	}
+	p.Sealed = m.Sealed
+}

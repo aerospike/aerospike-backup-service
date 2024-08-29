@@ -12,16 +12,31 @@ type BackupServiceConfig struct {
 }
 
 // NewBackupServiceConfigWithDefaultValues returns a new BackupServiceConfig with default values.
-func NewBackupServiceConfigWithDefaultValues() *BackupServiceConfig {
-	return &BackupServiceConfig{
+func NewBackupServiceConfigWithDefaultValues() BackupServiceConfig {
+	return BackupServiceConfig{
 		HTTPServer: &HTTPServerConfig{},
 		Logger:     &LoggerConfig{},
 	}
 }
 
-func (dto *BackupServiceConfig) ToModel() *model.BackupServiceConfig {
+func (b *BackupServiceConfig) ToModel() *model.BackupServiceConfig {
 	return &model.BackupServiceConfig{
-		HTTPServer: dto.HTTPServer.ToModel(),
-		Logger:     dto.Logger.ToModel(),
+		HTTPServer: b.HTTPServer.ToModel(),
+		Logger:     b.Logger.ToModel(),
+	}
+}
+
+func (b *BackupServiceConfig) fromModel(m *model.BackupServiceConfig) {
+	if m == nil {
+		return
+	}
+	if m.HTTPServer != nil {
+		b.HTTPServer = &HTTPServerConfig{}
+		b.HTTPServer.fromModel(m.HTTPServer)
+	}
+
+	if m.Logger != nil {
+		b.Logger = &LoggerConfig{}
+		b.Logger.fromModel(m.Logger)
 	}
 }

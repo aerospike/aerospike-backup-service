@@ -14,7 +14,7 @@ var _ ReadWriteDTO[model.Config] = (*Config)(nil)
 //
 //nolint:lll
 type Config struct {
-	ServiceConfig     *BackupServiceConfig        `yaml:"service,omitempty" json:"service,omitempty"`
+	ServiceConfig     BackupServiceConfig         `yaml:"service,omitempty" json:"service,omitempty"`
 	AerospikeClusters map[string]AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
 	Storage           map[string]Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
 	BackupPolicies    map[string]BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
@@ -31,8 +31,42 @@ func (c *Config) Deserialize(r io.Reader, format SerializationFormat) error {
 }
 
 func (c *Config) fromModel(m *model.Config) {
-	//TODO implement me
-	panic("implement me")
+	c.ServiceConfig.fromModel(&m.ServiceConfig)
+
+	c.AerospikeClusters = make(map[string]AerospikeCluster)
+	for k, v := range m.AerospikeClusters {
+		cluster := AerospikeCluster{}
+		cluster.fromModel(v)
+		c.AerospikeClusters[k] = cluster
+	}
+
+	c.Storage = make(map[string]Storage)
+	for k, v := range m.Storage {
+		storage := Storage{}
+		storage.fromModel(v)
+		c.Storage[k] = storage
+	}
+
+	c.BackupPolicies = make(map[string]BackupPolicy)
+	for k, v := range m.BackupPolicies {
+		policy := BackupPolicy{}
+		policy.fromModel(v)
+		c.BackupPolicies[k] = policy
+	}
+
+	c.BackupRoutines = make(map[string]BackupRoutine)
+	for k, v := range m.BackupRoutines {
+		routine := BackupRoutine{}
+		routine.fromModel(v, m)
+		c.BackupRoutines[k] = routine
+	}
+
+	c.SecretAgents = make(map[string]SecretAgent)
+	for k, v := range m.SecretAgents {
+		agent := SecretAgent{}
+		agent.fromModel(v)
+		c.SecretAgents[k] = agent
+	}
 }
 
 // NewConfigWithDefaultValues returns a new Config with default values.
@@ -46,14 +80,40 @@ func NewConfigWithDefaultValues() *Config {
 	}
 }
 
+func NewConfigFromModel(m *model.Config) *Config {
+	config := &Config{}
+	config.fromModel(m)
+	return config
+}
+
 // Validate validates the configuration.
 func (c *Config) Validate() error {
 	for name, routine := range c.BackupRoutines {
 		if name == "" {
 			return emptyFieldValidationError("routine name")
 		}
-		if err := routine.Validate(c); err != nil {
+		if err := routine.Validate(); err != nil {
 			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
+		}
+		if _, exists := c.BackupPolicies[routine.BackupPolicy]; !exists {
+			return notFoundValidationError("backup policy", routine.BackupPolicy)
+		}
+		cluster, exists := c.AerospikeClusters[routine.SourceCluster]
+		if !exists {
+			return notFoundValidationError("Aerospike cluster", routine.SourceCluster)
+		}
+		if cluster.MaxParallelScans != nil {
+			if len(routine.SetList) > *cluster.MaxParallelScans {
+				return fmt.Errorf("max parallel scans must be at least the cardinality of set-list")
+			}
+		}
+		if _, exists := c.Storage[routine.Storage]; !exists {
+			return notFoundValidationError("storage", routine.Storage)
+		}
+		if routine.SecretAgent != nil {
+			if _, exists := c.SecretAgents[*routine.SecretAgent]; !exists {
+				return notFoundValidationError("secret agent", *routine.SecretAgent)
+			}
 		}
 	}
 
@@ -96,8 +156,9 @@ func (c *Config) Validate() error {
 }
 
 func (c *Config) ToModel() *model.Config {
+	config := c.ServiceConfig
 	modelConfig := &model.Config{
-		ServiceConfig:     c.ServiceConfig.ToModel(),
+		ServiceConfig:     *config.ToModel(),
 		AerospikeClusters: make(map[string]*model.AerospikeCluster),
 		Storage:           make(map[string]*model.Storage),
 		BackupPolicies:    make(map[string]*model.BackupPolicy),
@@ -127,6 +188,7 @@ func (c *Config) ToModel() *model.Config {
 
 	return modelConfig
 }
+
 func emptyFieldValidationError(field string) error {
 	return fmt.Errorf("empty %s is not allowed", field)
 }

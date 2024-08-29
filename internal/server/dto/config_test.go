@@ -9,7 +9,7 @@ import (
 func validConfig() *Config {
 	return &Config{
 		ServiceConfig: NewBackupServiceConfigWithDefaultValues(),
-		BackupRoutines: map[string]*BackupRoutine{
+		BackupRoutines: map[string]BackupRoutine{
 			"routine1": {
 				SourceCluster: "cluster1",
 				BackupPolicy:  "policy1",
@@ -25,15 +25,15 @@ func validConfig() *Config {
 				IntervalCron:  "* * * * * *",
 			},
 		},
-		AerospikeClusters: map[string]*AerospikeCluster{
+		AerospikeClusters: map[string]AerospikeCluster{
 			"cluster1": NewLocalAerospikeCluster(),
 			"cluster2": NewLocalAerospikeCluster(),
 		},
-		BackupPolicies: map[string]*BackupPolicy{
+		BackupPolicies: map[string]BackupPolicy{
 			"policy1": {},
 			"policy2": {},
 		},
-		Storage: map[string]*Storage{
+		Storage: map[string]Storage{
 			"storage1": {Type: Local, Path: ptr.String("/")},
 			"storage2": {Type: Local, Path: ptr.String("/")},
 		},
@@ -50,7 +50,8 @@ func TestValidConfigValidation(t *testing.T) {
 
 func TestInvalidClusterReference(t *testing.T) {
 	config := validConfig()
-	config.BackupRoutines["routine1"].SourceCluster = "nonExistentCluster"
+	routine := config.BackupRoutines["routine1"]
+	routine.SourceCluster = "nonExistentCluster"
 
 	err := config.Validate()
 	if err == nil {
@@ -64,7 +65,8 @@ func TestInvalidClusterReference(t *testing.T) {
 
 func TestInvalidBackupPolicyReference(t *testing.T) {
 	config := validConfig()
-	config.BackupRoutines["routine1"].BackupPolicy = "nonExistentPolicy"
+	routine := config.BackupRoutines["routine1"]
+	routine.BackupPolicy = "nonExistentPolicy"
 
 	err := config.Validate()
 	if err == nil {
@@ -78,7 +80,8 @@ func TestInvalidBackupPolicyReference(t *testing.T) {
 
 func TestInvalidStorageReference(t *testing.T) {
 	config := validConfig()
-	config.BackupRoutines["routine1"].Storage = "nonExistentStorage"
+	routine := config.BackupRoutines["routine1"]
+	routine.Storage = "nonExistentStorage"
 
 	err := config.Validate()
 	if err == nil {

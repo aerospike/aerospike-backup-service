@@ -3,12 +3,12 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/internal/server/configuration"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/internal/server/middleware"
 	"github.com/aerospike/aerospike-backup-service/internal/util"

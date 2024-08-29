@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"io"
+
+	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 )
 
 type StorageAccessor interface {

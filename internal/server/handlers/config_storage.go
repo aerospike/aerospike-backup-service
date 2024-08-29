@@ -32,7 +32,7 @@ func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Requ
 // @Router      /v1/config/storage/{name} [post]
 // @Accept      json
 // @Param       name path string true "Backup storage name"
-// @Param       storage body model.Storage true "Backup storage details"
+// @Param       storage body dto.Storage true "Backup storage details"
 // @Success     201
 // @Failure     400 {string} string
 func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
@@ -110,7 +110,7 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Router      /v1/config/storage/{name} [get]
 // @Param       name path string true "Backup storage name"
 // @Produce     json
-// @Success  	200 {object} model.Storage
+// @Success  	200 {object} dto.Storage
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified storage could not be found"
 // @Failure     500 {string} string
@@ -157,7 +157,7 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/storage/{name} [put]
 // @Accept      json
 // @Param       name path string true "Backup storage name"
-// @Param       storage body model.Storage true "Backup storage details"
+// @Param       storage body dto.Storage true "Backup storage details"
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {

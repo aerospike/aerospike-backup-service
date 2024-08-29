@@ -114,7 +114,7 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Router      /v1/config/policies/{name} [get]
 // @Param       name path string true "Backup policy name"
 // @Produce     json
-// @Success  	200 {object} model.BackupPolicy
+// @Success  	200 {object} dto.BackupPolicy
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified policy could not be found"
 // @Failure     500 {string} string "The specified policy could not be found"
@@ -159,7 +159,7 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/policies/{name} [put]
 // @Accept      json
 // @Param       name path string true "Backup policy name"
-// @Param       policy body model.BackupPolicy true "Backup policy details"
+// @Param       policy body dto.BackupPolicy true "Backup policy details"
 // @Success     200
 // @Failure     400 {string} string
 //

@@ -19,7 +19,7 @@ import (
 // @Tags        Restore
 // @Router      /v1/restore/full [post]
 // @Accept      json
-// @Param       request body model.RestoreRequest true "Restore request details"
+// @Param       request body dto.RestoreRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
 // @Failure     405 {string} string
@@ -70,7 +70,7 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 // @Tags        Restore
 // @Router      /v1/restore/incremental [post]
 // @Accept      json
-// @Param       request body model.RestoreRequest true "Restore request details"
+// @Param       request body dto.RestoreRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
 // @Failure     405 {string} string
@@ -122,7 +122,7 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 // @Tags        Restore
 // @Router      /v1/restore/timestamp [post]
 // @Accept      json
-// @Param       request body model.RestoreTimestampRequest true "Restore request details"
+// @Param       request body dto.RestoreTimestampRequest true "Restore request details"
 // @Success     202 {int64} int64 "Restore operation job id"
 // @Failure     400 {string} string
 // @Failure     405 {string} string
@@ -171,7 +171,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 // @Produce     json
 // @Param       jobId path int true "Job ID to retrieve the status" format(int64)
 // @Router      /v1/restore/status/{jobId} [get]
-// @Success     200 {object} model.RestoreJobStatus "Restore job status details"
+// @Success     200 {object} dto.RestoreJobStatus "Restore job status details"
 // @Failure     400 {string} string
 func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreStatusHandler"))

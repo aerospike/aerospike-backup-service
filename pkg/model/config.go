@@ -8,7 +8,7 @@ import (
 // Config represents the service configuration.
 type Config struct {
 	mu                sync.Mutex
-	ServiceConfig     *BackupServiceConfig
+	ServiceConfig     BackupServiceConfig
 	AerospikeClusters map[string]*AerospikeCluster
 	Storage           map[string]*Storage
 	BackupPolicies    map[string]*BackupPolicy

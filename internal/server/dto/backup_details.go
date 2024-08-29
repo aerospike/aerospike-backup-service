@@ -8,7 +8,6 @@ import (
 // BackupDetails contains information about a backup.
 // @Description BackupDetails contains information about a backup.
 type BackupDetails struct {
-	BaseSerializableDTO
 	BackupMetadata
 	// The path to the backup files.
 	Key *string `yaml:"key,omitempty" json:"key,omitempty" example:"storage/daily/backup/1707915600000/source-ns1"`

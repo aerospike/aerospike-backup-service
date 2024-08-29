@@ -53,3 +53,10 @@ func (p *EncryptionPolicy) ToModel() *model.EncryptionPolicy {
 		KeySecret: p.KeySecret,
 	}
 }
+
+func (p *EncryptionPolicy) FromModel(m *model.EncryptionPolicy) {
+	p.Mode = m.Mode
+	p.KeyFile = m.KeyFile
+	p.KeyEnv = m.KeyEnv
+	p.KeySecret = m.KeySecret
+}

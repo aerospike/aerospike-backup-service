@@ -56,6 +56,9 @@ func (l *LoggerConfig) GetStdoutWriterOrDefault() bool {
 
 // Validate validates the logger configuration.
 func (l *LoggerConfig) Validate() error {
+	if l == nil {
+		return nil
+	}
 	if l.Level != nil && !slices.Contains(validLoggerLevels, *l.Level) {
 		return fmt.Errorf("invalid logger level: %s", *l.Level)
 	}
@@ -69,12 +72,28 @@ func (l *LoggerConfig) Validate() error {
 }
 
 func (l *LoggerConfig) ToModel() *model.LoggerConfig {
+	if l == nil {
+		return nil
+	}
+
 	return &model.LoggerConfig{
 		Level:        l.Level,
 		Format:       l.Format,
 		StdoutWriter: l.StdoutWriter,
 		FileWriter:   l.FileWriter.ToModel(),
 	}
+}
+
+func (l *LoggerConfig) fromModel(m *model.LoggerConfig) {
+	if m == nil {
+		return
+	}
+
+	l.Level = m.Level
+	l.Format = m.Format
+	l.StdoutWriter = m.StdoutWriter
+	l.FileWriter = &FileLoggerConfig{}
+	l.FileWriter.fromModel(m.FileWriter)
 }
 
 // FileLoggerConfig represents the configuration for the file logger writer.
@@ -119,16 +138,24 @@ func (f *FileLoggerConfig) Validate() error {
 	return nil
 }
 
-func (l *FileLoggerConfig) ToModel() *model.FileLoggerConfig {
-	if l == nil {
+func (f *FileLoggerConfig) ToModel() *model.FileLoggerConfig {
+	if f == nil {
 		return nil
 	}
 
 	return &model.FileLoggerConfig{
-		Filename:   l.Filename,
-		MaxSize:    l.MaxSize,
-		MaxAge:     l.MaxAge,
-		MaxBackups: l.MaxBackups,
-		Compress:   l.Compress,
+		Filename:   f.Filename,
+		MaxSize:    f.MaxSize,
+		MaxAge:     f.MaxAge,
+		MaxBackups: f.MaxBackups,
+		Compress:   f.Compress,
 	}
+}
+
+func (f *FileLoggerConfig) fromModel(m *model.FileLoggerConfig) {
+	f.Filename = m.Filename
+	f.MaxSize = m.MaxSize
+	f.MaxAge = m.MaxAge
+	f.MaxBackups = m.MaxBackups
+	f.Compress = m.Compress
 }

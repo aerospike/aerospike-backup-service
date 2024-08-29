@@ -32,7 +32,7 @@ func (s *Service) ConfigClusterActionHandler(w http.ResponseWriter, r *http.Requ
 // @Router      /v1/config/clusters/{name} [post]
 // @Accept      json
 // @Param       name path string true "Aerospike cluster name"
-// @Param       cluster body model.AerospikeCluster true "Aerospike cluster details"
+// @Param       cluster body dto.AerospikeCluster true "Aerospike cluster details"
 // @Success     201
 // @Failure     400 {string} string
 // @Failure     500 {string} string
@@ -118,7 +118,7 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 // @Router      /v1/config/clusters/{name} [get]
 // @Param       name path string true "Aerospike cluster name"
 // @Produce     json
-// @Success  	200 {object} model.AerospikeCluster
+// @Success  	200 {object} dto.AerospikeCluster
 // @Failure     400 {string} string
 // @Failure     404 {string} string "The specified cluster could not be found"
 // @Failure     500 {string} string "The specified cluster could not be found"
@@ -166,7 +166,7 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/clusters/{name} [put]
 // @Accept      json
 // @Param       name path string true "Aerospike cluster name"
-// @Param       cluster body model.AerospikeCluster true "Aerospike cluster details"
+// @Param       cluster body dto.AerospikeCluster true "Aerospike cluster details"
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
