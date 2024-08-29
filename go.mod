@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/aerospike/aerospike-client-go/v7 v7.6.1
 	github.com/aerospike/aerospike-management-lib v1.4.0
-	github.com/aerospike/backup-go v0.1.0
+	github.com/aerospike/backup-go v0.1.1-0.20240828073747-45f53a98f755
 	github.com/aws/aws-sdk-go-v2 v1.30.4
 	github.com/aws/aws-sdk-go-v2/config v1.27.28
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.59.0
