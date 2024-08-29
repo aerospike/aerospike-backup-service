@@ -2195,6 +2195,11 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "extra-ttl": {
+                    "description": "Amount of extra time-to-live to add to records that have expirable void-times.\nMust be set in seconds.",
+                    "type": "integer",
+                    "example": 86400
+                },
                 "max-async-batches": {
                     "description": "The max number of outstanding async record batch write calls at a time.",
                     "type": "integer",

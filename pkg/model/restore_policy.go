@@ -59,6 +59,9 @@ type RestorePolicy struct {
 	// Configuration of retries for each restore write operation.
 	// If nil, no retries will be performed.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
+	// Amount of extra time-to-live to add to records that have expirable void-times.
+	// Must be set in seconds.
+	ExtraTTL *int64 `yaml:"extra-ttl" json:"extra-ttl,omitempty" example:"86400"`
 }
 
 // Validate validates the restore policy.
@@ -86,6 +89,9 @@ func (p *RestorePolicy) Validate() error {
 	}
 	if p.Replace != nil && *p.Replace && p.Unique != nil && *p.Unique {
 		return errors.New("replace and unique options are contradictory")
+	}
+	if p.ExtraTTL != nil && *p.ExtraTTL <= 0 {
+		return fmt.Errorf("extraTTL %d invalid, should be positive number", *p.ExtraTTL)
 	}
 
 	if p.Namespace != nil { // namespace is optional.

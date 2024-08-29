@@ -113,6 +113,10 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 		}
 	}
 
+	if restoreRequest.Policy.ExtraTTL != nil {
+		config.ExtraTTL = *restoreRequest.Policy.ExtraTTL
+	}
+
 	if restoreRequest.SecretAgent != nil {
 		config.SecretAgentConfig = &backup.SecretAgentConfig{
 			ConnectionType:     restoreRequest.SecretAgent.ConnectionType,
@@ -123,6 +127,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 			IsBase64:           restoreRequest.SecretAgent.IsBase64,
 		}
 	}
+
 	return config
 }
 
