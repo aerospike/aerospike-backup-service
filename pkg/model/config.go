@@ -16,6 +16,16 @@ type Config struct {
 	SecretAgents      map[string]*SecretAgent
 }
 
+func NewConfig() *Config {
+	return &Config{
+		AerospikeClusters: make(map[string]*AerospikeCluster),
+		Storage:           make(map[string]*Storage),
+		BackupPolicies:    make(map[string]*BackupPolicy),
+		BackupRoutines:    make(map[string]*BackupRoutine),
+		SecretAgents:      make(map[string]*SecretAgent),
+	}
+}
+
 var (
 	ErrAlreadyExists = fmt.Errorf("item already exists")
 	ErrNotFound      = fmt.Errorf("item not found")

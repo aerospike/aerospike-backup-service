@@ -2,9 +2,10 @@ package service
 
 import (
 	"errors"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aws/smithy-go/ptr"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/mocks"
@@ -14,6 +15,14 @@ import (
 // MockClientFactory is a mock implementation of the AerospikeClientFactory interface.
 type MockClientFactory struct {
 	ShouldFail bool
+}
+
+var cluster = &model.AerospikeCluster{
+	ClusterLabel: ptr.String("test"),
+}
+
+var cluster2 = &model.AerospikeCluster{
+	ClusterLabel: ptr.String("test2"),
 }
 
 func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...*as.Host,
@@ -29,17 +38,17 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 
 func Test_GetClient(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*dto.AerospikeCluster{"testCluster": {}},
+		map[string]*model.AerospikeCluster{"testCluster": {}},
 		&MockClientFactory{},
 	)
 
 	// First call will create a new client
-	client, err := clientManager.GetClient("testCluster")
+	client, err := clientManager.GetClient(cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
 	// Second call will reuse the existing client
-	client2, err := clientManager.GetClient("testCluster")
+	client2, err := clientManager.GetClient(cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client2)
 	assert.Equal(t, client, client2)
@@ -47,32 +56,32 @@ func Test_GetClient(t *testing.T) {
 
 func Test_GetClient_ClusterNotFound(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*dto.AerospikeCluster{},
+		map[string]*model.AerospikeCluster{},
 		&MockClientFactory{},
 	)
 
-	client, err := clientManager.GetClient("nonExistentCluster")
+	client, err := clientManager.GetClient(cluster2)
 	assert.Nil(t, client)
 	assert.EqualError(t, err, "cluster nonExistentCluster not found")
 }
 
 func Test_CreateClient(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*dto.AerospikeCluster{},
+		map[string]*model.AerospikeCluster{},
 		&MockClientFactory{},
 	)
 
-	client, err := clientManager.CreateClient(&dto.AerospikeCluster{})
+	client, err := clientManager.CreateClient(&model.AerospikeCluster{})
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 }
 
 func Test_CreateClient_Errors(t *testing.T) {
 	mockClientFactory := &MockClientFactory{ShouldFail: true}
-	aeroCluster := &dto.AerospikeCluster{}
+	aeroCluster := &model.AerospikeCluster{}
 
 	clientManager := NewClientManager(
-		map[string]*dto.AerospikeCluster{},
+		map[string]*model.AerospikeCluster{},
 		mockClientFactory,
 	)
 
@@ -83,48 +92,48 @@ func Test_CreateClient_Errors(t *testing.T) {
 
 func Test_Close(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*dto.AerospikeCluster{"testCluster": {}},
+		map[string]*model.AerospikeCluster{"testCluster": {}},
 		&MockClientFactory{},
 	)
 
-	client, err := clientManager.GetClient("testCluster")
+	client, err := clientManager.GetClient(cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
 	clientManager.Close(client)
 
 	// Verify that client is removed from clients map
-	_, exists := clientManager.clients["testCluster"]
+	_, exists := clientManager.clients[cluster]
 	assert.False(t, exists)
 }
 
 func Test_Close_Multiple(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*dto.AerospikeCluster{"testCluster": {}},
+		map[string]*model.AerospikeCluster{"testCluster": {}},
 		&MockClientFactory{},
 	)
 
-	client, err := clientManager.GetClient("testCluster")
+	client, err := clientManager.GetClient(cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
-	client, err = clientManager.GetClient("testCluster")
+	client, err = clientManager.GetClient(cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
 	clientManager.Close(client)
 
-	_, exists := clientManager.clients["testCluster"]
+	_, exists := clientManager.clients[cluster]
 	assert.True(t, exists)
 
 	clientManager.Close(client)
 
-	_, exists = clientManager.clients["testCluster"]
+	_, exists = clientManager.clients[cluster]
 	assert.False(t, exists)
 }
 
 func Test_Close_NotExisting(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*dto.AerospikeCluster{},
+		map[string]*model.AerospikeCluster{},
 		&MockClientFactory{},
 	)
 	aeroClient := &mocks.MockAerospikeClient{}

@@ -2,12 +2,12 @@ package service
 
 import (
 	"errors"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"github.com/aerospike/backup-go"
 	"github.com/aws/smithy-go/ptr"
@@ -49,17 +49,15 @@ func (b *BackendHolderMock) SetData(_ map[string]*BackupBackend) {
 }
 
 func makeTestRestoreService() *dataRestorer {
-	config := dto.NewConfigWithDefaultValues()
-	config.Storage["s"] = &dto.Storage{
-		Path: ptr.String("/"),
-		Type: dto.Local,
-	}
-	config.BackupRoutines = map[string]*dto.BackupRoutine{
+	storage := &model.Storage{}
+	config := model.NewConfig()
+	_ = config.AddStorage("s", storage)
+	config.BackupRoutines = map[string]*model.BackupRoutine{
 		"routine": {
-			Storage: "s",
+			Storage: storage,
 		},
 		"routine_fail_restore": {
-			Storage: "s",
+			Storage: storage,
 		},
 	}
 
@@ -78,16 +76,16 @@ func makeTestRestoreService() *dataRestorer {
 type BackendMock struct {
 }
 
-func (m *BackendMock) FindIncrementalBackupsForNamespace(_ *dto.TimeBounds, _ string,
-) ([]dto.BackupDetails, error) {
-	return []dto.BackupDetails{{
-		BackupMetadata: dto.BackupMetadata{
+func (m *BackendMock) FindIncrementalBackupsForNamespace(_ *model.TimeBounds, _ string,
+) ([]model.BackupDetails, error) {
+	return []model.BackupDetails{{
+		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(10),
 			Namespace: "ns1",
 		},
 		Key: ptr.String("key"),
 	}, {
-		BackupMetadata: dto.BackupMetadata{
+		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(20),
 			Namespace: "ns1",
 		},
@@ -99,9 +97,9 @@ func (m *BackendMock) ReadClusterConfiguration(_ string) ([]byte, error) {
 	return []byte{}, nil
 }
 
-func (*BackendMock) FullBackupList(_ *dto.TimeBounds) ([]dto.BackupDetails, error) {
-	return []dto.BackupDetails{{
-		BackupMetadata: dto.BackupMetadata{
+func (*BackendMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
+	return []model.BackupDetails{{
+		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(5),
 			Namespace: "ns1",
 		},
@@ -109,15 +107,15 @@ func (*BackendMock) FullBackupList(_ *dto.TimeBounds) ([]dto.BackupDetails, erro
 	}}, nil
 }
 
-func (*BackendMock) IncrementalBackupList(_ *dto.TimeBounds) ([]dto.BackupDetails, error) {
-	return []dto.BackupDetails{{
-		BackupMetadata: dto.BackupMetadata{
+func (*BackendMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
+	return []model.BackupDetails{{
+		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(10),
 			Namespace: "ns1",
 		},
 		Key: ptr.String("key"),
 	}, {
-		BackupMetadata: dto.BackupMetadata{
+		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(20),
 			Namespace: "ns1",
 		},
@@ -125,12 +123,12 @@ func (*BackendMock) IncrementalBackupList(_ *dto.TimeBounds) ([]dto.BackupDetail
 	}}, nil
 }
 
-func (*BackendMock) FindLastFullBackup(t time.Time) ([]dto.BackupDetails, error) {
+func (*BackendMock) FindLastFullBackup(t time.Time) ([]model.BackupDetails, error) {
 	created := time.UnixMilli(5)
 
 	if t.After(created) {
-		return []dto.BackupDetails{{
-			BackupMetadata: dto.BackupMetadata{
+		return []model.BackupDetails{{
+			BackupMetadata: model.BackupMetadata{
 				Created:   created,
 				Namespace: "ns1",
 			},
@@ -141,15 +139,15 @@ func (*BackendMock) FindLastFullBackup(t time.Time) ([]dto.BackupDetails, error)
 	return nil, errBackupNotFound
 }
 
-func (*BackendFailMock) FindLastFullBackup(_ time.Time) ([]dto.BackupDetails, error) {
+func (*BackendFailMock) FindLastFullBackup(_ time.Time) ([]model.BackupDetails, error) {
 	return nil, errBackupNotFound
 }
 
 type BackendFailMock struct {
 }
 
-func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ *dto.TimeBounds, _ string,
-) ([]dto.BackupDetails, error) {
+func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ *model.TimeBounds, _ string,
+) ([]model.BackupDetails, error) {
 	return nil, nil
 }
 
@@ -157,11 +155,11 @@ func (m *BackendFailMock) ReadClusterConfiguration(_ string) ([]byte, error) {
 	return nil, errors.New("mock error")
 }
 
-func (*BackendFailMock) FullBackupList(_ *dto.TimeBounds) ([]dto.BackupDetails, error) {
+func (*BackendFailMock) FullBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
 	return nil, errors.New("mock error")
 }
 
-func (*BackendFailMock) IncrementalBackupList(_ *dto.TimeBounds) ([]dto.BackupDetails, error) {
+func (*BackendFailMock) IncrementalBackupList(_ *model.TimeBounds) ([]model.BackupDetails, error) {
 	return nil, errors.New("mock error")
 }
 
@@ -170,17 +168,17 @@ func TestRestoreOK(t *testing.T) {
 	t.Cleanup(func() {
 		cleanTestFolder()
 	})
-	restoreRequest := &dto.RestoreRequest{
-		DestinationCuster: dto.NewLocalAerospikeCluster(),
-		Policy: &dto.RestorePolicy{
+	restoreRequest := &model.RestoreRequest{
+		DestinationCuster: model.NewLocalAerospikeCluster(),
+		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
-		SourceStorage: &dto.Storage{
+		SourceStorage: &model.Storage{
 			Path: &validBackupPath,
-			Type: dto.Local,
+			Type: model.Local,
 		},
 	}
-	requestInternal := &dto.RestoreRequestInternal{
+	requestInternal := &model.RestoreRequestInternal{
 		RestoreRequest: *restoreRequest,
 		Dir:            &validBackupPath,
 	}
@@ -190,22 +188,22 @@ func TestRestoreOK(t *testing.T) {
 	}
 
 	jobStatus, _ := restoreService.JobStatus(jobID)
-	if jobStatus.Status != dto.JobStatusRunning {
-		t.Errorf("Expected jobStatus to be %s, but was %s", dto.JobStatusDone, jobStatus.Status)
+	if jobStatus.Status != model.JobStatusRunning {
+		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
 	time.Sleep(1 * time.Second)
 	jobStatus, _ = restoreService.JobStatus(jobID)
-	if jobStatus.Status != dto.JobStatusDone {
-		t.Errorf("Expected jobStatus to be %s, but was %s", dto.JobStatusDone, jobStatus.Status)
+	if jobStatus.Status != model.JobStatusDone {
+		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
 }
 
 func TestLatestFullBackupBeforeTime(t *testing.T) {
-	backupList := []dto.BackupDetails{
-		{BackupMetadata: dto.BackupMetadata{Created: time.UnixMilli(10)}},
-		{BackupMetadata: dto.BackupMetadata{Created: time.UnixMilli(20)}}, // Should be the latest full backup
-		{BackupMetadata: dto.BackupMetadata{Created: time.UnixMilli(20)}}, // Should be the latest full backup too
-		{BackupMetadata: dto.BackupMetadata{Created: time.UnixMilli(30)}},
+	backupList := []model.BackupDetails{
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)}},
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}}, // Should be the latest full backup
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}}, // Should be the latest full backup too
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(30)}},
 	}
 
 	result := latestFullBackupBeforeTime(backupList, time.UnixMilli(25))
@@ -222,10 +220,10 @@ func TestLatestFullBackupBeforeTime(t *testing.T) {
 }
 
 func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
-	backupList := []dto.BackupDetails{
-		{BackupMetadata: dto.BackupMetadata{Created: time.UnixMilli(10)}},
-		{BackupMetadata: dto.BackupMetadata{Created: time.UnixMilli(20)}},
-		{BackupMetadata: dto.BackupMetadata{Created: time.UnixMilli(30)}},
+	backupList := []model.BackupDetails{
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)}},
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}},
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(30)}},
 	}
 
 	result := latestFullBackupBeforeTime(backupList, time.UnixMilli(5))
@@ -236,12 +234,12 @@ func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
 }
 
 func Test_RestoreTimestamp(t *testing.T) {
-	request := dto.RestoreTimestampRequest{
-		DestinationCuster: dto.NewLocalAerospikeCluster(),
-		Policy: &dto.RestorePolicy{
+	request := model.RestoreTimestampRequest{
+		DestinationCuster: model.NewLocalAerospikeCluster(),
+		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
-		Time:    100,
+		Time:    time.UnixMilli(100),
 		Routine: "routine",
 	}
 
@@ -252,8 +250,8 @@ func Test_RestoreTimestamp(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 	jobStatus, _ := restoreService.JobStatus(jobID)
-	if jobStatus.Status != dto.JobStatusDone {
-		t.Errorf("Expected jobStatus to be %s, but was %s", dto.JobStatusDone, jobStatus.Status)
+	if jobStatus.Status != model.JobStatusDone {
+		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
 	if jobStatus.ReadRecords != 3 {
 		t.Errorf("Expected 3 (one full and 2 incremental backups), got %d", jobStatus.ReadRecords)
@@ -268,10 +266,10 @@ func Test_WrongStatus(t *testing.T) {
 }
 
 func Test_RestoreFromWrongFolder(t *testing.T) {
-	requestInternal := &dto.RestoreRequestInternal{
-		RestoreRequest: dto.RestoreRequest{
-			SourceStorage: &dto.Storage{
-				Type: dto.Local,
+	requestInternal := &model.RestoreRequestInternal{
+		RestoreRequest: model.RestoreRequest{
+			SourceStorage: &model.Storage{
+				Type: model.Local,
 				Path: util.Ptr("wrongPath"),
 			},
 		},
@@ -285,10 +283,10 @@ func Test_RestoreFromWrongFolder(t *testing.T) {
 }
 
 func Test_RestoreFromEmptyFolder(t *testing.T) {
-	requestInternal := &dto.RestoreRequestInternal{
-		RestoreRequest: dto.RestoreRequest{
-			SourceStorage: &dto.Storage{
-				Type: dto.Local,
+	requestInternal := &model.RestoreRequestInternal{
+		RestoreRequest: model.RestoreRequest{
+			SourceStorage: &model.Storage{
+				Type: model.Local,
 				Path: util.Ptr("./"),
 			},
 		},
@@ -307,16 +305,16 @@ func Test_RestoreFail(t *testing.T) {
 		cleanTestFolder()
 	})
 
-	restoreRequest := &dto.RestoreRequest{
-		DestinationCuster: &dto.AerospikeCluster{},
-		Policy: &dto.RestorePolicy{
+	restoreRequest := &model.RestoreRequest{
+		DestinationCuster: &model.AerospikeCluster{},
+		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
-		SourceStorage: &dto.Storage{
+		SourceStorage: &model.Storage{
 			Path: &validBackupPath,
 		},
 	}
-	requestInternal := &dto.RestoreRequestInternal{
+	requestInternal := &model.RestoreRequestInternal{
 		RestoreRequest: *restoreRequest,
 		Dir:            &validBackupPath,
 	}
@@ -327,13 +325,13 @@ func Test_RestoreFail(t *testing.T) {
 	}
 	time.Sleep(1 * time.Second)
 	status, _ := restoreService.JobStatus(jobID)
-	if status.Status != dto.JobStatusFailed {
+	if status.Status != model.JobStatusFailed {
 		t.Errorf("Expected restore job status to be Failed, but got %s", status.Status)
 	}
 }
 
 func Test_RestoreByTimeFailNoBackend(t *testing.T) {
-	request := &dto.RestoreTimestampRequest{
+	request := &model.RestoreTimestampRequest{
 		Routine: "wrongRoutine",
 	}
 
@@ -344,7 +342,7 @@ func Test_RestoreByTimeFailNoBackend(t *testing.T) {
 }
 
 func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
-	request := &dto.RestoreTimestampRequest{
+	request := &model.RestoreTimestampRequest{
 		Routine: "routine",
 	}
 
@@ -355,9 +353,9 @@ func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
 }
 
 func Test_RestoreByTimeFailNoBackup(t *testing.T) {
-	request := &dto.RestoreTimestampRequest{
+	request := &model.RestoreTimestampRequest{
 		Routine: "routine",
-		Time:    1,
+		Time:    time.UnixMilli(1),
 	}
 
 	_, err := restoreService.RestoreByTime(request)
@@ -367,16 +365,16 @@ func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 }
 
 func Test_restoreTimestampFail(t *testing.T) {
-	request := &dto.RestoreTimestampRequest{
+	request := &model.RestoreTimestampRequest{
 		Routine:           "routine_fail_restore",
-		Time:              10,
-		DestinationCuster: &dto.AerospikeCluster{},
+		Time:              time.UnixMilli(10),
+		DestinationCuster: &model.AerospikeCluster{},
 	}
 
 	jobID, _ := restoreService.RestoreByTime(request)
 	time.Sleep(1 * time.Second)
 	status, _ := restoreService.JobStatus(jobID)
-	if status.Status != dto.JobStatusFailed {
+	if status.Status != model.JobStatusFailed {
 		t.Errorf("Expected restore job status to be Failed, but got %s", status.Status)
 	}
 }
@@ -466,14 +464,14 @@ func Test_CalculateConfigurationBackupPath(t *testing.T) {
 type MockClientManager struct {
 }
 
-func (m *MockClientManager) GetClient(string) (*backup.Client, error) {
+func (m *MockClientManager) GetClient(_ *model.AerospikeCluster) (*backup.Client, error) {
 	return &backup.Client{}, nil
 }
 
 func (m *MockClientManager) Close(*backup.Client) {
 }
 
-func (m *MockClientManager) CreateClient(cluster *dto.AerospikeCluster) (*backup.Client, error) {
+func (m *MockClientManager) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
 	if len(cluster.ASClientHosts()) == 0 {
 		return nil, errors.New("no hosts provided")
 	}

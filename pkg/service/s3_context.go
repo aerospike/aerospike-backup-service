@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -128,7 +127,7 @@ func (s *S3Context) Read(filePath string) (io.ReadCloser, error) {
 	if err != nil {
 		var opErr *smithy.OperationError
 		if errors.As(err, &opErr) &&
-			(strings.Contains(filePath, dto.StateFileName) ||
+			(strings.Contains(filePath, model.StateFileName) ||
 				strings.Contains(filePath, metadataFile)) &&
 			strings.Contains(opErr.Unwrap().Error(), "StatusCode: 404") {
 			return nil, err

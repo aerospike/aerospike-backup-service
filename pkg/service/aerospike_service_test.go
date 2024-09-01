@@ -3,15 +3,15 @@
 package service
 
 import (
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/stretchr/testify/assert"
 )
 
 func Test(t *testing.T) {
-	cluster := dto.NewLocalAerospikeCluster()
+	cluster := model.NewLocalAerospikeCluster()
 	client, aerr := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
 	assert.NoError(t, aerr)
 	namespaces, err := getAllNamespacesOfCluster(client)

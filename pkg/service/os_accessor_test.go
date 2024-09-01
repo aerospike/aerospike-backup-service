@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -302,7 +303,7 @@ func TestReadState(t *testing.T) {
 	data, _ := json.Marshal(expected)
 	_ = accessor.write(path, data)
 
-	state := &dto.BackupState{}
+	state := &model.BackupState{}
 	err := accessor.readBackupState(path, state)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, state)
@@ -343,7 +344,7 @@ func TestReadStateNegative(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := tt.setup()
-			state := &dto.BackupState{}
+			state := &model.BackupState{}
 			err := accessor.readBackupState(dir, state)
 			if tt.ignoreErr {
 				assert.NoError(t, err)
