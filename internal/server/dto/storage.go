@@ -101,8 +101,8 @@ func (s *Storage) SetDefaultProfile() {
 	}
 }
 
-// NewStorage creates a new Storage object from a byte slice
-func NewStorage(r io.Reader, format SerializationFormat) (*Storage, error) {
+// NewStorageFromReader creates a new Storage object from a given reader
+func NewStorageFromReader(r io.Reader, format SerializationFormat) (*Storage, error) {
 	s := &Storage{}
 	if err := s.Deserialize(r, format); err != nil {
 		return nil, err

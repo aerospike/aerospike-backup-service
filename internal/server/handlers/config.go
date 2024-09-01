@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -20,7 +19,7 @@ import (
 func (s *Service) readConfig(w http.ResponseWriter) {
 	hLogger := s.logger.With(slog.String("handler", "readConfig"))
 
-	configuration, err := json.MarshalIndent(s.config, "", "    ") // pretty print
+	configuration, err := dto.NewConfigFromModel(s.config).Serialize(dto.JSON)
 	if err != nil {
 		// We won't log config as it is not secure.
 		hLogger.Error("failed to parse service configuration",
@@ -50,22 +49,13 @@ func (s *Service) readConfig(w http.ResponseWriter) {
 func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateConfig"))
 
-	var newConfig dto.Config
-
-	err := json.NewDecoder(r.Body).Decode(&newConfig)
+	newConfig, err := dto.NewConfigFromReader(r.Body, dto.JSON)
 	if err != nil {
 		// We won't log config as it is not secure.
 		hLogger.Error("failed to decode new configuration",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if err = newConfig.Validate(); err != nil {
-		hLogger.Error("invalid configuration",
-			slog.Any("error", err),
-		)
-		http.Error(w, "invalid configuration: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	s.config = newConfig.ToModel()

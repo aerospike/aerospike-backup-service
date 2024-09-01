@@ -86,6 +86,20 @@ func NewConfigFromModel(m *model.Config) *Config {
 	return config
 }
 
+// NewConfigFromReader creates a new Config object from a given reader
+func NewConfigFromReader(r io.Reader, format SerializationFormat) (*Config, error) {
+	c := &Config{}
+	if err := c.Deserialize(r, format); err != nil {
+		return nil, err
+	}
+
+	if err := c.Validate(); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
 // Validate validates the configuration.
 func (c *Config) Validate() error {
 	for name, routine := range c.BackupRoutines {

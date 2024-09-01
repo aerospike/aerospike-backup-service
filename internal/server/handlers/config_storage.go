@@ -38,7 +38,7 @@ func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Requ
 func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addStorage"))
 
-	newStorage, err := dto.NewStorage(r.Body, dto.JSON)
+	newStorage, err := dto.NewStorageFromReader(r.Body, dto.JSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
