@@ -2,6 +2,7 @@ package dto
 
 import (
 	"fmt"
+	"github.com/aerospike/backup-go/models"
 	"time"
 )
 
@@ -21,20 +22,20 @@ type RetryPolicy struct {
 }
 
 // Validate checks if the RetryPolicy fields are valid.
-func (rp *RetryPolicy) Validate() error {
-	if rp == nil {
+func (r *RetryPolicy) Validate() error {
+	if r == nil {
 		return nil
 	}
 
-	if rp.BaseTimeout <= 0 {
+	if r.BaseTimeout <= 0 {
 		return fmt.Errorf("BaseTimeout must be greater than 0")
 	}
 
-	if rp.Multiplier < 1 {
+	if r.Multiplier < 1 {
 		return fmt.Errorf("multiplier must be greater or equal than 1")
 	}
 
-	if rp.MaxRetries < 0 {
+	if r.MaxRetries < 0 {
 		return fmt.Errorf("MaxRetries must be 0 or greater")
 	}
 
@@ -42,6 +43,18 @@ func (rp *RetryPolicy) Validate() error {
 }
 
 // GetBaseTimeout converts the BaseTimeout from milliseconds to a time.Duration.
-func (rp *RetryPolicy) GetBaseTimeout() time.Duration {
-	return time.Duration(rp.BaseTimeout) * time.Millisecond
+func (r *RetryPolicy) GetBaseTimeout() time.Duration {
+	return time.Duration(r.BaseTimeout) * time.Millisecond
+}
+
+func (r *RetryPolicy) ToModel() *models.RetryPolicy {
+	if r == nil {
+		return nil
+	}
+
+	return &models.RetryPolicy{
+		BaseTimeout: r.GetBaseTimeout(),
+		Multiplier:  r.Multiplier,
+		MaxRetries:  uint(r.MaxRetries),
+	}
 }

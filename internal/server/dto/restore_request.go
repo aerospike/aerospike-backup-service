@@ -3,12 +3,10 @@ package dto
 import (
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
-
-// RestoreJobID represents the restore operation job id.
-type RestoreJobID int
 
 // RestoreRequest represents a restore operation request.
 // @Description RestoreRequest represents a restore operation request.
@@ -108,9 +106,32 @@ func (r *RestoreTimestampRequest) Validate() error {
 }
 
 func (r RestoreTimestampRequest) ToModel() *model.RestoreTimestampRequest {
-	return nil
+	return &model.RestoreTimestampRequest{
+		DestinationCuster: r.DestinationCuster.ToModel(),
+		Policy:            r.Policy.ToModel(),
+		SecretAgent:       r.SecretAgent.ToModel(),
+		Time:              time.UnixMilli(r.Time),
+		Routine:           r.Routine,
+	}
 }
 
-func (i RestoreRequestInternal) ToModel() *model.RestoreRequestInternal {
-	return nil
+func (r RestoreRequestInternal) ToModel() *model.RestoreRequestInternal {
+	return &model.RestoreRequestInternal{
+		RestoreRequest: model.RestoreRequest{
+			DestinationCuster: r.DestinationCuster.ToModel(),
+			Policy:            r.Policy.ToModel(),
+			SourceStorage:     r.SourceStorage.ToModel(),
+			SecretAgent:       r.SecretAgent.ToModel(),
+		},
+		Dir: r.Dir,
+	}
+}
+
+func (r *RestoreRequest) ToModel() *model.RestoreRequest {
+	return &model.RestoreRequest{
+		DestinationCuster: r.DestinationCuster.ToModel(),
+		Policy:            r.Policy.ToModel(),
+		SourceStorage:     r.SourceStorage.ToModel(),
+		SecretAgent:       r.SecretAgent.ToModel(),
+	}
 }

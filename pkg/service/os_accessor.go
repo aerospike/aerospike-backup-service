@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"io"
 	"io/fs"
 	"log/slog"
@@ -11,7 +12,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"gopkg.in/yaml.v3"
 )
@@ -27,7 +27,7 @@ func NewOSDiskAccessor() *OSDiskAccessor {
 	return &OSDiskAccessor{}
 }
 
-func (o *OSDiskAccessor) readBackupState(filepath string, state *dto.BackupState) error {
+func (o *OSDiskAccessor) readBackupState(filepath string, state *model.BackupState) error {
 	logger := slog.Default().With(slog.String("path", filepath))
 	bytes, err := os.ReadFile(filepath)
 	if err != nil {
@@ -50,20 +50,20 @@ func (o *OSDiskAccessor) readBackupState(filepath string, state *dto.BackupState
 	return nil
 }
 
-func (o *OSDiskAccessor) readBackupDetails(path string, _ bool) (dto.BackupDetails, error) {
+func (o *OSDiskAccessor) readBackupDetails(path string, _ bool) (model.BackupDetails, error) {
 	filePath := filepath.Join(path, metadataFile)
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
-		return dto.BackupDetails{}, err
+		return model.BackupDetails{}, err
 	}
 
-	metadata := &dto.BackupMetadata{}
+	metadata := &model.BackupMetadata{}
 	if err = yaml.Unmarshal(bytes, metadata); err != nil {
 		slog.Warn("Failed unmarshal metadata file", "path", filePath, "err", err,
 			"content", string(bytes))
-		return dto.BackupDetails{}, err
+		return model.BackupDetails{}, err
 	}
-	return dto.BackupDetails{
+	return model.BackupDetails{
 		BackupMetadata: *metadata,
 		Key:            util.Ptr(path),
 	}, nil

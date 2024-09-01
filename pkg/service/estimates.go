@@ -1,12 +1,11 @@
 package service
 
 import (
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"time"
-
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 )
 
-func currentBackupStatus(handlers map[string]BackupHandler) *dto.RunningJob {
+func currentBackupStatus(handlers map[string]BackupHandler) *model.RunningJob {
 	if len(handlers) == 0 {
 		return nil
 	}
@@ -35,11 +34,11 @@ func getAnyHandler(m map[string]BackupHandler) BackupHandler {
 
 // RestoreJobStatus returns the status of a restore job.
 // The information included in the response depends on the job status:
-//   - dto.JobStatusRunning -> current statistics and estimation.
-//   - dto.JobStatusDone -> statistics.
-//   - status dto.JobStatusFailed -> error.
-func RestoreJobStatus(job *jobInfo) *dto.RestoreJobStatus {
-	status := &dto.RestoreJobStatus{
+//   - model.JobStatusRunning -> current statistics and estimation.
+//   - model.JobStatusDone -> statistics.
+//   - status model.JobStatusFailed -> error.
+func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
+	status := &model.RestoreJobStatus{
 		Status: job.status,
 	}
 
@@ -56,7 +55,7 @@ func RestoreJobStatus(job *jobInfo) *dto.RestoreJobStatus {
 		status.TotalBytes += stats.GetTotalBytesRead()
 	}
 
-	if job.status == dto.JobStatusRunning {
+	if job.status == model.JobStatusRunning {
 		status.CurrentRestore = NewRunningJob(job.startTime, status.ReadRecords,
 			job.totalRecords)
 	}
@@ -69,13 +68,13 @@ func RestoreJobStatus(job *jobInfo) *dto.RestoreJobStatus {
 }
 
 // NewRunningJob created new RunningJob with calculated estimated time and percentage.
-func NewRunningJob(startTime time.Time, done, total uint64) *dto.RunningJob {
+func NewRunningJob(startTime time.Time, done, total uint64) *model.RunningJob {
 	if total == 0 {
 		return nil
 	}
 
 	percentage := float64(done) / float64(total)
-	return &dto.RunningJob{
+	return &model.RunningJob{
 		StartTime:        startTime,
 		DoneRecords:      done,
 		TotalRecords:     total,

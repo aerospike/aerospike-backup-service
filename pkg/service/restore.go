@@ -1,22 +1,21 @@
 package service
 
 import (
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"time"
-
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 )
 
 type RestoreManager interface {
 	// Restore starts a restore process using the given request.
 	// Returns the job id as a unique identifier.
-	Restore(request *dto.RestoreRequestInternal) (dto.RestoreJobID, error)
+	Restore(request *model.RestoreRequestInternal) (model.RestoreJobID, error)
 
 	// RestoreByTime starts a restore by time process using the given request.
 	// Returns the job id as a unique identifier.
-	RestoreByTime(request *dto.RestoreTimestampRequest) (dto.RestoreJobID, error)
+	RestoreByTime(request *model.RestoreTimestampRequest) (model.RestoreJobID, error)
 
 	// JobStatus returns status for the given job id.
-	JobStatus(jobID dto.RestoreJobID) (*dto.RestoreJobStatus, error)
+	JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error)
 
 	// RetrieveConfiguration return backed up Aerospike configuration.
 	RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error)

@@ -4,6 +4,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -47,7 +48,7 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 		Dir:            request.SourceStorage.Path,
 	}
 
-	jobID, err := s.restoreManager.Restore(requestInternal)
+	jobID, err := s.restoreManager.Restore(requestInternal.ToModel())
 	if err != nil {
 		hLogger.Error("failed to restore",
 			slog.Any("error", err),
@@ -98,7 +99,7 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 		RestoreRequest: request,
 		Dir:            request.SourceStorage.Path,
 	}
-	jobID, err := s.restoreManager.Restore(requestInternal)
+	jobID, err := s.restoreManager.Restore(requestInternal.ToModel())
 	if err != nil {
 		hLogger.Error("failed to restore",
 			slog.Any("error", err),
@@ -146,7 +147,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	jobID, err := s.restoreManager.RestoreByTime(&request)
+	jobID, err := s.restoreManager.RestoreByTime(request.ToModel())
 	if err != nil {
 		hLogger.Error("failed to restore by timestamp",
 			slog.Any("routine", request.Routine),
@@ -192,7 +193,7 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	status, err := s.restoreManager.JobStatus(dto.RestoreJobID(jobID))
+	status, err := s.restoreManager.JobStatus(model.RestoreJobID(jobID))
 	if err != nil {
 		hLogger.Error("failed to get job status",
 			slog.Int("jobID", jobID),

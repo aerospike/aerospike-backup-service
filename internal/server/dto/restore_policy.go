@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 )
 
 // RestorePolicy represents a policy for the restore operation.
@@ -57,7 +58,7 @@ type RestorePolicy struct {
 	// Compression details.
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
 	// Configuration of retries for each restore write operation.
-	// If nil, no retries will be performed.
+	// If nil, default retry policy will be used.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 }
 
@@ -111,4 +112,37 @@ func (p *RestorePolicy) GetRetryPolicyOrDefault() *RetryPolicy {
 	}
 
 	return defaultRetry
+}
+
+func (r *RestorePolicy) ToModel() *model.RestorePolicy {
+	if r == nil {
+		return nil
+	}
+
+	retryPolicy := r.RetryPolicy.ToModel()
+	if retryPolicy == nil {
+		retryPolicy = defaultRetry.ToModel()
+	}
+
+	return &model.RestorePolicy{
+		Parallel:           r.Parallel,
+		NoRecords:          r.NoRecords,
+		NoIndexes:          r.NoIndexes,
+		NoUdfs:             r.NoUdfs,
+		Timeout:            r.Timeout,
+		DisableBatchWrites: r.DisableBatchWrites,
+		MaxAsyncBatches:    r.MaxAsyncBatches,
+		BatchSize:          r.BatchSize,
+		Namespace:          r.Namespace.ToModel(),
+		SetList:            r.SetList,
+		BinList:            r.BinList,
+		Replace:            r.Replace,
+		Unique:             r.Unique,
+		NoGeneration:       r.NoGeneration,
+		Bandwidth:          r.Bandwidth,
+		Tps:                r.Tps,
+		EncryptionPolicy:   r.EncryptionPolicy.ToModel(),
+		CompressionPolicy:  r.CompressionPolicy.ToModel(),
+		RetryPolicy:        *retryPolicy,
+	}
 }

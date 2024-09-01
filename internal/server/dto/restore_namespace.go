@@ -1,6 +1,9 @@
 package dto
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
+)
 
 // RestoreNamespace specifies an alternative namespace name for the restore
 // operation, where Source is the original namespace name and Destination is
@@ -26,4 +29,24 @@ func (n *RestoreNamespace) Validate() error {
 	}
 
 	return nil
+}
+
+func (r *RestoreNamespace) ToModel() *model.RestoreNamespace {
+	if r == nil {
+		return nil
+	}
+
+	modelNamespace := &model.RestoreNamespace{}
+
+	if r.Source != nil {
+		source := *r.Source
+		modelNamespace.Source = &source
+	}
+
+	if r.Destination != nil {
+		destination := *r.Destination
+		modelNamespace.Destination = &destination
+	}
+
+	return modelNamespace
 }

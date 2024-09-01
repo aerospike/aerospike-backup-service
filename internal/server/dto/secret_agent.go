@@ -25,6 +25,10 @@ type SecretAgent struct {
 }
 
 func (s *SecretAgent) ToModel() *model.SecretAgent {
+	if s == nil {
+		return nil
+	}
+
 	return &model.SecretAgent{
 		ConnectionType: s.ConnectionType,
 		Address:        s.Address,

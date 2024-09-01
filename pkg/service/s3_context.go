@@ -29,7 +29,7 @@ type S3Context struct {
 	client        *s3.Client
 	bucket        string
 	Path          string
-	metadataCache *util.LoadingCache[string, *dto.BackupMetadata]
+	metadataCache *util.LoadingCache[string, *model.BackupMetadata]
 }
 
 var _ StorageAccessor = (*S3Context)(nil)
@@ -60,7 +60,7 @@ func NewS3Context(storage *model.Storage) *S3Context {
 		Path:   parsedPath,
 	}
 
-	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*dto.BackupMetadata, error) {
+	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*model.BackupMetadata, error) {
 		return s.readMetadata(path)
 	})
 	return s
@@ -99,12 +99,12 @@ func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
 	return cfg
 }
 
-func (s *S3Context) readBackupState(stateFilePath string, state *dto.BackupState) error {
+func (s *S3Context) readBackupState(stateFilePath string, state *model.BackupState) error {
 	return s.readFile(stateFilePath, state)
 }
 
-func (s *S3Context) readBackupDetails(path string, useCache bool) (dto.BackupDetails, error) {
-	var metadata *dto.BackupMetadata
+func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupDetails, error) {
+	var metadata *model.BackupMetadata
 	var err error
 	if useCache {
 		metadata, err = s.getMetadataFromCache(path)
@@ -112,9 +112,9 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (dto.BackupDet
 		metadata, err = s.readMetadata(path)
 	}
 	if err != nil {
-		return dto.BackupDetails{}, err
+		return model.BackupDetails{}, err
 	}
-	return dto.BackupDetails{
+	return model.BackupDetails{
 		BackupMetadata: *metadata,
 		Key:            util.Ptr(s3Protocol + s.bucket + "/" + path),
 	}, nil
@@ -252,7 +252,7 @@ func (s *S3Context) lsDir(prefix string, after *string) ([]string, error) {
 	return result, nil
 }
 
-func (s *S3Context) getMetadataFromCache(prefix string) (*dto.BackupMetadata, error) {
+func (s *S3Context) getMetadataFromCache(prefix string) (*model.BackupMetadata, error) {
 	metadata, err := s.metadataCache.Get(prefix)
 	if err != nil {
 		return nil, err
@@ -260,8 +260,8 @@ func (s *S3Context) getMetadataFromCache(prefix string) (*dto.BackupMetadata, er
 	return metadata, nil
 }
 
-func (s *S3Context) readMetadata(path string) (*dto.BackupMetadata, error) {
-	metadata := &dto.BackupMetadata{}
+func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
+	metadata := &model.BackupMetadata{}
 	metadataFilePath := filepath.Join(path, metadataFile)
 	err := s.readFile(metadataFilePath, metadata)
 	if err != nil {

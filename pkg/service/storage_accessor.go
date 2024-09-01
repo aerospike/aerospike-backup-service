@@ -1,17 +1,16 @@
 package service
 
 import (
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"io"
-
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 )
 
 type StorageAccessor interface {
 	// readBackupState reads backup state for a backup.
-	readBackupState(stateFilePath string, state *dto.BackupState) error
+	readBackupState(stateFilePath string, state *model.BackupState) error
 
 	// readBackupDetails returns backup details for a backup.
-	readBackupDetails(path string, useCache bool) (dto.BackupDetails, error)
+	readBackupDetails(path string, useCache bool) (model.BackupDetails, error)
 
 	// Read reads given file.
 	Read(path string) (io.ReadCloser, error)

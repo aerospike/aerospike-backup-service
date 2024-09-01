@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
@@ -24,7 +23,7 @@ type BackupRoutineHandler struct {
 	namespaces       []string
 	storage          *model.Storage
 	secretAgent      *model.SecretAgent
-	state            *dto.BackupState
+	state            *model.BackupState
 	retry            *RetryService
 	clientManager    ClientManager
 
@@ -205,7 +204,7 @@ func (h *BackupRoutineHandler) writeBackupMetadata(stats *models.BackupStats,
 	created time.Time,
 	namespace string,
 	backupFolder string) error {
-	metadata := dto.BackupMetadata{
+	metadata := model.BackupMetadata{
 		From:                time.Time{},
 		Created:             created,
 		Namespace:           namespace,
@@ -374,10 +373,10 @@ func (h *BackupRoutineHandler) writeState() {
 func getFullPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, namespace string,
 	now time.Time) string {
 	if backupPolicy.RemoveFiles.RemoveFullBackup() {
-		return fmt.Sprintf("%s/%s/%s", fullBackupsPath, dto.DataDirectory, namespace)
+		return fmt.Sprintf("%s/%s/%s", fullBackupsPath, model.DataDirectory, namespace)
 	}
 
-	return fmt.Sprintf("%s/%s/%s/%s", fullBackupsPath, formatTime(now), dto.DataDirectory, namespace)
+	return fmt.Sprintf("%s/%s/%s/%s", fullBackupsPath, formatTime(now), model.DataDirectory, namespace)
 }
 
 func getIncrementalPath(incrBackupsPath string, t time.Time) string {
@@ -385,24 +384,24 @@ func getIncrementalPath(incrBackupsPath string, t time.Time) string {
 }
 
 func getIncrementalPathForNamespace(incrBackupsPath string, namespace string, t time.Time) string {
-	return fmt.Sprintf("%s/%s/%s", getIncrementalPath(incrBackupsPath, t), dto.DataDirectory, namespace)
+	return fmt.Sprintf("%s/%s/%s", getIncrementalPath(incrBackupsPath, t), model.DataDirectory, namespace)
 }
 
 func getConfigurationPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, t time.Time) string {
 	if backupPolicy.RemoveFiles.RemoveFullBackup() {
-		path := fmt.Sprintf("%s/%s", fullBackupsPath, dto.ConfigurationBackupDirectory)
+		path := fmt.Sprintf("%s/%s", fullBackupsPath, model.ConfigurationBackupDirectory)
 		return path
 	}
 
-	return fmt.Sprintf("%s/%s/%s", fullBackupsPath, formatTime(t), dto.ConfigurationBackupDirectory)
+	return fmt.Sprintf("%s/%s/%s", fullBackupsPath, formatTime(t), model.ConfigurationBackupDirectory)
 }
 
 func formatTime(t time.Time) string {
 	return strconv.FormatInt(t.UnixMilli(), 10)
 }
 
-func (h *BackupRoutineHandler) GetCurrentStat() *dto.CurrentBackups {
-	return &dto.CurrentBackups{
+func (h *BackupRoutineHandler) GetCurrentStat() *model.CurrentBackups {
+	return &model.CurrentBackups{
 		Full:        currentBackupStatus(h.fullBackupHandlers),
 		Incremental: currentBackupStatus(h.incrBackupHandlers),
 	}

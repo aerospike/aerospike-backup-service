@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"time"
 )
 
 // RestoreJobID represents the restore operation job id.
@@ -26,15 +27,15 @@ type RestoreRequestInternal struct {
 // @Description RestoreTimestampRequest represents a restore by timestamp operation request.
 type RestoreTimestampRequest struct {
 	// The details of the Aerospike destination cluster.
-	DestinationCuster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
+	DestinationCuster *AerospikeCluster
 	// Restore policy to use in the operation.
-	Policy *RestorePolicy `json:"policy,omitempty" validate:"required"`
+	Policy *RestorePolicy
 	// Secret Agent configuration (optional).
-	SecretAgent *SecretAgent `json:"secret-agent,omitempty"`
+	SecretAgent *SecretAgent
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
-	Time int64 `json:"time,omitempty" format:"int64" example:"1739538000000" validate:"required"`
+	Time time.Time
 	// The backup routine name.
-	Routine string `json:"routine,omitempty" example:"daily" validate:"required"`
+	Routine string
 }
 
 // String satisfies the fmt.Stringer interface.

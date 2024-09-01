@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"strconv"
 	"time"
 )
@@ -19,6 +20,13 @@ func NewTimeBounds(fromTime, toTime *time.Time) (*TimeBounds, error) {
 		return nil, errors.New("fromTime should be less than toTime")
 	}
 	return &TimeBounds{FromTime: fromTime, ToTime: toTime}, nil
+}
+
+func (t *TimeBounds) ToModel() *model.TimeBounds {
+	return &model.TimeBounds{
+		FromTime: t.FromTime,
+		ToTime:   t.ToTime,
+	}
 }
 
 // NewTimeBoundsTo creates a new TimeBounds until the provided toTime.
@@ -65,36 +73,4 @@ func parseTimestamp(value string) (*time.Time, error) {
 
 	result := time.UnixMilli(intValue)
 	return &result, nil
-}
-
-// Contains verifies if the given value lies within FromTime (inclusive) and ToTime (exclusive).
-func (tb *TimeBounds) Contains(value time.Time) bool {
-	if tb.FromTime != nil && value.Before(*tb.FromTime) {
-		return false
-	}
-
-	if tb.ToTime != nil && value.After(*tb.ToTime) {
-		return false
-	}
-
-	return true
-}
-
-// String implements the Stringer interface.
-func (tb *TimeBounds) String() string {
-	if tb.FromTime == nil && tb.ToTime == nil {
-		return "NA"
-	}
-
-	from := "NA"
-	if tb.FromTime != nil {
-		from = tb.FromTime.Format("2006-01-02 15:04:05")
-	}
-
-	to := "NA"
-	if tb.ToTime != nil {
-		to = tb.ToTime.Format("2006-01-02 15:04:05")
-	}
-
-	return fmt.Sprintf("%s - %s", from, to)
 }

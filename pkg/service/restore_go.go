@@ -3,14 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/aws/s3"
-	"github.com/aerospike/backup-go/models"
 )
 
 // RestoreGo implements the [Restore] interface.
@@ -27,7 +26,7 @@ func NewRestoreGo() *RestoreGo {
 func (r *RestoreGo) RestoreRun(
 	ctx context.Context,
 	client *backup.Client,
-	restoreRequest *dto.RestoreRequestInternal,
+	restoreRequest *model.RestoreRequestInternal,
 ) (RestoreHandler, error) {
 	var err error
 
@@ -47,18 +46,14 @@ func (r *RestoreGo) RestoreRun(
 }
 
 //nolint:funlen
-func makeRestoreConfig(restoreRequest *dto.RestoreRequestInternal,
+func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 ) *backup.RestoreConfig {
 	config := backup.NewDefaultRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
 
-	retryPolicy := restoreRequest.Policy.GetRetryPolicyOrDefault()
-	config.RetryPolicy = &models.RetryPolicy{
-		BaseTimeout: retryPolicy.GetBaseTimeout(),
-		Multiplier:  retryPolicy.Multiplier,
-		MaxRetries:  uint(retryPolicy.MaxRetries),
-	}
+	config.RetryPolicy = util.Ptr(restoreRequest.Policy.RetryPolicy)
+
 	if restoreRequest.Policy.Tps != nil {
 		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)
 	}
@@ -124,7 +119,7 @@ func makeRestoreConfig(restoreRequest *dto.RestoreRequestInternal,
 	return config
 }
 
-func makeWritePolicy(restoreRequest *dto.RestoreRequestInternal) *a.WritePolicy {
+func makeWritePolicy(restoreRequest *model.RestoreRequestInternal) *a.WritePolicy {
 	writePolicy := a.NewWritePolicy(0, 0)
 	writePolicy.GenerationPolicy = a.EXPECT_GEN_GT
 	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
@@ -162,12 +157,12 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 
 // getReader instantiates and returns a reader for the restore operation
 // according to the specified storage type.
-func getReader(ctx context.Context, path *string, storage *dto.Storage,
+func getReader(ctx context.Context, path *string, storage *model.Storage,
 ) (backup.StreamingReader, error) {
 	switch storage.Type {
-	case dto.Local:
+	case model.Local:
 		return backup.NewStreamingReaderLocal(*path, backup.EncoderTypeASB)
-	case dto.S3:
+	case model.S3:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err

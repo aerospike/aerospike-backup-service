@@ -4,15 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-	"sync"
-	"time"
-
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/backup-go"
-	"github.com/aws/smithy-go/ptr"
 	"github.com/prometheus/client_golang/prometheus"
+	"log/slog"
+	"sync"
 )
 
 var errBackendNotFound = errors.New("backend not found")
@@ -22,7 +18,7 @@ var errBackupNotFound = errors.New("backup not found")
 // Stores job information locally within a map.
 type dataRestorer struct {
 	configRetriever
-	config         *dto.Config
+	config         *model.Config
 	restoreJobs    *JobsHolder
 	restoreService Restore
 	backends       BackendsHolder
@@ -33,7 +29,7 @@ var _ RestoreManager = (*dataRestorer)(nil)
 
 // NewRestoreManager returns a new dataRestorer instance.
 func NewRestoreManager(backends BackendsHolder,
-	config *dto.Config,
+	config *model.Config,
 	restoreService Restore,
 	clientManager ClientManager,
 ) RestoreManager {
@@ -49,17 +45,17 @@ func NewRestoreManager(backends BackendsHolder,
 	}
 }
 
-func (r *dataRestorer) Restore(request *dto.RestoreRequestInternal,
-) (dto.RestoreJobID, error) {
+func (r *dataRestorer) Restore(request *model.RestoreRequestInternal,
+) (model.RestoreJobID, error) {
 	jobID := r.restoreJobs.newJob()
-	totalRecords, err := validateStorageContainsBackup(request.SourceStorage.ToModel())
+	totalRecords, err := validateStorageContainsBackup(request.SourceStorage)
 	if err != nil {
 		return 0, err
 	}
 
 	ctx := context.TODO()
 	go func() {
-		client, err := r.clientManager.CreateClient(request.DestinationCuster.ToModel())
+		client, err := r.clientManager.CreateClient(request.DestinationCuster)
 		if err != nil {
 			slog.Error("Failed to restore by path",
 				slog.Any("cluster", request.DestinationCuster),
@@ -90,14 +86,13 @@ func (r *dataRestorer) Restore(request *dto.RestoreRequestInternal,
 	return jobID, nil
 }
 
-func (r *dataRestorer) RestoreByTime(request *dto.RestoreTimestampRequest,
-) (dto.RestoreJobID, error) {
+func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
+) (model.RestoreJobID, error) {
 	reader, found := r.backends.GetReader(request.Routine)
 	if !found {
 		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.Routine)
 	}
-	timestamp := time.UnixMilli(request.Time)
-	fullBackups, err := reader.FindLastFullBackup(timestamp)
+	fullBackups, err := reader.FindLastFullBackup(request.Time)
 	if err != nil {
 		return 0, fmt.Errorf("restore failed: %w", err)
 	}
@@ -111,11 +106,11 @@ func (r *dataRestorer) RestoreByTime(request *dto.RestoreTimestampRequest,
 func (r *dataRestorer) restoreByTimeSync(
 	ctx context.Context,
 	backend BackupListReader,
-	request *dto.RestoreTimestampRequest,
-	jobID dto.RestoreJobID,
-	fullBackups []dto.BackupDetails,
+	request *model.RestoreTimestampRequest,
+	jobID model.RestoreJobID,
+	fullBackups []model.BackupDetails,
 ) {
-	client, err := r.clientManager.CreateClient(request.DestinationCuster.ToModel())
+	client, err := r.clientManager.CreateClient(request.DestinationCuster)
 	if err != nil {
 		slog.Error("Failed to restore by timestamp",
 			slog.Any("cluster", request.DestinationCuster),
@@ -130,7 +125,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	multiError := prometheus.MultiError{}
 	for _, nsBackup := range fullBackups {
 		wg.Add(1)
-		go func(nsBackup dto.BackupDetails) {
+		go func(nsBackup model.BackupDetails) {
 			defer wg.Done()
 			if err := r.restoreNamespace(ctx, client, backend, request, jobID, nsBackup); err != nil {
 				multiError.Append(
@@ -155,14 +150,14 @@ func (r *dataRestorer) restoreNamespace(
 	ctx context.Context,
 	client *backup.Client,
 	backend BackupListReader,
-	request *dto.RestoreTimestampRequest,
-	jobID dto.RestoreJobID,
-	fullBackup dto.BackupDetails,
+	request *model.RestoreTimestampRequest,
+	jobID model.RestoreJobID,
+	fullBackup model.BackupDetails,
 ) error {
-	allBackups := []dto.BackupDetails{fullBackup}
+	allBackups := []model.BackupDetails{fullBackup}
 
 	// Find incremental backups
-	bounds, err := dto.NewTimeBounds(&fullBackup.Created, ptr.Time(time.UnixMilli(request.Time)))
+	bounds, err := model.NewTimeBounds(&fullBackup.Created, &request.Time)
 	if err != nil {
 		return err
 	}
@@ -201,13 +196,13 @@ func (r *dataRestorer) restoreNamespace(
 func (r *dataRestorer) restoreFromPath(
 	ctx context.Context,
 	client *backup.Client,
-	request *dto.RestoreTimestampRequest,
+	request *model.RestoreTimestampRequest,
 	backupPath *string,
 ) (RestoreHandler, error) {
 	restoreRequest := r.toRestoreRequest(request)
 	handler, err := r.restoreService.RestoreRun(ctx,
 		client,
-		&dto.RestoreRequestInternal{
+		&model.RestoreRequestInternal{
 			RestoreRequest: *restoreRequest,
 			Dir:            backupPath,
 		})
@@ -218,19 +213,18 @@ func (r *dataRestorer) restoreFromPath(
 	return handler, nil
 }
 
-func (r *dataRestorer) toRestoreRequest(request *dto.RestoreTimestampRequest) *dto.RestoreRequest {
+func (r *dataRestorer) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
 	routine := r.config.BackupRoutines[request.Routine]
-	storage := r.config.Storage[routine.Storage]
-	return dto.NewRestoreRequest(
+	return model.NewRestoreRequest(
 		request.DestinationCuster,
 		request.Policy,
-		&storage,
+		routine.Storage,
 		request.SecretAgent,
 	)
 }
 
 // JobStatus returns the status of the job with the given id.
-func (r *dataRestorer) JobStatus(jobID dto.RestoreJobID) (*dto.RestoreJobStatus, error) {
+func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
 	return r.restoreJobs.getStatus(jobID)
 }
 
