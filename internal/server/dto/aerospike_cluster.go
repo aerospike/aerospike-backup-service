@@ -3,6 +3,7 @@ package dto
 
 import (
 	"errors"
+	"io"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
@@ -49,6 +50,26 @@ func (a *AerospikeCluster) Validate() error {
 		}
 	}
 	return nil
+}
+
+// NewClusterFromReader creates a new Storage object from a given reader
+func NewClusterFromReader(r io.Reader, format SerializationFormat) (*AerospikeCluster, error) {
+	a := &AerospikeCluster{}
+	if err := Deserialize(a, r, format); err != nil {
+		return nil, err
+	}
+
+	if err := a.Validate(); err != nil {
+		return nil, err
+	}
+
+	return a, nil
+}
+
+func NewClusterFromModel(m *model.AerospikeCluster) *AerospikeCluster {
+	a := &AerospikeCluster{}
+	a.fromModel(m)
+	return a
 }
 
 func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster) {

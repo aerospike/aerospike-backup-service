@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -39,9 +38,7 @@ func (s *Service) ConfigClusterActionHandler(w http.ResponseWriter, r *http.Requ
 func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addAerospikeCluster"))
 
-	var newCluster dto.AerospikeCluster
-
-	err := json.NewDecoder(r.Body).Decode(&newCluster)
+	newCluster, err := dto.NewClusterFromReader(r.Body, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),
@@ -90,8 +87,8 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAerospikeClusters"))
 
-	clusters := s.config.AerospikeClusters
-	jsonResponse, err := json.Marshal(clusters)
+	toDTO := dto.ConvertModelMapToDTO(s.config.AerospikeClusters, dto.NewClusterFromModel)
+	jsonResponse, err := dto.Serialize(toDTO, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal clusters",
 			slog.Any("error", err),
@@ -139,7 +136,7 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cluster %s could not be found", clusterName), http.StatusNotFound)
 		return
 	}
-	jsonResponse, err := json.Marshal(cluster)
+	jsonResponse, err := dto.Serialize(dto.NewClusterFromModel(cluster), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal cluster",
 			slog.Any("error", err),
@@ -172,8 +169,7 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateAerospikeCluster"))
 
-	var updatedCluster dto.AerospikeCluster
-	err := json.NewDecoder(r.Body).Decode(&updatedCluster)
+	updatedCluster, err := dto.NewClusterFromReader(r.Body, dto.JSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

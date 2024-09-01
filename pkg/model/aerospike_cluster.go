@@ -23,19 +23,19 @@ import (
 type AerospikeCluster struct {
 	pwd atomic.Pointer[string]
 	// The cluster name.
-	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster"`
+	ClusterLabel *string
 	// The seed nodes details.
-	SeedNodes []SeedNode `yaml:"seed-nodes,omitempty" json:"seed-nodes,omitempty"`
+	SeedNodes []SeedNode
 	// The connection timeout in milliseconds.
-	ConnTimeout *int32 `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty" example:"5000"`
+	ConnTimeout *int32
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
-	UseServicesAlternate *bool `yaml:"use-services-alternate,omitempty" json:"use-services-alternate,omitempty"`
+	UseServicesAlternate *bool
 	// The authentication details to the Aerospike cluster.
-	Credentials *Credentials `yaml:"credentials,omitempty" json:"credentials,omitempty"`
+	Credentials *Credentials
 	// The cluster TLS configuration.
-	TLS *TLS `yaml:"tls,omitempty" json:"tls,omitempty"`
+	TLS *TLS
 	// Specifies the maximum number of parallel scans per the cluster.
-	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100" validate:"optional"`
+	MaxParallelScans *int
 }
 
 // NewLocalAerospikeCluster returns a new AerospikeCluster to be used in tests.
