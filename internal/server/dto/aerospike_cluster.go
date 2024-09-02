@@ -29,8 +29,8 @@ type AerospikeCluster struct {
 }
 
 // NewLocalAerospikeCluster returns a new AerospikeCluster to be used in tests.
-func NewLocalAerospikeCluster() AerospikeCluster {
-	return AerospikeCluster{
+func NewLocalAerospikeCluster() *AerospikeCluster {
+	return &AerospikeCluster{
 		SeedNodes:   []SeedNode{{HostName: "localhost", Port: 3000}},
 		Credentials: &Credentials{User: util.Ptr("tester"), Password: util.Ptr("psw")},
 	}

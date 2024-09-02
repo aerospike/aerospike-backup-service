@@ -39,6 +39,12 @@ func (s *SecretAgent) ToModel() *model.SecretAgent {
 	}
 }
 
+func NewSecretAgentFromModel(m *model.SecretAgent) *SecretAgent {
+	s := &SecretAgent{}
+	s.fromModel(m)
+	return s
+}
+
 func (s *SecretAgent) fromModel(m *model.SecretAgent) {
 	s.ConnectionType = m.ConnectionType
 	s.Address = m.Address

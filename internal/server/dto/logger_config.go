@@ -92,8 +92,10 @@ func (l *LoggerConfig) fromModel(m *model.LoggerConfig) {
 	l.Level = m.Level
 	l.Format = m.Format
 	l.StdoutWriter = m.StdoutWriter
-	l.FileWriter = &FileLoggerConfig{}
-	l.FileWriter.fromModel(m.FileWriter)
+	if m.FileWriter != nil {
+		l.FileWriter = &FileLoggerConfig{}
+		l.FileWriter.fromModel(m.FileWriter)
+	}
 }
 
 // FileLoggerConfig represents the configuration for the file logger writer.

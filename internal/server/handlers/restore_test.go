@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testConfigRestorePolicy() dto.RestorePolicy {
+func testConfigRestorePolicy() *dto.RestorePolicy {
 	testIn32 := int32(10)
-	return dto.RestorePolicy{
+	return &dto.RestorePolicy{
 		Parallel: &testIn32,
 	}
 }
@@ -25,9 +25,9 @@ func testRestoreRequest() dto.RestoreRequest {
 	policy := testConfigRestorePolicy()
 	storage := testConfigStorage()
 	return dto.RestoreRequest{
-		DestinationCuster: &cluster,
-		Policy:            &policy,
-		SourceStorage:     &storage,
+		DestinationCuster: cluster,
+		Policy:            policy,
+		SourceStorage:     storage,
 		SecretAgent:       nil,
 	}
 }
@@ -36,8 +36,8 @@ func testRestoreTimestampRequest() dto.RestoreTimestampRequest {
 	cluster := testConfigCluster()
 	policy := testConfigRestorePolicy()
 	return dto.RestoreTimestampRequest{
-		DestinationCuster: &cluster,
-		Policy:            &policy,
+		DestinationCuster: cluster,
+		Policy:            policy,
 		SecretAgent:       nil,
 		Time:              time.Now().Unix(),
 		Routine:           testRoutine,

@@ -119,7 +119,7 @@ func systemCtx() context.Context {
 }
 
 func readConfiguration(configurationManager configuration.ConfigurationManager) (*model.Config, error) {
-	bytes, err := configurationManager.ReadConfiguration()
+	r, err := configurationManager.ReadConfiguration()
 
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
@@ -127,7 +127,8 @@ func readConfiguration(configurationManager configuration.ConfigurationManager) 
 	}
 
 	config := dto.NewConfigWithDefaultValues()
-	err = config.Deserialize(bytes, dto.YAML)
+	err = config.Deserialize(r, dto.YAML)
+	r.Close()
 	slog.Info(fmt.Sprintf("Configuration: %v", config))
 	return config.ToModel(), nil
 }

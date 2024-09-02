@@ -22,12 +22,12 @@ func testSeedNode() dto.SeedNode {
 	}
 }
 
-func testConfigCluster() dto.AerospikeCluster {
+func testConfigCluster() *dto.AerospikeCluster {
 	label := "label"
 	timeout := int32(10)
 	useAlternate := false
 	queueSize := 1
-	return dto.AerospikeCluster{
+	return &dto.AerospikeCluster{
 		ClusterLabel:         &label,
 		SeedNodes:            []dto.SeedNode{testSeedNode()},
 		ConnTimeout:          &timeout,

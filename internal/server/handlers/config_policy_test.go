@@ -14,10 +14,10 @@ import (
 
 const testPolicy = "testPolicy"
 
-func testConfigBackupPolicy() dto.BackupPolicy {
+func testConfigBackupPolicy() *dto.BackupPolicy {
 	testIn32 := int32(10)
 	keepFiles := dto.KeepAll
-	return dto.BackupPolicy{
+	return &dto.BackupPolicy{
 		RemoveFiles:   &keepFiles,
 		Parallel:      &testIn32,
 		SocketTimeout: &testIn32,

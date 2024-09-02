@@ -13,7 +13,7 @@ import (
 
 func testConfigDTO() *dto.Config {
 	return &dto.Config{
-		ServiceConfig: &dto.BackupServiceConfig{
+		ServiceConfig: dto.BackupServiceConfig{
 			HTTPServer: &dto.HTTPServerConfig{},
 			Logger:     &dto.LoggerConfig{},
 		},

@@ -14,12 +14,12 @@ var _ ReadWriteDTO[model.Config] = (*Config)(nil)
 //
 //nolint:lll
 type Config struct {
-	ServiceConfig     BackupServiceConfig         `yaml:"service,omitempty" json:"service,omitempty"`
-	AerospikeClusters map[string]AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
-	Storage           map[string]Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
-	BackupPolicies    map[string]BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
-	BackupRoutines    map[string]BackupRoutine    `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
-	SecretAgents      map[string]SecretAgent      `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
+	ServiceConfig     BackupServiceConfig          `yaml:"service,omitempty" json:"service,omitempty"`
+	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
+	Storage           map[string]*Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
+	BackupPolicies    map[string]*BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
+	BackupRoutines    map[string]*BackupRoutine    `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
+	SecretAgents      map[string]*SecretAgent      `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 }
 
 func (c *Config) Serialize(format SerializationFormat) ([]byte, error) {
@@ -33,39 +33,29 @@ func (c *Config) Deserialize(r io.Reader, format SerializationFormat) error {
 func (c *Config) fromModel(m *model.Config) {
 	c.ServiceConfig.fromModel(&m.ServiceConfig)
 
-	c.AerospikeClusters = make(map[string]AerospikeCluster)
-	for k, v := range m.AerospikeClusters {
-		cluster := AerospikeCluster{}
-		cluster.fromModel(v)
-		c.AerospikeClusters[k] = cluster
+	c.AerospikeClusters = make(map[string]*AerospikeCluster)
+	for name, a := range m.AerospikeClusters {
+		c.AerospikeClusters[name] = NewClusterFromModel(a)
 	}
 
-	c.Storage = make(map[string]Storage)
-	for k, v := range m.Storage {
-		storage := Storage{}
-		storage.fromModel(v)
-		c.Storage[k] = storage
+	c.Storage = make(map[string]*Storage)
+	for name, s := range m.Storage {
+		c.Storage[name] = NewStorageFromModel(s)
 	}
 
-	c.BackupPolicies = make(map[string]BackupPolicy)
-	for k, v := range m.BackupPolicies {
-		policy := BackupPolicy{}
-		policy.fromModel(v)
-		c.BackupPolicies[k] = policy
+	c.BackupPolicies = make(map[string]*BackupPolicy)
+	for name, p := range m.BackupPolicies {
+		c.BackupPolicies[name] = NewBackupPolicyFromModel(p)
 	}
 
-	c.BackupRoutines = make(map[string]BackupRoutine)
-	for k, v := range m.BackupRoutines {
-		routine := BackupRoutine{}
-		routine.fromModel(v, m)
-		c.BackupRoutines[k] = routine
+	c.BackupRoutines = make(map[string]*BackupRoutine)
+	for name, r := range m.BackupRoutines {
+		c.BackupRoutines[name] = NewRoutineFromModel(r, m)
 	}
 
-	c.SecretAgents = make(map[string]SecretAgent)
-	for k, v := range m.SecretAgents {
-		agent := SecretAgent{}
-		agent.fromModel(v)
-		c.SecretAgents[k] = agent
+	c.SecretAgents = make(map[string]*SecretAgent)
+	for name, s := range m.SecretAgents {
+		c.SecretAgents[name] = NewSecretAgentFromModel(s)
 	}
 }
 
@@ -73,10 +63,10 @@ func (c *Config) fromModel(m *model.Config) {
 func NewConfigWithDefaultValues() *Config {
 	return &Config{
 		ServiceConfig:     NewBackupServiceConfigWithDefaultValues(),
-		Storage:           map[string]Storage{},
-		BackupRoutines:    map[string]BackupRoutine{},
-		BackupPolicies:    map[string]BackupPolicy{},
-		AerospikeClusters: map[string]AerospikeCluster{},
+		Storage:           map[string]*Storage{},
+		BackupRoutines:    map[string]*BackupRoutine{},
+		BackupPolicies:    map[string]*BackupPolicy{},
+		AerospikeClusters: map[string]*AerospikeCluster{},
 	}
 }
 

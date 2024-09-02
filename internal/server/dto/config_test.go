@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/aws/smithy-go/ptr"
@@ -9,7 +10,7 @@ import (
 func validConfig() *Config {
 	return &Config{
 		ServiceConfig: NewBackupServiceConfigWithDefaultValues(),
-		BackupRoutines: map[string]BackupRoutine{
+		BackupRoutines: map[string]*BackupRoutine{
 			"routine1": {
 				SourceCluster: "cluster1",
 				BackupPolicy:  "policy1",
@@ -25,15 +26,15 @@ func validConfig() *Config {
 				IntervalCron:  "* * * * * *",
 			},
 		},
-		AerospikeClusters: map[string]AerospikeCluster{
+		AerospikeClusters: map[string]*AerospikeCluster{
 			"cluster1": NewLocalAerospikeCluster(),
 			"cluster2": NewLocalAerospikeCluster(),
 		},
-		BackupPolicies: map[string]BackupPolicy{
+		BackupPolicies: map[string]*BackupPolicy{
 			"policy1": {},
 			"policy2": {},
 		},
-		Storage: map[string]Storage{
+		Storage: map[string]*Storage{
 			"storage1": {Type: Local, Path: ptr.String("/")},
 			"storage2": {Type: Local, Path: ptr.String("/")},
 		},
@@ -57,8 +58,8 @@ func TestInvalidClusterReference(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
-	expectedError := "backup routine 'routine1' validation error: Aerospike cluster 'nonExistentCluster' not found"
-	if err.Error() != expectedError {
+	expectedError := notFoundValidationError("routine1", "nonExistentCluster")
+	if errors.Is(err, expectedError) {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
 }
@@ -72,8 +73,8 @@ func TestInvalidBackupPolicyReference(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
-	expectedError := "backup routine 'routine1' validation error: backup policy 'nonExistentPolicy' not found"
-	if err.Error() != expectedError {
+	expectedError := notFoundValidationError("routine1", "nonExistentPolicy")
+	if errors.Is(err, expectedError) {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
 }
@@ -87,8 +88,8 @@ func TestInvalidStorageReference(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
-	expectedError := "backup routine 'routine1' validation error: storage 'nonExistentStorage' not found"
-	if err.Error() != expectedError {
+	expectedError := notFoundValidationError("routine1", "nonExistentStorage")
+	if errors.Is(err, expectedError) {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
 }

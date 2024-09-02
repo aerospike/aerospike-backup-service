@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -22,11 +23,11 @@ const (
 
 var errTest = errors.New("test error")
 
-func testRestoreJobStatus() *dto.RestoreJobStatus {
+func testRestoreJobStatus() *model.RestoreJobStatus {
 	estimatedEndTime := time.Now().Add(1 * time.Minute)
-	return &dto.RestoreJobStatus{
-		RestoreStats: dto.RestoreStats{},
-		CurrentRestore: &dto.RunningJob{
+	return &model.RestoreJobStatus{
+		RestoreStats: model.RestoreStats{},
+		CurrentRestore: &model.RunningJob{
 			TotalRecords:     100,
 			DoneRecords:      10,
 			StartTime:        time.Now(),
@@ -37,10 +38,10 @@ func testRestoreJobStatus() *dto.RestoreJobStatus {
 	}
 }
 
-func testBackupDetails() dto.BackupDetails {
+func testBackupDetails() model.BackupDetails {
 	key := testBackupDetailKey
-	return dto.BackupDetails{
-		BackupMetadata: dto.BackupMetadata{
+	return model.BackupDetails{
+		BackupMetadata: model.BackupMetadata{
 			Created:             time.Now(),
 			From:                time.Now().AddDate(0, 0, -1),
 			Namespace:           "ns",
@@ -54,28 +55,28 @@ func testBackupDetails() dto.BackupDetails {
 	}
 }
 
-func testConfig() *model.Config {
-	clusters := make(map[string]*model.AerospikeCluster)
+func testConfig() *dto.Config {
+	clusters := make(map[string]*dto.AerospikeCluster)
 	cluster := testConfigCluster()
-	clusters[testCluster] = &cluster
+	clusters[testCluster] = cluster
 
-	policies := make(map[string]*model.BackupPolicy)
+	policies := make(map[string]*dto.BackupPolicy)
 	policy := testConfigBackupPolicy()
-	policies[testPolicy] = &policy
+	policies[testPolicy] = policy
 
-	storages := make(map[string]*model.Storage)
+	storages := make(map[string]*dto.Storage)
 	storage := testConfigStorage()
-	storages[testStorage] = &storage
+	storages[testStorage] = storage
 
-	routines := make(map[string]*model.BackupRoutine)
-	routines[testRoutineName] = &model.BackupRoutine{
+	routines := make(map[string]*dto.BackupRoutine)
+	routines[testRoutineName] = &dto.BackupRoutine{
 		IntervalCron: "0 0 * * * *",
 	}
 
-	return &model.Config{
-		ServiceConfig: &model.BackupServiceConfig{
-			HTTPServer: &model.HTTPServerConfig{},
-			Logger:     &model.LoggerConfig{},
+	return &dto.Config{
+		ServiceConfig: dto.BackupServiceConfig{
+			HTTPServer: &dto.HTTPServerConfig{},
+			Logger:     &dto.LoggerConfig{},
 		},
 		AerospikeClusters: clusters,
 		Storage:           storages,
@@ -86,21 +87,21 @@ func testConfig() *model.Config {
 
 type restoreManagerMock struct{}
 
-func (mock restoreManagerMock) Restore(request *dto.RestoreRequestInternal) (model.RestoreJobID, error) {
+func (mock restoreManagerMock) Restore(request *model.RestoreRequestInternal) (model.RestoreJobID, error) {
 	if *request.Dir != testDir {
 		return 0, errTest
 	}
 	return model.RestoreJobID(testJobID), nil
 }
 
-func (mock restoreManagerMock) RestoreByTime(request *dto.RestoreTimestampRequest) (model.RestoreJobID, error) {
-	if request.Time == 0 {
+func (mock restoreManagerMock) RestoreByTime(request *model.RestoreTimestampRequest) (model.RestoreJobID, error) {
+	if request.Time == time.UnixMilli(0) {
 		return 0, errTest
 	}
 	return model.RestoreJobID(testJobID), nil
 }
 
-func (mock restoreManagerMock) JobStatus(jobID model.RestoreJobID) (*dto.RestoreJobStatus, error) {
+func (mock restoreManagerMock) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
 	if jobID != model.RestoreJobID(testJobID) {
 		return nil, errTest
 	}
@@ -116,17 +117,17 @@ func (mock restoreManagerMock) RetrieveConfiguration(routine string, _ time.Time
 
 type backupListReaderMock struct{}
 
-func (mock backupListReaderMock) FullBackupList(timebounds *dto.TimeBounds) ([]dto.BackupDetails, error) {
+func (mock backupListReaderMock) FullBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
 	if timebounds == nil {
 		return nil, errTest
 	}
-	return []dto.BackupDetails{testBackupDetails()}, nil
+	return []model.BackupDetails{testBackupDetails()}, nil
 }
-func (mock backupListReaderMock) IncrementalBackupList(timebounds *dto.TimeBounds) ([]dto.BackupDetails, error) {
+func (mock backupListReaderMock) IncrementalBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
 	if timebounds == nil {
 		return nil, errTest
 	}
-	return []dto.BackupDetails{testBackupDetails()}, nil
+	return []model.BackupDetails{testBackupDetails()}, nil
 }
 
 func (mock backupListReaderMock) ReadClusterConfiguration(path string) ([]byte, error) {
@@ -136,16 +137,16 @@ func (mock backupListReaderMock) ReadClusterConfiguration(path string) ([]byte, 
 	return []byte(fmt.Sprintf(`{ "dir": "%s" }`, testDir)), nil
 }
 
-func (mock backupListReaderMock) FindLastFullBackup(_ time.Time) ([]dto.BackupDetails, error) {
-	return []dto.BackupDetails{testBackupDetails()}, nil
+func (mock backupListReaderMock) FindLastFullBackup(_ time.Time) ([]model.BackupDetails, error) {
+	return []model.BackupDetails{testBackupDetails()}, nil
 }
 
-func (mock backupListReaderMock) FindIncrementalBackupsForNamespace(bounds *dto.TimeBounds, _ string,
-) ([]dto.BackupDetails, error) {
+func (mock backupListReaderMock) FindIncrementalBackupsForNamespace(bounds *model.TimeBounds, _ string,
+) ([]model.BackupDetails, error) {
 	if bounds == nil {
 		return nil, errTest
 	}
-	return []dto.BackupDetails{testBackupDetails()}, nil
+	return []model.BackupDetails{testBackupDetails()}, nil
 }
 
 type backendsHolderMock struct{}
@@ -170,11 +171,12 @@ func (mock backendsHolderMock) SetData(_ map[string]*service.BackupBackend) {
 
 type configurationManagerMock struct{}
 
-func (mock configurationManagerMock) ReadConfiguration() (*model.Config, error) {
-	return testConfig(), nil
+func (mock configurationManagerMock) ReadConfiguration() (io.ReadCloser, error) {
+	serialize, _ := dto.Serialize(testConfig(), dto.JSON)
+	return io.NopCloser(bytes.NewReader(serialize)), nil
 }
 
-func (mock configurationManagerMock) WriteConfiguration(config *dto.Config) error {
+func (mock configurationManagerMock) WriteConfiguration(config *model.Config) error {
 	if config == nil {
 		return errTest
 	}
@@ -183,7 +185,7 @@ func (mock configurationManagerMock) WriteConfiguration(config *dto.Config) erro
 
 func newServiceMock() *Service {
 	return &Service{
-		config:               testConfig(),
+		config:               testConfig().ToModel(),
 		scheduler:            quartz.NewStdScheduler(),
 		restoreManager:       restoreManagerMock{},
 		backupBackends:       backendsHolderMock{},

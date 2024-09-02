@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/pkg/util"
 )
 
 const (
@@ -59,63 +58,6 @@ type BackupPolicy struct {
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
-}
-
-// GetMaxRetriesOrDefault returns the value of the MaxRetries property.
-// If the property is not set, it returns the default value.
-func (p *BackupPolicy) GetMaxRetriesOrDefault() int32 {
-	if p.MaxRetries != nil {
-		return *p.MaxRetries
-	}
-	return defaultConfig.backupPolicy.maxRetries
-}
-
-// GetRetryDelayOrDefault returns the value of the RetryDelay property.
-// If the property is not set, it returns the default value.
-func (p *BackupPolicy) GetRetryDelayOrDefault() int32 {
-	if p.RetryDelay != nil {
-		return *p.RetryDelay
-	}
-	return defaultConfig.backupPolicy.retryDelay
-}
-
-// IsSealed returns the value of the Sealed property.
-// If the property is not set, it returns the default value.
-func (p *BackupPolicy) IsSealed() bool {
-	if p.Sealed != nil {
-		return *p.Sealed
-	}
-	return defaultConfig.backupPolicy.sealed
-}
-
-// CopySMDDisabled creates a new instance of the BackupPolicy struct with identical field values.
-// New instance has NoIndexes and NoUdfs set to true.
-func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
-	return &BackupPolicy{
-		Parallel:         p.Parallel,
-		SocketTimeout:    p.SocketTimeout,
-		TotalTimeout:     p.TotalTimeout,
-		MaxRetries:       p.MaxRetries,
-		RetryDelay:       p.RetryDelay,
-		RemoveFiles:      p.RemoveFiles,
-		NoRecords:        p.NoRecords,
-		NoIndexes:        util.Ptr(true),
-		NoUdfs:           util.Ptr(true),
-		Bandwidth:        p.Bandwidth,
-		RecordsPerSecond: p.RecordsPerSecond,
-		FileLimit:        p.FileLimit,
-		Sealed:           p.Sealed,
-	}
-}
-
-func (r *RemoveFilesType) RemoveFullBackup() bool {
-	// Full backups are deleted only if RemoveFiles is explicitly set to RemoveAll
-	return r != nil && *r == RemoveAll
-}
-
-func (r *RemoveFilesType) RemoveIncrementalBackup() bool {
-	// Incremental backups are deleted only if RemoveFiles is explicitly set to RemoveAll or RemoveIncremental
-	return r != nil && (*r == RemoveIncremental || *r == RemoveAll)
 }
 
 // Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
@@ -178,6 +120,12 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		CompressionPolicy: p.CompressionPolicy.ToModel(),
 		Sealed:            p.Sealed,
 	}
+}
+
+func NewBackupPolicyFromModel(m *model.BackupPolicy) *BackupPolicy {
+	b := &BackupPolicy{}
+	b.fromModel(m)
+	return b
 }
 
 func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
