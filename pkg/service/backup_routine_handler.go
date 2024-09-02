@@ -109,7 +109,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		return err
 	}
 
-	err = h.waitForFullBackups(now)
+	err = h.waitForFullBackups(ctx, now)
 	if err != nil {
 		return err
 	}
@@ -158,10 +158,10 @@ func (h *BackupRoutineHandler) startFullBackupForAllNamespaces(
 	return nil
 }
 
-func (h *BackupRoutineHandler) waitForFullBackups(backupTimestamp time.Time) error {
+func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context, backupTimestamp time.Time) error {
 	startTime := time.Now() // startTime is only used to measure backup time
 	for namespace, handler := range h.fullBackupHandlers {
-		err := handler.Wait()
+		err := handler.Wait(ctx)
 		if err != nil {
 			backupFailureCounter.Inc()
 			return fmt.Errorf("error during backup namespace %s, routine %s: %w",
@@ -266,7 +266,7 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 
 	h.startIncrementalBackupForAllNamespaces(ctx, client, now)
 
-	h.waitForIncrementalBackups(now)
+	h.waitForIncrementalBackups(ctx, now)
 	// increment incrBackupCounter metric
 	incrBackupCounter.Inc()
 
@@ -306,11 +306,11 @@ func (h *BackupRoutineHandler) startIncrementalBackupForAllNamespaces(
 	}
 }
 
-func (h *BackupRoutineHandler) waitForIncrementalBackups(backupTimestamp time.Time) {
+func (h *BackupRoutineHandler) waitForIncrementalBackups(ctx context.Context, backupTimestamp time.Time) {
 	startTime := time.Now() // startTime is only used to measure backup time
 	hasBackup := false
 	for namespace, handler := range h.incrBackupHandlers {
-		err := handler.Wait()
+		err := handler.Wait(ctx)
 		if err != nil {
 			slog.Warn("Failed incremental backup",
 				slog.String("routine", h.routineName),

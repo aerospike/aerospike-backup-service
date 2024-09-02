@@ -74,7 +74,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequestInternal,
 		r.restoreJobs.addHandler(jobID, handler)
 
 		// Wait for the restore operation to complete
-		err = handler.Wait()
+		err = handler.Wait(ctx)
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
 			return
@@ -184,7 +184,7 @@ func (r *dataRestorer) restoreNamespace(
 		}
 		r.restoreJobs.addHandler(jobID, handler)
 
-		err = handler.Wait()
+		err = handler.Wait(ctx)
 		if err != nil {
 			return err
 		}

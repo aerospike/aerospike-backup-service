@@ -29,7 +29,7 @@ func (m *MockRestoreHandler) GetStats() *models.RestoreStats {
 	return &stats
 }
 
-func (m *MockRestoreHandler) Wait() error {
+func (m *MockRestoreHandler) Wait(_ context.Context) error {
 	return nil
 }
 

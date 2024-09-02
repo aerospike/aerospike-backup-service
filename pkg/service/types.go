@@ -29,7 +29,7 @@ type RestoreHandler interface {
 	GetStats() *models.RestoreStats
 	// Wait waits for the restore job to complete and returns an error if the
 	// job failed.
-	Wait() error
+	Wait(context.Context) error
 }
 
 // BackupHandler represents a backup handler returned by the backup client.
@@ -38,7 +38,7 @@ type BackupHandler interface {
 	GetStats() *models.BackupStats
 	// Wait waits for the backup job to complete and returns an error if the
 	// job failed.
-	Wait() error
+	Wait(context.Context) error
 }
 
 // Restore represents a restore service.
