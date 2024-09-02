@@ -11,17 +11,17 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
-// FileConfigurationManager implements the ConfigurationManager interface,
+// FileConfigurationManager implements the Manager interface,
 // performing I/O operations on local storage.
 type FileConfigurationManager struct {
 	sync.Mutex
 	FilePath string
 }
 
-var _ ConfigurationManager = (*FileConfigurationManager)(nil)
+var _ Manager = (*FileConfigurationManager)(nil)
 
 // NewFileConfigurationManager returns a new FileConfigurationManager.
-func NewFileConfigurationManager(path string) ConfigurationManager {
+func NewFileConfigurationManager(path string) Manager {
 	return &FileConfigurationManager{FilePath: path}
 }
 

@@ -89,7 +89,7 @@ func startService(configFile string, remote bool) error {
 
 	// schedule all configured backups
 	backends := service.NewBackupBackends(config)
-	clientManager := service.NewClientManager(config.AerospikeClusters, &service.DefaultClientFactory{})
+	clientManager := service.NewClientManager(&service.DefaultClientFactory{})
 	handlers := service.MakeHandlers(clientManager, config, backends)
 	scheduler, err := service.ScheduleBackup(ctx, config, handlers)
 	if err != nil {
@@ -118,7 +118,7 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func readConfiguration(configurationManager configuration.ConfigurationManager) (*model.Config, error) {
+func readConfiguration(configurationManager configuration.Manager) (*model.Config, error) {
 	r, err := configurationManager.ReadConfiguration()
 
 	if err != nil {
@@ -140,7 +140,7 @@ func runHTTPServer(ctx context.Context,
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
-	configurationManager configuration.ConfigurationManager,
+	configurationManager configuration.Manager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) error {

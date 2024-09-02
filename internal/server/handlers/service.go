@@ -15,7 +15,7 @@ type Service struct {
 	restoreManager       service.RestoreManager
 	backupBackends       service.BackendsHolder
 	handlerHolder        service.BackupHandlerHolder
-	configurationManager configuration.ConfigurationManager
+	configurationManager configuration.Manager
 	clientManger         service.ClientManager
 	logger               *slog.Logger
 }
@@ -26,7 +26,7 @@ func NewService(
 	restoreManager service.RestoreManager,
 	backupBackends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
-	configurationManager configuration.ConfigurationManager,
+	configurationManager configuration.Manager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) *Service {

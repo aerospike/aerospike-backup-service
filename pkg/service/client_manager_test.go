@@ -34,7 +34,6 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 
 func Test_GetClient(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{"testCluster": {}},
 		&MockClientFactory{},
 	)
 
@@ -52,7 +51,6 @@ func Test_GetClient(t *testing.T) {
 
 func Test_CreateClient(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{},
 		&MockClientFactory{},
 	)
 
@@ -66,7 +64,6 @@ func Test_CreateClient_Errors(t *testing.T) {
 	aeroCluster := &model.AerospikeCluster{}
 
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{},
 		mockClientFactory,
 	)
 
@@ -77,7 +74,6 @@ func Test_CreateClient_Errors(t *testing.T) {
 
 func Test_Close(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{"testCluster": {}},
 		&MockClientFactory{},
 	)
 
@@ -94,7 +90,6 @@ func Test_Close(t *testing.T) {
 
 func Test_Close_Multiple(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{"testCluster": {}},
 		&MockClientFactory{},
 	)
 
@@ -118,7 +113,6 @@ func Test_Close_Multiple(t *testing.T) {
 
 func Test_Close_NotExisting(t *testing.T) {
 	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{},
 		&MockClientFactory{},
 	)
 	aeroClient := &mocks.MockAerospikeClient{}

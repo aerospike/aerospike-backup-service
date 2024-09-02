@@ -34,7 +34,7 @@ func NewHTTPServer(
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
-	configurationManager configuration.ConfigurationManager,
+	configurationManager configuration.Manager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) *HTTPServer {

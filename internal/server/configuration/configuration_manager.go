@@ -13,14 +13,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type ConfigurationManager interface {
+type Manager interface {
 	ReadConfiguration() (io.ReadCloser, error)
 	WriteConfiguration(config *model.Config) error
 }
 
-// NewConfigManager returns a new ConfigurationManager.
-func NewConfigManager(configFile string, remote bool,
-) (ConfigurationManager, error) {
+// NewConfigManager returns a new Manager.
+func NewConfigManager(configFile string, remote bool) (Manager, error) {
 	configStorage, err := makeConfigStorage(configFile, remote)
 	if err != nil {
 		return nil, err
@@ -37,7 +36,7 @@ func NewConfigManager(configFile string, remote bool,
 }
 
 func newLocalConfigurationManager(configStorage *model.Storage) (
-	ConfigurationManager, error) {
+	Manager, error) {
 	isHTTP, err := isHTTPPath(*configStorage.Path)
 	if err != nil {
 		return nil, err
@@ -81,12 +80,12 @@ func loadFileContent(configFile string) ([]byte, error) {
 		return nil, err
 	}
 	if isHTTP {
-		return readFromHttp(configFile)
+		return readFromHTTP(configFile)
 	}
 	return os.ReadFile(configFile)
 }
 
-func readFromHttp(url string) ([]byte, error) {
+func readFromHTTP(url string) ([]byte, error) {
 	// #nosec G107
 	resp, err := http.Get(url)
 	if err != nil {

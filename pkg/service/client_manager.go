@@ -49,9 +49,7 @@ type clientInfo struct {
 }
 
 // NewClientManager creates a new ClientManagerImpl.
-func NewClientManager(clusters map[string]*model.AerospikeCluster,
-	aerospikeClientFactory AerospikeClientFactory,
-) *ClientManagerImpl {
+func NewClientManager(aerospikeClientFactory AerospikeClientFactory) *ClientManagerImpl {
 	return &ClientManagerImpl{
 		clients:       make(map[*model.AerospikeCluster]*clientInfo),
 		clientFactory: aerospikeClientFactory,

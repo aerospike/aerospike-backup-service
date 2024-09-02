@@ -9,16 +9,16 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
-// HTTPConfigurationManager implements the ConfigurationManager interface,
+// HTTPConfigurationManager implements the Manager interface,
 // performing I/O operations via the HTTP(S) protocol.
 type HTTPConfigurationManager struct {
 	configURL string
 }
 
-var _ ConfigurationManager = (*HTTPConfigurationManager)(nil)
+var _ Manager = (*HTTPConfigurationManager)(nil)
 
 // NewHTTPConfigurationManager returns a new HTTPConfigurationManager.
-func NewHTTPConfigurationManager(uri string) ConfigurationManager {
+func NewHTTPConfigurationManager(uri string) Manager {
 	return &HTTPConfigurationManager{configURL: uri}
 }
 
