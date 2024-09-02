@@ -52,8 +52,8 @@ func NewBackupBackends(config *model.Config) *BackendHolderImpl {
 
 func BuildBackupBackends(config *model.Config) map[string]*BackupBackend {
 	backends := make(map[string]*BackupBackend, len(config.BackupRoutines))
-	for routineName := range config.BackupRoutines {
-		backends[routineName] = newBackend(config, routineName)
+	for routineName, routine := range config.BackupRoutines {
+		backends[routineName] = newBackend(routineName, routine)
 	}
 	return backends
 }

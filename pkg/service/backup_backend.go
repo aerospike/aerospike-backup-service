@@ -35,11 +35,9 @@ var _ BackupListReader = (*BackupBackend)(nil)
 
 const metadataFile = "metadata.yaml"
 
-func newBackend(config *model.Config, routineName string) *BackupBackend {
-	backupRoutine := config.BackupRoutines[routineName]
-	storage := backupRoutine.Storage
-	backupPolicy := backupRoutine.BackupPolicy
-	removeFullBackup := backupPolicy.RemoveFiles.RemoveFullBackup()
+func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend {
+	removeFullBackup := routine.BackupPolicy.RemoveFiles.RemoveFullBackup()
+	storage := routine.Storage
 	switch storage.Type {
 	case model.Local:
 		routinePath := filepath.Join(*storage.Path, routineName)
