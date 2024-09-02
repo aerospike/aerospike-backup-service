@@ -271,34 +271,40 @@ func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 }
 
 func (s *S3Context) DeleteFolder(folder string) error {
-	logger := slog.Default().With(slog.String("path", folder))
-	logger.Debug("Delete folder")
+	var continuationToken *string
+	prefix := strings.TrimSuffix(folder, "/") + "/"
 
-	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
-		Bucket: aws.String(s.bucket),
-		Prefix: aws.String(strings.TrimSuffix(folder, "/") + "/"),
-	})
-	if err != nil {
-		logger.Warn("Couldn't list files in directory", slog.Any("err", err))
-		return err
-	}
-
-	if len(result.Contents) == 0 {
-		logger.Debug("No files to delete")
-		return nil
-	}
-
-	for _, file := range result.Contents {
-		_, err := s.client.DeleteObject(s.ctx, &s3.DeleteObjectInput{
-			Bucket: aws.String(s.bucket),
-			Key:    file.Key,
+	for {
+		listResponse, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
+			Bucket:            &s.bucket,
+			Prefix:            &prefix,
+			ContinuationToken: continuationToken,
 		})
+
 		if err != nil {
-			slog.Debug("Couldn't delete file",
-				slog.String("path", *file.Key),
-				slog.Any("err", err))
+			return fmt.Errorf("failed to list objects: %w", err)
+		}
+
+		for _, p := range listResponse.Contents {
+			if p.Key == nil {
+				continue
+			}
+
+			_, err = s.client.DeleteObject(s.ctx, &s3.DeleteObjectInput{
+				Bucket: &s.bucket,
+				Key:    p.Key,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to delete object %s: %w", *p.Key, err)
+			}
+		}
+
+		continuationToken = listResponse.NextContinuationToken
+		if continuationToken == nil {
+			break
 		}
 	}
+
 	return nil
 }
 
