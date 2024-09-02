@@ -83,7 +83,7 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /v1/config/policies [get]
 // @Produce     json
-// @Success  	200 {object} map[string]model.BackupPolicy
+// @Success  	200 {object} map[string]dto.BackupPolicy
 // @Failure     500 {string} string
 func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadPolicies"))

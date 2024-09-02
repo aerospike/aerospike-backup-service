@@ -77,7 +77,7 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /v1/config/storage [get]
 // @Produce     json
-// @Success  	200 {object} map[string]model.Storage
+// @Success  	200 {object} map[string]dto.Storage
 // @Failure     500 {string} string
 func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAllStorage"))

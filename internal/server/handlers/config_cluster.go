@@ -82,7 +82,7 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /v1/config/clusters [get]
 // @Produce     json
-// @Success  	200 {object} map[string]model.AerospikeCluster
+// @Success  	200 {object} map[string]dto.AerospikeCluster
 // @Failure     500 {string} string
 func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAerospikeClusters"))
