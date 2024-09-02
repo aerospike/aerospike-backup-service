@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"encoding/json"
+	"github.com/aerospike/aerospike-backup-service/pkg/model"
 	"time"
 )
 
@@ -13,13 +13,23 @@ type BackupDetails struct {
 	Key *string `yaml:"key,omitempty" json:"key,omitempty" example:"storage/daily/backup/1707915600000/source-ns1"`
 }
 
-// String satisfies the fmt.Stringer interface.
-func (details BackupDetails) String() string {
-	backupDetails, err := json.Marshal(details)
-	if err != nil {
-		return err.Error()
-	}
-	return string(backupDetails)
+func (d *BackupDetails) fromModel(m *model.BackupDetails) {
+	d.Key = m.Key
+	d.Created = m.Created
+	d.From = m.From
+	d.Namespace = m.Namespace
+	d.RecordCount = m.RecordCount
+	d.ByteCount = m.ByteCount
+	d.FileCount = m.FileCount
+	d.SecondaryIndexCount = m.SecondaryIndexCount
+	d.UDFCount = m.UDFCount
+}
+
+// NewBackupDetailsFromModel creates a new BackupDetails from a model.BackupDetails
+func NewBackupDetailsFromModel(m *model.BackupDetails) *BackupDetails {
+	var d BackupDetails
+	d.fromModel(m)
+	return &d
 }
 
 // BackupMetadata is an internal container for storing backup metadata.

@@ -31,20 +31,20 @@ func (n *RestoreNamespace) Validate() error {
 	return nil
 }
 
-func (r *RestoreNamespace) ToModel() *model.RestoreNamespace {
-	if r == nil {
+func (n *RestoreNamespace) ToModel() *model.RestoreNamespace {
+	if n == nil {
 		return nil
 	}
 
 	modelNamespace := &model.RestoreNamespace{}
 
-	if r.Source != nil {
-		source := *r.Source
+	if n.Source != nil {
+		source := *n.Source
 		modelNamespace.Source = &source
 	}
 
-	if r.Destination != nil {
-		destination := *r.Destination
+	if n.Destination != nil {
+		destination := *n.Destination
 		modelNamespace.Destination = &destination
 	}
 

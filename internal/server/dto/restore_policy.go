@@ -114,35 +114,35 @@ func (p *RestorePolicy) GetRetryPolicyOrDefault() *RetryPolicy {
 	return defaultRetry
 }
 
-func (r *RestorePolicy) ToModel() *model.RestorePolicy {
-	if r == nil {
+func (p *RestorePolicy) ToModel() *model.RestorePolicy {
+	if p == nil {
 		return nil
 	}
 
-	retryPolicy := r.RetryPolicy.ToModel()
+	retryPolicy := p.RetryPolicy.ToModel()
 	if retryPolicy == nil {
 		retryPolicy = defaultRetry.ToModel()
 	}
 
 	return &model.RestorePolicy{
-		Parallel:           r.Parallel,
-		NoRecords:          r.NoRecords,
-		NoIndexes:          r.NoIndexes,
-		NoUdfs:             r.NoUdfs,
-		Timeout:            r.Timeout,
-		DisableBatchWrites: r.DisableBatchWrites,
-		MaxAsyncBatches:    r.MaxAsyncBatches,
-		BatchSize:          r.BatchSize,
-		Namespace:          r.Namespace.ToModel(),
-		SetList:            r.SetList,
-		BinList:            r.BinList,
-		Replace:            r.Replace,
-		Unique:             r.Unique,
-		NoGeneration:       r.NoGeneration,
-		Bandwidth:          r.Bandwidth,
-		Tps:                r.Tps,
-		EncryptionPolicy:   r.EncryptionPolicy.ToModel(),
-		CompressionPolicy:  r.CompressionPolicy.ToModel(),
+		Parallel:           p.Parallel,
+		NoRecords:          p.NoRecords,
+		NoIndexes:          p.NoIndexes,
+		NoUdfs:             p.NoUdfs,
+		Timeout:            p.Timeout,
+		DisableBatchWrites: p.DisableBatchWrites,
+		MaxAsyncBatches:    p.MaxAsyncBatches,
+		BatchSize:          p.BatchSize,
+		Namespace:          p.Namespace.ToModel(),
+		SetList:            p.SetList,
+		BinList:            p.BinList,
+		Replace:            p.Replace,
+		Unique:             p.Unique,
+		NoGeneration:       p.NoGeneration,
+		Bandwidth:          p.Bandwidth,
+		Tps:                p.Tps,
+		EncryptionPolicy:   p.EncryptionPolicy.ToModel(),
+		CompressionPolicy:  p.CompressionPolicy.ToModel(),
 		RetryPolicy:        *retryPolicy,
 	}
 }
