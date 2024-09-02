@@ -84,16 +84,12 @@ func checkBucket(ctx context.Context, client *s3.Client, bucket string) {
 }
 
 func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
-	//storage.SetDefaultProfile()
-	cfg, err := config.LoadDefaultConfig(
+	storage.SetDefaultProfile()
+	cfg, _ := config.LoadDefaultConfig(
 		ctx,
 		config.WithSharedConfigProfile(*storage.S3Profile),
 		config.WithRegion(*storage.S3Region),
 	)
-
-	if err != nil { // TODO: handle panic
-		panic(fmt.Sprintf("failed loading config, %v", err))
-	}
 
 	return cfg
 }

@@ -1,136 +1,113 @@
 package configuration
 
 import (
-	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-type MockDownloader struct {
-	mock.Mock
-}
-
-func (m *MockDownloader) read(configFile string) ([]byte, error) {
-	args := m.Called(configFile)
-	return args.Get(0).([]byte), args.Error(1)
-}
-
-type MockS3Builder struct {
-}
-
-func (m *MockS3Builder) NewS3ConfigurationManager(storage *model.Storage,
-) (ConfigurationManager, error) {
-	if storage.Type == model.S3 {
-		return &S3ConfigurationManager{}, nil
-	}
-	return nil, errors.New("wrong type")
-}
-
 func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
-	mockLocal := new(MockDownloader)
-	mockHTTP := new(MockDownloader)
+	// Create a temporary directory for local file tests
+	tempDir, err := os.MkdirTemp("", "config-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	// Create an HTTP test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/config.yaml":
+			fmt.Fprint(w, "type: local\npath: /tmp/config.yaml")
+		case "/remote.yaml":
+			fmt.Fprint(w, "type: local\npath: https://example.com/config.yaml")
+		case "/s3config.yaml":
+			fmt.Fprint(w, "type: aws-s3\npath: s3://bucket/config.yaml\ns3-region: europe")
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
 
 	tests := []struct {
 		name         string
 		configFile   string
 		remote       bool
-		setMock      func()
+		setup        func() error
 		expectError  bool
 		expectedType reflect.Type
 	}{
-		// Configuration file is passed straight to the service.
 		{
 			name:         "local non-remote",
-			configFile:   "config.yaml",
+			configFile:   filepath.Join(tempDir, "config.yaml"),
 			remote:       false,
-			setMock:      func() {},
+			setup:        func() error { return os.WriteFile(filepath.Join(tempDir, "config.yaml"), []byte("test config"), 0644) },
 			expectError:  false,
 			expectedType: reflect.TypeOf(&FileConfigurationManager{}),
 		},
 		{
 			name:         "http non-remote",
-			configFile:   "https://example.com/config.yaml",
+			configFile:   server.URL + "/config.yaml",
 			remote:       false,
-			setMock:      func() {},
+			setup:        func() error { return nil },
 			expectError:  false,
 			expectedType: reflect.TypeOf(&HTTPConfigurationManager{}),
 		},
-		// Open/download remote config file, and based on it's content
-		// open/download backup config.
 		{
 			name:       "local remote local configuration",
-			configFile: "/path/to/remote.yaml",
+			configFile: filepath.Join(tempDir, "remote.yaml"),
 			remote:     true,
-			setMock: func() {
-				mockLocal.
-					On("read", "/path/to/remote.yaml").
-					Return([]byte("type: local\npath: config.yaml"), nil)
+			setup: func() error {
+				return os.WriteFile(filepath.Join(tempDir, "remote.yaml"), []byte(fmt.Sprintf("type: local\npath: %s", filepath.Join(tempDir, "config.yaml"))), 0644)
 			},
 			expectError:  false,
 			expectedType: reflect.TypeOf(&FileConfigurationManager{}),
 		},
 		{
 			name:       "local remote http configuration",
-			configFile: "/path/to/remote.yaml",
+			configFile: filepath.Join(tempDir, "remote.yaml"),
 			remote:     true,
-			setMock: func() {
-				mockLocal.
-					On("read", "/path/to/remote.yaml").
-					Return([]byte("type: local\npath: https://example.com/config.yaml"), nil)
+			setup: func() error {
+				return os.WriteFile(filepath.Join(tempDir, "remote.yaml"), []byte(fmt.Sprintf("type: local\npath: %s/config.yaml", server.URL)), 0644)
 			},
 			expectError:  false,
 			expectedType: reflect.TypeOf(&HTTPConfigurationManager{}),
 		},
 		{
-			name:       "http remote local configuration",
-			configFile: "https://example.com/config.yaml",
-			remote:     true,
-			setMock: func() {
-				mockHTTP.
-					On("read", "https://example.com/config.yaml").
-					Return([]byte("type: local\npath: config.yaml"), nil)
-			},
+			name:         "http remote local configuration",
+			configFile:   server.URL + "/config.yaml",
+			remote:       true,
+			setup:        func() error { return nil },
 			expectError:  false,
 			expectedType: reflect.TypeOf(&FileConfigurationManager{}),
 		},
 		{
-			name:       "http remote http",
-			configFile: "http://path/to/remote.yaml",
-			remote:     true,
-			setMock: func() {
-				mockHTTP.
-					On("read", "http://path/to/remote.yaml").
-					Return([]byte("type: local\npath: https://example.com/config.yaml"), nil)
-			},
+			name:         "http remote http",
+			configFile:   server.URL + "/remote.yaml",
+			remote:       true,
+			setup:        func() error { return nil },
 			expectError:  false,
 			expectedType: reflect.TypeOf(&HTTPConfigurationManager{}),
 		},
-		// S3 configuration, we can read it from local file or by http.
 		{
 			name:       "local s3",
-			configFile: "config.yaml",
+			configFile: filepath.Join(tempDir, "s3config.yaml"),
 			remote:     true,
-			setMock: func() {
-				mockLocal.
-					On("read", "config.yaml").
-					Return([]byte("type: aws-s3\npath: s3://bucket/config.yaml\ns3-region: europe"), nil)
+			setup: func() error {
+				return os.WriteFile(filepath.Join(tempDir, "s3config.yaml"), []byte("type: aws-s3\npath: s3://bucket/config.yaml\ns3-region: europe"), 0644)
 			},
 			expectError:  false,
 			expectedType: reflect.TypeOf(&S3ConfigurationManager{}),
 		},
 		{
-			name:       "http s3",
-			configFile: "https://example.com/config.yaml",
-			remote:     true,
-			setMock: func() {
-				mockHTTP.
-					On("read", "https://example.com/config.yaml").
-					Return([]byte("type: aws-s3\npath: s3://bucket/config.yaml\ns3-region: europe"), nil)
-			},
+			name:         "http s3",
+			configFile:   server.URL + "/s3config.yaml",
+			remote:       true,
+			setup:        func() error { return nil },
 			expectError:  false,
 			expectedType: reflect.TypeOf(&S3ConfigurationManager{}),
 		},
@@ -138,9 +115,9 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockLocal = new(MockDownloader)
-			mockHTTP = new(MockDownloader)
-			tt.setMock()
+			err := tt.setup()
+			require.NoError(t, err, "Setup failed")
+
 			config, err := NewConfigManager(tt.configFile, tt.remote)
 			if tt.expectError {
 				require.Error(t, err)
