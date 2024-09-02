@@ -2,6 +2,7 @@ package dto
 
 import (
 	"fmt"
+
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 

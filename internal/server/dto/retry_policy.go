@@ -2,8 +2,9 @@ package dto
 
 import (
 	"fmt"
-	"github.com/aerospike/backup-go/models"
 	"time"
+
+	"github.com/aerospike/backup-go/models"
 )
 
 // RetryPolicy defines the configuration for retry attempts in case of failures.

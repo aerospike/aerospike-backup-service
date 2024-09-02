@@ -114,7 +114,7 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Failure     404 {string} string "The specified storage could not be found"
 // @Failure     500 {string} string
 //
-//nolint:dupl // Each handler must be in separate func. No duplication.
+
 func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readStorage"))
 

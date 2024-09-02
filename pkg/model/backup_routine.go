@@ -3,7 +3,7 @@ package model
 // BackupRoutine represents a scheduled backup operation routine.
 // @Description BackupRoutine represents a scheduled backup operation routine.
 //
-//nolint:lll
+
 type BackupRoutine struct {
 	// The name of the corresponding backup policy.
 	BackupPolicy *BackupPolicy

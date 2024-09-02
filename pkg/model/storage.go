@@ -5,7 +5,7 @@ import "github.com/aws/smithy-go/ptr"
 // Storage represents the configuration for a backup storage details.
 // @Description Storage represents the configuration for a backup storage details.
 //
-//nolint:lll
+
 type Storage struct {
 	// The type of the storage provider
 	Type StorageType

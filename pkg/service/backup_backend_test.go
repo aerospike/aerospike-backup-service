@@ -1,12 +1,13 @@
 package service
 
 import (
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"os"
 	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
 const tempFolder = "./tmp"

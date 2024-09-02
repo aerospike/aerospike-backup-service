@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"sync"
+
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/prometheus/client_golang/prometheus"
-	"log/slog"
-	"sync"
 )
 
 var errBackendNotFound = errors.New("backend not found")

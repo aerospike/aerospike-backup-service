@@ -1,9 +1,10 @@
 package model
 
 import (
+	"time"
+
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"github.com/aerospike/backup-go/models"
-	"time"
 )
 
 type backupPolicy struct {

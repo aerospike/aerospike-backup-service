@@ -121,7 +121,7 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified cluster could not be found"
 //
-//nolint:dupl // Each handler must be in separate func. No duplication.
+
 func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readRoutine"))
 

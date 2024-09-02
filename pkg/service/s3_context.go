@@ -136,7 +136,7 @@ func (s *S3Context) Read(filePath string) (io.ReadCloser, error) {
 }
 
 // readFile reads and decodes the YAML content from the given filePath into v.
-func (s *S3Context) readFile(filePath string, v any) error { //TODO CHANGE TO DTO
+func (s *S3Context) readFile(filePath string, v any) error {
 	content, err := s.Read(filePath)
 	if err != nil {
 		return err

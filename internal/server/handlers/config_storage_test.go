@@ -3,10 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v2/internal/server/dto"
 	"net/http"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v2/internal/server/dto"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"

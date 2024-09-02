@@ -2,13 +2,13 @@ package service
 
 import (
 	"errors"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aws/smithy-go/ptr"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/mocks"
+	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
 )
 

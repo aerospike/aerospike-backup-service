@@ -3,9 +3,9 @@
 package service
 
 import (
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/stretchr/testify/assert"
 )

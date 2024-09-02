@@ -1,8 +1,9 @@
 package service
 
 import (
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
 // BackupListReader allows to read list of existing backups.

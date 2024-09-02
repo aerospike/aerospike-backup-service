@@ -3,9 +3,10 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"strconv"
 	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
 // TimeBounds represents a period of time between two timestamps.
