@@ -30,7 +30,7 @@ func (s *S3ConfigurationManager) ReadConfiguration() (io.ReadCloser, error) {
 // WriteConfiguration writes the configuration to S3.
 func (s *S3ConfigurationManager) WriteConfiguration(config *model.Config) error {
 	configDto := dto.NewConfigFromModel(config)
-	data, err := configDto.Serialize(dto.YAML)
+	data, err := dto.Serialize(configDto, dto.YAML)
 	if err != nil {
 		return err
 	}

@@ -102,7 +102,7 @@ func (s *Storage) SetDefaultProfile() {
 // NewStorageFromReader creates a new Storage object from a given reader
 func NewStorageFromReader(r io.Reader, format SerializationFormat) (*Storage, error) {
 	s := &Storage{}
-	if err := s.Deserialize(r, format); err != nil {
+	if err := Deserialize(s, r, format); err != nil {
 		return nil, err
 	}
 
@@ -141,12 +141,4 @@ func (s *Storage) ToModel() *model.Storage {
 		MinPartSize:        s.MinPartSize,
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 	}
-}
-
-func (s *Storage) Deserialize(r io.Reader, format SerializationFormat) error {
-	return Deserialize(s, r, format)
-}
-
-func (s *Storage) Serialize(format SerializationFormat) ([]byte, error) {
-	return Serialize(s, format)
 }

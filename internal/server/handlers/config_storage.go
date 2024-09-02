@@ -130,7 +130,7 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResponse, err := dto.NewStorageFromModel(storage).Serialize(dto.JSON)
+	jsonResponse, err := dto.Serialize(dto.NewStorageFromModel(storage), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal starage",
 			slog.Any("error", err),

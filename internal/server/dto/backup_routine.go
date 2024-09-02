@@ -99,7 +99,7 @@ func (r *BackupRoutine) ToModel(config *model.Config) *model.BackupRoutine {
 // NewRoutine creates a new BackupRoutine object from a byte slice
 func NewRoutine(r io.Reader, format SerializationFormat) (*BackupRoutine, error) {
 	b := &BackupRoutine{}
-	if err := b.Deserialize(r, format); err != nil {
+	if err := Deserialize(b, r, format); err != nil {
 		return nil, err
 	}
 
@@ -114,14 +114,6 @@ func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRo
 	b := &BackupRoutine{}
 	b.fromModel(m, config)
 	return b
-}
-
-func (r *BackupRoutine) Deserialize(reader io.Reader, format SerializationFormat) error {
-	return Deserialize(r, reader, format)
-}
-
-func (r *BackupRoutine) Serialize(format SerializationFormat) ([]byte, error) {
-	return Serialize(r, format)
 }
 
 func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.Config) {

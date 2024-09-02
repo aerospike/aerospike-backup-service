@@ -19,7 +19,7 @@ import (
 func (s *Service) readConfig(w http.ResponseWriter) {
 	hLogger := s.logger.With(slog.String("handler", "readConfig"))
 
-	configuration, err := dto.NewConfigFromModel(s.config).Serialize(dto.JSON)
+	configuration, err := dto.Serialize(dto.NewConfigFromModel(s.config), dto.JSON)
 	if err != nil {
 		// We won't log config as it is not secure.
 		hLogger.Error("failed to parse service configuration",

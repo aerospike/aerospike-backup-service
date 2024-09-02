@@ -136,7 +136,7 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)
 		return
 	}
-	jsonResponse, err := dto.NewRoutineFromModel(routine, s.config).Serialize(dto.JSON)
+	jsonResponse, err := dto.Serialize(dto.NewRoutineFromModel(routine, s.config), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal backup routines",
 			slog.Any("error", err),

@@ -20,14 +20,6 @@ type Config struct {
 	SecretAgents      map[string]*SecretAgent      `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 }
 
-func (c *Config) Serialize(format SerializationFormat) ([]byte, error) {
-	return Serialize(c, format)
-}
-
-func (c *Config) Deserialize(r io.Reader, format SerializationFormat) error {
-	return Deserialize(c, r, format)
-}
-
 func (c *Config) fromModel(m *model.Config) {
 	c.ServiceConfig.fromModel(&m.ServiceConfig)
 
@@ -77,7 +69,7 @@ func NewConfigFromModel(m *model.Config) *Config {
 // NewConfigFromReader creates a new Config object from a given reader
 func NewConfigFromReader(r io.Reader, format SerializationFormat) (*Config, error) {
 	c := &Config{}
-	if err := c.Deserialize(r, format); err != nil {
+	if err := Deserialize(c, r, format); err != nil {
 		return nil, err
 	}
 

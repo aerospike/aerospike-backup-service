@@ -54,7 +54,7 @@ func (cm *FileConfigurationManager) WriteConfiguration(config *model.Config) err
 	}
 
 	configDto := dto.NewConfigFromModel(config)
-	data, err := configDto.Serialize(dto.YAML)
+	data, err := dto.Serialize(configDto, dto.YAML)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration data: %w", err)
 	}
