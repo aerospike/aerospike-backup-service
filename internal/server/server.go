@@ -52,7 +52,7 @@ func NewHTTPServer(
 
 	mw := middleware.RateLimiter(rateLimiter, whitelist)
 
-	restoreMgr := service.NewRestoreManager(backends, nil, service.NewRestoreGo(), clientManger) //TODO
+	restoreMgr := service.NewRestoreManager(backends, config, service.NewRestoreGo(), clientManger)
 
 	h := handlers.NewService(
 		config,
