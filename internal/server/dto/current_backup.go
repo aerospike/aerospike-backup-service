@@ -2,6 +2,8 @@ package dto
 
 import (
 	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
 // CurrentBackups represent the current state of backups (full and incremental)
@@ -10,6 +12,21 @@ type CurrentBackups struct {
 	Full *RunningJob `json:"full,omitempty"`
 	// Incremental represents the state of an incremental backup. Nil if no incremental backup is running.
 	Incremental *RunningJob `json:"incremental,omitempty"`
+}
+
+func NewCurrentBackupsFromModel(m *model.CurrentBackups) *CurrentBackups {
+	if m == nil {
+		return nil
+	}
+
+	c := &CurrentBackups{}
+	c.fromModel(m)
+	return c
+}
+
+func (c *CurrentBackups) fromModel(m *model.CurrentBackups) {
+	c.Full = NewRunningJobFromModel(m.Full)
+	c.Incremental = NewRunningJobFromModel(m.Incremental)
 }
 
 // RunningJob tracks progress of currently running job.
@@ -26,4 +43,22 @@ type RunningJob struct {
 	// EstimatedEndTime: the estimated time when the backup operation will be completed.
 	// A nil value indicates that the estimation is not available yet.
 	EstimatedEndTime *time.Time `json:"estimated-end-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
+}
+
+func NewRunningJobFromModel(m *model.RunningJob) *RunningJob {
+	if m == nil {
+		return nil
+	}
+
+	r := &RunningJob{}
+	r.fromModel(m)
+	return r
+}
+
+func (r *RunningJob) fromModel(m *model.RunningJob) {
+	r.TotalRecords = m.TotalRecords
+	r.DoneRecords = m.DoneRecords
+	r.StartTime = m.StartTime
+	r.PercentageDone = m.PercentageDone
+	r.EstimatedEndTime = m.EstimatedEndTime
 }

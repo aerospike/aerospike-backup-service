@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"encoding/json"
 	"errors"
 	"time"
 
@@ -36,39 +35,6 @@ type RestoreTimestampRequest struct {
 	Time int64 `json:"time,omitempty" format:"int64" example:"1739538000000" validate:"required"`
 	// The backup routine name.
 	Routine string `json:"routine,omitempty" example:"daily" validate:"required"`
-}
-
-// String satisfies the fmt.Stringer interface.
-func (r RestoreRequest) String() string {
-	request, err := json.Marshal(r)
-	if err != nil {
-		return err.Error()
-	}
-	return string(request)
-}
-
-// String satisfies the fmt.Stringer interface.
-func (r RestoreTimestampRequest) String() string {
-	request, err := json.Marshal(r)
-	if err != nil {
-		return err.Error()
-	}
-	return string(request)
-}
-
-// NewRestoreRequest creates a new RestoreRequest.
-func NewRestoreRequest(
-	destinationCluster *AerospikeCluster,
-	policy *RestorePolicy,
-	sourceStorage *Storage,
-	secretAgent *SecretAgent,
-) *RestoreRequest {
-	return &RestoreRequest{
-		DestinationCuster: destinationCluster,
-		Policy:            policy,
-		SourceStorage:     sourceStorage,
-		SecretAgent:       secretAgent,
-	}
 }
 
 // Validate validates the restore operation request.

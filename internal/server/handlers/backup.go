@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -306,8 +305,8 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stat := handler.GetCurrentStat()
-	response, err := json.Marshal(stat)
+	currentBackups := dto.NewCurrentBackupsFromModel(handler.GetCurrentStat())
+	response, err := dto.Serialize(currentBackups, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal statistics",
 			slog.Any("error", err),

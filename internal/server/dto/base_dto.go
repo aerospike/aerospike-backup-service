@@ -16,20 +16,12 @@ const (
 	YAML
 )
 
-// ReadDTO is an interface for DTOs that can be serialized
-type ReadDTO[M any] interface {
+type output[M any] interface {
 	fromModel(*M)
 }
 
-// WriteDTO is an interface for DTOs that can be deserialized
-type WriteDTO[M any] interface {
+type input[M any] interface {
 	ToModel() *M
-}
-
-// ReadWriteDTO is an interface for DTOs that can be both serialized and deserialized
-type ReadWriteDTO[M any] interface {
-	ReadDTO[M]
-	WriteDTO[M]
 }
 
 // Serialize handles serialization

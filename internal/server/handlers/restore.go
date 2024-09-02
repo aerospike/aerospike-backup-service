@@ -203,7 +203,7 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	jsonResponse, err := json.MarshalIndent(status, "", "    ") // pretty print
+	jsonResponse, err := dto.Serialize(status, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal restore result",
 			slog.Any("error", err),

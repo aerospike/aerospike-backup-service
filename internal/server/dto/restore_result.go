@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+
 type JobStatus string
 
 const (
@@ -29,4 +31,30 @@ type RestoreStats struct {
 	FresherRecords  uint64 `yaml:"fresher-records,omitempty" json:"fresher-records,omitempty" format:"int64" example:"5"`
 	IndexCount      uint64 `yaml:"index-count,omitempty" json:"index-count,omitempty" format:"int64" example:"3"`
 	UDFCount        uint64 `yaml:"udf-count,omitempty" json:"udf-count,omitempty" format:"int64" example:"1"`
+}
+
+func NewResultFromModel(m *model.RestoreJobStatus) *RestoreJobStatus {
+	if m == nil {
+		return nil
+	}
+
+	r := &RestoreJobStatus{}
+	r.fromModel(m)
+	return r
+}
+
+func (r *RestoreJobStatus) fromModel(m *model.RestoreJobStatus) {
+	r.ReadRecords = m.ReadRecords
+	r.TotalBytes = m.TotalBytes
+	r.ExpiredRecords = m.ExpiredRecords
+	r.SkippedRecords = m.SkippedRecords
+	r.IgnoredRecords = m.IgnoredRecords
+	r.InsertedRecords = m.InsertedRecords
+	r.ExistedRecords = m.ExistedRecords
+	r.FresherRecords = m.FresherRecords
+	r.IndexCount = m.IndexCount
+	r.UDFCount = m.UDFCount
+	r.Status = JobStatus(m.Status)
+	r.Error = m.Error
+	r.CurrentRestore = NewRunningJobFromModel(m.CurrentRestore)
 }

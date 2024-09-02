@@ -12,8 +12,6 @@ import (
 	"github.com/aws/smithy-go/ptr"
 )
 
-var _ ReadWriteDTO[model.Storage] = (*Storage)(nil)
-
 // Storage represents the configuration for a backup storage details.
 // @Description Storage represents the configuration for a backup storage details.
 //

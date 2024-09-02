@@ -7,8 +7,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
-var _ ReadWriteDTO[model.Config] = (*Config)(nil)
-
 // Config represents the service configuration file.
 // @Description Config represents the service configuration file.
 //
