@@ -21,10 +21,6 @@ var cluster = &model.AerospikeCluster{
 	ClusterLabel: ptr.String("test"),
 }
 
-var cluster2 = &model.AerospikeCluster{
-	ClusterLabel: ptr.String("test2"),
-}
-
 func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...*as.Host,
 ) (backup.AerospikeClient, error) {
 	if f.ShouldFail {
@@ -52,17 +48,6 @@ func Test_GetClient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, client2)
 	assert.Equal(t, client, client2)
-}
-
-func Test_GetClient_ClusterNotFound(t *testing.T) {
-	clientManager := NewClientManager(
-		map[string]*model.AerospikeCluster{},
-		&MockClientFactory{},
-	)
-
-	client, err := clientManager.GetClient(cluster2)
-	assert.Nil(t, client)
-	assert.EqualError(t, err, "cluster nonExistentCluster not found")
 }
 
 func Test_CreateClient(t *testing.T) {

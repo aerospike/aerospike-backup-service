@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
@@ -240,7 +239,7 @@ func TestReadBackupDetails(t *testing.T) {
 
 	path := filepath.Join(os.TempDir(), "test.yaml")
 	_ = os.MkdirAll(path, fs.ModePerm)
-	metadata := dto.BackupMetadata{
+	metadata := model.BackupMetadata{
 		Created:   time.Now(),
 		Namespace: "test-backup",
 	}
@@ -297,7 +296,7 @@ func TestReadState(t *testing.T) {
 	dir := os.TempDir()
 	_ = os.MkdirAll(dir, fs.ModePerm)
 	path := filepath.Join(dir, "test_state.yaml")
-	expected := &dto.BackupState{
+	expected := &model.BackupState{
 		Performed: 10,
 	}
 	data, _ := json.Marshal(expected)

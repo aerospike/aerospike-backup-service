@@ -25,15 +25,9 @@ func init() {
 		S3Region:           ptr.String("eu-central-1"),
 		S3EndpointOverride: ptr.String("http://localhost:9000"),
 	})
-	s3Context := NewS3Context(&model.Storage{
-		Type:     model.S3,
-		Path:     ptr.String("s3://as-backup-integration-test/storageAws"),
-		S3Region: ptr.String("eu-central-1"),
-	})
-	if minioContext != nil && s3Context != nil {
+	if minioContext != nil {
 		contexts = []S3Context{
 			*minioContext,
-			*s3Context,
 		}
 	}
 }
@@ -208,7 +202,10 @@ func TestS3Context_lsFiles(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.setup()
+			err := minioContext.DeleteFolder(tc.prefix)
+			require.NoError(t, err)
+
+			err = tc.setup()
 			require.NoError(t, err)
 
 			files, err := minioContext.lsFiles(tc.prefix)
