@@ -150,16 +150,7 @@ func (s *S3Context) readFile(filePath string, v any) error {
 	return nil
 }
 
-// WriteYaml writes v into filepath using the YAML format.
-func (s *S3Context) WriteYaml(filePath string, v any) error {
-	yamlData, err := yaml.Marshal(v)
-	if err != nil {
-		return err
-	}
-	return s.write(filePath, yamlData)
-}
-
-func (s *S3Context) write(filePath string, data []byte) error {
+func (s *S3Context) Write(filePath string, data []byte) error {
 	logger := slog.Default().With(slog.String("path", filePath),
 		slog.String("bucket", s.bucket))
 	_, err := s.client.PutObject(s.ctx, &s3.PutObjectInput{

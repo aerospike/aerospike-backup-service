@@ -12,10 +12,12 @@ import (
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 var contexts []S3Context
 var minioContext *S3Context
+var content = make([]byte, 4)
 
 func init() {
 	minioContext = NewS3Context(&model.Storage{
@@ -46,7 +48,8 @@ func runReadWriteState(t *testing.T, context S3Context) {
 		Namespace: "testNS",
 		Created:   time.Now(),
 	}
-	_ = context.WriteYaml("backup_path/"+metadataFile, metadataWrite)
+	data, _ := yaml.Marshal(metadataWrite)
+	_ = context.Write("backup_path/"+metadataFile, data)
 	metadataRead := dto.BackupMetadata{}
 
 	_ = context.readFile("backup_path/"+metadataFile, &metadataRead)
@@ -73,8 +76,8 @@ func TestS3Context_DeleteFile(t *testing.T) {
 
 func runDeleteFileTest(t *testing.T, context S3Context) {
 	t.Helper()
-	_ = context.WriteYaml("incremental/file.txt", "data")
-	_ = context.WriteYaml("incremental/file2.txt", "data")
+	_ = context.Write("incremental/file.txt", content)
+	_ = context.Write("incremental/file2.txt", content)
 
 	if files, _ := context.lsFiles("incremental"); len(files) != 2 {
 		t.Error("files not created")
@@ -104,8 +107,8 @@ func runDeleteFolderTest(t *testing.T, context S3Context) {
 	parent := "storage1/minioIncremental"
 	folder1 := parent + "/source-ns1"
 	folder2 := parent + "/source-ns16"
-	_ = context.WriteYaml(folder1+"/file1.txt", "data")
-	_ = context.WriteYaml(folder2+"/file2.txt", "data")
+	_ = context.Write(folder1+"/file1.txt", content)
+	_ = context.Write(folder2+"/file2.txt", content)
 
 	err := context.DeleteFolder(folder1)
 	if err != nil {
@@ -138,9 +141,9 @@ func TestS3Context_LsDir(t *testing.T) {
 	folder1 := parent + "/1000"
 	folder2 := parent + "/2000"
 	folder3 := parent + "/3000"
-	_ = minioContext.WriteYaml(folder1+"/file1.txt", "data")
-	_ = minioContext.WriteYaml(folder2+"/file2.txt", "data")
-	_ = minioContext.WriteYaml(folder3+"/file2.txt", "data")
+	_ = minioContext.Write(folder1+"/file1.txt", make([]byte, 4))
+	_ = minioContext.Write(folder2+"/file2.txt", make([]byte, 4))
+	_ = minioContext.Write(folder3+"/file2.txt", make([]byte, 4))
 	after := "2000"
 	dir, err := minioContext.lsDir(parent, &after)
 	assert.Nil(t, err)
@@ -157,7 +160,7 @@ func TestS3Context_lsFiles(t *testing.T) {
 		{
 			name: "Single file",
 			setup: func() error {
-				return minioContext.WriteYaml("test-prefix/file1.txt", "content")
+				return minioContext.Write("test-prefix/file1.txt", content)
 			},
 			prefix:        "test-prefix",
 			expectedFiles: []string{"test-prefix/file1.txt"},
@@ -165,13 +168,13 @@ func TestS3Context_lsFiles(t *testing.T) {
 		{
 			name: "Multiple files",
 			setup: func() error {
-				if err := minioContext.WriteYaml("test-prefix/file1.txt", "content"); err != nil {
+				if err := minioContext.Write("test-prefix/file1.txt", content); err != nil {
 					return err
 				}
-				if err := minioContext.WriteYaml("test-prefix/file2.txt", "content"); err != nil {
+				if err := minioContext.Write("test-prefix/file2.txt", content); err != nil {
 					return err
 				}
-				return minioContext.WriteYaml("test-prefix/subdir/file3.txt", "content")
+				return minioContext.Write("test-prefix/subdir/file3.txt", content)
 			},
 			prefix: "test-prefix",
 			expectedFiles: []string{"test-prefix/file1.txt",
@@ -183,7 +186,7 @@ func TestS3Context_lsFiles(t *testing.T) {
 			setup: func() error {
 				for i := 0; i < 3000; i++ {
 					filename := fmt.Sprintf("test-prefix/file%04d.txt", i)
-					if err := minioContext.WriteYaml(filename, "content"); err != nil {
+					if err := minioContext.Write(filename, content); err != nil {
 						return err
 					}
 				}

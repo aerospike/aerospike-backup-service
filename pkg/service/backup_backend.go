@@ -95,7 +95,7 @@ func (b *BackupBackend) writeYaml(path string, data any) error {
 		return err
 	}
 
-	return b.write(path, dataYaml)
+	return b.Write(path, dataYaml)
 }
 
 // FullBackupList returns a list of available full backups.
@@ -235,7 +235,7 @@ func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
 
 // PackageFiles creates a zip archive from the given file list and returns it as a byte array.
 func (b *BackupBackend) packageFiles(files []string) ([]byte, error) {
-	// Create a buffer to write our archive to
+	// Create a buffer to Write our archive to
 	buf := new(bytes.Buffer)
 
 	// Create a new zip archive
@@ -254,7 +254,7 @@ func (b *BackupBackend) packageFiles(files []string) ([]byte, error) {
 
 		_, err = io.Copy(f, data)
 		if err != nil {
-			return nil, fmt.Errorf("failed to write file %s: %w", file, err)
+			return nil, fmt.Errorf("failed to Write file %s: %w", file, err)
 		}
 	}
 

@@ -3,6 +3,7 @@ package configuration
 import (
 	"io"
 
+	"github.com/aerospike/aerospike-backup-service/v2/internal/server/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 )
@@ -28,5 +29,11 @@ func (s *S3ConfigurationManager) ReadConfiguration() (io.ReadCloser, error) {
 
 // WriteConfiguration writes the configuration to S3.
 func (s *S3ConfigurationManager) WriteConfiguration(config *model.Config) error {
-	return s.WriteYaml(s.Path, config)
+	configDto := dto.NewConfigFromModel(config)
+	data, err := configDto.Serialize(dto.YAML)
+	if err != nil {
+		return err
+	}
+
+	return s.Write(s.Path, data)
 }

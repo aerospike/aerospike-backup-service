@@ -73,7 +73,7 @@ func (o *OSDiskAccessor) Read(path string) (io.ReadCloser, error) {
 	return os.Open(path)
 }
 
-func (o *OSDiskAccessor) write(filePath string, data []byte) error {
+func (o *OSDiskAccessor) Write(filePath string, data []byte) error {
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
