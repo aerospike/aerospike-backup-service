@@ -55,4 +55,7 @@ type RestorePolicy struct {
 	CompressionPolicy *CompressionPolicy
 	// Configuration of retries for each restore write operation.
 	RetryPolicy models.RetryPolicy
+	// Amount of extra time-to-live to add to records that have expirable void-times.
+	// Must be set in seconds.
+	ExtraTTL *int64
 }

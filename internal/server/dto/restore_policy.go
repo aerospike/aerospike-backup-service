@@ -60,6 +60,9 @@ type RestorePolicy struct {
 	// Configuration of retries for each restore write operation.
 	// If nil, default retry policy will be used.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
+	// Amount of extra time-to-live to add to records that have expirable void-times.
+	// Must be set in seconds.
+	ExtraTTL *int64 `yaml:"extra-ttl" json:"extra-ttl,omitempty" example:"86400"`
 }
 
 // Validate validates the restore policy.
@@ -103,6 +106,9 @@ func (p *RestorePolicy) Validate() error {
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retry policy invalid: %w", err)
 	}
+	if p.ExtraTTL != nil && *p.ExtraTTL <= 0 {
+		return fmt.Errorf("extraTTL %d invalid, should be positive number", *p.ExtraTTL)
+	}
 	return nil
 }
 
@@ -144,5 +150,6 @@ func (p *RestorePolicy) ToModel() *model.RestorePolicy {
 		EncryptionPolicy:   p.EncryptionPolicy.ToModel(),
 		CompressionPolicy:  p.CompressionPolicy.ToModel(),
 		RetryPolicy:        *retryPolicy,
+		ExtraTTL:           p.ExtraTTL,
 	}
 }
