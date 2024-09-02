@@ -3,13 +3,17 @@ package service
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/io/aws/s3"
+	s3Storage "github.com/aerospike/backup-go/io/aws/s3"
+	"github.com/aerospike/backup-go/io/local"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 // BackupGo implements the [Backup] interface.
@@ -139,21 +143,51 @@ func getWriter(ctx context.Context, path *string, storage *model.Storage,
 ) (backup.Writer, error) {
 	switch storage.Type {
 	case model.Local:
-		return backup.NewWriterLocal(*path, true)
+		return local.NewWriter(local.WithDir(*path), local.WithRemoveFiles())
 	case model.S3:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err
 		}
-		return backup.NewWriterS3(ctx, &s3.Config{
-			Bucket:          bucket,
-			Region:          *storage.S3Region,
-			Endpoint:        *storage.S3EndpointOverride,
-			Profile:         *storage.S3Profile,
-			Prefix:          parsedPath,
-			MaxConnsPerHost: storage.MaxConnsPerHost,
-			MinPartSize:     storage.MinPartSize,
-		}, true)
+		client, err := getS3Client(
+			ctx,
+			*storage.S3Profile,
+			*storage.S3Region,
+			*storage.S3EndpointOverride,
+			storage.MaxConnsPerHost,
+		)
+		if err != nil {
+			return nil, err
+		}
+		return s3Storage.NewWriter(ctx, client, bucket, s3Storage.WithDir(parsedPath), s3Storage.WithRemoveFiles())
 	}
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
+}
+
+func getS3Client(ctx context.Context, profile, region, endpoint string, maxConnsPerHost int) (*s3.Client, error) {
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithSharedConfigProfile(profile),
+		config.WithRegion(region),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		if endpoint != "" {
+			o.BaseEndpoint = &endpoint
+		}
+
+		o.UsePathStyle = true
+
+		if maxConnsPerHost > 0 {
+			o.HTTPClient = &http.Client{
+				Transport: &http.Transport{
+					MaxConnsPerHost: maxConnsPerHost,
+				},
+			}
+		}
+	})
+
+	return client, nil
 }
