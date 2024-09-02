@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/configuration"
-	"github.com/aerospike/aerospike-backup-service/internal/server/handlers"
-	"github.com/aerospike/aerospike-backup-service/internal/server/middleware"
-	"github.com/aerospike/aerospike-backup-service/internal/util"
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/internal/server/configuration"
+	"github.com/aerospike/aerospike-backup-service/v2/internal/server/handlers"
+	"github.com/aerospike/aerospike-backup-service/v2/internal/server/middleware"
+	"github.com/aerospike/aerospike-backup-service/v2/internal/util"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 	"github.com/reugn/go-quartz/quartz"
 	"golang.org/x/time/rate"
 )

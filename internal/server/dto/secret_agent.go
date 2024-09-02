@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/aerospike/aerospike-backup-service/pkg/model"
+import "github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 
 // SecretAgent represents the configuration of an Aerospike Secret Agent
 // for a backup/restore operation.

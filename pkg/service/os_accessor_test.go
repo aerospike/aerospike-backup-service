@@ -3,7 +3,7 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 

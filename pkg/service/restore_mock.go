@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"log/slog"
 
 	"github.com/aerospike/backup-go"

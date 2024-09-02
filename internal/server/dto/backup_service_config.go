@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/aerospike/aerospike-backup-service/pkg/model"
+import "github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 
 // BackupServiceConfig represents the backup service configuration properties.
 // @Description BackupServiceConfig represents the backup service configuration properties.

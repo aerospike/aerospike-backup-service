@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/aerospike/aerospike-backup-service/internal/server/dto"
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/internal/server/dto"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"gopkg.in/yaml.v3"
 )
 

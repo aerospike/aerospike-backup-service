@@ -3,7 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
 // RestorePolicy represents a policy for the restore operation.

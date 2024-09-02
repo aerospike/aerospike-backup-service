@@ -2,7 +2,7 @@ package service
 
 import (
 	"errors"
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aws/smithy-go/ptr"
 	"testing"
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
 var _ ReadWriteDTO[model.Config] = (*Config)(nil)

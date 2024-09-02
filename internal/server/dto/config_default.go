@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"github.com/aerospike/aerospike-backup-service/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 )
 
 type backupPolicy struct {

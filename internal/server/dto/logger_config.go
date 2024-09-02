@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/aerospike/aerospike-backup-service/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
 // LoggerConfig represents the backup service logger configuration.
