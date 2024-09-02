@@ -127,7 +127,9 @@ func readConfiguration(configurationManager configuration.ConfigurationManager) 
 	}
 
 	config := dto.NewConfigWithDefaultValues()
-	err = config.Deserialize(r, dto.YAML)
+	if err := config.Deserialize(r, dto.YAML); err != nil {
+		return nil, err
+	}
 	r.Close()
 	slog.Info(fmt.Sprintf("Configuration: %v", config))
 	return config.ToModel(), nil

@@ -27,33 +27,6 @@ var (
 	supportedLoggerFormats = []string{"PLAIN", "JSON"}
 )
 
-// GetLevelOrDefault returns the value of the Level property.
-// If the property is not set, it returns the default value.
-func (l *LoggerConfig) GetLevelOrDefault() string {
-	if l.Level != nil {
-		return *l.Level
-	}
-	return *defaultConfig.logger.Level
-}
-
-// GetFormatOrDefault returns the value of the Format property.
-// If the property is not set, it returns the default value.
-func (l *LoggerConfig) GetFormatOrDefault() string {
-	if l.Format != nil {
-		return *l.Format
-	}
-	return *defaultConfig.logger.Format
-}
-
-// GetStdoutWriterOrDefault returns the value of the StdoutWriter property.
-// If the property is not set, it returns the default value.
-func (l *LoggerConfig) GetStdoutWriterOrDefault() bool {
-	if l.StdoutWriter != nil {
-		return *l.StdoutWriter
-	}
-	return *defaultConfig.logger.StdoutWriter
-}
-
 // Validate validates the logger configuration.
 func (l *LoggerConfig) Validate() error {
 	if l == nil {

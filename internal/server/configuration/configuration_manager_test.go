@@ -33,6 +33,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 	}))
 	defer server.Close()
 
+	configPath := filepath.Join(tempDir, "config.yaml")
 	tests := []struct {
 		name         string
 		configFile   string
@@ -42,10 +43,12 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 		expectedType reflect.Type
 	}{
 		{
-			name:         "local non-remote",
-			configFile:   filepath.Join(tempDir, "config.yaml"),
-			remote:       false,
-			setup:        func() error { return os.WriteFile(filepath.Join(tempDir, "config.yaml"), []byte("test config"), 0644) },
+			name:       "local non-remote",
+			configFile: configPath,
+			remote:     false,
+			setup: func() error {
+				return os.WriteFile(configPath, []byte("test config"), 0600)
+			},
 			expectError:  false,
 			expectedType: reflect.TypeOf(&FileConfigurationManager{}),
 		},
@@ -62,7 +65,8 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			configFile: filepath.Join(tempDir, "remote.yaml"),
 			remote:     true,
 			setup: func() error {
-				return os.WriteFile(filepath.Join(tempDir, "remote.yaml"), []byte(fmt.Sprintf("type: local\npath: %s", filepath.Join(tempDir, "config.yaml"))), 0644)
+				return os.WriteFile(filepath.Join(tempDir, "remote.yaml"),
+					[]byte(fmt.Sprintf("type: local\npath: %s", configPath)), 0600)
 			},
 			expectError:  false,
 			expectedType: reflect.TypeOf(&FileConfigurationManager{}),

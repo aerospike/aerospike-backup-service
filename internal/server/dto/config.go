@@ -99,25 +99,8 @@ func (c *Config) Validate() error {
 		if err := routine.Validate(); err != nil {
 			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
 		}
-		if _, exists := c.BackupPolicies[routine.BackupPolicy]; !exists {
-			return notFoundValidationError("backup policy", routine.BackupPolicy)
-		}
-		cluster, exists := c.AerospikeClusters[routine.SourceCluster]
-		if !exists {
-			return notFoundValidationError("Aerospike cluster", routine.SourceCluster)
-		}
-		if cluster.MaxParallelScans != nil {
-			if len(routine.SetList) > *cluster.MaxParallelScans {
-				return fmt.Errorf("max parallel scans must be at least the cardinality of set-list")
-			}
-		}
-		if _, exists := c.Storage[routine.Storage]; !exists {
-			return notFoundValidationError("storage", routine.Storage)
-		}
-		if routine.SecretAgent != nil {
-			if _, exists := c.SecretAgents[*routine.SecretAgent]; !exists {
-				return notFoundValidationError("secret agent", *routine.SecretAgent)
-			}
+		if err := c.validateRoutineReferences(routine); err != nil {
+			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
 		}
 	}
 
@@ -154,6 +137,31 @@ func (c *Config) Validate() error {
 
 	if err := c.ServiceConfig.Logger.Validate(); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (c *Config) validateRoutineReferences(routine *BackupRoutine) error {
+	if _, exists := c.BackupPolicies[routine.BackupPolicy]; !exists {
+		return notFoundValidationError("backup policy", routine.BackupPolicy)
+	}
+	cluster, exists := c.AerospikeClusters[routine.SourceCluster]
+	if !exists {
+		return notFoundValidationError("Aerospike cluster", routine.SourceCluster)
+	}
+	if cluster.MaxParallelScans != nil {
+		if len(routine.SetList) > *cluster.MaxParallelScans {
+			return fmt.Errorf("max parallel scans must be at least the cardinality of set-list")
+		}
+	}
+	if _, exists := c.Storage[routine.Storage]; !exists {
+		return notFoundValidationError("storage", routine.Storage)
+	}
+	if routine.SecretAgent != nil {
+		if _, exists := c.SecretAgents[*routine.SecretAgent]; !exists {
+			return notFoundValidationError("secret agent", *routine.SecretAgent)
+		}
 	}
 
 	return nil

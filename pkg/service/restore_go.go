@@ -54,7 +54,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
 
-	config.RetryPolicy = util.Ptr(restoreRequest.Policy.RetryPolicy)
+	config.RetryPolicy = restoreRequest.Policy.GetRetryPolicyOrDefault()
 
 	if restoreRequest.Policy.Tps != nil {
 		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)

@@ -113,22 +113,9 @@ func (p *RestorePolicy) Validate() error {
 	return nil
 }
 
-func (p *RestorePolicy) GetRetryPolicyOrDefault() *RetryPolicy {
-	if p.RetryPolicy != nil {
-		return p.RetryPolicy
-	}
-
-	return defaultRetry
-}
-
 func (p *RestorePolicy) ToModel() *model.RestorePolicy {
 	if p == nil {
 		return nil
-	}
-
-	retryPolicy := p.RetryPolicy.ToModel()
-	if retryPolicy == nil {
-		retryPolicy = defaultRetry.ToModel()
 	}
 
 	return &model.RestorePolicy{
@@ -150,7 +137,7 @@ func (p *RestorePolicy) ToModel() *model.RestorePolicy {
 		Tps:                p.Tps,
 		EncryptionPolicy:   p.EncryptionPolicy.ToModel(),
 		CompressionPolicy:  p.CompressionPolicy.ToModel(),
-		RetryPolicy:        *retryPolicy,
+		RetryPolicy:        p.RetryPolicy.ToModel(),
 		ExtraTTL:           p.ExtraTTL,
 	}
 }
