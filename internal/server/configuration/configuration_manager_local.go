@@ -35,12 +35,7 @@ func (cm *FileConfigurationManager) ReadConfiguration() (io.ReadCloser, error) {
 		return nil, errors.New("configuration file is missing")
 	}
 
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	return file, nil
+	return os.Open(filePath)
 }
 
 // WriteConfiguration writes the configuration to the given file path.

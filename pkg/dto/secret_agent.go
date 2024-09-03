@@ -40,6 +40,10 @@ func (s *SecretAgent) ToModel() *model.SecretAgent {
 }
 
 func NewSecretAgentFromModel(m *model.SecretAgent) *SecretAgent {
+	if m == nil {
+		return nil
+	}
+
 	s := &SecretAgent{}
 	s.fromModel(m)
 	return s

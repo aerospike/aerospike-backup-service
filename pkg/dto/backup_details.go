@@ -50,6 +50,10 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails) {
 
 // NewBackupDetailsFromModel creates a new BackupDetails from a model.BackupDetails
 func NewBackupDetailsFromModel(m *model.BackupDetails) *BackupDetails {
+	if m == nil {
+		return nil
+	}
+
 	var d BackupDetails
 	d.fromModel(m)
 	return &d

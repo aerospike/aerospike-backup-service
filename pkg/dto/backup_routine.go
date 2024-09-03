@@ -52,11 +52,11 @@ func (r *BackupRoutine) Validate() error {
 		return emptyFieldValidationError("storage")
 	}
 	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
-		return fmt.Errorf("backup interval string '%s' invalid: %v", r.IntervalCron, err)
+		return fmt.Errorf("backup interval string '%s' invalid: %w", r.IntervalCron, err)
 	}
 	if r.IncrIntervalCron != "" { // incremental interval is optional
 		if err := quartz.ValidateCronExpression(r.IncrIntervalCron); err != nil {
-			return fmt.Errorf("incremental backup interval string '%s' invalid: %v", r.IntervalCron, err)
+			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
 	}
 	for _, rack := range r.PreferRacks {
@@ -135,6 +135,10 @@ func NewRoutineFromReader(r io.Reader, format SerializationFormat) (*BackupRouti
 }
 
 func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRoutine {
+	if m == nil || config == nil {
+		return nil
+	}
+
 	b := &BackupRoutine{}
 	b.fromModel(m, config)
 	return b

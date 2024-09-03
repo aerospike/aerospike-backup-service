@@ -125,6 +125,10 @@ func (s *Storage) fromModel(m *model.Storage) {
 }
 
 func NewStorageFromModel(m *model.Storage) *Storage {
+	if m == nil {
+		return nil
+	}
+
 	var s Storage
 	s.fromModel(m)
 	return &s

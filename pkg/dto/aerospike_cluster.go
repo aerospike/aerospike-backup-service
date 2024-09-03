@@ -67,6 +67,10 @@ func NewClusterFromReader(r io.Reader, format SerializationFormat) (*AerospikeCl
 }
 
 func NewClusterFromModel(m *model.AerospikeCluster) *AerospikeCluster {
+	if m == nil {
+		return nil
+	}
+
 	a := &AerospikeCluster{}
 	a.fromModel(m)
 	return a

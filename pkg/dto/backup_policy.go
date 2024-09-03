@@ -138,6 +138,10 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 }
 
 func NewBackupPolicyFromModel(m *model.BackupPolicy) *BackupPolicy {
+	if m == nil {
+		return nil
+	}
+
 	b := &BackupPolicy{}
 	b.fromModel(m)
 	return b

@@ -61,6 +61,10 @@ func NewConfigWithDefaultValues() *Config {
 }
 
 func NewConfigFromModel(m *model.Config) *Config {
+	if m == nil {
+		return nil
+	}
+
 	config := &Config{}
 	config.fromModel(m)
 	return config
