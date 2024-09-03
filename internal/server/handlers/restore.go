@@ -202,8 +202,8 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 	}
 
+	jsonResponse, err := dto.Serialize(dto.NewResultFromModel(status), dto.JSON)
 	w.WriteHeader(http.StatusOK)
-	jsonResponse, err := dto.Serialize(status, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal restore result",
 			slog.Any("error", err),
