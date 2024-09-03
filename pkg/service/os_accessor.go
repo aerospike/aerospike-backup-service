@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -68,11 +69,11 @@ func (o *OSDiskAccessor) readBackupDetails(path string, _ bool) (model.BackupDet
 	}, nil
 }
 
-func (o *OSDiskAccessor) read(filePath string) ([]byte, error) {
-	return os.ReadFile(filePath)
+func (o *OSDiskAccessor) Read(path string) (io.ReadCloser, error) {
+	return os.Open(path)
 }
 
-func (o *OSDiskAccessor) write(filePath string, data []byte) error {
+func (o *OSDiskAccessor) Write(filePath string, data []byte) error {
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err

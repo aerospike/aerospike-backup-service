@@ -1,31 +1,32 @@
-package service
+package configuration
 
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"gopkg.in/yaml.v3"
 )
 
-// FileConfigurationManager implements the ConfigurationManager interface,
+// FileConfigurationManager implements the Manager interface,
 // performing I/O operations on local storage.
 type FileConfigurationManager struct {
 	sync.Mutex
 	FilePath string
 }
 
-var _ ConfigurationManager = (*FileConfigurationManager)(nil)
+var _ Manager = (*FileConfigurationManager)(nil)
 
 // NewFileConfigurationManager returns a new FileConfigurationManager.
-func NewFileConfigurationManager(path string) ConfigurationManager {
+func NewFileConfigurationManager(path string) Manager {
 	return &FileConfigurationManager{FilePath: path}
 }
 
-// ReadConfiguration reads the configuration from the given file path.
-func (cm *FileConfigurationManager) ReadConfiguration() (*model.Config, error) {
+// ReadConfiguration returns a reader for the configuration file.
+func (cm *FileConfigurationManager) ReadConfiguration() (io.ReadCloser, error) {
 	cm.Lock()
 	defer cm.Unlock()
 
@@ -33,19 +34,8 @@ func (cm *FileConfigurationManager) ReadConfiguration() (*model.Config, error) {
 	if filePath == "" {
 		return nil, errors.New("configuration file is missing")
 	}
-	buf, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
 
-	config := model.NewConfigWithDefaultValues()
-	err = yaml.Unmarshal(buf, config)
-	if err != nil {
-		return nil, fmt.Errorf("in file %q: %w", filePath, err)
-	}
-
-	err = config.Validate()
-	return config, err
+	return os.Open(filePath)
 }
 
 // WriteConfiguration writes the configuration to the given file path.
@@ -58,7 +48,8 @@ func (cm *FileConfigurationManager) WriteConfiguration(config *model.Config) err
 		return errors.New("configuration file path is missing")
 	}
 
-	data, err := yaml.Marshal(config)
+	configDto := dto.NewConfigFromModel(config)
+	data, err := dto.Serialize(configDto, dto.YAML)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration data: %w", err)
 	}

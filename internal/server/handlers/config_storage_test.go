@@ -6,17 +6,18 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
 )
 
 const testStorage = "testStorage"
+const unusedTestStorage = "unusedTestStorage"
 
-func testConfigStorage() model.Storage {
+func testConfigStorage() *dto.Storage {
 	path := testDir
-	return model.Storage{
+	return &dto.Storage{
 		Type:            "local",
 		Path:            &path,
 		MinPartSize:     5242880,
@@ -148,7 +149,6 @@ func TestService_ConfigStorageActionHandlerPut(t *testing.T) {
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigStorageActionHandlerDelete(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -163,7 +163,8 @@ func TestService_ConfigStorageActionHandlerDelete(t *testing.T) {
 		statusCode int
 		name       string
 	}{
-		{http.MethodDelete, http.StatusNoContent, testStorage},
+		{http.MethodDelete, http.StatusNoContent, unusedTestStorage},
+		{http.MethodDelete, http.StatusBadRequest, testStorage},
 		{http.MethodDelete, http.StatusNotFound, ""},
 		{http.MethodPost, http.StatusMethodNotAllowed, testStorage},
 		{http.MethodConnect, http.StatusMethodNotAllowed, testStorage},

@@ -1,13 +1,11 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/gorilla/mux"
 )
 
@@ -33,7 +31,7 @@ func (s *Service) ConfigPolicyActionHandler(w http.ResponseWriter, r *http.Reque
 // @Router      /v1/config/policies/{name} [post]
 // @Accept      json
 // @Param       name path string true "Backup policy name"
-// @Param       policy body model.BackupPolicy true "Backup policy details"
+// @Param       policy body dto.BackupPolicy true "Backup policy details"
 // @Success     201
 // @Failure     400 {string} string
 //
@@ -41,8 +39,7 @@ func (s *Service) ConfigPolicyActionHandler(w http.ResponseWriter, r *http.Reque
 func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addPolicy"))
 
-	var request model.BackupPolicy
-	err := json.NewDecoder(r.Body).Decode(&request)
+	request, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),
@@ -57,7 +54,7 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.AddPolicy(s.config, name, &request)
+	err = s.config.AddPolicy(name, request.ToModel())
 	if err != nil {
 		hLogger.Error("failed to add policy",
 			slog.String("name", name),
@@ -84,12 +81,13 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Tags        Configuration
 // @Router      /v1/config/policies [get]
 // @Produce     json
-// @Success  	200 {object} map[string]model.BackupPolicy
+// @Success  	200 {object} map[string]dto.BackupPolicy
 // @Failure     500 {string} string
 func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadPolicies"))
 
-	jsonResponse, err := json.Marshal(s.config.BackupPolicies)
+	policies := dto.ConvertModelMapToDTO(s.config.BackupPolicies, dto.NewBackupPolicyFromModel)
+	jsonResponse, err := dto.Serialize(policies, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal backup policies",
 			slog.Any("error", err),
@@ -115,7 +113,7 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Router      /v1/config/policies/{name} [get]
 // @Param       name path string true "Backup policy name"
 // @Produce     json
-// @Success  	200 {object} model.BackupPolicy
+// @Success  	200 {object} dto.BackupPolicy
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified policy could not be found"
 // @Failure     500 {string} string "The specified policy could not be found"
@@ -134,7 +132,7 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("policy %s could not be found", policyName), http.StatusNotFound)
 		return
 	}
-	jsonResponse, err := json.Marshal(policy)
+	jsonResponse, err := dto.Serialize(dto.NewBackupPolicyFromModel(policy), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal policy",
 			slog.Any("error", err),
@@ -160,7 +158,7 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/config/policies/{name} [put]
 // @Accept      json
 // @Param       name path string true "Backup policy name"
-// @Param       policy body model.BackupPolicy true "Backup policy details"
+// @Param       policy body dto.BackupPolicy true "Backup policy details"
 // @Success     200
 // @Failure     400 {string} string
 //
@@ -168,8 +166,7 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updatePolicy"))
 
-	var request model.BackupPolicy
-	err := json.NewDecoder(r.Body).Decode(&request)
+	request, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),
@@ -184,7 +181,7 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = service.UpdatePolicy(s.config, name, &request)
+	err = s.config.UpdatePolicy(name, request.ToModel())
 	if err != nil {
 		hLogger.Error("failed to update policy",
 			slog.String("name", name),
@@ -224,7 +221,7 @@ func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := service.DeletePolicy(s.config, policyName)
+	err := s.config.DeletePolicy(policyName)
 	if err != nil {
 		hLogger.Error("failed to delete policy",
 			slog.String("name", policyName),

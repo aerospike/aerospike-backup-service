@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 	"github.com/reugn/go-quartz/quartz"
@@ -53,28 +55,33 @@ func testBackupDetails() model.BackupDetails {
 	}
 }
 
-func testConfig() *model.Config {
-	clusters := make(map[string]*model.AerospikeCluster)
+func testConfig() *dto.Config {
+	clusters := make(map[string]*dto.AerospikeCluster)
 	cluster := testConfigCluster()
-	clusters[testCluster] = &cluster
+	clusters[testCluster] = cluster
 
-	policies := make(map[string]*model.BackupPolicy)
+	policies := make(map[string]*dto.BackupPolicy)
 	policy := testConfigBackupPolicy()
-	policies[testPolicy] = &policy
+	policies[testPolicy] = policy
+	policies[unusedTestPolicy] = policy
 
-	storages := make(map[string]*model.Storage)
+	storages := make(map[string]*dto.Storage)
 	storage := testConfigStorage()
-	storages[testStorage] = &storage
+	storages[testStorage] = storage
+	storages[unusedTestStorage] = storage
 
-	routines := make(map[string]*model.BackupRoutine)
-	routines[testRoutineName] = &model.BackupRoutine{
-		IntervalCron: "0 0 * * * *",
+	routines := make(map[string]*dto.BackupRoutine)
+	routines[testRoutineName] = &dto.BackupRoutine{
+		Storage:       testStorage,
+		BackupPolicy:  testPolicy,
+		SourceCluster: testCluster,
+		IntervalCron:  "0 0 * * * *",
 	}
 
-	return &model.Config{
-		ServiceConfig: &model.BackupServiceConfig{
-			HTTPServer: &model.HTTPServerConfig{},
-			Logger:     &model.LoggerConfig{},
+	return &dto.Config{
+		ServiceConfig: dto.BackupServiceConfig{
+			HTTPServer: &dto.HTTPServerConfig{},
+			Logger:     &dto.LoggerConfig{},
 		},
 		AerospikeClusters: clusters,
 		Storage:           storages,
@@ -93,7 +100,7 @@ func (mock restoreManagerMock) Restore(request *model.RestoreRequestInternal) (m
 }
 
 func (mock restoreManagerMock) RestoreByTime(request *model.RestoreTimestampRequest) (model.RestoreJobID, error) {
-	if request.Time == 0 {
+	if request.Time == time.UnixMilli(0) {
 		return 0, errTest
 	}
 	return model.RestoreJobID(testJobID), nil
@@ -169,8 +176,9 @@ func (mock backendsHolderMock) SetData(_ map[string]*service.BackupBackend) {
 
 type configurationManagerMock struct{}
 
-func (mock configurationManagerMock) ReadConfiguration() (*model.Config, error) {
-	return testConfig(), nil
+func (mock configurationManagerMock) ReadConfiguration() (io.ReadCloser, error) {
+	serialize, _ := dto.Serialize(testConfig(), dto.JSON)
+	return io.NopCloser(bytes.NewReader(serialize)), nil
 }
 
 func (mock configurationManagerMock) WriteConfiguration(config *model.Config) error {
@@ -181,8 +189,9 @@ func (mock configurationManagerMock) WriteConfiguration(config *model.Config) er
 }
 
 func newServiceMock() *Service {
+	toModel, _ := testConfig().ToModel()
 	return &Service{
-		config:               testConfig(),
+		config:               toModel,
 		scheduler:            quartz.NewStdScheduler(),
 		restoreManager:       restoreManagerMock{},
 		backupBackends:       backendsHolderMock{},

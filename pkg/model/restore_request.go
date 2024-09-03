@@ -2,7 +2,7 @@ package model
 
 import (
 	"encoding/json"
-	"errors"
+	"time"
 )
 
 // RestoreJobID represents the restore operation job id.
@@ -11,10 +11,10 @@ type RestoreJobID int
 // RestoreRequest represents a restore operation request.
 // @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
-	DestinationCuster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
-	Policy            *RestorePolicy    `json:"policy,omitempty" validate:"required"`
-	SourceStorage     *Storage          `json:"source,omitempty" validate:"required"`
-	SecretAgent       *SecretAgent      `json:"secret-agent,omitempty"`
+	DestinationCuster *AerospikeCluster
+	Policy            *RestorePolicy
+	SourceStorage     *Storage
+	SecretAgent       *SecretAgent
 }
 
 // RestoreRequestInternal is used internally to prepopulate data for the restore operation.
@@ -27,15 +27,15 @@ type RestoreRequestInternal struct {
 // @Description RestoreTimestampRequest represents a restore by timestamp operation request.
 type RestoreTimestampRequest struct {
 	// The details of the Aerospike destination cluster.
-	DestinationCuster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
+	DestinationCuster *AerospikeCluster
 	// Restore policy to use in the operation.
-	Policy *RestorePolicy `json:"policy,omitempty" validate:"required"`
+	Policy *RestorePolicy
 	// Secret Agent configuration (optional).
-	SecretAgent *SecretAgent `json:"secret-agent,omitempty"`
+	SecretAgent *SecretAgent
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
-	Time int64 `json:"time,omitempty" format:"int64" example:"1739538000000" validate:"required"`
+	Time time.Time
 	// The backup routine name.
-	Routine string `json:"routine,omitempty" example:"daily" validate:"required"`
+	Routine string
 }
 
 // String satisfies the fmt.Stringer interface.
@@ -69,38 +69,4 @@ func NewRestoreRequest(
 		SourceStorage:     sourceStorage,
 		SecretAgent:       secretAgent,
 	}
-}
-
-// Validate validates the restore operation request.
-func (r *RestoreRequest) Validate() error {
-	if err := r.DestinationCuster.Validate(); err != nil {
-		return err
-	}
-	if err := r.Policy.Validate(); err != nil {
-		return err
-	}
-	if err := r.SourceStorage.Validate(); err != nil {
-		return err
-	}
-	if err := r.Policy.Validate(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Validate validates the restore operation request.
-func (r *RestoreTimestampRequest) Validate() error {
-	if err := r.DestinationCuster.Validate(); err != nil {
-		return err
-	}
-	if err := r.Policy.Validate(); err != nil {
-		return err
-	}
-	if r.Time <= 0 {
-		return errors.New("restore point in time should be positive")
-	}
-	if r.Routine == "" {
-		return emptyFieldValidationError(r.Routine)
-	}
-	return nil
 }

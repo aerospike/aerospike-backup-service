@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v2/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/middleware"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/util"
@@ -33,7 +34,7 @@ func NewHTTPServer(
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
-	configurationManager service.ConfigurationManager,
+	configurationManager configuration.Manager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) *HTTPServer {

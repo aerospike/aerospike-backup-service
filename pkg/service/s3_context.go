@@ -27,7 +27,7 @@ type S3Context struct {
 	ctx           context.Context
 	client        *s3.Client
 	bucket        string
-	path          string
+	Path          string
 	metadataCache *util.LoadingCache[string, *model.BackupMetadata]
 }
 
@@ -56,7 +56,7 @@ func NewS3Context(storage *model.Storage) *S3Context {
 		ctx:    ctx,
 		client: client,
 		bucket: bucket,
-		path:   parsedPath,
+		Path:   parsedPath,
 	}
 
 	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*model.BackupMetadata, error) {
@@ -85,15 +85,11 @@ func checkBucket(ctx context.Context, client *s3.Client, bucket string) {
 
 func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
 	storage.SetDefaultProfile()
-	cfg, err := config.LoadDefaultConfig(
+	cfg, _ := config.LoadDefaultConfig(
 		ctx,
 		config.WithSharedConfigProfile(*storage.S3Profile),
 		config.WithRegion(*storage.S3Region),
 	)
-
-	if err != nil { // TODO: handle panic
-		panic(fmt.Sprintf("failed loading config, %v", err))
-	}
 
 	return cfg
 }
@@ -119,7 +115,7 @@ func (s *S3Context) readBackupDetails(path string, useCache bool) (model.BackupD
 	}, nil
 }
 
-func (s *S3Context) read(filePath string) ([]byte, error) {
+func (s *S3Context) Read(filePath string) (io.ReadCloser, error) {
 	result, err := s.client.GetObject(s.ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(filePath),
@@ -135,40 +131,26 @@ func (s *S3Context) read(filePath string) ([]byte, error) {
 		slog.Warn("Failed to read file", "path", filePath, "err", err)
 		return nil, err
 	}
-	defer result.Body.Close()
-	content, err := io.ReadAll(result.Body)
-	if err != nil {
-		slog.Warn("Couldn't read object body of a file",
-			"path", filePath, "err", err)
-		return nil, err
-	}
-	return content, nil
+
+	return result.Body, nil
 }
 
 // readFile reads and decodes the YAML content from the given filePath into v.
 func (s *S3Context) readFile(filePath string, v any) error {
-	content, err := s.read(filePath)
+	content, err := s.Read(filePath)
 	if err != nil {
 		return err
 	}
-	if err = yaml.Unmarshal(content, v); err != nil {
+	all, _ := io.ReadAll(content)
+	if err = yaml.Unmarshal(all, v); err != nil {
 		slog.Warn("Failed unmarshal state file for backup",
-			"path", filePath, "err", err, "content", string(content))
+			"path", filePath, "err", err, "content", string(all))
 		return err
 	}
 	return nil
 }
 
-// WriteYaml writes v into filepath using the YAML format.
-func (s *S3Context) writeYaml(filePath string, v any) error {
-	yamlData, err := yaml.Marshal(v)
-	if err != nil {
-		return err
-	}
-	return s.write(filePath, yamlData)
-}
-
-func (s *S3Context) write(filePath string, data []byte) error {
+func (s *S3Context) Write(filePath string, data []byte) error {
 	logger := slog.Default().With(slog.String("path", filePath),
 		slog.String("bucket", s.bucket))
 	_, err := s.client.PutObject(s.ctx, &s3.PutObjectInput{
@@ -184,7 +166,7 @@ func (s *S3Context) write(filePath string, data []byte) error {
 	return nil
 }
 
-// lsFiles returns all files in the given s3 prefix path.
+// lsFiles returns all files in the given s3 prefix Path.
 func (s *S3Context) lsFiles(prefix string) ([]string, error) {
 	var result []string
 
@@ -214,7 +196,7 @@ func (s *S3Context) lsFiles(prefix string) ([]string, error) {
 	return result, nil
 }
 
-// lsDir returns all subfolders in the given s3 prefix path.
+// lsDir returns all subfolders in the given s3 prefix Path.
 func (s *S3Context) lsDir(prefix string, after *string) ([]string, error) {
 	var result []string
 
@@ -276,34 +258,40 @@ func (s *S3Context) readMetadata(path string) (*model.BackupMetadata, error) {
 }
 
 func (s *S3Context) DeleteFolder(folder string) error {
-	logger := slog.Default().With(slog.String("path", folder))
-	logger.Debug("Delete folder")
+	var continuationToken *string
+	prefix := strings.TrimSuffix(folder, "/") + "/"
 
-	result, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
-		Bucket: aws.String(s.bucket),
-		Prefix: aws.String(strings.TrimSuffix(folder, "/") + "/"),
-	})
-	if err != nil {
-		logger.Warn("Couldn't list files in directory", slog.Any("err", err))
-		return err
-	}
-
-	if len(result.Contents) == 0 {
-		logger.Debug("No files to delete")
-		return nil
-	}
-
-	for _, file := range result.Contents {
-		_, err := s.client.DeleteObject(s.ctx, &s3.DeleteObjectInput{
-			Bucket: aws.String(s.bucket),
-			Key:    file.Key,
+	for {
+		listResponse, err := s.client.ListObjectsV2(s.ctx, &s3.ListObjectsV2Input{
+			Bucket:            &s.bucket,
+			Prefix:            &prefix,
+			ContinuationToken: continuationToken,
 		})
+
 		if err != nil {
-			slog.Debug("Couldn't delete file",
-				slog.String("path", *file.Key),
-				slog.Any("err", err))
+			return fmt.Errorf("failed to list objects: %w", err)
+		}
+
+		for _, p := range listResponse.Contents {
+			if p.Key == nil {
+				continue
+			}
+
+			_, err = s.client.DeleteObject(s.ctx, &s3.DeleteObjectInput{
+				Bucket: &s.bucket,
+				Key:    p.Key,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to delete object %s: %w", *p.Key, err)
+			}
+		}
+
+		continuationToken = listResponse.NextContinuationToken
+		if continuationToken == nil {
+			break
 		}
 	}
+
 	return nil
 }
 
@@ -313,15 +301,15 @@ func (s *S3Context) wrapWithPrefix(path string) *string {
 }
 
 func (s *S3Context) ValidateStorageContainsBackup() (uint64, error) {
-	files, err := s.lsFiles(s.path)
+	files, err := s.lsFiles(s.Path)
 	if err != nil {
 		return 0, err
 	}
 	if len(files) == 0 {
-		return 0, fmt.Errorf("given path %s does not exist", s.path)
+		return 0, fmt.Errorf("given path %s does not exist", s.Path)
 	}
 
-	metadata, err := s.readMetadata(s.path)
+	metadata, err := s.readMetadata(s.Path)
 	if err != nil {
 		return 0, err
 	}
@@ -330,5 +318,5 @@ func (s *S3Context) ValidateStorageContainsBackup() (uint64, error) {
 			return metadata.RecordCount, nil
 		}
 	}
-	return 0, fmt.Errorf("no backup files found in %s", s.path)
+	return 0, fmt.Errorf("no backup files found in %s", s.Path)
 }

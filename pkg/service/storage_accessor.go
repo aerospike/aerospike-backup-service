@@ -1,6 +1,8 @@
 package service
 
 import (
+	"io"
+
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
@@ -11,11 +13,11 @@ type StorageAccessor interface {
 	// readBackupDetails returns backup details for a backup.
 	readBackupDetails(path string, useCache bool) (model.BackupDetails, error)
 
-	// read reads given file.
-	read(path string) ([]byte, error)
+	// Read reads given file.
+	Read(path string) (io.ReadCloser, error)
 
-	// write writes the given byte array to a file
-	write(filePath string, v []byte) error
+	// Write writes the given byte array to a file
+	Write(filePath string, v []byte) error
 
 	// lsDir lists all subdirectories in the given path
 	// after is an optional filter to return folders after it.

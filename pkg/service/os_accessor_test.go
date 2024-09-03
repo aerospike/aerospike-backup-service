@@ -245,7 +245,7 @@ func TestReadBackupDetails(t *testing.T) {
 	}
 
 	data, _ := json.Marshal(metadata)
-	_ = accessor.write(filepath.Join(path, metadataFile), data)
+	_ = accessor.Write(filepath.Join(path, metadataFile), data)
 
 	details, err := accessor.readBackupDetails(path, true)
 	assert.NoError(t, err)
@@ -275,7 +275,7 @@ func TestReadBackupDetailsNegative(t *testing.T) {
 			name: "InvalidMetadata",
 			setup: func() string {
 				dir := t.TempDir()
-				_ = accessor.write(filepath.Join(dir, metadataFile), []byte{1, 2, 3})
+				_ = accessor.Write(filepath.Join(dir, metadataFile), []byte{1, 2, 3})
 				return dir
 			},
 		},
@@ -300,7 +300,7 @@ func TestReadState(t *testing.T) {
 		Performed: 10,
 	}
 	data, _ := json.Marshal(expected)
-	_ = accessor.write(path, data)
+	_ = accessor.Write(path, data)
 
 	state := &model.BackupState{}
 	err := accessor.readBackupState(path, state)
@@ -333,7 +333,7 @@ func TestReadStateNegative(t *testing.T) {
 			setup: func() string {
 				dir := t.TempDir()
 				path := filepath.Join(dir, "test_state.yaml")
-				_ = accessor.write(path, []byte{1, 2, 3})
+				_ = accessor.Write(path, []byte{1, 2, 3})
 				return path
 			},
 			ignoreErr: true, // when state file corrupted, default is returned.

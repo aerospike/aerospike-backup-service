@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"fmt"
+	"io"
 	"log/slog"
 	"path/filepath"
 	"sort"
@@ -34,11 +35,9 @@ var _ BackupListReader = (*BackupBackend)(nil)
 
 const metadataFile = "metadata.yaml"
 
-func newBackend(config *model.Config, routineName string) *BackupBackend {
-	backupRoutine := config.BackupRoutines[routineName]
-	storage := config.Storage[backupRoutine.Storage]
-	backupPolicy := config.BackupPolicies[backupRoutine.BackupPolicy]
-	removeFullBackup := backupPolicy.RemoveFiles.RemoveFullBackup()
+func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend {
+	removeFullBackup := routine.BackupPolicy.RemoveFiles.RemoveFullBackup()
+	storage := routine.Storage
 	switch storage.Type {
 	case model.Local:
 		routinePath := filepath.Join(*storage.Path, routineName)
@@ -52,7 +51,7 @@ func newBackend(config *model.Config, routineName string) *BackupBackend {
 		}
 	case model.S3:
 		s3Context := NewS3Context(storage)
-		routinePath := filepath.Join(s3Context.path, routineName)
+		routinePath := filepath.Join(s3Context.Path, routineName)
 		return &BackupBackend{
 			StorageAccessor:        s3Context,
 			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
@@ -96,7 +95,7 @@ func (b *BackupBackend) writeYaml(path string, data any) error {
 		return err
 	}
 
-	return b.write(path, dataYaml)
+	return b.Write(path, dataYaml)
 }
 
 // FullBackupList returns a list of available full backups.
@@ -236,14 +235,14 @@ func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
 
 // PackageFiles creates a zip archive from the given file list and returns it as a byte array.
 func (b *BackupBackend) packageFiles(files []string) ([]byte, error) {
-	// Create a buffer to write our archive to
+	// Create a buffer to Write our archive to
 	buf := new(bytes.Buffer)
 
 	// Create a new zip archive
 	w := zip.NewWriter(buf)
 
 	for _, file := range files {
-		data, err := b.read(file)
+		data, err := b.Read(file)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read file %s: %w", file, err)
 		}
@@ -253,9 +252,9 @@ func (b *BackupBackend) packageFiles(files []string) ([]byte, error) {
 			return nil, fmt.Errorf("failed to create entry for filename %s: %w", file, err)
 		}
 
-		_, err = f.Write(data)
+		_, err = io.Copy(f, data)
 		if err != nil {
-			return nil, fmt.Errorf("failed to write file %s: %w", file, err)
+			return nil, fmt.Errorf("failed to Write file %s: %w", file, err)
 		}
 	}
 

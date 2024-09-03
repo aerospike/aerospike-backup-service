@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"time"
 )
 
@@ -10,16 +9,7 @@ import (
 type BackupDetails struct {
 	BackupMetadata
 	// The path to the backup files.
-	Key *string `yaml:"key,omitempty" json:"key,omitempty" example:"storage/daily/backup/1707915600000/source-ns1"`
-}
-
-// String satisfies the fmt.Stringer interface.
-func (details BackupDetails) String() string {
-	backupDetails, err := json.Marshal(details)
-	if err != nil {
-		return err.Error()
-	}
-	return string(backupDetails)
+	Key *string
 }
 
 // BackupMetadata is an internal container for storing backup metadata.

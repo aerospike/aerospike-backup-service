@@ -119,7 +119,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Current backup statistics",
                         "schema": {
-                            "$ref": "#/definitions/model.CurrentBackups"
+                            "$ref": "#/definitions/dto.CurrentBackups"
                         }
                     },
                     "400": {
@@ -177,7 +177,7 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "array",
                                 "items": {
-                                    "$ref": "#/definitions/model.BackupDetails"
+                                    "$ref": "#/definitions/dto.BackupDetails"
                                 }
                             }
                         }
@@ -236,7 +236,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.BackupDetails"
+                                "$ref": "#/definitions/dto.BackupDetails"
                             }
                         }
                     },
@@ -289,7 +289,7 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "array",
                                 "items": {
-                                    "$ref": "#/definitions/model.BackupDetails"
+                                    "$ref": "#/definitions/dto.BackupDetails"
                                 }
                             }
                         }
@@ -348,7 +348,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.BackupDetails"
+                                "$ref": "#/definitions/dto.BackupDetails"
                             }
                         }
                     },
@@ -428,7 +428,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Config"
+                            "$ref": "#/definitions/dto.Config"
                         }
                     },
                     "500": {
@@ -455,7 +455,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Config"
+                            "$ref": "#/definitions/dto.Config"
                         }
                     }
                 ],
@@ -511,7 +511,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "$ref": "#/definitions/model.AerospikeCluster"
+                                "$ref": "#/definitions/dto.AerospikeCluster"
                             }
                         }
                     },
@@ -547,7 +547,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.AerospikeCluster"
+                            "$ref": "#/definitions/dto.AerospikeCluster"
                         }
                     },
                     "400": {
@@ -593,7 +593,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.AerospikeCluster"
+                            "$ref": "#/definitions/dto.AerospikeCluster"
                         }
                     }
                 ],
@@ -632,7 +632,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.AerospikeCluster"
+                            "$ref": "#/definitions/dto.AerospikeCluster"
                         }
                     }
                 ],
@@ -698,7 +698,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "$ref": "#/definitions/model.BackupPolicy"
+                                "$ref": "#/definitions/dto.BackupPolicy"
                             }
                         }
                     },
@@ -734,7 +734,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.BackupPolicy"
+                            "$ref": "#/definitions/dto.BackupPolicy"
                         }
                     },
                     "400": {
@@ -780,7 +780,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.BackupPolicy"
+                            "$ref": "#/definitions/dto.BackupPolicy"
                         }
                     }
                 ],
@@ -819,7 +819,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.BackupPolicy"
+                            "$ref": "#/definitions/dto.BackupPolicy"
                         }
                     }
                 ],
@@ -879,7 +879,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "$ref": "#/definitions/model.BackupRoutine"
+                                "$ref": "#/definitions/dto.BackupRoutine"
                             }
                         }
                     },
@@ -915,7 +915,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.BackupRoutine"
+                            "$ref": "#/definitions/dto.BackupRoutine"
                         }
                     },
                     "400": {
@@ -955,7 +955,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.BackupRoutine"
+                            "$ref": "#/definitions/dto.BackupRoutine"
                         }
                     }
                 ],
@@ -994,7 +994,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.BackupRoutine"
+                            "$ref": "#/definitions/dto.BackupRoutine"
                         }
                     }
                 ],
@@ -1054,7 +1054,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
-                                "$ref": "#/definitions/model.Storage"
+                                "$ref": "#/definitions/dto.Storage"
                             }
                         }
                     },
@@ -1090,7 +1090,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Storage"
+                            "$ref": "#/definitions/dto.Storage"
                         }
                     },
                     "400": {
@@ -1136,7 +1136,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Storage"
+                            "$ref": "#/definitions/dto.Storage"
                         }
                     }
                 ],
@@ -1175,7 +1175,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.Storage"
+                            "$ref": "#/definitions/dto.Storage"
                         }
                     }
                 ],
@@ -1236,7 +1236,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.RestoreRequest"
+                            "$ref": "#/definitions/dto.RestoreRequest"
                         }
                     }
                 ],
@@ -1279,7 +1279,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.RestoreRequest"
+                            "$ref": "#/definitions/dto.RestoreRequest"
                         }
                     }
                 ],
@@ -1329,7 +1329,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Restore job status details",
                         "schema": {
-                            "$ref": "#/definitions/model.RestoreJobStatus"
+                            "$ref": "#/definitions/dto.RestoreJobStatus"
                         }
                     },
                     "400": {
@@ -1359,7 +1359,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.RestoreTimestampRequest"
+                            "$ref": "#/definitions/dto.RestoreTimestampRequest"
                         }
                     }
                 ],
@@ -1453,7 +1453,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "model.AerospikeCluster": {
+        "dto.AerospikeCluster": {
             "description": "AerospikeCluster represents the configuration for an Aerospike cluster for backup.",
             "type": "object",
             "properties": {
@@ -1466,7 +1466,7 @@ const docTemplate = `{
                     "description": "The authentication details to the Aerospike cluster.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.Credentials"
+                            "$ref": "#/definitions/dto.Credentials"
                         }
                     ]
                 },
@@ -1484,14 +1484,14 @@ const docTemplate = `{
                     "description": "The seed nodes details.",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.SeedNode"
+                        "$ref": "#/definitions/dto.SeedNode"
                     }
                 },
                 "tls": {
                     "description": "The cluster TLS configuration.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.TLS"
+                            "$ref": "#/definitions/dto.TLS"
                         }
                     ]
                 },
@@ -1501,7 +1501,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.BackupDetails": {
+        "dto.BackupDetails": {
             "description": "BackupDetails contains information about a backup.",
             "type": "object",
             "properties": {
@@ -1557,7 +1557,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.BackupPolicy": {
+        "dto.BackupPolicy": {
             "description": "BackupPolicy represents a scheduled backup policy.",
             "type": "object",
             "properties": {
@@ -1570,7 +1570,7 @@ const docTemplate = `{
                     "description": "Compression details.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.CompressionPolicy"
+                            "$ref": "#/definitions/dto.CompressionPolicy"
                         }
                     ]
                 },
@@ -1578,7 +1578,7 @@ const docTemplate = `{
                     "description": "Encryption details.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.EncryptionPolicy"
+                            "$ref": "#/definitions/dto.EncryptionPolicy"
                         }
                     ]
                 },
@@ -1623,7 +1623,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.RemoveFilesType"
+                            "$ref": "#/definitions/dto.RemoveFilesType"
                         }
                     ]
                 },
@@ -1648,7 +1648,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.BackupRoutine": {
+        "dto.BackupRoutine": {
             "description": "BackupRoutine represents a scheduled backup operation routine.",
             "type": "object",
             "required": [
@@ -1735,7 +1735,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.BackupServiceConfig": {
+        "dto.BackupServiceConfig": {
             "description": "BackupServiceConfig represents the backup service configuration properties.",
             "type": "object",
             "properties": {
@@ -1743,7 +1743,7 @@ const docTemplate = `{
                     "description": "HTTPServer is the backup service HTTP server configuration.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.HTTPServerConfig"
+                            "$ref": "#/definitions/dto.HTTPServerConfig"
                         }
                     ]
                 },
@@ -1751,13 +1751,13 @@ const docTemplate = `{
                     "description": "Logger is the backup service logger configuration.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.LoggerConfig"
+                            "$ref": "#/definitions/dto.LoggerConfig"
                         }
                     ]
                 }
             }
         },
-        "model.CompressionPolicy": {
+        "dto.CompressionPolicy": {
             "description": "CompressionPolicy contains backup compression information.",
             "type": "object",
             "properties": {
@@ -1776,46 +1776,46 @@ const docTemplate = `{
                 }
             }
         },
-        "model.Config": {
+        "dto.Config": {
             "description": "Config represents the service configuration file.",
             "type": "object",
             "properties": {
                 "aerospike-clusters": {
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/model.AerospikeCluster"
+                        "$ref": "#/definitions/dto.AerospikeCluster"
                     }
                 },
                 "backup-policies": {
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/model.BackupPolicy"
+                        "$ref": "#/definitions/dto.BackupPolicy"
                     }
                 },
                 "backup-routines": {
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/model.BackupRoutine"
+                        "$ref": "#/definitions/dto.BackupRoutine"
                     }
                 },
                 "secret-agent": {
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/model.SecretAgent"
+                        "$ref": "#/definitions/dto.SecretAgent"
                     }
                 },
                 "service": {
-                    "$ref": "#/definitions/model.BackupServiceConfig"
+                    "$ref": "#/definitions/dto.BackupServiceConfig"
                 },
                 "storage": {
                     "type": "object",
                     "additionalProperties": {
-                        "$ref": "#/definitions/model.Storage"
+                        "$ref": "#/definitions/dto.Storage"
                     }
                 }
             }
         },
-        "model.Credentials": {
+        "dto.Credentials": {
             "description": "Credentials represents authentication details to the Aerospike cluster.",
             "type": "object",
             "properties": {
@@ -1846,14 +1846,14 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CurrentBackups": {
+        "dto.CurrentBackups": {
             "type": "object",
             "properties": {
                 "full": {
                     "description": "Full represents the state of a full backup. Nil if no full backup is running.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.RunningJob"
+                            "$ref": "#/definitions/dto.RunningJob"
                         }
                     ]
                 },
@@ -1861,13 +1861,13 @@ const docTemplate = `{
                     "description": "Incremental represents the state of an incremental backup. Nil if no incremental backup is running.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.RunningJob"
+                            "$ref": "#/definitions/dto.RunningJob"
                         }
                     ]
                 }
             }
         },
-        "model.EncryptionPolicy": {
+        "dto.EncryptionPolicy": {
             "description": "EncryptionPolicy contains backup encryption information.",
             "type": "object",
             "properties": {
@@ -1895,7 +1895,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.FileLoggerConfig": {
+        "dto.FileLoggerConfig": {
             "description": "FileLoggerConfig represents the configuration for the file logger writer.",
             "type": "object",
             "properties": {
@@ -1927,7 +1927,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.HTTPServerConfig": {
+        "dto.HTTPServerConfig": {
             "description": "HTTPServerConfig represents the service's HTTP server configuration.",
             "type": "object",
             "properties": {
@@ -1952,7 +1952,7 @@ const docTemplate = `{
                     "description": "HTTP rate limiter configuration.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.RateLimiterConfig"
+                            "$ref": "#/definitions/dto.RateLimiterConfig"
                         }
                     ]
                 },
@@ -1963,7 +1963,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.JobStatus": {
+        "dto.JobStatus": {
             "type": "string",
             "enum": [
                 "Running",
@@ -1976,7 +1976,7 @@ const docTemplate = `{
                 "JobStatusFailed"
             ]
         },
-        "model.LoggerConfig": {
+        "dto.LoggerConfig": {
             "description": "LoggerConfig represents the backup service logger configuration.",
             "type": "object",
             "properties": {
@@ -1984,7 +1984,7 @@ const docTemplate = `{
                     "description": "File writer logging configuration.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.FileLoggerConfig"
+                            "$ref": "#/definitions/dto.FileLoggerConfig"
                         }
                     ]
                 },
@@ -2017,7 +2017,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RateLimiterConfig": {
+        "dto.RateLimiterConfig": {
             "description": "RateLimiterConfig is the HTTP server rate limiter configuration.",
             "type": "object",
             "properties": {
@@ -2042,7 +2042,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RemoveFilesType": {
+        "dto.RemoveFilesType": {
             "description": "RemoveFilesType represents the type of the backup storage.",
             "type": "string",
             "enum": [
@@ -2056,12 +2056,12 @@ const docTemplate = `{
                 "RemoveIncremental"
             ]
         },
-        "model.RestoreJobStatus": {
+        "dto.RestoreJobStatus": {
             "description": "RestoreJobStatus represents a restore job status.",
             "type": "object",
             "properties": {
                 "current-job": {
-                    "$ref": "#/definitions/model.RunningJob"
+                    "$ref": "#/definitions/dto.RunningJob"
                 },
                 "error": {
                     "type": "string"
@@ -2114,7 +2114,7 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.JobStatus"
+                            "$ref": "#/definitions/dto.JobStatus"
                         }
                     ]
                 },
@@ -2130,7 +2130,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RestoreNamespace": {
+        "dto.RestoreNamespace": {
             "description": "RestoreNamespace specifies an alternative namespace name for the restore operation.",
             "type": "object",
             "required": [
@@ -2150,7 +2150,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RestorePolicy": {
+        "dto.RestorePolicy": {
             "description": "RestorePolicy represents a policy for the restore operation.",
             "type": "object",
             "properties": {
@@ -2179,7 +2179,7 @@ const docTemplate = `{
                     "description": "Compression details.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.CompressionPolicy"
+                            "$ref": "#/definitions/dto.CompressionPolicy"
                         }
                     ]
                 },
@@ -2191,7 +2191,7 @@ const docTemplate = `{
                     "description": "Encryption details.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.EncryptionPolicy"
+                            "$ref": "#/definitions/dto.EncryptionPolicy"
                         }
                     ]
                 },
@@ -2209,7 +2209,7 @@ const docTemplate = `{
                     "description": "Namespace details for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.RestoreNamespace"
+                            "$ref": "#/definitions/dto.RestoreNamespace"
                         }
                     ]
                 },
@@ -2239,10 +2239,10 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, no retries will be performed.",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, default retry policy will be used.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.RetryPolicy"
+                            "$ref": "#/definitions/dto.RetryPolicy"
                         }
                     ]
                 },
@@ -2273,7 +2273,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RestoreRequest": {
+        "dto.RestoreRequest": {
             "description": "RestoreRequest represents a restore operation request.",
             "type": "object",
             "required": [
@@ -2283,20 +2283,20 @@ const docTemplate = `{
             ],
             "properties": {
                 "destination": {
-                    "$ref": "#/definitions/model.AerospikeCluster"
+                    "$ref": "#/definitions/dto.AerospikeCluster"
                 },
                 "policy": {
-                    "$ref": "#/definitions/model.RestorePolicy"
+                    "$ref": "#/definitions/dto.RestorePolicy"
                 },
                 "secret-agent": {
-                    "$ref": "#/definitions/model.SecretAgent"
+                    "$ref": "#/definitions/dto.SecretAgent"
                 },
                 "source": {
-                    "$ref": "#/definitions/model.Storage"
+                    "$ref": "#/definitions/dto.Storage"
                 }
             }
         },
-        "model.RestoreTimestampRequest": {
+        "dto.RestoreTimestampRequest": {
             "description": "RestoreTimestampRequest represents a restore by timestamp operation request.",
             "type": "object",
             "required": [
@@ -2310,7 +2310,7 @@ const docTemplate = `{
                     "description": "The details of the Aerospike destination cluster.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.AerospikeCluster"
+                            "$ref": "#/definitions/dto.AerospikeCluster"
                         }
                     ]
                 },
@@ -2318,7 +2318,7 @@ const docTemplate = `{
                     "description": "Restore policy to use in the operation.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.RestorePolicy"
+                            "$ref": "#/definitions/dto.RestorePolicy"
                         }
                     ]
                 },
@@ -2331,7 +2331,7 @@ const docTemplate = `{
                     "description": "Secret Agent configuration (optional).",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.SecretAgent"
+                            "$ref": "#/definitions/dto.SecretAgent"
                         }
                     ]
                 },
@@ -2343,7 +2343,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RetryPolicy": {
+        "dto.RetryPolicy": {
             "description": "RetryPolicy defines the configuration for retry attempts in case of failures.",
             "type": "object",
             "properties": {
@@ -2361,7 +2361,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RunningJob": {
+        "dto.RunningJob": {
             "description": "RunningJob tracks progress of currently running job.",
             "type": "object",
             "properties": {
@@ -2392,7 +2392,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.SecretAgent": {
+        "dto.SecretAgent": {
             "description": "SecretAgent represents the configuration of an Aerospike Secret Agent for a backup/restore operation.",
             "type": "object",
             "properties": {
@@ -2428,7 +2428,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.SeedNode": {
+        "dto.SeedNode": {
             "description": "SeedNode represents details of a node in the Aerospike cluster.",
             "type": "object",
             "required": [
@@ -2453,7 +2453,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.Storage": {
+        "dto.Storage": {
             "description": "Storage represents the configuration for a backup storage details.",
             "type": "object",
             "required": [
@@ -2505,13 +2505,13 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/model.StorageType"
+                            "$ref": "#/definitions/dto.StorageType"
                         }
                     ]
                 }
             }
         },
-        "model.StorageType": {
+        "dto.StorageType": {
             "description": "StorageType represents the type of the backup storage.",
             "type": "string",
             "enum": [
@@ -2523,7 +2523,7 @@ const docTemplate = `{
                 "S3"
             ]
         },
-        "model.TLS": {
+        "dto.TLS": {
             "description": "TLS represents the Aerospike cluster TLS configuration options.",
             "type": "object",
             "properties": {

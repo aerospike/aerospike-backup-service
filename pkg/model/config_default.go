@@ -1,7 +1,10 @@
 package model
 
 import (
+	"time"
+
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
+	"github.com/aerospike/backup-go/models"
 )
 
 type backupPolicy struct {
@@ -38,8 +41,8 @@ var defaultConfig = struct {
 	},
 }
 
-var defaultRetry = &RetryPolicy{
-	BaseTimeout: 2000,
+var defaultRetry = &models.RetryPolicy{
+	BaseTimeout: 2 * time.Second,
 	MaxRetries:  5,
 	Multiplier:  2,
 }

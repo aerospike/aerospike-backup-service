@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 	"github.com/gorilla/mux"
@@ -21,7 +21,7 @@ import (
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/full [get]
-// @Success  200 {object} map[string][]model.BackupDetails "Full backups by routine"
+// @Success  200 {object} map[string][]dto.BackupDetails "Full backups by routine"
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +37,7 @@ func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/full/{name} [get]
-// @Success  200 {object} []model.BackupDetails "Full backups for routine"
+// @Success  200 {object} []dto.BackupDetails "Full backups for routine"
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +52,7 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/incremental [get]
-// @Success  200 {object} map[string][]model.BackupDetails "Incremental backups by routine"
+// @Success  200 {object} map[string][]dto.BackupDetails "Incremental backups by routine"
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +68,7 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Router   /v1/backups/incremental/{name} [get]
-// @Success  200 {object} []model.BackupDetails "Incremental backups for routine"
+// @Success  200 {object} []dto.BackupDetails "Incremental backups for routine"
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
@@ -81,7 +81,7 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
-	timeBounds, err := model.NewTimeBoundsFromString(from, to)
+	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
 	if err != nil {
 		hLogger.Error("failed parse time limits",
 			slog.String("from", from),
@@ -91,7 +91,7 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	backups, err := readBackupsLogic(s.config.BackupRoutines, s.backupBackends, timeBounds, isFullBackup)
+	backups, err := readBackupsLogic(s.config.BackupRoutines, s.backupBackends, timeBounds.ToModel(), isFullBackup)
 	if err != nil {
 		hLogger.Error("failed to retrieve backup list",
 			slog.Any("timeBounds", timeBounds),
@@ -101,7 +101,8 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	response, err := json.Marshal(backups)
+
+	response, err := dto.Serialize(dto.ConvertBackupDetailsMap(backups), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal backup list",
 			slog.Any("error", err),
@@ -128,7 +129,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
-	timeBounds, err := model.NewTimeBoundsFromString(from, to)
+	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
 	if err != nil {
 		hLogger.Error("failed parse time limits",
 			slog.String("from", from),
@@ -156,7 +157,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	}
 
 	backupListFunction := backupsReadFunction(reader, isFullBackup)
-	backups, err := backupListFunction(timeBounds)
+	backups, err := backupListFunction(timeBounds.ToModel())
 	if err != nil {
 		hLogger.Error("failed to retrieve backup list",
 			slog.Bool("isFullBackup", isFullBackup),
@@ -166,7 +167,8 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	response, err := json.Marshal(backups)
+	backupDetails := dto.ConvertModelsToDTO(backups, dto.NewBackupDetailsFromModel)
+	response, err := dto.Serialize(backupDetails, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal backup list",
 			slog.Any("error", err),
@@ -280,7 +282,7 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Produce  json
 // @Param    name path string true "Backup routine name"
 // @Router   /v1/backups/currentBackup/{name} [get]
-// @Success  200 {object} model.CurrentBackups "Current backup statistics"
+// @Success  200 {object} dto.CurrentBackups "Current backup statistics"
 // @Failure  404 {string} string
 // @Failure  400 {string} string
 // @Failure  500 {string} string
@@ -303,8 +305,8 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stat := handler.GetCurrentStat()
-	response, err := json.Marshal(stat)
+	currentBackups := dto.NewCurrentBackupsFromModel(handler.GetCurrentStat())
+	response, err := dto.Serialize(currentBackups, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal statistics",
 			slog.Any("error", err),

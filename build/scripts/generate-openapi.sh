@@ -2,7 +2,7 @@
 WORKSPACE="$(git rev-parse --show-toplevel)"
 
 docker run --rm --volume "$WORKSPACE":/local davi17g/swag:latest init \
--d /local/internal/server/handlers,/local/pkg/model -g info.go -o /local/docs
+-d /local/internal/server/handlers,/local/pkg/dto -g info.go -o /local/docs
 
 # swag codegen cannot handle int64 format for return values
 

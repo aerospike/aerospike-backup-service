@@ -49,17 +49,15 @@ func (b *BackendHolderMock) SetData(_ map[string]*BackupBackend) {
 }
 
 func makeTestRestoreService() *dataRestorer {
-	config := model.NewConfigWithDefaultValues()
-	config.Storage["s"] = &model.Storage{
-		Path: ptr.String("/"),
-		Type: model.Local,
-	}
+	storage := &model.Storage{}
+	config := model.NewConfig()
+	_ = config.AddStorage("s", storage)
 	config.BackupRoutines = map[string]*model.BackupRoutine{
 		"routine": {
-			Storage: "s",
+			Storage: storage,
 		},
 		"routine_fail_restore": {
-			Storage: "s",
+			Storage: storage,
 		},
 	}
 
@@ -241,7 +239,7 @@ func Test_RestoreTimestamp(t *testing.T) {
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
-		Time:    100,
+		Time:    time.UnixMilli(100),
 		Routine: "routine",
 	}
 
@@ -357,7 +355,7 @@ func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
 func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
 		Routine: "routine",
-		Time:    1,
+		Time:    time.UnixMilli(1),
 	}
 
 	_, err := restoreService.RestoreByTime(request)
@@ -369,7 +367,7 @@ func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 func Test_restoreTimestampFail(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
 		Routine:           "routine_fail_restore",
-		Time:              10,
+		Time:              time.UnixMilli(10),
 		DestinationCuster: &model.AerospikeCluster{},
 	}
 
@@ -466,7 +464,7 @@ func Test_CalculateConfigurationBackupPath(t *testing.T) {
 type MockClientManager struct {
 }
 
-func (m *MockClientManager) GetClient(string) (*backup.Client, error) {
+func (m *MockClientManager) GetClient(_ *model.AerospikeCluster) (*backup.Client, error) {
 	return &backup.Client{}, nil
 }
 

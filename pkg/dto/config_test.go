@@ -1,6 +1,7 @@
-package model
+package dto
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/aws/smithy-go/ptr"
@@ -50,42 +51,45 @@ func TestValidConfigValidation(t *testing.T) {
 
 func TestInvalidClusterReference(t *testing.T) {
 	config := validConfig()
-	config.BackupRoutines["routine1"].SourceCluster = "nonExistentCluster"
+	routine := config.BackupRoutines["routine1"]
+	routine.SourceCluster = "nonExistentCluster"
 
 	err := config.Validate()
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
-	expectedError := "backup routine 'routine1' validation error: Aerospike cluster 'nonExistentCluster' not found"
-	if err.Error() != expectedError {
+	expectedError := notFoundValidationError("routine1", "nonExistentCluster")
+	if errors.Is(err, expectedError) {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
 }
 
 func TestInvalidBackupPolicyReference(t *testing.T) {
 	config := validConfig()
-	config.BackupRoutines["routine1"].BackupPolicy = "nonExistentPolicy"
+	routine := config.BackupRoutines["routine1"]
+	routine.BackupPolicy = "nonExistentPolicy"
 
 	err := config.Validate()
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
-	expectedError := "backup routine 'routine1' validation error: backup policy 'nonExistentPolicy' not found"
-	if err.Error() != expectedError {
+	expectedError := notFoundValidationError("routine1", "nonExistentPolicy")
+	if errors.Is(err, expectedError) {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
 }
 
 func TestInvalidStorageReference(t *testing.T) {
 	config := validConfig()
-	config.BackupRoutines["routine1"].Storage = "nonExistentStorage"
+	routine := config.BackupRoutines["routine1"]
+	routine.Storage = "nonExistentStorage"
 
 	err := config.Validate()
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
-	expectedError := "backup routine 'routine1' validation error: storage 'nonExistentStorage' not found"
-	if err.Error() != expectedError {
+	expectedError := notFoundValidationError("routine1", "nonExistentStorage")
+	if errors.Is(err, expectedError) {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
 }

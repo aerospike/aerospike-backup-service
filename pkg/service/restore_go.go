@@ -12,7 +12,6 @@ import (
 	s3Storage "github.com/aerospike/backup-go/io/aws/s3"
 	"github.com/aerospike/backup-go/io/encoding/asb"
 	"github.com/aerospike/backup-go/io/local"
-	"github.com/aerospike/backup-go/models"
 )
 
 // RestoreGo implements the [Restore] interface.
@@ -55,12 +54,8 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
 
-	retryPolicy := restoreRequest.Policy.GetRetryPolicyOrDefault()
-	config.RetryPolicy = &models.RetryPolicy{
-		BaseTimeout: retryPolicy.GetBaseTimeout(),
-		Multiplier:  retryPolicy.Multiplier,
-		MaxRetries:  uint(retryPolicy.MaxRetries),
-	}
+	config.RetryPolicy = restoreRequest.Policy.GetRetryPolicyOrDefault()
+
 	if restoreRequest.Policy.Tps != nil {
 		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)
 	}

@@ -44,13 +44,9 @@ func newBackupRoutineHandler(
 	backupBackend *BackupBackend,
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
-	storage := config.Storage[backupRoutine.Storage]
-	backupPolicy := config.BackupPolicies[backupRoutine.BackupPolicy]
-
-	var secretAgent *model.SecretAgent
-	if backupRoutine.SecretAgent != nil {
-		secretAgent = config.SecretAgents[*backupRoutine.SecretAgent]
-	}
+	storage := backupRoutine.Storage
+	backupPolicy := backupRoutine.BackupPolicy
+	secretAgent := backupRoutine.SecretAgent
 
 	return &BackupRoutineHandler{
 		backupService:      backupService,
@@ -196,9 +192,9 @@ func (h *BackupRoutineHandler) writeClusterConfiguration(client backup.Aerospike
 	for i, info := range infos {
 		confFilePath := fmt.Sprintf("%s/aerospike_%d.conf", path, i)
 		logger.Debug("Write aerospike configuration", slog.String("path", confFilePath))
-		err := h.backend.write(confFilePath, []byte(info))
+		err := h.backend.Write(confFilePath, []byte(info))
 		if err != nil {
-			logger.Error("Failed to write configuration for the backup",
+			logger.Error("Failed to Write configuration for the backup",
 				slog.Any("err", err))
 		}
 	}
@@ -220,7 +216,7 @@ func (h *BackupRoutineHandler) writeBackupMetadata(stats *models.BackupStats,
 	}
 
 	if err := h.backend.writeBackupMetadata(backupFolder, metadata); err != nil {
-		slog.Error("Could not write backup metadata",
+		slog.Error("Could not Write backup metadata",
 			slog.String("routine", h.routineName),
 			slog.String("folder", backupFolder),
 			slog.Any("err", err))
@@ -331,7 +327,7 @@ func (h *BackupRoutineHandler) waitForIncrementalBackups(ctx context.Context, ba
 		}
 		if err := h.writeBackupMetadata(handler.GetStats(), backupTimestamp, namespace,
 			backupFolder); err != nil {
-			slog.Error("Could not write backup metadata",
+			slog.Error("Could not Write backup metadata",
 				slog.String("routine", h.routineName),
 				slog.String("folder", backupFolder),
 				slog.Any("err", err))
@@ -368,7 +364,7 @@ func (h *BackupRoutineHandler) updateIncrementalBackupState(now time.Time) {
 
 func (h *BackupRoutineHandler) writeState() {
 	if err := h.backend.writeState(h.state); err != nil {
-		slog.Error("Failed to write state for the backup",
+		slog.Error("Failed to Write state for the backup",
 			slog.String("routine", h.routineName),
 			slog.Any("err", err))
 	}

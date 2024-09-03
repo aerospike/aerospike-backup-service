@@ -7,37 +7,37 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
 )
 
-func testConfigRestorePolicy() model.RestorePolicy {
+func testConfigRestorePolicy() *dto.RestorePolicy {
 	testIn32 := int32(10)
-	return model.RestorePolicy{
+	return &dto.RestorePolicy{
 		Parallel: &testIn32,
 	}
 }
 
-func testRestoreRequest() model.RestoreRequest {
+func testRestoreRequest() dto.RestoreRequest {
 	cluster := testConfigCluster()
 	policy := testConfigRestorePolicy()
 	storage := testConfigStorage()
-	return model.RestoreRequest{
-		DestinationCuster: &cluster,
-		Policy:            &policy,
-		SourceStorage:     &storage,
+	return dto.RestoreRequest{
+		DestinationCuster: cluster,
+		Policy:            policy,
+		SourceStorage:     storage,
 		SecretAgent:       nil,
 	}
 }
 
-func testRestoreTimestampRequest() model.RestoreTimestampRequest {
+func testRestoreTimestampRequest() dto.RestoreTimestampRequest {
 	cluster := testConfigCluster()
 	policy := testConfigRestorePolicy()
-	return model.RestoreTimestampRequest{
-		DestinationCuster: &cluster,
-		Policy:            &policy,
+	return dto.RestoreTimestampRequest{
+		DestinationCuster: cluster,
+		Policy:            policy,
 		SecretAgent:       nil,
 		Time:              time.Now().Unix(),
 		Routine:           testRoutine,
