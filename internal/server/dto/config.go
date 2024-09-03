@@ -89,9 +89,6 @@ func (c *Config) Validate() error {
 		if err := routine.Validate(); err != nil {
 			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
 		}
-		if err := c.validateRoutineReferences(routine); err != nil {
-			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
-		}
 	}
 
 	for name, storage := range c.Storage {
@@ -129,35 +126,11 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	return nil
+	_, err := c.ToModel() // reference validation is happening in the model
+	return err
 }
 
-func (c *Config) validateRoutineReferences(routine *BackupRoutine) error {
-	if _, exists := c.BackupPolicies[routine.BackupPolicy]; !exists {
-		return notFoundValidationError("backup policy", routine.BackupPolicy)
-	}
-	cluster, exists := c.AerospikeClusters[routine.SourceCluster]
-	if !exists {
-		return notFoundValidationError("Aerospike cluster", routine.SourceCluster)
-	}
-	if cluster.MaxParallelScans != nil {
-		if len(routine.SetList) > *cluster.MaxParallelScans {
-			return fmt.Errorf("max parallel scans must be at least the cardinality of set-list")
-		}
-	}
-	if _, exists := c.Storage[routine.Storage]; !exists {
-		return notFoundValidationError("storage", routine.Storage)
-	}
-	if routine.SecretAgent != nil {
-		if _, exists := c.SecretAgents[*routine.SecretAgent]; !exists {
-			return notFoundValidationError("secret agent", *routine.SecretAgent)
-		}
-	}
-
-	return nil
-}
-
-func (c *Config) ToModel() *model.Config {
+func (c *Config) ToModel() (*model.Config, error) {
 	config := c.ServiceConfig
 	modelConfig := &model.Config{
 		ServiceConfig:     *config.ToModel(),
@@ -169,26 +142,41 @@ func (c *Config) ToModel() *model.Config {
 	}
 
 	for k, v := range c.AerospikeClusters {
-		modelConfig.AerospikeClusters[k] = v.ToModel()
+		if err := modelConfig.AddCluster(k, v.ToModel()); err != nil {
+			return nil, err
+		}
 	}
 
 	for k, v := range c.Storage {
-		modelConfig.Storage[k] = v.ToModel()
+		if err := modelConfig.AddStorage(k, v.ToModel()); err != nil {
+			return nil, err
+		}
 	}
 
 	for k, v := range c.BackupPolicies {
-		modelConfig.BackupPolicies[k] = v.ToModel()
+		if err := modelConfig.AddPolicy(k, v.ToModel()); err != nil {
+			return nil, err
+		}
 	}
 
 	for k, v := range c.SecretAgents {
-		modelConfig.SecretAgents[k] = v.ToModel()
+		if err := modelConfig.AddSecretAgent(k, v.ToModel()); err != nil {
+			return nil, err
+		}
 	}
 
 	for k, v := range c.BackupRoutines {
-		modelConfig.BackupRoutines[k] = v.ToModel(modelConfig)
+		toModel, err := v.ToModel(modelConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := modelConfig.AddRoutine(k, toModel); err != nil {
+			return nil, err
+		}
 	}
 
-	return modelConfig
+	return modelConfig, nil
 }
 
 func emptyFieldValidationError(field string) error {

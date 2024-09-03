@@ -175,7 +175,7 @@ func TestService_ConfigClusterActionHandlerDelete(t *testing.T) {
 		statusCode int
 		name       string
 	}{
-		{http.MethodDelete, http.StatusNoContent, testCluster},
+		{http.MethodDelete, http.StatusBadRequest, testCluster},
 		{http.MethodDelete, http.StatusNotFound, ""},
 		{http.MethodPost, http.StatusMethodNotAllowed, testCluster},
 		{http.MethodConnect, http.StatusMethodNotAllowed, testCluster},

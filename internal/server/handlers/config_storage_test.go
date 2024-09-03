@@ -13,6 +13,7 @@ import (
 )
 
 const testStorage = "testStorage"
+const unusedTestStorage = "unusedTestStorage"
 
 func testConfigStorage() *dto.Storage {
 	path := testDir
@@ -148,7 +149,6 @@ func TestService_ConfigStorageActionHandlerPut(t *testing.T) {
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigStorageActionHandlerDelete(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -163,7 +163,8 @@ func TestService_ConfigStorageActionHandlerDelete(t *testing.T) {
 		statusCode int
 		name       string
 	}{
-		{http.MethodDelete, http.StatusNoContent, testStorage},
+		{http.MethodDelete, http.StatusNoContent, unusedTestStorage},
+		{http.MethodDelete, http.StatusBadRequest, testStorage},
 		{http.MethodDelete, http.StatusNotFound, ""},
 		{http.MethodPost, http.StatusMethodNotAllowed, testStorage},
 		{http.MethodConnect, http.StatusMethodNotAllowed, testStorage},

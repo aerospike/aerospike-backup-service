@@ -16,14 +16,6 @@ const (
 	YAML
 )
 
-type output[M any] interface {
-	fromModel(*M)
-}
-
-type input[M any] interface {
-	ToModel() *M
-}
-
 // Serialize handles serialization
 func Serialize(v any, format SerializationFormat) ([]byte, error) {
 	var (

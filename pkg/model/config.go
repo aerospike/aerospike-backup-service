@@ -111,6 +111,7 @@ func (c *Config) UpdatePolicy(name string, p *BackupPolicy) error {
 	if _, exists := c.BackupPolicies[name]; !exists {
 		return fmt.Errorf("update backup policy %q: %w", name, ErrNotFound)
 	}
+
 	c.BackupPolicies[name] = p
 	return nil
 }
@@ -201,4 +202,15 @@ func (c *Config) routineUsesCluster(cluster *AerospikeCluster) string {
 		}
 	}
 	return ""
+}
+
+func (c *Config) AddSecretAgent(name string, agent *SecretAgent) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if _, exists := c.SecretAgents[name]; exists {
+		return fmt.Errorf("add Secret agent %q: %w", name, ErrAlreadyExists)
+	}
+	c.SecretAgents[name] = agent
+	return nil
 }

@@ -75,16 +75,40 @@ func (r *BackupRoutine) Validate() error {
 	return nil
 }
 
-func (r *BackupRoutine) ToModel(config *model.Config) *model.BackupRoutine {
+func (r *BackupRoutine) ToModel(config *model.Config) (*model.BackupRoutine, error) {
+	policy, found := config.BackupPolicies[r.BackupPolicy]
+	if !found {
+		return nil, notFoundValidationError("policy", r.BackupPolicy)
+	}
+
+	cluster, found := config.AerospikeClusters[r.SourceCluster]
+	if !found {
+		return nil, notFoundValidationError("Aerospike cluster", r.SourceCluster)
+	}
+
+	if cluster.MaxParallelScans != nil {
+		if len(r.SetList) > *cluster.MaxParallelScans {
+			return nil, fmt.Errorf("max parallel scans must be at least the cardinality of set-list")
+		}
+	}
+
+	storage, found := config.Storage[r.Storage]
+	if !found {
+		return nil, notFoundValidationError("storage", r.Storage)
+	}
+
 	var secretAgent *model.SecretAgent
 	if r.SecretAgent != nil {
-		secretAgent = config.SecretAgents[*r.SecretAgent]
+		secretAgent, found = config.SecretAgents[*r.SecretAgent]
+		if !found {
+			return nil, notFoundValidationError("secret agent", *r.SecretAgent)
+		}
 	}
 
 	return &model.BackupRoutine{
-		BackupPolicy:     config.BackupPolicies[r.BackupPolicy],
-		SourceCluster:    config.AerospikeClusters[r.SourceCluster],
-		Storage:          config.Storage[r.Storage],
+		BackupPolicy:     policy,
+		SourceCluster:    cluster,
+		Storage:          storage,
 		SecretAgent:      secretAgent,
 		IntervalCron:     r.IntervalCron,
 		IncrIntervalCron: r.IncrIntervalCron,
@@ -93,7 +117,7 @@ func (r *BackupRoutine) ToModel(config *model.Config) *model.BackupRoutine {
 		BinList:          r.BinList,
 		PreferRacks:      r.PreferRacks,
 		PartitionList:    r.PartitionList,
-	}
+	}, nil
 }
 
 // NewRoutine creates a new BackupRoutine object from a byte slice

@@ -63,14 +63,19 @@ func testConfig() *dto.Config {
 	policies := make(map[string]*dto.BackupPolicy)
 	policy := testConfigBackupPolicy()
 	policies[testPolicy] = policy
+	policies[unusedTestPolicy] = policy
 
 	storages := make(map[string]*dto.Storage)
 	storage := testConfigStorage()
 	storages[testStorage] = storage
+	storages[unusedTestStorage] = storage
 
 	routines := make(map[string]*dto.BackupRoutine)
 	routines[testRoutineName] = &dto.BackupRoutine{
-		IntervalCron: "0 0 * * * *",
+		Storage:       testStorage,
+		BackupPolicy:  testPolicy,
+		SourceCluster: testCluster,
+		IntervalCron:  "0 0 * * * *",
 	}
 
 	return &dto.Config{
@@ -184,8 +189,9 @@ func (mock configurationManagerMock) WriteConfiguration(config *model.Config) er
 }
 
 func newServiceMock() *Service {
+	toModel, _ := testConfig().ToModel()
 	return &Service{
-		config:               testConfig().ToModel(),
+		config:               toModel,
 		scheduler:            quartz.NewStdScheduler(),
 		restoreManager:       restoreManagerMock{},
 		backupBackends:       backendsHolderMock{},

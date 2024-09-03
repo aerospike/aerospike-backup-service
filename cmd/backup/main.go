@@ -132,7 +132,7 @@ func readConfiguration(configurationManager configuration.Manager) (*model.Confi
 	}
 	r.Close()
 	slog.Info(fmt.Sprintf("Configuration: %v", config))
-	return config.ToModel(), nil
+	return config.ToModel()
 }
 
 func runHTTPServer(ctx context.Context,

@@ -13,6 +13,7 @@ import (
 )
 
 const testPolicy = "testPolicy"
+const unusedTestPolicy = "unusedTestPolicy"
 
 func testConfigBackupPolicy() *dto.BackupPolicy {
 	testIn32 := int32(10)
@@ -149,7 +150,6 @@ func TestService_ConfigPolicyActionHandlerPut(t *testing.T) {
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
 func TestService_ConfigPolicyActionHandlerDelete(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock()
@@ -164,7 +164,8 @@ func TestService_ConfigPolicyActionHandlerDelete(t *testing.T) {
 		statusCode int
 		name       string
 	}{
-		{http.MethodDelete, http.StatusNoContent, testPolicy},
+		{http.MethodDelete, http.StatusNoContent, unusedTestPolicy},
+		{http.MethodDelete, http.StatusBadRequest, testPolicy},
 		{http.MethodDelete, http.StatusNotFound, ""},
 		{http.MethodPost, http.StatusMethodNotAllowed, testPolicy},
 		{http.MethodConnect, http.StatusMethodNotAllowed, testPolicy},
