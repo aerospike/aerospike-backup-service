@@ -201,7 +201,6 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 		)
 		http.Error(w, err.Error(), http.StatusNotFound)
 	}
-
 	jsonResponse, err := dto.Serialize(dto.NewResultFromModel(status), dto.JSON)
 	w.WriteHeader(http.StatusOK)
 	if err != nil {
