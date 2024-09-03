@@ -1,11 +1,5 @@
 package model
 
-// Compression modes
-const (
-	CompressNone = "NONE"
-	CompressZSTD = "ZSTD"
-)
-
 // CompressionPolicy contains backup compression information.
 // @Description CompressionPolicy contains backup compression information.
 type CompressionPolicy struct {
