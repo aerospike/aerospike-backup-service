@@ -82,7 +82,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/model.CurrentBackups'
+                $ref: '#/components/schemas/dto.CurrentBackups'
           description: Current backup statistics
         "400":
           content:
@@ -128,7 +128,7 @@ paths:
               schema:
                 additionalProperties:
                   items:
-                    $ref: '#/components/schemas/model.BackupDetails'
+                    $ref: '#/components/schemas/dto.BackupDetails'
                   type: array
                 type: object
           description: Full backups by routine
@@ -175,7 +175,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/model.BackupDetails'
+                  $ref: '#/components/schemas/dto.BackupDetails'
                 type: array
           description: Full backups for routine
         "400":
@@ -216,7 +216,7 @@ paths:
               schema:
                 additionalProperties:
                   items:
-                    $ref: '#/components/schemas/model.BackupDetails'
+                    $ref: '#/components/schemas/dto.BackupDetails'
                   type: array
                 type: object
           description: Incremental backups by routine
@@ -263,7 +263,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/model.BackupDetails'
+                  $ref: '#/components/schemas/dto.BackupDetails'
                 type: array
           description: Incremental backups for routine
         "400":
@@ -329,7 +329,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/model.Config'
+                $ref: '#/components/schemas/dto.Config'
           description: OK
         "500":
           content:
@@ -346,7 +346,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.Config'
+              $ref: '#/components/schemas/dto.Config'
         description: Configuration details
         required: true
       responses:
@@ -388,7 +388,7 @@ paths:
             application/json:
               schema:
                 additionalProperties:
-                  $ref: '#/components/schemas/model.AerospikeCluster'
+                  $ref: '#/components/schemas/dto.AerospikeCluster'
                 type: object
           description: OK
         "500":
@@ -437,7 +437,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/model.AerospikeCluster'
+                $ref: '#/components/schemas/dto.AerospikeCluster'
           description: OK
         "400":
           content:
@@ -474,7 +474,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.AerospikeCluster'
+              $ref: '#/components/schemas/dto.AerospikeCluster'
         description: Aerospike cluster details
         required: true
       responses:
@@ -510,7 +510,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.AerospikeCluster'
+              $ref: '#/components/schemas/dto.AerospikeCluster'
         description: Aerospike cluster details
         required: true
       responses:
@@ -536,7 +536,7 @@ paths:
             application/json:
               schema:
                 additionalProperties:
-                  $ref: '#/components/schemas/model.BackupPolicy'
+                  $ref: '#/components/schemas/dto.BackupPolicy'
                 type: object
           description: OK
         "500":
@@ -585,7 +585,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/model.BackupPolicy'
+                $ref: '#/components/schemas/dto.BackupPolicy'
           description: OK
         "400":
           content:
@@ -621,7 +621,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.BackupPolicy'
+              $ref: '#/components/schemas/dto.BackupPolicy'
         description: Backup policy details
         required: true
       responses:
@@ -651,7 +651,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.BackupPolicy'
+              $ref: '#/components/schemas/dto.BackupPolicy'
         description: Backup policy details
         required: true
       responses:
@@ -677,7 +677,7 @@ paths:
             application/json:
               schema:
                 additionalProperties:
-                  $ref: '#/components/schemas/model.BackupRoutine'
+                  $ref: '#/components/schemas/dto.BackupRoutine'
                 type: object
           description: OK
         "400":
@@ -712,37 +712,6 @@ paths:
       summary: Deletes a backup routine from the configuration by name.
       tags:
       - Configuration
-    get:
-      operationId: readRoutine
-      parameters:
-      - description: Backup routine name
-        in: path
-        name: name
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/model.BackupRoutine'
-          description: OK
-        "400":
-          content:
-            application/json:
-              schema:
-                type: string
-          description: Bad Request
-        "404":
-          content:
-            application/json:
-              schema:
-                type: string
-          description: The specified cluster could not be found
-      summary: Reads a specific routine from the configuration given its name.
-      tags:
-      - Configuration
     post:
       operationId: addRoutine
       parameters:
@@ -756,7 +725,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.BackupRoutine'
+              $ref: '#/components/schemas/dto.BackupRoutine'
         description: Backup routine details
         required: true
       responses:
@@ -786,7 +755,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.BackupRoutine'
+              $ref: '#/components/schemas/dto.BackupRoutine'
         description: Backup routine details
         required: true
       responses:
@@ -812,7 +781,7 @@ paths:
             application/json:
               schema:
                 additionalProperties:
-                  $ref: '#/components/schemas/model.Storage'
+                  $ref: '#/components/schemas/dto.Storage'
                 type: object
           description: OK
         "500":
@@ -861,7 +830,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/model.Storage'
+                $ref: '#/components/schemas/dto.Storage'
           description: OK
         "400":
           content:
@@ -897,7 +866,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.Storage'
+              $ref: '#/components/schemas/dto.Storage'
         description: Backup storage details
         required: true
       responses:
@@ -927,7 +896,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.Storage'
+              $ref: '#/components/schemas/dto.Storage'
         description: Backup storage details
         required: true
       responses:
@@ -951,7 +920,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.RestoreRequest'
+              $ref: '#/components/schemas/dto.RestoreRequest'
         description: Restore request details
         required: true
       responses:
@@ -985,7 +954,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.RestoreRequest'
+              $ref: '#/components/schemas/dto.RestoreRequest'
         description: Restore request details
         required: true
       responses:
@@ -1028,7 +997,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/model.RestoreJobStatus'
+                $ref: '#/components/schemas/dto.RestoreJobStatus'
           description: Restore job status details
         "400":
           content:
@@ -1047,7 +1016,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/model.RestoreTimestampRequest'
+              $ref: '#/components/schemas/dto.RestoreTimestampRequest'
         description: Restore request details
         required: true
       responses:
@@ -1129,7 +1098,7 @@ paths:
       - System
 components:
   schemas:
-    model.AerospikeCluster:
+    dto.AerospikeCluster:
       description: AerospikeCluster represents the configuration for an Aerospike
         cluster for backup.
       example:
@@ -1153,7 +1122,7 @@ components:
           type: integer
         credentials:
           allOf:
-          - $ref: '#/components/schemas/model.Credentials'
+          - $ref: '#/components/schemas/dto.Credentials'
           description: The authentication details to the Aerospike cluster.
           type: object
         label:
@@ -1167,11 +1136,11 @@ components:
         seed-nodes:
           description: The seed nodes details.
           items:
-            $ref: '#/components/schemas/model.SeedNode'
+            $ref: '#/components/schemas/dto.SeedNode'
           type: array
         tls:
           allOf:
-          - $ref: '#/components/schemas/model.TLS'
+          - $ref: '#/components/schemas/dto.TLS'
           description: The cluster TLS configuration.
           type: object
         use-services-alternate:
@@ -1179,7 +1148,7 @@ components:
             in info request during cluster tending.
           type: boolean
       type: object
-    model.BackupDetails:
+    dto.BackupDetails:
       description: BackupDetails contains information about a backup.
       example:
         udf-count: 2
@@ -1235,7 +1204,7 @@ components:
           format: int64
           type: integer
       type: object
-    model.BackupPolicy:
+    dto.BackupPolicy:
       description: BackupPolicy represents a scheduled backup policy.
       example:
         no-records: true
@@ -1262,12 +1231,12 @@ components:
           type: integer
         compression:
           allOf:
-          - $ref: '#/components/schemas/model.CompressionPolicy'
+          - $ref: '#/components/schemas/dto.CompressionPolicy'
           description: Compression details.
           type: object
         encryption:
           allOf:
-          - $ref: '#/components/schemas/model.EncryptionPolicy'
+          - $ref: '#/components/schemas/dto.EncryptionPolicy'
           description: Encryption details.
           type: object
         file-limit:
@@ -1301,7 +1270,7 @@ components:
           type: integer
         remove-files:
           allOf:
-          - $ref: '#/components/schemas/model.RemoveFilesType'
+          - $ref: '#/components/schemas/dto.RemoveFilesType'
           description: "Whether to clear the output directory (default: KeepAll)."
           type: object
         retry-delay:
@@ -1327,7 +1296,7 @@ components:
           example: 2000
           type: integer
       type: object
-    model.BackupRoutine:
+    dto.BackupRoutine:
       description: BackupRoutine represents a scheduled backup operation routine.
       example:
         incr-interval-cron: '*/10 * * * * *'
@@ -1416,7 +1385,7 @@ components:
       - source-cluster
       - storage
       type: object
-    model.BackupServiceConfig:
+    dto.BackupServiceConfig:
       description: BackupServiceConfig represents the backup service configuration
         properties.
       example:
@@ -1425,16 +1394,16 @@ components:
       properties:
         http:
           allOf:
-          - $ref: '#/components/schemas/model.HTTPServerConfig'
+          - $ref: '#/components/schemas/dto.HTTPServerConfig'
           description: HTTPServer is the backup service HTTP server configuration.
           type: object
         logger:
           allOf:
-          - $ref: '#/components/schemas/model.LoggerConfig'
+          - $ref: '#/components/schemas/dto.LoggerConfig'
           description: Logger is the backup service logger configuration.
           type: object
       type: object
-    model.CompressionPolicy:
+    dto.CompressionPolicy:
       description: CompressionPolicy contains backup compression information.
       properties:
         level:
@@ -1448,7 +1417,7 @@ components:
           - ZSTD
           type: string
       type: object
-    model.Config:
+    dto.Config:
       description: Config represents the service configuration file.
       example:
         backup-policies:
@@ -1524,28 +1493,28 @@ components:
       properties:
         aerospike-clusters:
           additionalProperties:
-            $ref: '#/components/schemas/model.AerospikeCluster'
+            $ref: '#/components/schemas/dto.AerospikeCluster'
           type: object
         backup-policies:
           additionalProperties:
-            $ref: '#/components/schemas/model.BackupPolicy'
+            $ref: '#/components/schemas/dto.BackupPolicy'
           type: object
         backup-routines:
           additionalProperties:
-            $ref: '#/components/schemas/model.BackupRoutine'
+            $ref: '#/components/schemas/dto.BackupRoutine'
           type: object
         secret-agent:
           additionalProperties:
-            $ref: '#/components/schemas/model.SecretAgent'
+            $ref: '#/components/schemas/dto.SecretAgent'
           type: object
         service:
-          $ref: '#/components/schemas/model.BackupServiceConfig'
+          $ref: '#/components/schemas/dto.BackupServiceConfig'
         storage:
           additionalProperties:
-            $ref: '#/components/schemas/model.Storage'
+            $ref: '#/components/schemas/dto.Storage'
           type: object
       type: object
-    model.Credentials:
+    dto.Credentials:
       description: Credentials represents authentication details to the Aerospike
         cluster.
       properties:
@@ -1572,25 +1541,25 @@ components:
           example: testUser
           type: string
       type: object
-    model.CurrentBackups:
+    dto.CurrentBackups:
       example:
         incremental: "{}"
         full: "{}"
       properties:
         full:
           allOf:
-          - $ref: '#/components/schemas/model.RunningJob'
+          - $ref: '#/components/schemas/dto.RunningJob'
           description: Full represents the state of a full backup. Nil if no full
             backup is running.
           type: object
         incremental:
           allOf:
-          - $ref: '#/components/schemas/model.RunningJob'
+          - $ref: '#/components/schemas/dto.RunningJob'
           description: Incremental represents the state of an incremental backup.
             Nil if no incremental backup is running.
           type: object
       type: object
-    model.EncryptionPolicy:
+    dto.EncryptionPolicy:
       description: EncryptionPolicy contains backup encryption information.
       properties:
         key-env:
@@ -1613,7 +1582,7 @@ components:
           - AES256
           type: string
       type: object
-    model.FileLoggerConfig:
+    dto.FileLoggerConfig:
       description: FileLoggerConfig represents the configuration for the file logger
         writer.
       properties:
@@ -1644,7 +1613,7 @@ components:
           example: 100
           type: integer
       type: object
-    model.HTTPServerConfig:
+    dto.HTTPServerConfig:
       description: HTTPServerConfig represents the service's HTTP server configuration.
       properties:
         address:
@@ -1662,14 +1631,14 @@ components:
           type: integer
         rate:
           allOf:
-          - $ref: '#/components/schemas/model.RateLimiterConfig'
+          - $ref: '#/components/schemas/dto.RateLimiterConfig'
           description: HTTP rate limiter configuration.
           type: object
         timeout:
           description: Timeout for http server operations in milliseconds.
           type: integer
       type: object
-    model.JobStatus:
+    dto.JobStatus:
       enum:
       - Running
       - Done
@@ -1679,12 +1648,12 @@ components:
       - JobStatusRunning
       - JobStatusDone
       - JobStatusFailed
-    model.LoggerConfig:
+    dto.LoggerConfig:
       description: LoggerConfig represents the backup service logger configuration.
       properties:
         file-writer:
           allOf:
-          - $ref: '#/components/schemas/model.FileLoggerConfig'
+          - $ref: '#/components/schemas/dto.FileLoggerConfig'
           description: File writer logging configuration.
           type: object
         format:
@@ -1710,7 +1679,7 @@ components:
           description: Whether to enable logging to the standard output.
           type: boolean
       type: object
-    model.RateLimiterConfig:
+    dto.RateLimiterConfig:
       description: RateLimiterConfig is the HTTP server rate limiter configuration.
       properties:
         size:
@@ -1727,7 +1696,7 @@ components:
             type: string
           type: array
       type: object
-    model.RemoveFilesType:
+    dto.RemoveFilesType:
       description: RemoveFilesType represents the type of the backup storage.
       enum:
       - KeepAll
@@ -1738,7 +1707,7 @@ components:
       - KeepAll
       - RemoveAll
       - RemoveIncremental
-    model.RestoreJobStatus:
+    dto.RestoreJobStatus:
       description: RestoreJobStatus represents a restore job status.
       example:
         expired-records: 2
@@ -1761,7 +1730,7 @@ components:
         status: "{}"
       properties:
         current-job:
-          $ref: '#/components/schemas/model.RunningJob'
+          $ref: '#/components/schemas/dto.RunningJob'
         error:
           type: string
         existed-records:
@@ -1798,7 +1767,7 @@ components:
           type: integer
         status:
           allOf:
-          - $ref: '#/components/schemas/model.JobStatus'
+          - $ref: '#/components/schemas/dto.JobStatus'
           type: object
         total-bytes:
           example: 2000
@@ -1809,7 +1778,7 @@ components:
           format: int64
           type: integer
       type: object
-    model.RestoreNamespace:
+    dto.RestoreNamespace:
       description: RestoreNamespace specifies an alternative namespace name for the
         restore operation.
       properties:
@@ -1825,7 +1794,7 @@ components:
       - destination
       - source
       type: object
-    model.RestorePolicy:
+    dto.RestorePolicy:
       description: RestorePolicy represents a policy for the restore operation.
       properties:
         bandwidth:
@@ -1850,7 +1819,7 @@ components:
           type: array
         compression:
           allOf:
-          - $ref: '#/components/schemas/model.CompressionPolicy'
+          - $ref: '#/components/schemas/dto.CompressionPolicy'
           description: Compression details.
           type: object
         disable-batch-writes:
@@ -1860,7 +1829,7 @@ components:
           type: boolean
         encryption:
           allOf:
-          - $ref: '#/components/schemas/model.EncryptionPolicy'
+          - $ref: '#/components/schemas/dto.EncryptionPolicy'
           description: Encryption details.
           type: object
         extra-ttl:
@@ -1876,7 +1845,7 @@ components:
           type: integer
         namespace:
           allOf:
-          - $ref: '#/components/schemas/model.RestoreNamespace'
+          - $ref: '#/components/schemas/dto.RestoreNamespace'
           description: |-
             Namespace details for the restore operation.
             By default, the data is restored to the namespace from which it was taken.
@@ -1911,10 +1880,10 @@ components:
           type: boolean
         retry-policy:
           allOf:
-          - $ref: '#/components/schemas/model.RetryPolicy'
+          - $ref: '#/components/schemas/dto.RetryPolicy'
           description: |-
             Configuration of retries for each restore write operation.
-            If nil, no retries will be performed.
+            If nil, default retry policy will be used.
           type: object
         set-list:
           description: "The sets to restore (optional, an empty list implies restoring\
@@ -1943,34 +1912,34 @@ components:
             the namespace, the record from the backup is ignored.
           type: boolean
       type: object
-    model.RestoreRequest:
+    dto.RestoreRequest:
       description: RestoreRequest represents a restore operation request.
       properties:
         destination:
-          $ref: '#/components/schemas/model.AerospikeCluster'
+          $ref: '#/components/schemas/dto.AerospikeCluster'
         policy:
-          $ref: '#/components/schemas/model.RestorePolicy'
+          $ref: '#/components/schemas/dto.RestorePolicy'
         secret-agent:
-          $ref: '#/components/schemas/model.SecretAgent'
+          $ref: '#/components/schemas/dto.SecretAgent'
         source:
-          $ref: '#/components/schemas/model.Storage'
+          $ref: '#/components/schemas/dto.Storage'
       required:
       - destination
       - policy
       - source
       type: object
-    model.RestoreTimestampRequest:
+    dto.RestoreTimestampRequest:
       description: RestoreTimestampRequest represents a restore by timestamp operation
         request.
       properties:
         destination:
           allOf:
-          - $ref: '#/components/schemas/model.AerospikeCluster'
+          - $ref: '#/components/schemas/dto.AerospikeCluster'
           description: The details of the Aerospike destination cluster.
           type: object
         policy:
           allOf:
-          - $ref: '#/components/schemas/model.RestorePolicy'
+          - $ref: '#/components/schemas/dto.RestorePolicy'
           description: Restore policy to use in the operation.
           type: object
         routine:
@@ -1979,7 +1948,7 @@ components:
           type: string
         secret-agent:
           allOf:
-          - $ref: '#/components/schemas/model.SecretAgent'
+          - $ref: '#/components/schemas/dto.SecretAgent'
           description: Secret Agent configuration (optional).
           type: object
         time:
@@ -1994,7 +1963,7 @@ components:
       - routine
       - time
       type: object
-    model.RetryPolicy:
+    dto.RetryPolicy:
       description: RetryPolicy defines the configuration for retry attempts in case
         of failures.
       properties:
@@ -2013,7 +1982,7 @@ components:
             The actual delay is calculated as: BaseTimeout * (Multiplier ^ attemptNumber)
           type: number
       type: object
-    model.RunningJob:
+    dto.RunningJob:
       description: RunningJob tracks progress of currently running job.
       example:
         estimated-end-time: 2006-01-02T15:04:05Z07:00
@@ -2047,7 +2016,7 @@ components:
           example: 100
           type: integer
       type: object
-    model.SecretAgent:
+    dto.SecretAgent:
       description: SecretAgent represents the configuration of an Aerospike Secret
         Agent for a backup/restore operation.
       example:
@@ -2084,7 +2053,7 @@ components:
           example: /path/to/ca.pem
           type: string
       type: object
-    model.SeedNode:
+    dto.SeedNode:
       description: SeedNode represents details of a node in the Aerospike cluster.
       example:
         port: 3000
@@ -2107,7 +2076,7 @@ components:
       - host-name
       - port
       type: object
-    model.Storage:
+    dto.Storage:
       description: Storage represents the configuration for a backup storage details.
       example:
         path: backups
@@ -2150,14 +2119,14 @@ components:
           type: string
         type:
           allOf:
-          - $ref: '#/components/schemas/model.StorageType'
+          - $ref: '#/components/schemas/dto.StorageType'
           description: The type of the storage provider
           type: object
       required:
       - path
       - type
       type: object
-    model.StorageType:
+    dto.StorageType:
       description: StorageType represents the type of the backup storage.
       enum:
       - local
@@ -2166,7 +2135,7 @@ components:
       x-enum-varnames:
       - Local
       - S3
-    model.TLS:
+    dto.TLS:
       description: TLS represents the Aerospike cluster TLS configuration options.
       properties:
         ca-file:

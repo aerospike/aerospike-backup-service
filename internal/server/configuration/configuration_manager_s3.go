@@ -3,7 +3,7 @@ package configuration
 import (
 	"io"
 
-	"github.com/aerospike/aerospike-backup-service/v2/internal/server/dto"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 )
