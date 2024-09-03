@@ -179,6 +179,10 @@ func (c *Credentials) fromModel(m *model.Credentials) {
 }
 
 func (c *Credentials) toModel() *model.Credentials {
+	if c == nil {
+		return nil
+	}
+
 	return &model.Credentials{
 		User:         c.User,
 		Password:     c.Password,

@@ -142,7 +142,8 @@ func (c *Config) ToModel() (*model.Config, error) {
 	}
 
 	for k, v := range c.AerospikeClusters {
-		if err := modelConfig.AddCluster(k, v.ToModel()); err != nil {
+		toModel := v.ToModel()
+		if err := modelConfig.AddCluster(k, toModel); err != nil {
 			return nil, err
 		}
 	}

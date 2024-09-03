@@ -78,7 +78,7 @@ func (r *BackupRoutine) Validate() error {
 func (r *BackupRoutine) ToModel(config *model.Config) (*model.BackupRoutine, error) {
 	policy, found := config.BackupPolicies[r.BackupPolicy]
 	if !found {
-		return nil, notFoundValidationError("policy", r.BackupPolicy)
+		return nil, notFoundValidationError("backup policy", r.BackupPolicy)
 	}
 
 	cluster, found := config.AerospikeClusters[r.SourceCluster]
