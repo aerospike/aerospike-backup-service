@@ -40,7 +40,7 @@ func (s *Service) ConfigRoutineActionHandler(w http.ResponseWriter, r *http.Requ
 func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addRoutine"))
 
-	newRoutine, err := dto.NewRoutine(r.Body, dto.JSON)
+	newRoutine, err := dto.NewRoutineFromReader(r.Body, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),
@@ -179,7 +179,7 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateRoutine"))
 
-	updatedRoutine, err := dto.NewRoutine(r.Body, dto.JSON)
+	updatedRoutine, err := dto.NewRoutineFromReader(r.Body, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),

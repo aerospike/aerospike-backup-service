@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -40,8 +39,7 @@ func (s *Service) ConfigPolicyActionHandler(w http.ResponseWriter, r *http.Reque
 func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addPolicy"))
 
-	var request dto.BackupPolicy
-	err := json.NewDecoder(r.Body).Decode(&request)
+	request, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),
@@ -168,8 +166,7 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updatePolicy"))
 
-	var request dto.BackupPolicy
-	err := json.NewDecoder(r.Body).Decode(&request)
+	request, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to decode request body",
 			slog.Any("error", err),

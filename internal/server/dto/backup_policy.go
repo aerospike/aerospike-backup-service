@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
@@ -58,6 +59,20 @@ type BackupPolicy struct {
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
+}
+
+// NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader
+func NewBackupPolicyFromReader(r io.Reader, format SerializationFormat) (*BackupPolicy, error) {
+	b := &BackupPolicy{}
+	if err := Deserialize(b, r, format); err != nil {
+		return nil, err
+	}
+
+	if err := b.Validate(); err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
 
 // Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
