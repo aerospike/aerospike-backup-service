@@ -893,6 +893,45 @@ const docTemplate = `{
             }
         },
         "/v1/config/routines/{name}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Reads a specific routine from the configuration given its name.",
+                "operationId": "readRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.BackupRoutine"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "The specified cluster could not be found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
             "put": {
                 "consumes": [
                     "application/json"

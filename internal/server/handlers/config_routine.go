@@ -129,8 +129,6 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} dto.BackupRoutine
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified cluster could not be found"
-//
-
 func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readRoutine"))
 

@@ -1031,6 +1031,52 @@
         "summary" : "Deletes a backup routine from the configuration by name.",
         "tags" : [ "Configuration" ]
       },
+      "get" : {
+        "operationId" : "readRoutine",
+        "parameters" : [ {
+          "description" : "Backup routine name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/dto.BackupRoutine"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The specified cluster could not be found"
+          }
+        },
+        "summary" : "Reads a specific routine from the configuration given its name.",
+        "tags" : [ "Configuration" ]
+      },
       "post" : {
         "operationId" : "addRoutine",
         "parameters" : [ {
