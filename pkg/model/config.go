@@ -65,7 +65,16 @@ func (c *Config) UpdateStorage(name string, s *Storage) error {
 	if _, exists := c.Storage[name]; !exists {
 		return fmt.Errorf("update storage %q: %w", name, ErrNotFound)
 	}
+
+	oldStorage := c.Storage[name]
+	for _, r := range c.BackupRoutines {
+		if r.Storage == oldStorage {
+			r.Storage = s
+		}
+	}
+
 	c.Storage[name] = s
+
 	return nil
 }
 
@@ -112,7 +121,14 @@ func (c *Config) UpdatePolicy(name string, p *BackupPolicy) error {
 		return fmt.Errorf("update backup policy %q: %w", name, ErrNotFound)
 	}
 
+	oldPolicy := c.BackupPolicies[name]
+	for _, r := range c.BackupRoutines {
+		if r.BackupPolicy == oldPolicy {
+			r.BackupPolicy = p
+		}
+	}
 	c.BackupPolicies[name] = p
+
 	return nil
 }
 
@@ -191,7 +207,16 @@ func (c *Config) UpdateCluster(name string, cluster *AerospikeCluster) error {
 	if _, exists := c.AerospikeClusters[name]; !exists {
 		return fmt.Errorf("update Aerospike cluster %q: %w", name, ErrNotFound)
 	}
+
+	oldCluster := c.AerospikeClusters[name]
+	for _, r := range c.BackupRoutines {
+		if r.SourceCluster == oldCluster {
+			r.SourceCluster = cluster
+		}
+	}
+
 	c.AerospikeClusters[name] = cluster
+
 	return nil
 }
 
