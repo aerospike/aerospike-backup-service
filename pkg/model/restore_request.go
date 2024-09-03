@@ -11,10 +11,10 @@ type RestoreJobID int
 // RestoreRequest represents a restore operation request.
 // @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
-	DestinationCuster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
-	Policy            *RestorePolicy    `json:"policy,omitempty" validate:"required"`
-	SourceStorage     *Storage          `json:"source,omitempty" validate:"required"`
-	SecretAgent       *SecretAgent      `json:"secret-agent,omitempty"`
+	DestinationCuster *AerospikeCluster
+	Policy            *RestorePolicy
+	SourceStorage     *Storage
+	SecretAgent       *SecretAgent
 }
 
 // RestoreRequestInternal is used internally to prepopulate data for the restore operation.

@@ -11,11 +11,11 @@ import (
 type BackupState struct {
 	sync.Mutex
 	// Last time the full backup was performed.
-	LastFullRun time.Time `yaml:"last-run,omitempty" json:"last-run,omitempty" example:"2023-12-14T10:08:54Z"`
+	LastFullRun time.Time
 	// Last time the incremental backup was performed.
-	LastIncrRun time.Time `yaml:"last-incr-run,omitempty" json:"last-incr-run,omitempty" example:"2023-12-15T12:00:00Z"`
+	LastIncrRun time.Time
 	// The number of successful full backups created for the routine.
-	Performed int `yaml:"performed,omitempty" json:"performed,omitempty" example:"5"`
+	Performed int
 }
 
 // String satisfies the fmt.Stringer interface.

@@ -14,22 +14,22 @@ type BackupDetails struct {
 
 // BackupMetadata is an internal container for storing backup metadata.
 //
-//nolint:lll
+
 type BackupMetadata struct {
 	// The backup time in the ISO 8601 format.
-	Created time.Time `yaml:"created,omitempty" json:"created,omitempty" example:"2023-03-20T14:50:00Z"`
+	Created time.Time
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups).
-	From time.Time `yaml:"from,omitempty" json:"from,omitempty" example:"2023-03-19T14:50:00Z"`
+	From time.Time
 	// The namespace of a backup.
-	Namespace string `yaml:"namespace,omitempty" json:"namespace,omitempty" example:"testNamespace"`
+	Namespace string
 	// The total number of records backed up.
-	RecordCount uint64 `yaml:"record-count,omitempty" json:"record-count,omitempty" format:"int64" example:"100"`
+	RecordCount uint64
 	// The size of the backup in bytes.
-	ByteCount uint64 `yaml:"byte-count,omitempty" json:"byte-count,omitempty" format:"int64" example:"2000"`
+	ByteCount uint64
 	// The number of backup files created.
-	FileCount uint64 `yaml:"file-count,omitempty" json:"file-count,omitempty" format:"int64" example:"1"`
+	FileCount uint64
 	// The number of secondary indexes backed up.
-	SecondaryIndexCount uint64 `yaml:"secondary-index-count,omitempty" json:"secondary-index-count,omitempty" format:"int64" example:"5"`
+	SecondaryIndexCount uint64
 	// The number of UDF files backed up.
-	UDFCount uint64 `yaml:"udf-count,omitempty" json:"udf-count,omitempty" format:"int64" example:"2"`
+	UDFCount uint64
 }

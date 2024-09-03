@@ -4,15 +4,15 @@ package model
 // @Description HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
 	// The address to listen on.
-	Address *string `yaml:"address,omitempty" json:"address,omitempty" default:"0.0.0.0" example:"0.0.0.0"`
+	Address *string
 	// The port to listen on.
-	Port *int `yaml:"port,omitempty" json:"port,omitempty" default:"8080" example:"8080"`
+	Port *int
 	// HTTP rate limiter configuration.
-	Rate *RateLimiterConfig `yaml:"rate,omitempty" json:"rate,omitempty"`
+	Rate *RateLimiterConfig
 	// ContextPath customizes path for the API endpoints.
-	ContextPath *string `yaml:"context-path,omitempty" json:"context-path,omitempty" default:"/"`
+	ContextPath *string
 	// Timeout for http server operations in milliseconds.
-	Timeout *int `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"5000"`
+	Timeout *int
 }
 
 // GetAddressOrDefault returns the value of the Address property.

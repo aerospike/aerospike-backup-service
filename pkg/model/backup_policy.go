@@ -51,7 +51,7 @@ type BackupPolicy struct {
 	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
-	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
+	Sealed *bool
 }
 
 // GetMaxRetriesOrDefault returns the value of the MaxRetries property.
