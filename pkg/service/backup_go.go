@@ -153,7 +153,7 @@ func getWriter(ctx context.Context, path *string, storage *model.Storage,
 			ctx,
 			*storage.S3Profile,
 			*storage.S3Region,
-			*storage.S3EndpointOverride,
+			storage.S3EndpointOverride,
 			storage.MaxConnsPerHost,
 		)
 		if err != nil {
@@ -164,7 +164,7 @@ func getWriter(ctx context.Context, path *string, storage *model.Storage,
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
 }
 
-func getS3Client(ctx context.Context, profile, region, endpoint string, maxConnsPerHost int) (*s3.Client, error) {
+func getS3Client(ctx context.Context, profile, region string, endpoint *string, maxConnsPerHost int) (*s3.Client, error) {
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithSharedConfigProfile(profile),
 		config.WithRegion(region),
@@ -174,8 +174,8 @@ func getS3Client(ctx context.Context, profile, region, endpoint string, maxConns
 	}
 
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		if endpoint != "" {
-			o.BaseEndpoint = &endpoint
+		if endpoint != nil {
+			o.BaseEndpoint = endpoint
 		}
 
 		o.UsePathStyle = true
