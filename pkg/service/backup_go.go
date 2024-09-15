@@ -164,7 +164,8 @@ func getWriter(ctx context.Context, path *string, storage *model.Storage,
 	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
 }
 
-func getS3Client(ctx context.Context, profile, region string, endpoint *string, maxConnsPerHost int) (*s3.Client, error) {
+func getS3Client(ctx context.Context, profile, region string, endpoint *string,
+	maxConnsPerHost int) (*s3.Client, error) {
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithSharedConfigProfile(profile),
 		config.WithRegion(region),
