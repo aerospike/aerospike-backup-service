@@ -3,12 +3,18 @@ package model
 import "github.com/aws/smithy-go/ptr"
 
 // Storage represents the configuration for a backup storage details.
-// @Description Storage represents the configuration for a backup storage details.
-//
+type Storage interface {
+	IsStorage()
+}
 
-type Storage struct {
-	// The type of the storage provider
-	Type StorageType
+type LocalStorage struct {
+	// The root path for the backup repository.
+	Path *string
+}
+
+func (s *LocalStorage) IsStorage() {}
+
+type S3Storage struct {
 	// The root path for the backup repository.
 	Path *string
 	// The S3 region string (AWS S3 optional).
@@ -25,18 +31,11 @@ type Storage struct {
 	MaxConnsPerHost int
 }
 
-// StorageType represents the type of the backup storage.
-// @Description StorageType represents the type of the backup storage.
-type StorageType string
-
-const (
-	Local StorageType = "local"
-	S3    StorageType = "aws-s3"
-)
-
 // SetDefaultProfile sets the "default" profile if not set.
-func (s *Storage) SetDefaultProfile() {
-	if s.Type == S3 && s.S3Profile == nil {
+func (s *S3Storage) SetDefaultProfile() {
+	if s.S3Profile == nil {
 		s.S3Profile = ptr.String("default")
 	}
 }
+
+func (s *S3Storage) IsStorage() {}

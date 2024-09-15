@@ -164,12 +164,12 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 
 // getReader instantiates and returns a reader for the restore operation
 // according to the specified storage type.
-func getReader(ctx context.Context, path *string, storage *model.Storage,
+func getReader(ctx context.Context, path *string, storage model.Storage,
 ) (backup.StreamingReader, error) {
-	switch storage.Type {
-	case model.Local:
+	switch storage := storage.(type) {
+	case *model.LocalStorage:
 		return local.NewReader(local.WithDir(*path), local.WithValidator(asb.NewValidator()))
-	case model.S3:
+	case *model.S3Storage:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err
@@ -192,5 +192,5 @@ func getReader(ctx context.Context, path *string, storage *model.Storage,
 			s3Storage.WithValidator(asb.NewValidator()),
 		)
 	}
-	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
+	return nil, fmt.Errorf("unknown storage type %v", storage)
 }

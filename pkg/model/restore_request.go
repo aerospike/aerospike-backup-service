@@ -13,7 +13,7 @@ type RestoreJobID int
 type RestoreRequest struct {
 	DestinationCuster *AerospikeCluster
 	Policy            *RestorePolicy
-	SourceStorage     *Storage
+	SourceStorage     Storage
 	SecretAgent       *SecretAgent
 }
 
@@ -60,7 +60,7 @@ func (r RestoreTimestampRequest) String() string {
 func NewRestoreRequest(
 	destinationCluster *AerospikeCluster,
 	policy *RestorePolicy,
-	sourceStorage *Storage,
+	sourceStorage Storage,
 	secretAgent *SecretAgent,
 ) *RestoreRequest {
 	return &RestoreRequest{

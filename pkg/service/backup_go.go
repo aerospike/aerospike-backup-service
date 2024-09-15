@@ -32,7 +32,7 @@ func (b *BackupGo) BackupRun(
 	backupRoutine *model.BackupRoutine,
 	backupPolicy *model.BackupPolicy,
 	client *backup.Client,
-	storage *model.Storage,
+	storage model.Storage,
 	secretAgent *model.SecretAgent,
 	timebounds model.TimeBounds,
 	namespace string,
@@ -80,7 +80,8 @@ func makeBackupConfig(
 	}
 
 	if backupPolicy.Parallel != nil {
-		config.Parallel = int(*backupPolicy.Parallel)
+		config.ParallelRead = int(*backupPolicy.Parallel)
+		config.ParallelWrite = int(*backupPolicy.Parallel)
 	}
 
 	if backupPolicy.FileLimit != nil {
@@ -139,12 +140,12 @@ func makeBackupConfig(
 
 // getWriter instantiates and returns a writer for the backup operation
 // according to the specified storage type.
-func getWriter(ctx context.Context, path *string, storage *model.Storage,
+func getWriter(ctx context.Context, path *string, storage model.Storage,
 ) (backup.Writer, error) {
-	switch storage.Type {
-	case model.Local:
+	switch storage := storage.(type) {
+	case *model.LocalStorage:
 		return local.NewWriter(local.WithDir(*path), local.WithRemoveFiles())
-	case model.S3:
+	case *model.S3Storage:
 		bucket, parsedPath, err := util.ParseS3Path(*path)
 		if err != nil {
 			return nil, err
@@ -161,7 +162,7 @@ func getWriter(ctx context.Context, path *string, storage *model.Storage,
 		}
 		return s3Storage.NewWriter(ctx, client, bucket, s3Storage.WithDir(parsedPath), s3Storage.WithRemoveFiles())
 	}
-	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
+	return nil, fmt.Errorf("unknown storage type %v", storage)
 }
 
 func getS3Client(ctx context.Context, profile, region string, endpoint *string, maxConnsPerHost int) (*s3.Client, error) {

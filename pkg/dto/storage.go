@@ -113,18 +113,24 @@ func NewStorageFromReader(r io.Reader, format SerializationFormat) (*Storage, er
 	return s, nil
 }
 
-func (s *Storage) fromModel(m *model.Storage) {
-	s.Type = StorageType(m.Type)
-	s.Path = m.Path
-	s.S3Region = m.S3Region
-	s.S3Profile = m.S3Profile
-	s.S3EndpointOverride = m.S3EndpointOverride
-	s.S3LogLevel = m.S3LogLevel
-	s.MinPartSize = m.MinPartSize
-	s.MaxConnsPerHost = m.MaxConnsPerHost
+func (s *Storage) fromModel(m model.Storage) {
+	switch m := m.(type) {
+	case *model.LocalStorage:
+		s.Type = Local
+		s.Path = m.Path
+	case *model.S3Storage:
+		s.Type = S3
+		s.Path = m.Path
+		s.S3Region = m.S3Region
+		s.S3Profile = m.S3Profile
+		s.S3EndpointOverride = m.S3EndpointOverride
+		s.S3LogLevel = m.S3LogLevel
+		s.MinPartSize = m.MinPartSize
+		s.MaxConnsPerHost = m.MaxConnsPerHost
+	}
 }
 
-func NewStorageFromModel(m *model.Storage) *Storage {
+func NewStorageFromModel(m model.Storage) *Storage {
 	if m == nil {
 		return nil
 	}
@@ -134,15 +140,25 @@ func NewStorageFromModel(m *model.Storage) *Storage {
 	return &s
 }
 
-func (s *Storage) ToModel() *model.Storage {
-	return &model.Storage{
-		Type:               model.StorageType(s.Type),
-		Path:               s.Path,
-		S3Region:           s.S3Region,
-		S3Profile:          s.S3Profile,
-		S3EndpointOverride: s.S3EndpointOverride,
-		S3LogLevel:         s.S3LogLevel,
-		MinPartSize:        s.MinPartSize,
-		MaxConnsPerHost:    s.MaxConnsPerHost,
+func (s *Storage) ToModel() model.Storage {
+	switch s.Type {
+	case Local:
+		return &model.LocalStorage{
+			Path: s.Path,
+		}
+	case S3:
+		s3Storage := &model.S3Storage{
+			Path:               s.Path,
+			S3Region:           s.S3Region,
+			S3Profile:          s.S3Profile,
+			S3EndpointOverride: s.S3EndpointOverride,
+			S3LogLevel:         s.S3LogLevel,
+			MinPartSize:        s.MinPartSize,
+			MaxConnsPerHost:    s.MaxConnsPerHost,
+		}
+		s3Storage.SetDefaultProfile()
+		return s3Storage
+	default:
+		return nil
 	}
 }

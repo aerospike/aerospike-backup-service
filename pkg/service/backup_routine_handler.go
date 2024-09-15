@@ -21,7 +21,7 @@ type BackupRoutineHandler struct {
 	backupRoutine    *model.BackupRoutine
 	routineName      string
 	namespaces       []string
-	storage          *model.Storage
+	storage          model.Storage
 	secretAgent      *model.SecretAgent
 	state            *model.BackupState
 	retry            *RetryService

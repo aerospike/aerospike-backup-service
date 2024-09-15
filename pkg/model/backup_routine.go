@@ -10,7 +10,7 @@ type BackupRoutine struct {
 	// The name of the corresponding source cluster.
 	SourceCluster *AerospikeCluster
 	// The name of the corresponding storage provider configuration.
-	Storage *Storage
+	Storage Storage
 	// The Secret Agent configuration for the routine (optional).
 	SecretAgent *SecretAgent
 	// The interval for full backup as a cron expression string.

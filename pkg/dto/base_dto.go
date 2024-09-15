@@ -3,6 +3,7 @@ package dto
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"io"
 
 	"gopkg.in/yaml.v3"
@@ -73,6 +74,15 @@ func ConvertModelMapToDTO[M any, D any](modelMap map[string]*M, dtoConstructor f
 	result := make(map[string]*D, len(modelMap))
 	for key, model := range modelMap {
 		result[key] = dtoConstructor(model)
+	}
+	return result
+}
+
+// ConvertStorageMapToDTO converts a map of models to a map of DTOs
+func ConvertStorageMapToDTO(modelMap map[string]model.Storage) map[string]*Storage {
+	result := make(map[string]*Storage, len(modelMap))
+	for key, s := range modelMap {
+		result[key] = NewStorageFromModel(s)
 	}
 	return result
 }

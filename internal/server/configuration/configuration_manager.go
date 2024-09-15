@@ -25,17 +25,17 @@ func NewConfigManager(configFile string, remote bool) (Manager, error) {
 		return nil, err
 	}
 
-	switch configStorage.Type {
-	case model.S3:
-		return newS3ConfigurationManager(configStorage)
-	case model.Local:
-		return newLocalConfigurationManager(configStorage)
+	switch storage := configStorage.(type) {
+	case *model.S3Storage:
+		return newS3ConfigurationManager(storage)
+	case *model.LocalStorage:
+		return newLocalConfigurationManager(storage)
 	default:
-		return nil, fmt.Errorf("unknown type %s", configStorage.Type)
+		return nil, fmt.Errorf("unknown type %s", storage)
 	}
 }
 
-func newLocalConfigurationManager(configStorage *model.Storage) (
+func newLocalConfigurationManager(configStorage *model.LocalStorage) (
 	Manager, error) {
 	isHTTP, err := isHTTPPath(*configStorage.Path)
 	if err != nil {
@@ -48,10 +48,9 @@ func newLocalConfigurationManager(configStorage *model.Storage) (
 }
 
 func makeConfigStorage(configURI string, remote bool,
-) (*model.Storage, error) {
+) (model.Storage, error) {
 	if !remote {
-		return &model.Storage{
-			Type: model.Local,
+		return &model.LocalStorage{
 			Path: &configURI,
 		}, nil
 	}

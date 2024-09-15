@@ -10,7 +10,7 @@ type Config struct {
 	mu                sync.Mutex
 	ServiceConfig     BackupServiceConfig
 	AerospikeClusters map[string]*AerospikeCluster
-	Storage           map[string]*Storage
+	Storage           map[string]Storage // Storage is an interface
 	BackupPolicies    map[string]*BackupPolicy
 	BackupRoutines    map[string]*BackupRoutine
 	SecretAgents      map[string]*SecretAgent
@@ -19,7 +19,7 @@ type Config struct {
 func NewConfig() *Config {
 	return &Config{
 		AerospikeClusters: make(map[string]*AerospikeCluster),
-		Storage:           make(map[string]*Storage),
+		Storage:           make(map[string]Storage),
 		BackupPolicies:    make(map[string]*BackupPolicy),
 		BackupRoutines:    make(map[string]*BackupRoutine),
 		SecretAgents:      make(map[string]*SecretAgent),
@@ -32,7 +32,7 @@ var (
 	ErrInUse         = fmt.Errorf("item is in use")
 )
 
-func (c *Config) AddStorage(name string, s *Storage) error {
+func (c *Config) AddStorage(name string, s Storage) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -58,7 +58,7 @@ func (c *Config) DeleteStorage(name string) error {
 	return nil
 }
 
-func (c *Config) UpdateStorage(name string, s *Storage) error {
+func (c *Config) UpdateStorage(name string, s Storage) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -78,7 +78,7 @@ func (c *Config) UpdateStorage(name string, s *Storage) error {
 	return nil
 }
 
-func (c *Config) routineUsesStorage(s *Storage) string {
+func (c *Config) routineUsesStorage(s Storage) string {
 	for name, r := range c.BackupRoutines {
 		if r.Storage == s {
 			return name
