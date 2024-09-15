@@ -178,7 +178,7 @@ func getReader(ctx context.Context, path *string, storage *model.Storage,
 			ctx,
 			*storage.S3Profile,
 			*storage.S3Region,
-			*storage.S3EndpointOverride,
+			storage.S3EndpointOverride,
 			storage.MaxConnsPerHost,
 		)
 		if err != nil {
