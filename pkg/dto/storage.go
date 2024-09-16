@@ -121,7 +121,8 @@ func (s *Storage) fromModel(m model.Storage) {
 		s.Path = m.Path
 	case *model.S3Storage:
 		s.Type = S3
-		s.Path = &m.Path
+		pathWithPrefix := "s3://" + m.Bucket + "/" + m.Path + "/"
+		s.Path = &pathWithPrefix
 		s.S3Region = &m.S3Region
 		s.S3Profile = &m.S3Profile
 		s.S3EndpointOverride = m.S3EndpointOverride
