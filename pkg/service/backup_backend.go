@@ -60,7 +60,7 @@ func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend
 			fullBackupInProgress:   &atomic.Bool{},
 		}
 	default:
-		panic(fmt.Sprintf("Unsupported storage type: %v", storage))
+		panic(fmt.Sprintf("Unsupported storage type: %T", storage))
 	}
 }
 
