@@ -2,7 +2,7 @@ package model
 
 // Storage represents the configuration for a backup storage details.
 type Storage interface {
-	IsStorage()
+	storage()
 }
 
 type LocalStorage struct {
@@ -10,7 +10,7 @@ type LocalStorage struct {
 	Path *string
 }
 
-func (s *LocalStorage) IsStorage() {}
+func (s *LocalStorage) storage() {}
 
 type S3Storage struct {
 	// The root path for the backup repository (just a path, without bucket)
@@ -31,4 +31,4 @@ type S3Storage struct {
 	MaxConnsPerHost int
 }
 
-func (s *S3Storage) IsStorage() {}
+func (s *S3Storage) storage() {}
