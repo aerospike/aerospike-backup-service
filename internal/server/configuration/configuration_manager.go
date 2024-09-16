@@ -31,7 +31,7 @@ func NewConfigManager(configFile string, remote bool) (Manager, error) {
 	case *model.LocalStorage:
 		return newLocalConfigurationManager(storage)
 	default:
-		return nil, fmt.Errorf("unknown type %s", storage)
+		return nil, fmt.Errorf("unknown type %T", storage)
 	}
 }
 
