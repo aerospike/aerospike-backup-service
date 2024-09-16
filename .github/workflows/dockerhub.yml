@@ -22,17 +22,18 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Get Latest Tag
-        uses: actions-ecosystem/action-get-latest-tag@v1
-        id: get-latest-tag
+        run: |
+          echo "TAG=$(cat VERSION | cut -c 2-)" >> $GITHUB_ENV
       - name: Get Repo Name
         id: variables_step
         run: |
           echo "repo_name=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
       - name: Promote to DockerHub
         env:
+          TAG: ${{env.TAG}}
           ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
         run: |
           docker buildx imagetools create \
-          --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:${{ steps.get-latest-tag.outputs.tag }}" \
+          --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:$TAG" \
           --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:latest" \
-          "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/${{ steps.variables_step.outputs.repo_name }}:${{ steps.get-latest-tag.outputs.tag }}"
+          "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/${{ steps.variables_step.outputs.repo_name }}:$TAG"
