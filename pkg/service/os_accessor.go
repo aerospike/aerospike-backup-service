@@ -168,10 +168,6 @@ func (o *OSDiskAccessor) DeleteFolder(pathToDelete string) error {
 	return nil
 }
 
-func (o *OSDiskAccessor) wrapWithPrefix(path string) *string {
-	return &path
-}
-
 func validatePathContainsBackup(path string) (uint64, error) {
 	_, err := os.Stat(path)
 	if err != nil {

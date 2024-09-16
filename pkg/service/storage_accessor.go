@@ -28,8 +28,4 @@ type StorageAccessor interface {
 
 	// DeleteFolder removes the folder and all its contents at the specified path.
 	DeleteFolder(path string) error
-
-	// wrapWithPrefix combines path with bucket name. This is the opposite of
-	// url.parse, required for asbackup library.
-	wrapWithPrefix(path string) *string
 }

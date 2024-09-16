@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	s3Storage "github.com/aerospike/backup-go/io/aws/s3"
@@ -170,14 +169,10 @@ func getReader(ctx context.Context, path *string, storage model.Storage,
 	case *model.LocalStorage:
 		return local.NewReader(local.WithDir(*path), local.WithValidator(asb.NewValidator()))
 	case *model.S3Storage:
-		bucket, parsedPath, err := util.ParseS3Path(*path)
-		if err != nil {
-			return nil, err
-		}
 		client, err := getS3Client(
 			ctx,
-			*storage.S3Profile,
-			*storage.S3Region,
+			storage.S3Profile,
+			storage.S3Region,
 			storage.S3EndpointOverride,
 			storage.MaxConnsPerHost,
 		)
@@ -187,8 +182,8 @@ func getReader(ctx context.Context, path *string, storage model.Storage,
 		return s3Storage.NewReader(
 			ctx,
 			client,
-			bucket,
-			s3Storage.WithDir(parsedPath),
+			storage.Bucket,
+			s3Storage.WithDir(storage.Path),
 			s3Storage.WithValidator(asb.NewValidator()),
 		)
 	}

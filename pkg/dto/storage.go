@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"github.com/aws/smithy-go/ptr"
 )
 
@@ -120,9 +121,9 @@ func (s *Storage) fromModel(m model.Storage) {
 		s.Path = m.Path
 	case *model.S3Storage:
 		s.Type = S3
-		s.Path = m.Path
-		s.S3Region = m.S3Region
-		s.S3Profile = m.S3Profile
+		s.Path = &m.Path
+		s.S3Region = &m.S3Region
+		s.S3Profile = &m.S3Profile
 		s.S3EndpointOverride = m.S3EndpointOverride
 		s.S3LogLevel = m.S3LogLevel
 		s.MinPartSize = m.MinPartSize
@@ -147,17 +148,23 @@ func (s *Storage) ToModel() model.Storage {
 			Path: s.Path,
 		}
 	case S3:
-		s3Storage := &model.S3Storage{
-			Path:               s.Path,
-			S3Region:           s.S3Region,
-			S3Profile:          s.S3Profile,
+		// storage path is already validated.
+		bucket, parsedPath, _ := util.ParseS3Path(*s.Path)
+		profile := "default"
+		if s.S3Profile != nil {
+			profile = *s.S3Profile
+		}
+
+		return &model.S3Storage{
+			Path:               parsedPath,
+			Bucket:             bucket,
+			S3Region:           *s.S3Region,
+			S3Profile:          profile,
 			S3EndpointOverride: s.S3EndpointOverride,
 			S3LogLevel:         s.S3LogLevel,
 			MinPartSize:        s.MinPartSize,
 			MaxConnsPerHost:    s.MaxConnsPerHost,
 		}
-		s3Storage.SetDefaultProfile()
-		return s3Storage
 	default:
 		return nil
 	}

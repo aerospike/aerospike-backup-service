@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	s3Storage "github.com/aerospike/backup-go/io/aws/s3"
@@ -36,7 +35,7 @@ func (b *BackupGo) BackupRun(
 	secretAgent *model.SecretAgent,
 	timebounds model.TimeBounds,
 	namespace string,
-	path *string,
+	path string,
 ) (BackupHandler, error) {
 	config := makeBackupConfig(namespace, backupRoutine, backupPolicy,
 		timebounds, secretAgent)
@@ -140,27 +139,23 @@ func makeBackupConfig(
 
 // getWriter instantiates and returns a writer for the backup operation
 // according to the specified storage type.
-func getWriter(ctx context.Context, path *string, storage model.Storage,
+func getWriter(ctx context.Context, path string, storage model.Storage,
 ) (backup.Writer, error) {
 	switch storage := storage.(type) {
 	case *model.LocalStorage:
-		return local.NewWriter(local.WithDir(*path), local.WithRemoveFiles())
+		return local.NewWriter(local.WithDir(path), local.WithRemoveFiles())
 	case *model.S3Storage:
-		bucket, parsedPath, err := util.ParseS3Path(*path)
-		if err != nil {
-			return nil, err
-		}
 		client, err := getS3Client(
 			ctx,
-			*storage.S3Profile,
-			*storage.S3Region,
+			storage.S3Profile,
+			storage.S3Region,
 			storage.S3EndpointOverride,
 			storage.MaxConnsPerHost,
 		)
 		if err != nil {
 			return nil, err
 		}
-		return s3Storage.NewWriter(ctx, client, bucket, s3Storage.WithDir(parsedPath), s3Storage.WithRemoveFiles())
+		return s3Storage.NewWriter(ctx, client, storage.Bucket, s3Storage.WithDir(path), s3Storage.WithRemoveFiles())
 	}
 	return nil, fmt.Errorf("unknown storage type %v", storage)
 }

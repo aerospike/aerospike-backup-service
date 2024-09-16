@@ -3,9 +3,9 @@ package dto
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"io"
 
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"gopkg.in/yaml.v3"
 )
 
