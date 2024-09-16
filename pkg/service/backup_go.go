@@ -157,7 +157,7 @@ func getWriter(ctx context.Context, path string, storage model.Storage,
 		}
 		return s3Storage.NewWriter(ctx, client, storage.Bucket, s3Storage.WithDir(path), s3Storage.WithRemoveFiles())
 	}
-	return nil, fmt.Errorf("unknown storage type %v", storage)
+	return nil, fmt.Errorf("unknown storage type %T", storage)
 }
 
 func getS3Client(ctx context.Context, profile, region string, endpoint *string,
