@@ -187,5 +187,5 @@ func getReader(ctx context.Context, path *string, storage model.Storage,
 			s3Storage.WithValidator(asb.NewValidator()),
 		)
 	}
-	return nil, fmt.Errorf("unknown storage type %v", storage)
+	return nil, fmt.Errorf("unknown storage type %T", storage)
 }
