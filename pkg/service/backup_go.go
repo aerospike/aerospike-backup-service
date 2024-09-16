@@ -79,8 +79,8 @@ func makeBackupConfig(
 	}
 
 	if backupPolicy.Parallel != nil {
-		config.ParallelRead = int(*backupPolicy.Parallel)
-		config.ParallelWrite = int(*backupPolicy.Parallel)
+		config.ParallelRead = *backupPolicy.Parallel
+		config.ParallelWrite = *backupPolicy.Parallel
 	}
 
 	if backupPolicy.FileLimit != nil {
