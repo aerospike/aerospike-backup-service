@@ -37,9 +37,8 @@ const metadataFile = "metadata.yaml"
 
 func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend {
 	removeFullBackup := routine.BackupPolicy.RemoveFiles.RemoveFullBackup()
-	storage := routine.Storage
-	switch storage.Type {
-	case model.Local:
+	switch storage := routine.Storage.(type) {
+	case *model.LocalStorage:
 		routinePath := filepath.Join(*storage.Path, routineName)
 		return &BackupBackend{
 			StorageAccessor:        NewOSDiskAccessor(),
@@ -49,7 +48,7 @@ func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend
 			removeFullBackup:       removeFullBackup,
 			fullBackupInProgress:   &atomic.Bool{},
 		}
-	case model.S3:
+	case *model.S3Storage:
 		s3Context := NewS3Context(storage)
 		routinePath := filepath.Join(s3Context.Path, routineName)
 		return &BackupBackend{
@@ -61,7 +60,7 @@ func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend
 			fullBackupInProgress:   &atomic.Bool{},
 		}
 	default:
-		panic(fmt.Sprintf("Unsupported storage type: %v", storage.Type))
+		panic(fmt.Sprintf("Unsupported storage type: %T", storage))
 	}
 }
 

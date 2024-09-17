@@ -229,11 +229,11 @@ func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobSta
 	return r.restoreJobs.getStatus(jobID)
 }
 
-func validateStorageContainsBackup(storage *model.Storage) (uint64, error) {
-	switch storage.Type {
-	case model.Local:
+func validateStorageContainsBackup(storage model.Storage) (uint64, error) {
+	switch storage := storage.(type) {
+	case *model.LocalStorage:
 		return validatePathContainsBackup(*storage.Path)
-	case model.S3:
+	case *model.S3Storage:
 		return NewS3Context(storage).ValidateStorageContainsBackup()
 	}
 	return 0, nil

@@ -147,7 +147,7 @@ func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRo
 func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.Config) {
 	r.BackupPolicy = findKeyByValue(config.BackupPolicies, m.BackupPolicy)
 	r.SourceCluster = findKeyByValue(config.AerospikeClusters, m.SourceCluster)
-	r.Storage = findKeyByValue(config.Storage, m.Storage)
+	r.Storage = findStorageKey(config.Storage, m.Storage)
 	if m.SecretAgent != nil {
 		r.SecretAgent = ptr.String(findKeyByValue(config.SecretAgents, m.SecretAgent))
 	}
@@ -164,6 +164,15 @@ func findKeyByValue[V any](m map[string]*V, value *V) string {
 	for k, v := range m {
 		if v == value {
 			return k
+		}
+	}
+	return ""
+}
+
+func findStorageKey(storageMap map[string]model.Storage, targetStorage model.Storage) string {
+	for key, storage := range storageMap {
+		if storage == targetStorage {
+			return key
 		}
 	}
 	return ""

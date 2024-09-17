@@ -139,7 +139,7 @@ func (c *Config) ToModel() (*model.Config, error) {
 	modelConfig := &model.Config{
 		ServiceConfig:     *config.ToModel(),
 		AerospikeClusters: make(map[string]*model.AerospikeCluster),
-		Storage:           make(map[string]*model.Storage),
+		Storage:           make(map[string]model.Storage),
 		BackupPolicies:    make(map[string]*model.BackupPolicy),
 		BackupRoutines:    make(map[string]*model.BackupRoutine),
 		SecretAgents:      make(map[string]*model.SecretAgent),

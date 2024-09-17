@@ -24,7 +24,7 @@ type RemoveFilesType string
 //nolint:lll
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel.
-	Parallel *int32 `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
+	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
 	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
 	SocketTimeout *int32 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`

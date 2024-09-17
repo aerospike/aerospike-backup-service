@@ -34,7 +34,7 @@ type S3Context struct {
 var _ StorageAccessor = (*S3Context)(nil)
 
 // NewS3Context returns a new S3Context.
-func NewS3Context(storage *model.Storage) *S3Context {
+func NewS3Context(storage *model.S3Storage) *S3Context {
 	// Load the SDK's configuration from environment and shared config, and
 	// create the client with this.
 	ctx := context.TODO()
@@ -47,16 +47,13 @@ func NewS3Context(storage *model.Storage) *S3Context {
 		o.UsePathStyle = true
 	})
 
-	// storage path is already validated.
-	bucket, parsedPath, _ := util.ParseS3Path(*storage.Path)
-
-	go checkBucket(ctx, client, bucket)
+	go checkBucket(ctx, client, storage.Bucket)
 
 	s := &S3Context{
 		ctx:    ctx,
 		client: client,
-		bucket: bucket,
-		Path:   parsedPath,
+		bucket: storage.Bucket,
+		Path:   storage.Path,
 	}
 
 	s.metadataCache = util.NewLoadingCache(ctx, func(path string) (*model.BackupMetadata, error) {
@@ -83,12 +80,11 @@ func checkBucket(ctx context.Context, client *s3.Client, bucket string) {
 	}
 }
 
-func createConfig(ctx context.Context, storage *model.Storage) aws.Config {
-	storage.SetDefaultProfile()
+func createConfig(ctx context.Context, storage *model.S3Storage) aws.Config {
 	cfg, _ := config.LoadDefaultConfig(
 		ctx,
-		config.WithSharedConfigProfile(*storage.S3Profile),
-		config.WithRegion(*storage.S3Region),
+		config.WithSharedConfigProfile(storage.S3Profile),
+		config.WithRegion(storage.S3Region),
 	)
 
 	return cfg
@@ -293,11 +289,6 @@ func (s *S3Context) DeleteFolder(folder string) error {
 	}
 
 	return nil
-}
-
-func (s *S3Context) wrapWithPrefix(path string) *string {
-	result := s3Protocol + s.bucket + "/" + path + "/"
-	return &result
 }
 
 func (s *S3Context) ValidateStorageContainsBackup() (uint64, error) {

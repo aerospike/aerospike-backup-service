@@ -20,11 +20,11 @@ var minioContext *S3Context
 var content = make([]byte, 4)
 
 func init() {
-	minioContext = NewS3Context(&model.Storage{
-		Type:               model.S3,
-		Path:               ptr.String("s3://as-backup-bucket/storageMinio"),
-		S3Profile:          ptr.String("minio"),
-		S3Region:           ptr.String("eu-central-1"),
+	minioContext = NewS3Context(&model.S3Storage{
+		Path:               "storageMinio",
+		Bucket:             "as-backup-bucket",
+		S3Profile:          "minio",
+		S3Region:           "eu-central-1",
 		S3EndpointOverride: ptr.String("http://localhost:9000"),
 	})
 	if minioContext != nil {

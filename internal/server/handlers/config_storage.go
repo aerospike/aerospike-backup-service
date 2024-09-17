@@ -82,7 +82,7 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAllStorage"))
 
-	toDTO := dto.ConvertModelMapToDTO(s.config.Storage, dto.NewStorageFromModel)
+	toDTO := dto.ConvertStorageMapToDTO(s.config.Storage)
 	jsonResponse, err := dto.Serialize(toDTO, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal storage",

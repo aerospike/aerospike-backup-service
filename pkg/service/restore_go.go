@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	s3Storage "github.com/aerospike/backup-go/io/aws/s3"
@@ -164,20 +163,16 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 
 // getReader instantiates and returns a reader for the restore operation
 // according to the specified storage type.
-func getReader(ctx context.Context, path *string, storage *model.Storage,
+func getReader(ctx context.Context, path *string, storage model.Storage,
 ) (backup.StreamingReader, error) {
-	switch storage.Type {
-	case model.Local:
+	switch storage := storage.(type) {
+	case *model.LocalStorage:
 		return local.NewReader(local.WithDir(*path), local.WithValidator(asb.NewValidator()))
-	case model.S3:
-		bucket, parsedPath, err := util.ParseS3Path(*path)
-		if err != nil {
-			return nil, err
-		}
+	case *model.S3Storage:
 		client, err := getS3Client(
 			ctx,
-			*storage.S3Profile,
-			*storage.S3Region,
+			storage.S3Profile,
+			storage.S3Region,
 			storage.S3EndpointOverride,
 			storage.MaxConnsPerHost,
 		)
@@ -187,10 +182,10 @@ func getReader(ctx context.Context, path *string, storage *model.Storage,
 		return s3Storage.NewReader(
 			ctx,
 			client,
-			bucket,
-			s3Storage.WithDir(parsedPath),
+			storage.Bucket,
+			s3Storage.WithDir(storage.Path),
 			s3Storage.WithValidator(asb.NewValidator()),
 		)
 	}
-	return nil, fmt.Errorf("unknown storage type %v", storage.Type)
+	return nil, fmt.Errorf("unknown storage type %T", storage)
 }

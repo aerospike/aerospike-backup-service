@@ -16,7 +16,7 @@ type S3ConfigurationManager struct {
 
 var _ Manager = (*S3ConfigurationManager)(nil)
 
-func newS3ConfigurationManager(configStorage *model.Storage) (Manager, error) {
+func newS3ConfigurationManager(configStorage *model.S3Storage) (Manager, error) {
 	return &S3ConfigurationManager{
 		service.NewS3Context(configStorage),
 	}, nil

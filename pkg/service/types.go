@@ -15,11 +15,11 @@ type Backup interface {
 		backupRoutine *model.BackupRoutine,
 		backupPolicy *model.BackupPolicy,
 		client *backup.Client,
-		storage *model.Storage,
+		storage model.Storage,
 		secretAgent *model.SecretAgent,
 		timebounds model.TimeBounds,
 		namespace string,
-		path *string,
+		path string,
 	) (BackupHandler, error)
 }
 

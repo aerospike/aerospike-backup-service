@@ -21,7 +21,7 @@ type BackupRoutineHandler struct {
 	backupRoutine    *model.BackupRoutine
 	routineName      string
 	namespaces       []string
-	storage          *model.Storage
+	storage          model.Storage
 	secretAgent      *model.SecretAgent
 	state            *model.BackupState
 	retry            *RetryService
@@ -141,11 +141,9 @@ func (h *BackupRoutineHandler) startFullBackupForAllNamespaces(
 	}
 
 	for _, namespace := range namespaces {
-		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy,
-			namespace, upperBound)
-		backupPath := h.backend.wrapWithPrefix(backupFolder)
+		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, upperBound)
 		handler, err := h.backupService.BackupRun(ctx, h.backupRoutine, h.backupFullPolicy, client,
-			h.storage, h.secretAgent, timebounds, namespace, backupPath)
+			h.storage, h.secretAgent, timebounds, namespace, backupFolder)
 		if err != nil {
 			backupFailureCounter.Inc()
 			return fmt.Errorf("could not start backup of namespace %s, routine %s: %w",
@@ -289,12 +287,10 @@ func (h *BackupRoutineHandler) startIncrementalBackupForAllNamespaces(
 	}
 
 	for _, namespace := range namespaces {
-		backupFolder := getIncrementalPathForNamespace(h.backend.incrementalBackupsPath,
-			namespace, upperBound)
-		backupPath := h.backend.wrapWithPrefix(backupFolder)
+		backupFolder := getIncrementalPathForNamespace(h.backend.incrementalBackupsPath, namespace, upperBound)
 		handler, err := h.backupService.BackupRun(ctx,
 			h.backupRoutine, h.backupIncrPolicy, client, h.storage, h.secretAgent,
-			*timebounds, namespace, backupPath)
+			*timebounds, namespace, backupFolder)
 		if err != nil {
 			incrBackupFailureCounter.Inc()
 			slog.Warn("could not start backup",

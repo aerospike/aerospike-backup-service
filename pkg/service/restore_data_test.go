@@ -49,7 +49,7 @@ func (b *BackendHolderMock) SetData(_ map[string]*BackupBackend) {
 }
 
 func makeTestRestoreService() *dataRestorer {
-	storage := &model.Storage{}
+	storage := &model.LocalStorage{}
 	config := model.NewConfig()
 	_ = config.AddStorage("s", storage)
 	config.BackupRoutines = map[string]*model.BackupRoutine{
@@ -173,9 +173,8 @@ func TestRestoreOK(t *testing.T) {
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
-		SourceStorage: &model.Storage{
+		SourceStorage: &model.LocalStorage{
 			Path: &validBackupPath,
-			Type: model.Local,
 		},
 	}
 	requestInternal := &model.RestoreRequestInternal{
@@ -268,8 +267,7 @@ func Test_WrongStatus(t *testing.T) {
 func Test_RestoreFromWrongFolder(t *testing.T) {
 	requestInternal := &model.RestoreRequestInternal{
 		RestoreRequest: model.RestoreRequest{
-			SourceStorage: &model.Storage{
-				Type: model.Local,
+			SourceStorage: &model.LocalStorage{
 				Path: util.Ptr("wrongPath"),
 			},
 		},
@@ -285,8 +283,7 @@ func Test_RestoreFromWrongFolder(t *testing.T) {
 func Test_RestoreFromEmptyFolder(t *testing.T) {
 	requestInternal := &model.RestoreRequestInternal{
 		RestoreRequest: model.RestoreRequest{
-			SourceStorage: &model.Storage{
-				Type: model.Local,
+			SourceStorage: &model.LocalStorage{
 				Path: util.Ptr("./"),
 			},
 		},
@@ -310,7 +307,7 @@ func Test_RestoreFail(t *testing.T) {
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
-		SourceStorage: &model.Storage{
+		SourceStorage: &model.LocalStorage{
 			Path: &validBackupPath,
 		},
 	}
