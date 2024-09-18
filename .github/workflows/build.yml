@@ -22,6 +22,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check go.mod
+        run: |
+          go mod tidy
+          git diff --exit-code
+
       - name: Test
         run: |
           go test -race -tags=ci ./... -coverprofile=coverage.out -covermode=atomic
