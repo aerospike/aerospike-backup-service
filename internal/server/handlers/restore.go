@@ -140,7 +140,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = request.Validate(); err != nil {
+	if err = request.Validate(s.config); err != nil {
 		hLogger.Error("failed to validate request",
 			slog.Any("error", err),
 		)
