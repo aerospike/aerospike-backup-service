@@ -7,19 +7,15 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
-// RestoreRequest represents a restore operation request.
+// RestoreRequest represents a restore operation request from custom storage
 // @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
 	DestinationCuster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
 	Policy            *RestorePolicy    `json:"policy,omitempty" validate:"required"`
 	SourceStorage     *Storage          `json:"source,omitempty" validate:"required"`
 	SecretAgent       *SecretAgent      `json:"secret-agent,omitempty"`
-}
-
-// RestoreRequestInternal is used internally to prepopulate data for the restore operation.
-type RestoreRequestInternal struct {
-	RestoreRequest
-	Dir *string
+	// Path to the data from storage root. Empty means backups are in the storage root folder.
+	BackupDataPath *string `json:"backup-data,omitempty" validate:"optional"`
 }
 
 // RestoreTimestampRequest represents a restore by timestamp operation request.
@@ -84,23 +80,16 @@ func (r RestoreTimestampRequest) ToModel() *model.RestoreTimestampRequest {
 	}
 }
 
-func (r RestoreRequestInternal) ToModel() *model.RestoreRequestInternal {
-	return &model.RestoreRequestInternal{
-		RestoreRequest: model.RestoreRequest{
-			DestinationCuster: r.DestinationCuster.ToModel(),
-			Policy:            r.Policy.ToModel(),
-			SourceStorage:     r.SourceStorage.ToModel(),
-			SecretAgent:       r.SecretAgent.ToModel(),
-		},
-		Dir: r.Dir,
-	}
-}
-
 func (r *RestoreRequest) ToModel() *model.RestoreRequest {
+	path := ""
+	if r.BackupDataPath != nil {
+		path = *r.BackupDataPath
+	}
 	return &model.RestoreRequest{
 		DestinationCuster: r.DestinationCuster.ToModel(),
 		Policy:            r.Policy.ToModel(),
 		SourceStorage:     r.SourceStorage.ToModel(),
 		SecretAgent:       r.SecretAgent.ToModel(),
+		BackupDataPath:    path,
 	}
 }

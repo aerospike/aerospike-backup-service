@@ -29,7 +29,7 @@ func (cr *configRetriever) RetrieveConfiguration(routine string, toTime time.Tim
 	// fullBackups has backups for multiple namespaces, but same timestamp,
 	// they share the same configuration.
 	lastFullBackup := fullBackups[0]
-	configPath, err := calculateConfigurationBackupPath(*lastFullBackup.Key)
+	configPath, err := calculateConfigurationBackupPath(lastFullBackup.Key)
 	if err != nil {
 		return nil, err
 	}

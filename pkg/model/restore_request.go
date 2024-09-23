@@ -15,12 +15,7 @@ type RestoreRequest struct {
 	Policy            *RestorePolicy
 	SourceStorage     Storage
 	SecretAgent       *SecretAgent
-}
-
-// RestoreRequestInternal is used internally to prepopulate data for the restore operation.
-type RestoreRequestInternal struct {
-	RestoreRequest
-	Dir *string
+	BackupDataPath    string // path to the backup data
 }
 
 // RestoreTimestampRequest represents a restore by timestamp operation request.

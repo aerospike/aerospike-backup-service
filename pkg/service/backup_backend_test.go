@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"os"
 	"strconv"
 	"sync/atomic"
@@ -14,18 +15,18 @@ const tempFolder = "./tmp"
 
 func TestFullBackupRemoveFiles(t *testing.T) {
 	backend := &BackupBackend{
-		StorageAccessor:      &OSDiskAccessor{},
-		fullBackupsPath:      tempFolder + "/routine/backup",
+		storage:              &model.LocalStorage{Path: tempFolder},
+		fullBackupsPath:      "routine/backup",
 		removeFullBackup:     true,
 		fullBackupInProgress: &atomic.Bool{},
 	}
 
 	path := backend.fullBackupsPath + "/data/source-ns1/"
 	_ = os.MkdirAll(path, 0744)
-	_ = backend.writeBackupMetadata(path, model.BackupMetadata{Created: time.UnixMilli(10)})
+	_ = backend.writeBackupMetadata(context.TODO(), path, model.BackupMetadata{Created: time.UnixMilli(10)})
 
 	to := model.NewTimeBoundsTo(time.UnixMilli(1000))
-	list, _ := backend.FullBackupList(to)
+	list, _ := backend.FullBackupList(context.TODO(), to)
 	if len(list) != 1 {
 		t.Errorf("Expected list size 1, got %v", list)
 	}
@@ -36,8 +37,8 @@ func TestFullBackupRemoveFiles(t *testing.T) {
 
 func TestFullBackupKeepFiles(t *testing.T) {
 	backend := &BackupBackend{
-		StorageAccessor:      &OSDiskAccessor{},
-		fullBackupsPath:      tempFolder + "/routine/backup",
+		storage:              &model.LocalStorage{Path: tempFolder},
+		fullBackupsPath:      "routine/backup",
 		removeFullBackup:     false,
 		fullBackupInProgress: &atomic.Bool{},
 	}
@@ -45,11 +46,11 @@ func TestFullBackupKeepFiles(t *testing.T) {
 	for _, t := range []int64{10, 20, 30} {
 		path := backend.fullBackupsPath + "/" + strconv.FormatInt(t, 10) + "/data/source-ns1/"
 		_ = os.MkdirAll(path, 0744)
-		_ = backend.writeBackupMetadata(path, model.BackupMetadata{Created: time.UnixMilli(t)})
+		_ = backend.writeBackupMetadata(context.TODO(), path, model.BackupMetadata{Created: time.UnixMilli(t)})
 	}
 
 	bounds := model.NewTimeBoundsTo(time.UnixMilli(25))
-	list, _ := backend.FullBackupList(bounds)
+	list, _ := backend.FullBackupList(context.TODO(), bounds)
 	if len(list) != 2 {
 		t.Errorf("Expected list size 2, got %v", list)
 	}

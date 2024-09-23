@@ -1976,6 +1976,19 @@ const docTemplate = `{
                 "JobStatusFailed"
             ]
         },
+        "dto.LocalStorage": {
+            "type": "object",
+            "required": [
+                "path"
+            ],
+            "properties": {
+                "path": {
+                    "description": "The root path for the backup repository.",
+                    "type": "string",
+                    "example": "backups"
+                }
+            }
+        },
         "dto.LoggerConfig": {
             "description": "LoggerConfig represents the backup service logger configuration.",
             "type": "object",
@@ -2282,6 +2295,10 @@ const docTemplate = `{
                 "source"
             ],
             "properties": {
+                "backup-data": {
+                    "description": "Path to the data from storage root. Empty means backups are in the storage root folder.",
+                    "type": "string"
+                },
                 "destination": {
                     "$ref": "#/definitions/dto.AerospikeCluster"
                 },
@@ -2392,6 +2409,56 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.S3Storage": {
+            "type": "object",
+            "required": [
+                "bucket",
+                "path",
+                "s3-region"
+            ],
+            "properties": {
+                "bucket": {
+                    "description": "The S3 bucket name.",
+                    "type": "string"
+                },
+                "max_async_connections": {
+                    "description": "The maximum number of simultaneous requests from S3.",
+                    "type": "integer",
+                    "example": 16
+                },
+                "min_part_size": {
+                    "description": "The minimum size in bytes of individual S3 UploadParts",
+                    "type": "integer",
+                    "default": 5242880,
+                    "example": 10
+                },
+                "path": {
+                    "description": "The root path for the backup repository within the bucket.",
+                    "type": "string",
+                    "example": "backups"
+                },
+                "s3-endpoint-override": {
+                    "description": "An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).",
+                    "type": "string",
+                    "example": "http://host.docker.internal:9000"
+                },
+                "s3-log-level": {
+                    "description": "The log level of the AWS S3 SDK (AWS S3 optional).",
+                    "type": "string",
+                    "default": "FATAL"
+                },
+                "s3-profile": {
+                    "description": "The S3 profile name (AWS S3 optional).",
+                    "type": "string",
+                    "example": "default"
+                },
+                "s3-region": {
+                    "description": "The S3 region string.",
+                    "type": "string",
+                    "example": "eu-central-1"
+                }
+            }
+        },
         "dto.SecretAgent": {
             "description": "SecretAgent represents the configuration of an Aerospike Secret Agent for a backup/restore operation.",
             "type": "object",
@@ -2456,72 +2523,24 @@ const docTemplate = `{
         "dto.Storage": {
             "description": "Storage represents the configuration for a backup storage details.",
             "type": "object",
-            "required": [
-                "path",
-                "type"
-            ],
             "properties": {
-                "max_async_connections": {
-                    "description": "The maximum number of simultaneous requests from S3.",
-                    "type": "integer",
-                    "example": 16
-                },
-                "min_part_size": {
-                    "description": "The minimum size in bytes of individual S3 UploadParts",
-                    "type": "integer",
-                    "default": 5242880,
-                    "example": 10
-                },
-                "path": {
-                    "description": "The root path for the backup repository.",
-                    "type": "string",
-                    "example": "backups"
-                },
-                "s3-endpoint-override": {
-                    "description": "An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).",
-                    "type": "string",
-                    "example": "http://host.docker.internal:9000"
-                },
-                "s3-log-level": {
-                    "description": "The log level of the AWS S3 SDK (AWS S3 optional).",
-                    "type": "string",
-                    "default": "FATAL"
-                },
-                "s3-profile": {
-                    "description": "The S3 profile name (AWS S3 optional).",
-                    "type": "string",
-                    "example": "default"
-                },
-                "s3-region": {
-                    "description": "The S3 region string (AWS S3 optional).",
-                    "type": "string",
-                    "example": "eu-central-1"
-                },
-                "type": {
-                    "description": "The type of the storage provider",
-                    "enum": [
-                        "local",
-                        "aws-s3"
-                    ],
+                "local-storage": {
+                    "description": "LocalStorage configuration, set if using local storage",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/dto.StorageType"
+                            "$ref": "#/definitions/dto.LocalStorage"
+                        }
+                    ]
+                },
+                "s3-storage": {
+                    "description": "S3Storage configuration, set if using S3 storage",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.S3Storage"
                         }
                     ]
                 }
             }
-        },
-        "dto.StorageType": {
-            "description": "StorageType represents the type of the backup storage.",
-            "type": "string",
-            "enum": [
-                "local",
-                "aws-s3"
-            ],
-            "x-enum-varnames": [
-                "Local",
-                "S3"
-            ]
         },
         "dto.TLS": {
             "description": "TLS represents the Aerospike cluster TLS configuration options.",

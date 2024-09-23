@@ -26,8 +26,6 @@ func NewConfigManager(configFile string, remote bool) (Manager, error) {
 	}
 
 	switch storage := configStorage.(type) {
-	case *model.S3Storage:
-		return newS3ConfigurationManager(storage)
 	case *model.LocalStorage:
 		return newLocalConfigurationManager(storage)
 	default:
@@ -37,21 +35,21 @@ func NewConfigManager(configFile string, remote bool) (Manager, error) {
 
 func newLocalConfigurationManager(configStorage *model.LocalStorage) (
 	Manager, error) {
-	isHTTP, err := isHTTPPath(*configStorage.Path)
+	isHTTP, err := isHTTPPath(configStorage.Path)
 	if err != nil {
 		return nil, err
 	}
 	if isHTTP {
-		return NewHTTPConfigurationManager(*configStorage.Path), nil
+		return NewHTTPConfigurationManager(configStorage.Path), nil
 	}
-	return NewFileConfigurationManager(*configStorage.Path), nil
+	return NewFileConfigurationManager(configStorage.Path), nil
 }
 
 func makeConfigStorage(configURI string, remote bool,
 ) (model.Storage, error) {
 	if !remote {
 		return &model.LocalStorage{
-			Path: &configURI,
+			Path: configURI,
 		}, nil
 	}
 

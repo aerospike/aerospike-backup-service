@@ -98,25 +98,6 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			expectError:  false,
 			expectedType: reflect.TypeOf(&HTTPConfigurationManager{}),
 		},
-		{
-			name:       "local s3",
-			configFile: filepath.Join(tempDir, "s3config.yaml"),
-			remote:     true,
-			setup: func() error {
-				return os.WriteFile(filepath.Join(tempDir, "s3config.yaml"),
-					[]byte("type: aws-s3\npath: s3://bucket/config.yaml\ns3-region: europe"), 0600)
-			},
-			expectError:  false,
-			expectedType: reflect.TypeOf(&S3ConfigurationManager{}),
-		},
-		{
-			name:         "http s3",
-			configFile:   server.URL + "/s3config.yaml",
-			remote:       true,
-			setup:        func() error { return nil },
-			expectError:  false,
-			expectedType: reflect.TypeOf(&S3ConfigurationManager{}),
-		},
 	}
 
 	for _, tt := range tests {

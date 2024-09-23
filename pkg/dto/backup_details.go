@@ -11,7 +11,7 @@ import (
 type BackupDetails struct {
 	BackupMetadata
 	// The path to the backup files.
-	Key *string `yaml:"key,omitempty" json:"key,omitempty" example:"storage/daily/backup/1707915600000/source-ns1"`
+	Key string `yaml:"key,omitempty" json:"key,omitempty" example:"storage/daily/backup/1707915600000/source-ns1"`
 }
 
 // BackupMetadata is an internal container for storing backup metadata.

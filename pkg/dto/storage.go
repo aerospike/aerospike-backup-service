@@ -2,30 +2,38 @@ package dto
 
 import (
 	"errors"
-	"fmt"
 	"io"
-	"net/url"
-	"slices"
-	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
-	"github.com/aws/smithy-go/ptr"
 )
 
 // Storage represents the configuration for a backup storage details.
 // @Description Storage represents the configuration for a backup storage details.
+type Storage struct {
+	// LocalStorage configuration, set if using local storage
+	LocalStorage *LocalStorage `yaml:"local-storage,omitempty" json:"local-storage,omitempty"`
+	// S3Storage configuration, set if using S3 storage
+	S3Storage *S3Storage `yaml:"s3-storage,omitempty" json:"s3-storage,omitempty"`
+}
+
+// LocalStorage represents the configuration for local storage.
+type LocalStorage struct {
+	// The root path for the backup repository.
+	Path string `yaml:"path" json:"path" example:"backups" validate:"required"`
+}
+
+// S3Storage represents the configuration for S3 storage.
 //
 //nolint:lll
-type Storage struct {
-	// The type of the storage provider
-	Type StorageType `yaml:"type" json:"type" enums:"local,aws-s3" validate:"required"`
-	// The root path for the backup repository.
-	Path *string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" validate:"required"`
-	// The S3 region string (AWS S3 optional).
-	S3Region *string `yaml:"s3-region,omitempty" json:"s3-region,omitempty" example:"eu-central-1"`
+type S3Storage struct {
+	// The S3 bucket name.
+	Bucket string `yaml:"bucket" json:"bucket" validate:"required"`
+	// The root path for the backup repository within the bucket.
+	Path string `yaml:"path" json:"path" example:"backups" validate:"required"`
+	// The S3 region string.
+	S3Region string `yaml:"s3-region" json:"s3-region" example:"eu-central-1" validate:"required"`
 	// The S3 profile name (AWS S3 optional).
-	S3Profile *string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty" example:"default"`
+	S3Profile string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty" example:"default"`
 	// An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).
 	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000"`
 	// The log level of the AWS S3 SDK (AWS S3 optional).
@@ -36,67 +44,100 @@ type Storage struct {
 	MaxConnsPerHost int `yaml:"max_async_connections,omitempty" json:"max_async_connections,omitempty" example:"16"`
 }
 
-// StorageType represents the type of the backup storage.
-// @Description StorageType represents the type of the backup storage.
-type StorageType string
-
-const (
-	Local              StorageType = "local"
-	S3                 StorageType = "aws-s3"
-	MinAllowedPartSize             = 5 * 1024 * 1024 // 5 MB in bytes
-)
-
-var validS3LogLevels = []string{"OFF", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "TRACE"}
-
-// Validate validates the storage configuration.
+// Validate checks if the Storage is valid.
 func (s *Storage) Validate() error {
 	if s == nil {
-		return errors.New("source storage is not specified")
+		return errors.New("storage is not specified")
 	}
-	if s.Path == nil || len(*s.Path) == 0 {
-		return errors.New("storage path is not specified")
-	}
-	if err := s.validateType(); err != nil {
-		return err
-	}
-	if s.Type == S3 {
-		if s.S3Region == nil || len(*s.S3Region) == 0 {
-			return errors.New("s3 region is not specified")
-		}
 
-		_, err := url.Parse(*s.Path)
-		if err != nil {
-			return fmt.Errorf("failed to parse S3 storage path: %w", err)
-		}
+	if s.LocalStorage != nil && s.S3Storage != nil {
+		return errors.New("only one storage type should be specified")
 	}
-	if s.S3LogLevel != nil &&
-		!slices.Contains(validS3LogLevels, strings.ToUpper(*s.S3LogLevel)) {
-		return errors.New("invalid s3 log level")
+
+	if s.LocalStorage == nil && s.S3Storage == nil {
+		return errors.New("no storage configuration provided")
 	}
-	if s.MinPartSize != 0 && s.MinPartSize < MinAllowedPartSize {
-		return fmt.Errorf("min_part_size must be at least %d bytes", MinAllowedPartSize)
+
+	if s.LocalStorage != nil {
+		return s.LocalStorage.Validate()
 	}
-	if s.MaxConnsPerHost < 0 {
-		return errors.New("max_async_connections must not be negative")
+
+	if s.S3Storage != nil {
+		return s.S3Storage.Validate()
+	}
+
+	return nil
+}
+
+// Validate checks if the LocalStorage is valid.
+func (l *LocalStorage) Validate() error {
+	if l.Path == "" {
+		return errors.New("local storage path is not specified")
 	}
 	return nil
 }
 
-// validateType validates the storage provider type.
-func (s *Storage) validateType() error {
-	s.Type = StorageType(strings.ToLower(string(s.Type)))
-	switch s.Type {
-	case Local, S3:
-		return nil
-	default:
-		return fmt.Errorf("invalid storage type: %v", s.Type)
+// Validate checks if the S3Storage is valid.
+func (s *S3Storage) Validate() error {
+	if s.Bucket == "" {
+		return errors.New("S3 bucket is not specified")
 	}
+	if s.Path == "" {
+		return errors.New("S3 storage path is not specified")
+	}
+	if s.S3Region == "" {
+		return errors.New("S3 region is not specified")
+	}
+	// Add more S3-specific validations here if needed
+	return nil
 }
 
-// SetDefaultProfile sets the "default" profile if not set.
-func (s *Storage) SetDefaultProfile() {
-	if s.Type == S3 && s.S3Profile == nil {
-		s.S3Profile = ptr.String("default")
+// ToModel converts the Storage DTO to its corresponding model.
+func (s *Storage) ToModel() model.Storage {
+	if s.LocalStorage != nil {
+		return &model.LocalStorage{
+			Path: s.LocalStorage.Path,
+		}
+	}
+	if s.S3Storage != nil {
+		return &model.S3Storage{
+			Bucket:             s.S3Storage.Bucket,
+			Path:               s.S3Storage.Path,
+			S3Region:           s.S3Storage.S3Region,
+			S3Profile:          s.S3Storage.S3Profile,
+			S3EndpointOverride: s.S3Storage.S3EndpointOverride,
+			S3LogLevel:         s.S3Storage.S3LogLevel,
+			MinPartSize:        s.S3Storage.MinPartSize,
+			MaxConnsPerHost:    s.S3Storage.MaxConnsPerHost,
+		}
+	}
+	return nil
+}
+
+// NewStorageFromModel creates a new Storage DTO from the model.
+func NewStorageFromModel(m model.Storage) *Storage {
+	switch s := m.(type) {
+	case *model.LocalStorage:
+		return &Storage{
+			LocalStorage: &LocalStorage{
+				Path: s.Path,
+			},
+		}
+	case *model.S3Storage:
+		return &Storage{
+			S3Storage: &S3Storage{
+				Bucket:             s.Bucket,
+				Path:               s.Path,
+				S3Region:           s.S3Region,
+				S3Profile:          s.S3Profile,
+				S3EndpointOverride: s.S3EndpointOverride,
+				S3LogLevel:         s.S3LogLevel,
+				MinPartSize:        s.MinPartSize,
+				MaxConnsPerHost:    s.MaxConnsPerHost,
+			},
+		}
+	default:
+		return nil
 	}
 }
 
@@ -112,61 +153,4 @@ func NewStorageFromReader(r io.Reader, format SerializationFormat) (*Storage, er
 	}
 
 	return s, nil
-}
-
-func (s *Storage) fromModel(m model.Storage) {
-	switch m := m.(type) {
-	case *model.LocalStorage:
-		s.Type = Local
-		s.Path = m.Path
-	case *model.S3Storage:
-		s.Type = S3
-		pathWithPrefix := "s3://" + m.Bucket + "/" + m.Path + "/"
-		s.Path = &pathWithPrefix
-		s.S3Region = &m.S3Region
-		s.S3Profile = &m.S3Profile
-		s.S3EndpointOverride = m.S3EndpointOverride
-		s.S3LogLevel = m.S3LogLevel
-		s.MinPartSize = m.MinPartSize
-		s.MaxConnsPerHost = m.MaxConnsPerHost
-	}
-}
-
-func NewStorageFromModel(m model.Storage) *Storage {
-	if m == nil {
-		return nil
-	}
-
-	var s Storage
-	s.fromModel(m)
-	return &s
-}
-
-func (s *Storage) ToModel() model.Storage {
-	switch s.Type {
-	case Local:
-		return &model.LocalStorage{
-			Path: s.Path,
-		}
-	case S3:
-		// storage path is already validated.
-		bucket, parsedPath, _ := util.ParseS3Path(*s.Path)
-		profile := "default"
-		if s.S3Profile != nil {
-			profile = *s.S3Profile
-		}
-
-		return &model.S3Storage{
-			Path:               parsedPath,
-			Bucket:             bucket,
-			S3Region:           *s.S3Region,
-			S3Profile:          profile,
-			S3EndpointOverride: s.S3EndpointOverride,
-			S3LogLevel:         s.S3LogLevel,
-			MinPartSize:        s.MinPartSize,
-			MaxConnsPerHost:    s.MaxConnsPerHost,
-		}
-	default:
-		return nil
-	}
 }

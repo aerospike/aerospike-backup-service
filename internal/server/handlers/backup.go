@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -157,7 +158,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	}
 
 	backupListFunction := backupsReadFunction(reader, isFullBackup)
-	backups, err := backupListFunction(timeBounds.ToModel())
+	backups, err := backupListFunction(context.Background(), timeBounds.ToModel())
 	if err != nil {
 		hLogger.Error("failed to retrieve backup list",
 			slog.Bool("isFullBackup", isFullBackup),
@@ -196,7 +197,7 @@ func readBackupsLogic(routines map[string]*model.BackupRoutine,
 	for routine := range routines {
 		reader, _ := backends.GetReader(routine)
 		backupListFunction := backupsReadFunction(reader, isFullBackup)
-		list, err := backupListFunction(timeBounds)
+		list, err := backupListFunction(context.Background(), timeBounds)
 		if err != nil {
 			return nil, err
 		}
@@ -206,7 +207,8 @@ func readBackupsLogic(routines map[string]*model.BackupRoutine,
 }
 
 func backupsReadFunction(
-	backend service.BackupListReader, fullBackup bool) func(*model.TimeBounds) ([]model.BackupDetails, error) {
+	backend service.BackupListReader, fullBackup bool,
+) func(context.Context, *model.TimeBounds) ([]model.BackupDetails, error) {
 	if fullBackup {
 		return backend.FullBackupList
 	}

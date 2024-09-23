@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -46,17 +47,16 @@ func NewRestoreManager(backends BackendsHolder,
 	}
 }
 
-func (r *dataRestorer) Restore(request *model.RestoreRequestInternal,
-) (model.RestoreJobID, error) {
+func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
 	jobID := r.restoreJobs.newJob()
-	totalRecords, err := validateStorageContainsBackup(request.SourceStorage)
+	ctx := context.TODO()
+	totalRecords, err := recordsInBackup(ctx, request)
 	if err != nil {
 		return 0, err
 	}
 
-	ctx := context.TODO()
 	go func() {
-		client, err := r.clientManager.CreateClient(request.DestinationCuster)
+		client, err := r.clientManager.GetClient(request.DestinationCuster)
 		if err != nil {
 			slog.Error("Failed to restore by path",
 				slog.Any("cluster", request.DestinationCuster),
@@ -111,7 +111,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	jobID model.RestoreJobID,
 	fullBackups []model.BackupDetails,
 ) {
-	client, err := r.clientManager.CreateClient(request.DestinationCuster)
+	client, err := r.clientManager.GetClient(request.DestinationCuster)
 	if err != nil {
 		slog.Error("Failed to restore by timestamp",
 			slog.Any("cluster", request.DestinationCuster),
@@ -163,11 +163,9 @@ func (r *dataRestorer) restoreNamespace(
 		return err
 	}
 
-	incrementalBackups, err := backend.FindIncrementalBackupsForNamespace(bounds,
-		fullBackup.Namespace)
+	incrementalBackups, err := backend.FindIncrementalBackupsForNamespace(ctx, bounds, fullBackup.Namespace)
 	if err != nil {
-		return fmt.Errorf("could not find incremental backups for namespace %s: %w",
-			fullBackup.Namespace, err)
+		return fmt.Errorf("could not find incremental backups for namespace %s: %w", fullBackup.Namespace, err)
 	}
 
 	// Append incremental backups to allBackups
@@ -198,17 +196,13 @@ func (r *dataRestorer) restoreFromPath(
 	ctx context.Context,
 	client *backup.Client,
 	request *model.RestoreTimestampRequest,
-	backupPath *string,
+	backupPath string,
 ) (RestoreHandler, error) {
 	restoreRequest := r.toRestoreRequest(request)
-	handler, err := r.restoreService.RestoreRun(ctx,
-		client,
-		&model.RestoreRequestInternal{
-			RestoreRequest: *restoreRequest,
-			Dir:            backupPath,
-		})
+	restoreRequest.BackupDataPath = backupPath
+	handler, err := r.restoreService.RestoreRun(ctx, client, restoreRequest)
 	if err != nil {
-		return nil, fmt.Errorf("could not start restore from backup at %s: %w", *backupPath, err)
+		return nil, fmt.Errorf("could not start restore from backup at %s: %w", backupPath, err)
 	}
 
 	return handler, nil
@@ -229,12 +223,14 @@ func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobSta
 	return r.restoreJobs.getStatus(jobID)
 }
 
-func validateStorageContainsBackup(storage model.Storage) (uint64, error) {
-	switch storage := storage.(type) {
-	case *model.LocalStorage:
-		return validatePathContainsBackup(*storage.Path)
-	case *model.S3Storage:
-		return NewS3Context(storage).ValidateStorageContainsBackup()
+func recordsInBackup(ctx context.Context, request *model.RestoreRequest) (uint64, error) {
+	bytes, err := ReadOneFile(ctx, request.SourceStorage, filepath.Join(request.BackupDataPath, metadataFile))
+	if err != nil {
+		return 0, err
 	}
-	return 0, nil
+	metadata, err := model.NewMetadataFromBytes(bytes)
+	if err != nil {
+		return 0, err
+	}
+	return metadata.RecordCount, nil
 }

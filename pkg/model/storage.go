@@ -7,7 +7,7 @@ type Storage interface {
 
 type LocalStorage struct {
 	// The root path for the backup repository.
-	Path *string
+	Path string
 }
 
 func (s *LocalStorage) storage() {}

@@ -46,6 +46,6 @@ type Restore interface {
 	RestoreRun(
 		ctx context.Context,
 		client *backup.Client,
-		restoreRequest *model.RestoreRequestInternal,
+		restoreRequest *model.RestoreRequest,
 	) (RestoreHandler, error)
 }

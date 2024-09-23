@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -39,7 +40,6 @@ func testRestoreJobStatus() *model.RestoreJobStatus {
 }
 
 func testBackupDetails() model.BackupDetails {
-	key := testBackupDetailKey
 	return model.BackupDetails{
 		BackupMetadata: model.BackupMetadata{
 			Created:             time.Now(),
@@ -51,7 +51,7 @@ func testBackupDetails() model.BackupDetails {
 			SecondaryIndexCount: 0,
 			UDFCount:            0,
 		},
-		Key: &key,
+		Key: testBackupDetailKey,
 	}
 }
 
@@ -92,8 +92,8 @@ func testConfig() *dto.Config {
 
 type restoreManagerMock struct{}
 
-func (mock restoreManagerMock) Restore(request *model.RestoreRequestInternal) (model.RestoreJobID, error) {
-	if *request.Dir != testDir {
+func (mock restoreManagerMock) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
+	if request.BackupDataPath != testDir {
 		return 0, errTest
 	}
 	return model.RestoreJobID(testJobID), nil
@@ -122,13 +122,15 @@ func (mock restoreManagerMock) RetrieveConfiguration(routine string, _ time.Time
 
 type backupListReaderMock struct{}
 
-func (mock backupListReaderMock) FullBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
+func (mock backupListReaderMock) FullBackupList(_ context.Context, timebounds *model.TimeBounds,
+) ([]model.BackupDetails, error) {
 	if timebounds == nil {
 		return nil, errTest
 	}
 	return []model.BackupDetails{testBackupDetails()}, nil
 }
-func (mock backupListReaderMock) IncrementalBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
+func (mock backupListReaderMock) IncrementalBackupList(_ context.Context, timebounds *model.TimeBounds,
+) ([]model.BackupDetails, error) {
 	if timebounds == nil {
 		return nil, errTest
 	}
@@ -146,7 +148,8 @@ func (mock backupListReaderMock) FindLastFullBackup(_ time.Time) ([]model.Backup
 	return []model.BackupDetails{testBackupDetails()}, nil
 }
 
-func (mock backupListReaderMock) FindIncrementalBackupsForNamespace(bounds *model.TimeBounds, _ string,
+func (mock backupListReaderMock) FindIncrementalBackupsForNamespace(
+	_ context.Context, bounds *model.TimeBounds, _ string,
 ) ([]model.BackupDetails, error) {
 	if bounds == nil {
 		return nil, errTest
