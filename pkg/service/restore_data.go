@@ -52,7 +52,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 	ctx := context.TODO()
 	totalRecords, err := recordsInBackup(ctx, request)
 	if err != nil {
-		return 0, err
+		slog.Info("Could not read backup metadata", slog.Any("err", err))
 	}
 
 	go func() {
