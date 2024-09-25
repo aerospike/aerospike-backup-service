@@ -71,7 +71,7 @@ func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, me
 	}
 
 	metadataFilePath := filepath.Join(path, metadataFile)
-	return writeOneFile(ctx, b.storage, metadataFilePath, dataYaml)
+	return WriteFile(ctx, b.storage, metadataFilePath, dataYaml)
 }
 
 // FullBackupList returns a list of available full backups.
@@ -94,7 +94,7 @@ func (b *BackupBackend) readMetadataList(ctx context.Context, timebounds *model.
 	} else {
 		backupRoot = b.incrementalBackupsPath
 	}
-	files, err := ReadAllFiles(ctx, b.storage, backupRoot, metadataFilter)
+	files, err := readFiles(ctx, b.storage, backupRoot, metadataFilter)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "is empty") {
 			return nil, nil
@@ -183,7 +183,7 @@ func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {
 }
 
 func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
-	configBackups, err := ReadAllFiles(context.Background(), b.storage, path, configurationFilter)
+	configBackups, err := readFiles(context.Background(), b.storage, path, configurationFilter)
 	if err != nil {
 		return nil, err
 	}

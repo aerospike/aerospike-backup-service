@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io"
 	"log/slog"
 	"os"
@@ -22,6 +21,7 @@ import (
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -128,6 +128,10 @@ func readConfiguration(configurationManager configuration.Manager) (*model.Confi
 	}
 
 	configBytes, err := io.ReadAll(r)
+	if err != nil {
+		slog.Error("failed to read configuration", "error", err)
+		return nil, err
+	}
 	slog.Info(fmt.Sprintf("Configuration:\n%s", string(configBytes)))
 
 	config := dto.NewConfigWithDefaultValues()

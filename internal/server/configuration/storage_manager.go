@@ -22,7 +22,7 @@ func NewStorageManager(configStorage model.Storage) *StorageManager {
 }
 
 func (m *StorageManager) ReadConfiguration() (io.ReadCloser, error) {
-	content, err := service.ReadOneFile(context.TODO(), m.storage, "")
+	content, err := service.ReadFile(context.TODO(), m.storage, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration file: %w", err)
 	}
@@ -31,22 +31,11 @@ func (m *StorageManager) ReadConfiguration() (io.ReadCloser, error) {
 }
 
 func (m *StorageManager) WriteConfiguration(config *model.Config) error {
-	writer, err := service.WriterForStorage(context.TODO(), "", m.storage, true, false, false)
-	if err != nil {
-		return err
-	}
-	newWriter, err := writer.NewWriter(context.TODO(), "")
-	if err != nil {
-		return err
-	}
-	defer newWriter.Close()
-
 	configDto := dto.NewConfigFromModel(config)
 	data, err := dto.Serialize(configDto, dto.YAML)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration data: %w", err)
 	}
 
-	_, err = newWriter.Write(data)
-	return err
+	return service.WriteFile(context.TODO(), m.storage, "", data)
 }

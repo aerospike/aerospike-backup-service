@@ -18,8 +18,8 @@ import (
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-func ReadOneFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
-	reader, err := ReaderForStorage(ctx, storage, filepath, true, nil)
+func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
+	reader, err := readerForStorage(ctx, storage, filepath, true, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +39,8 @@ func ReadOneFile(ctx context.Context, storage model.Storage, filepath string) ([
 	}
 }
 
-func ReadAllFiles(ctx context.Context, storage model.Storage, path string, filter validator) ([]*bytes.Buffer, error) {
-	reader, err := ReaderForStorage(ctx, storage, path, false, filter)
+func readFiles(ctx context.Context, storage model.Storage, path string, filter validator) ([]*bytes.Buffer, error) {
+	reader, err := readerForStorage(ctx, storage, path, false, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -76,8 +76,8 @@ func ReadAllFiles(ctx context.Context, storage model.Storage, path string, filte
 	}
 }
 
-func writeOneFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {
-	writer, err := WriterForStorage(ctx, fileName, storage, true, false, false)
+func WriteFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {
+	writer, err := writerForStorage(ctx, fileName, storage, true, false, false)
 	if err != nil {
 		return err
 	}
@@ -95,6 +95,15 @@ func writeOneFile(ctx context.Context, storage model.Storage, fileName string, c
 	}
 
 	return nil
+}
+
+func DeleteFolder(ctx context.Context, storage model.Storage, path string) error {
+	writer, err := writerForStorage(ctx, path, storage, false, true, true)
+	if err != nil {
+		return err
+	}
+
+	return writer.RemoveFiles(ctx)
 }
 
 type validator interface {
@@ -120,9 +129,9 @@ func (n *nameValidator) Run(path string) error {
 var metadataFilter = &nameValidator{metadataFile}
 var configurationFilter = &nameValidator{".conf"}
 
-// ReaderForStorage instantiates and returns a reader for the restore operation
+// readerForStorage instantiates and returns a reader for the restore operation
 // according to the specified storage type.
-func ReaderForStorage(ctx context.Context, storage model.Storage, path string, isFile bool, filter validator,
+func readerForStorage(ctx context.Context, storage model.Storage, path string, isFile bool, filter validator,
 ) (backup.StreamingReader, error) {
 	switch storage := storage.(type) {
 	case *model.LocalStorage:
@@ -170,9 +179,9 @@ func ReaderForStorage(ctx context.Context, storage model.Storage, path string, i
 	return nil, fmt.Errorf("unknown storage type %T", storage)
 }
 
-// WriterForStorage instantiates and returns a writer for the backup operation
+// writerForStorage instantiates and returns a writer for the backup operation
 // according to the specified storage type.
-func WriterForStorage(ctx context.Context, path string, storage model.Storage,
+func writerForStorage(ctx context.Context, path string, storage model.Storage,
 	isFile, isRemoveFiles, withNested bool) (backup.Writer, error) {
 	switch storage := storage.(type) {
 	case *model.LocalStorage:

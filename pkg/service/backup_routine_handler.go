@@ -119,7 +119,9 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 	// update the state
 	h.state.SetLastFullRun(now)
 
-	h.cleanIncrementalBackups(ctx, logger)
+	if h.backupFullPolicy.RemoveFiles.RemoveIncrementalBackup() {
+		h.deleteFolder(ctx, h.backend.incrementalBackupsPath, logger)
+	}
 
 	h.writeClusterConfiguration(ctx, client.AerospikeClient(), now)
 	return nil
@@ -187,7 +189,7 @@ func (h *BackupRoutineHandler) writeClusterConfiguration(
 
 	for i, info := range infos {
 		confFilePath := getConfigurationFile(h, now, i)
-		err := writeOneFile(ctx, h.storage, confFilePath, []byte(info))
+		err := WriteFile(ctx, h.storage, confFilePath, []byte(info))
 		if err != nil {
 			logger.Error("Failed to Write configuration for the backup",
 				slog.Any("err", err))
@@ -220,29 +222,11 @@ func (h *BackupRoutineHandler) writeBackupMetadata(
 	return nil
 }
 
-func (h *BackupRoutineHandler) cleanIncrementalBackups(ctx context.Context, logger *slog.Logger) {
-	if h.backupIncrPolicy.RemoveFiles.RemoveIncrementalBackup() {
-		if h.deleteFolder(ctx, h.backend.incrementalBackupsPath, logger) {
-			return
-		}
-
-		logger.Info("Cleaned incremental backups")
-	}
-}
-
-func (h *BackupRoutineHandler) deleteFolder(ctx context.Context, path string, logger *slog.Logger) bool {
-	storage, err := WriterForStorage(ctx, path, h.storage, false, true, true)
+func (h *BackupRoutineHandler) deleteFolder(ctx context.Context, path string, logger *slog.Logger) {
+	err := DeleteFolder(ctx, h.storage, path)
 	if err != nil {
-		logger.Error("Could not clean incremental backups", slog.Any("err", err))
-		return true
+		logger.Error("Could not delete folder", slog.Any("err", err))
 	}
-
-	err = storage.RemoveFiles(ctx)
-	if err != nil {
-		logger.Error("Could not clean incremental backups", slog.Any("err", err))
-		return true
-	}
-	return false
 }
 
 func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now time.Time) {

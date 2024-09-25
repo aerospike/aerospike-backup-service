@@ -224,7 +224,7 @@ func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobSta
 }
 
 func recordsInBackup(ctx context.Context, request *model.RestoreRequest) (uint64, error) {
-	bytes, err := ReadOneFile(ctx, request.SourceStorage, filepath.Join(request.BackupDataPath, metadataFile))
+	bytes, err := ReadFile(ctx, request.SourceStorage, filepath.Join(request.BackupDataPath, metadataFile))
 	if err != nil {
 		return 0, err
 	}

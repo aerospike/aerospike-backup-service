@@ -34,7 +34,8 @@ func (b *BackupGo) BackupRun(
 ) (BackupHandler, error) {
 	config := makeBackupConfig(namespace, backupRoutine, backupPolicy, timebounds, secretAgent)
 
-	writerFactory, err := WriterForStorage(ctx, path, storage, false, backupPolicy.RemoveFiles.RemoveFullBackup(), false)
+	writerFactory, err := writerForStorage(ctx, path, storage, false,
+		backupPolicy.RemoveFiles.RemoveFullBackup(), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer, %w", err)
 	}
