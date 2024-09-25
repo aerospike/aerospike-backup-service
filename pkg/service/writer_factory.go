@@ -185,9 +185,7 @@ func WriterForStorage(ctx context.Context, path string, storage model.Storage,
 		if isRemoveFiles {
 			opts = append(opts, local.WithRemoveFiles())
 		}
-		if withNested {
-			opts = append(opts, local.WithNestedDir())
-		}
+		opts = append(opts, local.WithNestedDir())
 		return local.NewWriter(ctx, opts...)
 	case *model.S3Storage:
 		client, err := getS3Client(
