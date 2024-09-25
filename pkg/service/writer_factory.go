@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -175,7 +176,7 @@ func WriterForStorage(ctx context.Context, path string, storage model.Storage,
 	isFile, isRemoveFiles, withNested bool) (backup.Writer, error) {
 	switch storage := storage.(type) {
 	case *model.LocalStorage:
-		fullPath := storage.Path + "/" + path
+		fullPath := filepath.Join(storage.Path, path)
 		var opts []local.Opt
 		if isFile {
 			opts = append(opts, local.WithFile(fullPath))
@@ -195,7 +196,7 @@ func WriterForStorage(ctx context.Context, path string, storage model.Storage,
 		if err != nil {
 			return nil, err
 		}
-		fullPath := storage.Path + "/" + path
+		fullPath := filepath.Join(storage.Path, path)
 		var opts []s3.Opt
 		if isFile {
 			opts = append(opts, s3.WithFile(fullPath))
