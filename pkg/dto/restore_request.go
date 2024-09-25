@@ -35,6 +35,9 @@ type RestoreTimestampRequest struct {
 
 // Validate validates the restore operation request.
 func (r *RestoreRequest) Validate() error {
+	if r.BackupDataPath == nil {
+		return errors.New("path is not specified")
+	}
 	if err := r.DestinationCuster.Validate(); err != nil {
 		return err
 	}
