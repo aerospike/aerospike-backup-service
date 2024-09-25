@@ -14,8 +14,8 @@ type RestoreRequest struct {
 	Policy            *RestorePolicy    `json:"policy,omitempty" validate:"required"`
 	SourceStorage     *Storage          `json:"source,omitempty" validate:"required"`
 	SecretAgent       *SecretAgent      `json:"secret-agent,omitempty"`
-	// Path to the data from storage root. Empty means backups are in the storage root folder.
-	BackupDataPath *string `json:"backup-data,omitempty" validate:"optional"`
+	// Path to the data from storage root.
+	BackupDataPath *string `json:"backup-data,omitempty" validate:"required"`
 }
 
 // RestoreTimestampRequest represents a restore by timestamp operation request.
