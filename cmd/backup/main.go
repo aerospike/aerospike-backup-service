@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -120,18 +122,19 @@ func systemCtx() context.Context {
 
 func readConfiguration(configurationManager configuration.Manager) (*model.Config, error) {
 	r, err := configurationManager.ReadConfiguration()
-
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
 		return nil, err
 	}
 
+	configBytes, err := io.ReadAll(r)
+	slog.Info(fmt.Sprintf("Configuration:\n%s", string(configBytes)))
+
 	config := dto.NewConfigWithDefaultValues()
-	if err := dto.Deserialize(config, r, dto.YAML); err != nil {
+	if err := yaml.Unmarshal(configBytes, config); err != nil {
 		return nil, err
 	}
 	r.Close()
-	slog.Info(fmt.Sprintf("Configuration: %v", config))
 	return config.ToModel()
 }
 

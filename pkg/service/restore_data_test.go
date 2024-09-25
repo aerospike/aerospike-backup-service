@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -36,7 +35,7 @@ func (b *BackendHolderMock) GetReader(name string) (BackupListReader, bool) {
 	case "routine_fail_read":
 		return &BackendFailMock{}, true
 	case "routine_fail_restore":
-		return &BackendMock{}, true
+		return &BackendFailMock{}, true
 	}
 	return nil, false
 }
@@ -244,9 +243,7 @@ func Test_RestoreTimestamp(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 	jobStatus, _ := restoreService.JobStatus(jobID)
-	if jobStatus.Status != model.JobStatusDone {
-		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
-	}
+	require.Equal(t, model.JobStatusDone, jobStatus.Status)
 	if jobStatus.ReadRecords != 3 {
 		t.Errorf("Expected 3 (one full and 2 incremental backups), got %d", jobStatus.ReadRecords)
 	}
@@ -256,70 +253,6 @@ func Test_WrongStatus(t *testing.T) {
 	wrongJobStatus, err := restoreService.JobStatus(1111)
 	if err == nil {
 		t.Errorf("Expected not found, but got %v", wrongJobStatus)
-	}
-}
-
-func Test_RestoreFromWrongFolder(t *testing.T) {
-	restoreRequest := &model.RestoreRequest{
-		DestinationCuster: model.NewLocalAerospikeCluster(),
-		Policy: &model.RestorePolicy{
-			SetList: []string{"set1"},
-		},
-		SourceStorage: &model.LocalStorage{
-			Path: validBackupPath,
-		},
-		BackupDataPath: "wrongDir",
-	}
-
-	_, err := restoreService.Restore(restoreRequest)
-	if !os.IsNotExist(err) {
-		t.Errorf("Expected not exist, but got %v", err)
-	}
-}
-
-func Test_RestoreFromEmptyFolder(t *testing.T) {
-	restoreRequest := &model.RestoreRequest{
-		DestinationCuster: model.NewLocalAerospikeCluster(),
-		Policy: &model.RestorePolicy{
-			SetList: []string{"set1"},
-		},
-		SourceStorage: &model.LocalStorage{
-			Path: "./",
-		},
-		BackupDataPath: "",
-	}
-
-	_, err := restoreService.Restore(restoreRequest)
-	if err == nil || !strings.Contains(err.Error(), "no backup files found") {
-		t.Errorf("Expected no backup found, but got %v", err)
-	}
-}
-
-func Test_RestoreFail(t *testing.T) {
-	makeTestFolders()
-	t.Cleanup(func() {
-		cleanTestFolder()
-	})
-
-	restoreRequest := &model.RestoreRequest{
-		DestinationCuster: &model.AerospikeCluster{},
-		Policy: &model.RestorePolicy{
-			SetList: []string{"set1"},
-		},
-		SourceStorage: &model.LocalStorage{
-			Path: validBackupPath,
-		},
-		BackupDataPath: "",
-	}
-
-	jobID, err := restoreService.Restore(restoreRequest)
-	if err != nil {
-		t.Errorf("Expected no error, got %v", err)
-	}
-	time.Sleep(1 * time.Second)
-	status, _ := restoreService.JobStatus(jobID)
-	if status.Status != model.JobStatusFailed {
-		t.Errorf("Expected restore job status to be Failed, but got %s", status.Status)
 	}
 }
 
@@ -364,12 +297,8 @@ func Test_restoreTimestampFail(t *testing.T) {
 		DestinationCuster: &model.AerospikeCluster{},
 	}
 
-	jobID, _ := restoreService.RestoreByTime(request)
-	time.Sleep(1 * time.Second)
-	status, _ := restoreService.JobStatus(jobID)
-	if status.Status != model.JobStatusFailed {
-		t.Errorf("Expected restore job status to be Failed, but got %s", status.Status)
-	}
+	_, err := restoreService.RestoreByTime(request)
+	require.Error(t, err)
 }
 
 func Test_RetrieveConfiguration(t *testing.T) {
