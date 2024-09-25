@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/smithy-go/ptr"
 	"net/http"
 	"testing"
 	"time"
@@ -29,6 +30,7 @@ func testRestoreRequest() dto.RestoreRequest {
 		Policy:            policy,
 		SourceStorage:     storage,
 		SecretAgent:       nil,
+		BackupDataPath:    ptr.String(testDir),
 	}
 }
 
