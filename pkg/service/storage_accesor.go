@@ -137,7 +137,7 @@ func readerForStorage(ctx context.Context, storage model.Storage, path string, i
 	case *model.LocalStorage:
 		var fullPath string
 		if len(path) > 0 {
-			fullPath = storage.Path + "/" + path
+			fullPath = filepath.Join(storage.Path, path)
 		} else {
 			fullPath = storage.Path
 		}
@@ -165,7 +165,7 @@ func readerForStorage(ctx context.Context, storage model.Storage, path string, i
 		}
 		var fullPath string
 		if len(path) > 0 {
-			fullPath = storage.Path + "/" + path
+			fullPath = filepath.Join(storage.Path, path)
 		} else {
 			fullPath = storage.Path
 		}
