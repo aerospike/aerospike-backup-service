@@ -135,12 +135,7 @@ func readerForStorage(ctx context.Context, storage model.Storage, path string, i
 ) (backup.StreamingReader, error) {
 	switch storage := storage.(type) {
 	case *model.LocalStorage:
-		var fullPath string
-		if len(path) > 0 {
-			fullPath = filepath.Join(storage.Path, path)
-		} else {
-			fullPath = storage.Path
-		}
+		fullPath := filepath.Join(storage.Path, path)
 		opts := []local.Opt{
 			local.WithNestedDir(),
 		}
@@ -163,12 +158,7 @@ func readerForStorage(ctx context.Context, storage model.Storage, path string, i
 			s3.WithValidator(filter),
 			s3.WithNestedDir(),
 		}
-		var fullPath string
-		if len(path) > 0 {
-			fullPath = filepath.Join(storage.Path, path)
-		} else {
-			fullPath = storage.Path
-		}
+		fullPath := filepath.Join(storage.Path, path)
 		if isFile {
 			opts = append(opts, s3.WithFile(fullPath))
 		} else {
