@@ -27,9 +27,13 @@ func NewFileConfigurationManager(path string) Manager {
 }
 
 // ReadConfiguration returns a reader for the configuration file.
-func (cm *FileConfigurationManager) ReadConfiguration(_ context.Context) (io.ReadCloser, error) {
+func (cm *FileConfigurationManager) ReadConfiguration(ctx context.Context) (io.ReadCloser, error) {
 	cm.Lock()
 	defer cm.Unlock()
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	filePath := cm.FilePath
 	if filePath == "" {
@@ -40,9 +44,13 @@ func (cm *FileConfigurationManager) ReadConfiguration(_ context.Context) (io.Rea
 }
 
 // WriteConfiguration writes the configuration to the given file path.
-func (cm *FileConfigurationManager) WriteConfiguration(_ context.Context, config *model.Config) error {
+func (cm *FileConfigurationManager) WriteConfiguration(ctx context.Context, config *model.Config) error {
 	cm.Lock()
 	defer cm.Unlock()
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
 	filePath := cm.FilePath
 	if filePath == "" {

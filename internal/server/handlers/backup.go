@@ -158,7 +158,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	}
 
 	backupListFunction := backupsReadFunction(reader, isFullBackup)
-	backups, err := backupListFunction(context.Background(), timeBounds.ToModel())
+	backups, err := backupListFunction(r.Context(), timeBounds.ToModel())
 	if err != nil {
 		hLogger.Error("failed to retrieve backup list",
 			slog.Bool("isFullBackup", isFullBackup),
