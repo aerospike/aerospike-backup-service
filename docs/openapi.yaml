@@ -1183,15 +1183,22 @@ components:
       description: BackupDetails contains information about a backup.
       example:
         udf-count: 2
+        backup-data-path: daily/backup/1707915600000/source-ns1
         file-count: 1
         created: 2023-03-20T14:50:00Z
         namespace: testNamespace
         from: 2023-03-19T14:50:00Z
+        storage:
+          s3-storage: "{}"
+          local-storage: "{}"
         record-count: 100
         secondary-index-count: 5
         byte-count: 2000
-        key: storage/daily/backup/1707915600000/source-ns1
       properties:
+        backup-data-path:
+          description: The path to the backup files.
+          example: daily/backup/1707915600000/source-ns1
+          type: string
         byte-count:
           description: The size of the backup in bytes.
           example: 2000
@@ -1211,10 +1218,6 @@ components:
             (for incremental backups).
           example: 2023-03-19T14:50:00Z
           type: string
-        key:
-          description: The path to the backup files.
-          example: storage/daily/backup/1707915600000/source-ns1
-          type: string
         namespace:
           description: The namespace of a backup.
           example: testNamespace
@@ -1229,6 +1232,8 @@ components:
           example: 5
           format: int64
           type: integer
+        storage:
+          $ref: '#/components/schemas/dto.Storage'
         udf-count:
           description: The number of UDF files backed up.
           example: 2
@@ -1949,9 +1954,8 @@ components:
     dto.RestoreRequest:
       description: RestoreRequest represents a restore operation request.
       properties:
-        backup-data:
-          description: Path to the data from storage root. Empty means backups are
-            in the storage root folder.
+        backup-data-path:
+          description: Path to the data from storage root.
           type: string
         destination:
           $ref: '#/components/schemas/dto.AerospikeCluster'
@@ -1962,6 +1966,7 @@ components:
         source:
           $ref: '#/components/schemas/dto.Storage'
       required:
+      - backup-data-path
       - destination
       - policy
       - source

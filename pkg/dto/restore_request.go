@@ -15,7 +15,7 @@ type RestoreRequest struct {
 	SourceStorage     *Storage          `json:"source,omitempty" validate:"required"`
 	SecretAgent       *SecretAgent      `json:"secret-agent,omitempty"`
 	// Path to the data from storage root.
-	BackupDataPath *string `json:"backup-data,omitempty" validate:"required"`
+	BackupDataPath *string `json:"backup-data-path" validate:"required"`
 }
 
 // RestoreTimestampRequest represents a restore by timestamp operation request.

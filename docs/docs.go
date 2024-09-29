@@ -1505,6 +1505,11 @@ const docTemplate = `{
             "description": "BackupDetails contains information about a backup.",
             "type": "object",
             "properties": {
+                "backup-data-path": {
+                    "description": "The path to the backup files.",
+                    "type": "string",
+                    "example": "daily/backup/1707915600000/source-ns1"
+                },
                 "byte-count": {
                     "description": "The size of the backup in bytes.",
                     "type": "integer",
@@ -1527,11 +1532,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2023-03-19T14:50:00Z"
                 },
-                "key": {
-                    "description": "The path to the backup files.",
-                    "type": "string",
-                    "example": "storage/daily/backup/1707915600000/source-ns1"
-                },
                 "namespace": {
                     "description": "The namespace of a backup.",
                     "type": "string",
@@ -1548,6 +1548,9 @@ const docTemplate = `{
                     "type": "integer",
                     "format": "int64",
                     "example": 5
+                },
+                "storage": {
+                    "$ref": "#/definitions/dto.Storage"
                 },
                 "udf-count": {
                     "description": "The number of UDF files backed up.",
@@ -2290,13 +2293,14 @@ const docTemplate = `{
             "description": "RestoreRequest represents a restore operation request.",
             "type": "object",
             "required": [
+                "backup-data-path",
                 "destination",
                 "policy",
                 "source"
             ],
             "properties": {
-                "backup-data": {
-                    "description": "Path to the data from storage root. Empty means backups are in the storage root folder.",
+                "backup-data-path": {
+                    "description": "Path to the data from storage root.",
                     "type": "string"
                 },
                 "destination": {

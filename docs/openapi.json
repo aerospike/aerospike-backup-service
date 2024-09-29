@@ -1691,6 +1691,11 @@
       "dto.BackupDetails" : {
         "description" : "BackupDetails contains information about a backup.",
         "properties" : {
+          "backup-data-path" : {
+            "description" : "The path to the backup files.",
+            "example" : "daily/backup/1707915600000/source-ns1",
+            "type" : "string"
+          },
           "byte-count" : {
             "description" : "The size of the backup in bytes.",
             "example" : 2000,
@@ -1713,11 +1718,6 @@
             "example" : "2023-03-19T14:50:00Z",
             "type" : "string"
           },
-          "key" : {
-            "description" : "The path to the backup files.",
-            "example" : "storage/daily/backup/1707915600000/source-ns1",
-            "type" : "string"
-          },
           "namespace" : {
             "description" : "The namespace of a backup.",
             "example" : "testNamespace",
@@ -1734,6 +1734,9 @@
             "example" : 5,
             "format" : "int64",
             "type" : "integer"
+          },
+          "storage" : {
+            "$ref" : "#/components/schemas/dto.Storage"
           },
           "udf-count" : {
             "description" : "The number of UDF files backed up.",
@@ -2383,8 +2386,8 @@
       "dto.RestoreRequest" : {
         "description" : "RestoreRequest represents a restore operation request.",
         "properties" : {
-          "backup-data" : {
-            "description" : "Path to the data from storage root. Empty means backups are in the storage root folder.",
+          "backup-data-path" : {
+            "description" : "Path to the data from storage root.",
             "type" : "string"
           },
           "destination" : {
@@ -2400,7 +2403,7 @@
             "$ref" : "#/components/schemas/dto.Storage"
           }
         },
-        "required" : [ "destination", "policy", "source" ],
+        "required" : [ "backup-data-path", "destination", "policy", "source" ],
         "type" : "object"
       },
       "dto.RestoreTimestampRequest" : {

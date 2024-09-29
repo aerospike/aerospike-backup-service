@@ -12,7 +12,8 @@ import (
 type BackupDetails struct {
 	BackupMetadata
 	// The path to the backup files.
-	Key string
+	Key     string
+	Storage Storage
 }
 
 // BackupMetadata is an internal container for storing backup metadata.

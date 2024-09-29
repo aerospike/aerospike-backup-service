@@ -112,6 +112,7 @@ func (b *BackupBackend) readMetadataList(ctx context.Context, timebounds *model.
 			backups = append(backups, model.BackupDetails{
 				BackupMetadata: *metadata,
 				Key:            getKey(backupRoot, metadata, b.removeFullBackup && isFullBackup),
+				Storage:        b.storage,
 			})
 		}
 	}

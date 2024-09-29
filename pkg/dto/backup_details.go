@@ -11,7 +11,8 @@ import (
 type BackupDetails struct {
 	BackupMetadata
 	// The path to the backup files.
-	Key string `yaml:"key,omitempty" json:"key,omitempty" example:"storage/daily/backup/1707915600000/source-ns1"`
+	Key     string   `yaml:"backup-data-path" json:"backup-data-path" example:"daily/backup/1707915600000/source-ns1"`
+	Storage *Storage `yaml:"storage" json:"storage"`
 }
 
 // BackupMetadata is an internal container for storing backup metadata.
@@ -46,6 +47,7 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails) {
 	d.FileCount = m.FileCount
 	d.SecondaryIndexCount = m.SecondaryIndexCount
 	d.UDFCount = m.UDFCount
+	d.Storage = NewStorageFromModel(m.Storage)
 }
 
 // NewBackupDetailsFromModel creates a new BackupDetails from a model.BackupDetails
