@@ -132,13 +132,13 @@ func readConfiguration(ctx context.Context, configurationManager configuration.M
 		slog.Error("failed to read configuration", "error", err)
 		return nil, err
 	}
+	defer r.Close()
 	slog.Info(fmt.Sprintf("Configuration:\n%s", string(configBytes)))
 
 	config := dto.NewConfigWithDefaultValues()
 	if err := yaml.Unmarshal(configBytes, config); err != nil {
 		return nil, err
 	}
-	defer r.Close()
 	return config.ToModel()
 }
 
