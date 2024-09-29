@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -133,7 +132,7 @@ func readConfiguration(ctx context.Context, configurationManager configuration.M
 		return nil, err
 	}
 	defer r.Close()
-	slog.Info(fmt.Sprintf("Configuration:\n%s", string(configBytes)))
+	slog.Info("Read service config file:\n" + string(configBytes))
 
 	config := dto.NewConfigWithDefaultValues()
 	if err := yaml.Unmarshal(configBytes, config); err != nil {
