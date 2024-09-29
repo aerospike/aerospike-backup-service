@@ -11,7 +11,7 @@ import (
 type BackupDetails struct {
 	BackupMetadata
 	// The path to the backup files.
-	Key     string   `yaml:"backup-data-path" json:"backup-data-path" example:"daily/backup/1707915600000/source-ns1"`
+	Key     string   `yaml:"key" json:"key" example:"daily/backup/1707915600000/source-ns1"`
 	Storage *Storage `yaml:"storage" json:"storage"`
 }
 

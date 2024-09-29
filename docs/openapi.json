@@ -1691,11 +1691,6 @@
       "dto.BackupDetails" : {
         "description" : "BackupDetails contains information about a backup.",
         "properties" : {
-          "backup-data-path" : {
-            "description" : "The path to the backup files.",
-            "example" : "daily/backup/1707915600000/source-ns1",
-            "type" : "string"
-          },
           "byte-count" : {
             "description" : "The size of the backup in bytes.",
             "example" : 2000,
@@ -1716,6 +1711,11 @@
           "from" : {
             "description" : "The lower time bound of backup entities in the ISO 8601 format (for incremental backups).",
             "example" : "2023-03-19T14:50:00Z",
+            "type" : "string"
+          },
+          "key" : {
+            "description" : "The path to the backup files.",
+            "example" : "daily/backup/1707915600000/source-ns1",
             "type" : "string"
           },
           "namespace" : {

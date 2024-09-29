@@ -1505,11 +1505,6 @@ const docTemplate = `{
             "description": "BackupDetails contains information about a backup.",
             "type": "object",
             "properties": {
-                "backup-data-path": {
-                    "description": "The path to the backup files.",
-                    "type": "string",
-                    "example": "daily/backup/1707915600000/source-ns1"
-                },
                 "byte-count": {
                     "description": "The size of the backup in bytes.",
                     "type": "integer",
@@ -1531,6 +1526,11 @@ const docTemplate = `{
                     "description": "The lower time bound of backup entities in the ISO 8601 format (for incremental backups).",
                     "type": "string",
                     "example": "2023-03-19T14:50:00Z"
+                },
+                "key": {
+                    "description": "The path to the backup files.",
+                    "type": "string",
+                    "example": "daily/backup/1707915600000/source-ns1"
                 },
                 "namespace": {
                     "description": "The namespace of a backup.",
