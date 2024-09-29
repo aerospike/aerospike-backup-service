@@ -11,7 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 )
 
-// StorageManager implement Manager interface.
+// StorageManager implements Manager interface.
 // it stores service configuration in provided Storage (Local, s3 aws etc.)
 type StorageManager struct {
 	storage model.Storage

@@ -195,7 +195,7 @@ func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
 	return b.packageFiles(configBackups)
 }
 
-// PackageFiles creates a zip archive from the given file list and returns it as a byte array.
+// packageFiles creates a zip archive from the given file list and returns it as a byte array.
 func (b *BackupBackend) packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
 	// Create a buffer to write our archive to
 	buf := new(bytes.Buffer)

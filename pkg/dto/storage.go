@@ -3,6 +3,7 @@ package dto
 import (
 	"errors"
 	"io"
+	"log/slog"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
@@ -88,7 +89,6 @@ func (s *S3Storage) Validate() error {
 	if s.S3Region == "" {
 		return errors.New("S3 region is not specified")
 	}
-	// Add more S3-specific validations here if needed
 	return nil
 }
 
@@ -111,6 +111,8 @@ func (s *Storage) ToModel() model.Storage {
 			MaxConnsPerHost:    s.S3Storage.MaxConnsPerHost,
 		}
 	}
+
+	slog.Info("error converting storage dto to model: no storage configuration provided")
 	return nil
 }
 
