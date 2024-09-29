@@ -23,10 +23,10 @@ func TestFullBackupRemoveFiles(t *testing.T) {
 
 	path := backend.fullBackupsPath + "/data/source-ns1/"
 	_ = os.MkdirAll(path, 0744)
-	_ = backend.writeBackupMetadata(context.TODO(), path, model.BackupMetadata{Created: time.UnixMilli(10)})
+	_ = backend.writeBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(10)})
 
 	to := model.NewTimeBoundsTo(time.UnixMilli(1000))
-	list, _ := backend.FullBackupList(context.TODO(), to)
+	list, _ := backend.FullBackupList(context.Background(), to)
 	if len(list) != 1 {
 		t.Errorf("Expected list size 1, got %v", list)
 	}
@@ -46,11 +46,11 @@ func TestFullBackupKeepFiles(t *testing.T) {
 	for _, t := range []int64{10, 20, 30} {
 		path := backend.fullBackupsPath + "/" + strconv.FormatInt(t, 10) + "/data/source-ns1/"
 		_ = os.MkdirAll(path, 0744)
-		_ = backend.writeBackupMetadata(context.TODO(), path, model.BackupMetadata{Created: time.UnixMilli(t)})
+		_ = backend.writeBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(t)})
 	}
 
 	bounds := model.NewTimeBoundsTo(time.UnixMilli(25))
-	list, _ := backend.FullBackupList(context.TODO(), bounds)
+	list, _ := backend.FullBackupList(context.Background(), bounds)
 	if len(list) != 2 {
 		t.Errorf("Expected list size 2, got %v", list)
 	}

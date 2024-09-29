@@ -138,7 +138,7 @@ func readConfiguration(ctx context.Context, configurationManager configuration.M
 	if err := yaml.Unmarshal(configBytes, config); err != nil {
 		return nil, err
 	}
-	r.Close()
+	defer r.Close()
 	return config.ToModel()
 }
 

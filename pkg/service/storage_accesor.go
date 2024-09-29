@@ -3,7 +3,6 @@ package service
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -123,7 +122,7 @@ func (n *nameValidator) Run(path string) error {
 		return nil
 	}
 
-	return errors.New("skip")
+	return fmt.Errorf("skipped by filter '%s'", n.filter)
 }
 
 var metadataFilter = &nameValidator{metadataFile}
