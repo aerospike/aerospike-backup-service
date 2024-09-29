@@ -179,12 +179,12 @@ func (mock backendsHolderMock) SetData(_ map[string]*service.BackupBackend) {
 
 type configurationManagerMock struct{}
 
-func (mock configurationManagerMock) ReadConfiguration() (io.ReadCloser, error) {
+func (mock configurationManagerMock) ReadConfiguration(_ context.Context) (io.ReadCloser, error) {
 	serialize, _ := dto.Serialize(testConfig(), dto.JSON)
 	return io.NopCloser(bytes.NewReader(serialize)), nil
 }
 
-func (mock configurationManagerMock) WriteConfiguration(config *model.Config) error {
+func (mock configurationManagerMock) WriteConfiguration(_ context.Context, config *model.Config) error {
 	if config == nil {
 		return errTest
 	}

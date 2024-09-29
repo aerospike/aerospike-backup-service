@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/url"
@@ -13,8 +14,8 @@ import (
 )
 
 type Manager interface {
-	ReadConfiguration() (io.ReadCloser, error)
-	WriteConfiguration(config *model.Config) error
+	ReadConfiguration(ctx context.Context) (io.ReadCloser, error)
+	WriteConfiguration(ctx context.Context, config *model.Config) error
 }
 
 // NewConfigManager returns a new Manager.

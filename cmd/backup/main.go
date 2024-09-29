@@ -71,14 +71,14 @@ func startService(configFile string, remote bool) error {
 		return err
 	}
 
+	// get system ctx
+	ctx := systemCtx()
+
 	// read configuration file
-	config, err := readConfiguration(manager)
+	config, err := readConfiguration(ctx, manager)
 	if err != nil {
 		return err
 	}
-
-	// get system ctx
-	ctx := systemCtx()
 
 	// set default loggers
 	loggerConfig := config.ServiceConfig.Logger
@@ -120,8 +120,8 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func readConfiguration(configurationManager configuration.Manager) (*model.Config, error) {
-	r, err := configurationManager.ReadConfiguration()
+func readConfiguration(ctx context.Context, configurationManager configuration.Manager) (*model.Config, error) {
+	r, err := configurationManager.ReadConfiguration(ctx)
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
 		return nil, err

@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -26,7 +27,7 @@ func NewFileConfigurationManager(path string) Manager {
 }
 
 // ReadConfiguration returns a reader for the configuration file.
-func (cm *FileConfigurationManager) ReadConfiguration() (io.ReadCloser, error) {
+func (cm *FileConfigurationManager) ReadConfiguration(_ context.Context) (io.ReadCloser, error) {
 	cm.Lock()
 	defer cm.Unlock()
 
@@ -39,7 +40,7 @@ func (cm *FileConfigurationManager) ReadConfiguration() (io.ReadCloser, error) {
 }
 
 // WriteConfiguration writes the configuration to the given file path.
-func (cm *FileConfigurationManager) WriteConfiguration(config *model.Config) error {
+func (cm *FileConfigurationManager) WriteConfiguration(_ context.Context, config *model.Config) error {
 	cm.Lock()
 	defer cm.Unlock()
 
