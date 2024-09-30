@@ -3,16 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
-	s3Storage "github.com/aerospike/backup-go/io/aws/s3"
-	"github.com/aerospike/backup-go/io/local"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 // BackupGo implements the [Backup] interface.
@@ -37,10 +32,10 @@ func (b *BackupGo) BackupRun(
 	namespace string,
 	path string,
 ) (BackupHandler, error) {
-	config := makeBackupConfig(namespace, backupRoutine, backupPolicy,
-		timebounds, secretAgent)
+	config := makeBackupConfig(namespace, backupRoutine, backupPolicy, timebounds, secretAgent)
 
-	writerFactory, err := getWriter(ctx, path, storage)
+	writerFactory, err := writerForStorage(ctx, path, storage, false,
+		backupPolicy.RemoveFiles.RemoveFullBackup(), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer, %w", err)
 	}
@@ -135,56 +130,4 @@ func makeBackupConfig(
 	}
 
 	return config
-}
-
-// getWriter instantiates and returns a writer for the backup operation
-// according to the specified storage type.
-func getWriter(ctx context.Context, path string, storage model.Storage,
-) (backup.Writer, error) {
-	switch storage := storage.(type) {
-	case *model.LocalStorage:
-		return local.NewWriter(local.WithDir(path), local.WithRemoveFiles())
-	case *model.S3Storage:
-		client, err := getS3Client(
-			ctx,
-			storage.S3Profile,
-			storage.S3Region,
-			storage.S3EndpointOverride,
-			storage.MaxConnsPerHost,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return s3Storage.NewWriter(ctx, client, storage.Bucket, s3Storage.WithDir(path), s3Storage.WithRemoveFiles())
-	}
-	return nil, fmt.Errorf("unknown storage type %T", storage)
-}
-
-func getS3Client(ctx context.Context, profile, region string, endpoint *string,
-	maxConnsPerHost int) (*s3.Client, error) {
-	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithSharedConfigProfile(profile),
-		config.WithRegion(region),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		if endpoint != nil {
-			o.BaseEndpoint = endpoint
-		}
-
-		o.UsePathStyle = true
-
-		if maxConnsPerHost > 0 {
-			o.HTTPClient = &http.Client{
-				Transport: &http.Transport{
-					MaxConnsPerHost: maxConnsPerHost,
-				},
-			}
-		}
-	})
-
-	return client, nil
 }

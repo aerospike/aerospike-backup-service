@@ -64,7 +64,7 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.configurationManager.WriteConfiguration(s.config)
+	err = s.configurationManager.WriteConfiguration(r.Context(), s.config)
 	if err != nil {
 		// We won't log config as it is not secure.
 		hLogger.Error("failed to update configuration",

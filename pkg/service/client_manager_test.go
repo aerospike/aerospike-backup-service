@@ -54,7 +54,7 @@ func Test_CreateClient(t *testing.T) {
 		&MockClientFactory{},
 	)
 
-	client, err := clientManager.CreateClient(&model.AerospikeCluster{})
+	client, err := clientManager.createClient(&model.AerospikeCluster{})
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 }
@@ -67,7 +67,7 @@ func Test_CreateClient_Errors(t *testing.T) {
 		mockClientFactory,
 	)
 
-	client, err := clientManager.CreateClient(aeroCluster)
+	client, err := clientManager.createClient(aeroCluster)
 	assert.Nil(t, client)
 	assert.ErrorContains(t, err, "failed to connect to aerospike")
 }

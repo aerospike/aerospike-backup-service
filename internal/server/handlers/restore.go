@@ -43,12 +43,8 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	requestInternal := &dto.RestoreRequestInternal{
-		RestoreRequest: request,
-		Dir:            request.SourceStorage.Path,
-	}
 
-	jobID, err := s.restoreManager.Restore(requestInternal.ToModel())
+	jobID, err := s.restoreManager.Restore(request.ToModel())
 	if err != nil {
 		hLogger.Error("failed to restore",
 			slog.Any("error", err),
@@ -95,11 +91,7 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	requestInternal := &dto.RestoreRequestInternal{
-		RestoreRequest: request,
-		Dir:            request.SourceStorage.Path,
-	}
-	jobID, err := s.restoreManager.Restore(requestInternal.ToModel())
+	jobID, err := s.restoreManager.Restore(request.ToModel())
 	if err != nil {
 		hLogger.Error("failed to restore",
 			slog.Any("error", err),
@@ -140,7 +132,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = request.Validate(); err != nil {
+	if err = request.Validate(s.config); err != nil {
 		hLogger.Error("failed to validate request",
 			slog.Any("error", err),
 		)

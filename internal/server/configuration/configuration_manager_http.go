@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -23,8 +24,13 @@ func NewHTTPConfigurationManager(uri string) Manager {
 }
 
 // ReadConfiguration returns a reader for the configuration using a URL.
-func (h *HTTPConfigurationManager) ReadConfiguration() (io.ReadCloser, error) {
-	resp, err := http.Get(h.configURL)
+func (h *HTTPConfigurationManager) ReadConfiguration(ctx context.Context) (io.ReadCloser, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.configURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +39,7 @@ func (h *HTTPConfigurationManager) ReadConfiguration() (io.ReadCloser, error) {
 }
 
 // WriteConfiguration is unsupported for HTTPConfigurationManager.
-func (h *HTTPConfigurationManager) WriteConfiguration(_ *model.Config) error {
+func (h *HTTPConfigurationManager) WriteConfiguration(_ context.Context, _ *model.Config) error {
 	return fmt.Errorf("%w: HTTPConfigurationManager.WriteConfiguration",
 		errors.ErrUnsupported)
 }

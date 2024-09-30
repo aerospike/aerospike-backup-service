@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -91,7 +92,8 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	backups, err := readBackupsLogic(s.config.BackupRoutines, s.backupBackends, timeBounds.ToModel(), isFullBackup)
+	backups, err := readBackupsLogic(r.Context(),
+		s.config.BackupRoutines, s.backupBackends, timeBounds.ToModel(), isFullBackup)
 	if err != nil {
 		hLogger.Error("failed to retrieve backup list",
 			slog.Any("timeBounds", timeBounds),
@@ -157,7 +159,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	}
 
 	backupListFunction := backupsReadFunction(reader, isFullBackup)
-	backups, err := backupListFunction(timeBounds.ToModel())
+	backups, err := backupListFunction(r.Context(), timeBounds.ToModel())
 	if err != nil {
 		hLogger.Error("failed to retrieve backup list",
 			slog.Bool("isFullBackup", isFullBackup),
@@ -188,15 +190,17 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-func readBackupsLogic(routines map[string]*model.BackupRoutine,
+func readBackupsLogic(ctx context.Context,
+	routines map[string]*model.BackupRoutine,
 	backends service.BackendsHolder,
 	timeBounds *model.TimeBounds,
-	isFullBackup bool) (map[string][]model.BackupDetails, error) {
+	isFullBackup bool,
+) (map[string][]model.BackupDetails, error) {
 	result := make(map[string][]model.BackupDetails)
 	for routine := range routines {
 		reader, _ := backends.GetReader(routine)
 		backupListFunction := backupsReadFunction(reader, isFullBackup)
-		list, err := backupListFunction(timeBounds)
+		list, err := backupListFunction(ctx, timeBounds)
 		if err != nil {
 			return nil, err
 		}
@@ -206,7 +210,8 @@ func readBackupsLogic(routines map[string]*model.BackupRoutine,
 }
 
 func backupsReadFunction(
-	backend service.BackupListReader, fullBackup bool) func(*model.TimeBounds) ([]model.BackupDetails, error) {
+	backend service.BackupListReader, fullBackup bool,
+) func(context.Context, *model.TimeBounds) ([]model.BackupDetails, error) {
 	if fullBackup {
 		return backend.FullBackupList
 	}

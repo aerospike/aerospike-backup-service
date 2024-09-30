@@ -5,8 +5,7 @@ go 1.22
 require (
 	github.com/aerospike/aerospike-client-go/v7 v7.6.1
 	github.com/aerospike/aerospike-management-lib v1.4.0
-	github.com/aerospike/backup-go v0.1.1-0.20240915144030-90f6c7196a9f
-	github.com/aws/aws-sdk-go-v2 v1.30.4
+	github.com/aerospike/backup-go v0.1.1-0.20240925101433-f4c9883d21fe
 	github.com/aws/aws-sdk-go-v2/config v1.27.28
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.59.0
 	github.com/aws/smithy-go v1.20.4
@@ -27,6 +26,7 @@ require (
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.30.4 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.4 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.28 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.12 // indirect

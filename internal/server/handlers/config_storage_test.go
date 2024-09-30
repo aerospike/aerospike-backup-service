@@ -18,10 +18,9 @@ const unusedTestStorage = "unusedTestStorage"
 func testConfigStorage() *dto.Storage {
 	path := testDir
 	return &dto.Storage{
-		Type:            "local",
-		Path:            &path,
-		MinPartSize:     5242880,
-		MaxConnsPerHost: 1,
+		LocalStorage: &dto.LocalStorage{
+			Path: path,
+		},
 	}
 }
 

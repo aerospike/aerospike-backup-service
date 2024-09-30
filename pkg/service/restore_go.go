@@ -8,9 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
-	s3Storage "github.com/aerospike/backup-go/io/aws/s3"
 	"github.com/aerospike/backup-go/io/encoding/asb"
-	"github.com/aerospike/backup-go/io/local"
 )
 
 // RestoreGo implements the [Restore] interface.
@@ -27,13 +25,13 @@ func NewRestoreGo() *RestoreGo {
 func (r *RestoreGo) RestoreRun(
 	ctx context.Context,
 	client *backup.Client,
-	restoreRequest *model.RestoreRequestInternal,
+	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
 	var err error
 
-	config := makeRestoreConfig(restoreRequest)
+	config := makeRestoreConfig(request)
 
-	reader, err := getReader(ctx, restoreRequest.Dir, restoreRequest.SourceStorage)
+	reader, err := readerForStorage(ctx, request.SourceStorage, request.BackupDataPath, false, asb.NewValidator())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}
@@ -47,7 +45,7 @@ func (r *RestoreGo) RestoreRun(
 }
 
 //nolint:funlen
-func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
+func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 ) *backup.RestoreConfig {
 	config := backup.NewDefaultRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
@@ -125,7 +123,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequestInternal,
 	return config
 }
 
-func makeWritePolicy(restoreRequest *model.RestoreRequestInternal) *a.WritePolicy {
+func makeWritePolicy(restoreRequest *model.RestoreRequest) *a.WritePolicy {
 	writePolicy := a.NewWritePolicy(0, 0)
 	writePolicy.GenerationPolicy = a.EXPECT_GEN_GT
 	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
@@ -159,33 +157,4 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	default:
 		return a.UPDATE
 	}
-}
-
-// getReader instantiates and returns a reader for the restore operation
-// according to the specified storage type.
-func getReader(ctx context.Context, path *string, storage model.Storage,
-) (backup.StreamingReader, error) {
-	switch storage := storage.(type) {
-	case *model.LocalStorage:
-		return local.NewReader(local.WithDir(*path), local.WithValidator(asb.NewValidator()))
-	case *model.S3Storage:
-		client, err := getS3Client(
-			ctx,
-			storage.S3Profile,
-			storage.S3Region,
-			storage.S3EndpointOverride,
-			storage.MaxConnsPerHost,
-		)
-		if err != nil {
-			return nil, err
-		}
-		return s3Storage.NewReader(
-			ctx,
-			client,
-			storage.Bucket,
-			s3Storage.WithDir(storage.Path),
-			s3Storage.WithValidator(asb.NewValidator()),
-		)
-	}
-	return nil, fmt.Errorf("unknown storage type %T", storage)
 }

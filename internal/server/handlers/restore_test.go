@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
+	"github.com/aws/smithy-go/ptr"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
@@ -29,6 +30,7 @@ func testRestoreRequest() dto.RestoreRequest {
 		Policy:            policy,
 		SourceStorage:     storage,
 		SecretAgent:       nil,
+		BackupDataPath:    ptr.String(testDir),
 	}
 }
 

@@ -63,7 +63,7 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.WriteConfiguration(s.config)
+	err = s.configurationManager.WriteConfiguration(r.Context(), s.config)
 	if err != nil {
 		hLogger.Error("failed to write configuration",
 			slog.String("name", name),
@@ -190,7 +190,7 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.WriteConfiguration(s.config)
+	err = s.configurationManager.WriteConfiguration(r.Context(), s.config)
 	if err != nil {
 		hLogger.Error("failed to write configuration",
 			slog.String("name", name),
@@ -230,7 +230,7 @@ func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.WriteConfiguration(s.config)
+	err = s.configurationManager.WriteConfiguration(r.Context(), s.config)
 	if err != nil {
 		hLogger.Error("failed to write configuration",
 			slog.String("name", policyName),

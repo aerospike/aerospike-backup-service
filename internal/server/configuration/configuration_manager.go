@@ -2,7 +2,7 @@ package configuration
 
 import (
 	"bytes"
-	"fmt"
+	"context"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,47 +14,34 @@ import (
 )
 
 type Manager interface {
-	ReadConfiguration() (io.ReadCloser, error)
-	WriteConfiguration(config *model.Config) error
+	ReadConfiguration(ctx context.Context) (io.ReadCloser, error)
+	WriteConfiguration(ctx context.Context, config *model.Config) error
 }
 
 // NewConfigManager returns a new Manager.
 func NewConfigManager(configFile string, remote bool) (Manager, error) {
-	configStorage, err := makeConfigStorage(configFile, remote)
+	if remote {
+		storage, err := readStorage(configFile)
+		if err != nil {
+			return nil, err
+		}
+
+		return NewStorageManager(storage), nil
+	}
+
+	isHTTP, err := isHTTPPath(configFile)
 	if err != nil {
 		return nil, err
 	}
 
-	switch storage := configStorage.(type) {
-	case *model.S3Storage:
-		return newS3ConfigurationManager(storage)
-	case *model.LocalStorage:
-		return newLocalConfigurationManager(storage)
-	default:
-		return nil, fmt.Errorf("unknown type %T", storage)
-	}
-}
-
-func newLocalConfigurationManager(configStorage *model.LocalStorage) (
-	Manager, error) {
-	isHTTP, err := isHTTPPath(*configStorage.Path)
-	if err != nil {
-		return nil, err
-	}
 	if isHTTP {
-		return NewHTTPConfigurationManager(*configStorage.Path), nil
+		return NewHTTPConfigurationManager(configFile), nil
 	}
-	return NewFileConfigurationManager(*configStorage.Path), nil
+
+	return NewFileConfigurationManager(configFile), nil
 }
 
-func makeConfigStorage(configURI string, remote bool,
-) (model.Storage, error) {
-	if !remote {
-		return &model.LocalStorage{
-			Path: &configURI,
-		}, nil
-	}
-
+func readStorage(configURI string) (model.Storage, error) {
 	content, err := loadFileContent(configURI)
 	if err != nil {
 		return nil, err

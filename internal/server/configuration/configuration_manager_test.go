@@ -19,21 +19,17 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Create an HTTP test server
+	storageDto := "local-storage:\n    path: ./config.yaml"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/config.yaml":
-			fmt.Fprint(w, "type: local\npath: /tmp/config.yaml")
-		case "/remote.yaml":
-			fmt.Fprint(w, "type: local\npath: https://example.com/config.yaml")
-		case "/s3config.yaml":
-			fmt.Fprint(w, "type: aws-s3\npath: s3://bucket/config.yaml\ns3-region: europe")
+		case "/storage.yaml":
+			_, _ = fmt.Fprint(w, storageDto)
 		default:
 			http.NotFound(w, r)
 		}
 	}))
 	defer server.Close()
 
-	configPath := filepath.Join(tempDir, "config.yaml")
 	tests := []struct {
 		name         string
 		configFile   string
@@ -43,17 +39,17 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 		expectedType reflect.Type
 	}{
 		{
-			name:       "local non-remote",
-			configFile: configPath,
+			name:       "Local file, non-remote",
+			configFile: filepath.Join(tempDir, "local_config.yaml"),
 			remote:     false,
 			setup: func() error {
-				return os.WriteFile(configPath, []byte("test config"), 0600)
+				return os.WriteFile(filepath.Join(tempDir, "local_config.yaml"), []byte("test: config"), 0600)
 			},
 			expectError:  false,
 			expectedType: reflect.TypeOf(&FileConfigurationManager{}),
 		},
 		{
-			name:         "http non-remote",
+			name:         "HTTP file, non-remote",
 			configFile:   server.URL + "/config.yaml",
 			remote:       false,
 			setup:        func() error { return nil },
@@ -61,64 +57,34 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			expectedType: reflect.TypeOf(&HTTPConfigurationManager{}),
 		},
 		{
-			name:       "local remote local configuration",
-			configFile: filepath.Join(tempDir, "remote.yaml"),
-			remote:     true,
-			setup: func() error {
-				return os.WriteFile(filepath.Join(tempDir, "remote.yaml"),
-					[]byte(fmt.Sprintf("type: local\npath: %s", configPath)), 0600)
-			},
-			expectError:  false,
-			expectedType: reflect.TypeOf(&FileConfigurationManager{}),
-		},
-		{
-			name:       "local remote http configuration",
-			configFile: filepath.Join(tempDir, "remote.yaml"),
-			remote:     true,
-			setup: func() error {
-				return os.WriteFile(filepath.Join(tempDir, "remote.yaml"),
-					[]byte(fmt.Sprintf("type: local\npath: %s/config.yaml", server.URL)), 0600)
-			},
-			expectError:  false,
-			expectedType: reflect.TypeOf(&HTTPConfigurationManager{}),
-		},
-		{
-			name:         "http remote local configuration",
-			configFile:   server.URL + "/config.yaml",
+			name:         "HTTP file, remote",
+			configFile:   server.URL + "/storage.yaml",
 			remote:       true,
 			setup:        func() error { return nil },
 			expectError:  false,
-			expectedType: reflect.TypeOf(&FileConfigurationManager{}),
+			expectedType: reflect.TypeOf(&StorageManager{}),
 		},
 		{
-			name:         "http remote http",
-			configFile:   server.URL + "/remote.yaml",
-			remote:       true,
-			setup:        func() error { return nil },
-			expectError:  false,
-			expectedType: reflect.TypeOf(&HTTPConfigurationManager{}),
-		},
-		{
-			name:       "local s3",
-			configFile: filepath.Join(tempDir, "s3config.yaml"),
+			name:       "Local file, remote",
+			configFile: filepath.Join(tempDir, "storage_config.yaml"),
 			remote:     true,
 			setup: func() error {
-				return os.WriteFile(filepath.Join(tempDir, "s3config.yaml"),
-					[]byte("type: aws-s3\npath: s3://bucket/config.yaml\ns3-region: europe"), 0600)
+				return os.WriteFile(filepath.Join(tempDir, "storage_config.yaml"), []byte(storageDto), 0600)
 			},
 			expectError:  false,
-			expectedType: reflect.TypeOf(&S3ConfigurationManager{}),
+			expectedType: reflect.TypeOf(&StorageManager{}),
 		},
 		{
-			name:         "http s3",
-			configFile:   server.URL + "/s3config.yaml",
-			remote:       true,
-			setup:        func() error { return nil },
-			expectError:  false,
-			expectedType: reflect.TypeOf(&S3ConfigurationManager{}),
+			name:       "Local file, remote but invalid storage config",
+			configFile: filepath.Join(tempDir, "invalid_storage.yaml"),
+			remote:     true,
+			setup: func() error {
+				return os.WriteFile(filepath.Join(tempDir, "invalid_storage.yaml"), []byte("invalid: yaml"), 0600)
+			},
+			expectError:  true,
+			expectedType: nil,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.setup()
@@ -127,9 +93,10 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			config, err := NewConfigManager(tt.configFile, tt.remote)
 			if tt.expectError {
 				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
+				return
 			}
+
+			require.NoError(t, err)
 			configType := reflect.TypeOf(config)
 			require.Equal(t, tt.expectedType.String(), configType.String())
 		})

@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -20,6 +20,7 @@ import (
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -69,14 +70,14 @@ func startService(configFile string, remote bool) error {
 		return err
 	}
 
+	// get system ctx
+	ctx := systemCtx()
+
 	// read configuration file
-	config, err := readConfiguration(manager)
+	config, err := readConfiguration(ctx, manager)
 	if err != nil {
 		return err
 	}
-
-	// get system ctx
-	ctx := systemCtx()
 
 	// set default loggers
 	loggerConfig := config.ServiceConfig.Logger
@@ -118,20 +119,25 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func readConfiguration(configurationManager configuration.Manager) (*model.Config, error) {
-	r, err := configurationManager.ReadConfiguration()
-
+func readConfiguration(ctx context.Context, configurationManager configuration.Manager) (*model.Config, error) {
+	r, err := configurationManager.ReadConfiguration(ctx)
 	if err != nil {
 		slog.Error("failed to read configuration file", "error", err)
 		return nil, err
 	}
 
-	config := dto.NewConfigWithDefaultValues()
-	if err := dto.Deserialize(config, r, dto.YAML); err != nil {
+	configBytes, err := io.ReadAll(r)
+	if err != nil {
+		slog.Error("failed to read configuration", "error", err)
 		return nil, err
 	}
-	r.Close()
-	slog.Info(fmt.Sprintf("Configuration: %v", config))
+	defer r.Close()
+	slog.Info("Read service config file:\n" + string(configBytes))
+
+	config := dto.NewConfigWithDefaultValues()
+	if err := yaml.Unmarshal(configBytes, config); err != nil {
+		return nil, err
+	}
 	return config.ToModel()
 }
 

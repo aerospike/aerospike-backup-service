@@ -12,14 +12,15 @@ aerospike-clusters:
 
 storage:
   local:
-    type: "local"
-    path: ./localStorage
+    local-storage:
+      path: ./localStorage
   minio:
-    type: "aws-s3"
-    path: s3://as-backup-bucket/storage1
-    s3-region: eu-central-1
-    s3-profile: minio
-    s3-endpoint-override: http://localhost:9000
+    s3-storage:
+      path: storage1
+      bucket: as-backup-bucket
+      s3-region: eu-central-1
+      s3-profile: minio
+      s3-endpoint-override: http://localhost:9000
 
 backup-policies:
   keepFilesMaxRecordsPolicy:

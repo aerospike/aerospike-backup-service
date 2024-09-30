@@ -3,24 +3,25 @@ package service
 import (
 	"archive/zip"
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"io"
-	"log/slog"
+	"os"
 	"path/filepath"
 	"sort"
-	"sync"
+	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"gopkg.in/yaml.v3"
 )
 
 // BackupBackend handles the backup management logic, employing a StorageAccessor
 // implementation for I/O operations.
 type BackupBackend struct {
-	StorageAccessor
+	storage                model.Storage
 	fullBackupsPath        string
 	incrementalBackupsPath string
 	stateFilePath          string
@@ -28,108 +29,114 @@ type BackupBackend struct {
 
 	// BackupBackend needs to know if full backup is running to filter it out
 	fullBackupInProgress *atomic.Bool
-	stateFileMutex       sync.RWMutex
 }
 
 var _ BackupListReader = (*BackupBackend)(nil)
 
-const metadataFile = "metadata.yaml"
-
 func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend {
 	removeFullBackup := routine.BackupPolicy.RemoveFiles.RemoveFullBackup()
-	switch storage := routine.Storage.(type) {
-	case *model.LocalStorage:
-		routinePath := filepath.Join(*storage.Path, routineName)
-		return &BackupBackend{
-			StorageAccessor:        NewOSDiskAccessor(),
-			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
-			incrementalBackupsPath: filepath.Join(routinePath, model.IncrementalBackupDirectory),
-			stateFilePath:          filepath.Join(routinePath, model.StateFileName),
-			removeFullBackup:       removeFullBackup,
-			fullBackupInProgress:   &atomic.Bool{},
-		}
-	case *model.S3Storage:
-		s3Context := NewS3Context(storage)
-		routinePath := filepath.Join(s3Context.Path, routineName)
-		return &BackupBackend{
-			StorageAccessor:        s3Context,
-			fullBackupsPath:        filepath.Join(routinePath, model.FullBackupDirectory),
-			incrementalBackupsPath: filepath.Join(routinePath, model.IncrementalBackupDirectory),
-			stateFilePath:          filepath.Join(routinePath, model.StateFileName),
-			removeFullBackup:       removeFullBackup,
-			fullBackupInProgress:   &atomic.Bool{},
-		}
-	default:
-		panic(fmt.Sprintf("Unsupported storage type: %T", storage))
+	return &BackupBackend{
+		storage:                routine.Storage,
+		fullBackupsPath:        filepath.Join(routineName, model.FullBackupDirectory),
+		incrementalBackupsPath: filepath.Join(routineName, model.IncrementalBackupDirectory),
+		stateFilePath:          filepath.Join(routineName, model.StateFileName),
+		removeFullBackup:       removeFullBackup,
+		fullBackupInProgress:   &atomic.Bool{},
 	}
 }
 
 func (b *BackupBackend) readState() *model.BackupState {
-	b.stateFileMutex.RLock()
-	defer b.stateFileMutex.RUnlock()
-	state := model.NewBackupState()
-	err := b.readBackupState(b.stateFilePath, state)
-	if err != nil {
-		slog.Warn("Failed to read backup state",
-			slog.String("path", b.stateFilePath),
-			slog.Any("err", err))
+	to := model.NewTimeBoundsTo(time.Now())
+	fullBackupList, _ := b.FullBackupList(context.Background(), to)
+	incrementalBackupList, _ := b.IncrementalBackupList(context.Background(), to)
+
+	return &model.BackupState{
+		LastFullRun: lastBackupTime(fullBackupList),
+		LastIncrRun: lastBackupTime(incrementalBackupList),
 	}
-	return state
 }
 
-func (b *BackupBackend) writeState(state *model.BackupState) error {
-	b.stateFileMutex.Lock()
-	defer b.stateFileMutex.Unlock()
-	return b.writeYaml(b.stateFilePath, state)
+func lastBackupTime(b []model.BackupDetails) time.Time {
+	if len(b) > 0 {
+		return latestBackupBeforeTime(b, time.Now())[0].Created
+	}
+
+	return time.Time{}
 }
 
-func (b *BackupBackend) writeBackupMetadata(path string, metadata model.BackupMetadata) error {
-	metadataFilePath := filepath.Join(path, metadataFile)
-	return b.writeYaml(metadataFilePath, metadata)
-}
-
-func (b *BackupBackend) writeYaml(path string, data any) error {
-	dataYaml, err := yaml.Marshal(data)
+func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error {
+	dataYaml, err := yaml.Marshal(metadata)
 	if err != nil {
 		return err
 	}
 
-	return b.Write(path, dataYaml)
+	metadataFilePath := filepath.Join(path, metadataFile)
+	return WriteFile(ctx, b.storage, metadataFilePath, dataYaml)
 }
 
 // FullBackupList returns a list of available full backups.
-func (b *BackupBackend) FullBackupList(timebounds *model.TimeBounds) ([]model.BackupDetails, error) {
-	slog.Info("Get full backups",
-		slog.String("backupFolder", b.fullBackupsPath),
-		slog.Any("timebounds", timebounds),
-		slog.Bool("removeFullBackup", b.removeFullBackup))
+func (b *BackupBackend) FullBackupList(ctx context.Context, timeBounds *model.TimeBounds,
+) ([]model.BackupDetails, error) {
+	return b.readMetadataList(ctx, timeBounds, true)
+}
 
-	// when use RemoveFiles.RemoveFullBackup() = true, backup data is located in
-	// backupFolder folder itself
-	if b.removeFullBackup {
-		return b.detailsFromPaths(timebounds, false, b.fullBackupsPath), nil
+// IncrementalBackupList returns a list of available incremental backups.
+func (b *BackupBackend) IncrementalBackupList(ctx context.Context, timeBounds *model.TimeBounds,
+) ([]model.BackupDetails, error) {
+	return b.readMetadataList(ctx, timeBounds, false)
+}
+
+func (b *BackupBackend) readMetadataList(ctx context.Context, timebounds *model.TimeBounds, isFullBackup bool,
+) ([]model.BackupDetails, error) {
+	var backupRoot string
+	if isFullBackup {
+		backupRoot = b.fullBackupsPath
+	} else {
+		backupRoot = b.incrementalBackupsPath
+	}
+	files, err := readFiles(ctx, b.storage, backupRoot, metadataFilter)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "is empty") {
+			return nil, nil
+		}
+		return nil, err
 	}
 
-	return b.fromSubfolders(timebounds, b.fullBackupsPath)
+	var backups []model.BackupDetails
+	for _, buf := range files {
+		metadata, err := model.NewMetadataFromBytes(buf.Bytes())
+		if err != nil {
+			return nil, fmt.Errorf("error decoding backup metadata YAML: %w", err)
+		}
+		if timebounds.Contains(metadata.Created) {
+			backups = append(backups, model.BackupDetails{
+				BackupMetadata: *metadata,
+				Key:            getKey(backupRoot, metadata, b.removeFullBackup && isFullBackup),
+				Storage:        b.storage,
+			})
+		}
+	}
+
+	return backups, nil
 }
 
 // FindLastFullBackup returns last full backup prior to given time.
 func (b *BackupBackend) FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error) {
-	fullBackupList, err := b.FullBackupList(model.NewTimeBoundsTo(toTime))
+	fullBackupList, err := b.FullBackupList(context.Background(), model.NewTimeBoundsTo(toTime))
 	if err != nil {
 		return nil, fmt.Errorf("cannot read full backup list: %w", err)
 	}
 
-	fullBackup := latestFullBackupBeforeTime(fullBackupList, toTime) // it's a list of namespaces
+	fullBackup := latestBackupBeforeTime(fullBackupList, toTime) // it's a list of namespaces
 	if len(fullBackup) == 0 {
 		return nil, fmt.Errorf("%w: %s", errBackupNotFound, toTime)
 	}
 	return fullBackup, nil
 }
 
-// latestFullBackupBeforeTime returns list of backups with same creation time,
+// latestBackupBeforeTime returns list of backups with same creation time,
 // latest before upperBound.
-func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound time.Time,
+func latestBackupBeforeTime(allBackups []model.BackupDetails, upperBound time.Time,
 ) []model.BackupDetails {
 	var result []model.BackupDetails
 	var latestTime time.Time
@@ -150,9 +157,10 @@ func latestFullBackupBeforeTime(allBackups []model.BackupDetails, upperBound tim
 }
 
 // FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
-func (b *BackupBackend) FindIncrementalBackupsForNamespace(bounds *model.TimeBounds, namespace string,
+func (b *BackupBackend) FindIncrementalBackupsForNamespace(
+	ctx context.Context, bounds *model.TimeBounds, namespace string,
 ) ([]model.BackupDetails, error) {
-	allIncrementalBackupList, err := b.IncrementalBackupList(bounds)
+	allIncrementalBackupList, err := b.IncrementalBackupList(ctx, bounds)
 	if err != nil {
 		return nil, err
 	}
@@ -171,57 +179,12 @@ func (b *BackupBackend) FindIncrementalBackupsForNamespace(bounds *model.TimeBou
 	return filteredIncrementalBackups, nil
 }
 
-func (b *BackupBackend) detailsFromPaths(timebounds *model.TimeBounds, useCache bool,
-	paths ...string) []model.BackupDetails {
-	// each path contains a backup of specific time
-	backupDetails := make([]model.BackupDetails, 0, len(paths))
-	for _, path := range paths {
-		namespaces, err := b.lsDir(filepath.Join(path, model.DataDirectory), nil)
-		if err != nil {
-			slog.Warn("Cannot list backup dir", "path", path, "err", err)
-			continue
-		}
-		for _, namespacePath := range namespaces {
-			details, err := b.readBackupDetails(namespacePath, useCache)
-			if err != nil {
-				slog.Debug("Cannot read backup details", "err", err)
-				continue
-			}
-			if timebounds.Contains(details.Created) {
-				backupDetails = append(backupDetails, details)
-			}
-		}
-	}
-	return backupDetails
-}
-
-func (b *BackupBackend) fromSubfolders(timebounds *model.TimeBounds, backupFolder string,
-) ([]model.BackupDetails, error) {
-	var after *string
-	if timebounds.FromTime != nil {
-		after = util.Ptr(formatTime(*timebounds.FromTime))
-	}
-
-	subfolders, err := b.lsDir(backupFolder, after)
-	if err != nil {
-		return nil, err
-	}
-
-	return b.detailsFromPaths(timebounds, true, subfolders...), nil
-}
-
-// IncrementalBackupList returns a list of available incremental backups.
-func (b *BackupBackend) IncrementalBackupList(timebounds *model.TimeBounds,
-) ([]model.BackupDetails, error) {
-	return b.fromSubfolders(timebounds, b.incrementalBackupsPath)
-}
-
 func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {
 	return b.fullBackupInProgress
 }
 
 func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
-	configBackups, err := b.lsFiles(path)
+	configBackups, err := readFiles(context.Background(), b.storage, path, configurationFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -232,28 +195,25 @@ func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
 	return b.packageFiles(configBackups)
 }
 
-// PackageFiles creates a zip archive from the given file list and returns it as a byte array.
-func (b *BackupBackend) packageFiles(files []string) ([]byte, error) {
-	// Create a buffer to Write our archive to
+// packageFiles creates a zip archive from the given file list and returns it as a byte array.
+func (b *BackupBackend) packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
+	// Create a buffer to write our archive to
 	buf := new(bytes.Buffer)
 
 	// Create a new zip archive
 	w := zip.NewWriter(buf)
 
-	for _, file := range files {
-		data, err := b.Read(file)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read file %s: %w", file, err)
-		}
+	for i, data := range buffers {
+		fileName := getConfigFileName(i)
 
-		f, err := w.Create(filepath.Base(file))
+		f, err := w.Create(fileName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create entry for filename %s: %w", file, err)
+			return nil, fmt.Errorf("failed to create entry for filename %s: %w", fileName, err)
 		}
 
 		_, err = io.Copy(f, data)
 		if err != nil {
-			return nil, fmt.Errorf("failed to Write file %s: %w", file, err)
+			return nil, fmt.Errorf("failed to write buffer %d: %w", i, err)
 		}
 	}
 

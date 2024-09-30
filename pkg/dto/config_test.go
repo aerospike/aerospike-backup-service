@@ -3,8 +3,6 @@ package dto
 import (
 	"errors"
 	"testing"
-
-	"github.com/aws/smithy-go/ptr"
 )
 
 func validConfig() *Config {
@@ -35,8 +33,8 @@ func validConfig() *Config {
 			"policy2": {},
 		},
 		Storage: map[string]*Storage{
-			"storage1": {Type: Local, Path: ptr.String("/")},
-			"storage2": {Type: Local, Path: ptr.String("/")},
+			"storage1": {LocalStorage: &LocalStorage{"/"}},
+			"storage2": {LocalStorage: &LocalStorage{"/"}},
 		},
 	}
 }

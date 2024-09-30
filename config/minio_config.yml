@@ -8,13 +8,13 @@ aerospike-clusters:
       password: psw
 storage:
   minioStorage:
-    # Use "aws-s3" for S3 or compatible and "local" for local storage.
-    type: "aws-s3"
-    # as-backup-bucket is expected to exist in MinIO.
-    path: s3://as-backup-bucket/minioStorage
-    s3-region: eu-central-1
-    s3-profile: minio
-    s3-endpoint-override: http://localhost:9000
+    s3-storage:
+      path: minioStorage
+      # as-backup-bucket is expected to exist in MinIO.
+      bucket: as-backup-bucket
+      s3-region: eu-central-1
+      s3-profile: minio
+      s3-endpoint-override: http://localhost:9000
 backup-policies:
   keepFilesPolicy:
     # Run backup operations in a single thread.

@@ -14,8 +14,6 @@ import (
 type ClientManager interface {
 	// GetClient returns a backup client by aerospike cluster name (new or cached).
 	GetClient(*model.AerospikeCluster) (*backup.Client, error)
-	// CreateClient creates a new backup client.
-	CreateClient(*model.AerospikeCluster) (*backup.Client, error)
 	// Close ensures that the specified backup client is closed.
 	Close(*backup.Client)
 }
@@ -66,7 +64,7 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 		return info.client, nil
 	}
 
-	client, err := cm.CreateClient(cluster)
+	client, err := cm.createClient(cluster)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create backup client: %w", err)
 	}
@@ -79,8 +77,8 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 	return client, nil
 }
 
-// CreateClient creates a new backup client given the aerospike cluster configuration.
-func (cm *ClientManagerImpl) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
+// createClient creates a new backup client given the aerospike cluster configuration.
+func (cm *ClientManagerImpl) createClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
 	aeroClient, err := cm.clientFactory.NewClientWithPolicyAndHost(cluster.ASClientPolicy(),
 		cluster.ASClientHosts()...)
 	if err != nil {

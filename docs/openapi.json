@@ -1715,7 +1715,7 @@
           },
           "key" : {
             "description" : "The path to the backup files.",
-            "example" : "storage/daily/backup/1707915600000/source-ns1",
+            "example" : "daily/backup/1707915600000/source-ns1",
             "type" : "string"
           },
           "namespace" : {
@@ -1734,6 +1734,9 @@
             "example" : 5,
             "format" : "int64",
             "type" : "integer"
+          },
+          "storage" : {
+            "$ref" : "#/components/schemas/dto.Storage"
           },
           "udf-count" : {
             "description" : "The number of UDF files backed up.",
@@ -2112,6 +2115,17 @@
         "type" : "string",
         "x-enum-varnames" : [ "JobStatusRunning", "JobStatusDone", "JobStatusFailed" ]
       },
+      "dto.LocalStorage" : {
+        "properties" : {
+          "path" : {
+            "description" : "The root path for the backup repository.",
+            "example" : "backups",
+            "type" : "string"
+          }
+        },
+        "required" : [ "path" ],
+        "type" : "object"
+      },
       "dto.LoggerConfig" : {
         "description" : "LoggerConfig represents the backup service logger configuration.",
         "properties" : {
@@ -2372,6 +2386,10 @@
       "dto.RestoreRequest" : {
         "description" : "RestoreRequest represents a restore operation request.",
         "properties" : {
+          "backup-data-path" : {
+            "description" : "Path to the data from storage root.",
+            "type" : "string"
+          },
           "destination" : {
             "$ref" : "#/components/schemas/dto.AerospikeCluster"
           },
@@ -2385,7 +2403,7 @@
             "$ref" : "#/components/schemas/dto.Storage"
           }
         },
-        "required" : [ "destination", "policy", "source" ],
+        "required" : [ "backup-data-path", "destination", "policy", "source" ],
         "type" : "object"
       },
       "dto.RestoreTimestampRequest" : {
@@ -2476,6 +2494,51 @@
         },
         "type" : "object"
       },
+      "dto.S3Storage" : {
+        "properties" : {
+          "bucket" : {
+            "description" : "The S3 bucket name.",
+            "type" : "string"
+          },
+          "max_async_connections" : {
+            "description" : "The maximum number of simultaneous requests from S3.",
+            "example" : 16,
+            "type" : "integer"
+          },
+          "min_part_size" : {
+            "description" : "The minimum size in bytes of individual S3 UploadParts",
+            "example" : 10,
+            "type" : "integer"
+          },
+          "path" : {
+            "description" : "The root path for the backup repository within the bucket.",
+            "example" : "backups",
+            "type" : "string"
+          },
+          "s3-endpoint-override" : {
+            "description" : "An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).",
+            "example" : "http://host.docker.internal:9000",
+            "type" : "string"
+          },
+          "s3-log-level" : {
+            "default" : "FATAL",
+            "description" : "The log level of the AWS S3 SDK (AWS S3 optional).",
+            "type" : "string"
+          },
+          "s3-profile" : {
+            "description" : "The S3 profile name (AWS S3 optional).",
+            "example" : "default",
+            "type" : "string"
+          },
+          "s3-region" : {
+            "description" : "The S3 region string.",
+            "example" : "eu-central-1",
+            "type" : "string"
+          }
+        },
+        "required" : [ "bucket", "path", "s3-region" ],
+        "type" : "object"
+      },
       "dto.SecretAgent" : {
         "description" : "SecretAgent represents the configuration of an Aerospike Secret Agent for a backup/restore operation.",
         "properties" : {
@@ -2537,57 +2600,22 @@
       "dto.Storage" : {
         "description" : "Storage represents the configuration for a backup storage details.",
         "properties" : {
-          "max_async_connections" : {
-            "description" : "The maximum number of simultaneous requests from S3.",
-            "example" : 16,
-            "type" : "integer"
-          },
-          "min_part_size" : {
-            "description" : "The minimum size in bytes of individual S3 UploadParts",
-            "example" : 10,
-            "type" : "integer"
-          },
-          "path" : {
-            "description" : "The root path for the backup repository.",
-            "example" : "backups",
-            "type" : "string"
-          },
-          "s3-endpoint-override" : {
-            "description" : "An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).",
-            "example" : "http://host.docker.internal:9000",
-            "type" : "string"
-          },
-          "s3-log-level" : {
-            "default" : "FATAL",
-            "description" : "The log level of the AWS S3 SDK (AWS S3 optional).",
-            "type" : "string"
-          },
-          "s3-profile" : {
-            "description" : "The S3 profile name (AWS S3 optional).",
-            "example" : "default",
-            "type" : "string"
-          },
-          "s3-region" : {
-            "description" : "The S3 region string (AWS S3 optional).",
-            "example" : "eu-central-1",
-            "type" : "string"
-          },
-          "type" : {
+          "local-storage" : {
             "allOf" : [ {
-              "$ref" : "#/components/schemas/dto.StorageType"
+              "$ref" : "#/components/schemas/dto.LocalStorage"
             } ],
-            "description" : "The type of the storage provider",
+            "description" : "LocalStorage configuration, set if using local storage",
+            "type" : "object"
+          },
+          "s3-storage" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.S3Storage"
+            } ],
+            "description" : "S3Storage configuration, set if using S3 storage",
             "type" : "object"
           }
         },
-        "required" : [ "path", "type" ],
         "type" : "object"
-      },
-      "dto.StorageType" : {
-        "description" : "StorageType represents the type of the backup storage.",
-        "enum" : [ "local", "aws-s3" ],
-        "type" : "string",
-        "x-enum-varnames" : [ "Local", "S3" ]
       },
       "dto.TLS" : {
         "description" : "TLS represents the Aerospike cluster TLS configuration options.",

@@ -1,7 +1,10 @@
 package model
 
 import (
+	"fmt"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 // BackupDetails contains information about a backup.
@@ -9,7 +12,8 @@ import (
 type BackupDetails struct {
 	BackupMetadata
 	// The path to the backup files.
-	Key *string
+	Key     string
+	Storage Storage
 }
 
 // BackupMetadata is an internal container for storing backup metadata.
@@ -32,4 +36,14 @@ type BackupMetadata struct {
 	SecondaryIndexCount uint64 `yaml:"secondary-index-count,omitempty" json:"secondary-index-count,omitempty" format:"int64" example:"5"`
 	// The number of UDF files backed up.
 	UDFCount uint64 `yaml:"udf-count,omitempty" json:"udf-count,omitempty" format:"int64" example:"2"`
+}
+
+// NewMetadataFromBytes creates a new Metadata object from a byte slice
+func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
+	var metadata BackupMetadata
+	err := yaml.Unmarshal(data, &metadata)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshaling YAML: %w", err)
+	}
+	return &metadata, nil
 }
