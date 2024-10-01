@@ -32,3 +32,18 @@ type S3Storage struct {
 }
 
 func (s *S3Storage) storage() {}
+
+type GcpStorage struct {
+	// Path to file containing Service Account JSON Key.
+	KeyFile string
+	// For GCP storage bucket is not part of the path as in S3.
+	// So we should set it separately.
+	BucketName string
+	// The root path for the backup repository.
+	Path string
+	// Alternative url.
+	// It is not recommended to use an alternate URL in a production environment.
+	Endpoint string
+}
+
+func (s *GcpStorage) storage() {}

@@ -2,6 +2,7 @@ package dto
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 
@@ -15,12 +16,41 @@ type Storage struct {
 	LocalStorage *LocalStorage `yaml:"local-storage,omitempty" json:"local-storage,omitempty"`
 	// S3Storage configuration, set if using S3 storage
 	S3Storage *S3Storage `yaml:"s3-storage,omitempty" json:"s3-storage,omitempty"`
+	// GcpStorage configuration, set if using GCP storage
+	GcpStorage *GcpStorage `yaml:"gcp-storage,omitempty" json:"gcp-storage,omitempty"`
+}
+
+// StorageValidator interface for storage types that can be validated
+type StorageValidator interface {
+	Validate() error
+}
+
+// Validate checks if the Storage is valid.
+func (s *Storage) Validate() error {
+	if s == nil {
+		return errors.New("storage is not specified")
+	}
+
+	validator, err := uniqueStorage(s.LocalStorage, s.S3Storage, s.GcpStorage)
+	if err != nil {
+		return err
+	}
+
+	return validator.Validate()
 }
 
 // LocalStorage represents the configuration for local storage.
 type LocalStorage struct {
 	// The root path for the backup repository.
 	Path string `yaml:"path" json:"path" example:"backups" validate:"required"`
+}
+
+// Validate checks if the LocalStorage is valid.
+func (l *LocalStorage) Validate() error {
+	if l.Path == "" {
+		return errors.New("local storage path is not specified")
+	}
+	return nil
 }
 
 // S3Storage represents the configuration for S3 storage.
@@ -45,39 +75,6 @@ type S3Storage struct {
 	MaxConnsPerHost int `yaml:"max_async_connections,omitempty" json:"max_async_connections,omitempty" example:"16"`
 }
 
-// Validate checks if the Storage is valid.
-func (s *Storage) Validate() error {
-	if s == nil {
-		return errors.New("storage is not specified")
-	}
-
-	if s.LocalStorage != nil && s.S3Storage != nil {
-		return errors.New("only one storage type should be specified")
-	}
-
-	if s.LocalStorage == nil && s.S3Storage == nil {
-		return errors.New("no storage configuration provided")
-	}
-
-	if s.LocalStorage != nil {
-		return s.LocalStorage.Validate()
-	}
-
-	if s.S3Storage != nil {
-		return s.S3Storage.Validate()
-	}
-
-	return nil
-}
-
-// Validate checks if the LocalStorage is valid.
-func (l *LocalStorage) Validate() error {
-	if l.Path == "" {
-		return errors.New("local storage path is not specified")
-	}
-	return nil
-}
-
 // Validate checks if the S3Storage is valid.
 func (s *S3Storage) Validate() error {
 	if s.Bucket == "" {
@@ -88,6 +85,34 @@ func (s *S3Storage) Validate() error {
 	}
 	if s.S3Region == "" {
 		return errors.New("S3 region is not specified")
+	}
+	return nil
+}
+
+// GcpStorage represents the configuration for GCP storage.
+type GcpStorage struct {
+	// Path to file containing Service Account JSON Key.
+	KeyFile string `yaml:"key-file" json:"key-file" validate:"required"`
+	// For GCP storage bucket is not part of the path as in S3.
+	// So we should set it separately.
+	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
+	// The root path for the backup repository.
+	Path string `yaml:"path" json:"path" example:"backups" validate:"required"`
+	// Alternative url.
+	// It is not recommended to use an alternate URL in a production environment.
+	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
+}
+
+// Validate checks if the GcpStorage is valid.
+func (g *GcpStorage) Validate() error {
+	if g.KeyFile == "" {
+		return errors.New("GCP key file is not specified")
+	}
+	if g.BucketName == "" {
+		return errors.New("GCP bucket name is not specified")
+	}
+	if g.Path == "" {
+		return errors.New("GCP storage path is not specified")
 	}
 	return nil
 }
@@ -109,6 +134,14 @@ func (s *Storage) ToModel() model.Storage {
 			S3LogLevel:         s.S3Storage.S3LogLevel,
 			MinPartSize:        s.S3Storage.MinPartSize,
 			MaxConnsPerHost:    s.S3Storage.MaxConnsPerHost,
+		}
+	}
+	if s.GcpStorage != nil {
+		return &model.GcpStorage{
+			KeyFile:    s.GcpStorage.KeyFile,
+			BucketName: s.GcpStorage.BucketName,
+			Path:       s.GcpStorage.Path,
+			Endpoint:   s.GcpStorage.Endpoint,
 		}
 	}
 
@@ -138,6 +171,15 @@ func NewStorageFromModel(m model.Storage) *Storage {
 				MaxConnsPerHost:    s.MaxConnsPerHost,
 			},
 		}
+	case *model.GcpStorage:
+		return &Storage{
+			GcpStorage: &GcpStorage{
+				KeyFile:    s.KeyFile,
+				BucketName: s.BucketName,
+				Path:       s.Path,
+				Endpoint:   s.Endpoint,
+			},
+		}
 	default:
 		return nil
 	}
@@ -155,4 +197,29 @@ func NewStorageFromReader(r io.Reader, format SerializationFormat) (*Storage, er
 	}
 
 	return s, nil
+}
+
+// uniqueStorage returns the unique non-nil StorageValidator,
+// or an error if there are none or multiple non-nil elements
+func uniqueStorage(validators ...StorageValidator) (StorageValidator, error) {
+	var (
+		result StorageValidator
+		count  = 0
+	)
+
+	for _, v := range validators {
+		if v != nil {
+			result = v
+			count++
+		}
+	}
+
+	if count == 0 {
+		return nil, errors.New("no storage type specified")
+	}
+	if count > 1 {
+		return nil, fmt.Errorf("multiple storage types specified (%d). Exactly one storage type should be specified", count)
+	}
+
+	return result, nil
 }
