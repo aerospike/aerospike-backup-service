@@ -158,6 +158,8 @@ func (h *BackupRoutineHandler) startFullBackupForAllNamespaces(
 }
 
 func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context, backupTimestamp time.Time) error {
+	go h.trackProgressMetric()
+
 	startTime := time.Now() // startTime is only used to measure backup time
 	for namespace, handler := range h.fullBackupHandlers {
 		err := handler.Wait(ctx)
@@ -174,6 +176,23 @@ func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context, backupTim
 	}
 	backupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))
 	return nil
+}
+
+func (h *BackupRoutineHandler) trackProgressMetric() {
+	backupProgress.WithLabelValues(h.routineName).Set(0)
+
+	var percentageDone uint
+	for percentageDone < 100 {
+		time.Sleep(1 * time.Second)
+		full := h.GetCurrentStat().Full
+		if full == nil {
+			continue
+		}
+		percentageDone = full.PercentageDone
+		backupProgress.WithLabelValues(h.routineName).Set(float64(percentageDone))
+	}
+
+	backupProgress.DeleteLabelValues(h.routineName)
 }
 
 func (h *BackupRoutineHandler) writeClusterConfiguration(

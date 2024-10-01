@@ -44,7 +44,7 @@ backup-policies:
   keepFilesPolicySlow:
     parallel: 8
     remove-files: KeepAll
-    bandwidth: 120000
+    bandwidth: 1200000
     sealed: true
   encryptedCompressedPolicy128:
     parallel: 8
@@ -206,18 +206,6 @@ backup-routines:
     storage: local
     namespaces: ["source-ns13"]
     backup-policy: keepFilesPolicySlow
-  fullBackupEncrypedCompressed128:
-      interval-cron: "@yearly"
-      source-cluster: absDefaultCluster
-      storage: local
-      namespaces: ["source-ns18"]
-      backup-policy: encryptedCompressedPolicy128
-  fullBackupEncrypedCompressed256:
-      interval-cron: "@yearly"
-      source-cluster: absDefaultCluster
-      storage: local
-      namespaces: ["source-ns21"]
-      backup-policy: encryptedCompressedPolicy256
   noIndexesUdfsRecords:
     interval-cron: "@yearly"
     source-cluster: absDefaultCluster
