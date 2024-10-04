@@ -94,7 +94,7 @@ func (b *BackupBackend) readMetadataList(ctx context.Context, timebounds *model.
 	} else {
 		backupRoot = b.incrementalBackupsPath
 	}
-	files, err := readFiles(ctx, b.storage, backupRoot, metadataFilter)
+	files, err := readFiles(ctx, b.storage, backupRoot, metadataFile)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "is empty") {
 			return nil, nil
@@ -184,7 +184,7 @@ func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {
 }
 
 func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
-	configBackups, err := readFiles(context.Background(), b.storage, path, configurationFilter)
+	configBackups, err := readFiles(context.Background(), b.storage, path, configExt)
 	if err != nil {
 		return nil, err
 	}

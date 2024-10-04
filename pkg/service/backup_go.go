@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -26,7 +27,7 @@ func (b *BackupGo) BackupRun(
 	backupRoutine *model.BackupRoutine,
 	backupPolicy *model.BackupPolicy,
 	client *backup.Client,
-	storage model.Storage,
+	s model.Storage,
 	secretAgent *model.SecretAgent,
 	timebounds model.TimeBounds,
 	namespace string,
@@ -34,7 +35,7 @@ func (b *BackupGo) BackupRun(
 ) (BackupHandler, error) {
 	config := makeBackupConfig(namespace, backupRoutine, backupPolicy, timebounds, secretAgent)
 
-	writerFactory, err := writerForStorage(ctx, path, storage, false,
+	writerFactory, err := storage.CreateWriter(ctx, s, path, false,
 		backupPolicy.RemoveFiles.RemoveFullBackup(), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer, %w", err)
