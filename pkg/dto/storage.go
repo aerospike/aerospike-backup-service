@@ -31,12 +31,29 @@ func (s *Storage) Validate() error {
 		return errors.New("storage is not specified")
 	}
 
-	validator, err := uniqueStorage(s.LocalStorage, s.S3Storage, s.GcpStorage)
-	if err != nil {
-		return err
+	var validStorage StorageValidator
+	count := 0
+
+	if s.LocalStorage != nil {
+		validStorage = s.LocalStorage
+		count++
+	}
+	if s.S3Storage != nil {
+		validStorage = s.S3Storage
+		count++
+	}
+	if s.GcpStorage != nil {
+		validStorage = s.GcpStorage
+		count++
+	}
+	if count == 0 {
+		return errors.New("no storage type specified")
+	}
+	if count > 1 {
+		return fmt.Errorf("multiple storage types specified (%d). Exactly one storage type should be specified", count)
 	}
 
-	return validator.Validate()
+	return validStorage.Validate()
 }
 
 // LocalStorage represents the configuration for local storage.
@@ -197,29 +214,4 @@ func NewStorageFromReader(r io.Reader, format SerializationFormat) (*Storage, er
 	}
 
 	return s, nil
-}
-
-// uniqueStorage returns the unique non-nil StorageValidator,
-// or an error if there are none or multiple non-nil elements
-func uniqueStorage(validators ...StorageValidator) (StorageValidator, error) {
-	var (
-		result StorageValidator
-		count  = 0
-	)
-
-	for _, v := range validators {
-		if v != nil {
-			result = v
-			count++
-		}
-	}
-
-	if count == 0 {
-		return nil, errors.New("no storage type specified")
-	}
-	if count > 1 {
-		return nil, fmt.Errorf("multiple storage types specified (%d). Exactly one storage type should be specified", count)
-	}
-
-	return result, nil
 }
