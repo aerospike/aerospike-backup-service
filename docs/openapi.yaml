@@ -1188,6 +1188,7 @@ components:
         namespace: testNamespace
         from: 2023-03-19T14:50:00Z
         storage:
+          gcp-storage: "{}"
           s3-storage: "{}"
           local-storage: "{}"
         record-count: 100
@@ -1501,6 +1502,7 @@ components:
             timeout: 5000
         storage:
           key:
+            gcp-storage: "{}"
             s3-storage: "{}"
             local-storage: "{}"
         backup-routines:
@@ -1642,6 +1644,30 @@ components:
             it gets rotated.
           example: 100
           type: integer
+      type: object
+    dto.GcpStorage:
+      properties:
+        bucket-name:
+          description: |-
+            For GCP storage bucket is not part of the path as in S3.
+            So we should set it separately.
+          type: string
+        endpoint:
+          description: |-
+            Alternative url.
+            It is not recommended to use an alternate URL in a production environment.
+          type: string
+        key-file:
+          description: Path to file containing Service Account JSON Key.
+          type: string
+        path:
+          description: The root path for the backup repository.
+          example: backups
+          type: string
+      required:
+      - bucket-name
+      - key-file
+      - path
       type: object
     dto.HTTPServerConfig:
       description: HTTPServerConfig represents the service's HTTP server configuration.
@@ -2161,9 +2187,15 @@ components:
     dto.Storage:
       description: Storage represents the configuration for a backup storage details.
       example:
+        gcp-storage: "{}"
         s3-storage: "{}"
         local-storage: "{}"
       properties:
+        gcp-storage:
+          allOf:
+          - $ref: '#/components/schemas/dto.GcpStorage'
+          description: "GcpStorage configuration, set if using GCP storage"
+          type: object
         local-storage:
           allOf:
           - $ref: '#/components/schemas/dto.LocalStorage'
