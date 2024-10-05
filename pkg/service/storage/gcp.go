@@ -1,15 +1,15 @@
 package storage
 
 import (
-	"cloud.google.com/go/storage"
 	"context"
 	"fmt"
-	"google.golang.org/api/option"
 	"path/filepath"
 
+	"cloud.google.com/go/storage"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/backup-go"
 	gcp "github.com/aerospike/backup-go/io/gcp/storage"
+	"google.golang.org/api/option"
 )
 
 type GcpStorageAccessor struct{}
@@ -19,7 +19,9 @@ func (a *GcpStorageAccessor) supports(storage model.Storage) bool {
 	return ok
 }
 
-func (a *GcpStorageAccessor) createReader(ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator) (backup.StreamingReader, error) {
+func (a *GcpStorageAccessor) createReader(
+	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator,
+) (backup.StreamingReader, error) {
 	gcps := storage.(*model.GcpStorage)
 	client, err := getGcpClient(ctx, gcps)
 	if err != nil {
@@ -38,7 +40,9 @@ func (a *GcpStorageAccessor) createReader(ctx context.Context, storage model.Sto
 	return gcp.NewReader(ctx, client, gcps.BucketName, opts...)
 }
 
-func (a *GcpStorageAccessor) createWriter(ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool) (backup.Writer, error) {
+func (a *GcpStorageAccessor) createWriter(
+	ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool,
+) (backup.Writer, error) {
 	gcps := storage.(*model.GcpStorage)
 	client, err := getGcpClient(ctx, gcps)
 	if err != nil {

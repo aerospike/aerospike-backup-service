@@ -2,14 +2,14 @@ package storage
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go-v2/config"
-	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"net/http"
 	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/aws/s3"
+	"github.com/aws/aws-sdk-go-v2/config"
+	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 type S3StorageAccessor struct{}
@@ -19,7 +19,9 @@ func (a *S3StorageAccessor) supports(storage model.Storage) bool {
 	return ok
 }
 
-func (a *S3StorageAccessor) createReader(ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator) (backup.StreamingReader, error) {
+func (a *S3StorageAccessor) createReader(
+	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator,
+) (backup.StreamingReader, error) {
 	s3s := storage.(*model.S3Storage)
 	client, err := getS3Client(ctx, s3s)
 	if err != nil {
@@ -38,7 +40,9 @@ func (a *S3StorageAccessor) createReader(ctx context.Context, storage model.Stor
 	return s3.NewReader(ctx, client, s3s.Bucket, opts...)
 }
 
-func (a *S3StorageAccessor) createWriter(ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool) (backup.Writer, error) {
+func (a *S3StorageAccessor) createWriter(
+	ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool,
+) (backup.Writer, error) {
 	s3s := storage.(*model.S3Storage)
 	client, err := getS3Client(ctx, s3s)
 	if err != nil {

@@ -13,8 +13,16 @@ type nameValidator struct {
 	filter string
 }
 
+func newNameValidator(s string) *nameValidator {
+	if s != "" {
+		return &nameValidator{s}
+	}
+
+	return nil
+}
+
 func (n *nameValidator) Run(path string) error {
-	if len(n.filter) == 0 {
+	if n == nil || len(n.filter) == 0 {
 		return nil
 	}
 

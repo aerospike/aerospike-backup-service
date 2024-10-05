@@ -16,12 +16,14 @@ func (a *LocalStorageAccessor) supports(storage model.Storage) bool {
 	return ok
 }
 
-func (a *LocalStorageAccessor) createReader(ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator) (backup.StreamingReader, error) {
+func (a *LocalStorageAccessor) createReader(
+	_ context.Context, storage model.Storage, path string, isFile bool, filter Validator,
+) (backup.StreamingReader, error) {
 	ls := storage.(*model.LocalStorage)
 	fullPath := filepath.Join(ls.Path, path)
-	opts := []local.Opt{local.WithNestedDir()}
-	if filter != nil {
-		opts = append(opts, local.WithValidator(filter))
+	opts := []local.Opt{
+		local.WithValidator(filter),
+		local.WithNestedDir(),
 	}
 	if isFile {
 		opts = append(opts, local.WithFile(fullPath))
@@ -31,7 +33,9 @@ func (a *LocalStorageAccessor) createReader(ctx context.Context, storage model.S
 	return local.NewReader(opts...)
 }
 
-func (a *LocalStorageAccessor) createWriter(ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool) (backup.Writer, error) {
+func (a *LocalStorageAccessor) createWriter(
+	ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool,
+) (backup.Writer, error) {
 	ls := storage.(*model.LocalStorage)
 	fullPath := filepath.Join(ls.Path, path)
 	var opts []local.Opt

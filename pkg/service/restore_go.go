@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asb"

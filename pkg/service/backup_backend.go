@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	"gopkg.in/yaml.v3"
 )
 
@@ -71,7 +72,7 @@ func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, me
 	}
 
 	metadataFilePath := filepath.Join(path, metadataFile)
-	return WriteFile(ctx, b.storage, metadataFilePath, dataYaml)
+	return storage.WriteFile(ctx, b.storage, metadataFilePath, dataYaml)
 }
 
 // FullBackupList returns a list of available full backups.
@@ -94,7 +95,7 @@ func (b *BackupBackend) readMetadataList(ctx context.Context, timebounds *model.
 	} else {
 		backupRoot = b.incrementalBackupsPath
 	}
-	files, err := readFiles(ctx, b.storage, backupRoot, metadataFile)
+	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "is empty") {
 			return nil, nil
@@ -184,7 +185,7 @@ func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {
 }
 
 func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
-	configBackups, err := readFiles(context.Background(), b.storage, path, configExt)
+	configBackups, err := storage.ReadFiles(context.Background(), b.storage, path, configExt)
 	if err != nil {
 		return nil, err
 	}

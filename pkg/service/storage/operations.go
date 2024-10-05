@@ -3,7 +3,6 @@ package storage
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -11,34 +10,45 @@ import (
 )
 
 // CreateReader creates a reader for a path in the specified storage.
-func CreateReader(ctx context.Context, storage model.Storage, path string, isFile bool, v Validator) (backup.StreamingReader, error) {
-	accessor, err := getAccessor(storage)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get storage accessor: %w", err)
-	}
-	return accessor.createReader(ctx, storage, path, isFile, v)
+func CreateReader(ctx context.Context, storage model.Storage, path string, isFile bool, v Validator,
+) (backup.StreamingReader, error) {
+	return getAccessor(storage).createReader(ctx, storage, path, isFile, v)
 }
 
 // CreateWriter creates a writer for a path in the specified storage.
-func CreateWriter(ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool) (backup.Writer, error) {
-	accessor, err := getAccessor(storage)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get storage accessor: %w", err)
-	}
-	return accessor.createWriter(ctx, storage, path, isFile, isRemoveFiles, withNested)
+func CreateWriter(ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool,
+) (backup.Writer, error) {
+	return getAccessor(storage).createWriter(ctx, storage, path, isFile, isRemoveFiles, withNested)
 }
 
-func ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error) {
-	var filter Validator
-	if len(filterStr) > 0 {
-		filter = &nameValidator{filterStr}
-	}
-	reader, err := CreateReader(ctx, storage, path, false, filter)
+func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
+	reader, err := CreateReader(ctx, storage, filepath, true, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	readersCh := make(chan io.ReadCloser)
+	readersCh := make(chan io.ReadCloser, 1)
+	errorsCh := make(chan error, 1)
+	go reader.StreamFiles(ctx, readersCh, errorsCh)
+
+	select {
+	case err := <-errorsCh:
+		return nil, err
+	case r := <-readersCh:
+		defer r.Close()
+		return io.ReadAll(r)
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+func ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error) {
+	reader, err := CreateReader(ctx, storage, path, false, newNameValidator(filterStr))
+	if err != nil {
+		return nil, err
+	}
+
+	readersCh := make(chan io.ReadCloser, 1)
 	errorsCh := make(chan error, 1)
 
 	go reader.StreamFiles(ctx, readersCh, errorsCh)
@@ -67,27 +77,6 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-	}
-}
-
-func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
-	reader, err := CreateReader(ctx, storage, filepath, true, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	readersCh := make(chan io.ReadCloser, 1)
-	errorsCh := make(chan error, 1)
-	go reader.StreamFiles(ctx, readersCh, errorsCh)
-
-	select {
-	case err := <-errorsCh:
-		return nil, err
-	case r := <-readersCh:
-		defer r.Close()
-		return io.ReadAll(r)
-	case <-ctx.Done():
-		return nil, ctx.Err()
 	}
 }
 
