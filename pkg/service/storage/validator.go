@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// Validator is used inside of backup.StreamingReader to filter files.
 type Validator interface {
 	Run(fileName string) error
 }
