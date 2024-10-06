@@ -8,7 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 )
 
 // StorageManager implements Manager interface.
@@ -25,7 +25,7 @@ func NewStorageManager(configStorage model.Storage) Manager {
 }
 
 func (m *StorageManager) ReadConfiguration(ctx context.Context) (io.ReadCloser, error) {
-	content, err := service.ReadFile(ctx, m.storage, "")
+	content, err := storage.ReadFile(ctx, m.storage, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration file: %w", err)
 	}
@@ -40,5 +40,5 @@ func (m *StorageManager) WriteConfiguration(ctx context.Context, config *model.C
 		return fmt.Errorf("failed to marshal configuration data: %w", err)
 	}
 
-	return service.WriteFile(ctx, m.storage, "", data)
+	return storage.WriteFile(ctx, m.storage, "", data)
 }

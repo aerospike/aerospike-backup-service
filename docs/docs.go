@@ -1930,6 +1930,33 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.GcpStorage": {
+            "type": "object",
+            "required": [
+                "bucket-name",
+                "key-file",
+                "path"
+            ],
+            "properties": {
+                "bucket-name": {
+                    "description": "For GCP storage bucket is not part of the path as in S3.\nSo we should set it separately.",
+                    "type": "string"
+                },
+                "endpoint": {
+                    "description": "Alternative url.\nIt is not recommended to use an alternate URL in a production environment.",
+                    "type": "string"
+                },
+                "key-file": {
+                    "description": "Path to file containing Service Account JSON Key.",
+                    "type": "string"
+                },
+                "path": {
+                    "description": "The root path for the backup repository.",
+                    "type": "string",
+                    "example": "backups"
+                }
+            }
+        },
         "dto.HTTPServerConfig": {
             "description": "HTTPServerConfig represents the service's HTTP server configuration.",
             "type": "object",
@@ -2528,6 +2555,14 @@ const docTemplate = `{
             "description": "Storage represents the configuration for a backup storage details.",
             "type": "object",
             "properties": {
+                "gcp-storage": {
+                    "description": "GcpStorage configuration, set if using GCP storage",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.GcpStorage"
+                        }
+                    ]
+                },
                 "local-storage": {
                     "description": "LocalStorage configuration, set if using local storage",
                     "allOf": [

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asb"
@@ -31,7 +32,7 @@ func (r *RestoreGo) RestoreRun(
 
 	config := makeRestoreConfig(request)
 
-	reader, err := readerForStorage(ctx, request.SourceStorage, request.BackupDataPath, false, asb.NewValidator())
+	reader, err := storage.CreateReader(ctx, request.SourceStorage, request.BackupDataPath, false, asb.NewValidator())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}
