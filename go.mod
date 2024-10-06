@@ -19,7 +19,6 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.3
-	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 	golang.org/x/sync v0.8.0
 	golang.org/x/time v0.6.0
 	google.golang.org/api v0.187.0
