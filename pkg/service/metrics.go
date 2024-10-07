@@ -1,6 +1,11 @@
 package service
 
 import (
+	"context"
+	"strconv"
+	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -58,7 +63,7 @@ var (
 			Name: "aerospike_abs_backup_progress_pct",
 			Help: "Progress of backup processes in percent",
 		},
-		[]string{"routine"},
+		[]string{"routine", "type"},
 	)
 	restoreProgress = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -79,4 +84,69 @@ func init() {
 	prometheus.MustRegister(backupDurationGauge)
 	prometheus.MustRegister(incrBackupDurationGauge)
 	prometheus.MustRegister(backupProgress, restoreProgress)
+}
+
+type MetricsCollector struct {
+	backupHandler BackupHandlerHolder
+	jobsHolder    *JobsHolder
+}
+
+// NewMetricsCollector creates a new MetricsCollector
+func NewMetricsCollector(bh BackupHandlerHolder, jh *JobsHolder) *MetricsCollector {
+	return &MetricsCollector{
+		backupHandler: bh,
+		jobsHolder:    jh,
+	}
+}
+
+func (mc *MetricsCollector) Start(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Second)
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				mc.collectMetrics()
+			}
+		}
+	}()
+}
+
+func (mc *MetricsCollector) collectMetrics() {
+	mc.collectBackupMetrics()
+	mc.collectRestoreMetrics()
+}
+
+func (mc *MetricsCollector) collectBackupMetrics() {
+	backupProgress.Reset()
+
+	for routineName, handler := range mc.backupHandler {
+		currentStat := handler.GetCurrentStat()
+
+		// Update Full backup metric if running
+		if currentStat.Full != nil {
+			backupProgress.WithLabelValues(routineName, "Full").Set(float64(currentStat.Full.PercentageDone))
+		}
+
+		// Update Incremental backup metric if running
+		if currentStat.Incremental != nil {
+			backupProgress.WithLabelValues(routineName, "Incremental").Set(float64(currentStat.Incremental.PercentageDone))
+		}
+	}
+}
+
+// collectRestoreMetrics collects metrics from JobsHolder
+func (mc *MetricsCollector) collectRestoreMetrics() {
+	restoreProgress.Reset()
+	for jobID, job := range mc.jobsHolder.restoreJobs {
+		jobIDStr := strconv.Itoa(int(jobID))
+
+		status := RestoreJobStatus(job)
+		restore := status.CurrentRestore
+		if restore != nil && status.Status == model.JobStatusRunning {
+			restoreProgress.WithLabelValues(jobIDStr).Set(float64(restore.PercentageDone))
+		}
+	}
 }

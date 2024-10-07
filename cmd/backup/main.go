@@ -97,8 +97,11 @@ func startService(configFile string, remote bool) error {
 		return err
 	}
 
+	var restoreJobs = service.NewJobsHolder()
+	service.NewMetricsCollector(handlers, restoreJobs).Start(ctx)
+
 	// run HTTP server
-	err = runHTTPServer(ctx, config, scheduler, backends, handlers, manager, clientManager, appLogger)
+	err = runHTTPServer(ctx, config, scheduler, backends, handlers, manager, clientManager, appLogger, restoreJobs)
 
 	// stop the scheduler
 	scheduler.Stop()
@@ -149,6 +152,7 @@ func runHTTPServer(ctx context.Context,
 	configurationManager configuration.Manager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
+	restoreJobs *service.JobsHolder,
 ) error {
 	httpServer := server.NewHTTPServer(
 		config,
@@ -158,6 +162,7 @@ func runHTTPServer(ctx context.Context,
 		configurationManager,
 		clientManger,
 		logger,
+		restoreJobs,
 	)
 	go func() {
 		httpServer.Start()

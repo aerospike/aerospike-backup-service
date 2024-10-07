@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
@@ -36,12 +35,13 @@ func NewRestoreManager(backends BackendsHolder,
 	config *model.Config,
 	restoreService Restore,
 	clientManager ClientManager,
+	restoreJobs *JobsHolder,
 ) RestoreManager {
 	return &dataRestorer{
 		configRetriever: configRetriever{
 			backends,
 		},
-		restoreJobs:    NewJobsHolder(),
+		restoreJobs:    restoreJobs,
 		restoreService: restoreService,
 		backends:       backends,
 		config:         config,
@@ -77,7 +77,6 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 		r.restoreJobs.addHandler(jobID, handler)
 
 		// Wait for the restore operation to complete
-		go r.trackProgressMetric(jobID)
 		err = handler.Wait(ctx)
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
@@ -88,24 +87,6 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 	}()
 
 	return jobID, nil
-}
-
-func (r *dataRestorer) trackProgressMetric(job model.RestoreJobID) {
-	jobLabel := fmt.Sprintf("%d", job)
-	restoreProgress.WithLabelValues(jobLabel).Set(0)
-
-	for {
-		time.Sleep(1 * time.Second)
-		status, err := r.restoreJobs.getStatus(job)
-		if err != nil || status.Status != model.JobStatusRunning {
-			break
-		}
-
-		percentageDone := status.CurrentRestore.PercentageDone
-		restoreProgress.WithLabelValues(jobLabel).Set(float64(percentageDone))
-	}
-
-	restoreProgress.DeleteLabelValues(jobLabel)
 }
 
 func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,

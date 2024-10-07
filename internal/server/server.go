@@ -29,14 +29,14 @@ type HTTPServer struct {
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(
-	config *model.Config,
+func NewHTTPServer(config *model.Config,
 	scheduler quartz.Scheduler,
 	backends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
 	configurationManager configuration.Manager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
+	restoreJobs *service.JobsHolder,
 ) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer
 
@@ -52,7 +52,7 @@ func NewHTTPServer(
 
 	mw := middleware.RateLimiter(rateLimiter, whitelist)
 
-	restoreMgr := service.NewRestoreManager(backends, config, service.NewRestoreGo(), clientManger)
+	restoreMgr := service.NewRestoreManager(backends, config, service.NewRestoreGo(), clientManger, restoreJobs)
 
 	h := handlers.NewService(
 		config,
