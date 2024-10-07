@@ -58,14 +58,14 @@ var (
 		})
 	backupProgress = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "aerospike_abs_backup_progress_pct",
+			Name: "aerospike_backup_service_backup_progress_pct",
 			Help: "Progress of backup processes in percent",
 		},
 		[]string{"routine", "type"},
 	)
 	restoreProgress = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "aerospike_abs_restore_progress_pct",
+			Name: "aerospike_backup_service_restore_progress_pct",
 			Help: "Progress of restore processes in percent",
 		},
 		[]string{"label"},
