@@ -97,7 +97,7 @@ func startService(configFile string, remote bool) error {
 		return err
 	}
 
-	var restoreJobs = service.NewJobsHolder()
+	var restoreJobs = service.NewRestoreJobsHolder()
 	service.NewMetricsCollector(handlers, restoreJobs).Start(ctx)
 
 	// run HTTP server

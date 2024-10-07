@@ -23,8 +23,8 @@ type RestoreJobsHolder struct {
 	jobs map[model.RestoreJobID]*jobInfo
 }
 
-// NewJobsHolder returns a new RestoreJobsHolder.
-func NewJobsHolder() *RestoreJobsHolder {
+// NewRestoreJobsHolder returns a new RestoreJobsHolder.
+func NewRestoreJobsHolder() *RestoreJobsHolder {
 	return &RestoreJobsHolder{
 		jobs: make(map[model.RestoreJobID]*jobInfo),
 	}

@@ -64,7 +64,7 @@ func makeTestRestoreService() *dataRestorer {
 		configRetriever: configRetriever{
 			backends: &BackendHolderMock{},
 		},
-		restoreJobs:    NewJobsHolder(),
+		restoreJobs:    NewRestoreJobsHolder(),
 		restoreService: NewRestoreMock(),
 		backends:       &BackendHolderMock{},
 		config:         config,
