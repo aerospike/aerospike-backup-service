@@ -36,10 +36,10 @@ func (h *RestoreJobsHolder) newJob(label string) model.RestoreJobID {
 	id := model.RestoreJobID(rand.Int())
 	h.Lock()
 	defer h.Unlock()
-	currentTime := time.Now()
+
 	h.jobs[id] = &jobInfo{
 		status:    model.JobStatusRunning,
-		startTime: currentTime,
+		startTime: time.Now(),
 		label:     label,
 	}
 	return id

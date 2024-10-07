@@ -135,7 +135,6 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 	}
 }
 
-// collectRestoreMetrics collects metrics from RestoreJobsHolder
 func (mc *MetricsCollector) collectRestoreMetrics() {
 	restoreProgress.Reset()
 
@@ -143,7 +142,7 @@ func (mc *MetricsCollector) collectRestoreMetrics() {
 	defer mc.jobsHolder.Unlock()
 
 	for _, job := range mc.jobsHolder.jobs {
-		restore := RestoreJobStatus(job).CurrentRestore
+		restore := RestoreJobStatus(job).CurrentRestore // CurrentRestore exists only for running jobs
 		if restore != nil {
 			restoreProgress.WithLabelValues(job.label).Set(float64(restore.PercentageDone))
 		}
