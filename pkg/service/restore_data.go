@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	"github.com/aerospike/backup-go"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -244,7 +245,7 @@ func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobSta
 }
 
 func recordsInBackup(ctx context.Context, request *model.RestoreRequest) (uint64, error) {
-	bytes, err := ReadFile(ctx, request.SourceStorage, filepath.Join(request.BackupDataPath, metadataFile))
+	bytes, err := storage.ReadFile(ctx, request.SourceStorage, filepath.Join(request.BackupDataPath, metadataFile))
 	if err != nil {
 		return 0, err
 	}

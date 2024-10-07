@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 )
@@ -208,7 +209,7 @@ func (h *BackupRoutineHandler) writeClusterConfiguration(
 
 	for i, info := range infos {
 		confFilePath := getConfigurationFile(h, now, i)
-		err := WriteFile(ctx, h.storage, confFilePath, []byte(info))
+		err := storage.WriteFile(ctx, h.storage, confFilePath, []byte(info))
 		if err != nil {
 			logger.Error("Failed to Write configuration for the backup",
 				slog.Any("err", err))
@@ -242,7 +243,7 @@ func (h *BackupRoutineHandler) writeBackupMetadata(
 }
 
 func (h *BackupRoutineHandler) deleteFolder(ctx context.Context, path string, logger *slog.Logger) {
-	err := DeleteFolder(ctx, h.storage, path)
+	err := storage.DeleteFolder(ctx, h.storage, path)
 	if err != nil {
 		logger.Error("Could not delete folder", slog.Any("err", err))
 	}

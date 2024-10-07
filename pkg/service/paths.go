@@ -9,7 +9,10 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
-const metadataFile = "metadata.yaml"
+const (
+	metadataFile = "metadata.yaml"
+	configExt    = ".conf"
+)
 
 func getFullPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, namespace string,
 	now time.Time) string {
@@ -44,7 +47,7 @@ func getConfigurationFile(h *BackupRoutineHandler, t time.Time, i int) string {
 }
 
 func getConfigFileName(i int) string {
-	return fmt.Sprintf("aerospike_%d.conf", i)
+	return fmt.Sprintf("aerospike_%d%s", i, configExt)
 }
 
 func getKey(path string, metadata *model.BackupMetadata, noTimestampInPath bool) string {
