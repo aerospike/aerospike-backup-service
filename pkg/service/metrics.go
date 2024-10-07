@@ -68,7 +68,7 @@ var (
 			Name: "aerospike_abs_restore_progress_pct",
 			Help: "Progress of restore processes in percent",
 		},
-		[]string{"routine"},
+		[]string{"label"},
 	)
 )
 
@@ -140,7 +140,7 @@ func (mc *MetricsCollector) collectRestoreMetrics() {
 	restoreProgress.Reset()
 
 	mc.jobsHolder.Lock()
-	defer mc.jobsHolder.Lock()
+	defer mc.jobsHolder.Unlock()
 
 	for _, job := range mc.jobsHolder.jobs {
 		restore := RestoreJobStatus(job).CurrentRestore
