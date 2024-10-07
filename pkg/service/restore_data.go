@@ -22,7 +22,7 @@ var errBackupNotFound = errors.New("backup not found")
 type dataRestorer struct {
 	configRetriever
 	config         *model.Config
-	restoreJobs    *JobsHolder
+	restoreJobs    *RestoreJobsHolder
 	restoreService Restore
 	backends       BackendsHolder
 	clientManager  ClientManager
@@ -35,7 +35,7 @@ func NewRestoreManager(backends BackendsHolder,
 	config *model.Config,
 	restoreService Restore,
 	clientManager ClientManager,
-	restoreJobs *JobsHolder,
+	restoreJobs *RestoreJobsHolder,
 ) RestoreManager {
 	return &dataRestorer{
 		configRetriever: configRetriever{

@@ -152,7 +152,7 @@ func runHTTPServer(ctx context.Context,
 	configurationManager configuration.Manager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
-	restoreJobs *service.JobsHolder,
+	restoreJobs *service.RestoreJobsHolder,
 ) error {
 	httpServer := server.NewHTTPServer(
 		config,

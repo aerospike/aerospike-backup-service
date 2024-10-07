@@ -36,7 +36,7 @@ func NewHTTPServer(config *model.Config,
 	configurationManager configuration.Manager,
 	clientManger service.ClientManager,
 	logger *slog.Logger,
-	restoreJobs *service.JobsHolder,
+	restoreJobs *service.RestoreJobsHolder,
 ) *HTTPServer {
 	serverConfig := config.ServiceConfig.HTTPServer
 

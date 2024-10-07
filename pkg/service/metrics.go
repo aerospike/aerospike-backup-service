@@ -86,11 +86,11 @@ func init() {
 
 type MetricsCollector struct {
 	backupHandler BackupHandlerHolder
-	jobsHolder    *JobsHolder
+	jobsHolder    *RestoreJobsHolder
 }
 
 // NewMetricsCollector creates a new MetricsCollector
-func NewMetricsCollector(bh BackupHandlerHolder, jh *JobsHolder) *MetricsCollector {
+func NewMetricsCollector(bh BackupHandlerHolder, jh *RestoreJobsHolder) *MetricsCollector {
 	return &MetricsCollector{
 		backupHandler: bh,
 		jobsHolder:    jh,
@@ -135,10 +135,14 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 	}
 }
 
-// collectRestoreMetrics collects metrics from JobsHolder
+// collectRestoreMetrics collects metrics from RestoreJobsHolder
 func (mc *MetricsCollector) collectRestoreMetrics() {
 	restoreProgress.Reset()
-	for _, job := range mc.jobsHolder.restoreJobs {
+
+	mc.jobsHolder.Lock()
+	defer mc.jobsHolder.Lock()
+
+	for _, job := range mc.jobsHolder.jobs {
 		restore := RestoreJobStatus(job).CurrentRestore
 		if restore != nil {
 			restoreProgress.WithLabelValues(job.label).Set(float64(restore.PercentageDone))

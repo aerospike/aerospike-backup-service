@@ -44,7 +44,6 @@ func newBackupRoutineHandler(
 	backupBackend *BackupBackend,
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
-	storage := backupRoutine.Storage
 	backupPolicy := backupRoutine.BackupPolicy
 	secretAgent := backupRoutine.SecretAgent
 
@@ -56,7 +55,7 @@ func newBackupRoutineHandler(
 		backupIncrPolicy:   backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
 		routineName:        routineName,
 		namespaces:         backupRoutine.Namespaces,
-		storage:            storage,
+		storage:            backupRoutine.Storage,
 		secretAgent:        secretAgent,
 		state:              backupBackend.readState(),
 		retry:              NewRetryService(routineName),
