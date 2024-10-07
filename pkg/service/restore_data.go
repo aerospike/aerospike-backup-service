@@ -50,7 +50,7 @@ func NewRestoreManager(backends BackendsHolder,
 }
 
 func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
-	jobID := r.restoreJobs.newJob()
+	jobID := r.restoreJobs.newJob(request.BackupDataPath)
 	ctx := context.TODO()
 	totalRecords, err := recordsInBackup(ctx, request)
 	if err != nil {
@@ -99,7 +99,7 @@ func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
 	if err != nil {
 		return 0, fmt.Errorf("restore failed: %w", err)
 	}
-	jobID := r.restoreJobs.newJob()
+	jobID := r.restoreJobs.newJob(request.Routine)
 	ctx := context.TODO()
 	go r.restoreByTimeSync(ctx, reader, request, jobID, fullBackups)
 

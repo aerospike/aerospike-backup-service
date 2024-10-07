@@ -2,10 +2,8 @@ package service
 
 import (
 	"context"
-	"strconv"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -140,13 +138,10 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 // collectRestoreMetrics collects metrics from JobsHolder
 func (mc *MetricsCollector) collectRestoreMetrics() {
 	restoreProgress.Reset()
-	for jobID, job := range mc.jobsHolder.restoreJobs {
-		jobIDStr := strconv.Itoa(int(jobID))
-
-		status := RestoreJobStatus(job)
-		restore := status.CurrentRestore
-		if restore != nil && status.Status == model.JobStatusRunning {
-			restoreProgress.WithLabelValues(jobIDStr).Set(float64(restore.PercentageDone))
+	for _, job := range mc.jobsHolder.restoreJobs {
+		restore := RestoreJobStatus(job).CurrentRestore
+		if restore != nil {
+			restoreProgress.WithLabelValues(job.label).Set(float64(restore.PercentageDone))
 		}
 	}
 }
