@@ -59,14 +59,14 @@ var (
 	backupProgress = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_backup_progress_pct",
-			Help: "Progress of backup processes in percent",
+			Help: "Progress of backup processes in percentage",
 		},
 		[]string{"routine", "type"},
 	)
 	restoreProgress = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_restore_progress_pct",
-			Help: "Progress of restore processes in percent",
+			Help: "Progress of restore processes in percentage",
 		},
 		[]string{"label"},
 	)
@@ -97,8 +97,8 @@ func NewMetricsCollector(bh BackupHandlerHolder, jh *RestoreJobsHolder) *Metrics
 	}
 }
 
-func (mc *MetricsCollector) Start(ctx context.Context) {
-	ticker := time.NewTicker(1 * time.Second)
+func (mc *MetricsCollector) Start(ctx context.Context, duration time.Duration) {
+	ticker := time.NewTicker(duration)
 	go func() {
 		defer ticker.Stop()
 		for {
