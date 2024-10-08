@@ -1179,6 +1179,29 @@ components:
             in info request during cluster tending.
           type: boolean
       type: object
+    dto.AzureStorage:
+      properties:
+        account-key:
+          type: string
+        account-name:
+          description: Account name + key auth
+          type: string
+        client-id:
+          type: string
+        client-secret:
+          type: string
+        container-name:
+          type: string
+        endpoint:
+          description: Mandatory fields
+          type: string
+        tenant-id:
+          description: Azure Active directory
+          type: string
+      required:
+      - container-name
+      - endpoint
+      type: object
     dto.BackupDetails:
       description: BackupDetails contains information about a backup.
       example:
@@ -1188,6 +1211,7 @@ components:
         namespace: testNamespace
         from: 2023-03-19T14:50:00Z
         storage:
+          azure-storage: "{}"
           gcp-storage: "{}"
           s3-storage: "{}"
           local-storage: "{}"
@@ -1502,6 +1526,7 @@ components:
             timeout: 5000
         storage:
           key:
+            azure-storage: "{}"
             gcp-storage: "{}"
             s3-storage: "{}"
             local-storage: "{}"
@@ -2187,10 +2212,16 @@ components:
     dto.Storage:
       description: Storage represents the configuration for a backup storage details.
       example:
+        azure-storage: "{}"
         gcp-storage: "{}"
         s3-storage: "{}"
         local-storage: "{}"
       properties:
+        azure-storage:
+          allOf:
+          - $ref: '#/components/schemas/dto.AzureStorage'
+          description: "AzureStorage configuration, set if using Azure storage"
+          type: object
         gcp-storage:
           allOf:
           - $ref: '#/components/schemas/dto.GcpStorage'

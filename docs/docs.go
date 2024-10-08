@@ -1501,6 +1501,39 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.AzureStorage": {
+            "type": "object",
+            "required": [
+                "container-name",
+                "endpoint"
+            ],
+            "properties": {
+                "account-key": {
+                    "type": "string"
+                },
+                "account-name": {
+                    "description": "Account name + key auth",
+                    "type": "string"
+                },
+                "client-id": {
+                    "type": "string"
+                },
+                "client-secret": {
+                    "type": "string"
+                },
+                "container-name": {
+                    "type": "string"
+                },
+                "endpoint": {
+                    "description": "Mandatory fields",
+                    "type": "string"
+                },
+                "tenant-id": {
+                    "description": "Azure Active directory",
+                    "type": "string"
+                }
+            }
+        },
         "dto.BackupDetails": {
             "description": "BackupDetails contains information about a backup.",
             "type": "object",
@@ -2555,6 +2588,14 @@ const docTemplate = `{
             "description": "Storage represents the configuration for a backup storage details.",
             "type": "object",
             "properties": {
+                "azure-storage": {
+                    "description": "AzureStorage configuration, set if using Azure storage",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.AzureStorage"
+                        }
+                    ]
+                },
                 "gcp-storage": {
                     "description": "GcpStorage configuration, set if using GCP storage",
                     "allOf": [
