@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
+	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -63,12 +63,7 @@ func newConfigManager(configFile string, remote bool) (Manager, error) {
 		return NewStorageManager(storage), nil
 	}
 
-	isHTTP, err := isHTTPPath(configFile)
-	if err != nil {
-		return nil, err
-	}
-
-	if isHTTP {
+	if isHTTPPath(configFile) {
 		return NewHTTPConfigurationManager(configFile), nil
 	}
 
@@ -94,11 +89,7 @@ func readStorage(configURI string) (model.Storage, error) {
 }
 
 func loadFileContent(configFile string) ([]byte, error) {
-	isHTTP, err := isHTTPPath(configFile)
-	if err != nil {
-		return nil, err
-	}
-	if isHTTP {
+	if isHTTPPath(configFile) {
 		return readFromHTTP(configFile)
 	}
 
@@ -131,11 +122,6 @@ func readFromHTTP(url string) ([]byte, error) {
 }
 
 // isHTTPPath determines whether the specified path is a valid http/https.
-func isHTTPPath(path string) (bool, error) {
-	uri, err := url.Parse(path)
-	if err != nil {
-		return false, fmt.Errorf("failed to parse URL: %w", err)
-	}
-
-	return uri.Scheme == "http" || uri.Scheme == "https", nil
+func isHTTPPath(path string) bool {
+	return strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://")
 }
