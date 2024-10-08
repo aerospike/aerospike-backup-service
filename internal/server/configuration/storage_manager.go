@@ -27,7 +27,7 @@ func NewStorageManager(configStorage model.Storage) Manager {
 func (m *StorageManager) ReadConfiguration(ctx context.Context) (io.ReadCloser, error) {
 	content, err := storage.ReadFile(ctx, m.storage, "")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read configuration file: %w", err)
+		return nil, fmt.Errorf("failed to read configuration from storage %v: %w", m.storage, err)
 	}
 
 	return io.NopCloser(bytes.NewReader(content)), nil

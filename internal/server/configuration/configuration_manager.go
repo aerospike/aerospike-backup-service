@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -20,6 +21,10 @@ type Manager interface {
 
 // Load handles the entire configuration setup process
 func Load(ctx context.Context, configFile string, remote bool) (*model.Config, Manager, error) {
+	slog.Info("Read service configuration from",
+		slog.String("file", configFile),
+		slog.Bool("remote", remote))
+
 	manager, err := newConfigManager(configFile, remote)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
@@ -35,6 +40,7 @@ func Load(ctx context.Context, configFile string, remote bool) (*model.Config, M
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read configuration content: %w", err)
 	}
+	slog.Info("Service configuration:\n" + string(configBytes))
 
 	config := dto.NewConfigWithDefaultValues()
 	if err := yaml.Unmarshal(configBytes, config); err != nil {
