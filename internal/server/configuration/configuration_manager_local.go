@@ -35,12 +35,16 @@ func (cm *FileConfigurationManager) ReadConfiguration(ctx context.Context) (io.R
 		return nil, err
 	}
 
-	filePath := cm.FilePath
-	if filePath == "" {
-		return nil, errors.New("configuration file is missing")
+	if cm.FilePath == "" {
+		return nil, errors.New("configuration file path is missing")
 	}
 
-	return os.Open(filePath)
+	file, err := os.Open(cm.FilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file %q: %w", cm.FilePath, err)
+	}
+
+	return file, nil
 }
 
 // WriteConfiguration writes the configuration to the given file path.
@@ -52,8 +56,7 @@ func (cm *FileConfigurationManager) WriteConfiguration(ctx context.Context, conf
 		return err
 	}
 
-	filePath := cm.FilePath
-	if filePath == "" {
+	if cm.FilePath == "" {
 		return errors.New("configuration file path is missing")
 	}
 
@@ -63,9 +66,9 @@ func (cm *FileConfigurationManager) WriteConfiguration(ctx context.Context, conf
 		return fmt.Errorf("failed to marshal configuration data: %w", err)
 	}
 
-	err = os.WriteFile(filePath, data, 0600)
+	err = os.WriteFile(cm.FilePath, data, 0600)
 	if err != nil {
-		return fmt.Errorf("failed to write configuration to file %q: %w", filePath, err)
+		return fmt.Errorf("failed to write configuration to file %q: %w", cm.FilePath, err)
 	}
 
 	return nil

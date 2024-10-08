@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 // Storage represents the configuration for a backup storage details.
 // This interface is implemented by all specific storage types.
 type Storage interface {
@@ -12,6 +14,9 @@ type LocalStorage struct {
 }
 
 func (s *LocalStorage) storage() {}
+func (s *LocalStorage) String() string {
+	return fmt.Sprintf("LocalStorage(Path: %s)", s.Path)
+}
 
 type S3Storage struct {
 	// Path is the root directory within the S3 bucket where backups will be stored.
@@ -35,6 +40,9 @@ type S3Storage struct {
 }
 
 func (s *S3Storage) storage() {}
+func (s *S3Storage) String() string {
+	return fmt.Sprintf("S3Storage(Bucket: %s, Path: %s)", s.Bucket, s.Path)
+}
 
 type GcpStorage struct {
 	// KeyFile is the path to the JSON file containing the Google Cloud service account key.
@@ -50,6 +58,9 @@ type GcpStorage struct {
 }
 
 func (s *GcpStorage) storage() {}
+func (s *GcpStorage) String() string {
+	return fmt.Sprintf("GcpStorage(Bucket: %s, Path: %s)", s.BucketName, s.Path)
+}
 
 // AzureStorage represents the configuration for Azure Blob storage.
 type AzureStorage struct {

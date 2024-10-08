@@ -1,12 +1,13 @@
 package configuration
 
 import (
-	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
+	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -18,23 +19,57 @@ type Manager interface {
 	WriteConfiguration(ctx context.Context, config *model.Config) error
 }
 
-// NewConfigManager returns a new Manager.
-func NewConfigManager(configFile string, remote bool) (Manager, error) {
+// Load handles the entire configuration setup process
+func Load(ctx context.Context, configFile string, remote bool) (*model.Config, Manager, error) {
+	slog.Info("Read service configuration from",
+		slog.String("file", configFile),
+		slog.Bool("remote", remote))
+
+	manager, err := newConfigManager(configFile, remote)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
+	}
+
+	reader, err := manager.ReadConfiguration(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read configuration file: %w", err)
+	}
+	defer reader.Close()
+
+	configBytes, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read configuration content: %w", err)
+	}
+	slog.Info("Service configuration:\n" + string(configBytes))
+
+	config := dto.NewConfigWithDefaultValues()
+	if err := yaml.Unmarshal(configBytes, config); err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
+	}
+
+	if err := config.Validate(); err != nil {
+		return nil, nil, fmt.Errorf("configuration validation failed: %w", err)
+	}
+
+	modelConfig, err := config.ToModel()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to convert configuration to model: %w", err)
+	}
+
+	return modelConfig, manager, nil
+}
+
+func newConfigManager(configFile string, remote bool) (Manager, error) {
 	if remote {
 		storage, err := readStorage(configFile)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read remote storage configuration: %w", err)
 		}
 
 		return NewStorageManager(storage), nil
 	}
 
-	isHTTP, err := isHTTPPath(configFile)
-	if err != nil {
-		return nil, err
-	}
-
-	if isHTTP {
+	if isHTTPPath(configFile) {
 		return NewHTTPConfigurationManager(configFile), nil
 	}
 
@@ -44,54 +79,55 @@ func NewConfigManager(configFile string, remote bool) (Manager, error) {
 func readStorage(configURI string) (model.Storage, error) {
 	content, err := loadFileContent(configURI)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load file content: %w", err)
 	}
 
 	configStorage := &dto.Storage{}
-	err = yaml.Unmarshal(content, configStorage)
-	if err != nil {
-		return nil, err
+	if err = yaml.Unmarshal(content, configStorage); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal storage configuration: %w", err)
 	}
 
-	err = configStorage.Validate()
-	if err != nil {
-		return nil, err
+	if err = configStorage.Validate(); err != nil {
+		return nil, fmt.Errorf("validate storage configuration error: %w", err)
 	}
+
 	return configStorage.ToModel(), nil
 }
 
 func loadFileContent(configFile string) ([]byte, error) {
-	isHTTP, err := isHTTPPath(configFile)
-	if err != nil {
-		return nil, err
-	}
-	if isHTTP {
+	if isHTTPPath(configFile) {
 		return readFromHTTP(configFile)
 	}
-	return os.ReadFile(configFile)
+
+	content, err := os.ReadFile(configFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s from disk: %w", configFile, err)
+	}
+
+	return content, nil
 }
 
 func readFromHTTP(url string) ([]byte, error) {
 	// #nosec G107
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed HTTP GET request to %s: %w", url, err)
 	}
 	defer resp.Body.Close()
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(resp.Body)
-	if err != nil {
-		return nil, err
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
-	return buf.Bytes(), nil
+
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read HTTP response body: %w", err)
+	}
+
+	return content, nil
 }
 
 // isHTTPPath determines whether the specified path is a valid http/https.
-func isHTTPPath(path string) (bool, error) {
-	uri, err := url.Parse(path)
-	if err != nil {
-		return false, err
-	}
-
-	return uri.Scheme == "http" || uri.Scheme == "https", nil
+func isHTTPPath(path string) bool {
+	return strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://")
 }
