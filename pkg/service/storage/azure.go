@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -30,10 +31,11 @@ func (a *AzureStorageAccessor) createReader(
 		azure.WithValidator(filter),
 		azure.WithNestedDir(),
 	}
+	fullPath := filepath.Join(azures.Path, path)
 	if isFile {
-		opts = append(opts, azure.WithFile(path))
+		opts = append(opts, azure.WithFile(fullPath))
 	} else {
-		opts = append(opts, azure.WithDir(path))
+		opts = append(opts, azure.WithDir(fullPath))
 	}
 	return azure.NewReader(ctx, client, azures.ContainerName, opts...)
 }
@@ -46,11 +48,12 @@ func (a *AzureStorageAccessor) createWriter(
 	if err != nil {
 		return nil, err
 	}
+	fullPath := filepath.Join(azures.Path, path)
 	var opts []azure.Opt
 	if isFile {
-		opts = append(opts, azure.WithFile(path))
+		opts = append(opts, azure.WithFile(fullPath))
 	} else {
-		opts = append(opts, azure.WithDir(path))
+		opts = append(opts, azure.WithDir(fullPath))
 	}
 	if isRemoveFiles {
 		opts = append(opts, azure.WithRemoveFiles())

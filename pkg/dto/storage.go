@@ -152,6 +152,8 @@ type AzureStorage struct {
 	// Mandatory fields
 	Endpoint      string `yaml:"endpoint" json:"endpoint" validate:"required"`
 	ContainerName string `yaml:"container-name" json:"container-name" validate:"required"`
+	// The root path for the backup repository within the bucket.
+	Path string `yaml:"path" json:"path" example:"backups" validate:"required"`
 }
 
 // Validate checks if the AzureStorage is valid.
@@ -210,6 +212,7 @@ func (s *Storage) ToModel() model.Storage {
 		azureStorage := &model.AzureStorage{
 			Endpoint:      s.AzureStorage.Endpoint,
 			ContainerName: s.AzureStorage.ContainerName,
+			Path:          s.AzureStorage.Path,
 		}
 
 		switch {
@@ -267,6 +270,7 @@ func NewStorageFromModel(m model.Storage) *Storage {
 		azureStorage := &AzureStorage{
 			Endpoint:      s.Endpoint,
 			ContainerName: s.ContainerName,
+			Path:          s.Path,
 		}
 
 		switch auth := s.Auth.(type) {

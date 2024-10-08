@@ -50,6 +50,7 @@ func (s *GcpStorage) storage() {}
 
 // AzureStorage represents the configuration for Azure Blob storage.
 type AzureStorage struct {
+	Path          string
 	Endpoint      string
 	ContainerName string
 	Auth          AzureAuth
