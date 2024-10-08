@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"errors"
-	"io"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -14,13 +14,11 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/util"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -65,18 +63,11 @@ func run() int {
 }
 
 func startService(configFile string, remote bool) error {
-	manager, err := configuration.NewConfigManager(configFile, remote)
-	if err != nil {
-		return err
-	}
-
-	// get system ctx
 	ctx := systemCtx()
 
-	// read configuration file
-	config, err := readConfiguration(ctx, manager)
+	config, manager, err := configuration.Load(ctx, configFile, remote)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// set default loggers
@@ -120,28 +111,6 @@ func systemCtx() context.Context {
 	}()
 
 	return ctx
-}
-
-func readConfiguration(ctx context.Context, configurationManager configuration.Manager) (*model.Config, error) {
-	r, err := configurationManager.ReadConfiguration(ctx)
-	if err != nil {
-		slog.Error("failed to read configuration file", "error", err)
-		return nil, err
-	}
-
-	configBytes, err := io.ReadAll(r)
-	if err != nil {
-		slog.Error("failed to read configuration", "error", err)
-		return nil, err
-	}
-	defer r.Close()
-	slog.Info("Read service config file:\n" + string(configBytes))
-
-	config := dto.NewConfigWithDefaultValues()
-	if err := yaml.Unmarshal(configBytes, config); err != nil {
-		return nil, err
-	}
-	return config.ToModel()
 }
 
 func runHTTPServer(ctx context.Context,

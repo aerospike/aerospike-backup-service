@@ -3,6 +3,7 @@ package configuration
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -18,8 +19,42 @@ type Manager interface {
 	WriteConfiguration(ctx context.Context, config *model.Config) error
 }
 
-// NewConfigManager returns a new Manager.
-func NewConfigManager(configFile string, remote bool) (Manager, error) {
+// Load handles the entire configuration setup process
+func Load(ctx context.Context, configFile string, remote bool) (*model.Config, Manager, error) {
+	manager, err := newConfigManager(configFile, remote)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
+	}
+
+	reader, err := manager.ReadConfiguration(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read configuration file: %w", err)
+	}
+	defer reader.Close()
+
+	configBytes, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read configuration content: %w", err)
+	}
+
+	config := dto.NewConfigWithDefaultValues()
+	if err := yaml.Unmarshal(configBytes, config); err != nil {
+		return nil, nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
+	}
+
+	if err := config.Validate(); err != nil {
+		return nil, nil, fmt.Errorf("configuration validation failed: %w", err)
+	}
+
+	modelConfig, err := config.ToModel()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to convert configuration to model: %w", err)
+	}
+
+	return modelConfig, manager, nil
+}
+
+func newConfigManager(configFile string, remote bool) (Manager, error) {
 	if remote {
 		storage, err := readStorage(configFile)
 		if err != nil {
