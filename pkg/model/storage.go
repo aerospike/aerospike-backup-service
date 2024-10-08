@@ -76,6 +76,9 @@ type AzureStorage struct {
 }
 
 func (s *AzureStorage) storage() {}
+func (s *AzureStorage) String() string {
+	return fmt.Sprintf("AzureStorage(Endpoint: %s, Container: %s, Path: %s)", s.Endpoint, s.ContainerName, s.Path)
+}
 
 // AzureAuth represents the authentication methods for Azure Blob storage.
 // This interface is implemented by AzureSharedKeyAuth and AzureADAuth.
