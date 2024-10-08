@@ -196,14 +196,13 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 
 		// Decode PEM data
 		keyBlock, _ := pem.Decode(keyFileBytes)
-		certBlock, _ := pem.Decode(certFileBytes)
 
-		if keyBlock == nil || certBlock == nil {
+		if keyBlock == nil {
 			errorLog(errors.New("failed to decode PEM data for key or certificate"))
 			return nil
 		}
 
-		// Check and Decrypt the the Key Block using passphrase
+		// Check and Decrypt the Key Block using passphrase
 		if t.KeyfilePassword != nil && x509.IsEncryptedPEMBlock(keyBlock) {
 			decryptedDERBytes, err := x509.DecryptPEMBlock(keyBlock, []byte(*t.KeyfilePassword))
 			if err != nil {
@@ -217,13 +216,12 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 
 		// Encode PEM data
 		keyPEM := pem.EncodeToMemory(keyBlock)
-		certPEM := pem.EncodeToMemory(certBlock)
 
-		if keyPEM == nil || certPEM == nil {
+		if keyPEM == nil {
 			errorLog(fmt.Errorf("failed to encode PEM data for key or certificate"))
 		}
 
-		cert, err := tls.X509KeyPair(certPEM, keyPEM)
+		cert, err := tls.X509KeyPair(certFileBytes, keyPEM)
 		if err != nil {
 			errorLog(fmt.Errorf("failed to add client certificate and key to the pool: %s", err))
 		}
