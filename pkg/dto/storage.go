@@ -18,6 +18,8 @@ type Storage struct {
 	S3Storage *S3Storage `yaml:"s3-storage,omitempty" json:"s3-storage,omitempty"`
 	// GcpStorage configuration, set if using GCP storage
 	GcpStorage *GcpStorage `yaml:"gcp-storage,omitempty" json:"gcp-storage,omitempty"`
+	// AzureStorage configuration, set if using Azure storage
+	AzureStorage *AzureStorage `yaml:"azure-storage,omitempty" json:"azure-storage,omitempty"`
 }
 
 // StorageValidator interface for storage types that can be validated
@@ -44,6 +46,10 @@ func (s *Storage) Validate() error {
 	}
 	if s.GcpStorage != nil {
 		validStorage = s.GcpStorage
+		count++
+	}
+	if s.AzureStorage != nil {
+		validStorage = s.AzureStorage
 		count++
 	}
 	if count == 0 {
@@ -134,6 +140,45 @@ func (g *GcpStorage) Validate() error {
 	return nil
 }
 
+// AzureStorage represents the configuration for Azure Blob storage.
+type AzureStorage struct {
+	// Account name + key auth
+	AccountName string `yaml:"account-name,omitempty" json:"account-name,omitempty"`
+	AccountKey  string `yaml:"account-key,omitempty" json:"account-key,omitempty"`
+	// Azure Active directory
+	TenantID     string `yaml:"tenant-id,omitempty" json:"tenant-id,omitempty"`
+	ClientID     string `yaml:"client-id,omitempty" json:"client-id,omitempty"`
+	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty"`
+	// Mandatory fields
+	Endpoint      string `yaml:"endpoint" json:"endpoint" validate:"required"`
+	ContainerName string `yaml:"container-name" json:"container-name" validate:"required"`
+}
+
+// Validate checks if the AzureStorage is valid.
+func (a *AzureStorage) Validate() error {
+	if a.Endpoint == "" {
+		return errors.New("azure storage endpoint is not specified")
+	}
+	if a.ContainerName == "" {
+		return errors.New("azure storage container name is not specified")
+	}
+
+	// Check for valid authentication method
+	hasSharedKey := a.AccountName != "" && a.AccountKey != ""
+	hasAAD := a.TenantID != "" && a.ClientID != "" && a.ClientSecret != ""
+
+	if !hasSharedKey && !hasAAD {
+		return errors.New("azure storage authentication method is not specified")
+	}
+
+	if hasSharedKey && hasAAD {
+		return errors.New(`azure storage authentication method is ambiguous:
+use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
+	}
+
+	return nil
+}
+
 // ToModel converts the Storage DTO to its corresponding model.
 func (s *Storage) ToModel() model.Storage {
 	if s.LocalStorage != nil {
@@ -161,7 +206,28 @@ func (s *Storage) ToModel() model.Storage {
 			Endpoint:   s.GcpStorage.Endpoint,
 		}
 	}
+	if s.AzureStorage != nil {
+		azureStorage := &model.AzureStorage{
+			Endpoint:      s.AzureStorage.Endpoint,
+			ContainerName: s.AzureStorage.ContainerName,
+		}
 
+		switch {
+		case s.AzureStorage.AccountName != "":
+			azureStorage.Auth = model.AzureSharedKeyAuth{
+				AccountName: s.AzureStorage.AccountName,
+				AccountKey:  s.AzureStorage.AccountKey,
+			}
+		case s.AzureStorage.TenantID != "":
+			azureStorage.Auth = model.AzureADAuth{
+				TenantID:     s.AzureStorage.TenantID,
+				ClientID:     s.AzureStorage.ClientID,
+				ClientSecret: s.AzureStorage.ClientSecret,
+			}
+		}
+
+		return azureStorage
+	}
 	slog.Info("error converting storage dto to model: no storage configuration provided")
 	return nil
 }
@@ -196,6 +262,25 @@ func NewStorageFromModel(m model.Storage) *Storage {
 				Path:       s.Path,
 				Endpoint:   s.Endpoint,
 			},
+		}
+	case *model.AzureStorage:
+		azureStorage := &AzureStorage{
+			Endpoint:      s.Endpoint,
+			ContainerName: s.ContainerName,
+		}
+
+		switch auth := s.Auth.(type) {
+		case model.AzureSharedKeyAuth:
+			azureStorage.AccountName = auth.AccountName
+			azureStorage.AccountKey = auth.AccountKey
+		case model.AzureADAuth:
+			azureStorage.TenantID = auth.TenantID
+			azureStorage.ClientID = auth.ClientID
+			azureStorage.ClientSecret = auth.ClientSecret
+		}
+
+		return &Storage{
+			AzureStorage: azureStorage,
 		}
 	default:
 		return nil

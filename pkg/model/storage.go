@@ -47,3 +47,34 @@ type GcpStorage struct {
 }
 
 func (s *GcpStorage) storage() {}
+
+// AzureStorage represents the configuration for Azure Blob storage.
+type AzureStorage struct {
+	Endpoint      string
+	ContainerName string
+	Auth          AzureAuth
+}
+
+func (s *AzureStorage) storage() {}
+
+// AzureAuth represents the authentication methods for Azure Blob storage.
+type AzureAuth interface {
+	azureAuth()
+}
+
+// AzureSharedKeyAuth represents shared key authentication for Azure Blob storage.
+type AzureSharedKeyAuth struct {
+	AccountName string
+	AccountKey  string
+}
+
+func (AzureSharedKeyAuth) azureAuth() {}
+
+// AzureADAuth represents Azure Active Directory authentication for Azure Blob storage.
+type AzureADAuth struct {
+	TenantID     string
+	ClientID     string
+	ClientSecret string
+}
+
+func (AzureADAuth) azureAuth() {}
