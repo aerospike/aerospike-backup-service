@@ -40,5 +40,9 @@ func (m *StorageManager) WriteConfiguration(ctx context.Context, config *model.C
 		return fmt.Errorf("failed to marshal configuration data: %w", err)
 	}
 
-	return storage.WriteFile(ctx, m.storage, "", data)
+	if err := storage.WriteFile(ctx, m.storage, "", data); err != nil {
+		return fmt.Errorf("failed to write configuration to storage %v: %w", m.storage, err)
+	}
+
+	return nil
 }

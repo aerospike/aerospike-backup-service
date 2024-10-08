@@ -1,7 +1,6 @@
 package configuration
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -58,7 +57,7 @@ func newConfigManager(configFile string, remote bool) (Manager, error) {
 	if remote {
 		storage, err := readStorage(configFile)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read remote storage configuration: %w", err)
 		}
 
 		return NewStorageManager(storage), nil
@@ -79,19 +78,18 @@ func newConfigManager(configFile string, remote bool) (Manager, error) {
 func readStorage(configURI string) (model.Storage, error) {
 	content, err := loadFileContent(configURI)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load file content: %w", err)
 	}
 
 	configStorage := &dto.Storage{}
-	err = yaml.Unmarshal(content, configStorage)
-	if err != nil {
-		return nil, err
+	if err = yaml.Unmarshal(content, configStorage); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal storage configuration: %w", err)
 	}
 
-	err = configStorage.Validate()
-	if err != nil {
-		return nil, err
+	if err = configStorage.Validate(); err != nil {
+		return nil, fmt.Errorf("validate storage configuration error: %w", err)
 	}
+
 	return configStorage.ToModel(), nil
 }
 
@@ -103,29 +101,40 @@ func loadFileContent(configFile string) ([]byte, error) {
 	if isHTTP {
 		return readFromHTTP(configFile)
 	}
-	return os.ReadFile(configFile)
+
+	content, err := os.ReadFile(configFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %s from disk: %w", configFile, err)
+	}
+
+	return content, nil
 }
 
 func readFromHTTP(url string) ([]byte, error) {
 	// #nosec G107
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed HTTP GET request to %s: %w", url, err)
 	}
 	defer resp.Body.Close()
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(resp.Body)
-	if err != nil {
-		return nil, err
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
-	return buf.Bytes(), nil
+
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read HTTP response body: %w", err)
+	}
+
+	return content, nil
 }
 
 // isHTTPPath determines whether the specified path is a valid http/https.
 func isHTTPPath(path string) (bool, error) {
 	uri, err := url.Parse(path)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to parse URL: %w", err)
 	}
 
 	return uri.Scheme == "http" || uri.Scheme == "https", nil
