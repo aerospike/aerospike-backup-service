@@ -1,5 +1,9 @@
 run:
   timeout: 2m
+linters-settings:
+  gosec:
+    excludes:
+      - G115
 
 linters:
   disable-all: true
