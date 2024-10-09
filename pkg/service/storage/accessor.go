@@ -11,7 +11,7 @@ import (
 // Accessor interface abstracts storage layer.
 type Accessor interface {
 	supports(storage model.Storage) bool
-	createReader(ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator,
+	createReader(ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, from string,
 	) (backup.StreamingReader, error)
 	createWriter(ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool,
 	) (backup.Writer, error)

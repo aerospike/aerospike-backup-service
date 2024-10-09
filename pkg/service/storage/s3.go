@@ -20,7 +20,7 @@ func (a *S3StorageAccessor) supports(storage model.Storage) bool {
 }
 
 func (a *S3StorageAccessor) createReader(
-	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator,
+	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, from string,
 ) (backup.StreamingReader, error) {
 	s3s := storage.(*model.S3Storage)
 	client, err := getS3Client(ctx, s3s)
@@ -30,6 +30,7 @@ func (a *S3StorageAccessor) createReader(
 	opts := []s3.Opt{
 		s3.WithValidator(filter),
 		s3.WithNestedDir(),
+		s3.WithStartAfter(from),
 	}
 	fullPath := filepath.Join(s3s.Path, path)
 	if isFile {

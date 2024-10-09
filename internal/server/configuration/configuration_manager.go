@@ -81,7 +81,7 @@ func readStorage(configURI string) (model.Storage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to load file content: %w", err)
 	}
-
+	slog.Info("Configuration storage:\n" + string(content))
 	configStorage := &dto.Storage{}
 	if err = yaml.Unmarshal(content, configStorage); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal storage configuration: %w", err)

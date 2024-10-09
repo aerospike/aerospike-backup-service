@@ -20,7 +20,7 @@ func (a *AzureStorageAccessor) supports(storage model.Storage) bool {
 }
 
 func (a *AzureStorageAccessor) createReader(
-	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator,
+	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, from string,
 ) (backup.StreamingReader, error) {
 	azures := storage.(*model.AzureStorage)
 	client, err := getAzureClient(azures)
@@ -30,6 +30,7 @@ func (a *AzureStorageAccessor) createReader(
 	opts := []azure.Opt{
 		azure.WithValidator(filter),
 		azure.WithNestedDir(),
+		azure.WithMarker(from),
 	}
 	fullPath := filepath.Join(azures.Path, path)
 	if isFile {
