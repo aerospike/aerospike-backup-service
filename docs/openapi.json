@@ -1688,6 +1688,45 @@
         },
         "type" : "object"
       },
+      "dto.AzureStorage" : {
+        "properties" : {
+          "account-key" : {
+            "description" : "AccountKey is the Azure storage account key for Shared Key authentication.",
+            "type" : "string"
+          },
+          "account-name" : {
+            "description" : "AccountName is the Azure storage account name for Shared Key authentication.",
+            "type" : "string"
+          },
+          "client-id" : {
+            "description" : "ClientID is the Azure Active Directory client ID for AAD authentication.",
+            "type" : "string"
+          },
+          "client-secret" : {
+            "description" : "ClientSecret is the Azure Active Directory client secret for AAD authentication.",
+            "type" : "string"
+          },
+          "container-name" : {
+            "description" : "ContainerName is the name of the Azure Blob container.",
+            "type" : "string"
+          },
+          "endpoint" : {
+            "description" : "Endpoint is the Azure Blob service endpoint URL.",
+            "type" : "string"
+          },
+          "path" : {
+            "description" : "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
+            "example" : "backups",
+            "type" : "string"
+          },
+          "tenant-id" : {
+            "description" : "TenantID is the Azure Active Directory tenant ID for AAD authentication.",
+            "type" : "string"
+          }
+        },
+        "required" : [ "container-name", "endpoint" ],
+        "type" : "object"
+      },
       "dto.BackupDetails" : {
         "description" : "BackupDetails contains information about a backup.",
         "properties" : {
@@ -2080,7 +2119,7 @@
       "dto.GcpStorage" : {
         "properties" : {
           "bucket-name" : {
-            "description" : "For GCP storage bucket is not part of the path as in S3.\nSo we should set it separately.",
+            "description" : "GCP storage bucket name.",
             "type" : "string"
           },
           "endpoint" : {
@@ -2092,12 +2131,12 @@
             "type" : "string"
           },
           "path" : {
-            "description" : "The root path for the backup repository.",
+            "description" : "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
             "example" : "backups",
             "type" : "string"
           }
         },
-        "required" : [ "bucket-name", "key-file", "path" ],
+        "required" : [ "bucket-name", "key-file" ],
         "type" : "object"
       },
       "dto.HTTPServerConfig" : {
@@ -2529,12 +2568,12 @@
             "type" : "integer"
           },
           "min_part_size" : {
-            "description" : "The minimum size in bytes of individual S3 UploadParts",
+            "description" : "The minimum size in bytes of individual S3 UploadParts.",
             "example" : 10,
             "type" : "integer"
           },
           "path" : {
-            "description" : "The root path for the backup repository within the bucket.",
+            "description" : "The root path for the backup repository within the bucket.\nIf not specified, backups will be saved in the bucket's root.",
             "example" : "backups",
             "type" : "string"
           },
@@ -2559,7 +2598,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "bucket", "path", "s3-region" ],
+        "required" : [ "bucket", "s3-region" ],
         "type" : "object"
       },
       "dto.SecretAgent" : {
@@ -2623,25 +2662,32 @@
       "dto.Storage" : {
         "description" : "Storage represents the configuration for a backup storage details.",
         "properties" : {
+          "azure-storage" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.AzureStorage"
+            } ],
+            "description" : "AzureStorage configuration, set if using Azure storage.",
+            "type" : "object"
+          },
           "gcp-storage" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.GcpStorage"
             } ],
-            "description" : "GcpStorage configuration, set if using GCP storage",
+            "description" : "GcpStorage configuration, set if using GCP storage.",
             "type" : "object"
           },
           "local-storage" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.LocalStorage"
             } ],
-            "description" : "LocalStorage configuration, set if using local storage",
+            "description" : "LocalStorage configuration, set if using local storage.",
             "type" : "object"
           },
           "s3-storage" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.S3Storage"
             } ],
-            "description" : "S3Storage configuration, set if using S3 storage",
+            "description" : "S3Storage configuration, set if using S3 storage.",
             "type" : "object"
           }
         },

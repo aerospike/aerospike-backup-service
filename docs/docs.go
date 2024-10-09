@@ -1501,6 +1501,48 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.AzureStorage": {
+            "type": "object",
+            "required": [
+                "container-name",
+                "endpoint"
+            ],
+            "properties": {
+                "account-key": {
+                    "description": "AccountKey is the Azure storage account key for Shared Key authentication.",
+                    "type": "string"
+                },
+                "account-name": {
+                    "description": "AccountName is the Azure storage account name for Shared Key authentication.",
+                    "type": "string"
+                },
+                "client-id": {
+                    "description": "ClientID is the Azure Active Directory client ID for AAD authentication.",
+                    "type": "string"
+                },
+                "client-secret": {
+                    "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.",
+                    "type": "string"
+                },
+                "container-name": {
+                    "description": "ContainerName is the name of the Azure Blob container.",
+                    "type": "string"
+                },
+                "endpoint": {
+                    "description": "Endpoint is the Azure Blob service endpoint URL.",
+                    "type": "string"
+                },
+                "path": {
+                    "description": "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
+                    "type": "string",
+                    "example": "backups"
+                },
+                "tenant-id": {
+                    "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.",
+                    "type": "string"
+                }
+            }
+        },
         "dto.BackupDetails": {
             "description": "BackupDetails contains information about a backup.",
             "type": "object",
@@ -1934,12 +1976,11 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "bucket-name",
-                "key-file",
-                "path"
+                "key-file"
             ],
             "properties": {
                 "bucket-name": {
-                    "description": "For GCP storage bucket is not part of the path as in S3.\nSo we should set it separately.",
+                    "description": "GCP storage bucket name.",
                     "type": "string"
                 },
                 "endpoint": {
@@ -1951,7 +1992,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "path": {
-                    "description": "The root path for the backup repository.",
+                    "description": "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
                     "type": "string",
                     "example": "backups"
                 }
@@ -2444,7 +2485,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "bucket",
-                "path",
                 "s3-region"
             ],
             "properties": {
@@ -2458,13 +2498,13 @@ const docTemplate = `{
                     "example": 16
                 },
                 "min_part_size": {
-                    "description": "The minimum size in bytes of individual S3 UploadParts",
+                    "description": "The minimum size in bytes of individual S3 UploadParts.",
                     "type": "integer",
                     "default": 5242880,
                     "example": 10
                 },
                 "path": {
-                    "description": "The root path for the backup repository within the bucket.",
+                    "description": "The root path for the backup repository within the bucket.\nIf not specified, backups will be saved in the bucket's root.",
                     "type": "string",
                     "example": "backups"
                 },
@@ -2555,8 +2595,16 @@ const docTemplate = `{
             "description": "Storage represents the configuration for a backup storage details.",
             "type": "object",
             "properties": {
+                "azure-storage": {
+                    "description": "AzureStorage configuration, set if using Azure storage.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.AzureStorage"
+                        }
+                    ]
+                },
                 "gcp-storage": {
-                    "description": "GcpStorage configuration, set if using GCP storage",
+                    "description": "GcpStorage configuration, set if using GCP storage.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.GcpStorage"
@@ -2564,7 +2612,7 @@ const docTemplate = `{
                     ]
                 },
                 "local-storage": {
-                    "description": "LocalStorage configuration, set if using local storage",
+                    "description": "LocalStorage configuration, set if using local storage.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocalStorage"
@@ -2572,7 +2620,7 @@ const docTemplate = `{
                     ]
                 },
                 "s3-storage": {
-                    "description": "S3Storage configuration, set if using S3 storage",
+                    "description": "S3Storage configuration, set if using S3 storage.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.S3Storage"
