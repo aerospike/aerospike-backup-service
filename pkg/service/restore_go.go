@@ -32,7 +32,7 @@ func (r *RestoreGo) RestoreRun(
 
 	config := makeRestoreConfig(request)
 
-	reader, err := storage.CreateReader(ctx, request.SourceStorage, request.BackupDataPath, false, asb.NewValidator())
+	reader, err := storage.CreateReader(ctx, request.SourceStorage, request.BackupDataPath, false, asb.NewValidator(), "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}

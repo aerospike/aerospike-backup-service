@@ -17,7 +17,7 @@ func (a *LocalStorageAccessor) supports(storage model.Storage) bool {
 }
 
 func (a *LocalStorageAccessor) createReader(
-	_ context.Context, storage model.Storage, path string, isFile bool, filter Validator,
+	_ context.Context, storage model.Storage, path string, isFile bool, filter Validator, _ string,
 ) (backup.StreamingReader, error) {
 	ls := storage.(*model.LocalStorage)
 	fullPath := filepath.Join(ls.Path, path)

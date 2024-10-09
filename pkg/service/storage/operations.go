@@ -3,16 +3,19 @@ package storage
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/backup-go"
 )
 
 // CreateReader creates a reader for a path in the specified storage.
-func CreateReader(ctx context.Context, storage model.Storage, path string, isFile bool, v Validator,
+func CreateReader(
+	ctx context.Context, storage model.Storage, path string, isFile bool, v Validator, startScanFrom string,
 ) (backup.StreamingReader, error) {
-	return getAccessor(storage).createReader(ctx, storage, path, isFile, v)
+	return getAccessor(storage).createReader(ctx, storage, path, isFile, v, startScanFrom)
 }
 
 // CreateWriter creates a writer for a path in the specified storage.
@@ -22,7 +25,7 @@ func CreateWriter(ctx context.Context, storage model.Storage, path string, isFil
 }
 
 func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
-	reader, err := CreateReader(ctx, storage, filepath, true, nil)
+	reader, err := CreateReader(ctx, storage, filepath, true, nil, "")
 	if err != nil {
 		return nil, err
 	}
@@ -42,8 +45,14 @@ func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]by
 	}
 }
 
-func ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error) {
-	reader, err := CreateReader(ctx, storage, path, false, newNameValidator(filterStr))
+func ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
+) ([]*bytes.Buffer, error) {
+	var startScanFrom string
+	if fromTime != nil {
+		startScanFrom = fmt.Sprintf("%d", fromTime.UnixMilli()-1) // -1 to ensure filter is greater or equal.
+	}
+
+	reader, err := CreateReader(ctx, storage, path, false, newNameValidator(filterStr), startScanFrom)
 	if err != nil {
 		return nil, err
 	}
