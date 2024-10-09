@@ -79,7 +79,7 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 	}
 
 	client := awsS3.NewFromConfig(cfg, func(o *awsS3.Options) {
-		if s.S3EndpointOverride != nil {
+		if s.S3EndpointOverride != nil && *s.S3EndpointOverride != "" {
 			o.BaseEndpoint = s.S3EndpointOverride
 		}
 
