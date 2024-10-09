@@ -20,7 +20,7 @@ func (a *GcpStorageAccessor) supports(storage model.Storage) bool {
 }
 
 func (a *GcpStorageAccessor) createReader(
-	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, from string,
+	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, startScanFrom string,
 ) (backup.StreamingReader, error) {
 	gcps := storage.(*model.GcpStorage)
 	client, err := getGcpClient(ctx, gcps)
@@ -30,7 +30,7 @@ func (a *GcpStorageAccessor) createReader(
 	opts := []gcp.Opt{
 		gcp.WithValidator(filter),
 		gcp.WithNestedDir(),
-		gcp.WithStartOffset(from),
+		gcp.WithStartOffset(startScanFrom),
 	}
 	fullPath := filepath.Join(gcps.Path, path)
 	if isFile {

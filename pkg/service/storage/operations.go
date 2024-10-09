@@ -12,9 +12,10 @@ import (
 )
 
 // CreateReader creates a reader for a path in the specified storage.
-func CreateReader(ctx context.Context, storage model.Storage, path string, isFile bool, v Validator, from string,
+func CreateReader(
+	ctx context.Context, storage model.Storage, path string, isFile bool, v Validator, startScanFrom string,
 ) (backup.StreamingReader, error) {
-	return getAccessor(storage).createReader(ctx, storage, path, isFile, v, from)
+	return getAccessor(storage).createReader(ctx, storage, path, isFile, v, startScanFrom)
 }
 
 // CreateWriter creates a writer for a path in the specified storage.
@@ -46,12 +47,12 @@ func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]by
 
 func ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
 ) ([]*bytes.Buffer, error) {
-	var from string
+	var startScanFrom string
 	if fromTime != nil {
-		from = fmt.Sprintf("%d", fromTime.UnixMilli()-1) // -1 to ensure filter is greater or equal.
+		startScanFrom = fmt.Sprintf("%d", fromTime.UnixMilli()-1) // -1 to ensure filter is greater or equal.
 	}
 
-	reader, err := CreateReader(ctx, storage, path, false, newNameValidator(filterStr), from)
+	reader, err := CreateReader(ctx, storage, path, false, newNameValidator(filterStr), startScanFrom)
 	if err != nil {
 		return nil, err
 	}
