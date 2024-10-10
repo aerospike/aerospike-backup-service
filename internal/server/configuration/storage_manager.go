@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
-
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 )
@@ -24,18 +21,17 @@ func NewStorageManager(configStorage model.Storage) Manager {
 	}
 }
 
-func (m *StorageManager) ReadConfiguration(ctx context.Context) (io.ReadCloser, error) {
+func (m *StorageManager) ReadConfiguration(ctx context.Context) (*model.Config, error) {
 	content, err := storage.ReadFile(ctx, m.storage, "")
 	if err != nil {
-		return nil, fmt.Errorf("failed to read configuration from storage %+v: %w", m.storage, err)
+		return nil, fmt.Errorf("failed to read configuration from storage: %w", err)
 	}
 
-	return io.NopCloser(bytes.NewReader(content)), nil
+	return readAndProcessConfig(bytes.NewReader(content))
 }
 
 func (m *StorageManager) WriteConfiguration(ctx context.Context, config *model.Config) error {
-	configDto := dto.NewConfigFromModel(config)
-	data, err := dto.Serialize(configDto, dto.YAML)
+	data, err := serializeConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration data: %w", err)
 	}
@@ -45,4 +41,8 @@ func (m *StorageManager) WriteConfiguration(ctx context.Context, config *model.C
 	}
 
 	return nil
+}
+
+func (m *StorageManager) Update(updateFunc func(*model.Config) error) error {
+	return genericUpdate(m, updateFunc)
 }

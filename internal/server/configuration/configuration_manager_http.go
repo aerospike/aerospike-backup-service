@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -24,7 +23,7 @@ func NewHTTPConfigurationManager(uri string) Manager {
 }
 
 // ReadConfiguration returns a reader for the configuration using a URL.
-func (h *HTTPConfigurationManager) ReadConfiguration(ctx context.Context) (io.ReadCloser, error) {
+func (h *HTTPConfigurationManager) ReadConfiguration(ctx context.Context) (*model.Config, error) {
 	if h.configURL == "" {
 		return nil, errors.New("configuration URL is missing")
 	}
@@ -39,15 +38,19 @@ func (h *HTTPConfigurationManager) ReadConfiguration(ctx context.Context) (io.Re
 		return nil, fmt.Errorf("failed to execute HTTP request: %w", err)
 	}
 
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
 		return nil, fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
 
-	return resp.Body, nil
+	return readAndProcessConfig(resp.Body)
 }
 
 // WriteConfiguration is unsupported for HTTPConfigurationManager.
 func (h *HTTPConfigurationManager) WriteConfiguration(_ context.Context, _ *model.Config) error {
 	return fmt.Errorf("writing configuration is not supported for HTTP: %w", errors.ErrUnsupported)
+}
+
+func (h *HTTPConfigurationManager) Update(_ func(*model.Config) error) error {
+	return fmt.Errorf("update is not supported for HTTP: %w", errors.ErrUnsupported)
 }
