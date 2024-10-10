@@ -20,6 +20,24 @@ type Manager interface {
 	Update(ctx context.Context, updateFunc func(*model.Config) error) error
 }
 
+func Load(ctx context.Context, configFile string, remote bool) (*model.Config, Manager, error) {
+	slog.Info("Read service configuration from",
+		slog.String("file", configFile),
+		slog.Bool("remote", remote))
+
+	manager, err := newConfigManager(configFile, remote)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
+	}
+
+	config, err := manager.Read(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read configuration: %w", err)
+	}
+
+	return config, manager, nil
+}
+
 func readConfig(reader io.Reader) (*model.Config, error) {
 	configBytes, err := io.ReadAll(reader)
 	if err != nil {
@@ -52,24 +70,6 @@ func writeConfig(writer io.Writer, config *model.Config) error {
 	}
 	_, err = writer.Write(data)
 	return err
-}
-
-func Load(ctx context.Context, configFile string, remote bool) (*model.Config, Manager, error) {
-	slog.Info("Read service configuration from",
-		slog.String("file", configFile),
-		slog.Bool("remote", remote))
-
-	manager, err := newConfigManager(configFile, remote)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
-	}
-
-	config, err := manager.Read(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read configuration: %w", err)
-	}
-
-	return config, manager, nil
 }
 
 func newConfigManager(configFile string, remote bool) (Manager, error) {
