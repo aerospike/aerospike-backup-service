@@ -25,8 +25,11 @@ func NewFileConfigurationManager(path string) Manager {
 }
 
 // ReadConfiguration returns a reader for the configuration file.
+func (cm *FileConfigurationManager) Read(ctx context.Context) (*model.Config, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
-func (cm *FileConfigurationManager) ReadConfiguration(ctx context.Context) (*model.Config, error) {
 	if cm.FilePath == "" {
 		return nil, errors.New("configuration file path is missing")
 	}
@@ -37,11 +40,11 @@ func (cm *FileConfigurationManager) ReadConfiguration(ctx context.Context) (*mod
 	}
 	defer file.Close()
 
-	return readAndProcessConfig(file)
+	return readConfig(file)
 }
 
-// WriteConfiguration writes the configuration to the given file path.
-func (cm *FileConfigurationManager) WriteConfiguration(ctx context.Context, config *model.Config) error {
+// Write writes the configuration to the given file path.
+func (cm *FileConfigurationManager) Write(ctx context.Context, config *model.Config) error {
 	cm.Lock()
 	defer cm.Unlock()
 
@@ -66,6 +69,15 @@ func (cm *FileConfigurationManager) WriteConfiguration(ctx context.Context, conf
 	return nil
 }
 
-func (cm *FileConfigurationManager) Update(updateFunc func(*model.Config) error) error {
-	return genericUpdate(cm, updateFunc)
+func (cm *FileConfigurationManager) Update(ctx context.Context, updateFunc func(*model.Config) error) error {
+	config, err := cm.Read(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to read configuration: %w", err)
+	}
+
+	if err := updateFunc(config); err != nil {
+		return fmt.Errorf("failed to update configuration: %w", err)
+	}
+
+	return cm.Write(ctx, config)
 }

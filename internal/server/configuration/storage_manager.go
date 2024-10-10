@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 )
@@ -21,16 +22,16 @@ func NewStorageManager(configStorage model.Storage) Manager {
 	}
 }
 
-func (m *StorageManager) ReadConfiguration(ctx context.Context) (*model.Config, error) {
+func (m *StorageManager) Read(ctx context.Context) (*model.Config, error) {
 	content, err := storage.ReadFile(ctx, m.storage, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration from storage: %w", err)
 	}
 
-	return readAndProcessConfig(bytes.NewReader(content))
+	return readConfig(bytes.NewReader(content))
 }
 
-func (m *StorageManager) WriteConfiguration(ctx context.Context, config *model.Config) error {
+func (m *StorageManager) Write(ctx context.Context, config *model.Config) error {
 	data, err := serializeConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration data: %w", err)
@@ -43,6 +44,16 @@ func (m *StorageManager) WriteConfiguration(ctx context.Context, config *model.C
 	return nil
 }
 
-func (m *StorageManager) Update(updateFunc func(*model.Config) error) error {
-	return genericUpdate(m, updateFunc)
+func (m *StorageManager) Update(ctx context.Context, updateFunc func(*model.Config) error) error {
+	config, err := m.Read(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to read configuration: %w", err)
+	}
+
+	if err := updateFunc(config); err != nil {
+		return fmt.Errorf("failed to update configuration: %w", err)
+	}
+
+	return m.Write(ctx, config)
+
 }

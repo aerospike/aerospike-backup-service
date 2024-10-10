@@ -15,12 +15,12 @@ import (
 )
 
 type Manager interface {
-	ReadConfiguration(ctx context.Context) (*model.Config, error)
-	WriteConfiguration(ctx context.Context, config *model.Config) error
+	Read(ctx context.Context) (*model.Config, error)
+	Write(ctx context.Context, config *model.Config) error
 	Update(ctx context.Context, updateFunc func(*model.Config) error) error
 }
 
-func readAndProcessConfig(reader io.Reader) (*model.Config, error) {
+func readConfig(reader io.Reader) (*model.Config, error) {
 	configBytes, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration content: %w", err)
@@ -45,21 +45,7 @@ func readAndProcessConfig(reader io.Reader) (*model.Config, error) {
 }
 
 func serializeConfig(config *model.Config) ([]byte, error) {
-	dtoConfig := dto.NewConfigFromModel(config)
-	return yaml.Marshal(dtoConfig)
-}
-
-func genericUpdate(ctx context.Context, m Manager, updateFunc func(*model.Config) error) error {
-	config, err := m.ReadConfiguration(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to read configuration: %w", err)
-	}
-
-	if err := updateFunc(config); err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
-	}
-
-	return m.WriteConfiguration(ctx, config)
+	return yaml.Marshal(dto.NewConfigFromModel(config))
 }
 
 func Load(ctx context.Context, configFile string, remote bool) (*model.Config, Manager, error) {
@@ -72,7 +58,7 @@ func Load(ctx context.Context, configFile string, remote bool) (*model.Config, M
 		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
 	}
 
-	config, err := manager.ReadConfiguration(ctx)
+	config, err := manager.Read(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read configuration: %w", err)
 	}

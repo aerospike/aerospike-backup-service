@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -179,12 +178,15 @@ func (mock backendsHolderMock) SetData(_ map[string]*service.BackupBackend) {
 
 type configurationManagerMock struct{}
 
-func (mock configurationManagerMock) ReadConfiguration(_ context.Context) (io.ReadCloser, error) {
-	serialize, _ := dto.Serialize(testConfig(), dto.JSON)
-	return io.NopCloser(bytes.NewReader(serialize)), nil
+func (mock configurationManagerMock) Read(_ context.Context) (*model.Config, error) {
+	return testConfig().ToModel()
 }
 
-func (mock configurationManagerMock) WriteConfiguration(_ context.Context, config *model.Config) error {
+func (mock configurationManagerMock) Update(ctx context.Context, _ func(*model.Config) error) error {
+	return nil
+}
+
+func (mock configurationManagerMock) Write(_ context.Context, config *model.Config) error {
 	if config == nil {
 		return errTest
 	}

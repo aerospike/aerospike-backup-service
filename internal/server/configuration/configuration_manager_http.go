@@ -23,12 +23,12 @@ func NewHTTPConfigurationManager(uri string) Manager {
 }
 
 // ReadConfiguration returns a reader for the configuration using a URL.
-func (h *HTTPConfigurationManager) ReadConfiguration(ctx context.Context) (*model.Config, error) {
-	if h.configURL == "" {
+func (cm *HTTPConfigurationManager) Read(ctx context.Context) (*model.Config, error) {
+	if cm.configURL == "" {
 		return nil, errors.New("configuration URL is missing")
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.configURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cm.configURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
@@ -43,14 +43,14 @@ func (h *HTTPConfigurationManager) ReadConfiguration(ctx context.Context) (*mode
 		return nil, fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
 
-	return readAndProcessConfig(resp.Body)
+	return readConfig(resp.Body)
 }
 
 // WriteConfiguration is unsupported for HTTPConfigurationManager.
-func (h *HTTPConfigurationManager) WriteConfiguration(_ context.Context, _ *model.Config) error {
+func (cm *HTTPConfigurationManager) Write(_ context.Context, _ *model.Config) error {
 	return fmt.Errorf("writing configuration is not supported for HTTP: %w", errors.ErrUnsupported)
 }
 
-func (h *HTTPConfigurationManager) Update(_ func(*model.Config) error) error {
+func (cm *HTTPConfigurationManager) Update(_ context.Context, _ func(*model.Config) error) error {
 	return fmt.Errorf("update is not supported for HTTP: %w", errors.ErrUnsupported)
 }
