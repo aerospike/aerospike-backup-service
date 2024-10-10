@@ -15,11 +15,11 @@ import (
 )
 
 type Manager interface {
-	ReadConfiguration(ctx context.Context) (io.ReadCloser, error)
-	WriteConfiguration(ctx context.Context, config *model.Config) error
+	Read(ctx context.Context) (*model.Config, error)
+	Write(ctx context.Context, config *model.Config) error
+	Update(ctx context.Context, updateFunc func(*model.Config) error) error
 }
 
-// Load handles the entire configuration setup process
 func Load(ctx context.Context, configFile string, remote bool) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
@@ -30,33 +30,46 @@ func Load(ctx context.Context, configFile string, remote bool) (*model.Config, M
 		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
 	}
 
-	reader, err := manager.ReadConfiguration(ctx)
+	config, err := manager.Read(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read configuration file: %w", err)
+		return nil, nil, fmt.Errorf("failed to read configuration: %w", err)
 	}
-	defer reader.Close()
 
+	return config, manager, nil
+}
+
+func readConfig(reader io.Reader) (*model.Config, error) {
 	configBytes, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read configuration content: %w", err)
+		return nil, fmt.Errorf("failed to read configuration content: %w", err)
 	}
 	slog.Info("Service configuration:\n" + string(configBytes))
 
 	config := dto.NewConfigWithDefaultValues()
 	if err := yaml.Unmarshal(configBytes, config); err != nil {
-		return nil, nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 
 	if err := config.Validate(); err != nil {
-		return nil, nil, fmt.Errorf("configuration validation failed: %w", err)
+		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
 
 	modelConfig, err := config.ToModel()
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to convert configuration to model: %w", err)
+		return nil, fmt.Errorf("failed to convert configuration to model: %w", err)
 	}
 
-	return modelConfig, manager, nil
+	return modelConfig, nil
+}
+
+func writeConfig(writer io.Writer, config *model.Config) error {
+	dtoConfig := dto.NewConfigFromModel(config)
+	data, err := yaml.Marshal(dtoConfig)
+	if err != nil {
+		return fmt.Errorf("failed to marshal configuration: %w", err)
+	}
+	_, err = writer.Write(data)
+	return err
 }
 
 func newConfigManager(configFile string, remote bool) (Manager, error) {
@@ -66,14 +79,14 @@ func newConfigManager(configFile string, remote bool) (Manager, error) {
 			return nil, fmt.Errorf("failed to read remote storage configuration: %w", err)
 		}
 
-		return NewStorageManager(storage), nil
+		return newStorageManager(storage), nil
 	}
 
 	if isHTTPPath(configFile) {
-		return NewHTTPConfigurationManager(configFile), nil
+		return newHTTPConfigurationManager(configFile), nil
 	}
 
-	return NewFileConfigurationManager(configFile), nil
+	return newFileConfigurationManager(configFile), nil
 }
 
 func readStorage(configURI string) (model.Storage, error) {

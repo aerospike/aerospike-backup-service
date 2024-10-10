@@ -65,7 +65,7 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = s.configurationManager.WriteConfiguration(r.Context(), s.config)
+	err = s.configurationManager.Write(r.Context(), s.config)
 	if err != nil {
 		hLogger.Error("failed to write configuration",
 			slog.Any("error", err),
@@ -190,7 +190,7 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.WriteConfiguration(r.Context(), s.config)
+	err = s.configurationManager.Write(r.Context(), s.config)
 	if err != nil {
 		hLogger.Error("failed to write configuration",
 			slog.String("name", clusterName),
@@ -229,7 +229,7 @@ func (s *Service) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.WriteConfiguration(r.Context(), s.config)
+	err = s.configurationManager.Write(r.Context(), s.config)
 	if err != nil {
 		hLogger.Error("failed to write configuration",
 			slog.String("name", clusterName),
