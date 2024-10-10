@@ -44,8 +44,14 @@ func readConfig(reader io.Reader) (*model.Config, error) {
 	return modelConfig, nil
 }
 
-func serializeConfig(config *model.Config) ([]byte, error) {
-	return yaml.Marshal(dto.NewConfigFromModel(config))
+func writeConfig(writer io.Writer, config *model.Config) error {
+	dtoConfig := dto.NewConfigFromModel(config)
+	data, err := yaml.Marshal(dtoConfig)
+	if err != nil {
+		return fmt.Errorf("failed to marshal configuration: %w", err)
+	}
+	_, err = writer.Write(data)
+	return err
 }
 
 func Load(ctx context.Context, configFile string, remote bool) (*model.Config, Manager, error) {
@@ -73,14 +79,14 @@ func newConfigManager(configFile string, remote bool) (Manager, error) {
 			return nil, fmt.Errorf("failed to read remote storage configuration: %w", err)
 		}
 
-		return NewStorageManager(storage), nil
+		return newStorageManager(storage), nil
 	}
 
 	if isHTTPPath(configFile) {
-		return NewHTTPConfigurationManager(configFile), nil
+		return newHTTPConfigurationManager(configFile), nil
 	}
 
-	return NewFileConfigurationManager(configFile), nil
+	return newFileConfigurationManager(configFile), nil
 }
 
 func readStorage(configURI string) (model.Storage, error) {

@@ -10,22 +10,22 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
-// FileConfigurationManager implements the Manager interface,
+// fileConfigurationManager implements the Manager interface,
 // performing I/O operations on local storage.
-type FileConfigurationManager struct {
+type fileConfigurationManager struct {
 	sync.Mutex
 	FilePath string
 }
 
-var _ Manager = (*FileConfigurationManager)(nil)
+var _ Manager = (*fileConfigurationManager)(nil)
 
-// NewFileConfigurationManager returns a new FileConfigurationManager.
-func NewFileConfigurationManager(path string) Manager {
-	return &FileConfigurationManager{FilePath: path}
+// newFileConfigurationManager returns a new fileConfigurationManager.
+func newFileConfigurationManager(path string) Manager {
+	return &fileConfigurationManager{FilePath: path}
 }
 
 // ReadConfiguration returns a reader for the configuration file.
-func (cm *FileConfigurationManager) Read(ctx context.Context) (*model.Config, error) {
+func (cm *fileConfigurationManager) Read(ctx context.Context) (*model.Config, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (cm *FileConfigurationManager) Read(ctx context.Context) (*model.Config, er
 }
 
 // Write writes the configuration to the given file path.
-func (cm *FileConfigurationManager) Write(ctx context.Context, config *model.Config) error {
+func (cm *fileConfigurationManager) Write(ctx context.Context, config *model.Config) error {
 	cm.Lock()
 	defer cm.Unlock()
 
@@ -56,20 +56,20 @@ func (cm *FileConfigurationManager) Write(ctx context.Context, config *model.Con
 		return errors.New("configuration file path is missing")
 	}
 
-	data, err := serializeConfig(config)
+	file, err := os.OpenFile(cm.FilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return fmt.Errorf("failed to marshal configuration data: %w", err)
+		return fmt.Errorf("failed to open file for writing %q: %w", cm.FilePath, err)
 	}
+	defer file.Close()
 
-	err = os.WriteFile(cm.FilePath, data, 0600)
-	if err != nil {
+	if err := writeConfig(file, config); err != nil {
 		return fmt.Errorf("failed to write configuration to file %q: %w", cm.FilePath, err)
 	}
 
 	return nil
 }
 
-func (cm *FileConfigurationManager) Update(ctx context.Context, updateFunc func(*model.Config) error) error {
+func (cm *fileConfigurationManager) Update(ctx context.Context, updateFunc func(*model.Config) error) error {
 	config, err := cm.Read(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read configuration: %w", err)

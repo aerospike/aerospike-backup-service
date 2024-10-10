@@ -9,20 +9,20 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 )
 
-// StorageManager implements Manager interface.
+// storageManager implements Manager interface.
 // it stores service configuration in provided Storage (Local, s3 aws etc.)
-type StorageManager struct {
+type storageManager struct {
 	storage model.Storage
 }
 
-// NewStorageManager returns new instance of StorageManager
-func NewStorageManager(configStorage model.Storage) Manager {
-	return &StorageManager{
+// newStorageManager returns new instance of storageManager
+func newStorageManager(configStorage model.Storage) Manager {
+	return &storageManager{
 		storage: configStorage,
 	}
 }
 
-func (m *StorageManager) Read(ctx context.Context) (*model.Config, error) {
+func (m *storageManager) Read(ctx context.Context) (*model.Config, error) {
 	content, err := storage.ReadFile(ctx, m.storage, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration from storage: %w", err)
@@ -31,20 +31,20 @@ func (m *StorageManager) Read(ctx context.Context) (*model.Config, error) {
 	return readConfig(bytes.NewReader(content))
 }
 
-func (m *StorageManager) Write(ctx context.Context, config *model.Config) error {
-	data, err := serializeConfig(config)
-	if err != nil {
-		return fmt.Errorf("failed to marshal configuration data: %w", err)
+func (m *storageManager) Write(ctx context.Context, config *model.Config) error {
+	var buf bytes.Buffer
+	if err := writeConfig(&buf, config); err != nil {
+		return err
 	}
 
-	if err := storage.WriteFile(ctx, m.storage, "", data); err != nil {
+	if err := storage.WriteFile(ctx, m.storage, "", buf.Bytes()); err != nil {
 		return fmt.Errorf("failed to write configuration to storage %+v: %w", m.storage, err)
 	}
 
 	return nil
 }
 
-func (m *StorageManager) Update(ctx context.Context, updateFunc func(*model.Config) error) error {
+func (m *storageManager) Update(ctx context.Context, updateFunc func(*model.Config) error) error {
 	config, err := m.Read(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read configuration: %w", err)
@@ -55,5 +55,4 @@ func (m *StorageManager) Update(ctx context.Context, updateFunc func(*model.Conf
 	}
 
 	return m.Write(ctx, config)
-
 }

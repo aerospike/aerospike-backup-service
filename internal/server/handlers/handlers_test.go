@@ -182,7 +182,7 @@ func (mock configurationManagerMock) Read(_ context.Context) (*model.Config, err
 	return testConfig().ToModel()
 }
 
-func (mock configurationManagerMock) Update(ctx context.Context, _ func(*model.Config) error) error {
+func (mock configurationManagerMock) Update(_ context.Context, _ func(*model.Config) error) error {
 	return nil
 }
 
