@@ -17,7 +17,6 @@ import (
 type Manager interface {
 	Read(ctx context.Context) (*model.Config, error)
 	Write(ctx context.Context, config *model.Config) error
-	Update(ctx context.Context, updateFunc func(*model.Config) error) error
 }
 
 func Load(ctx context.Context, configFile string, remote bool) (*model.Config, Manager, error) {

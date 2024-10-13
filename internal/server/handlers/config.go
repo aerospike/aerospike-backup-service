@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"context"
+	"fmt"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"log/slog"
 	"net/http"
 
@@ -76,7 +79,7 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// ApplyConfig
+// ApplyConfig  read and apply configuration from file.
 // @Summary     Applies the configuration for the service.
 // @ID          applyConfig
 // @Tags        Configuration
@@ -84,18 +87,30 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 // @Accept      json
 // @Success     200
 // @Failure     400 {string} string
-func (s *Service) ApplyConfig(w http.ResponseWriter, _ *http.Request) {
+func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ApplyConfig"))
 
-	handlers, err := service.ApplyNewConfig(s.scheduler, s.config, s.backupBackends, s.clientManger)
+	config, err := s.configurationManager.Read(r.Context())
 	if err != nil {
-		hLogger.Error("failed to apply new config",
+		hLogger.Error("failed to read config",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	s.handlerHolder = handlers
+
+	err = s.changeConfig(r.Context(), func(c *model.Config) error {
+		c = config //TODO: copy fields.
+		return nil
+	})
+	if err != nil {
+		hLogger.Error("failed to apply config",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -106,4 +121,25 @@ func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		s.updateConfig(w, r)
 	}
+}
+
+func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
+	err := updateFunc(s.config)
+	if err != nil {
+		return fmt.Errorf("cannot update configuration: %w", err)
+	}
+
+	err = s.configurationManager.Write(ctx, s.config)
+	if err != nil {
+		return fmt.Errorf("failed to write configuration: %w", err)
+	}
+
+	handlers, err := service.ApplyNewConfig(s.scheduler, s.config, s.backupBackends, s.clientManger)
+	if err != nil {
+		return fmt.Errorf("failed to apply new configuration:  %w", err)
+	}
+
+	s.handlerHolder = handlers
+
+	return nil
 }

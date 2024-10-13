@@ -75,7 +75,7 @@ func startService(configFile string, remote bool) error {
 	appLogger := slog.New(
 		util.LogHandler(loggerConfig),
 	)
-	slog.SetDefault(slog.New(util.LogHandler(loggerConfig)))
+	slog.SetDefault(appLogger)
 	logger.SetDefault(util.NewQuartzLogger(ctx))
 	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 
