@@ -221,8 +221,6 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup routine name"
 // @Success     204
 // @Failure     400 {string} string
-//
-//nolint:dupl // Each handler must be in separate func. No duplication.
 func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deleteRoutine"))
 

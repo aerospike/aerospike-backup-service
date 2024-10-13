@@ -200,8 +200,6 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup policy name"
 // @Success     204
 // @Failure     400 {string} string
-//
-//nolint:dupl // Each handler must be in separate func. No duplication.
 func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deletePolicy"))
 
@@ -215,7 +213,6 @@ func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
 	err := s.changeConfig(r.Context(), func(config *model.Config) error {
 		return config.DeletePolicy(policyName)
 	})
-
 	if err != nil {
 		hLogger.Error("failed to delete policy",
 			slog.String("name", policyName),

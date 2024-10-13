@@ -11,6 +11,15 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 )
 
+func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.readConfig(w)
+	case http.MethodPut:
+		s.updateConfig(w, r)
+	}
+}
+
 // readConfig
 // @Summary     Returns the configuration for the service.
 // @ID	        readConfig
@@ -24,7 +33,6 @@ func (s *Service) readConfig(w http.ResponseWriter) {
 
 	configuration, err := dto.Serialize(dto.NewConfigFromModel(s.config), dto.JSON)
 	if err != nil {
-		// We won't log config as it is not secure.
 		hLogger.Error("failed to parse service configuration",
 			slog.Any("error", err),
 		)
@@ -54,28 +62,31 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 
 	newConfig, err := dto.NewConfigFromReader(r.Body, dto.JSON)
 	if err != nil {
-		// We won't log config as it is not secure.
 		hLogger.Error("failed to decode new configuration",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	s.config, err = newConfig.ToModel()
+
+	newConfigModel, err := newConfig.ToModel()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+		config.CopyFrom(newConfigModel)
+		return nil
+	})
+
+	if err != nil {
+		hLogger.Error("failed to apply config",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = s.configurationManager.Write(r.Context(), s.config)
-	if err != nil {
-		// We won't log config as it is not secure.
-		hLogger.Error("failed to update configuration",
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -112,15 +123,6 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-}
-
-func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.readConfig(w)
-	case http.MethodPut:
-		s.updateConfig(w, r)
-	}
 }
 
 func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {

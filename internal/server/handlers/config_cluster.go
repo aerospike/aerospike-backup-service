@@ -163,6 +163,8 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Param       cluster body dto.AerospikeCluster true "Aerospike cluster details"
 // @Success     200
 // @Failure     400 {string} string
+//
+//nolint:dupl
 func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateAerospikeCluster"))
 
@@ -202,8 +204,6 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 // @Param       name path string true "Aerospike cluster name"
 // @Success     204
 // @Failure     400 {string} string
-//
-//nolint:dupl // Each handler must be in separate func. No duplication.
 func (s *Service) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deleteAerospikeCluster"))
 
