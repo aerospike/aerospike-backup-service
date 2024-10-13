@@ -68,16 +68,3 @@ func (cm *fileConfigurationManager) Write(ctx context.Context, config *model.Con
 
 	return nil
 }
-
-func (cm *fileConfigurationManager) Update(ctx context.Context, updateFunc func(*model.Config) error) error {
-	config, err := cm.Read(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to read configuration: %w", err)
-	}
-
-	if err := updateFunc(config); err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
-	}
-
-	return cm.Write(ctx, config)
-}

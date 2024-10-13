@@ -176,6 +176,10 @@ func (mock backendsHolderMock) Get(routineName string) (*service.BackupBackend, 
 func (mock backendsHolderMock) SetData(_ map[string]*service.BackupBackend) {
 }
 
+func (mock backendsHolderMock) GetAllReaders() map[string]service.BackupListReader {
+	return nil
+}
+
 type configurationManagerMock struct{}
 
 func (mock configurationManagerMock) Read(_ context.Context) (*model.Config, error) {

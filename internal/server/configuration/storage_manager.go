@@ -43,16 +43,3 @@ func (m *storageManager) Write(ctx context.Context, config *model.Config) error 
 
 	return nil
 }
-
-func (m *storageManager) Update(ctx context.Context, updateFunc func(*model.Config) error) error {
-	config, err := m.Read(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to read configuration: %w", err)
-	}
-
-	if err := updateFunc(config); err != nil {
-		return fmt.Errorf("failed to update configuration: %w", err)
-	}
-
-	return m.Write(ctx, config)
-}

@@ -3,11 +3,11 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"log/slog"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 )
 
@@ -100,7 +100,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.changeConfig(r.Context(), func(c *model.Config) error {
-		c = config //TODO: copy fields.
+		c.CopyFrom(config)
 		return nil
 	})
 	if err != nil {
