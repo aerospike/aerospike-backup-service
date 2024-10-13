@@ -15,6 +15,8 @@ type BackendsHolder interface {
 	Get(routineName string) (*BackupBackend, bool)
 	// SetData replaces stored backends.
 	SetData(backends map[string]*BackupBackend)
+
+	GetAllReaders() map[string]BackupListReader
 }
 
 type BackendHolderImpl struct {
@@ -35,6 +37,18 @@ func (b *BackendHolderImpl) GetReader(name string) (BackupListReader, bool) {
 	defer b.RUnlock()
 	backend, found := b.data[name]
 	return backend, found
+}
+
+func (b *BackendHolderImpl) GetAllReaders() map[string]BackupListReader {
+	b.RLock()
+	defer b.RUnlock()
+
+	readers := make(map[string]BackupListReader, len(b.data))
+	for name, backend := range b.data {
+		readers[name] = backend
+	}
+
+	return readers
 }
 
 func (b *BackendHolderImpl) Get(name string) (*BackupBackend, bool) {
