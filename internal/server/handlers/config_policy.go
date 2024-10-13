@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/gorilla/mux"
 )
 
@@ -39,9 +40,9 @@ func (s *Service) ConfigPolicyActionHandler(w http.ResponseWriter, r *http.Reque
 func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addPolicy"))
 
-	request, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
+	newPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
 	if err != nil {
-		hLogger.Error("failed to decode request body",
+		hLogger.Error("failed to decode newPolicy body",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -54,7 +55,9 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = s.config.AddPolicy(name, request.ToModel())
+	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.AddPolicy(name, newPolicy.ToModel())
+	})
 	if err != nil {
 		hLogger.Error("failed to add policy",
 			slog.String("name", name),
@@ -63,15 +66,7 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.Write(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.String("name", name),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -166,9 +161,9 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updatePolicy"))
 
-	request, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
+	updatedPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
 	if err != nil {
-		hLogger.Error("failed to decode request body",
+		hLogger.Error("failed to decode newPolicyDto body",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -181,7 +176,10 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = s.config.UpdatePolicy(name, request.ToModel())
+
+	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.UpdatePolicy(name, updatedPolicy.ToModel())
+	})
 	if err != nil {
 		hLogger.Error("failed to update policy",
 			slog.String("name", name),
@@ -190,15 +188,7 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.Write(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.String("name", name),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -221,7 +211,11 @@ func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := s.config.DeletePolicy(policyName)
+
+	err := s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.DeletePolicy(policyName)
+	})
+
 	if err != nil {
 		hLogger.Error("failed to delete policy",
 			slog.String("name", policyName),
@@ -230,14 +224,6 @@ func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.Write(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.String("name", policyName),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	w.WriteHeader(http.StatusNoContent)
 }

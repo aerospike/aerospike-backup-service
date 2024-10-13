@@ -64,7 +64,10 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.config.AddRoutine(name, toModel)
+
+	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.AddRoutine(name, toModel)
+	})
 	if err != nil {
 		hLogger.Error("failed to add routine",
 			slog.String("name", name),
@@ -73,15 +76,7 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.Write(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.String("name", name),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -203,7 +198,9 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.config.UpdateRoutine(name, toModel)
+	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.UpdateRoutine(name, toModel)
+	})
 	if err != nil {
 		hLogger.Error("failed to update routine",
 			slog.String("name", name),
@@ -212,15 +209,7 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.Write(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.String("name", name),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -243,7 +232,10 @@ func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := s.config.DeleteRoutine(routineName)
+
+	err := s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.DeleteRoutine(routineName)
+	})
 	if err != nil {
 		hLogger.Error("failed to delete routine",
 			slog.String("name", routineName),
@@ -252,14 +244,6 @@ func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.Write(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.String("name", routineName),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	w.WriteHeader(http.StatusNoContent)
 }

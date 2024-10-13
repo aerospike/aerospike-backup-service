@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/gorilla/mux"
 )
 
@@ -56,7 +57,10 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = s.config.AddCluster(name, newCluster.ToModel())
+
+	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.AddCluster(name, newCluster.ToModel())
+	})
 	if err != nil {
 		hLogger.Error("failed to add cluster",
 			slog.String("name", name),
@@ -65,14 +69,7 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = s.configurationManager.Write(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -181,7 +178,10 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = s.config.UpdateCluster(clusterName, updatedCluster.ToModel())
+
+	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.UpdateCluster(clusterName, updatedCluster.ToModel())
+	})
 	if err != nil {
 		hLogger.Error("failed to update cluster",
 			slog.String("name", clusterName),
@@ -190,14 +190,7 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.Write(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.String("name", clusterName),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -220,7 +213,10 @@ func (s *Service) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := s.config.DeleteCluster(clusterName)
+
+	err := s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.DeleteCluster(clusterName)
+	})
 	if err != nil {
 		hLogger.Error("failed to delete cluster",
 			slog.String("name", clusterName),
@@ -229,14 +225,6 @@ func (s *Service) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.Write(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.String("name", clusterName),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
