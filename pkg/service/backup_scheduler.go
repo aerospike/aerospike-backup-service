@@ -67,10 +67,8 @@ func ApplyNewConfig(scheduler quartz.Scheduler,
 	return handlers, nil
 }
 
-// ScheduleBackup creates a new quartz.Scheduler, schedules all the configured backup jobs,
-// starts and returns the scheduler.
-func ScheduleBackup(ctx context.Context, config *model.Config, handlers BackupHandlerHolder,
-) (quartz.Scheduler, error) {
+// NewScheduler creates a new running quartz.Scheduler
+func NewScheduler(ctx context.Context) quartz.Scheduler {
 	scheduler := quartz.NewStdSchedulerWithOptions(quartz.StdSchedulerOptions{
 		OutdatedThreshold: 1 * time.Second,
 		RetryInterval:     100 * time.Millisecond,
@@ -78,11 +76,7 @@ func ScheduleBackup(ctx context.Context, config *model.Config, handlers BackupHa
 
 	scheduler.Start(ctx)
 
-	err := scheduleRoutines(scheduler, config, handlers)
-	if err != nil {
-		return nil, err
-	}
-	return scheduler, nil
+	return scheduler
 }
 
 // MakeHandlers creates and returns a map of backup handlers per the configured routines.

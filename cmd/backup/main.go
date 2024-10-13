@@ -82,17 +82,18 @@ func startService(configFile string, remote bool) error {
 	// schedule all configured backups
 	backends := service.NewBackupBackends(config)
 	clientManager := service.NewClientManager(&service.DefaultClientFactory{})
-	handlers := service.MakeHandlers(clientManager, config, backends)
-	scheduler, err := service.ScheduleBackup(ctx, config, handlers)
+	scheduler := service.NewScheduler(ctx)
+
+	backupHandlers, err := service.ApplyNewConfig(scheduler, config, backends, clientManager)
 	if err != nil {
 		return err
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()
-	service.NewMetricsCollector(handlers, restoreJobs).Start(ctx, 1*time.Second)
+	service.NewMetricsCollector(backupHandlers, restoreJobs).Start(ctx, 1*time.Second)
 
 	// run HTTP server
-	err = runHTTPServer(ctx, config, scheduler, backends, handlers, manager, clientManager, appLogger, restoreJobs)
+	err = runHTTPServer(ctx, config, scheduler, backends, backupHandlers, manager, clientManager, appLogger, restoreJobs)
 
 	// stop the scheduler
 	scheduler.Stop()
