@@ -173,7 +173,7 @@ func (mock backendsHolderMock) Get(routineName string) (*service.BackupBackend, 
 	return &service.BackupBackend{}, true
 }
 
-func (mock backendsHolderMock) SetData(_ map[string]*service.BackupBackend) {
+func (mock backendsHolderMock) Init(_ *model.Config) {
 }
 
 func (mock backendsHolderMock) GetAllReaders() map[string]service.BackupListReader {

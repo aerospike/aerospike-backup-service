@@ -80,7 +80,7 @@ func startService(configFile string, remote bool) error {
 	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 
 	// schedule all configured backups
-	backends := service.NewBackupBackends(config)
+	backends := service.NewBackupBackends()
 	clientManager := service.NewClientManager(&service.DefaultClientFactory{})
 	scheduler := service.NewScheduler(ctx)
 	backupHandlers := make(service.BackupHandlerHolder)

@@ -10,6 +10,7 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
+// ConfigApplier is responsible for applying new configuration to the service.
 type ConfigApplier interface {
 	ApplyNewConfig() error
 }
@@ -48,7 +49,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig() error {
 		return err
 	}
 
-	a.backends.SetData(BuildBackupBackends(a.config))
+	a.backends.Init(a.config)
 	clear(*a.handlerHolder)
 
 	// Refill handlers
