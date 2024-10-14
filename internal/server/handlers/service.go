@@ -11,6 +11,7 @@ import (
 
 type Service struct {
 	config               *model.Config
+	configApplier        service.ConfigApplier
 	scheduler            quartz.Scheduler
 	restoreManager       service.RestoreManager
 	backupBackends       service.BackendsHolder
@@ -22,6 +23,7 @@ type Service struct {
 
 func NewService(
 	config *model.Config,
+	configApplier service.ConfigApplier,
 	scheduler quartz.Scheduler,
 	restoreManager service.RestoreManager,
 	backupBackends service.BackendsHolder,
@@ -32,6 +34,7 @@ func NewService(
 ) *Service {
 	return &Service{
 		config:               config,
+		configApplier:        configApplier,
 		scheduler:            scheduler,
 		restoreManager:       restoreManager,
 		backupBackends:       backupBackends,

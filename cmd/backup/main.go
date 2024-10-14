@@ -13,11 +13,11 @@ import (
 	backup "github.com/aerospike/aerospike-backup-service/v2"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/configuration"
+	"github.com/aerospike/aerospike-backup-service/v2/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/util"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 	"github.com/reugn/go-quartz/logger"
-	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
 
@@ -83,8 +83,17 @@ func startService(configFile string, remote bool) error {
 	backends := service.NewBackupBackends(config)
 	clientManager := service.NewClientManager(&service.DefaultClientFactory{})
 	scheduler := service.NewScheduler(ctx)
+	backupHandlers := make(service.BackupHandlerHolder)
 
-	backupHandlers, err := service.ApplyNewConfig(scheduler, config, backends, clientManager)
+	configApplier := service.NewDefaultConfigApplier(
+		scheduler,
+		config,
+		backends,
+		clientManager,
+		&backupHandlers,
+	)
+
+	err = configApplier.ApplyNewConfig()
 	if err != nil {
 		return err
 	}
@@ -92,8 +101,22 @@ func startService(configFile string, remote bool) error {
 	var restoreJobs = service.NewRestoreJobsHolder()
 	service.NewMetricsCollector(backupHandlers, restoreJobs).Start(ctx, 1*time.Second)
 
+	restoreMgr := service.NewRestoreManager(backends, config, service.NewRestoreGo(), clientManager, restoreJobs)
+
+	httpService := handlers.NewService(
+		config,
+		configApplier,
+		scheduler,
+		restoreMgr,
+		backends,
+		backupHandlers,
+		manager,
+		clientManager,
+		appLogger,
+	)
+
 	// run HTTP server
-	err = runHTTPServer(ctx, config, scheduler, backends, backupHandlers, manager, clientManager, appLogger, restoreJobs)
+	err = runHTTPServer(ctx, config.ServiceConfig.HTTPServer, httpService)
 
 	// stop the scheduler
 	scheduler.Stop()
@@ -114,26 +137,8 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func runHTTPServer(ctx context.Context,
-	config *model.Config,
-	scheduler quartz.Scheduler,
-	backends service.BackendsHolder,
-	handlerHolder service.BackupHandlerHolder,
-	configurationManager configuration.Manager,
-	clientManger service.ClientManager,
-	logger *slog.Logger,
-	restoreJobs *service.RestoreJobsHolder,
-) error {
-	httpServer := server.NewHTTPServer(
-		config,
-		scheduler,
-		backends,
-		handlerHolder,
-		configurationManager,
-		clientManger,
-		logger,
-		restoreJobs,
-	)
+func runHTTPServer(ctx context.Context, serverConfig *model.HTTPServerConfig, h *handlers.Service) error {
+	httpServer := server.NewHTTPServer(serverConfig, h)
 	go func() {
 		httpServer.Start()
 	}()

@@ -197,10 +197,17 @@ func (mock configurationManagerMock) Write(_ context.Context, config *model.Conf
 	return nil
 }
 
+type MockConfigApplier struct{}
+
+func (a *MockConfigApplier) ApplyNewConfig() error {
+	return nil
+}
+
 func newServiceMock() *Service {
 	toModel, _ := testConfig().ToModel()
 	return &Service{
 		config:               toModel,
+		configApplier:        &MockConfigApplier{},
 		scheduler:            quartz.NewStdScheduler(),
 		restoreManager:       restoreManagerMock{},
 		backupBackends:       backendsHolderMock{},

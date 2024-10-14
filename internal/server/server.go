@@ -8,13 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v2/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/middleware"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/util"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
-	"github.com/reugn/go-quartz/quartz"
 	"golang.org/x/time/rate"
 )
 
@@ -24,22 +21,11 @@ const (
 
 // HTTPServer is the backup service HTTP server wrapper.
 type HTTPServer struct {
-	config *model.Config
 	server *http.Server
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(config *model.Config,
-	scheduler quartz.Scheduler,
-	backends service.BackendsHolder,
-	handlerHolder service.BackupHandlerHolder,
-	configurationManager configuration.Manager,
-	clientManger service.ClientManager,
-	logger *slog.Logger,
-	restoreJobs *service.RestoreJobsHolder,
-) *HTTPServer {
-	serverConfig := config.ServiceConfig.HTTPServer
-
+func NewHTTPServer(serverConfig *model.HTTPServerConfig, h *handlers.Service) *HTTPServer {
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 	httpTimeout := time.Duration(serverConfig.GetTimeout()) * time.Millisecond
 
@@ -49,21 +35,7 @@ func NewHTTPServer(config *model.Config,
 	)
 
 	whitelist := util.NewIPWhiteList(serverConfig.GetRateOrDefault().GetWhiteListOrDefault())
-
 	mw := middleware.RateLimiter(rateLimiter, whitelist)
-
-	restoreMgr := service.NewRestoreManager(backends, config, service.NewRestoreGo(), clientManger, restoreJobs)
-
-	h := handlers.NewService(
-		config,
-		scheduler,
-		restoreMgr,
-		backends,
-		handlerHolder,
-		configurationManager,
-		clientManger,
-		logger,
-	)
 
 	router := NewRouter(
 		fmt.Sprintf("/%s", restAPIVersion),
@@ -72,7 +44,6 @@ func NewHTTPServer(config *model.Config,
 		mw)
 
 	return &HTTPServer{
-		config: config,
 		server: &http.Server{
 			Addr:              addr,
 			ReadHeaderTimeout: httpTimeout,
