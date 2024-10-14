@@ -54,7 +54,7 @@ func (r *RestoreRequest) Validate() error {
 }
 
 // Validate validates the restore operation request.
-func (r *RestoreTimestampRequest) Validate() error {
+func (r *RestoreTimestampRequest) Validate(config *model.Config) error {
 	if err := r.DestinationCuster.Validate(); err != nil {
 		return err
 	}
@@ -66,6 +66,9 @@ func (r *RestoreTimestampRequest) Validate() error {
 	}
 	if r.Routine == "" {
 		return emptyFieldValidationError(r.Routine)
+	}
+	if _, ok := config.BackupRoutines[r.Routine]; !ok {
+		return notFoundValidationError("routine", r.Routine)
 	}
 	return nil
 }
