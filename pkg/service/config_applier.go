@@ -1,9 +1,10 @@
 package service
 
 import (
+	"sync"
+
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/reugn/go-quartz/quartz"
-	"sync"
 )
 
 type ConfigApplier interface {

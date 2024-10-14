@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"log/slog"
+	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -10,6 +11,7 @@ import (
 )
 
 type Service struct {
+	sync.Mutex
 	config               *model.Config
 	configApplier        service.ConfigApplier
 	scheduler            quartz.Scheduler

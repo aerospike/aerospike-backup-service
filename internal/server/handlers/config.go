@@ -98,6 +98,9 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
+	s.Lock()
+	defer s.Unlock()
+
 	hLogger := s.logger.With(slog.String("handler", "ApplyConfig"))
 
 	config, err := s.configurationManager.Read(r.Context())
@@ -125,6 +128,9 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
+	s.Lock()
+	defer s.Unlock()
+
 	err := updateFunc(s.config)
 	if err != nil {
 		return fmt.Errorf("cannot update configuration: %w", err)
