@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/reugn/go-quartz/quartz"
+	"sync"
 )
 
 type ConfigApplier interface {
@@ -10,6 +11,7 @@ type ConfigApplier interface {
 }
 
 type DefaultConfigApplier struct {
+	sync.Mutex
 	scheduler     quartz.Scheduler
 	config        *model.Config
 	backends      BackendsHolder
@@ -34,6 +36,9 @@ func NewDefaultConfigApplier(
 }
 
 func (a *DefaultConfigApplier) ApplyNewConfig() error {
+	a.Lock()
+	defer a.Unlock()
+
 	err := a.scheduler.Clear()
 	if err != nil {
 		return err
