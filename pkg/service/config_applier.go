@@ -1,9 +1,11 @@
 package service
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/reugn/go-quartz/matcher"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -36,17 +38,34 @@ func NewDefaultConfigApplier(
 	}
 }
 
+type OrMatcher[T any] struct {
+	matchers []quartz.Matcher[T]
+}
+
+func NewOrMatcher[T any](matchers ...quartz.Matcher[T]) OrMatcher[T] {
+	return OrMatcher[T]{matchers: matchers}
+}
+
+func (o OrMatcher[T]) IsMatch(value T) bool {
+	for _, m := range o.matchers {
+		if m.IsMatch(value) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (a *DefaultConfigApplier) ApplyNewConfig() error {
 	a.Lock()
 	defer a.Unlock()
 
-	err := a.scheduler.Clear()
+	err := a.clearPeriodicSchedulerJobs()
 	if err != nil {
 		return err
 	}
 
 	a.backends.SetData(BuildBackupBackends(a.config))
-
 	clear(*a.handlerHolder)
 
 	// Refill handlers
@@ -60,6 +79,25 @@ func (a *DefaultConfigApplier) ApplyNewConfig() error {
 		return err
 	}
 
+	return nil
+}
+
+// we don't want to delete ad-hoc jobs
+func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
+	orMatcher := NewOrMatcher(
+		matcher.JobGroupEquals(quartzGroupBackupFull),
+		matcher.JobGroupEquals(quartzGroupBackupIncremental))
+	keys, err := a.scheduler.GetJobKeys(orMatcher)
+	if err != nil {
+		return fmt.Errorf("cannot fetch jobs: %w", err)
+	}
+
+	for _, key := range keys {
+		err = a.scheduler.DeleteJob(key)
+		if err != nil {
+			return fmt.Errorf("cannot delete job: %w", err)
+		}
+	}
 	return nil
 }
 
