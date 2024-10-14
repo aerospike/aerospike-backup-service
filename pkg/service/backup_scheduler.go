@@ -58,7 +58,7 @@ func ApplyNewConfig(scheduler quartz.Scheduler,
 
 	backends.SetData(BuildBackupBackends(config))
 
-	handlers := MakeHandlers(manager, config, backends)
+	handlers := makeHandlers(manager, config, backends)
 	err = scheduleRoutines(scheduler, config, handlers)
 	if err != nil {
 		return nil, err
@@ -79,8 +79,8 @@ func NewScheduler(ctx context.Context) quartz.Scheduler {
 	return scheduler
 }
 
-// MakeHandlers creates and returns a map of backup handlers per the configured routines.
-func MakeHandlers(clientManager ClientManager,
+// makeHandlers creates and returns a map of backup handlers per the configured routines.
+func makeHandlers(clientManager ClientManager,
 	config *model.Config,
 	backends BackendsHolder,
 ) BackupHandlerHolder {
