@@ -81,8 +81,9 @@ func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config,
 	return nil
 }
 
-func scheduleFullBackup(scheduler quartz.Scheduler, handler *BackupRoutineHandler,
-	interval string, routineName string) error {
+func scheduleFullBackup(
+	scheduler quartz.Scheduler, handler *BackupRoutineHandler, interval string, routineName string,
+) error {
 	fullCronTrigger, err := quartz.NewCronTrigger(interval)
 	if err != nil {
 		return err
