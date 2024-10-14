@@ -71,15 +71,13 @@ func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config,
 		handler := handlers[routineName]
 
 		// schedule a full backup job for the routine
-		if err := scheduleFullBackup(scheduler, handler, routine.IntervalCron,
-			routineName); err != nil {
+		if err := scheduleFullBackup(scheduler, handler, routine.IntervalCron, routineName); err != nil {
 			return fmt.Errorf("failed to schedule full backup: %w", err)
 		}
 
 		if routine.IncrIntervalCron != "" {
 			// schedule an incremental backup job for the routine
-			if err := scheduleIncrementalBackup(scheduler, handler,
-				routine.IncrIntervalCron, routineName); err != nil {
+			if err := scheduleIncrementalBackup(scheduler, handler, routine.IncrIntervalCron, routineName); err != nil {
 				return fmt.Errorf("failed to schedule incremental backup: %w", err)
 			}
 		}
@@ -119,17 +117,19 @@ func scheduleFullBackup(
 	return nil
 }
 
-func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupRoutineHandler,
-	interval string, routineName string) error {
+func scheduleIncrementalBackup(
+	scheduler quartz.Scheduler, handler *BackupRoutineHandler, interval string, routineName string,
+) error {
 	incrCronTrigger, err := quartz.NewCronTrigger(interval)
 	if err != nil {
 		return err
 	}
 
 	incrementalJob := newBackupJob(handler, jobTypeIncremental)
+	jobName := fmt.Sprintf("%s-%s", routineName, jobTypeIncremental)
 	incrJobDetail := quartz.NewJobDetail(
 		incrementalJob,
-		quartz.NewJobKeyWithGroup(routineName, quartzGroupScheduled),
+		quartz.NewJobKeyWithGroup(jobName, quartzGroupScheduled),
 	)
 
 	if err = scheduler.ScheduleJob(incrJobDetail, incrCronTrigger); err != nil {
