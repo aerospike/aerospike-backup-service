@@ -13,7 +13,7 @@ import (
 // backupJob implements the quartz.Job interface.
 type backupJob struct {
 	handler   *BackupRoutineHandler
-	jobType   string
+	jobType   jobType
 	isRunning atomic.Bool
 }
 
@@ -22,14 +22,14 @@ var _ quartz.Job = (*backupJob)(nil)
 // Execute is called by a Scheduler when the Trigger associated with this job fires.
 func (j *backupJob) Execute(ctx context.Context) error {
 	logger := slog.Default().With(slog.String("routine", j.handler.routineName),
-		slog.String("type", j.jobType))
+		slog.Any("type", j.jobType))
 
 	if j.isRunning.CompareAndSwap(false, true) {
 		defer j.isRunning.Store(false)
 		switch j.jobType {
-		case quartzGroupBackupFull:
+		case jobTypeFull:
 			j.handler.runFullBackup(ctx, time.Now())
-		case quartzGroupBackupIncremental:
+		case jobTypeIncremental:
 			j.handler.runIncrementalBackup(ctx, time.Now())
 		default:
 			logger.Error("Unsupported backup type")
@@ -42,11 +42,11 @@ func (j *backupJob) Execute(ctx context.Context) error {
 	return nil
 }
 
-func incrementSkippedCounters(jobType string) {
+func incrementSkippedCounters(jobType jobType) {
 	switch jobType {
-	case quartzGroupBackupFull:
+	case jobTypeFull:
 		backupSkippedCounter.Inc()
-	case quartzGroupBackupIncremental:
+	case jobTypeIncremental:
 		incrBackupSkippedCounter.Inc()
 	}
 }
@@ -57,7 +57,7 @@ func (j *backupJob) Description() string {
 }
 
 // newBackupJob creates a new backup job.
-func newBackupJob(handler *BackupRoutineHandler, jobType string) quartz.Job {
+func newBackupJob(handler *BackupRoutineHandler, jobType jobType) quartz.Job {
 	return &backupJob{
 		handler: handler,
 		jobType: jobType,

@@ -39,24 +39,6 @@ func NewDefaultConfigApplier(
 	}
 }
 
-type OrMatcher[T any] struct {
-	matchers []quartz.Matcher[T]
-}
-
-func NewOrMatcher[T any](matchers ...quartz.Matcher[T]) OrMatcher[T] {
-	return OrMatcher[T]{matchers: matchers}
-}
-
-func (o OrMatcher[T]) IsMatch(value T) bool {
-	for _, m := range o.matchers {
-		if m.IsMatch(value) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (a *DefaultConfigApplier) ApplyNewConfig() error {
 	a.Lock()
 	defer a.Unlock()
@@ -85,10 +67,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig() error {
 
 // we don't want to delete ad-hoc jobs
 func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
-	orMatcher := NewOrMatcher(
-		matcher.JobGroupEquals(quartzGroupBackupFull),
-		matcher.JobGroupEquals(quartzGroupBackupIncremental))
-	keys, err := a.scheduler.GetJobKeys(orMatcher)
+	keys, err := a.scheduler.GetJobKeys(matcher.JobGroupEquals(quartzGroupScheduled))
 	if err != nil {
 		return fmt.Errorf("cannot fetch jobs: %w", err)
 	}

@@ -11,9 +11,15 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
+type quartzGroup = string
+type jobType string
+
 const (
-	quartzGroupBackupFull        = "full"
-	quartzGroupBackupIncremental = "incremental"
+	quartzGroupAdHoc     quartzGroup = "ad-hoc"
+	quartzGroupScheduled quartzGroup = "scheduled"
+
+	jobTypeFull        jobType = "full"
+	jobTypeIncremental jobType = "incremental"
 )
 
 var jobStore = &backupJobs{jobs: make(map[string]*quartz.JobDetail)}
@@ -34,14 +40,14 @@ func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
 	jobStore.Lock()
 	defer jobStore.Unlock()
 
-	key := quartz.NewJobKeyWithGroup(name, quartzGroupBackupFull).String()
+	key := quartz.NewJobKeyWithGroup(name, quartzGroupScheduled).String()
 	job := jobStore.jobs[key]
 	if job == nil {
 		return nil
 	}
 
-	jobKey := quartz.NewJobKeyWithGroup(fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli()),
-		quartzGroupBackupFull)
+	adhocName := fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli())
+	jobKey := quartz.NewJobKeyWithGroup(adhocName, quartzGroupAdHoc)
 
 	return quartz.NewJobDetail(job.Job(), jobKey)
 }
@@ -89,10 +95,10 @@ func scheduleFullBackup(
 		return err
 	}
 
-	fullJob := newBackupJob(handler, quartzGroupBackupFull)
+	fullJob := newBackupJob(handler, jobTypeFull)
 	fullJobDetail := quartz.NewJobDetail(
 		fullJob,
-		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupFull),
+		quartz.NewJobKeyWithGroup(routineName, quartzGroupScheduled),
 	)
 
 	if err = scheduler.ScheduleJob(fullJobDetail, fullCronTrigger); err != nil {
@@ -120,10 +126,10 @@ func scheduleIncrementalBackup(scheduler quartz.Scheduler, handler *BackupRoutin
 		return err
 	}
 
-	incrementalJob := newBackupJob(handler, quartzGroupBackupIncremental)
+	incrementalJob := newBackupJob(handler, jobTypeIncremental)
 	incrJobDetail := quartz.NewJobDetail(
 		incrementalJob,
-		quartz.NewJobKeyWithGroup(routineName, quartzGroupBackupIncremental),
+		quartz.NewJobKeyWithGroup(routineName, quartzGroupScheduled),
 	)
 
 	if err = scheduler.ScheduleJob(incrJobDetail, incrCronTrigger); err != nil {
