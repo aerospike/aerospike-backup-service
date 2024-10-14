@@ -8,7 +8,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 )
 
 func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {
@@ -136,12 +135,10 @@ func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Confi
 		return fmt.Errorf("failed to write configuration: %w", err)
 	}
 
-	handlers, err := service.ApplyNewConfig(s.scheduler, s.config, s.backupBackends, s.clientManger)
+	err = s.configApplier.ApplyNewConfig()
 	if err != nil {
 		return fmt.Errorf("failed to apply new configuration:  %w", err)
 	}
-
-	s.handlerHolder = handlers
 
 	return nil
 }
