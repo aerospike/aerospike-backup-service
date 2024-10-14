@@ -49,7 +49,7 @@ func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
 // NewScheduler creates a new running quartz.Scheduler
 func NewScheduler(ctx context.Context) quartz.Scheduler {
 	scheduler := quartz.NewStdSchedulerWithOptions(quartz.StdSchedulerOptions{
-		OutdatedThreshold: 1 * time.Second,
+		OutdatedThreshold: 5 * time.Second,
 		RetryInterval:     100 * time.Millisecond,
 	}, nil, nil)
 
