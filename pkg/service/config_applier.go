@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -92,6 +93,7 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 		return fmt.Errorf("cannot fetch jobs: %w", err)
 	}
 
+	slog.Info(fmt.Sprintf("Delete scheduled jobs %+v", keys))
 	for _, key := range keys {
 		err = a.scheduler.DeleteJob(key)
 		if err != nil {
