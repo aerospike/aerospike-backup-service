@@ -15,7 +15,7 @@ type BackendsHolder interface {
 	Get(routineName string) (*BackupBackend, bool)
 	// SetData replaces stored backends.
 	SetData(backends map[string]*BackupBackend)
-
+	// GetAllReaders returns all backends as BackupListReader.
 	GetAllReaders() map[string]BackupListReader
 }
 
