@@ -98,9 +98,6 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
-	s.Lock()
-	defer s.Unlock()
-
 	hLogger := s.logger.With(slog.String("handler", "ApplyConfig"))
 
 	config, err := s.configurationManager.Read(r.Context())
