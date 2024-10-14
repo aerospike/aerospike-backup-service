@@ -17,7 +17,6 @@ type Service struct {
 	backupBackends       service.BackendsHolder
 	handlerHolder        service.BackupHandlerHolder
 	configurationManager configuration.Manager
-	clientManger         service.ClientManager
 	logger               *slog.Logger
 }
 
@@ -29,7 +28,6 @@ func NewService(
 	backupBackends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
 	configurationManager configuration.Manager,
-	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) *Service {
 	return &Service{
@@ -40,7 +38,6 @@ func NewService(
 		backupBackends:       backupBackends,
 		handlerHolder:        handlerHolder,
 		configurationManager: configurationManager,
-		clientManger:         clientManger,
 		logger:               logger,
 	}
 }

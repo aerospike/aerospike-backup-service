@@ -23,12 +23,12 @@ func newHTTPConfigurationManager(uri string) Manager {
 }
 
 // ReadConfiguration returns a reader for the configuration using a URL.
-func (cm *httpConfigurationManager) Read(ctx context.Context) (*model.Config, error) {
-	if cm.configURL == "" {
+func (h *httpConfigurationManager) Read(ctx context.Context) (*model.Config, error) {
+	if h.configURL == "" {
 		return nil, errors.New("configuration URL is missing")
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cm.configURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, h.configURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
@@ -47,6 +47,6 @@ func (cm *httpConfigurationManager) Read(ctx context.Context) (*model.Config, er
 }
 
 // WriteConfiguration is unsupported for httpConfigurationManager.
-func (cm *httpConfigurationManager) Write(_ context.Context, _ *model.Config) error {
+func (h *httpConfigurationManager) Write(_ context.Context, _ *model.Config) error {
 	return fmt.Errorf("writing configuration is not supported for HTTP: %w", errors.ErrUnsupported)
 }

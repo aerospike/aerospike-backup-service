@@ -65,7 +65,7 @@ func run() int {
 func startService(configFile string, remote bool) error {
 	ctx := systemCtx()
 
-	config, manager, err := configuration.Load(ctx, configFile, remote)
+	config, configurationManager, err := configuration.Load(ctx, configFile, remote)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -110,8 +110,7 @@ func startService(configFile string, remote bool) error {
 		restoreMgr,
 		backends,
 		backupHandlers,
-		manager,
-		clientManager,
+		configurationManager,
 		appLogger,
 	)
 
