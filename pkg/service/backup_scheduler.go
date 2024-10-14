@@ -36,18 +36,17 @@ func (b *backupJobs) put(key string, value *quartz.JobDetail) {
 }
 
 // NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
-func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
+func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
 	jobStore.Lock()
 	defer jobStore.Unlock()
 
-	key := quartz.NewJobKeyWithGroup(name, quartzGroupScheduled).String()
+	key := fullJobKey(routineName).String()
 	job := jobStore.jobs[key]
 	if job == nil {
 		return nil
 	}
 
-	adhocName := fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli())
-	jobKey := quartz.NewJobKeyWithGroup(adhocName, quartzGroupAdHoc)
+	jobKey := adhocKey(routineName)
 
 	return quartz.NewJobDetail(job.Job(), jobKey)
 }
@@ -94,10 +93,7 @@ func scheduleFullBackup(
 	}
 
 	fullJob := newBackupJob(handler, jobTypeFull)
-	fullJobDetail := quartz.NewJobDetail(
-		fullJob,
-		quartz.NewJobKeyWithGroup(routineName, quartzGroupScheduled),
-	)
+	fullJobDetail := quartz.NewJobDetail(fullJob, fullJobKey(routineName))
 
 	if err = scheduler.ScheduleJob(fullJobDetail, fullCronTrigger); err != nil {
 		return err
@@ -126,10 +122,9 @@ func scheduleIncrementalBackup(
 	}
 
 	incrementalJob := newBackupJob(handler, jobTypeIncremental)
-	jobName := fmt.Sprintf("%s-%s", routineName, jobTypeIncremental)
 	incrJobDetail := quartz.NewJobDetail(
 		incrementalJob,
-		quartz.NewJobKeyWithGroup(jobName, quartzGroupScheduled),
+		incrJobKey(routineName),
 	)
 
 	if err = scheduler.ScheduleJob(incrJobDetail, incrCronTrigger); err != nil {
@@ -138,6 +133,21 @@ func scheduleIncrementalBackup(
 
 	jobStore.put(incrJobDetail.JobKey().String(), incrJobDetail)
 	return nil
+}
+
+func incrJobKey(routineName string) *quartz.JobKey {
+	jobName := fmt.Sprintf("%s-%s", routineName, jobTypeIncremental)
+	return quartz.NewJobKeyWithGroup(jobName, quartzGroupScheduled)
+}
+
+func fullJobKey(routineName string) *quartz.JobKey {
+	jobName := fmt.Sprintf("%s-%s", routineName, jobTypeFull)
+	return quartz.NewJobKeyWithGroup(jobName, quartzGroupScheduled)
+}
+
+func adhocKey(name string) *quartz.JobKey {
+	jobName := fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli())
+	return quartz.NewJobKeyWithGroup(jobName, quartzGroupAdHoc)
 }
 
 func needToRunFullBackupNow(lastFullRun time.Time, trigger *quartz.CronTrigger) bool {
