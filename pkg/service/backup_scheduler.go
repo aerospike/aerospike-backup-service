@@ -46,27 +46,6 @@ func NewAdHocFullBackupJobForRoutine(name string) *quartz.JobDetail {
 	return quartz.NewJobDetail(job.Job(), jobKey)
 }
 
-func ApplyNewConfig(scheduler quartz.Scheduler,
-	config *model.Config,
-	backends BackendsHolder,
-	manager ClientManager,
-) (BackupHandlerHolder, error) {
-	err := scheduler.Clear()
-	if err != nil {
-		return nil, err
-	}
-
-	backends.SetData(BuildBackupBackends(config))
-
-	handlers := makeHandlers(manager, config, backends)
-	err = scheduleRoutines(scheduler, config, handlers)
-	if err != nil {
-		return nil, err
-	}
-
-	return handlers, nil
-}
-
 // NewScheduler creates a new running quartz.Scheduler
 func NewScheduler(ctx context.Context) quartz.Scheduler {
 	scheduler := quartz.NewStdSchedulerWithOptions(quartz.StdSchedulerOptions{
@@ -77,20 +56,6 @@ func NewScheduler(ctx context.Context) quartz.Scheduler {
 	scheduler.Start(ctx)
 
 	return scheduler
-}
-
-// makeHandlers creates and returns a map of backup handlers per the configured routines.
-func makeHandlers(clientManager ClientManager,
-	config *model.Config,
-	backends BackendsHolder,
-) BackupHandlerHolder {
-	handlers := make(BackupHandlerHolder)
-	backupService := NewBackupGo()
-	for routineName := range config.BackupRoutines {
-		backend, _ := backends.Get(routineName)
-		handlers[routineName] = newBackupRoutineHandler(config, clientManager, backupService, routineName, backend)
-	}
-	return handlers
 }
 
 // scheduleRoutines schedules the given handlers using the scheduler.

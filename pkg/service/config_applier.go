@@ -56,3 +56,17 @@ func (a *DefaultConfigApplier) ApplyNewConfig() error {
 
 	return nil
 }
+
+// makeHandlers creates and returns a map of backup handlers per the configured routines.
+func makeHandlers(clientManager ClientManager,
+	config *model.Config,
+	backends BackendsHolder,
+) BackupHandlerHolder {
+	handlers := make(BackupHandlerHolder)
+	backupService := NewBackupGo()
+	for routineName := range config.BackupRoutines {
+		backend, _ := backends.Get(routineName)
+		handlers[routineName] = newBackupRoutineHandler(config, clientManager, backupService, routineName, backend)
+	}
+	return handlers
+}
