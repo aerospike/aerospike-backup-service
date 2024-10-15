@@ -15,7 +15,9 @@ import (
 )
 
 type Manager interface {
+	// Read reads the configuration from the source.
 	Read(ctx context.Context) (*model.Config, error)
+	// Write writes the configuration to the source.
 	Write(ctx context.Context, config *model.Config) error
 }
 
