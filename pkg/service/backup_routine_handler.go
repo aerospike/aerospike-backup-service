@@ -191,7 +191,7 @@ func (h *BackupRoutineHandler) writeClusterConfiguration(
 		confFilePath := getConfigurationFile(h, now, i)
 		err := storage.WriteFile(ctx, h.storage, confFilePath, []byte(info))
 		if err != nil {
-			logger.Error("Failed to Write configuration for the backup",
+			logger.Error("Failed to write cluster configuration backup",
 				slog.Any("err", err))
 		}
 	}

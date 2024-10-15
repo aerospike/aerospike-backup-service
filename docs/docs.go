@@ -480,7 +480,7 @@ const docTemplate = `{
                 "tags": [
                     "Configuration"
                 ],
-                "summary": "Applies the configuration for the service.",
+                "summary": "Reloads the configuration from the config file.",
                 "operationId": "applyConfig",
                 "responses": {
                     "200": {

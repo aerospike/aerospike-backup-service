@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/gorilla/mux"
 )
 
@@ -35,6 +35,8 @@ func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Requ
 // @Param       storage body dto.Storage true "Backup storage details"
 // @Success     201
 // @Failure     400 {string} string
+//
+//nolint:dupl
 func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addStorage"))
 
@@ -50,7 +52,10 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = s.config.AddStorage(name, newStorage.ToModel())
+
+	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.AddStorage(name, newStorage.ToModel())
+	})
 	if err != nil {
 		hLogger.Error("failed to add storage",
 			slog.String("name", name),
@@ -59,15 +64,7 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.WriteConfiguration(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.String("name", name),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -130,7 +127,7 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse, err := dto.Serialize(dto.NewStorageFromModel(storage), dto.JSON)
 	if err != nil {
-		hLogger.Error("failed to marshal starage",
+		hLogger.Error("failed to marshal storage",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -160,19 +157,23 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateStorage"))
 
-	var updatedStorage dto.Storage
-	err := json.NewDecoder(r.Body).Decode(&updatedStorage)
+	updatedStorage, err := dto.NewStorageFromReader(r.Body, dto.JSON)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	defer r.Body.Close()
+
 	storageName := mux.Vars(r)["name"]
 	if storageName == "" {
 		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err = s.config.UpdateStorage(storageName, updatedStorage.ToModel())
+
+	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.UpdateStorage(storageName, updatedStorage.ToModel())
+	})
 	if err != nil {
 		hLogger.Error("failed to update storage",
 			slog.String("name", storageName),
@@ -181,15 +182,7 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.WriteConfiguration(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.String("name", storageName),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -201,8 +194,6 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup storage name"
 // @Success     204
 // @Failure     400 {string} string
-//
-//nolint:dupl // Each handler must be in separate func. No duplication.
 func (s *Service) deleteStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deleteStorage"))
 
@@ -212,7 +203,10 @@ func (s *Service) deleteStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	err := s.config.DeleteStorage(storageName)
+
+	err := s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.DeleteStorage(storageName)
+	})
 	if err != nil {
 		hLogger.Error("failed to delete storage",
 			slog.String("name", storageName),
@@ -221,14 +215,6 @@ func (s *Service) deleteStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = s.configurationManager.WriteConfiguration(r.Context(), s.config)
-	if err != nil {
-		hLogger.Error("failed to write configuration",
-			slog.String("name", storageName),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	w.WriteHeader(http.StatusNoContent)
 }

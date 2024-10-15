@@ -68,7 +68,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 		}
 		defer r.clientManager.Close(client)
 
-		handler, err := r.restoreService.RestoreRun(ctx, client, request)
+		handler, err := r.restoreService.Run(ctx, client, request)
 		if err != nil {
 			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed to start restore operation: %w", err))
 			return
@@ -202,7 +202,7 @@ func (r *dataRestorer) restoreFromPath(
 ) (RestoreHandler, error) {
 	restoreRequest := r.toRestoreRequest(request)
 	restoreRequest.BackupDataPath = backupPath
-	handler, err := r.restoreService.RestoreRun(ctx, client, restoreRequest)
+	handler, err := r.restoreService.Run(ctx, client, restoreRequest)
 	if err != nil {
 		return nil, fmt.Errorf("could not start restore from backup at %s: %w", backupPath, err)
 	}

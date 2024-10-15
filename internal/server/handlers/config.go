@@ -1,12 +1,25 @@
 package handlers
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
+
+func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.readConfig(w)
+	case http.MethodPut:
+		s.updateConfig(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
 
 // readConfig
 // @Summary     Returns the configuration for the service.
@@ -21,7 +34,6 @@ func (s *Service) readConfig(w http.ResponseWriter) {
 
 	configuration, err := dto.Serialize(dto.NewConfigFromModel(s.config), dto.JSON)
 	if err != nil {
-		// We won't log config as it is not secure.
 		hLogger.Error("failed to parse service configuration",
 			slog.Any("error", err),
 		)
@@ -51,59 +63,93 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 
 	newConfig, err := dto.NewConfigFromReader(r.Body, dto.JSON)
 	if err != nil {
-		// We won't log config as it is not secure.
 		hLogger.Error("failed to decode new configuration",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	s.config, err = newConfig.ToModel()
+
+	newConfigModel, err := newConfig.ToModel()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+		config.CopyFrom(newConfigModel)
+		return nil
+	})
+
+	if err != nil {
+		hLogger.Error("failed to update config",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = s.configurationManager.WriteConfiguration(r.Context(), s.config)
-	if err != nil {
-		// We won't log config as it is not secure.
-		hLogger.Error("failed to update configuration",
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	w.WriteHeader(http.StatusOK)
 }
 
-// ApplyConfig
-// @Summary     Applies the configuration for the service.
+// ApplyConfig  read and apply configuration from file.
+// @Summary     Reloads the configuration from the config file.
 // @ID          applyConfig
 // @Tags        Configuration
 // @Router      /v1/config/apply [post]
 // @Accept      json
 // @Success     200
 // @Failure     400 {string} string
-func (s *Service) ApplyConfig(w http.ResponseWriter, _ *http.Request) {
+func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ApplyConfig"))
 
-	handlers, err := service.ApplyNewConfig(s.scheduler, s.config, s.backupBackends, s.clientManger)
+	config, err := s.configurationManager.Read(r.Context())
 	if err != nil {
-		hLogger.Error("failed to apply new config",
+		hLogger.Error("failed to read config",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	s.handlerHolder = handlers
+
+	err = s.applyConfig(config)
+	if err != nil {
+		hLogger.Error("failed to apply config",
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.readConfig(w)
-	case http.MethodPut:
-		s.updateConfig(w, r)
+func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
+	s.Lock()
+	defer s.Unlock()
+
+	err := updateFunc(s.config)
+	if err != nil {
+		return fmt.Errorf("cannot update configuration: %w", err)
 	}
+
+	err = s.configurationManager.Write(ctx, s.config)
+	if err != nil {
+		return fmt.Errorf("failed to write configuration: %w", err)
+	}
+
+	err = s.configApplier.ApplyNewConfig()
+	if err != nil {
+		return fmt.Errorf("failed to apply new configuration: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) applyConfig(c *model.Config) error {
+	s.Lock()
+	defer s.Unlock()
+
+	s.config.CopyFrom(c)
+
+	return s.configApplier.ApplyNewConfig()
 }

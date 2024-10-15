@@ -13,11 +13,11 @@ import (
 	backup "github.com/aerospike/aerospike-backup-service/v2"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/configuration"
+	"github.com/aerospike/aerospike-backup-service/v2/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/util"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 	"github.com/reugn/go-quartz/logger"
-	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
 
@@ -65,7 +65,7 @@ func run() int {
 func startService(configFile string, remote bool) error {
 	ctx := systemCtx()
 
-	config, manager, err := configuration.Load(ctx, configFile, remote)
+	config, configurationManager, err := configuration.Load(ctx, configFile, remote)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -75,24 +75,47 @@ func startService(configFile string, remote bool) error {
 	appLogger := slog.New(
 		util.LogHandler(loggerConfig),
 	)
-	slog.SetDefault(slog.New(util.LogHandler(loggerConfig)))
+	slog.SetDefault(appLogger)
 	logger.SetDefault(util.NewQuartzLogger(ctx))
 	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 
 	// schedule all configured backups
-	backends := service.NewBackupBackends(config)
+	backends := service.NewBackupBackends()
 	clientManager := service.NewClientManager(&service.DefaultClientFactory{})
-	handlers := service.MakeHandlers(clientManager, config, backends)
-	scheduler, err := service.ScheduleBackup(ctx, config, handlers)
+	scheduler := service.NewScheduler(ctx)
+	backupHandlers := make(service.BackupHandlerHolder)
+
+	configApplier := service.NewDefaultConfigApplier(
+		scheduler,
+		config,
+		backends,
+		clientManager,
+		&backupHandlers,
+	)
+
+	err = configApplier.ApplyNewConfig()
 	if err != nil {
 		return err
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()
-	service.NewMetricsCollector(handlers, restoreJobs).Start(ctx, 1*time.Second)
+	service.NewMetricsCollector(backupHandlers, restoreJobs).Start(ctx, 1*time.Second)
+
+	restoreMgr := service.NewRestoreManager(backends, config, service.NewRestore(), clientManager, restoreJobs)
+
+	httpService := handlers.NewService(
+		config,
+		configApplier,
+		scheduler,
+		restoreMgr,
+		backends,
+		backupHandlers,
+		configurationManager,
+		appLogger,
+	)
 
 	// run HTTP server
-	err = runHTTPServer(ctx, config, scheduler, backends, handlers, manager, clientManager, appLogger, restoreJobs)
+	err = runHTTPServer(ctx, config.ServiceConfig.HTTPServer, httpService)
 
 	// stop the scheduler
 	scheduler.Stop()
@@ -113,26 +136,8 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func runHTTPServer(ctx context.Context,
-	config *model.Config,
-	scheduler quartz.Scheduler,
-	backends service.BackendsHolder,
-	handlerHolder service.BackupHandlerHolder,
-	configurationManager configuration.Manager,
-	clientManger service.ClientManager,
-	logger *slog.Logger,
-	restoreJobs *service.RestoreJobsHolder,
-) error {
-	httpServer := server.NewHTTPServer(
-		config,
-		scheduler,
-		backends,
-		handlerHolder,
-		configurationManager,
-		clientManger,
-		logger,
-		restoreJobs,
-	)
+func runHTTPServer(ctx context.Context, serverConfig *model.HTTPServerConfig, h *handlers.Service) error {
+	httpServer := server.NewHTTPServer(serverConfig, h)
 	go func() {
 		httpServer.Start()
 	}()

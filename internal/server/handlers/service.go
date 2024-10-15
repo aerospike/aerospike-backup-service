@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"log/slog"
+	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -10,34 +11,35 @@ import (
 )
 
 type Service struct {
+	sync.Mutex
 	config               *model.Config
+	configApplier        service.ConfigApplier
 	scheduler            quartz.Scheduler
 	restoreManager       service.RestoreManager
 	backupBackends       service.BackendsHolder
 	handlerHolder        service.BackupHandlerHolder
 	configurationManager configuration.Manager
-	clientManger         service.ClientManager
 	logger               *slog.Logger
 }
 
 func NewService(
 	config *model.Config,
+	configApplier service.ConfigApplier,
 	scheduler quartz.Scheduler,
 	restoreManager service.RestoreManager,
 	backupBackends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
 	configurationManager configuration.Manager,
-	clientManger service.ClientManager,
 	logger *slog.Logger,
 ) *Service {
 	return &Service{
 		config:               config,
+		configApplier:        configApplier,
 		scheduler:            scheduler,
 		restoreManager:       restoreManager,
 		backupBackends:       backupBackends,
 		handlerHolder:        handlerHolder,
 		configurationManager: configurationManager,
-		clientManger:         clientManger,
 		logger:               logger,
 	}
 }

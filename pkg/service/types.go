@@ -43,7 +43,7 @@ type BackupHandler interface {
 
 // Restore represents a restore service.
 type Restore interface {
-	RestoreRun(
+	Run(
 		ctx context.Context,
 		client *backup.Client,
 		restoreRequest *model.RestoreRequest,

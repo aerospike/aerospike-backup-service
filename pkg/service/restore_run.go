@@ -12,18 +12,18 @@ import (
 	"github.com/aerospike/backup-go/io/encoding/asb"
 )
 
-// RestoreGo implements the [Restore] interface.
-type RestoreGo struct {
+// RestoreRunner implements the [Restore] interface.
+type RestoreRunner struct {
 }
 
-// NewRestoreGo returns a new RestoreGo instance.
-func NewRestoreGo() *RestoreGo {
-	return &RestoreGo{}
+// NewRestore returns a new RestoreRunner instance.
+func NewRestore() *RestoreRunner {
+	return &RestoreRunner{}
 }
 
-// RestoreRun creates a [backup.Client] and initiates the restore operation.
+// Run initiates the restore operation.
 // A restore handler is returned to monitor the job status.
-func (r *RestoreGo) RestoreRun(
+func (r *RestoreRunner) Run(
 	ctx context.Context,
 	client *backup.Client,
 	request *model.RestoreRequest,

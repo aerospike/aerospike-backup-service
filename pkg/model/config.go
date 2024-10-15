@@ -239,3 +239,17 @@ func (c *Config) AddSecretAgent(name string, agent *SecretAgent) error {
 	c.SecretAgents[name] = agent
 	return nil
 }
+
+func (c *Config) CopyFrom(other *Config) {
+	c.mu.Lock()
+	other.mu.Lock()
+	defer c.mu.Unlock()
+	defer other.mu.Unlock()
+
+	c.ServiceConfig = other.ServiceConfig
+	c.AerospikeClusters = other.AerospikeClusters
+	c.Storage = other.Storage
+	c.BackupPolicies = other.BackupPolicies
+	c.BackupRoutines = other.BackupRoutines
+	c.SecretAgents = other.SecretAgents
+}

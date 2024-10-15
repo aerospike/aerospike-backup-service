@@ -4,27 +4,26 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
-// HTTPConfigurationManager implements the Manager interface,
+// httpConfigurationManager implements the Manager interface,
 // performing I/O operations via the HTTP(S) protocol.
-type HTTPConfigurationManager struct {
+type httpConfigurationManager struct {
 	configURL string
 }
 
-var _ Manager = (*HTTPConfigurationManager)(nil)
+var _ Manager = (*httpConfigurationManager)(nil)
 
-// NewHTTPConfigurationManager returns a new HTTPConfigurationManager.
-func NewHTTPConfigurationManager(uri string) Manager {
-	return &HTTPConfigurationManager{configURL: uri}
+// newHTTPConfigurationManager returns a new httpConfigurationManager.
+func newHTTPConfigurationManager(uri string) Manager {
+	return &httpConfigurationManager{configURL: uri}
 }
 
 // ReadConfiguration returns a reader for the configuration using a URL.
-func (h *HTTPConfigurationManager) ReadConfiguration(ctx context.Context) (io.ReadCloser, error) {
+func (h *httpConfigurationManager) Read(ctx context.Context) (*model.Config, error) {
 	if h.configURL == "" {
 		return nil, errors.New("configuration URL is missing")
 	}
@@ -39,15 +38,15 @@ func (h *HTTPConfigurationManager) ReadConfiguration(ctx context.Context) (io.Re
 		return nil, fmt.Errorf("failed to execute HTTP request: %w", err)
 	}
 
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
 		return nil, fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
 
-	return resp.Body, nil
+	return readConfig(resp.Body)
 }
 
-// WriteConfiguration is unsupported for HTTPConfigurationManager.
-func (h *HTTPConfigurationManager) WriteConfiguration(_ context.Context, _ *model.Config) error {
+// WriteConfiguration is unsupported for httpConfigurationManager.
+func (h *httpConfigurationManager) Write(_ context.Context, _ *model.Config) error {
 	return fmt.Errorf("writing configuration is not supported for HTTP: %w", errors.ErrUnsupported)
 }

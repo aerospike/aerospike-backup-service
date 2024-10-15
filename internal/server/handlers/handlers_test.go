@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -174,20 +173,33 @@ func (mock backendsHolderMock) Get(routineName string) (*service.BackupBackend, 
 	return &service.BackupBackend{}, true
 }
 
-func (mock backendsHolderMock) SetData(_ map[string]*service.BackupBackend) {
+func (mock backendsHolderMock) Init(_ *model.Config) {
+}
+
+func (mock backendsHolderMock) GetAllReaders() map[string]service.BackupListReader {
+	return nil
 }
 
 type configurationManagerMock struct{}
 
-func (mock configurationManagerMock) ReadConfiguration(_ context.Context) (io.ReadCloser, error) {
-	serialize, _ := dto.Serialize(testConfig(), dto.JSON)
-	return io.NopCloser(bytes.NewReader(serialize)), nil
+func (mock configurationManagerMock) Read(_ context.Context) (*model.Config, error) {
+	return testConfig().ToModel()
 }
 
-func (mock configurationManagerMock) WriteConfiguration(_ context.Context, config *model.Config) error {
+func (mock configurationManagerMock) Update(_ context.Context, _ func(*model.Config) error) error {
+	return nil
+}
+
+func (mock configurationManagerMock) Write(_ context.Context, config *model.Config) error {
 	if config == nil {
 		return errTest
 	}
+	return nil
+}
+
+type MockConfigApplier struct{}
+
+func (a *MockConfigApplier) ApplyNewConfig() error {
 	return nil
 }
 
@@ -195,6 +207,7 @@ func newServiceMock() *Service {
 	toModel, _ := testConfig().ToModel()
 	return &Service{
 		config:               toModel,
+		configApplier:        &MockConfigApplier{},
 		scheduler:            quartz.NewStdScheduler(),
 		restoreManager:       restoreManagerMock{},
 		backupBackends:       backendsHolderMock{},

@@ -92,8 +92,7 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	backups, err := readBackupsLogic(r.Context(),
-		s.config.BackupRoutines, s.backupBackends, timeBounds.ToModel(), isFullBackup)
+	backups, err := readBackupsLogic(r.Context(), s.backupBackends, timeBounds.ToModel(), isFullBackup)
 	if err != nil {
 		hLogger.Error("failed to retrieve backup list",
 			slog.Any("timeBounds", timeBounds),
@@ -191,14 +190,13 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 }
 
 func readBackupsLogic(ctx context.Context,
-	routines map[string]*model.BackupRoutine,
 	backends service.BackendsHolder,
 	timeBounds *model.TimeBounds,
 	isFullBackup bool,
 ) (map[string][]model.BackupDetails, error) {
 	result := make(map[string][]model.BackupDetails)
-	for routine := range routines {
-		reader, _ := backends.GetReader(routine)
+
+	for routine, reader := range backends.GetAllReaders() {
 		backupListFunction := backupsReadFunction(reader, isFullBackup)
 		list, err := backupListFunction(ctx, timeBounds)
 		if err != nil {

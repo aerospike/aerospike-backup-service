@@ -376,7 +376,7 @@ paths:
               schema:
                 type: string
           description: Bad Request
-      summary: Applies the configuration for the service.
+      summary: Reloads the configuration from the config file.
       tags:
       - Configuration
   /v1/config/clusters:
