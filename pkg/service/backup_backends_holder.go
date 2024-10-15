@@ -15,7 +15,7 @@ type BackendsHolder interface {
 	GetReader(routineName string) (BackupListReader, bool)
 	// Get returns BackupBackend for routine.
 	Get(routineName string) (*BackupBackend, bool)
-	// GetAllReaders returns all backends as BackupListReader.
+	// GetAllReaders returns all backends as a map routineName -> BackupListReader.
 	GetAllReaders() map[string]BackupListReader
 }
 
