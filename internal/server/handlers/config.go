@@ -16,6 +16,8 @@ func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {
 		s.readConfig(w)
 	case http.MethodPut:
 		s.updateConfig(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
