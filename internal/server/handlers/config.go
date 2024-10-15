@@ -92,7 +92,7 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 // ApplyConfig  read and apply configuration from file.
-// @Summary     Applies the configuration for the service.
+// @Summary		Reloads the configuration from the config file.
 // @ID          applyConfig
 // @Tags        Configuration
 // @Router      /v1/config/apply [post]
