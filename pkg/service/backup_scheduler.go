@@ -11,8 +11,10 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
-type quartzGroup = string
-type jobType string
+type (
+	quartzGroup string
+	jobType     string
+)
 
 const (
 	quartzGroupAdHoc     quartzGroup = "ad-hoc"
@@ -137,17 +139,17 @@ func scheduleIncrementalBackup(
 
 func incrJobKey(routineName string) *quartz.JobKey {
 	jobName := fmt.Sprintf("%s-%s", routineName, jobTypeIncremental)
-	return quartz.NewJobKeyWithGroup(jobName, quartzGroupScheduled)
+	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupScheduled))
 }
 
 func fullJobKey(routineName string) *quartz.JobKey {
 	jobName := fmt.Sprintf("%s-%s", routineName, jobTypeFull)
-	return quartz.NewJobKeyWithGroup(jobName, quartzGroupScheduled)
+	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupScheduled))
 }
 
 func adhocKey(name string) *quartz.JobKey {
 	jobName := fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli())
-	return quartz.NewJobKeyWithGroup(jobName, quartzGroupAdHoc)
+	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupAdHoc))
 }
 
 func needToRunFullBackupNow(lastFullRun time.Time, trigger *quartz.CronTrigger) bool {
