@@ -42,7 +42,7 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 
 	newPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
 	if err != nil {
-		hLogger.Error("failed to decode newPolicy body",
+		hLogger.Error("failed to decode policy",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -163,7 +163,7 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 
 	updatedPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
 	if err != nil {
-		hLogger.Error("failed to decode newPolicyDto body",
+		hLogger.Error("failed to decode policy",
 			slog.Any("error", err),
 		)
 		http.Error(w, err.Error(), http.StatusBadRequest)
