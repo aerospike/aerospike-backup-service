@@ -33,8 +33,8 @@ func (m *MockRestoreHandler) Wait(_ context.Context) error {
 	return nil
 }
 
-// RestoreRun mocks the interface method.
-func (r *RestoreMock) RestoreRun(_ context.Context, _ *backup.Client,
+// Run mocks the interface method.
+func (r *RestoreMock) Run(_ context.Context, _ *backup.Client,
 	_ *model.RestoreRequest) (RestoreHandler, error) {
 	slog.Info("RestoreRun mock call")
 	return &MockRestoreHandler{}, nil
