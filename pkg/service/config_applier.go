@@ -68,12 +68,12 @@ func (a *DefaultConfigApplier) ApplyNewConfig() error {
 
 // we don't want to delete ad-hoc jobs
 func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
-	keys, err := a.scheduler.GetJobKeys(matcher.JobGroupEquals(quartzGroupScheduled))
+	keys, err := a.scheduler.GetJobKeys(matcher.JobGroupEquals(string(quartzGroupScheduled)))
 	if err != nil {
 		return fmt.Errorf("cannot fetch jobs: %w", err)
 	}
 
-	slog.Info(fmt.Sprintf("Delete scheduled jobs %+v", keys))
+	slog.Info("Delete scheduled jobs", slog.Any("keys", keys))
 	for _, key := range keys {
 		err = a.scheduler.DeleteJob(key)
 		if err != nil {
