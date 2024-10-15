@@ -1,245 +1,401 @@
----
-aerospike-clusters:
-  absDefaultCluster:
-    seed-nodes:
-      - host-name: "localhost"
-        port: 3000
-    credentials:
-      user: "tester"
-      password: "psw"
-    max-parallel-scans: 5
-
-
-storage:
-  local:
-    local-storage:
-      path: ./localStorage
-  minio:
-    s3-storage:
-      path: storage1
-      bucket: as-backup-bucket
-      s3-region: eu-central-1
-      s3-profile: minio
-      s3-endpoint-override: http://localhost:9000
-
-backup-policies:
-  keepFilesMaxRecordsPolicy:
-    parallel: 8
-    remove-files: KeepAll
-    sealed: true
-    retry-delay: 10_000
-    max-retries: 10
-  keepFilesPolicy:
-    parallel: 8
-    remove-files: KeepAll
-    sealed: true
-  removeFilesPolicy:
-    parallel: 8
-    remove-files: RemoveAll
-    sealed: true
-  removeIncrementalPolicy:
-    parallel: 8
-    remove-files: RemoveIncremental
-    sealed: true
-  keepFilesPolicySlow:
-    parallel: 8
-    remove-files: KeepAll
-    bandwidth: 120000
-    sealed: true
-  encryptedCompressedPolicy128:
-    parallel: 8
-    remove-files: RemoveAll
-    sealed: true
-    encryption:
-      key-file: encryptionKey
-      mode: AES128
-    compression:
-      level: 20
-      mode: ZSTD
-  encryptedCompressedPolicy256:
-    parallel: 8
-    remove-files: RemoveAll
-    sealed: true
-    encryption:
-      key-file: encryptionKey
-      mode: AES256
-    compression:
-      level: 20
-      mode: ZSTD
-  notSealed:
-    parallel: 8
-    remove-files: KeepAll
-    sealed: false
-  noIndexesUdfsRecords:
-    parallel: 8
-    remove-files: KeepAll
-    sealed: true
-    no-indexes: true
-    no-records: true
-    no-udfs: true
-backup-routines:
-  localStorageRemoveFiles:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns1"]
-    backup-policy: removeFilesPolicy
-  localStorage:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns2"]
-    backup-policy: keepFilesPolicy
-  localStorageNotSealed:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns2"]
-    backup-policy: notSealed
-  minioRemoveFiles:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: minio
-    namespaces: ["source-ns3"]
-    backup-policy: removeFilesPolicy
-  minio:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: minio
-    namespaces: ["source-ns4"]
-    backup-policy: keepFilesMaxRecordsPolicy
-  localStorageIncremental1:
-    interval-cron: "@yearly"
-    incr-interval-cron: "*/10 * * * * *"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns5"]
-    set-list:
-      - absSet5
-    backup-policy: keepFilesPolicy
-  incrementalBackupCluster:
-    interval-cron: "@yearly"
-    incr-interval-cron: "*/10 * * * * *"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: []
-    backup-policy: keepFilesPolicy
-  incrementalBackupClusterNotSealed:
-    interval-cron: "@yearly"
-    incr-interval-cron: "*/10 * * * * *"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: []
-    backup-policy: notSealed
-  incrementalBackupMultipleNSs:
-    interval-cron: "@yearly"
-    incr-interval-cron: "*/10 * * * * *"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns18", "source-ns19", "source-ns20"]
-    backup-policy: keepFilesPolicy
-  minioIncremental:
-    interval-cron: "@yearly"
-    incr-interval-cron: "*/10 * * * * *"
-    source-cluster: absDefaultCluster
-    storage: minio
-    namespaces: ["source-ns6"]
-    set-list:
-      - absSet6
-    backup-policy: removeIncrementalPolicy
-  edgeCases:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns7"]
-    backup-policy: keepFilesPolicy
-  filterBySetAndBin:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns8"]
-    set-list:
-      - backupSet
-    bin-list:
-      - backupBin
-    backup-policy: removeFilesPolicy
-  localStorageIncremental3:
-    interval-cron: "@yearly"
-    incr-interval-cron: "*/10 * * * * *"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns10"]
-    backup-policy: removeFilesPolicy
-  fullBackup1:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns9"]
-    backup-policy: keepFilesPolicy
-  fullBackup2:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns11"]
-    backup-policy: keepFilesPolicy
-  fullBackup3:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns12"]
-    backup-policy: keepFilesPolicy
-  fullBackupFullCluster:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: []
-    backup-policy: keepFilesPolicy
-  fullBackup3Namespaces:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns15", "source-ns16", "source-ns17"]
-    backup-policy: keepFilesPolicy
-  fullBackupSlow:
-    interval-cron: "*/20 * * * * *"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns13"]
-    backup-policy: keepFilesPolicySlow
-  fullBackupEncrypedCompressed128:
-      interval-cron: "@yearly"
-      source-cluster: absDefaultCluster
-      storage: local
-      namespaces: ["source-ns18"]
-      backup-policy: encryptedCompressedPolicy128
-  fullBackupEncrypedCompressed256:
-      interval-cron: "@yearly"
-      source-cluster: absDefaultCluster
-      storage: local
-      namespaces: ["source-ns21"]
-      backup-policy: encryptedCompressedPolicy256
-  noIndexesUdfsRecords:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: [ "source-ns19" ]
-    backup-policy: noIndexesUdfsRecords
-  oneMinuteIntervalBackup:
-    interval-cron: "0 */1 * * * *"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: [ "source-ns20" ]
-    backup-policy: removeFilesPolicy
-  timestamp:
-    interval-cron: "@yearly"
-    incr-interval-cron: "*/9 * * * * *"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: ["source-ns14"]
-    backup-policy: keepFilesPolicy
-
 service:
-  logger:
-    file-writer:
-      filename: "log/backup-service.log"
-    level: INFO
+    http:
+        rate: {}
+    logger:
+        level: INFO
+        file-writer:
+            filename: log/backup-service.log
+            maxsize: 100
+            maxage: 0
+            maxbackups: 0
+            compress: false
+aerospike-clusters:
+    absDefaultCluster:
+        seed-nodes:
+            - host-name: localhost
+              port: 3000
+        credentials:
+            user: tester
+            password: psw
+        max-parallel-scans: 5
+storage:
+    RoutineWithWrongValuesStorage1728906168562:
+        local-storage:
+            path: BackupWithNewConfigTestPath
+    RoutineWithWrongValuesStorage1728906170010:
+        local-storage:
+            path: BackupWithNewConfigTestPath
+    RoutineWithWrongValuesStorage1728906172320:
+        local-storage:
+            path: BackupWithNewConfigTestPath
+    RoutineWithWrongValuesStorage1728906174187:
+        local-storage:
+            path: BackupWithNewConfigTestPath
+    RoutineWithWrongValuesStorage1728906175578:
+        local-storage:
+            path: BackupWithNewConfigTestPath
+    RoutineWithWrongValuesStorage1728906176918:
+        local-storage:
+            path: BackupWithNewConfigTestPath
+    local:
+        local-storage:
+            path: ./localStorage
+    minio:
+        s3-storage:
+            bucket: as-backup-bucket
+            path: storage1
+            s3-region: eu-central-1
+            s3-profile: minio
+            s3-endpoint-override: http://localhost:9000
+backup-policies:
+    RoutineWithWrongValuesPolicy1728906168561:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    RoutineWithWrongValuesPolicy1728906170010:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    RoutineWithWrongValuesPolicy1728906172320:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    RoutineWithWrongValuesPolicy1728906174187:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    RoutineWithWrongValuesPolicy1728906175578:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    RoutineWithWrongValuesPolicy1728906176918:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    encryptedCompressedPolicy128:
+        parallel: 8
+        remove-files: RemoveAll
+        encryption:
+            mode: AES128
+            key-file: encryptionKey
+        sealed: true
+    encryptedCompressedPolicy256:
+        parallel: 8
+        remove-files: RemoveAll
+        encryption:
+            mode: AES256
+            key-file: encryptionKey
+        sealed: true
+    keepFilesMaxRecordsPolicy:
+        parallel: 8
+        max-retries: 10
+        retry-delay: 10000
+        remove-files: KeepAll
+        sealed: true
+    keepFilesPolicy:
+        parallel: 8
+        remove-files: KeepAll
+        sealed: true
+    keepFilesPolicySlow:
+        parallel: 8
+        remove-files: KeepAll
+        bandwidth: 120000
+        sealed: true
+    noIndexesUdfsRecords:
+        parallel: 8
+        remove-files: KeepAll
+        no-records: true
+        no-indexes: true
+        no-udfs: true
+        sealed: true
+    notSealed:
+        parallel: 8
+        remove-files: KeepAll
+        sealed: false
+    policyNegativeValues1728906242415:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    policyNegativeValues1728906243852:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    policyNegativeValues1728906243996:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    policyNegativeValues1728906244119:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    policyNegativeValues1728906244241:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    policyNegativeValues1728906244536:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    policyNegativeValues1728906244668:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    policyNegativeValues1728906244763:
+        parallel: 1
+        remove-files: RemoveAll
+        sealed: true
+    removeFilesPolicy:
+        parallel: 8
+        remove-files: RemoveAll
+        sealed: true
+    removeIncrementalPolicy:
+        parallel: 8
+        remove-files: RemoveIncremental
+        sealed: true
+backup-routines:
+    RoutineWithWrongValuesRoutine1728906168562:
+        backup-policy: RoutineWithWrongValuesPolicy1728906168561
+        source-cluster: absDefaultCluster
+        storage: RoutineWithWrongValuesStorage1728906168562
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns21
+    RoutineWithWrongValuesRoutine1728906170010:
+        backup-policy: RoutineWithWrongValuesPolicy1728906170010
+        source-cluster: absDefaultCluster
+        storage: RoutineWithWrongValuesStorage1728906170010
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns21
+    RoutineWithWrongValuesRoutine1728906172320:
+        backup-policy: RoutineWithWrongValuesPolicy1728906172320
+        source-cluster: absDefaultCluster
+        storage: RoutineWithWrongValuesStorage1728906172320
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns21
+    RoutineWithWrongValuesRoutine1728906174187:
+        backup-policy: RoutineWithWrongValuesPolicy1728906174187
+        source-cluster: absDefaultCluster
+        storage: RoutineWithWrongValuesStorage1728906174187
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns21
+    RoutineWithWrongValuesRoutine1728906175578:
+        backup-policy: RoutineWithWrongValuesPolicy1728906175578
+        source-cluster: absDefaultCluster
+        storage: RoutineWithWrongValuesStorage1728906175578
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns21
+    RoutineWithWrongValuesRoutine1728906176918:
+        backup-policy: RoutineWithWrongValuesPolicy1728906176918
+        source-cluster: absDefaultCluster
+        storage: RoutineWithWrongValuesStorage1728906176918
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns21
+    edgeCases:
+        backup-policy: keepFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns7
+    filterBySetAndBin:
+        backup-policy: removeFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns8
+        set-list:
+            - backupSet
+        bin-list:
+            - backupBin
+    fullBackup1:
+        backup-policy: keepFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns9
+    fullBackup2:
+        backup-policy: keepFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns11
+    fullBackup3:
+        backup-policy: keepFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns12
+    fullBackup3Namespaces:
+        backup-policy: keepFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns15
+            - source-ns16
+            - source-ns17
+    fullBackupEncrypedCompressed128:
+        backup-policy: encryptedCompressedPolicy128
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns18
+    fullBackupEncrypedCompressed256:
+        backup-policy: encryptedCompressedPolicy256
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns21
+    fullBackupFullCluster:
+        backup-policy: keepFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+    fullBackupSlow:
+        backup-policy: keepFilesPolicySlow
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '*/20 * * * * *'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns13
+    incrementalBackupCluster:
+        backup-policy: keepFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: '*/10 * * * * *'
+    incrementalBackupClusterNotSealed:
+        backup-policy: notSealed
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: '*/10 * * * * *'
+    incrementalBackupMultipleNSs:
+        backup-policy: keepFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: '*/10 * * * * *'
+        namespaces:
+            - source-ns18
+            - source-ns19
+            - source-ns20
+    localStorage:
+        backup-policy: keepFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns2
+    localStorageIncremental1:
+        backup-policy: keepFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: '*/10 * * * * *'
+        namespaces:
+            - source-ns5
+        set-list:
+            - absSet5
+    localStorageIncremental3:
+        backup-policy: removeFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: '*/10 * * * * *'
+        namespaces:
+            - source-ns10
+    localStorageNotSealed:
+        backup-policy: notSealed
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns2
+    localStorageRemoveFiles:
+        backup-policy: removeFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns1
+    minio:
+        backup-policy: keepFilesMaxRecordsPolicy
+        source-cluster: absDefaultCluster
+        storage: minio
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns4
+    minioIncremental:
+        backup-policy: removeIncrementalPolicy
+        source-cluster: absDefaultCluster
+        storage: minio
+        interval-cron: '@yearly'
+        incr-interval-cron: '*/10 * * * * *'
+        namespaces:
+            - source-ns6
+        set-list:
+            - absSet6
+    minioRemoveFiles:
+        backup-policy: removeFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: minio
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns3
+    noIndexesUdfsRecords:
+        backup-policy: noIndexesUdfsRecords
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns19
+    oneMinuteIntervalBackup:
+        backup-policy: removeFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: 0 */1 * * * *
+        incr-interval-cron: ""
+        namespaces:
+            - source-ns20
+    timestamp:
+        backup-policy: keepFilesPolicy
+        source-cluster: absDefaultCluster
+        storage: local
+        interval-cron: '@yearly'
+        incr-interval-cron: '*/9 * * * * *'
+        namespaces:
+            - source-ns14
