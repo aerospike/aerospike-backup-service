@@ -41,7 +41,7 @@ func (b *BackupGo) BackupRun(
 		return nil, fmt.Errorf("failed to create backup writer, %w", err)
 	}
 
-	handler, err := client.Backup(ctx, config, writerFactory)
+	handler, err := client.Backup(ctx, config, writerFactory, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start backup, %w", err)
 	}
