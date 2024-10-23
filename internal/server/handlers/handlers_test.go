@@ -183,7 +183,7 @@ func (mock backendsHolderMock) GetAllReaders() map[string]service.BackupListRead
 type configurationManagerMock struct{}
 
 func (mock configurationManagerMock) Read(_ context.Context) (*model.Config, error) {
-	return testConfig().ToModel()
+	return testConfig().ToModel(nil)
 }
 
 func (mock configurationManagerMock) Update(_ context.Context, _ func(*model.Config) error) error {
@@ -204,7 +204,7 @@ func (a *MockConfigApplier) ApplyNewConfig() error {
 }
 
 func newServiceMock() *Service {
-	toModel, _ := testConfig().ToModel()
+	toModel, _ := testConfig().ToModel(nil)
 	return &Service{
 		config:               toModel,
 		configApplier:        &MockConfigApplier{},

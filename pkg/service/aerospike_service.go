@@ -1,11 +1,13 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 
 	_ "github.com/aerospike/aerospike-backup-service/v2/modules/schema" // it's required to load configuration schemas in init method
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
@@ -15,6 +17,71 @@ import (
 )
 
 const namespaceInfo = "namespaces"
+
+type NamespaceValidator interface {
+	MissingNamespaces(cluster *model.AerospikeCluster, namespaces []string) []string
+	ValidateRoutines(cluster *model.AerospikeCluster, config *model.Config) error
+}
+
+type defaultNamespaceValidator struct {
+	ClientManager ClientManager
+}
+
+func NewNamespaceValidator(clientManager ClientManager) NamespaceValidator {
+	return &defaultNamespaceValidator{
+		ClientManager: clientManager,
+	}
+}
+
+func (nv *defaultNamespaceValidator) MissingNamespaces(
+	cluster *model.AerospikeCluster,
+	namespaces []string,
+) []string {
+	if len(namespaces) == 0 {
+		return nil
+	}
+
+	backupClient, err := nv.ClientManager.GetClient(cluster)
+	if err != nil {
+		slog.Info("Failed to connect to aerospike cluster", slog.Any("error", err))
+		return nil
+	}
+	defer nv.ClientManager.Close(backupClient)
+
+	namespacesInCluster, err := getAllNamespacesOfCluster(backupClient.AerospikeClient())
+	if err != nil {
+		slog.Info("Failed to retrieve namespaces from cluster", slog.Any("error", err))
+	}
+
+	return util.MissingElements(namespaces, namespacesInCluster)
+}
+
+func (nv *defaultNamespaceValidator) ValidateRoutines(cluster *model.AerospikeCluster, config *model.Config) error {
+	var err error
+	routines := filterRoutinesByCluster(config.BackupRoutines, cluster)
+	for routineName, routine := range routines {
+		missingNamespaces := nv.MissingNamespaces(cluster, routine.Namespaces)
+		if len(missingNamespaces) > 0 {
+			err = errors.Join(err, fmt.Errorf("cluster is missing namespaces %v that are used in routine %v",
+				missingNamespaces, routineName))
+		}
+	}
+
+	return err
+}
+
+// filterRoutinesByCluster filters backup routines by the given cluster.
+func filterRoutinesByCluster(
+	routines map[string]*model.BackupRoutine, cluster *model.AerospikeCluster,
+) map[string]*model.BackupRoutine {
+	filteredRoutines := make(map[string]*model.BackupRoutine)
+	for name, routine := range routines {
+		if routine.SourceCluster == cluster {
+			filteredRoutines[name] = routine
+		}
+	}
+	return filteredRoutines
+}
 
 // clusterHasRequiredNamespace checks if given namespace exists in cluster.
 func clusterHasRequiredNamespace(namespace string, client backup.AerospikeClient) (bool, error) {

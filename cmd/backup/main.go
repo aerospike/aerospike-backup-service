@@ -64,8 +64,10 @@ func run() int {
 
 func startService(configFile string, remote bool) error {
 	ctx := systemCtx()
+	clientManager := service.NewClientManager(&service.DefaultClientFactory{})
+	nsValidator := service.NewNamespaceValidator(clientManager)
 
-	config, configurationManager, err := configuration.Load(ctx, configFile, remote)
+	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -81,7 +83,6 @@ func startService(configFile string, remote bool) error {
 
 	// schedule all configured backups
 	backends := service.NewBackupBackends()
-	clientManager := service.NewClientManager(&service.DefaultClientFactory{})
 	scheduler := service.NewScheduler(ctx)
 	backupHandlers := make(service.BackupHandlerHolder)
 
@@ -112,6 +113,7 @@ func startService(configFile string, remote bool) error {
 		backupHandlers,
 		configurationManager,
 		appLogger,
+		nsValidator,
 	)
 
 	// run HTTP server

@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -75,7 +76,10 @@ func (r *BackupRoutine) Validate() error {
 	return nil
 }
 
-func (r *BackupRoutine) ToModel(config *model.Config) (*model.BackupRoutine, error) {
+func (r *BackupRoutine) ToModel(
+	config *model.Config,
+	nsValidator service.NamespaceValidator,
+) (*model.BackupRoutine, error) {
 	policy, found := config.BackupPolicies[r.BackupPolicy]
 	if !found {
 		return nil, notFoundValidationError("backup policy", r.BackupPolicy)
@@ -103,6 +107,11 @@ func (r *BackupRoutine) ToModel(config *model.Config) (*model.BackupRoutine, err
 		if !found {
 			return nil, notFoundValidationError("secret agent", *r.SecretAgent)
 		}
+	}
+
+	missingNSs := nsValidator.MissingNamespaces(cluster, r.Namespaces)
+	if len(missingNSs) > 0 {
+		return nil, fmt.Errorf("the following namespaces are missing in the cluster: %v", missingNSs)
 	}
 
 	return &model.BackupRoutine{

@@ -38,7 +38,7 @@ func (b *BackupGo) BackupRun(
 		return nil, err
 	}
 	if !ok {
-		return nil, fmt.Errorf("cluster does not have all require namespace")
+		return nil, fmt.Errorf("cluster does not have the namespace %s configured", namespace)
 	}
 
 	config := makeBackupConfig(namespace, backupRoutine, backupPolicy, timebounds, secretAgent)
