@@ -183,7 +183,7 @@ func (mock backendsHolderMock) GetAllReaders() map[string]service.BackupListRead
 type configurationManagerMock struct{}
 
 func (mock configurationManagerMock) Read(_ context.Context) (*model.Config, error) {
-	return testConfig().ToModel(nil)
+	return testConfig().ToModel(&MockNamespaceValidator{})
 }
 
 func (mock configurationManagerMock) Update(_ context.Context, _ func(*model.Config) error) error {
@@ -203,16 +203,27 @@ func (a *MockConfigApplier) ApplyNewConfig() error {
 	return nil
 }
 
+type MockNamespaceValidator struct{}
+
+func (m *MockNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ []string) []string {
+	return nil
+}
+
+func (m *MockNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ *model.Config) error {
+	return nil
+}
+
 func newServiceMock() *Service {
-	toModel, _ := testConfig().ToModel(nil)
-	return &Service{
-		config:               toModel,
-		configApplier:        &MockConfigApplier{},
-		scheduler:            quartz.NewStdScheduler(),
-		restoreManager:       restoreManagerMock{},
-		backupBackends:       backendsHolderMock{},
-		handlerHolder:        nil,
-		configurationManager: configurationManagerMock{},
-		logger:               slog.New(slog.NewJSONHandler(io.Discard, nil)),
-	}
+	toModel, _ := testConfig().ToModel(&MockNamespaceValidator{})
+	return NewService(
+		toModel,
+		&MockConfigApplier{},
+		quartz.NewStdScheduler(),
+		restoreManagerMock{},
+		backendsHolderMock{},
+		nil,
+		configurationManagerMock{},
+		slog.New(slog.NewJSONHandler(io.Discard, nil)),
+		&MockNamespaceValidator{},
+	)
 }
