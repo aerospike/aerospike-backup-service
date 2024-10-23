@@ -3,6 +3,8 @@ package dto
 import (
 	"errors"
 	"testing"
+
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
 func validConfig() *Config {
@@ -42,9 +44,19 @@ func validConfig() *Config {
 func TestValidConfigValidation(t *testing.T) {
 	config := validConfig()
 
-	if err := config.Validate(); err != nil {
+	if err := config.validate(); err != nil {
 		t.Errorf("Expected no validation error, but got: %v", err)
 	}
+}
+
+type MockNamespaceValidator struct{}
+
+func (m *MockNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ []string) []string {
+	return nil
+}
+
+func (m *MockNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ *model.Config) error {
+	return nil
 }
 
 func TestInvalidClusterReference(t *testing.T) {
@@ -52,7 +64,8 @@ func TestInvalidClusterReference(t *testing.T) {
 	routine := config.BackupRoutines["routine1"]
 	routine.SourceCluster = "nonExistentCluster"
 
-	err := config.Validate()
+	_, err := config.ToModel(&MockNamespaceValidator{})
+
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
@@ -67,7 +80,7 @@ func TestInvalidBackupPolicyReference(t *testing.T) {
 	routine := config.BackupRoutines["routine1"]
 	routine.BackupPolicy = "nonExistentPolicy"
 
-	err := config.Validate()
+	_, err := config.ToModel(&MockNamespaceValidator{})
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
@@ -82,7 +95,7 @@ func TestInvalidStorageReference(t *testing.T) {
 	routine := config.BackupRoutines["routine1"]
 	routine.Storage = "nonExistentStorage"
 
-	err := config.Validate()
+	_, err := config.ToModel(&MockNamespaceValidator{})
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}

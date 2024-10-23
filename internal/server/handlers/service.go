@@ -20,6 +20,7 @@ type Service struct {
 	handlerHolder        service.BackupHandlerHolder
 	configurationManager configuration.Manager
 	logger               *slog.Logger
+	nsValidator          service.NamespaceValidator
 }
 
 func NewService(
@@ -31,6 +32,7 @@ func NewService(
 	handlerHolder service.BackupHandlerHolder,
 	configurationManager configuration.Manager,
 	logger *slog.Logger,
+	nsValidator service.NamespaceValidator,
 ) *Service {
 	return &Service{
 		config:               config,
@@ -41,5 +43,6 @@ func NewService(
 		handlerHolder:        handlerHolder,
 		configurationManager: configurationManager,
 		logger:               logger,
+		nsValidator:          nsValidator,
 	}
 }

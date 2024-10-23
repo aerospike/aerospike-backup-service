@@ -64,24 +64,19 @@ func run() int {
 
 func startService(configFile string, remote bool) error {
 	ctx := systemCtx()
+	clientManager := service.NewClientManager(&service.DefaultClientFactory{})
+	nsValidator := service.NewNamespaceValidator(clientManager)
 
-	config, configurationManager, err := configuration.Load(ctx, configFile, remote)
+	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// set default loggers
-	loggerConfig := config.ServiceConfig.Logger
-	appLogger := slog.New(
-		util.LogHandler(loggerConfig),
-	)
-	slog.SetDefault(appLogger)
-	logger.SetDefault(util.NewQuartzLogger(ctx))
+	appLogger := setDefaultLoggers(ctx, config)
 	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 
 	// schedule all configured backups
 	backends := service.NewBackupBackends()
-	clientManager := service.NewClientManager(&service.DefaultClientFactory{})
 	scheduler := service.NewScheduler(ctx)
 	backupHandlers := make(service.BackupHandlerHolder)
 
@@ -101,7 +96,8 @@ func startService(configFile string, remote bool) error {
 	var restoreJobs = service.NewRestoreJobsHolder()
 	service.NewMetricsCollector(backupHandlers, restoreJobs).Start(ctx, 1*time.Second)
 
-	restoreMgr := service.NewRestoreManager(backends, config, service.NewRestore(), clientManager, restoreJobs)
+	restoreMgr := service.NewRestoreManager(
+		backends, config, service.NewRestore(), clientManager, restoreJobs, nsValidator)
 
 	httpService := handlers.NewService(
 		config,
@@ -112,6 +108,7 @@ func startService(configFile string, remote bool) error {
 		backupHandlers,
 		configurationManager,
 		appLogger,
+		nsValidator,
 	)
 
 	// run HTTP server
@@ -121,6 +118,15 @@ func startService(configFile string, remote bool) error {
 	scheduler.Stop()
 
 	return err
+}
+
+func setDefaultLoggers(ctx context.Context, config *model.Config) *slog.Logger {
+	appLogger := slog.New(
+		util.LogHandler(config.ServiceConfig.Logger),
+	)
+	slog.SetDefault(appLogger)
+	logger.SetDefault(util.NewQuartzLogger(ctx))
+	return appLogger
 }
 
 func systemCtx() context.Context {

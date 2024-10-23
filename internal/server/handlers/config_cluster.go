@@ -163,8 +163,6 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Param       cluster body dto.AerospikeCluster true "Aerospike cluster details"
 // @Success     200
 // @Failure     400 {string} string
-//
-//nolint:dupl
 func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateAerospikeCluster"))
 
@@ -181,8 +179,19 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	cluster := updatedCluster.ToModel()
+	err = s.nsValidator.ValidateRoutines(cluster, s.config)
+	if err != nil {
+		hLogger.Error("cluster namespace validation failed",
+			slog.String("name", clusterName),
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.UpdateCluster(clusterName, updatedCluster.ToModel())
+		return config.UpdateCluster(clusterName, cluster)
 	})
 	if err != nil {
 		hLogger.Error("failed to update cluster",

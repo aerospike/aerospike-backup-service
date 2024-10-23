@@ -33,6 +33,14 @@ func (b *BackupGo) BackupRun(
 	namespace string,
 	path string,
 ) (BackupHandler, error) {
+	ok, err := clusterHasRequiredNamespace(namespace, client.AerospikeClient())
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, fmt.Errorf("cluster does not have the namespace %s configured", namespace)
+	}
+
 	config := makeBackupConfig(namespace, backupRoutine, backupPolicy, timebounds, secretAgent)
 
 	writerFactory, err := storage.CreateWriter(ctx, s, path, false,

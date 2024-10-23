@@ -35,8 +35,6 @@ func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Requ
 // @Param       storage body dto.Storage true "Backup storage details"
 // @Success     201
 // @Failure     400 {string} string
-//
-//nolint:dupl
 func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addStorage"))
 
