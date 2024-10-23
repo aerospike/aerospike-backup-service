@@ -16,6 +16,22 @@ import (
 
 const namespaceInfo = "namespaces"
 
+// clusterHasRequiredNamespace checks if given namespace exists in cluster.
+func clusterHasRequiredNamespace(namespace string, client backup.AerospikeClient) (bool, error) {
+	namespacesInCluster, err := getAllNamespacesOfCluster(client)
+	if err != nil {
+		return false, fmt.Errorf("failed to retrieve namespaces from cluster: %w", err)
+	}
+
+	for _, n := range namespacesInCluster {
+		if n == namespace {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // getAllNamespacesOfCluster retrieves a list of all namespaces in an Aerospike cluster.
 func getAllNamespacesOfCluster(client backup.AerospikeClient) ([]string, error) {
 	node, err := client.Cluster().GetRandomNode()
