@@ -19,7 +19,11 @@ import (
 const namespaceInfo = "namespaces"
 
 type NamespaceValidator interface {
+	// MissingNamespaces returns a slice containing any namespaces specified in the
+	// provided slice which do not exist on the given cluster.
 	MissingNamespaces(cluster *model.AerospikeCluster, namespaces []string) []string
+	// ValidateRoutines verifies that all namespaces referenced in backup routines
+	// exist in their respective clusters.
 	ValidateRoutines(cluster *model.AerospikeCluster, config *model.Config) error
 }
 
