@@ -105,7 +105,7 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 			// it can be only 1 missing ns.
 			err := fmt.Errorf("destination cluster does not have namespace %s", missingNamespaces[0])
 			slog.Error("Failed to restore by path",
-				slog.Any("cluster", request.DestinationCuster),
+				slog.Any("cluster label", request.DestinationCuster.ClusterLabel),
 				slog.Any("err", err))
 			r.restoreJobs.setFailed(jobID, err)
 			return true
