@@ -172,7 +172,7 @@ func TestRestoreOK(t *testing.T) {
 		cleanTestFolder()
 	})
 	restoreRequest := &model.RestoreRequest{
-		DestinationCuster: model.NewLocalAerospikeCluster(),
+		DestinationCluster: model.NewLocalAerospikeCluster(),
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
@@ -232,7 +232,7 @@ func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
 
 func Test_RestoreTimestamp(t *testing.T) {
 	request := model.RestoreTimestampRequest{
-		DestinationCuster: model.NewLocalAerospikeCluster(),
+		DestinationCluster: model.NewLocalAerospikeCluster(),
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
@@ -296,9 +296,9 @@ func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 
 func Test_restoreTimestampFail(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
-		Routine:           "routine_fail_restore",
-		Time:              time.UnixMilli(10),
-		DestinationCuster: &model.AerospikeCluster{},
+		Routine:            "routine_fail_restore",
+		Time:               time.UnixMilli(10),
+		DestinationCluster: &model.AerospikeCluster{},
 	}
 
 	_, err := restoreService.RestoreByTime(request)
