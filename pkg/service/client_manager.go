@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	as "github.com/aerospike/aerospike-client-go/v7"
@@ -39,18 +40,21 @@ type ClientManagerImpl struct {
 	mu            sync.Mutex
 	clients       map[*model.AerospikeCluster]*clientInfo
 	clientFactory AerospikeClientFactory
+	closeDelay    time.Duration
 }
 
 type clientInfo struct {
-	client *backup.Client
-	count  int
+	client     *backup.Client
+	count      int
+	closeTimer *time.Timer
 }
 
 // NewClientManager creates a new ClientManagerImpl.
-func NewClientManager(aerospikeClientFactory AerospikeClientFactory) *ClientManagerImpl {
+func NewClientManager(aerospikeClientFactory AerospikeClientFactory, closeDelay time.Duration) *ClientManagerImpl {
 	return &ClientManagerImpl{
 		clients:       make(map[*model.AerospikeCluster]*clientInfo),
 		clientFactory: aerospikeClientFactory,
+		closeDelay:    closeDelay,
 	}
 }
 
@@ -60,6 +64,11 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 	defer cm.mu.Unlock()
 
 	if info, exists := cm.clients[cluster]; exists {
+		// If there's a pending close operation, cancel it by stopping the timer
+		if info.closeTimer != nil {
+			info.closeTimer.Stop()
+			info.closeTimer = nil
+		}
 		info.count++
 		return info.client, nil
 	}
@@ -106,13 +115,27 @@ func (cm *ClientManagerImpl) Close(client *backup.Client) {
 		if info.client == client {
 			info.count--
 			if info.count == 0 {
-				info.client.AerospikeClient().Close()
-				delete(cm.clients, id)
+				info.closeTimer = cm.scheduleClosing(id)
 			}
 			return
 		}
 	}
 
-	// close client even it was not found
+	// Close client even if it was not found
 	client.AerospikeClient().Close()
+}
+
+// scheduleClosing schedules client closing after the configured delay.
+// Returns a timer that can be used to cancel the scheduled closing if needed.
+func (cm *ClientManagerImpl) scheduleClosing(cluster *model.AerospikeCluster) *time.Timer {
+	return time.AfterFunc(cm.closeDelay, func() {
+		cm.mu.Lock()
+		defer cm.mu.Unlock()
+
+		// Check if the client still exists and count is still 0
+		if info, exists := cm.clients[cluster]; exists && info.count == 0 {
+			info.client.AerospikeClient().Close()
+			delete(cm.clients, cluster)
+		}
+	})
 }

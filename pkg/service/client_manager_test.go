@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	as "github.com/aerospike/aerospike-client-go/v7"
@@ -35,6 +36,7 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 func Test_GetClient(t *testing.T) {
 	clientManager := NewClientManager(
 		&MockClientFactory{},
+		10*time.Second,
 	)
 
 	// First call will create a new client
@@ -52,6 +54,7 @@ func Test_GetClient(t *testing.T) {
 func Test_CreateClient(t *testing.T) {
 	clientManager := NewClientManager(
 		&MockClientFactory{},
+		10*time.Second,
 	)
 
 	client, err := clientManager.createClient(&model.AerospikeCluster{})
@@ -65,6 +68,7 @@ func Test_CreateClient_Errors(t *testing.T) {
 
 	clientManager := NewClientManager(
 		mockClientFactory,
+		10*time.Second,
 	)
 
 	client, err := clientManager.createClient(aeroCluster)
@@ -75,6 +79,7 @@ func Test_CreateClient_Errors(t *testing.T) {
 func Test_Close(t *testing.T) {
 	clientManager := NewClientManager(
 		&MockClientFactory{},
+		0*time.Second, // Immediate close for testing
 	)
 
 	client, err := clientManager.GetClient(cluster)
@@ -82,6 +87,9 @@ func Test_Close(t *testing.T) {
 	assert.NotNil(t, client)
 
 	clientManager.Close(client)
+
+	// Wait a bit for the timer to fire
+	time.Sleep(10 * time.Millisecond)
 
 	// Verify that client is removed from clients map
 	_, exists := clientManager.clients[cluster]
@@ -91,6 +99,7 @@ func Test_Close(t *testing.T) {
 func Test_Close_Multiple(t *testing.T) {
 	clientManager := NewClientManager(
 		&MockClientFactory{},
+		0*time.Second, // Immediate close for testing
 	)
 
 	client, err := clientManager.GetClient(cluster)
@@ -107,13 +116,44 @@ func Test_Close_Multiple(t *testing.T) {
 
 	clientManager.Close(client)
 
+	// Wait a bit for the timer to fire
+	time.Sleep(10 * time.Millisecond)
+
 	_, exists = clientManager.clients[cluster]
 	assert.False(t, exists)
+}
+
+func Test_Close_CancelOnReuse(t *testing.T) {
+	clientManager := NewClientManager(
+		&MockClientFactory{},
+		100*time.Millisecond,
+	)
+
+	client, err := clientManager.GetClient(cluster)
+	assert.NoError(t, err)
+	assert.NotNil(t, client)
+
+	// Schedule closing
+	clientManager.Close(client)
+
+	// Reuse the client before it's closed
+	time.Sleep(50 * time.Millisecond)
+	client2, err := clientManager.GetClient(cluster)
+	assert.NoError(t, err)
+	assert.Equal(t, client, client2)
+
+	// Wait longer than the close delay
+	time.Sleep(100 * time.Millisecond)
+
+	// Client should still exist because close was cancelled
+	_, exists := clientManager.clients[cluster]
+	assert.True(t, exists)
 }
 
 func Test_Close_NotExisting(t *testing.T) {
 	clientManager := NewClientManager(
 		&MockClientFactory{},
+		10*time.Second,
 	)
 	aeroClient := &mocks.MockAerospikeClient{}
 	aeroClient.On("Close").Return()

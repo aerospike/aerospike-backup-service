@@ -64,7 +64,7 @@ func run() int {
 
 func startService(configFile string, remote bool) error {
 	ctx := systemCtx()
-	clientManager := service.NewClientManager(&service.DefaultClientFactory{})
+	clientManager := service.NewClientManager(&service.DefaultClientFactory{}, 10*time.Second)
 	nsValidator := service.NewNamespaceValidator(clientManager)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
