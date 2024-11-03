@@ -33,6 +33,14 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 	return m, nil
 }
 
+func assertClientExists(t *testing.T, clientManager *ClientManagerImpl, cl *model.AerospikeCluster, shouldExist bool) {
+	t.Helper()
+	clientManager.mu.Lock()
+	defer clientManager.mu.Unlock()
+	_, exists := clientManager.clients[cl]
+	assert.Equal(t, shouldExist, exists)
+}
+
 func Test_GetClient(t *testing.T) {
 	clientManager := NewClientManager(
 		&MockClientFactory{},
@@ -79,27 +87,24 @@ func Test_CreateClient_Errors(t *testing.T) {
 func Test_Close(t *testing.T) {
 	clientManager := NewClientManager(
 		&MockClientFactory{},
-		0*time.Second, // Immediate close for testing
+		100*time.Millisecond,
 	)
 
 	client, err := clientManager.GetClient(cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
+	assertClientExists(t, clientManager, cluster, true)
 
 	clientManager.Close(client)
+	time.Sleep(150 * time.Millisecond) // Wait for timer to fire
 
-	// Wait a bit for the timer to fire
-	time.Sleep(10 * time.Millisecond)
-
-	// Verify that client is removed from clients map
-	_, exists := clientManager.clients[cluster]
-	assert.False(t, exists)
+	assertClientExists(t, clientManager, cluster, false)
 }
 
 func Test_Close_Multiple(t *testing.T) {
 	clientManager := NewClientManager(
 		&MockClientFactory{},
-		0*time.Second, // Immediate close for testing
+		100*time.Millisecond,
 	)
 
 	client, err := clientManager.GetClient(cluster)
@@ -110,17 +115,11 @@ func Test_Close_Multiple(t *testing.T) {
 	assert.NotNil(t, client)
 
 	clientManager.Close(client)
-
-	_, exists := clientManager.clients[cluster]
-	assert.True(t, exists)
+	assertClientExists(t, clientManager, cluster, true)
 
 	clientManager.Close(client)
-
-	// Wait a bit for the timer to fire
-	time.Sleep(10 * time.Millisecond)
-
-	_, exists = clientManager.clients[cluster]
-	assert.False(t, exists)
+	time.Sleep(150 * time.Millisecond) // Wait for timer to fire
+	assertClientExists(t, clientManager, cluster, false)
 }
 
 func Test_Close_CancelOnReuse(t *testing.T) {
@@ -143,11 +142,8 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 	assert.Equal(t, client, client2)
 
 	// Wait longer than the close delay
-	time.Sleep(100 * time.Millisecond)
-
-	// Client should still exist because close was cancelled
-	_, exists := clientManager.clients[cluster]
-	assert.True(t, exists)
+	time.Sleep(150 * time.Millisecond)
+	assertClientExists(t, clientManager, cluster, true)
 }
 
 func Test_Close_NotExisting(t *testing.T) {
