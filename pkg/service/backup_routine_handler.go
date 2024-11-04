@@ -166,7 +166,7 @@ func (h *BackupRoutineHandler) waitForFullBackups(
 		err := handler.Wait(ctx)
 		if err != nil {
 			backupFailureCounter.Inc()
-			slog.Info("delete failed backup folder",
+			slog.Info("Delete failed backup folder",
 				slog.String("path", backupFolder),
 			)
 			h.deleteFolder(ctx, backupFolder, logger) // cleanup on failure
@@ -178,7 +178,9 @@ func (h *BackupRoutineHandler) waitForFullBackups(
 			return err
 		}
 	}
-	backupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))
+	duration := float64(time.Since(startTime).Milliseconds())
+	logger.Info("Finished full backup", slog.Float64("duration_ms", duration))
+	backupDurationGauge.Set(duration)
 	return nil
 }
 

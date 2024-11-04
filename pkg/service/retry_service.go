@@ -25,7 +25,7 @@ func NewRetryService(label string) *RetryService {
 func (r *RetryService) retry(f func() error, retryInterval time.Duration, n int32) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	logger := slog.Default().With(slog.String("label", r.label))
+	logger := slog.Default().With(slog.String("routine", r.label))
 
 	r.clearTimer()
 	err := f()
