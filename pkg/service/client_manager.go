@@ -37,7 +37,7 @@ func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
 // ClientManagerImpl implements [ClientManager].
 // Is responsible for creating and closing backup clients.
 type ClientManagerImpl struct {
-	mu            sync.Mutex
+	mu            sync.RWMutex
 	clients       map[*model.AerospikeCluster]*clientInfo
 	clientFactory AerospikeClientFactory
 	closeDelay    time.Duration
@@ -75,8 +75,8 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 // getExistingClient tries to get an existing client from the cache.
 // Returns nil if client doesn't exist.
 func (cm *ClientManagerImpl) getExistingClient(cluster *model.AerospikeCluster) *backup.Client {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
 
 	if info, exists := cm.clients[cluster]; exists {
 		cm.incrementRef(info)
