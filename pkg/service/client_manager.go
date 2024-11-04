@@ -111,7 +111,7 @@ func isClusterHealthy(client backup.AerospikeClient) bool {
 		return false
 	}
 
-	info, err := node.RequestInfo(nil, "status")
+	info, err := node.RequestInfo(client.GetDefaultInfoPolicy(), "status")
 	return err == nil && info["status"] == "ok"
 }
 
