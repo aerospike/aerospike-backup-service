@@ -42,6 +42,7 @@ func (r *RetryService) retry(f func() error, retryInterval time.Duration, n int3
 
 	logger.Info("Execution failed, retry scheduled",
 		slog.Any("retryInterval", retryInterval),
+		slog.Any("attempts", n-1),
 		slog.Any("err", err))
 
 	r.timer = time.AfterFunc(retryInterval, func() {

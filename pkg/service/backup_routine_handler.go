@@ -166,6 +166,9 @@ func (h *BackupRoutineHandler) waitForFullBackups(
 		err := handler.Wait(ctx)
 		if err != nil {
 			backupFailureCounter.Inc()
+			slog.Info("delete failed backup folder",
+				slog.String("path", backupFolder),
+			)
 			h.deleteFolder(ctx, backupFolder, logger) // cleanup on failure
 			return fmt.Errorf("error during backup namespace %s, routine %s: %w",
 				namespace, h.routineName, err)
