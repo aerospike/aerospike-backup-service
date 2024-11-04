@@ -70,7 +70,7 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newConfigModel, err := newConfig.ToModel()
+	newConfigModel, err := newConfig.ToModel(s.nsValidator)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

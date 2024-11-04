@@ -20,7 +20,7 @@ type DefaultConfigApplier struct {
 	scheduler     quartz.Scheduler
 	config        *model.Config
 	backends      BackendsHolder
-	manager       ClientManager
+	clientManager ClientManager
 	handlerHolder *BackupHandlerHolder
 }
 
@@ -35,7 +35,7 @@ func NewDefaultConfigApplier(
 		scheduler:     scheduler,
 		config:        config,
 		backends:      backends,
-		manager:       manager,
+		clientManager: manager,
 		handlerHolder: handlerHolder,
 	}
 }
@@ -53,7 +53,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig() error {
 	clear(*a.handlerHolder)
 
 	// Refill handlers
-	newHandlers := makeHandlers(a.manager, a.config, a.backends)
+	newHandlers := makeHandlers(a.clientManager, a.config, a.backends)
 	for k, v := range newHandlers {
 		(*a.handlerHolder)[k] = v
 	}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,12 +22,17 @@ type Manager interface {
 	Write(ctx context.Context, config *model.Config) error
 }
 
-func Load(ctx context.Context, configFile string, remote bool) (*model.Config, Manager, error) {
+func Load(
+	ctx context.Context,
+	configFile string,
+	remote bool,
+	nsValidator service.NamespaceValidator,
+) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
 		slog.Bool("remote", remote))
 
-	manager, err := newConfigManager(configFile, remote)
+	manager, err := newConfigManager(configFile, remote, nsValidator)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
 	}
@@ -39,7 +45,7 @@ func Load(ctx context.Context, configFile string, remote bool) (*model.Config, M
 	return config, manager, nil
 }
 
-func readConfig(reader io.Reader) (*model.Config, error) {
+func readConfig(reader io.Reader, nsValidator service.NamespaceValidator) (*model.Config, error) {
 	configBytes, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration content: %w", err)
@@ -51,11 +57,7 @@ func readConfig(reader io.Reader) (*model.Config, error) {
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 
-	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("configuration validation failed: %w", err)
-	}
-
-	modelConfig, err := config.ToModel()
+	modelConfig, err := config.ToModel(nsValidator)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert configuration to model: %w", err)
 	}
@@ -73,21 +75,21 @@ func writeConfig(writer io.Writer, config *model.Config) error {
 	return err
 }
 
-func newConfigManager(configFile string, remote bool) (Manager, error) {
+func newConfigManager(configFile string, remote bool, nsValidator service.NamespaceValidator) (Manager, error) {
 	if remote {
 		storage, err := readStorage(configFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read remote storage configuration: %w", err)
 		}
 
-		return newStorageManager(storage), nil
+		return newStorageManager(storage, nsValidator), nil
 	}
 
 	if isHTTPPath(configFile) {
-		return newHTTPConfigurationManager(configFile), nil
+		return newHTTPConfigurationManager(configFile, nsValidator), nil
 	}
 
-	return newFileConfigurationManager(configFile), nil
+	return newFileConfigurationManager(configFile, nsValidator), nil
 }
 
 func readStorage(configURI string) (model.Storage, error) {

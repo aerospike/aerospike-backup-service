@@ -90,7 +90,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			err := tt.setup()
 			require.NoError(t, err, "Setup failed")
 
-			config, err := newConfigManager(tt.configFile, tt.remote)
+			config, err := newConfigManager(tt.configFile, tt.remote, nil)
 			if tt.expectError {
 				require.Error(t, err)
 				return

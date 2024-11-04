@@ -10,10 +10,10 @@ import (
 // RestoreRequest represents a restore operation request from custom storage
 // @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
-	DestinationCuster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
-	Policy            *RestorePolicy    `json:"policy,omitempty" validate:"required"`
-	SourceStorage     *Storage          `json:"source,omitempty" validate:"required"`
-	SecretAgent       *SecretAgent      `json:"secret-agent,omitempty"`
+	DestinationCluster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
+	Policy             *RestorePolicy    `json:"policy,omitempty" validate:"required"`
+	SourceStorage      *Storage          `json:"source,omitempty" validate:"required"`
+	SecretAgent        *SecretAgent      `json:"secret-agent,omitempty"`
 	// Path to the data from storage root.
 	BackupDataPath *string `json:"backup-data-path" validate:"required"`
 }
@@ -22,7 +22,7 @@ type RestoreRequest struct {
 // @Description RestoreTimestampRequest represents a restore by timestamp operation request.
 type RestoreTimestampRequest struct {
 	// The details of the Aerospike destination cluster.
-	DestinationCuster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
+	DestinationCluster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
 	// Restore policy to use in the operation.
 	Policy *RestorePolicy `json:"policy,omitempty" validate:"required"`
 	// Secret Agent configuration (optional).
@@ -38,7 +38,7 @@ func (r *RestoreRequest) Validate() error {
 	if r.BackupDataPath == nil {
 		return errors.New("path is not specified")
 	}
-	if err := r.DestinationCuster.Validate(); err != nil {
+	if err := r.DestinationCluster.Validate(); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
@@ -55,7 +55,7 @@ func (r *RestoreRequest) Validate() error {
 
 // Validate validates the restore operation request.
 func (r *RestoreTimestampRequest) Validate(config *model.Config) error {
-	if err := r.DestinationCuster.Validate(); err != nil {
+	if err := r.DestinationCluster.Validate(); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
@@ -75,11 +75,11 @@ func (r *RestoreTimestampRequest) Validate(config *model.Config) error {
 
 func (r RestoreTimestampRequest) ToModel() *model.RestoreTimestampRequest {
 	return &model.RestoreTimestampRequest{
-		DestinationCuster: r.DestinationCuster.ToModel(),
-		Policy:            r.Policy.ToModel(),
-		SecretAgent:       r.SecretAgent.ToModel(),
-		Time:              time.UnixMilli(r.Time),
-		Routine:           r.Routine,
+		DestinationCluster: r.DestinationCluster.ToModel(),
+		Policy:             r.Policy.ToModel(),
+		SecretAgent:        r.SecretAgent.ToModel(),
+		Time:               time.UnixMilli(r.Time),
+		Routine:            r.Routine,
 	}
 }
 
@@ -89,10 +89,10 @@ func (r *RestoreRequest) ToModel() *model.RestoreRequest {
 		path = *r.BackupDataPath
 	}
 	return &model.RestoreRequest{
-		DestinationCuster: r.DestinationCuster.ToModel(),
-		Policy:            r.Policy.ToModel(),
-		SourceStorage:     r.SourceStorage.ToModel(),
-		SecretAgent:       r.SecretAgent.ToModel(),
-		BackupDataPath:    path,
+		DestinationCluster: r.DestinationCluster.ToModel(),
+		Policy:             r.Policy.ToModel(),
+		SourceStorage:      r.SourceStorage.ToModel(),
+		SecretAgent:        r.SecretAgent.ToModel(),
+		BackupDataPath:     path,
 	}
 }

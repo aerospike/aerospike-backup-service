@@ -26,11 +26,11 @@ func testRestoreRequest() dto.RestoreRequest {
 	policy := testConfigRestorePolicy()
 	storage := testConfigStorage()
 	return dto.RestoreRequest{
-		DestinationCuster: cluster,
-		Policy:            policy,
-		SourceStorage:     storage,
-		SecretAgent:       nil,
-		BackupDataPath:    ptr.String(testDir),
+		DestinationCluster: cluster,
+		Policy:             policy,
+		SourceStorage:      storage,
+		SecretAgent:        nil,
+		BackupDataPath:     ptr.String(testDir),
 	}
 }
 
@@ -38,11 +38,11 @@ func testRestoreTimestampRequest() dto.RestoreTimestampRequest {
 	cluster := testConfigCluster()
 	policy := testConfigRestorePolicy()
 	return dto.RestoreTimestampRequest{
-		DestinationCuster: cluster,
-		Policy:            policy,
-		SecretAgent:       nil,
-		Time:              time.Now().Unix(),
-		Routine:           testRoutine,
+		DestinationCluster: cluster,
+		Policy:             policy,
+		SecretAgent:        nil,
+		Time:               time.Now().Unix(),
+		Routine:            testRoutine,
 	}
 }
 

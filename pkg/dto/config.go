@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 )
 
 // Config represents the service configuration file.
@@ -77,15 +78,11 @@ func NewConfigFromReader(r io.Reader, format SerializationFormat) (*Config, erro
 		return nil, err
 	}
 
-	if err := c.Validate(); err != nil {
-		return nil, err
-	}
-
 	return c, nil
 }
 
-// Validate validates the configuration.
-func (c *Config) Validate() error {
+// validate validates the configuration.
+func (c *Config) validate() error {
 	for name, routine := range c.BackupRoutines {
 		if name == "" {
 			return emptyFieldValidationError("routine name")
@@ -130,11 +127,14 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	_, err := c.ToModel() // reference validation is happening in the model
-	return err
+	return nil
 }
 
-func (c *Config) ToModel() (*model.Config, error) {
+func (c *Config) ToModel(nsValidator service.NamespaceValidator) (*model.Config, error) {
+	if err := c.validate(); err != nil {
+		return nil, fmt.Errorf("configuration validation failed: %w", err)
+	}
+
 	config := c.ServiceConfig
 	modelConfig := &model.Config{
 		ServiceConfig:     *config.ToModel(),
@@ -171,7 +171,7 @@ func (c *Config) ToModel() (*model.Config, error) {
 	}
 
 	for k, v := range c.BackupRoutines {
-		toModel, err := v.ToModel(modelConfig)
+		toModel, err := v.ToModel(modelConfig, nsValidator)
 		if err != nil {
 			return nil, err
 		}

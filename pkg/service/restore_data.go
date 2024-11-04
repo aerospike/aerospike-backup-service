@@ -26,6 +26,7 @@ type dataRestorer struct {
 	restoreService Restore
 	backends       BackendsHolder
 	clientManager  ClientManager
+	nsValidator    NamespaceValidator
 }
 
 var _ RestoreManager = (*dataRestorer)(nil)
@@ -36,6 +37,7 @@ func NewRestoreManager(backends BackendsHolder,
 	restoreService Restore,
 	clientManager ClientManager,
 	restoreJobs *RestoreJobsHolder,
+	nsValidator NamespaceValidator,
 ) RestoreManager {
 	return &dataRestorer{
 		configRetriever: configRetriever{
@@ -46,6 +48,7 @@ func NewRestoreManager(backends BackendsHolder,
 		backends:       backends,
 		config:         config,
 		clientManager:  clientManager,
+		nsValidator:    nsValidator,
 	}
 }
 
@@ -58,15 +61,19 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 	}
 
 	go func() {
-		client, err := r.clientManager.GetClient(request.DestinationCuster)
+		client, err := r.clientManager.GetClient(request.DestinationCluster)
 		if err != nil {
 			slog.Error("Failed to restore by path",
-				slog.Any("cluster", request.DestinationCuster),
+				slog.Any("cluster", request.DestinationCluster.ClusterLabel),
 				slog.Any("err", err))
 			r.restoreJobs.setFailed(jobID, err)
 			return
 		}
 		defer r.clientManager.Close(client)
+
+		if r.validateDestinationNamespace(request, jobID) {
+			return
+		}
 
 		handler, err := r.restoreService.Run(ctx, client, request)
 		if err != nil {
@@ -87,6 +94,25 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 	}()
 
 	return jobID, nil
+}
+
+// validateDestinationNamespace checks if destination cluster contains namespace from restore request (if it is set).
+func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest, jobID model.RestoreJobID) bool {
+	if request.Policy.Namespace != nil {
+		missingNamespaces := r.nsValidator.MissingNamespaces(
+			request.DestinationCluster, []string{*request.Policy.Namespace.Destination})
+		if len(missingNamespaces) > 0 {
+			// it can be only 1 missing ns.
+			err := fmt.Errorf("destination cluster does not have namespace %s", missingNamespaces[0])
+			slog.Error("Failed to restore by path",
+				slog.Any("cluster label", request.DestinationCluster.ClusterLabel),
+				slog.Any("err", err))
+			r.restoreJobs.setFailed(jobID, err)
+			return true
+		}
+	}
+
+	return false
 }
 
 func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
@@ -113,10 +139,10 @@ func (r *dataRestorer) restoreByTimeSync(
 	jobID model.RestoreJobID,
 	fullBackups []model.BackupDetails,
 ) {
-	client, err := r.clientManager.GetClient(request.DestinationCuster)
+	client, err := r.clientManager.GetClient(request.DestinationCluster)
 	if err != nil {
 		slog.Error("Failed to restore by timestamp",
-			slog.Any("cluster", request.DestinationCuster),
+			slog.Any("cluster", request.DestinationCluster.ClusterLabel),
 			slog.Any("err", err))
 		r.restoreJobs.setFailed(jobID, err)
 		return
@@ -213,7 +239,7 @@ func (r *dataRestorer) restoreFromPath(
 func (r *dataRestorer) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
 	routine := r.config.BackupRoutines[request.Routine]
 	return model.NewRestoreRequest(
-		request.DestinationCuster,
+		request.DestinationCluster,
 		request.Policy,
 		routine.Storage,
 		request.SecretAgent,

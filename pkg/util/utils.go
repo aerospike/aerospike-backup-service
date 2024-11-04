@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 )
 
@@ -54,4 +55,16 @@ func ParseS3Path(s string) (bucket string, path string, err error) {
 	}
 
 	return parsed.Host, strings.TrimPrefix(parsed.Path, "/"), nil
+}
+
+// MissingElements returns all elements in `subset` that are not present in `superset`.
+func MissingElements(subset, superset []string) []string {
+	var missing []string
+	for _, element := range subset {
+		if !slices.Contains(superset, element) {
+			missing = append(missing, element)
+		}
+	}
+
+	return missing
 }
