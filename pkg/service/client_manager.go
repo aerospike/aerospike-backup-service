@@ -20,9 +20,10 @@ type ClientManager interface {
 	Close(*backup.Client)
 }
 
-// AerospikeClientFactory defines an interface for creating new clients.
+// AerospikeClientFactory defines an interface for creating and checking clients.
 type AerospikeClientFactory interface {
 	NewClientWithPolicyAndHost(policy *as.ClientPolicy, hosts ...*as.Host) (backup.AerospikeClient, error)
+	IsClusterHealthy(client backup.AerospikeClient) bool
 }
 
 // DefaultClientFactory is the default implementation of AerospikeClientFactory.
@@ -33,6 +34,26 @@ func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
 	policy *as.ClientPolicy, hosts ...*as.Host,
 ) (backup.AerospikeClient, error) {
 	return as.NewClientWithPolicyAndHost(policy, hosts...)
+}
+
+// IsClusterHealthy checks if the cluster is connected and responding.
+func (f *DefaultClientFactory) IsClusterHealthy(client backup.AerospikeClient) bool {
+	if client == nil {
+		return false
+	}
+
+	cluster := client.Cluster()
+	if !cluster.IsConnected() {
+		return false
+	}
+
+	node, err := cluster.GetRandomNode()
+	if err != nil {
+		return false
+	}
+
+	info, err := node.RequestInfo(nil, "status")
+	return err == nil && info["status"] == "ok"
 }
 
 // ClientManagerImpl implements [ClientManager].
@@ -78,13 +99,13 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 }
 
 // getExistingClient tries to get an existing client from the cache.
-// Returns nil if client doesn't exist.
+// Returns nil if client doesn't exist, error is client is not connected.
 func (cm *ClientManagerImpl) getExistingClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 
 	if info, exists := cm.clients[cluster]; exists {
-		if !isClusterHealthy(info.client.AerospikeClient()) {
+		if !cm.clientFactory.IsClusterHealthy(info.client.AerospikeClient()) {
 			return nil, errors.New("aerospike cluster connection lost")
 		}
 
@@ -93,26 +114,6 @@ func (cm *ClientManagerImpl) getExistingClient(cluster *model.AerospikeCluster) 
 	}
 
 	return nil, nil
-}
-
-// isClusterHealthy checks if the cluster is connected and responding
-func isClusterHealthy(client backup.AerospikeClient) bool {
-	if client == nil {
-		return false
-	}
-
-	cluster := client.Cluster()
-	if !cluster.IsConnected() {
-		return false
-	}
-
-	node, err := cluster.GetRandomNode()
-	if err != nil { // No nodes available
-		return false
-	}
-
-	info, err := node.RequestInfo(client.GetDefaultInfoPolicy(), "status")
-	return err == nil && info["status"] == "ok"
 }
 
 // storeClient attempts to store the client in the cache.

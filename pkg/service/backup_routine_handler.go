@@ -179,7 +179,7 @@ func (h *BackupRoutineHandler) waitForFullBackups(
 		}
 	}
 	duration := float64(time.Since(startTime).Milliseconds())
-	logger.Info("Finished full backup", slog.Float64("duration_ms", duration))
+	logger.Debug("Finished full backup", slog.Float64("duration_ms", duration))
 	backupDurationGauge.Set(duration)
 	return nil
 }

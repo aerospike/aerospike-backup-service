@@ -11,11 +11,13 @@ import (
 	"github.com/aerospike/backup-go/mocks"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // MockClientFactory is a mock implementation of the AerospikeClientFactory interface.
 type MockClientFactory struct {
-	ShouldFail bool
+	ShouldFail            bool
+	IsClusterDisconnected bool
 }
 
 var cluster = &model.AerospikeCluster{
@@ -33,12 +35,8 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 	return m, nil
 }
 
-func assertClientExists(t *testing.T, clientManager *ClientManagerImpl, cl *model.AerospikeCluster, shouldExist bool) {
-	t.Helper()
-	clientManager.mu.Lock()
-	defer clientManager.mu.Unlock()
-	_, exists := clientManager.clients[cl]
-	assert.Equal(t, shouldExist, exists)
+func (f *MockClientFactory) IsClusterHealthy(_ backup.AerospikeClient) bool {
+	return !f.IsClusterDisconnected
 }
 
 func Test_GetClient(t *testing.T) {
@@ -57,6 +55,20 @@ func Test_GetClient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, client2)
 	assert.Equal(t, client, client2)
+}
+
+func Test_GetClient_UnhealthyConnection(t *testing.T) {
+	clientManager := NewClientManager(
+		&MockClientFactory{IsClusterDisconnected: true},
+		10*time.Second,
+	)
+
+	_, _ = clientManager.GetClient(cluster)
+	// Try to get client - should fail due to unhealthy connection
+	client, err := clientManager.GetClient(cluster)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "aerospike cluster connection lost")
+	assert.Nil(t, client)
 }
 
 func Test_CreateClient(t *testing.T) {
@@ -157,4 +169,12 @@ func Test_Close_NotExisting(t *testing.T) {
 	clientManager.Close(client)
 
 	aeroClient.AssertExpectations(t)
+}
+
+func assertClientExists(t *testing.T, clientManager *ClientManagerImpl, cl *model.AerospikeCluster, shouldExist bool) {
+	t.Helper()
+	clientManager.mu.Lock()
+	defer clientManager.mu.Unlock()
+	_, exists := clientManager.clients[cl]
+	assert.Equal(t, shouldExist, exists)
 }
