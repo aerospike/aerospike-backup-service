@@ -7,7 +7,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/aerospike/backup-go"
 	"log/slog"
 	"os"
 	"strings"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/backup-go"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
