@@ -31,7 +31,7 @@ func testConfigBackupPolicy() *dto.BackupPolicy {
 
 func TestService_ConfigPolicyActionHandlerPost(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/policies/{name}",
@@ -76,7 +76,7 @@ func TestService_ConfigPolicyActionHandlerPost(t *testing.T) {
 //nolint:dupl // No duplication here, just tests.
 func TestService_ConfigPolicyActionHandlerGet(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/policies/{name}",
@@ -111,7 +111,7 @@ func TestService_ConfigPolicyActionHandlerGet(t *testing.T) {
 
 func TestService_ConfigPolicyActionHandlerPut(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/policies/{name}",
@@ -153,7 +153,7 @@ func TestService_ConfigPolicyActionHandlerPut(t *testing.T) {
 
 func TestService_ConfigPolicyActionHandlerDelete(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/policies/{name}",
@@ -189,7 +189,7 @@ func TestService_ConfigPolicyActionHandlerDelete(t *testing.T) {
 
 func TestService_ReadPolicies(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/policies",

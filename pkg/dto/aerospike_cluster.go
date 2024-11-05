@@ -7,7 +7,6 @@ import (
 	"io"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -29,14 +28,6 @@ type AerospikeCluster struct {
 	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100" validate:"optional"`
 }
 
-// NewLocalAerospikeCluster returns a new AerospikeCluster to be used in tests.
-func NewLocalAerospikeCluster() *AerospikeCluster {
-	return &AerospikeCluster{
-		SeedNodes:   []SeedNode{{HostName: "localhost", Port: 3000}},
-		Credentials: &Credentials{User: util.Ptr("tester"), Password: util.Ptr("psw")},
-	}
-}
-
 // Validate validates the Aerospike cluster entity.
 func (a *AerospikeCluster) Validate() error {
 	if a == nil {
@@ -51,7 +42,7 @@ func (a *AerospikeCluster) Validate() error {
 		}
 	}
 	if err := a.Credentials.Validate(); err != nil {
-		return err
+		return fmt.Errorf("credentials validation error: %w", err)
 	}
 
 	return nil
@@ -193,8 +184,17 @@ func (c *Credentials) fromModel(m *model.Credentials) {
 
 // Validate validates the credentials configuration
 func (c *Credentials) Validate() error {
-	if c.User == nil {
-		return errors.New("username is required")
+	// Allow anonymous access (nil or empty credentials)
+	if c == nil {
+		return nil
+	}
+
+	// Check if any auth method is specified
+	hasAuth := c.Password != nil || c.PasswordPath != nil || c.SecretAgent != nil || c.KeySecret != nil
+
+	// If using auth, username is required
+	if hasAuth && c.User == nil {
+		return errors.New("username is required when using authentication")
 	}
 
 	methodCount := 0

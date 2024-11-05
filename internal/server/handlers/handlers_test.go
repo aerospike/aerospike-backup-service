@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 	"github.com/reugn/go-quartz/quartz"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -213,8 +215,10 @@ func (m *MockNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ *
 	return nil
 }
 
-func newServiceMock() *Service {
-	toModel, _ := testConfig().ToModel(&MockNamespaceValidator{})
+func newServiceMock(t *testing.T) *Service {
+	t.Helper()
+	toModel, err := testConfig().ToModel(&MockNamespaceValidator{})
+	require.NoError(t, err)
 	return NewService(
 		toModel,
 		&MockConfigApplier{},

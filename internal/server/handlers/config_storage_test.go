@@ -27,7 +27,7 @@ func testConfigStorage() *dto.Storage {
 //nolint:dupl // No duplication here, just tests.
 func TestService_ConfigStorageActionHandlerPost(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/storage/{name}",
@@ -73,7 +73,7 @@ func TestService_ConfigStorageActionHandlerPost(t *testing.T) {
 //nolint:dupl // No duplication here, just tests.
 func TestService_ConfigStorageActionHandlerGet(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/storage/{name}",
@@ -108,7 +108,7 @@ func TestService_ConfigStorageActionHandlerGet(t *testing.T) {
 
 func TestService_ConfigStorageActionHandlerPut(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/storage/{name}",
@@ -150,7 +150,7 @@ func TestService_ConfigStorageActionHandlerPut(t *testing.T) {
 
 func TestService_ConfigStorageActionHandlerDelete(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/storage/{name}",
@@ -186,7 +186,7 @@ func TestService_ConfigStorageActionHandlerDelete(t *testing.T) {
 
 func TestService_ReadAllStorage(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/storage",

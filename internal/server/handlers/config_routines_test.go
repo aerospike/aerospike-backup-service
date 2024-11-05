@@ -26,7 +26,7 @@ func testBackupRoutine() dto.BackupRoutine {
 //nolint:dupl // No duplication here, just tests.
 func TestService_ConfigRoutineActionHandlerPost(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/routines/{name}",
@@ -72,7 +72,7 @@ func TestService_ConfigRoutineActionHandlerPost(t *testing.T) {
 //nolint:dupl // No duplication here, just tests.
 func TestService_ConfigRoutineActionHandlerGet(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/routines/{name}",
@@ -107,7 +107,7 @@ func TestService_ConfigRoutineActionHandlerGet(t *testing.T) {
 
 func TestService_ConfigRoutineActionHandlerPut(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/routines/{name}",
@@ -150,7 +150,7 @@ func TestService_ConfigRoutineActionHandlerPut(t *testing.T) {
 //nolint:dupl // No duplication here, just tests.
 func TestService_ConfigRoutineActionHandlerDelete(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/routines/{name}",
@@ -185,7 +185,7 @@ func TestService_ConfigRoutineActionHandlerDelete(t *testing.T) {
 
 func TestService_ReadRoutines(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/routines",

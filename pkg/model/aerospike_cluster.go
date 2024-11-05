@@ -139,7 +139,7 @@ func (c *AerospikeCluster) GetAuthMode() *string {
 func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	policy := as.NewClientPolicy()
 	if c.Credentials != nil {
-		policy.User = util.ValueOrZero(c.Credentials.User)
+		policy.User = util.ValueOrZero(c.GetUser())
 		policy.Password = util.ValueOrZero(c.GetPassword())
 		if c.Credentials.AuthMode != nil {
 			switch strings.ToUpper(*c.Credentials.AuthMode) {
