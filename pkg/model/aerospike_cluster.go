@@ -112,19 +112,16 @@ func (c *AerospikeCluster) loadSecretAgentPassword() *string {
 		return nil
 	}
 
-	password, err := getPasswordFromSecretAgent(c.Credentials.SecretAgent, c.Credentials.KeySecret)
+	agent := *c.Credentials.SecretAgent
+	password, err := backup.ParseSecret(agent.ToSecretAgentConfig(), *c.Credentials.KeySecret)
 	if err != nil {
 		slog.Error("Failed to get password from secret agent",
-			"agent", *c.Credentials.SecretAgent,
+			"agent", agent,
 			"err", err)
 		return nil
 	}
 
 	return &password
-}
-
-func getPasswordFromSecretAgent(agent *SecretAgent, secret *string) (string, error) {
-	return backup.ParseSecret(agent.ToSecretAgentConfig(), *secret)
 }
 
 // GetAuthMode safely returns the authentication mode.

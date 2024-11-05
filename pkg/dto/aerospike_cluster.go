@@ -184,15 +184,12 @@ func (c *Credentials) fromModel(m *model.Credentials) {
 
 // Validate validates the credentials configuration
 func (c *Credentials) Validate() error {
-	// Allow anonymous access (nil or empty credentials)
 	if c == nil {
 		return nil
 	}
 
-	// Check if any auth method is specified
 	hasAuth := c.Password != nil || c.PasswordPath != nil || c.SecretAgent != nil || c.KeySecret != nil
 
-	// If using auth, username is required
 	if hasAuth && c.User == nil {
 		return errors.New("username is required when using authentication")
 	}

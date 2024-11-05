@@ -115,7 +115,7 @@ func (c *Config) validate() error {
 			return emptyFieldValidationError("policy name")
 		}
 		if err := policy.Validate(); err != nil {
-			return err
+			return fmt.Errorf("policy '%s' validation error: %s", name, err.Error())
 		}
 	}
 
@@ -124,7 +124,7 @@ func (c *Config) validate() error {
 			return emptyFieldValidationError("secret agent name")
 		}
 		if err := agent.validate(); err != nil {
-			return err
+			return fmt.Errorf("secret agent '%s' validation error: %s", name, err.Error())
 		}
 	}
 
