@@ -119,6 +119,15 @@ func (c *Config) validate() error {
 		}
 	}
 
+	for name, agent := range c.SecretAgents {
+		if name == "" {
+			return emptyFieldValidationError("secret agent name")
+		}
+		if err := agent.validate(); err != nil {
+			return err
+		}
+	}
+
 	if err := c.ServiceConfig.HTTPServer.Validate(); err != nil {
 		return err
 	}

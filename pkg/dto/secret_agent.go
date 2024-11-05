@@ -1,6 +1,11 @@
 package dto
 
-import "github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+import (
+	"fmt"
+
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
+)
 
 // SecretAgent represents the configuration of an Aerospike Secret Agent
 // for a backup/restore operation.
@@ -56,4 +61,30 @@ func (s *SecretAgent) fromModel(m *model.SecretAgent) {
 	s.Timeout = m.Timeout
 	s.TLSCAString = m.TLSCAString
 	s.IsBase64 = m.IsBase64
+}
+
+// validate validates the SecretAgentConfig.
+func (s *SecretAgent) validate() error {
+	if s == nil {
+		return nil
+	}
+
+	if s.Address == nil || (s.Address != nil && *s.Address == "") {
+		return fmt.Errorf("address is required")
+	}
+
+	if s.Timeout != nil && *s.Timeout <= 0 {
+		return fmt.Errorf("invalid timeout: %d", *s.Timeout)
+	}
+
+	if s.ConnectionType == nil {
+		return fmt.Errorf("connection type is required")
+	}
+
+	if s.ConnectionType != nil &&
+		(*s.ConnectionType != saClient.ConnectionTypeTCP && *s.ConnectionType != saClient.ConnectionTypeUDS) {
+		return fmt.Errorf("unsupported connection type: %s", *s.ConnectionType)
+	}
+
+	return nil
 }
