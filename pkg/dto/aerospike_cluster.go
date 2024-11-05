@@ -3,6 +3,7 @@ package dto
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -49,6 +50,10 @@ func (a *AerospikeCluster) Validate() error {
 			return err
 		}
 	}
+	if err := a.Credentials.Validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -172,7 +177,9 @@ type Credentials struct {
 	// The file path with the password string, will take precedence over the password field.
 	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"`
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
-	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
+	AuthMode    *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
+	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
+	KeySecret   *string `yaml:"key-secret,omitempty" json:"key-secret,omitempty"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials) {
@@ -180,6 +187,39 @@ func (c *Credentials) fromModel(m *model.Credentials) {
 	c.Password = m.Password
 	c.PasswordPath = m.PasswordPath
 	c.AuthMode = m.AuthMode
+}
+
+// Validate validates the credentials configuration
+func (c *Credentials) Validate() error {
+	if c.User == nil {
+		return errors.New("username is required")
+	}
+
+	methodCount := 0
+	if c.Password != nil {
+		methodCount++
+	}
+
+	if c.PasswordPath != nil {
+		methodCount++
+	}
+
+	if c.SecretAgent != nil || c.KeySecret != nil {
+		if c.SecretAgent == nil {
+			return errors.New("secret agent name is required when key secret is specified")
+		}
+		if c.KeySecret == nil {
+			return errors.New("key secret is required when secret agent is specified")
+		}
+
+		methodCount++
+	}
+
+	if methodCount != 1 {
+		return fmt.Errorf("exactly one authentication method must be specified, got %d", methodCount)
+	}
+
+	return nil
 }
 
 func (c *Credentials) toModel() *model.Credentials {
