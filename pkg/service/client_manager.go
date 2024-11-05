@@ -99,7 +99,7 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 }
 
 // getExistingClient tries to get an existing client from the cache.
-// Returns nil if client doesn't exist, error is client is not connected.
+// Returns nil if client doesn't exist, error if client is not connected.
 func (cm *ClientManagerImpl) getExistingClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
