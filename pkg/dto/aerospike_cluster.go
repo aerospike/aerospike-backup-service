@@ -177,9 +177,11 @@ type Credentials struct {
 	// The file path with the password string, will take precedence over the password field.
 	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"`
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
-	AuthMode    *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
-	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
-	KeySecret   *string `yaml:"key-secret,omitempty" json:"key-secret,omitempty"`
+	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
+	// Secret Agent configuration (optional).
+	SecretAgent *SecretAgent `json:"secret-agent,omitempty"`
+	// Path to stored password.
+	KeySecret *string `yaml:"key-secret,omitempty" json:"key-secret,omitempty"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials) {
@@ -206,10 +208,13 @@ func (c *Credentials) Validate() error {
 
 	if c.SecretAgent != nil || c.KeySecret != nil {
 		if c.SecretAgent == nil {
-			return errors.New("secret agent name is required when key secret is specified")
+			return errors.New("secret agent is required when key secret is specified")
 		}
 		if c.KeySecret == nil {
 			return errors.New("key secret is required when secret agent is specified")
+		}
+		if err := c.SecretAgent.validate(); err != nil {
+			return err
 		}
 
 		methodCount++
@@ -232,6 +237,8 @@ func (c *Credentials) toModel() *model.Credentials {
 		Password:     c.Password,
 		PasswordPath: c.PasswordPath,
 		AuthMode:     c.AuthMode,
+		KeySecret:    c.KeySecret,
+		SecretAgent:  c.SecretAgent.ToModel(),
 	}
 }
 
