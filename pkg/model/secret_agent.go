@@ -1,5 +1,7 @@
 package model
 
+import "github.com/aerospike/backup-go"
+
 // SecretAgent represents the configuration of an Aerospike Secret Agent
 // for a backup/restore operation.
 // Aerospike Secret Agent acts as a proxy layer between Aerospike server and one or more
@@ -20,4 +22,19 @@ type SecretAgent struct {
 	TLSCAString *string
 	// Flag that shows if secret agent responses are encrypted with base64.
 	IsBase64 *bool
+}
+
+func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
+	if s == nil {
+		return nil
+	}
+
+	return &backup.SecretAgentConfig{
+		ConnectionType:     s.ConnectionType,
+		Address:            s.Address,
+		Port:               s.Port,
+		TimeoutMillisecond: s.Timeout,
+		CaFile:             s.TLSCAString,
+		IsBase64:           s.IsBase64,
+	}
 }

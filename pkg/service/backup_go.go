@@ -41,7 +41,7 @@ func (b *BackupGo) BackupRun(
 		return nil, fmt.Errorf("failed to create backup writer, %w", err)
 	}
 
-	handler, err := client.Backup(ctx, config, writerFactory)
+	handler, err := client.Backup(ctx, config, writerFactory, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start backup, %w", err)
 	}
@@ -119,16 +119,7 @@ func makeBackupConfig(
 		}
 	}
 
-	if secretAgent != nil {
-		config.SecretAgentConfig = &backup.SecretAgentConfig{
-			ConnectionType:     secretAgent.ConnectionType,
-			Address:            secretAgent.Address,
-			Port:               secretAgent.Port,
-			TimeoutMillisecond: secretAgent.Timeout,
-			CaFile:             secretAgent.TLSCAString,
-			IsBase64:           secretAgent.IsBase64,
-		}
-	}
+	config.SecretAgentConfig = secretAgent.ToSecretAgentConfig()
 
 	return config
 }

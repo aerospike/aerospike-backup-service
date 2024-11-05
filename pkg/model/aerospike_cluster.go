@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/aerospike/backup-go"
 	"log/slog"
 	"os"
 	"strings"
@@ -53,21 +54,45 @@ func (c *AerospikeCluster) GetUser() *string {
 	return nil
 }
 
-// GetPassword tries to read and set the password once from PasswordPath, if it exists.
-// Returns the password value. If it failed to read password, it will return nil
+// GetPassword tries to read and set the password once from the configured source.
+// Returns the password value. If it fails to read the password, it will return nil
 // and try to read again next time.
 func (c *AerospikeCluster) GetPassword() *string {
 	if password := c.pwd.Load(); password != nil {
 		return password
 	}
 
-	if c.Credentials != nil && c.Credentials.Password != nil {
-		c.pwd.Store(c.Credentials.Password)
+	if c.Credentials == nil {
+		return nil
+	}
+
+	password := c.loadPassword()
+	if password != nil {
+		c.pwd.Store(password)
+	}
+
+	return password
+}
+
+func (c *AerospikeCluster) loadPassword() *string {
+	if c.Credentials.Password != nil {
 		return c.Credentials.Password
 	}
 
-	if c.Credentials == nil || c.Credentials.PasswordPath == nil {
-		slog.Warn("No credentials provided to read password")
+	if password := c.loadPasswordFromFile(); password != nil {
+		return password
+	}
+
+	if password := c.loadSecretAgentPassword(); password != nil {
+		return password
+	}
+
+	slog.Warn("No valid authentication method configured")
+	return nil
+}
+
+func (c *AerospikeCluster) loadPasswordFromFile() *string {
+	if c.Credentials.PasswordPath == nil {
 		return nil
 	}
 
@@ -79,8 +104,27 @@ func (c *AerospikeCluster) GetPassword() *string {
 
 	slog.Debug("Successfully read password", "path", *c.Credentials.PasswordPath)
 	password := string(data)
-	c.pwd.Store(&password)
 	return &password
+}
+
+func (c *AerospikeCluster) loadSecretAgentPassword() *string {
+	if c.Credentials.SecretAgent == nil || c.Credentials.KeySecret == nil {
+		return nil
+	}
+
+	password, err := getPasswordFromSecretAgent(c.Credentials.SecretAgent, c.Credentials.KeySecret)
+	if err != nil {
+		slog.Error("Failed to get password from secret agent",
+			"agent", *c.Credentials.SecretAgent,
+			"err", err)
+		return nil
+	}
+
+	return &password
+}
+
+func getPasswordFromSecretAgent(agent *SecretAgent, secret *string) (string, error) {
+	return backup.ParseSecret(agent.ToSecretAgentConfig(), *secret)
 }
 
 // GetAuthMode safely returns the authentication mode.
@@ -270,6 +314,10 @@ type Credentials struct {
 	PasswordPath *string
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
 	AuthMode *string
+	// The name of the configured Secret Agent to use for authentication
+	SecretAgent *SecretAgent
+	// The key to retrieve from the Secret Agent
+	KeySecret *string
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.
