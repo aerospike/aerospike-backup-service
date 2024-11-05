@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -19,9 +20,10 @@ type ClientManager interface {
 	Close(*backup.Client)
 }
 
-// AerospikeClientFactory defines an interface for creating new clients.
+// AerospikeClientFactory defines an interface for creating and checking clients.
 type AerospikeClientFactory interface {
 	NewClientWithPolicyAndHost(policy *as.ClientPolicy, hosts ...*as.Host) (backup.AerospikeClient, error)
+	IsClusterHealthy(client backup.AerospikeClient) bool
 }
 
 // DefaultClientFactory is the default implementation of AerospikeClientFactory.
@@ -32,6 +34,26 @@ func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
 	policy *as.ClientPolicy, hosts ...*as.Host,
 ) (backup.AerospikeClient, error) {
 	return as.NewClientWithPolicyAndHost(policy, hosts...)
+}
+
+// IsClusterHealthy checks if the cluster is connected and responding.
+func (f *DefaultClientFactory) IsClusterHealthy(client backup.AerospikeClient) bool {
+	if client == nil {
+		return false
+	}
+
+	cluster := client.Cluster()
+	if !cluster.IsConnected() {
+		return false
+	}
+
+	node, err := cluster.GetRandomNode()
+	if err != nil {
+		return false
+	}
+
+	info, err := node.RequestInfo(nil, "status")
+	return err == nil && info["status"] == "ok"
 }
 
 // ClientManagerImpl implements [ClientManager].
@@ -60,11 +82,15 @@ func NewClientManager(aerospikeClientFactory AerospikeClientFactory, closeDelay 
 
 // GetClient returns a backup client by aerospike cluster name (new or cached).
 func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
-	if client := cm.getExistingClient(cluster); client != nil {
+	client, err := cm.getExistingClient(cluster)
+	if err != nil {
+		return nil, err
+	}
+	if client != nil {
 		return client, nil
 	}
 
-	client, err := cm.createClient(cluster)
+	client, err = cm.createClient(cluster)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create backup client: %w", err)
 	}
@@ -73,17 +99,21 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 }
 
 // getExistingClient tries to get an existing client from the cache.
-// Returns nil if client doesn't exist.
-func (cm *ClientManagerImpl) getExistingClient(cluster *model.AerospikeCluster) *backup.Client {
+// Returns nil if client doesn't exist, error if client is not connected.
+func (cm *ClientManagerImpl) getExistingClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 
 	if info, exists := cm.clients[cluster]; exists {
+		if !cm.clientFactory.IsClusterHealthy(info.client.AerospikeClient()) {
+			return nil, errors.New("aerospike cluster connection lost")
+		}
+
 		cm.incrementRef(info)
-		return info.client
+		return info.client, nil
 	}
 
-	return nil
+	return nil, nil
 }
 
 // storeClient attempts to store the client in the cache.

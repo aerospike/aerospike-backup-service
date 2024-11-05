@@ -108,7 +108,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		return err
 	}
 
-	err = h.waitForFullBackups(ctx, now)
+	err = h.waitForFullBackups(ctx, now, logger)
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		h.deleteFolder(ctx, h.backend.incrementalBackupsPath, logger)
 	}
 
-	h.writeClusterConfiguration(ctx, client.AerospikeClient(), now)
+	h.writeClusterConfiguration(ctx, client.AerospikeClient(), now, logger)
 	return nil
 }
 
@@ -157,30 +157,36 @@ func (h *BackupRoutineHandler) startFullBackupForAllNamespaces(
 	return nil
 }
 
-func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context, backupTimestamp time.Time) error {
+func (h *BackupRoutineHandler) waitForFullBackups(
+	ctx context.Context, backupTimestamp time.Time, logger *slog.Logger,
+) error {
 	startTime := time.Now() // startTime is only used to measure backup time
 	for namespace, handler := range h.fullBackupHandlers {
+		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, backupTimestamp)
 		err := handler.Wait(ctx)
 		if err != nil {
 			backupFailureCounter.Inc()
+			slog.Info("Delete failed backup folder",
+				slog.String("path", backupFolder),
+			)
+			h.deleteFolder(ctx, backupFolder, logger) // cleanup on failure
 			return fmt.Errorf("error during backup namespace %s, routine %s: %w",
 				namespace, h.routineName, err)
 		}
 
-		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, backupTimestamp)
 		if err := h.writeBackupMetadata(ctx, handler.GetStats(), backupTimestamp, namespace, backupFolder); err != nil {
 			return err
 		}
 	}
-	backupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))
+	duration := float64(time.Since(startTime).Milliseconds())
+	logger.Debug("Finished full backup", slog.Float64("duration_ms", duration))
+	backupDurationGauge.Set(duration)
 	return nil
 }
 
 func (h *BackupRoutineHandler) writeClusterConfiguration(
-	ctx context.Context, client backup.AerospikeClient, now time.Time,
+	ctx context.Context, client backup.AerospikeClient, now time.Time, logger *slog.Logger,
 ) {
-	logger := slog.Default().With(slog.String("routine", h.routineName))
-
 	infos := getClusterConfiguration(client)
 	if len(infos) == 0 {
 		logger.Warn("Could not read aerospike configuration")
