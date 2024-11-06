@@ -1,8 +1,6 @@
 module github.com/aerospike/aerospike-backup-service/v2
 
-go 1.22.7
-
-toolchain go1.23.2
+go 1.22
 
 require (
 	cloud.google.com/go/storage v1.46.0
