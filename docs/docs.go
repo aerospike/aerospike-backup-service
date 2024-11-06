@@ -1879,10 +1879,22 @@ const docTemplate = `{
                     "type": "string",
                     "example": "testPswd"
                 },
+                "password-key-secret": {
+                    "description": "The secret keyword in Aerospike Secret Agent containing password.\nOnly applicable when SecretAgent is specified.",
+                    "type": "string"
+                },
                 "password-path": {
                     "description": "The file path with the password string, will take precedence over the password field.",
                     "type": "string",
                     "example": "/path/to/pass.txt"
+                },
+                "secret-agent": {
+                    "description": "Secret Agent configuration (optional).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    ]
                 },
                 "user": {
                     "description": "The username for the cluster authentication.",

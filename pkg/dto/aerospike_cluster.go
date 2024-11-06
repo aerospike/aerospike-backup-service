@@ -171,8 +171,9 @@ type Credentials struct {
 	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
 	// Secret Agent configuration (optional).
 	SecretAgent *SecretAgent `json:"secret-agent,omitempty"`
-	// Path to stored password.
-	KeySecret *string `yaml:"key-secret,omitempty" json:"key-secret,omitempty"`
+	// The secret keyword in Aerospike Secret Agent containing password.
+	// Only applicable when SecretAgent is specified.
+	PasswordKeySecret *string `yaml:"password-key-secret,omitempty" json:"password-key-secret,omitempty"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials) {
@@ -188,7 +189,7 @@ func (c *Credentials) Validate() error {
 		return nil
 	}
 
-	hasAuth := c.Password != nil || c.PasswordPath != nil || c.SecretAgent != nil || c.KeySecret != nil
+	hasAuth := c.Password != nil || c.PasswordPath != nil || c.SecretAgent != nil || c.PasswordKeySecret != nil
 
 	if hasAuth && c.User == nil {
 		return errors.New("username is required when using authentication")
@@ -203,11 +204,11 @@ func (c *Credentials) Validate() error {
 		methodCount++
 	}
 
-	if c.SecretAgent != nil || c.KeySecret != nil {
+	if c.SecretAgent != nil || c.PasswordKeySecret != nil {
 		if c.SecretAgent == nil {
 			return errors.New("secret agent is required when key secret is specified")
 		}
-		if c.KeySecret == nil {
+		if c.PasswordKeySecret == nil {
 			return errors.New("key secret is required when secret agent is specified")
 		}
 		if err := c.SecretAgent.validate(); err != nil {
@@ -230,12 +231,12 @@ func (c *Credentials) toModel() *model.Credentials {
 	}
 
 	return &model.Credentials{
-		User:         c.User,
-		Password:     c.Password,
-		PasswordPath: c.PasswordPath,
-		AuthMode:     c.AuthMode,
-		KeySecret:    c.KeySecret,
-		SecretAgent:  c.SecretAgent.ToModel(),
+		User:              c.User,
+		Password:          c.Password,
+		PasswordPath:      c.PasswordPath,
+		AuthMode:          c.AuthMode,
+		PasswordKeySecret: c.PasswordKeySecret,
+		SecretAgent:       c.SecretAgent.ToModel(),
 	}
 }
 

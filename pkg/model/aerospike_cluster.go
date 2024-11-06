@@ -108,12 +108,12 @@ func (c *AerospikeCluster) loadPasswordFromFile() *string {
 }
 
 func (c *AerospikeCluster) loadSecretAgentPassword() *string {
-	if c.Credentials.SecretAgent == nil || c.Credentials.KeySecret == nil {
+	if c.Credentials.SecretAgent == nil || c.Credentials.PasswordKeySecret == nil {
 		return nil
 	}
 
 	agent := *c.Credentials.SecretAgent
-	password, err := backup.ParseSecret(agent.ToSecretAgentConfig(), *c.Credentials.KeySecret)
+	password, err := backup.ParseSecret(agent.ToSecretAgentConfig(), *c.Credentials.PasswordKeySecret)
 	if err != nil {
 		slog.Error("Failed to get password from secret agent",
 			"agent", agent,
@@ -311,10 +311,11 @@ type Credentials struct {
 	PasswordPath *string
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
 	AuthMode *string
-	// The name of the configured Secret Agent to use for authentication
+	// The name of the configured Secret Agent to use for authentication.
 	SecretAgent *SecretAgent
-	// The key to retrieve from the Secret Agent
-	KeySecret *string
+	// The secret keyword in Aerospike Secret Agent containing password.
+	// Only applicable when SecretAgent is specified.
+	PasswordKeySecret *string
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.
