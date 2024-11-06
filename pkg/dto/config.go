@@ -88,7 +88,7 @@ func (c *Config) validate() error {
 			return emptyFieldValidationError("routine name")
 		}
 		if err := routine.Validate(); err != nil {
-			return fmt.Errorf("backup routine '%s' validation error: %s", name, err.Error())
+			return fmt.Errorf("backup routine '%s' validation error: %w", name, err)
 		}
 	}
 
@@ -97,7 +97,7 @@ func (c *Config) validate() error {
 			return emptyFieldValidationError("storage name")
 		}
 		if err := storage.Validate(); err != nil {
-			return fmt.Errorf("storage '%s' validation error: %s", name, err.Error())
+			return fmt.Errorf("storage '%s' validation error: %w", name, err)
 		}
 	}
 
@@ -106,7 +106,7 @@ func (c *Config) validate() error {
 			return emptyFieldValidationError("cluster name")
 		}
 		if err := cluster.Validate(); err != nil {
-			return fmt.Errorf("cluster '%s' validation error: %s", name, err.Error())
+			return fmt.Errorf("cluster '%s' validation error: %w", name, err)
 		}
 	}
 
@@ -115,7 +115,7 @@ func (c *Config) validate() error {
 			return emptyFieldValidationError("policy name")
 		}
 		if err := policy.Validate(); err != nil {
-			return fmt.Errorf("policy '%s' validation error: %s", name, err.Error())
+			return fmt.Errorf("policy '%s' validation error: %w", name, err)
 		}
 	}
 
@@ -124,7 +124,7 @@ func (c *Config) validate() error {
 			return emptyFieldValidationError("secret agent name")
 		}
 		if err := agent.validate(); err != nil {
-			return fmt.Errorf("secret agent '%s' validation error: %s", name, err.Error())
+			return fmt.Errorf("secret agent '%s' validation error: %w", name, err)
 		}
 	}
 
