@@ -218,8 +218,8 @@ func (c *Credentials) Validate() error {
 		methodCount++
 	}
 
-	if methodCount != 1 {
-		return fmt.Errorf("exactly one authentication method must be specified, got %d", methodCount)
+	if methodCount > 1 {
+		return fmt.Errorf("only one authentication method must be specified, got %d", methodCount)
 	}
 
 	return nil
