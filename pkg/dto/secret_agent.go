@@ -69,7 +69,7 @@ func (s *SecretAgent) validate() error {
 		return nil
 	}
 
-	if s.Address == nil || (s.Address != nil && *s.Address == "") {
+	if s.Address == nil || *s.Address == "" {
 		return fmt.Errorf("address is required")
 	}
 

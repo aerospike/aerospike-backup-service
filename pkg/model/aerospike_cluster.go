@@ -98,7 +98,9 @@ func (c *AerospikeCluster) loadPasswordFromFile() *string {
 
 	data, err := os.ReadFile(*c.Credentials.PasswordPath)
 	if err != nil {
-		slog.Error("Failed to read password", "path", *c.Credentials.PasswordPath, "err", err)
+		slog.Error("Failed to read password",
+			slog.String("path", *c.Credentials.PasswordPath),
+			slog.Any("err", err))
 		return nil
 	}
 
@@ -116,8 +118,8 @@ func (c *AerospikeCluster) loadSecretAgentPassword() *string {
 	password, err := backup.ParseSecret(agent.ToSecretAgentConfig(), *c.Credentials.PasswordKeySecret)
 	if err != nil {
 		slog.Error("Failed to get password from secret agent",
-			"agent", agent,
-			"err", err)
+			slog.Any("agent", agent),
+			slog.Any("err", err))
 		return nil
 	}
 
@@ -172,7 +174,9 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 		clusterName = *clusterLabel
 	}
 	errorLog := func(err error) {
-		slog.Error("Failed to initialize tls.Config", "cluster", clusterName, "err", err)
+		slog.Error("Failed to initialize tls.Config",
+			slog.String("cluster", clusterName),
+			slog.Any("err", err))
 	}
 
 	// Try to load system CA certs, otherwise just make an empty pool
@@ -243,7 +247,8 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 		}
 
 		clientPool = append(clientPool, cert)
-		slog.Debug("Added TLS client certificate and key to the pool", "cluster", clusterName)
+		slog.Debug("Added TLS client certificate and key to the pool",
+			slog.String("cluster", clusterName))
 	}
 	tlsConfig := &tls.Config{
 		Certificates:             clientPool,
