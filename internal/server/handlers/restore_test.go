@@ -49,7 +49,7 @@ func testRestoreTimestampRequest() dto.RestoreTimestampRequest {
 //nolint:dupl // No duplication here, just tests.
 func TestService_RestoreFullHandler(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/v1/restore/full",
@@ -90,7 +90,7 @@ func TestService_RestoreFullHandler(t *testing.T) {
 //nolint:dupl // No duplication here, just tests.
 func TestService_RestoreIncrementalHandler(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/v1/restore/incremental",
@@ -131,7 +131,7 @@ func TestService_RestoreIncrementalHandler(t *testing.T) {
 //nolint:dupl // No duplication here, just tests.
 func TestService_RestoreByTimeHandler(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/v1/restore/timestamp",
@@ -171,7 +171,7 @@ func TestService_RestoreByTimeHandler(t *testing.T) {
 
 func TestService_RestoreStatusHandler(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/v1/restore/status/{jobId}",
@@ -209,7 +209,7 @@ func TestService_RestoreStatusHandler(t *testing.T) {
 
 func TestService_RetrieveConfig(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/v1/retrieve/configuration/{name}/{timestamp}",

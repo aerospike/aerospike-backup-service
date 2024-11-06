@@ -1601,11 +1601,21 @@ components:
           description: The password for the cluster authentication.
           example: testPswd
           type: string
+        password-key-secret:
+          description: |-
+            The secret keyword in Aerospike Secret Agent containing password.
+            Only applicable when SecretAgent is specified.
+          type: string
         password-path:
           description: "The file path with the password string, will take precedence\
             \ over the password field."
           example: /path/to/pass.txt
           type: string
+        secret-agent:
+          allOf:
+          - $ref: '#/components/schemas/dto.SecretAgent'
+          description: Secret Agent configuration (optional).
+          type: object
         user:
           description: The username for the cluster authentication.
           example: testUser

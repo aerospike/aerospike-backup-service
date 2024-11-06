@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 )
 
 func validConfig() *Config {
@@ -38,6 +39,14 @@ func validConfig() *Config {
 			"storage1": {LocalStorage: &LocalStorage{"/"}},
 			"storage2": {LocalStorage: &LocalStorage{"/"}},
 		},
+	}
+}
+
+// NewLocalAerospikeCluster returns a new AerospikeCluster to be used in tests.
+func NewLocalAerospikeCluster() *AerospikeCluster {
+	return &AerospikeCluster{
+		SeedNodes:   []SeedNode{{HostName: "localhost", Port: 3000}},
+		Credentials: &Credentials{User: util.Ptr("tester"), Password: util.Ptr("psw")},
 	}
 }
 

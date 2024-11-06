@@ -25,7 +25,7 @@ func testConfigDTO() *dto.Config {
 
 func TestService_ConfigActionHandlerGet(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config",
@@ -57,7 +57,7 @@ func TestService_ConfigActionHandlerGet(t *testing.T) {
 
 func TestService_ConfigActionHandlerPut(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config",

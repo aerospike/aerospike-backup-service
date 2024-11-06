@@ -3,10 +3,10 @@ package dto
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -28,14 +28,6 @@ type AerospikeCluster struct {
 	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100" validate:"optional"`
 }
 
-// NewLocalAerospikeCluster returns a new AerospikeCluster to be used in tests.
-func NewLocalAerospikeCluster() *AerospikeCluster {
-	return &AerospikeCluster{
-		SeedNodes:   []SeedNode{{HostName: "localhost", Port: 3000}},
-		Credentials: &Credentials{User: util.Ptr("tester"), Password: util.Ptr("psw")},
-	}
-}
-
 // Validate validates the Aerospike cluster entity.
 func (a *AerospikeCluster) Validate() error {
 	if a == nil {
@@ -49,6 +41,10 @@ func (a *AerospikeCluster) Validate() error {
 			return err
 		}
 	}
+	if err := a.Credentials.Validate(); err != nil {
+		return fmt.Errorf("credentials validation error: %w", err)
+	}
+
 	return nil
 }
 
@@ -173,6 +169,11 @@ type Credentials struct {
 	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"`
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
 	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
+	// Secret Agent configuration (optional).
+	SecretAgent *SecretAgent `json:"secret-agent,omitempty"`
+	// The secret keyword in Aerospike Secret Agent containing password.
+	// Only applicable when SecretAgent is specified.
+	PasswordKeySecret *string `yaml:"password-key-secret,omitempty" json:"password-key-secret,omitempty"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials) {
@@ -182,16 +183,60 @@ func (c *Credentials) fromModel(m *model.Credentials) {
 	c.AuthMode = m.AuthMode
 }
 
+// Validate validates the credentials configuration
+func (c *Credentials) Validate() error {
+	if c == nil {
+		return nil
+	}
+
+	hasAuth := c.Password != nil || c.PasswordPath != nil || c.SecretAgent != nil || c.PasswordKeySecret != nil
+
+	if hasAuth && c.User == nil {
+		return errors.New("username is required when using authentication")
+	}
+
+	methodCount := 0
+	if c.Password != nil {
+		methodCount++
+	}
+
+	if c.PasswordPath != nil {
+		methodCount++
+	}
+
+	if c.SecretAgent != nil || c.PasswordKeySecret != nil {
+		if c.SecretAgent == nil {
+			return errors.New("secret agent is required when key secret is specified")
+		}
+		if c.PasswordKeySecret == nil {
+			return errors.New("key secret is required when secret agent is specified")
+		}
+		if err := c.SecretAgent.validate(); err != nil {
+			return err
+		}
+
+		methodCount++
+	}
+
+	if methodCount > 1 {
+		return fmt.Errorf("only one authentication method must be specified, got %d", methodCount)
+	}
+
+	return nil
+}
+
 func (c *Credentials) toModel() *model.Credentials {
 	if c == nil {
 		return nil
 	}
 
 	return &model.Credentials{
-		User:         c.User,
-		Password:     c.Password,
-		PasswordPath: c.PasswordPath,
-		AuthMode:     c.AuthMode,
+		User:              c.User,
+		Password:          c.Password,
+		PasswordPath:      c.PasswordPath,
+		AuthMode:          c.AuthMode,
+		PasswordKeySecret: c.PasswordKeySecret,
+		SecretAgent:       c.SecretAgent.ToModel(),
 	}
 }
 

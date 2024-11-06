@@ -12,7 +12,7 @@ import (
 //nolint:dupl // No duplication here, just tests.
 func TestService_GetAllFullBackups(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/backups/full",
@@ -55,7 +55,7 @@ func TestService_GetAllFullBackups(t *testing.T) {
 
 func TestService_GetFullBackupsForRoutine(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/backups/full/{name}",
@@ -102,7 +102,7 @@ func TestService_GetFullBackupsForRoutine(t *testing.T) {
 //nolint:dupl // No duplication here, just tests.
 func TestService_GetAllIncrementalBackups(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/backups/incremental",
@@ -145,7 +145,7 @@ func TestService_GetAllIncrementalBackups(t *testing.T) {
 
 func TestService_GetIncrementalBackupsForRoutine(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/backups/incremental/{name}",
@@ -191,7 +191,7 @@ func TestService_GetIncrementalBackupsForRoutine(t *testing.T) {
 
 func TestService_ScheduleFullBackup(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/backups/schedule/{name}",
@@ -236,7 +236,7 @@ func TestService_ScheduleFullBackup(t *testing.T) {
 
 func TestService_GetCurrentBackupInfo(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/backups/currentBackup/{name}",

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
+	"github.com/aws/smithy-go/ptr"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/require"
@@ -32,15 +33,18 @@ func testConfigCluster() *dto.AerospikeCluster {
 		SeedNodes:            []dto.SeedNode{testSeedNode()},
 		ConnTimeout:          &timeout,
 		UseServicesAlternate: &useAlternate,
-		Credentials:          &dto.Credentials{},
-		TLS:                  &dto.TLS{},
-		MaxParallelScans:     &queueSize,
+		Credentials: &dto.Credentials{
+			User:     ptr.String("user"),
+			Password: ptr.String("password"),
+		},
+		TLS:              &dto.TLS{},
+		MaxParallelScans: &queueSize,
 	}
 }
 
 func TestService_ConfigClusterActionHandlerPost(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/clusters/{name}",
@@ -85,7 +89,7 @@ func TestService_ConfigClusterActionHandlerPost(t *testing.T) {
 //nolint:dupl // No duplication here, just tests.
 func TestService_ConfigClusterActionHandlerGet(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/clusters/{name}",
@@ -120,7 +124,7 @@ func TestService_ConfigClusterActionHandlerGet(t *testing.T) {
 
 func TestService_ConfigClusterActionHandlerPut(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/clusters/{name}",
@@ -163,7 +167,7 @@ func TestService_ConfigClusterActionHandlerPut(t *testing.T) {
 //nolint:dupl // No duplication here, just tests.
 func TestService_ConfigClusterActionHandlerDelete(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/clusters/{name}",
@@ -198,7 +202,7 @@ func TestService_ConfigClusterActionHandlerDelete(t *testing.T) {
 
 func TestService_ReadAerospikeClusters(t *testing.T) {
 	t.Parallel()
-	h := newServiceMock()
+	h := newServiceMock(t)
 	router := mux.NewRouter()
 	router.HandleFunc(
 		"/config/clusters",

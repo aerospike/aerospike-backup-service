@@ -15,6 +15,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v7"
+	"github.com/aerospike/backup-go"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -53,33 +54,75 @@ func (c *AerospikeCluster) GetUser() *string {
 	return nil
 }
 
-// GetPassword tries to read and set the password once from PasswordPath, if it exists.
-// Returns the password value. If it failed to read password, it will return nil
+// GetPassword tries to read and set the password once from the configured source.
+// Returns the password value. If it fails to read the password, it will return nil
 // and try to read again next time.
 func (c *AerospikeCluster) GetPassword() *string {
 	if password := c.pwd.Load(); password != nil {
 		return password
 	}
 
-	if c.Credentials != nil && c.Credentials.Password != nil {
-		c.pwd.Store(c.Credentials.Password)
+	if c.Credentials == nil {
+		return nil
+	}
+
+	password := c.loadPassword()
+	if password != nil {
+		c.pwd.Store(password)
+	}
+
+	return password
+}
+
+func (c *AerospikeCluster) loadPassword() *string {
+	if c.Credentials.Password != nil {
 		return c.Credentials.Password
 	}
 
-	if c.Credentials == nil || c.Credentials.PasswordPath == nil {
-		slog.Warn("No credentials provided to read password")
+	if password := c.loadPasswordFromFile(); password != nil {
+		return password
+	}
+
+	if password := c.loadSecretAgentPassword(); password != nil {
+		return password
+	}
+
+	slog.Warn("No valid authentication method configured")
+	return nil
+}
+
+func (c *AerospikeCluster) loadPasswordFromFile() *string {
+	if c.Credentials.PasswordPath == nil {
 		return nil
 	}
 
 	data, err := os.ReadFile(*c.Credentials.PasswordPath)
 	if err != nil {
-		slog.Error("Failed to read password", "path", *c.Credentials.PasswordPath, "err", err)
+		slog.Error("Failed to read password",
+			slog.String("path", *c.Credentials.PasswordPath),
+			slog.Any("err", err))
 		return nil
 	}
 
 	slog.Debug("Successfully read password", "path", *c.Credentials.PasswordPath)
 	password := string(data)
-	c.pwd.Store(&password)
+	return &password
+}
+
+func (c *AerospikeCluster) loadSecretAgentPassword() *string {
+	if c.Credentials.SecretAgent == nil || c.Credentials.PasswordKeySecret == nil {
+		return nil
+	}
+
+	agent := *c.Credentials.SecretAgent
+	password, err := backup.ParseSecret(agent.ToSecretAgentConfig(), *c.Credentials.PasswordKeySecret)
+	if err != nil {
+		slog.Error("Failed to get password from secret agent",
+			slog.Any("agent", agent),
+			slog.Any("err", err))
+		return nil
+	}
+
 	return &password
 }
 
@@ -95,7 +138,7 @@ func (c *AerospikeCluster) GetAuthMode() *string {
 func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	policy := as.NewClientPolicy()
 	if c.Credentials != nil {
-		policy.User = util.ValueOrZero(c.Credentials.User)
+		policy.User = util.ValueOrZero(c.GetUser())
 		policy.Password = util.ValueOrZero(c.GetPassword())
 		if c.Credentials.AuthMode != nil {
 			switch strings.ToUpper(*c.Credentials.AuthMode) {
@@ -131,7 +174,9 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 		clusterName = *clusterLabel
 	}
 	errorLog := func(err error) {
-		slog.Error("Failed to initialize tls.Config", "cluster", clusterName, "err", err)
+		slog.Error("Failed to initialize tls.Config",
+			slog.String("cluster", clusterName),
+			slog.Any("err", err))
 	}
 
 	// Try to load system CA certs, otherwise just make an empty pool
@@ -202,7 +247,8 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 		}
 
 		clientPool = append(clientPool, cert)
-		slog.Debug("Added TLS client certificate and key to the pool", "cluster", clusterName)
+		slog.Debug("Added TLS client certificate and key to the pool",
+			slog.String("cluster", clusterName))
 	}
 	tlsConfig := &tls.Config{
 		Certificates:             clientPool,
@@ -270,6 +316,11 @@ type Credentials struct {
 	PasswordPath *string
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
 	AuthMode *string
+	// The name of the configured Secret Agent to use for authentication.
+	SecretAgent *SecretAgent
+	// The secret keyword in Aerospike Secret Agent containing password.
+	// Only applicable when SecretAgent is specified.
+	PasswordKeySecret *string
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.
