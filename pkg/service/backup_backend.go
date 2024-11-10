@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -27,9 +26,6 @@ type BackupBackend struct {
 	incrementalBackupsPath string
 	stateFilePath          string
 	removeFullBackup       bool
-
-	// BackupBackend needs to know if full backup is running to filter it out
-	fullBackupInProgress *atomic.Bool
 }
 
 var _ BackupListReader = (*BackupBackend)(nil)
@@ -42,7 +38,6 @@ func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend
 		incrementalBackupsPath: filepath.Join(routineName, model.IncrementalBackupDirectory),
 		stateFilePath:          filepath.Join(routineName, model.StateFileName),
 		removeFullBackup:       removeFullBackup,
-		fullBackupInProgress:   &atomic.Bool{},
 	}
 }
 
@@ -178,10 +173,6 @@ func (b *BackupBackend) FindIncrementalBackupsForNamespace(
 	})
 
 	return filteredIncrementalBackups, nil
-}
-
-func (b *BackupBackend) FullBackupInProgress() *atomic.Bool {
-	return b.fullBackupInProgress
 }
 
 func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {

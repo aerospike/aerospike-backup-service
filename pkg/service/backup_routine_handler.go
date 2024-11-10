@@ -81,23 +81,20 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 	)
 }
 
+// TODO: think about locks
 func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now time.Time) error {
 	logger := slog.Default().With(slog.String("routine", h.routineName))
 	var err error
-	if !h.backend.FullBackupInProgress().CompareAndSwap(false, true) {
+	if len(h.fullBackupHandlers) > 0 {
 		logger.Info("Full backup is currently in progress, skipping full backup")
 		return nil
 	}
-
-	logger.Debug("Acquire fullBackupInProgress lock")
-	defer h.backend.FullBackupInProgress().Store(false)
 
 	client, err := h.clientManager.GetClient(h.backupRoutine.SourceCluster)
 	if err != nil {
 		return err
 	}
 
-	// release the lock
 	defer func() {
 		h.clientManager.Close(client)
 		clear(h.fullBackupHandlers)
@@ -242,7 +239,7 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 		logger.Debug("Skip incremental backup until initial full backup is done")
 		return
 	}
-	if h.backend.FullBackupInProgress().Load() {
+	if len(h.fullBackupHandlers) > 0 {
 		logger.Debug("Full backup is currently in progress, skipping incremental backup")
 		return
 	}

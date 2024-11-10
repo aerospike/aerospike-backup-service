@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"strconv"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -15,10 +14,9 @@ const tempFolder = "./tmp"
 
 func TestFullBackupRemoveFiles(t *testing.T) {
 	backend := &BackupBackend{
-		storage:              &model.LocalStorage{Path: tempFolder},
-		fullBackupsPath:      "routine/backup",
-		removeFullBackup:     true,
-		fullBackupInProgress: &atomic.Bool{},
+		storage:          &model.LocalStorage{Path: tempFolder},
+		fullBackupsPath:  "routine/backup",
+		removeFullBackup: true,
 	}
 
 	path := backend.fullBackupsPath + "/data/source-ns1/"
@@ -37,10 +35,9 @@ func TestFullBackupRemoveFiles(t *testing.T) {
 
 func TestFullBackupKeepFiles(t *testing.T) {
 	backend := &BackupBackend{
-		storage:              &model.LocalStorage{Path: tempFolder},
-		fullBackupsPath:      "routine/backup",
-		removeFullBackup:     false,
-		fullBackupInProgress: &atomic.Bool{},
+		storage:          &model.LocalStorage{Path: tempFolder},
+		fullBackupsPath:  "routine/backup",
+		removeFullBackup: false,
 	}
 
 	for _, t := range []int64{10, 20, 30} {
