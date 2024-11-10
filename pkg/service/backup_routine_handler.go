@@ -15,7 +15,7 @@ import (
 // BackupRoutineHandler implements backup logic for single routine.
 type BackupRoutineHandler struct {
 	backupService    Backup
-	backend          *BackupBackend
+	metadataWriter   BackupMetadataManager
 	backupFullPolicy *model.BackupPolicy
 	backupIncrPolicy *model.BackupPolicy
 	backupRoutine    *model.BackupRoutine
@@ -33,6 +33,11 @@ type BackupRoutineHandler struct {
 	incrBackupHandlers map[string]BackupHandler
 }
 
+type BackupMetadataManager interface {
+	WriteBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
+	ReadState() *model.BackupState
+}
+
 // BackupHandlerHolder stores backupHandlers by routine name
 type BackupHandlerHolder map[string]*BackupRoutineHandler
 
@@ -42,7 +47,7 @@ func newBackupRoutineHandler(
 	clientManager ClientManager,
 	backupService Backup,
 	routineName string,
-	backupBackend *BackupBackend,
+	backupBackend BackupMetadataManager,
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
 	backupPolicy := backupRoutine.BackupPolicy
@@ -50,7 +55,7 @@ func newBackupRoutineHandler(
 
 	return &BackupRoutineHandler{
 		backupService:      backupService,
-		backend:            backupBackend,
+		metadataWriter:     backupBackend,
 		backupRoutine:      backupRoutine,
 		backupFullPolicy:   backupPolicy,
 		backupIncrPolicy:   backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
@@ -58,7 +63,7 @@ func newBackupRoutineHandler(
 		namespaces:         backupRoutine.Namespaces,
 		storage:            backupRoutine.Storage,
 		secretAgent:        backupRoutine.SecretAgent,
-		state:              backupBackend.readState(),
+		state:              backupBackend.ReadState(),
 		retry:              NewRetryService(logger),
 		fullBackupHandlers: make(map[string]BackupHandler),
 		incrBackupHandlers: make(map[string]BackupHandler),
@@ -116,7 +121,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 	h.state.SetLastFullRun(now)
 
 	if h.backupFullPolicy.RemoveFiles.RemoveIncrementalBackup() {
-		h.deleteFolder(ctx, h.backend.incrementalBackupsPath)
+		h.deleteFolder(ctx, getIncrementalRoot(h.routineName))
 	}
 
 	h.writeClusterConfiguration(ctx, client.AerospikeClient(), now)
@@ -138,7 +143,7 @@ func (h *BackupRoutineHandler) startFullBackupForAllNamespaces(
 	}
 
 	for _, namespace := range namespaces {
-		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, upperBound)
+		backupFolder := getFullPath(h.routineName, h.backupFullPolicy, namespace, upperBound)
 		handler, err := h.backupService.BackupRun(ctx, h.backupRoutine, h.backupFullPolicy, client,
 			h.storage, h.secretAgent, timebounds, namespace, backupFolder)
 		if err != nil {
@@ -158,7 +163,7 @@ func (h *BackupRoutineHandler) waitForFullBackups(
 ) error {
 	startTime := time.Now() // startTime is only used to measure backup time
 	for namespace, handler := range h.fullBackupHandlers {
-		backupFolder := getFullPath(h.backend.fullBackupsPath, h.backupFullPolicy, namespace, backupTimestamp)
+		backupFolder := getFullPath(h.routineName, h.backupFullPolicy, namespace, backupTimestamp)
 		err := handler.Wait(ctx)
 		if err != nil {
 			backupFailureCounter.Inc()
@@ -190,7 +195,7 @@ func (h *BackupRoutineHandler) writeClusterConfiguration(
 	}
 
 	for i, info := range infos {
-		confFilePath := getConfigurationFile(h, now, i)
+		confFilePath := getConfigurationPath(h.routineName, h.backupFullPolicy, now, i)
 		err := storage.WriteFile(ctx, h.storage, confFilePath, []byte(info))
 		if err != nil {
 			h.logger.Error("Failed to write cluster configuration backup",
@@ -213,7 +218,7 @@ func (h *BackupRoutineHandler) writeBackupMetadata(
 		UDFCount:            uint64(stats.GetUDFs()),
 	}
 
-	if err := h.backend.writeBackupMetadata(ctx, backupFolder, metadata); err != nil {
+	if err := h.metadataWriter.WriteBackupMetadata(ctx, backupFolder, metadata); err != nil {
 		h.logger.Error("Could not Write backup metadata",
 			slog.String("folder", backupFolder),
 			slog.Any("err", err))
@@ -280,7 +285,7 @@ func (h *BackupRoutineHandler) startIncrementalBackupForAllNamespaces(
 	}
 
 	for _, namespace := range namespaces {
-		backupFolder := getIncrementalPathForNamespace(h.backend.incrementalBackupsPath, namespace, upperBound)
+		backupFolder := getIncrementalPathForNamespace(h.routineName, namespace, upperBound)
 		handler, err := h.backupService.BackupRun(ctx,
 			h.backupRoutine, h.backupIncrPolicy, client, h.storage, h.secretAgent,
 			*timebounds, namespace, backupFolder)
@@ -307,7 +312,7 @@ func (h *BackupRoutineHandler) waitForIncrementalBackups(
 			incrBackupFailureCounter.Inc()
 		}
 
-		backupFolder := getIncrementalPathForNamespace(h.backend.incrementalBackupsPath, namespace, backupTimestamp)
+		backupFolder := getIncrementalPathForNamespace(h.routineName, namespace, backupTimestamp)
 		// delete if the backup file is empty
 		if handler.GetStats().IsEmpty() {
 			h.deleteFolder(ctx, backupFolder)
@@ -322,7 +327,7 @@ func (h *BackupRoutineHandler) waitForIncrementalBackups(
 	}
 
 	if !hasBackup {
-		h.deleteFolder(ctx, getIncrementalPath(h.backend.incrementalBackupsPath, backupTimestamp))
+		h.deleteFolder(ctx, getIncrementalTimestampPath(h.routineName, backupTimestamp))
 	}
 
 	incrBackupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))

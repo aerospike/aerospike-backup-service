@@ -21,11 +21,9 @@ import (
 // BackupBackend handles the backup management logic, employing a StorageAccessor
 // implementation for I/O operations.
 type BackupBackend struct {
-	storage                model.Storage
-	fullBackupsPath        string
-	incrementalBackupsPath string
-	stateFilePath          string
-	removeFullBackup       bool
+	storage          model.Storage
+	routineName      string
+	removeFullBackup bool
 }
 
 var _ BackupListReader = (*BackupBackend)(nil)
@@ -33,15 +31,13 @@ var _ BackupListReader = (*BackupBackend)(nil)
 func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend {
 	removeFullBackup := routine.BackupPolicy.RemoveFiles.RemoveFullBackup()
 	return &BackupBackend{
-		storage:                routine.Storage,
-		fullBackupsPath:        filepath.Join(routineName, model.FullBackupDirectory),
-		incrementalBackupsPath: filepath.Join(routineName, model.IncrementalBackupDirectory),
-		stateFilePath:          filepath.Join(routineName, model.StateFileName),
-		removeFullBackup:       removeFullBackup,
+		storage:          routine.Storage,
+		routineName:      routineName,
+		removeFullBackup: removeFullBackup,
 	}
 }
 
-func (b *BackupBackend) readState() *model.BackupState {
+func (b *BackupBackend) ReadState() *model.BackupState {
 	to := model.NewTimeBoundsTo(time.Now())
 	fullBackupList, _ := b.FullBackupList(context.Background(), to)
 	incrementalBackupList, _ := b.IncrementalBackupList(context.Background(), to)
@@ -60,7 +56,7 @@ func lastBackupTime(b []model.BackupDetails) time.Time {
 	return time.Time{}
 }
 
-func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error {
+func (b *BackupBackend) WriteBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error {
 	dataYaml, err := yaml.Marshal(metadata)
 	if err != nil {
 		return err
@@ -84,12 +80,7 @@ func (b *BackupBackend) IncrementalBackupList(ctx context.Context, timeBounds *m
 
 func (b *BackupBackend) readMetadataList(ctx context.Context, timebounds *model.TimeBounds, isFullBackup bool,
 ) ([]model.BackupDetails, error) {
-	var backupRoot string
-	if isFullBackup {
-		backupRoot = b.fullBackupsPath
-	} else {
-		backupRoot = b.incrementalBackupsPath
-	}
+	backupRoot := getBackupRootPath(b.routineName, isFullBackup)
 	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timebounds.FromTime)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "is empty") {
@@ -107,7 +98,7 @@ func (b *BackupBackend) readMetadataList(ctx context.Context, timebounds *model.
 		if timebounds.Contains(metadata.Created) {
 			backups = append(backups, model.BackupDetails{
 				BackupMetadata: *metadata,
-				Key:            getKey(backupRoot, metadata, b.removeFullBackup && isFullBackup),
+				Key:            getKey(b.routineName, isFullBackup, metadata, b.removeFullBackup && isFullBackup),
 				Storage:        b.storage,
 			})
 		}

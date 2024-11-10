@@ -15,13 +15,13 @@ const tempFolder = "./tmp"
 func TestFullBackupRemoveFiles(t *testing.T) {
 	backend := &BackupBackend{
 		storage:          &model.LocalStorage{Path: tempFolder},
-		fullBackupsPath:  "routine/backup",
+		routineName:      "routine",
 		removeFullBackup: true,
 	}
 
-	path := backend.fullBackupsPath + "/data/source-ns1/"
+	path := backend.routineName + "/backup/data/source-ns1/"
 	_ = os.MkdirAll(path, 0744)
-	_ = backend.writeBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(10)})
+	_ = backend.WriteBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(10)})
 
 	to := model.NewTimeBoundsTo(time.UnixMilli(1000))
 	list, _ := backend.FullBackupList(context.Background(), to)
@@ -36,14 +36,14 @@ func TestFullBackupRemoveFiles(t *testing.T) {
 func TestFullBackupKeepFiles(t *testing.T) {
 	backend := &BackupBackend{
 		storage:          &model.LocalStorage{Path: tempFolder},
-		fullBackupsPath:  "routine/backup",
+		routineName:      "routine",
 		removeFullBackup: false,
 	}
 
 	for _, t := range []int64{10, 20, 30} {
-		path := backend.fullBackupsPath + "/" + strconv.FormatInt(t, 10) + "/data/source-ns1/"
+		path := backend.routineName + "/backup" + strconv.FormatInt(t, 10) + "/data/source-ns1/"
 		_ = os.MkdirAll(path, 0744)
-		_ = backend.writeBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(t)})
+		_ = backend.WriteBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(t)})
 	}
 
 	bounds := model.NewTimeBoundsTo(time.UnixMilli(25))
