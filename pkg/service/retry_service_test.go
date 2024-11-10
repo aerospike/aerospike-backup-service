@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -10,7 +11,7 @@ import (
 const timeout = 100 * time.Millisecond
 
 func Test_timer(t *testing.T) {
-	r := NewRetryService("test")
+	r := NewRetryService(slog.Default())
 	counterLock := sync.Mutex{}
 	retryCounter := 2
 	r.retry(func() error {
@@ -32,7 +33,7 @@ func Test_timer(t *testing.T) {
 }
 
 func Test_timer_expires(t *testing.T) {
-	r := NewRetryService("test")
+	r := NewRetryService(slog.Default())
 	counterLock := sync.Mutex{}
 	retryCounter := 0
 	const attempts = 3
@@ -52,7 +53,7 @@ func Test_timer_expires(t *testing.T) {
 }
 
 func Test_timerRunTwice(t *testing.T) {
-	r := NewRetryService("test")
+	r := NewRetryService(slog.Default())
 	counterLock := sync.Mutex{}
 	retryCounter := 3
 	f := func() error {
