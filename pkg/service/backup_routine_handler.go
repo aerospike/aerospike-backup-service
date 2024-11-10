@@ -46,11 +46,9 @@ func newBackupRoutineHandler(
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
 	backupPolicy := backupRoutine.BackupPolicy
-	secretAgent := backupRoutine.SecretAgent
-
 	logger := slog.Default().With(slog.String("routine", routineName))
 
-	handler := &BackupRoutineHandler{
+	return &BackupRoutineHandler{
 		backupService:      backupService,
 		backend:            backupBackend,
 		backupRoutine:      backupRoutine,
@@ -59,16 +57,14 @@ func newBackupRoutineHandler(
 		routineName:        routineName,
 		namespaces:         backupRoutine.Namespaces,
 		storage:            backupRoutine.Storage,
-		secretAgent:        secretAgent,
+		secretAgent:        backupRoutine.SecretAgent,
 		state:              backupBackend.readState(),
+		retry:              NewRetryService(logger),
 		fullBackupHandlers: make(map[string]BackupHandler),
 		incrBackupHandlers: make(map[string]BackupHandler),
 		clientManager:      clientManager,
 		logger:             logger,
 	}
-
-	handler.retry = NewRetryService(logger)
-	return handler
 }
 
 func getNamespacesToBackup(namespaces []string, client backup.AerospikeClient) ([]string, error) {
