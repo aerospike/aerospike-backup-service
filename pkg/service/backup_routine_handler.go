@@ -14,19 +14,20 @@ import (
 
 // BackupRoutineHandler implements backup logic for single routine.
 type BackupRoutineHandler struct {
-	backupService    Backup
-	metadataWriter   BackupMetadataManager
-	backupFullPolicy *model.BackupPolicy
-	backupIncrPolicy *model.BackupPolicy
-	backupRoutine    *model.BackupRoutine
-	routineName      string
-	namespaces       []string
-	storage          model.Storage
-	secretAgent      *model.SecretAgent
-	state            *model.BackupState
-	retry            *RetryService
-	clientManager    ClientManager
-	logger           *slog.Logger
+	backupService       Backup
+	metadataWriter      BackupMetadataManager
+	backupFullPolicy    *model.BackupPolicy
+	backupIncrPolicy    *model.BackupPolicy
+	backupRoutine       *model.BackupRoutine
+	routineName         string
+	namespaces          []string
+	storage             model.Storage
+	secretAgent         *model.SecretAgent
+	state               *model.BackupState
+	retry               *RetryService
+	clientManager       ClientManager
+	logger              *slog.Logger
+	clusterConfigWriter ClusterConfigWriter
 
 	// backup handlers by namespace
 	fullBackupHandlers map[string]BackupHandler
@@ -36,6 +37,11 @@ type BackupRoutineHandler struct {
 type BackupMetadataManager interface {
 	WriteBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
 	ReadState() *model.BackupState
+}
+
+// ClusterConfigWriter handles writing cluster configuration to storage.
+type ClusterConfigWriter interface {
+	Write(ctx context.Context, client backup.AerospikeClient, timestamp time.Time)
 }
 
 // BackupHandlerHolder stores backupHandlers by routine name
@@ -51,6 +57,7 @@ func newBackupRoutineHandler(
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
 	backupPolicy := backupRoutine.BackupPolicy
+	backupStorage := backupRoutine.Storage
 	logger := slog.Default().With(slog.String("routine", routineName))
 
 	return &BackupRoutineHandler{
@@ -61,14 +68,19 @@ func newBackupRoutineHandler(
 		backupIncrPolicy:   backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
 		routineName:        routineName,
 		namespaces:         backupRoutine.Namespaces,
-		storage:            backupRoutine.Storage,
+		storage:            backupStorage,
 		secretAgent:        backupRoutine.SecretAgent,
 		state:              backupBackend.ReadState(),
 		retry:              NewRetryService(logger),
 		fullBackupHandlers: make(map[string]BackupHandler),
 		incrBackupHandlers: make(map[string]BackupHandler),
 		clientManager:      clientManager,
-		logger:             logger,
+		clusterConfigWriter: NewClusterConfigWriter(
+			backupStorage,
+			routineName,
+			backupPolicy,
+			logger),
+		logger: logger,
 	}
 }
 
@@ -124,7 +136,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		h.deleteFolder(ctx, getIncrementalRoot(h.routineName))
 	}
 
-	h.writeClusterConfiguration(ctx, client.AerospikeClient(), now)
+	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 	return nil
 }
 
@@ -183,25 +195,6 @@ func (h *BackupRoutineHandler) waitForFullBackups(
 	h.logger.Debug("Finished full backup", slog.Float64("duration_ms", duration))
 	backupDurationGauge.Set(duration)
 	return nil
-}
-
-func (h *BackupRoutineHandler) writeClusterConfiguration(
-	ctx context.Context, client backup.AerospikeClient, now time.Time,
-) {
-	infos := getClusterConfiguration(client)
-	if len(infos) == 0 {
-		h.logger.Warn("Could not read aerospike configuration")
-		return
-	}
-
-	for i, info := range infos {
-		confFilePath := getConfigurationPath(h.routineName, h.backupFullPolicy, now, i)
-		err := storage.WriteFile(ctx, h.storage, confFilePath, []byte(info))
-		if err != nil {
-			h.logger.Error("Failed to write cluster configuration backup",
-				slog.Any("err", err))
-		}
-	}
 }
 
 func (h *BackupRoutineHandler) writeBackupMetadata(
