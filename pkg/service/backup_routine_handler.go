@@ -229,16 +229,7 @@ func (h *BackupRoutineHandler) deleteFolder(ctx context.Context, path string) {
 }
 
 func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now time.Time) {
-	if h.state.LastFullRunIsEmpty() {
-		h.logger.Debug("Skip incremental backup until initial full backup is done")
-		return
-	}
-	if len(h.fullBackupHandlers) > 0 {
-		h.logger.Debug("Full backup is currently in progress, skipping incremental backup")
-		return
-	}
-	if len(h.incrBackupHandlers) > 0 {
-		h.logger.Debug("Incremental backup is currently in progress, skipping incremental backup")
+	if h.skipIncrementalBackup() {
 		return
 	}
 
@@ -261,6 +252,23 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 
 	// update the state
 	h.state.SetLastIncrRun(now)
+}
+
+func (h *BackupRoutineHandler) skipIncrementalBackup() bool {
+	if h.state.LastFullRunIsEmpty() {
+		h.logger.Debug("Skip incremental backup until initial full backup is done")
+		return true
+	}
+	if len(h.fullBackupHandlers) > 0 {
+		h.logger.Debug("Full backup is currently in progress, skipping incremental backup")
+		return true
+	}
+	if len(h.incrBackupHandlers) > 0 {
+		h.logger.Debug("Incremental backup is currently in progress, skipping incremental backup")
+		return true
+	}
+
+	return false
 }
 
 func (h *BackupRoutineHandler) startIncrementalBackupForAllNamespaces(

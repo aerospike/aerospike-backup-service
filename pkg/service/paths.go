@@ -48,7 +48,8 @@ func getConfigurationPath(routineName string, policy *model.BackupPolicy, timest
 	if policy.RemoveFiles.RemoveFullBackup() {
 		return join(routineName, fullBackupDirectory, configurationBackupDirectory, getConfigFileName(index))
 	}
-	return join(routineName, fullBackupDirectory, formatTimestamp(timestamp), configurationBackupDirectory, getConfigFileName(index))
+	return join(routineName, fullBackupDirectory, formatTimestamp(timestamp),
+		configurationBackupDirectory, getConfigFileName(index))
 }
 
 func getKey(routineName string, isFullBackup bool, metadata *model.BackupMetadata, noTimestampInPath bool) string {
