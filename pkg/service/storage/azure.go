@@ -30,7 +30,7 @@ func (a *AzureStorageAccessor) createReader(
 	opts := []azure.Opt{
 		azure.WithValidator(filter),
 		azure.WithNestedDir(),
-		azure.WithMarker(startScanFrom),
+		azure.WithStartAfter(startScanFrom),
 	}
 	fullPath := filepath.Join(azures.Path, path)
 	if isFile {
