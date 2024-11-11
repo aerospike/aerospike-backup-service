@@ -20,9 +20,9 @@ const (
 
 func getBackupRootPath(routineName string, isFullBackup bool) string {
 	if isFullBackup {
-		return join(routineName, fullBackupDirectory)
+		return filepath.Join(routineName, fullBackupDirectory)
 	}
-	return join(routineName, incrementalBackupDirectory)
+	return filepath.Join(routineName, incrementalBackupDirectory)
 }
 
 func getIncrementalRoot(routineName string) string {
@@ -31,24 +31,24 @@ func getIncrementalRoot(routineName string) string {
 
 func getFullPath(routineName string, policy *model.BackupPolicy, namespace string, timestamp time.Time) string {
 	if policy.RemoveFiles.RemoveFullBackup() {
-		return join(routineName, fullBackupDirectory, dataDirectory, namespace)
+		return filepath.Join(routineName, fullBackupDirectory, dataDirectory, namespace)
 	}
-	return join(routineName, fullBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
+	return filepath.Join(routineName, fullBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
 }
 
 func getIncrementalPathForNamespace(routineName string, namespace string, timestamp time.Time) string {
-	return join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
+	return filepath.Join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
 }
 
 func getIncrementalTimestampPath(routineName string, timestamp time.Time) string {
-	return join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp))
+	return filepath.Join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp))
 }
 
 func getConfigurationPath(routineName string, policy *model.BackupPolicy, timestamp time.Time, index int) string {
 	if policy.RemoveFiles.RemoveFullBackup() {
-		return join(routineName, fullBackupDirectory, configurationBackupDirectory, getConfigFileName(index))
+		return filepath.Join(routineName, fullBackupDirectory, configurationBackupDirectory, getConfigFileName(index))
 	}
-	return join(routineName, fullBackupDirectory, formatTimestamp(timestamp),
+	return filepath.Join(routineName, fullBackupDirectory, formatTimestamp(timestamp),
 		configurationBackupDirectory, getConfigFileName(index))
 }
 
@@ -59,9 +59,9 @@ func getKey(routineName string, isFullBackup bool, metadata *model.BackupMetadat
 	}
 
 	if noTimestampInPath {
-		return join(routineName, backupDir, dataDirectory, metadata.Namespace)
+		return filepath.Join(routineName, backupDir, dataDirectory, metadata.Namespace)
 	}
-	return join(routineName, backupDir, formatTimestamp(metadata.Created), dataDirectory, metadata.Namespace)
+	return filepath.Join(routineName, backupDir, formatTimestamp(metadata.Created), dataDirectory, metadata.Namespace)
 }
 
 func formatTimestamp(t time.Time) string {
@@ -70,8 +70,4 @@ func formatTimestamp(t time.Time) string {
 
 func getConfigFileName(index int) string {
 	return fmt.Sprintf("aerospike_%d%s", index, configExt)
-}
-
-func join(elements ...string) string {
-	return filepath.Join(elements...)
 }

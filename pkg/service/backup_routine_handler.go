@@ -34,8 +34,11 @@ type BackupRoutineHandler struct {
 	incrBackupHandlers map[string]BackupHandler
 }
 
+// BackupMetadataManager handles backup metadata.
 type BackupMetadataManager interface {
+	// WriteBackupMetadata writes backup metadata to storage after successful backup.
 	WriteBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
+	// ReadState scans storage for last backup state (on startup).
 	ReadState() *model.BackupState
 }
 
