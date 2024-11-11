@@ -165,27 +165,27 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 
 	// Expect backup run for each namespace
 	backupService.On("BackupRun",
-		mock.Anything, // ctx
-		mock.Anything, // backupRoutine
-		mock.Anything, // backupPolicy
-		mock.Anything, // client
-		mock.Anything, // storage
-		mock.Anything, // secretAgent
-		mock.Anything, // timebounds
-		"ns1",         // namespace
-		mock.Anything, // path
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		"ns1",
+		mock.Anything,
 	).Return(backupHandler, nil).Once()
 
 	backupService.On("BackupRun",
-		mock.Anything, // ctx
-		mock.Anything, // backupRoutine
-		mock.Anything, // backupPolicy
-		mock.Anything, // client
-		mock.Anything, // storage
-		mock.Anything, // secretAgent
-		mock.Anything, // timebounds
-		"ns2",         // namespace
-		mock.Anything, // path
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		"ns2",
+		mock.Anything,
 	).Return(backupHandler, nil).Once()
 
 	metadataWriter.On("WriteBackupMetadata",
@@ -217,7 +217,6 @@ func TestRunFullBackupInternal_BackupError(t *testing.T) {
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
 
-	// Setup mocks
 	client := &backup.Client{}
 	clientManager.On("GetClient", mock.Anything).Return(client, nil)
 	clientManager.On("Close", client).Return()
@@ -251,7 +250,6 @@ func TestRunFullBackupInternal_WaitError(t *testing.T) {
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
 
-	// Setup mocks
 	client := &backup.Client{}
 	clientManager.On("GetClient", mock.Anything).Return(client, nil)
 	clientManager.On("Close", client).Return()
@@ -279,4 +277,138 @@ func TestRunFullBackupInternal_WaitError(t *testing.T) {
 	clientManager.AssertExpectations(t)
 	backupService.AssertExpectations(t)
 	backupHandler.AssertExpectations(t)
+}
+
+func TestRunIncrementalBackup_NoFullBackupYet(t *testing.T) {
+	backupService := new(mockBackupService)
+	clientManager := new(mockClientManager)
+	metadataWriter := new(mockMetadataWriter)
+	configWriter := new(mockClusterConfigWriter)
+
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler.state = &model.BackupState{} // Ensure empty state
+
+	handler.runIncrementalBackup(context.Background(), time.Now())
+
+	clientManager.AssertNotCalled(t, "GetClient")
+	backupService.AssertNotCalled(t, "BackupRun")
+}
+
+func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
+	backupService := new(mockBackupService)
+	clientManager := new(mockClientManager)
+	metadataWriter := new(mockMetadataWriter)
+	configWriter := new(mockClusterConfigWriter)
+
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler.state = &model.BackupState{
+		LastFullRun: time.Now(), // Set last full run
+	}
+
+	handler.fullBackupHandlers["ns1"] = &mockBackupHandler{}
+
+	handler.runIncrementalBackup(context.Background(), time.Now())
+
+	clientManager.AssertNotCalled(t, "GetClient")
+	backupService.AssertNotCalled(t, "BackupRun")
+}
+
+func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
+	backupService := new(mockBackupService)
+	clientManager := new(mockClientManager)
+	metadataWriter := new(mockMetadataWriter)
+	configWriter := new(mockClusterConfigWriter)
+
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler.state = &model.BackupState{
+		LastFullRun: time.Now(), // Set last full run
+	}
+
+	handler.incrBackupHandlers["test"] = &mockBackupHandler{}
+
+	handler.runIncrementalBackup(context.Background(), time.Now())
+
+	clientManager.AssertNotCalled(t, "GetClient")
+	backupService.AssertNotCalled(t, "BackupRun")
+}
+
+func TestRunIncrementalBackup_ClientError(t *testing.T) {
+	backupService := new(mockBackupService)
+	clientManager := new(mockClientManager)
+	metadataWriter := new(mockMetadataWriter)
+	configWriter := new(mockClusterConfigWriter)
+
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler.state = &model.BackupState{
+		LastFullRun: time.Now(),
+	}
+
+	expectedErr := errors.New("client error")
+	clientManager.On("GetClient", mock.Anything).Return(nil, expectedErr)
+
+	handler.runIncrementalBackup(context.Background(), time.Now())
+
+	clientManager.AssertExpectations(t)
+	backupService.AssertNotCalled(t, "BackupRun")
+}
+
+func TestRunIncrementalBackup_Success(t *testing.T) {
+	backupService := new(mockBackupService)
+	clientManager := new(mockClientManager)
+	metadataWriter := new(mockMetadataWriter)
+	configWriter := new(mockClusterConfigWriter)
+
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	now := time.Now()
+	lastRun := now.Add(-1 * time.Hour)
+	handler.state = &model.BackupState{
+		LastFullRun: lastRun,
+	}
+
+	client := &backup.Client{}
+	clientManager.On("GetClient", mock.Anything).Return(client, nil)
+	clientManager.On("Close", client).Return()
+
+	backupHandler := new(mockBackupHandler)
+	stats := &models.BackupStats{}
+	backupHandler.On("Wait", mock.Anything).Return(nil)
+	backupHandler.On("GetStats").Return(stats)
+
+	// Expect backup run for each namespace
+	backupService.On("BackupRun",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		"ns1",
+		mock.Anything,
+	).Return(backupHandler, nil)
+
+	backupService.On("BackupRun",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		"ns2",
+		mock.Anything,
+	).Return(backupHandler, nil)
+
+	metadataWriter.On("WriteBackupMetadata",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(nil)
+
+	handler.runIncrementalBackup(context.Background(), now)
+
+	clientManager.AssertExpectations(t)
+	backupService.AssertExpectations(t)
+	backupHandler.AssertExpectations(t)
+	assert.Equal(t, now, handler.state.LastIncrRun)
 }
