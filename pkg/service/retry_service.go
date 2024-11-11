@@ -9,23 +9,22 @@ import (
 // RetryService a service for retrying a function with a specified interval
 // and number of attempts.
 type RetryService struct {
-	label string
-	timer *time.Timer
-	mu    sync.Mutex
+	logger *slog.Logger
+	timer  *time.Timer
+	mu     sync.Mutex
 }
 
 // NewRetryService returns a new RetryService instance.
-//   - label is used for logging purposes only.
-func NewRetryService(label string) *RetryService {
+//   - logger is used for logging retry attempts and errors
+func NewRetryService(logger *slog.Logger) *RetryService {
 	return &RetryService{
-		label: label,
+		logger: logger,
 	}
 }
 
 func (r *RetryService) retry(f func() error, retryInterval time.Duration, n int32) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	logger := slog.Default().With(slog.String("label", r.label))
 
 	r.clearTimer()
 	err := f()
@@ -35,12 +34,12 @@ func (r *RetryService) retry(f func() error, retryInterval time.Duration, n int3
 	}
 
 	if n == 0 {
-		logger.Warn("Execution failed, no retry attempts left",
+		r.logger.Warn("Execution failed, no retry attempts left",
 			slog.Any("err", err))
 		return
 	}
 
-	logger.Info("Execution failed, retry scheduled",
+	r.logger.Info("Execution failed, retry scheduled",
 		slog.Any("retryInterval", retryInterval),
 		slog.Any("attempts", n-1),
 		slog.Any("err", err))

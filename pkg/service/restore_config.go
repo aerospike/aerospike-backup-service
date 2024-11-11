@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 )
 
@@ -45,5 +44,5 @@ func calculateConfigurationBackupPath(backupKey string) (string, error) {
 	// Move up two directories
 	base := filepath.Dir(filepath.Dir(path))
 	// Join new directory 'config' with the new base
-	return filepath.Join(base, model.ConfigurationBackupDirectory), nil
+	return filepath.Join(base, configurationBackupDirectory), nil
 }

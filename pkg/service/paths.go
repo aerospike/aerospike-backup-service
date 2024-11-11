@@ -10,50 +10,64 @@ import (
 )
 
 const (
-	metadataFile = "metadata.yaml"
-	configExt    = ".conf"
+	metadataFile                 = "metadata.yaml"
+	configExt                    = ".conf"
+	incrementalBackupDirectory   = "incremental"
+	fullBackupDirectory          = "backup"
+	configurationBackupDirectory = "configuration"
+	dataDirectory                = "data"
 )
 
-func getFullPath(fullBackupsPath string, backupPolicy *model.BackupPolicy, namespace string,
-	now time.Time) string {
-	if backupPolicy.RemoveFiles.RemoveFullBackup() {
-		return fmt.Sprintf("%s/%s/%s", fullBackupsPath, model.DataDirectory, namespace)
+func getBackupRootPath(routineName string, isFullBackup bool) string {
+	if isFullBackup {
+		return filepath.Join(routineName, fullBackupDirectory)
+	}
+	return filepath.Join(routineName, incrementalBackupDirectory)
+}
+
+func getIncrementalRoot(routineName string) string {
+	return getBackupRootPath(routineName, false)
+}
+
+func getFullPath(routineName string, policy *model.BackupPolicy, namespace string, timestamp time.Time) string {
+	if policy.RemoveFiles.RemoveFullBackup() {
+		return filepath.Join(routineName, fullBackupDirectory, dataDirectory, namespace)
+	}
+	return filepath.Join(routineName, fullBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
+}
+
+func getIncrementalPathForNamespace(routineName string, namespace string, timestamp time.Time) string {
+	return filepath.Join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
+}
+
+func getIncrementalTimestampPath(routineName string, timestamp time.Time) string {
+	return filepath.Join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp))
+}
+
+func getConfigurationPath(routineName string, policy *model.BackupPolicy, timestamp time.Time, index int) string {
+	if policy.RemoveFiles.RemoveFullBackup() {
+		return filepath.Join(routineName, fullBackupDirectory, configurationBackupDirectory, getConfigFileName(index))
+	}
+	return filepath.Join(routineName, fullBackupDirectory, formatTimestamp(timestamp),
+		configurationBackupDirectory, getConfigFileName(index))
+}
+
+func getKey(routineName string, isFullBackup bool, metadata *model.BackupMetadata, noTimestampInPath bool) string {
+	backupDir := fullBackupDirectory
+	if !isFullBackup {
+		backupDir = incrementalBackupDirectory
 	}
 
-	return fmt.Sprintf("%s/%s/%s/%s", fullBackupsPath, formatTime(now), model.DataDirectory, namespace)
+	if noTimestampInPath {
+		return filepath.Join(routineName, backupDir, dataDirectory, metadata.Namespace)
+	}
+	return filepath.Join(routineName, backupDir, formatTimestamp(metadata.Created), dataDirectory, metadata.Namespace)
 }
 
-func getIncrementalPath(incrBackupsPath string, t time.Time) string {
-	return fmt.Sprintf("%s/%s", incrBackupsPath, formatTime(t))
-}
-
-func getIncrementalPathForNamespace(incrBackupsPath string, namespace string, t time.Time) string {
-	return fmt.Sprintf("%s/%s/%s", getIncrementalPath(incrBackupsPath, t), model.DataDirectory, namespace)
-}
-
-func formatTime(t time.Time) string {
+func formatTimestamp(t time.Time) string {
 	return strconv.FormatInt(t.UnixMilli(), 10)
 }
 
-func getConfigurationFile(h *BackupRoutineHandler, t time.Time, i int) string {
-	path := ""
-	if h.backupFullPolicy.RemoveFiles.RemoveFullBackup() {
-		path = fmt.Sprintf("%s/%s", h.backend.fullBackupsPath, model.ConfigurationBackupDirectory)
-	} else {
-		path = fmt.Sprintf("%s/%s/%s", h.backend.fullBackupsPath, formatTime(t), model.ConfigurationBackupDirectory)
-	}
-
-	return filepath.Join(path, getConfigFileName(i))
-}
-
-func getConfigFileName(i int) string {
-	return fmt.Sprintf("aerospike_%d%s", i, configExt)
-}
-
-func getKey(path string, metadata *model.BackupMetadata, noTimestampInPath bool) string {
-	if noTimestampInPath {
-		return fmt.Sprintf("%s/data/%s", path, metadata.Namespace)
-	}
-
-	return fmt.Sprintf("%s/%d/data/%s", path, metadata.Created.UnixMilli(), metadata.Namespace)
+func getConfigFileName(index int) string {
+	return fmt.Sprintf("aerospike_%d%s", index, configExt)
 }
