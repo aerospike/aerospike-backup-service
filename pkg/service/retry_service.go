@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -32,7 +34,8 @@ func (r *RetryService) retry(label string, f func() error) error {
 	var lastErr error
 	for attempt := 1; attempt <= r.maxAttempts; attempt++ {
 		lastErr = f()
-		if lastErr == nil {
+
+		if lastErr == nil || errors.Is(lastErr, context.Canceled) {
 			return nil // success
 		}
 
