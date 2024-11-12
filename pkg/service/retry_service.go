@@ -1,59 +1,51 @@
 package service
 
 import (
+	"fmt"
 	"log/slog"
-	"sync"
 	"time"
 )
 
-// RetryService a service for retrying a function with a specified interval
-// and number of attempts.
+// RetryService is a service for retrying a function with a specified interval
+// and a maximum number of attempts.
 type RetryService struct {
-	logger *slog.Logger
-	timer  *time.Timer
-	mu     sync.Mutex
+	logger        *slog.Logger
+	retryInterval time.Duration
+	maxAttempts   int32
 }
 
 // NewRetryService returns a new RetryService instance.
+//   - retryInterval is the interval between retry attempts
+//   - maxAttempts is the maximum number of retry attempts
 //   - logger is used for logging retry attempts and errors
-func NewRetryService(logger *slog.Logger) *RetryService {
+func NewRetryService(retryInterval time.Duration, maxAttempts int32, logger *slog.Logger) *RetryService {
 	return &RetryService{
-		logger: logger,
+		logger:        logger,
+		retryInterval: retryInterval,
+		maxAttempts:   maxAttempts,
 	}
 }
 
-func (r *RetryService) retry(f func() error, retryInterval time.Duration, n int32) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+// retry attempts to execute the given function up to maxAttempts with the specified retryInterval.
+// If all attempts fail, it returns an error.
+func (r *RetryService) retry(f func() error) error {
+	var lastErr error
+	for attempt := int32(1); attempt <= r.maxAttempts; attempt++ {
+		lastErr = f()
+		if lastErr == nil {
+			return nil // success
+		}
 
-	r.clearTimer()
-	err := f()
-
-	if err == nil { // function executed successfully, no retry needed
-		return
-	}
-
-	if n == 0 {
-		r.logger.Warn("Execution failed, no retry attempts left",
-			slog.Any("err", err))
-		return
-	}
-
-	r.logger.Info("Execution failed, retry scheduled",
-		slog.Any("retryInterval", retryInterval),
-		slog.Any("attempts", n-1),
-		slog.Any("err", err))
-
-	r.timer = time.AfterFunc(retryInterval, func() {
-		r.retry(f, retryInterval, n-1)
-	})
-}
-
-func (r *RetryService) clearTimer() {
-	if r.timer != nil {
-		r.timer.Stop()
-		if r.timer.C != nil {
-			<-r.timer.C
+		if attempt < r.maxAttempts { // Log and wait only if there are attempts left
+			r.logger.Info("Execution failed, retrying...",
+				slog.Any("attempt", attempt),
+				slog.Any("maxAttempts", r.maxAttempts),
+				slog.Any("retryInterval", r.retryInterval),
+				slog.Any("err", lastErr))
+			time.Sleep(r.retryInterval) // wait before the next attempt
 		}
 	}
+
+	// If we exhausted all attempts, return an error
+	return fmt.Errorf("failed after %d attempts: %w", r.maxAttempts, lastErr)
 }
