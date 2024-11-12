@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -100,7 +101,7 @@ func newBackupRoutineHandler(
 		state:            backupBackend.ReadState(),
 		retry: NewRetryService(
 			time.Duration(backupPolicy.GetRetryDelayOrDefault())*time.Millisecond,
-			backupPolicy.GetMaxRetriesOrDefault(),
+			int(backupPolicy.GetMaxRetriesOrDefault()),
 			logger),
 		fullBackupHandlers: make(map[string]BackupHandler),
 		incrBackupHandlers: make(map[string]BackupHandler),
@@ -128,9 +129,8 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 		return
 	}
 
-	client, err := h.clientManager.GetClient(h.backupRoutine.SourceCluster)
+	client, namespaces, err := h.prepareCluster()
 	if err != nil {
-		h.logger.Error("cannot create backup client", slog.Any("err", err))
 		return
 	}
 
@@ -139,15 +139,8 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 		clear(h.fullBackupHandlers)
 	}()
 
-	namespaces, err := getNamespacesToBackup(h.namespaces, client.AerospikeClient())
-	if err != nil {
-		h.logger.Error("Cannot retrieve namespaces from source cluster", slog.Any("err", err))
-		return
-	}
-
-	timebounds := h.createTimebounds(now)
 	for _, namespace := range namespaces {
-		h.fullBackupHandlers[namespace] = h.startNamespaceBackup(ctx, namespace, now, client, timebounds)
+		h.fullBackupHandlers[namespace] = h.startNamespaceBackup(ctx, namespace, now, client)
 	}
 
 	err = h.waitForFullBackups(ctx)
@@ -168,74 +161,54 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 }
 
+func (h *BackupRoutineHandler) prepareCluster() (*backup.Client, []string, error) {
+	var client *backup.Client
+	var namespaces []string
+	err := h.retry.retry("cluster connection", func() error {
+		var err error
+		client, err = h.clientManager.GetClient(h.backupRoutine.SourceCluster)
+		if err != nil {
+			return fmt.Errorf("cannot get backup client: %w", err)
+		}
+		namespaces, err = getNamespacesToBackup(h.namespaces, client.AerospikeClient())
+		if err != nil {
+			return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
+		}
+
+		return nil
+	})
+
+	return client, namespaces, err
+}
+
+func (h *BackupRoutineHandler) startNamespaceBackup(
+	ctx context.Context, namespace string, now time.Time, client *backup.Client,
+) *RetryableBackupHandler {
+	backupFolder := getFullPath(h.routineName, h.backupFullPolicy, namespace, now)
+	timebounds := h.createTimebounds(now)
+
+	return newRetryableBackupHandler(
+		ctx,
+		h.retry,
+		func(ctx context.Context) (BackupHandler, error) { // start backup.
+			return h.backupService.BackupRun(
+				ctx, h.backupRoutine, h.backupFullPolicy, client, h.storage, h.secretAgent, timebounds, namespace, backupFolder,
+			)
+		},
+		func(ctx context.Context) { // on fail.
+			h.deleteFolder(ctx, backupFolder)
+		},
+		func(ctx context.Context, stats *models.BackupStats) error { // on success.
+			return h.writeBackupMetadata(ctx, stats, now, namespace, backupFolder)
+		},
+	)
+}
+
 func (h *BackupRoutineHandler) createTimebounds(now time.Time) model.TimeBounds {
 	if h.backupFullPolicy.IsSealed() {
 		return *model.NewTimeBoundsTo(now)
 	}
 	return model.TimeBounds{}
-}
-
-func (h *BackupRoutineHandler) startNamespaceBackup(
-	ctx context.Context,
-	namespace string,
-	now time.Time,
-	client *backup.Client,
-	timebounds model.TimeBounds,
-) *RetryableBackupHandler {
-	backupFolder := getFullPath(h.routineName, h.backupFullPolicy, namespace, now)
-
-	return newRetryableBackupHandler(
-		ctx,
-		h.retry,
-		h.createBackupStartFn(client, namespace, backupFolder, timebounds),
-		h.createCleanupFn(backupFolder),
-		h.createSuccessHandler(namespace, backupFolder, now),
-	)
-}
-
-func (h *BackupRoutineHandler) createSuccessHandler(
-	namespace string,
-	backupFolder string,
-	now time.Time,
-) func(ctx context.Context, stats *models.BackupStats) error {
-	return func(ctx context.Context, stats *models.BackupStats) error {
-		return h.writeBackupMetadata(
-			ctx,
-			stats,
-			now,
-			namespace,
-			backupFolder,
-		)
-	}
-}
-
-func (h *BackupRoutineHandler) createBackupStartFn(
-	client *backup.Client,
-	namespace string,
-	backupFolder string,
-	timebounds model.TimeBounds,
-) func(context.Context) (BackupHandler, error) {
-	return func(ctx context.Context) (BackupHandler, error) {
-		return h.backupService.BackupRun(
-			ctx,
-			h.backupRoutine,
-			h.backupFullPolicy,
-			client,
-			h.storage,
-			h.secretAgent,
-			timebounds,
-			namespace,
-			backupFolder,
-		)
-	}
-}
-
-func (h *BackupRoutineHandler) createCleanupFn(
-	backupFolder string,
-) func(context.Context) {
-	return func(ctx context.Context) {
-		h.deleteFolder(ctx, backupFolder)
-	}
 }
 
 func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context) error {
