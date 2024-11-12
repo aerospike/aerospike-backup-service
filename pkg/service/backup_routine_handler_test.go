@@ -109,41 +109,8 @@ func setupTestHandler(
 		state:              &model.BackupState{},
 		storage:            &model.LocalStorage{Path: "/tmp"},
 		logger:             slog.Default(),
+		retry:              NewRetryService(0, 1, slog.Default()),
 	}
-}
-
-func TestRunFullBackupInternal_SkipIfInProgress(t *testing.T) {
-	backupService := new(mockBackupService)
-	clientManager := new(mockClientManager)
-	metadataWriter := new(mockMetadataWriter)
-	configWriter := new(mockClusterConfigWriter)
-
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
-
-	// Simulate backup in progress
-	handler.fullBackupHandlers["test"] = &mockBackupHandler{}
-
-	err := handler.runFullBackupInternal(context.Background(), time.Now())
-
-	assert.NoError(t, err, "Should not return error when skipping backup")
-}
-
-func TestRunFullBackupInternal_ClientError(t *testing.T) {
-	backupService := new(mockBackupService)
-	clientManager := new(mockClientManager)
-	metadataWriter := new(mockMetadataWriter)
-	configWriter := new(mockClusterConfigWriter)
-
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
-
-	expectedErr := errors.New("client error")
-	clientManager.On("GetClient", mock.Anything).Return(nil, expectedErr)
-
-	err := handler.runFullBackupInternal(context.Background(), time.Now())
-
-	assert.Error(t, err)
-	assert.Equal(t, expectedErr, err)
-	clientManager.AssertExpectations(t)
 }
 
 func TestRunFullBackupInternal_Success(t *testing.T) {
@@ -200,46 +167,12 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mock.Anything,
 	).Return()
 
-	err := handler.runFullBackupInternal(context.Background(), time.Now())
+	handler.runFullBackup(context.Background(), time.Now())
 
-	assert.NoError(t, err)
 	clientManager.AssertExpectations(t)
 	backupService.AssertExpectations(t)
 	metadataWriter.AssertExpectations(t)
 	configWriter.AssertExpectations(t)
-}
-
-func TestRunFullBackupInternal_BackupError(t *testing.T) {
-	backupService := new(mockBackupService)
-	clientManager := new(mockClientManager)
-	metadataWriter := new(mockMetadataWriter)
-	configWriter := new(mockClusterConfigWriter)
-
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
-
-	client := &backup.Client{}
-	clientManager.On("GetClient", mock.Anything).Return(client, nil)
-	clientManager.On("Close", client).Return()
-
-	expectedErr := errors.New("backup error")
-	backupService.On("BackupRun",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return(&mockBackupHandler{}, expectedErr)
-
-	err := handler.runFullBackupInternal(context.Background(), time.Now())
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), expectedErr.Error())
-	clientManager.AssertExpectations(t)
-	backupService.AssertExpectations(t)
 }
 
 func TestRunFullBackupInternal_WaitError(t *testing.T) {
@@ -270,10 +203,8 @@ func TestRunFullBackupInternal_WaitError(t *testing.T) {
 		mock.Anything,
 	).Return(backupHandler, nil)
 
-	err := handler.runFullBackupInternal(context.Background(), time.Now())
+	handler.runFullBackup(context.Background(), time.Now())
 
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), expectedErr.Error())
 	clientManager.AssertExpectations(t)
 	backupService.AssertExpectations(t)
 	backupHandler.AssertExpectations(t)
