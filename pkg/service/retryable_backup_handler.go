@@ -46,7 +46,7 @@ func newRetryableBackupHandler(
 
 	// Start the backup process with retries
 	go func() {
-		h.errCh <- retry.retry(processBackup)
+		h.errCh <- retry.retry("backup", processBackup)
 	}()
 
 	return h
