@@ -31,13 +31,11 @@ func newRetryableBackupHandler(
 			return fmt.Errorf("failed to start backup: %w", err)
 		}
 
-		// Store the handler safely
-		h.Lock()
-		h.handler = handler
-		h.Unlock()
+		h.setHandler(handler)
 
 		if err = handler.Wait(ctx); err != nil {
 			onFail(ctx)
+			h.setHandler(nil)
 			return fmt.Errorf("backup failed: %w", err)
 		}
 
@@ -50,6 +48,12 @@ func newRetryableBackupHandler(
 	}()
 
 	return h
+}
+
+func (h *RetryableBackupHandler) setHandler(handler BackupHandler) {
+	h.Lock()
+	defer h.Unlock()
+	h.handler = handler
 }
 
 func (h *RetryableBackupHandler) Wait(ctx context.Context) error {
