@@ -7,14 +7,21 @@ import (
 )
 
 func currentBackupStatus(handlers map[string]BackupHandler) *model.RunningJob {
-	if len(handlers) == 0 {
-		return nil
-	}
+	activeHandlers := 0
 
 	var total, done uint64
 	for _, handler := range handlers {
+		if handler.GetStats() == nil {
+			continue
+		}
+
+		activeHandlers++
 		done += handler.GetStats().GetReadRecords()
 		total += handler.GetStats().TotalRecords
+	}
+
+	if activeHandlers == 0 {
+		return nil
 	}
 
 	// These are the backups of multiple namespaces in the same routine.
