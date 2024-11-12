@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/aerospike/backup-go/models"
@@ -27,8 +28,7 @@ func newRetryableBackupHandler(
 	processBackup := func() error {
 		handler, err := start(ctx)
 		if err != nil {
-			h.errCh <- err
-			return nil // don't retry errors from start function
+			return fmt.Errorf("failed to start backup: %w", err)
 		}
 
 		// Store the handler safely
@@ -38,7 +38,7 @@ func newRetryableBackupHandler(
 
 		if err = handler.Wait(ctx); err != nil {
 			onFail(ctx)
-			return err
+			return fmt.Errorf("backup failed: %w", err)
 		}
 
 		return onSuccess(ctx, handler.GetStats())
