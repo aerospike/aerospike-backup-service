@@ -71,5 +71,6 @@ func (h *RetryableBackupHandler) GetStats() *models.BackupStats {
 	if h.handler != nil {
 		return h.handler.GetStats()
 	}
-	return &models.BackupStats{}
+
+	return nil
 }
