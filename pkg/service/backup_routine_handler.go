@@ -9,6 +9,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 )
@@ -124,11 +125,16 @@ func getNamespacesToBackup(namespaces []string, client backup.AerospikeClient) (
 }
 
 func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time) {
-	if err := h.runFullBackupInternal(ctx, now); err != nil {
+	duration, err := util.MeasureDuration(func() error {
+		return h.runFullBackupInternal(ctx, now)
+	})
+
+	if err != nil {
 		h.logger.Error("Failed running full backup", slog.Any("error", err))
 		backupFailureCounter.Inc()
 	} else {
 		h.logger.Debug("Finished full backup")
+		backupDurationGauge.Set(float64(duration.Milliseconds()))
 		backupCounter.Inc()
 	}
 }
@@ -229,17 +235,12 @@ func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) 
 }
 
 func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context) error {
-	startTime := time.Now()
-
 	var aggregatedErr error
 	for _, handler := range h.fullBackupHandlers {
 		if err := handler.Wait(ctx); err != nil {
 			aggregatedErr = errors.Join(aggregatedErr, err)
 		}
 	}
-
-	durationMs := float64(time.Since(startTime).Milliseconds())
-	backupDurationGauge.Set(durationMs)
 
 	return aggregatedErr
 }
@@ -281,11 +282,15 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 		return
 	}
 
-	if err := h.runIncrementalBackupInternal(ctx, now); err != nil {
+	duration, err := util.MeasureDuration(func() error {
+		return h.runIncrementalBackupInternal(ctx, now)
+	})
+	if err != nil {
 		incrBackupFailureCounter.Inc()
 		h.logger.Error("Failed running incremental backup", slog.Any("error", err))
 	} else {
 		incrBackupCounter.Inc()
+		incrBackupDurationGauge.Set(float64(duration.Milliseconds()))
 		h.logger.Debug("Finished incremental backup")
 	}
 }
@@ -364,7 +369,6 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 func (h *BackupRoutineHandler) waitForIncrementalBackups(
 	ctx context.Context, backupTimestamp time.Time,
 ) error {
-	startTime := time.Now() // startTime is only used to measure backup time
 	var (
 		aggregatedErr error
 		hasBackup     bool
@@ -385,7 +389,6 @@ func (h *BackupRoutineHandler) waitForIncrementalBackups(
 		h.deleteFolder(ctx, getIncrementalTimestampPath(h.routineName, backupTimestamp))
 	}
 
-	incrBackupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))
 	return aggregatedErr
 }
 

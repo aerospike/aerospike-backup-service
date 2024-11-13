@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"slices"
 	"strings"
+	"time"
 )
 
 // Ptr returns a pointer to the given object.
@@ -67,4 +68,10 @@ func MissingElements(subset, superset []string) []string {
 	}
 
 	return missing
+}
+
+func MeasureDuration(f func() error) (time.Duration, error) {
+	startTime := time.Now()
+	err := f()
+	return time.Since(startTime), err
 }
