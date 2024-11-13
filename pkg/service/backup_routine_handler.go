@@ -236,9 +236,9 @@ func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) 
 
 func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context) error {
 	var aggregatedErr error
-	for _, handler := range h.fullBackupHandlers {
+	for ns, handler := range h.fullBackupHandlers {
 		if err := handler.Wait(ctx); err != nil {
-			aggregatedErr = errors.Join(aggregatedErr, err)
+			aggregatedErr = errors.Join(aggregatedErr, fmt.Errorf("namespace %s: %w", ns, err))
 		}
 	}
 
@@ -373,10 +373,10 @@ func (h *BackupRoutineHandler) waitForIncrementalBackups(
 		aggregatedErr error
 		hasBackup     bool
 	)
-	for _, handler := range h.incrBackupHandlers {
+	for ns, handler := range h.incrBackupHandlers {
 		err := handler.Wait(ctx)
 		if err != nil {
-			aggregatedErr = errors.Join(aggregatedErr, err)
+			aggregatedErr = errors.Join(aggregatedErr, fmt.Errorf("namespace %s: %w", ns, err))
 			continue
 		}
 		if handler.GetStats() != nil && !handler.GetStats().IsEmpty() {
