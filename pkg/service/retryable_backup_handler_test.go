@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
 	"testing"
 	"time"
 
@@ -99,12 +100,15 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 
 	successCount := 0
 	failureCount := 0
+	var mu sync.Mutex
 
 	start := func(_ context.Context) (BackupHandler, error) {
 		return mockHandler, nil
 	}
 
 	onFail := func(_ context.Context) {
+		mu.Lock()
+		defer mu.Unlock()
 		failureCount++
 	}
 
@@ -120,6 +124,9 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	cancel()
 
 	err := handler.Wait(ctx)
+
+	mu.Lock()
+	defer mu.Unlock()
 
 	assert.ErrorIs(t, err, context.Canceled)
 	assert.Equal(t, 0, failureCount)
