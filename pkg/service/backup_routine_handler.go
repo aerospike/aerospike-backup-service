@@ -192,7 +192,7 @@ func (h *BackupRoutineHandler) startNamespaceBackup(
 	ctx context.Context, namespace string, now time.Time, client *backup.Client,
 ) BackupHandler {
 	backupFolder := getFullPath(h.routineName, h.backupFullPolicy, namespace, now)
-	timebounds := h.createTimebounds(now)
+	timebounds := h.createTimebounds(true, now)
 
 	return startBackup(
 		ctx,
@@ -211,11 +211,21 @@ func (h *BackupRoutineHandler) startNamespaceBackup(
 	)
 }
 
-func (h *BackupRoutineHandler) createTimebounds(now time.Time) model.TimeBounds {
-	if h.backupFullPolicy.IsSealed() {
-		return *model.NewTimeBoundsTo(now)
+func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) model.TimeBounds {
+	var (
+		fromTime *time.Time
+		toTime   *time.Time
+	)
+
+	if !fullBackup {
+		fromTime = &h.state.LastFullRun
 	}
-	return model.TimeBounds{}
+
+	if h.backupFullPolicy.IsSealed() {
+		toTime = &now
+	}
+
+	return model.TimeBounds{FromTime: fromTime, ToTime: toTime}
 }
 
 func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context) error {
@@ -267,6 +277,7 @@ func (h *BackupRoutineHandler) deleteFolder(ctx context.Context, path string) {
 
 func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now time.Time) {
 	if h.skipIncrementalBackup() {
+		incrBackupSkippedCounter.Inc()
 		return
 	}
 
@@ -355,19 +366,11 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 	return nil
 }
 
-func (h *BackupRoutineHandler) createIncremenralTimeBounds(now time.Time) *model.TimeBounds {
-	timebounds := model.NewTimeBoundsFrom(h.state.LastRun())
-	if h.backupFullPolicy.IsSealed() {
-		timebounds.ToTime = &now
-	}
-	return timebounds
-}
-
 func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 	ctx context.Context, namespace string, now time.Time, client *backup.Client,
 ) BackupHandler {
 	backupFolder := getIncrementalPathForNamespace(h.routineName, namespace, now)
-	timebounds := h.createIncremenralTimeBounds(now)
+	timebounds := h.createTimebounds(false, now)
 
 	return startBackup(
 		ctx,
@@ -375,7 +378,7 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 		func(ctx context.Context) (BackupHandler, error) { // start backup.
 			return h.backupService.BackupRun(ctx,
 				h.backupRoutine, h.backupIncrPolicy, client, h.storage, h.secretAgent,
-				*timebounds, namespace, backupFolder)
+				timebounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) { // on fail.
 			h.deleteFolder(ctx, backupFolder)
