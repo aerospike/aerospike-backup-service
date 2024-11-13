@@ -224,7 +224,8 @@ func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) 
 	)
 
 	if !fullBackup {
-		fromTime = &h.state.LastFullRun
+		lastRun := h.state.LastRun()
+		fromTime = &lastRun
 	}
 
 	if h.backupFullPolicy.IsSealed() {
