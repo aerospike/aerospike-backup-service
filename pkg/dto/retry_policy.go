@@ -59,3 +59,14 @@ func (r *RetryPolicy) ToModel() *models.RetryPolicy {
 		MaxRetries:  uint(r.MaxRetries),
 	}
 }
+func newRetryPolicyFromModel(m *models.RetryPolicy) *RetryPolicy {
+	if m == nil {
+		return nil
+	}
+
+	return &RetryPolicy{
+		BaseTimeout: m.BaseTimeout.Milliseconds(),
+		Multiplier:  m.Multiplier,
+		MaxRetries:  int(m.MaxRetries),
+	}
+}

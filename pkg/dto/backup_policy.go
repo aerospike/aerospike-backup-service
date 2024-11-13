@@ -30,10 +30,9 @@ type BackupPolicy struct {
 	SocketTimeout *int32 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
 	TotalTimeout *int32 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`
-	// Maximum number of retries before aborting the current transaction.
-	MaxRetries *int32 `yaml:"max-retries,omitempty" json:"max-retries,omitempty" example:"3"`
-	// RetryDelay defines the delay in milliseconds before retrying a failed operation.
-	RetryDelay *int32 `yaml:"retry-delay,omitempty" json:"retry-delay,omitempty" example:"500"`
+	// RetryPolicy defines the configuration for retry attempts in case of failures.
+	// If nil, default policy is used.
+	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Whether to clear the output directory (default: KeepAll).
 	RemoveFiles *RemoveFilesType `yaml:"remove-files,omitempty" json:"remove-files,omitempty" enums:"KeepAll,RemoveAll,RemoveIncremental"`
 	// Do not back up any record data (metadata or bin data).
@@ -89,11 +88,8 @@ func (p *BackupPolicy) Validate() error {
 	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
 		return fmt.Errorf("totalTimeout %d invalid, should be positive number", *p.TotalTimeout)
 	}
-	if p.MaxRetries != nil && *p.MaxRetries < 0 {
-		return fmt.Errorf("maxRetries %d invalid, should be positive number", *p.MaxRetries)
-	}
-	if p.RetryDelay != nil && *p.RetryDelay < 0 {
-		return fmt.Errorf("retryDelay %d invalid, should be positive number", *p.RetryDelay)
+	if err := p.RetryPolicy.Validate(); err != nil {
+		return fmt.Errorf("retryPolicy validation failed: %w", err)
 	}
 	if p.Bandwidth != nil && *p.Bandwidth <= 0 {
 		return fmt.Errorf("bandwidth %d invalid, should be positive number", *p.Bandwidth)
@@ -122,8 +118,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		Parallel:          p.Parallel,
 		SocketTimeout:     p.SocketTimeout,
 		TotalTimeout:      p.TotalTimeout,
-		MaxRetries:        p.MaxRetries,
-		RetryDelay:        p.RetryDelay,
+		RetryPolicy:       p.RetryPolicy.ToModel(),
 		RemoveFiles:       (*model.RemoveFilesType)(p.RemoveFiles),
 		NoRecords:         p.NoRecords,
 		NoIndexes:         p.NoIndexes,
@@ -151,8 +146,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.Parallel = m.Parallel
 	p.SocketTimeout = m.SocketTimeout
 	p.TotalTimeout = m.TotalTimeout
-	p.MaxRetries = m.MaxRetries
-	p.RetryDelay = m.RetryDelay
+	p.RetryPolicy = newRetryPolicyFromModel(m.RetryPolicy)
 	p.RemoveFiles = (*RemoveFilesType)(m.RemoveFiles)
 	p.NoRecords = m.NoRecords
 	p.NoIndexes = m.NoIndexes

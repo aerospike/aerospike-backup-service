@@ -4,27 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aerospike/backup-go/models"
 	"log/slog"
+	"math"
 	"time"
 )
 
 // RetryService is a service for retrying a function with a specified interval
 // and a maximum number of attempts.
 type RetryService struct {
-	logger        *slog.Logger
-	retryInterval time.Duration
-	maxAttempts   int
+	logger *slog.Logger
+	policy models.RetryPolicy
 }
 
 // NewRetryService returns a new RetryService instance.
-//   - retryInterval is the interval between retry attempts
-//   - maxAttempts is the maximum number of retry attempts
-//   - logger is used for logging retry attempts and errors
-func NewRetryService(retryInterval time.Duration, maxAttempts int, logger *slog.Logger) *RetryService {
+func NewRetryService(policy models.RetryPolicy, logger *slog.Logger) *RetryService {
 	return &RetryService{
-		logger:        logger,
-		retryInterval: retryInterval,
-		maxAttempts:   maxAttempts,
+		logger: logger,
+		policy: policy,
 	}
 }
 
@@ -32,21 +29,23 @@ func NewRetryService(retryInterval time.Duration, maxAttempts int, logger *slog.
 // If all attempts fail, it returns an error.
 func (r *RetryService) retry(label string, f func() error) error {
 	var lastErr error
-	for attempt := 1; attempt <= r.maxAttempts; attempt++ {
+	for attempt := uint(1); attempt <= r.policy.MaxRetries; attempt++ {
 		lastErr = f()
 
 		if lastErr == nil || errors.Is(lastErr, context.Canceled) {
 			return nil // success
 		}
 
-		if attempt < r.maxAttempts { // Log and wait only if there are attempts left
+		retryInterval := time.Duration(float64(r.policy.BaseTimeout.Milliseconds())*math.Pow(r.policy.Multiplier, float64(attempt-1))) * time.Millisecond
+
+		if attempt < r.policy.MaxRetries { // Log and wait only if there are attempts left
 			r.logger.Info("Execution failed, retrying...",
 				slog.String("label", label),
-				slog.Int("attempt", attempt),
-				slog.Int("maxAttempts", r.maxAttempts),
-				slog.Any("retryInterval", r.retryInterval),
+				slog.Any("attempt", attempt),
+				slog.Any("maxAttempts", r.policy.MaxRetries),
+				slog.Any("retryInterval", retryInterval),
 				slog.Any("err", lastErr))
-			time.Sleep(r.retryInterval) // wait before the next attempt
+			time.Sleep(retryInterval) // wait before the next attempt
 		}
 	}
 

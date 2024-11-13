@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
+	"github.com/aerospike/backup-go/models"
 )
 
 const (
@@ -23,10 +24,8 @@ type BackupPolicy struct {
 	SocketTimeout *int32
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
 	TotalTimeout *int32
-	// Maximum number of retries before aborting the current transaction.
-	MaxRetries *int32
-	// RetryDelay defines the delay in milliseconds before retrying a failed operation.
-	RetryDelay *int32
+	// RetryPolicy defines the configuration for retry attempts in case of failures.
+	RetryPolicy *models.RetryPolicy
 	// Whether to clear the output directory (default: KeepAll).
 	RemoveFiles *RemoveFilesType
 	// Do not back up any record data (metadata or bin data).
@@ -54,24 +53,6 @@ type BackupPolicy struct {
 	Sealed *bool
 }
 
-// GetMaxRetriesOrDefault returns the value of the MaxRetries property.
-// If the property is not set, it returns the default value.
-func (p *BackupPolicy) GetMaxRetriesOrDefault() int32 {
-	if p.MaxRetries != nil {
-		return *p.MaxRetries
-	}
-	return defaultConfig.backupPolicy.maxRetries
-}
-
-// GetRetryDelayOrDefault returns the value of the RetryDelay property.
-// If the property is not set, it returns the default value.
-func (p *BackupPolicy) GetRetryDelayOrDefault() int32 {
-	if p.RetryDelay != nil {
-		return *p.RetryDelay
-	}
-	return defaultConfig.backupPolicy.retryDelay
-}
-
 // IsSealed returns the value of the Sealed property.
 // If the property is not set, it returns the default value.
 func (p *BackupPolicy) IsSealed() bool {
@@ -88,8 +69,7 @@ func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
 		Parallel:         p.Parallel,
 		SocketTimeout:    p.SocketTimeout,
 		TotalTimeout:     p.TotalTimeout,
-		MaxRetries:       p.MaxRetries,
-		RetryDelay:       p.RetryDelay,
+		RetryPolicy:      p.RetryPolicy,
 		RemoveFiles:      p.RemoveFiles,
 		NoRecords:        p.NoRecords,
 		NoIndexes:        util.Ptr(true),
