@@ -115,16 +115,11 @@ func setupTestHandler(
 
 func TestRunFullBackupInternal_Success(t *testing.T) {
 	backupService := new(mockBackupService)
-	clientManager := new(mockClientManager)
+	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
-
-	// Setup mocks
-	client := &backup.Client{}
-	clientManager.On("GetClient", mock.Anything).Return(client, nil)
-	clientManager.On("Close", client).Return()
 
 	backupHandler := new(mockBackupHandler)
 	backupHandler.On("Wait", mock.Anything).Return(nil)
@@ -177,15 +172,11 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 
 func TestRunFullBackupInternal_WaitError(t *testing.T) {
 	backupService := new(mockBackupService)
-	clientManager := new(mockClientManager)
+	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
-
-	client := &backup.Client{}
-	clientManager.On("GetClient", mock.Anything).Return(client, nil)
-	clientManager.On("Close", client).Return()
 
 	backupHandler := new(mockBackupHandler)
 	expectedErr := errors.New("wait error")
@@ -212,7 +203,7 @@ func TestRunFullBackupInternal_WaitError(t *testing.T) {
 
 func TestRunIncrementalBackup_NoFullBackupYet(t *testing.T) {
 	backupService := new(mockBackupService)
-	clientManager := new(mockClientManager)
+	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
 
@@ -227,7 +218,7 @@ func TestRunIncrementalBackup_NoFullBackupYet(t *testing.T) {
 
 func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
 	backupService := new(mockBackupService)
-	clientManager := new(mockClientManager)
+	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
 
@@ -246,7 +237,7 @@ func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
 
 func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
 	backupService := new(mockBackupService)
-	clientManager := new(mockClientManager)
+	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
 
@@ -285,7 +276,7 @@ func TestRunIncrementalBackup_ClientError(t *testing.T) {
 
 func TestRunIncrementalBackup_Success(t *testing.T) {
 	backupService := new(mockBackupService)
-	clientManager := new(mockClientManager)
+	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
 
@@ -295,10 +286,6 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	handler.state = &model.BackupState{
 		LastFullRun: lastRun,
 	}
-
-	client := &backup.Client{}
-	clientManager.On("GetClient", mock.Anything).Return(client, nil)
-	clientManager.On("Close", client).Return()
 
 	backupHandler := new(mockBackupHandler)
 	stats := &models.BackupStats{}
@@ -342,4 +329,67 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	backupService.AssertExpectations(t)
 	backupHandler.AssertExpectations(t)
 	assert.Equal(t, now, handler.state.LastIncrRun)
+}
+
+func TestRunFullBackup_PartialFailure(t *testing.T) {
+	backupService := new(mockBackupService)
+	metadataWriter := new(mockMetadataWriter)
+	configWriter := new(mockClusterConfigWriter)
+	clientManager := clientManagerMock()
+
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+
+	successHandler := new(mockBackupHandler)
+	successHandler.On("Wait", mock.Anything).Return(nil)
+	successHandler.On("GetStats").Return(&models.BackupStats{})
+
+	failHandler := new(mockBackupHandler)
+	failHandler.On("Wait", mock.Anything).Return(errors.New("failed backup for namespace2"))
+
+	// Set up BackupRun calls for namespaces
+	backupService.On("BackupRun",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		"ns1",
+		mock.Anything,
+	).Return(successHandler, nil).Once()
+
+	backupService.On("BackupRun",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		"ns2",
+		mock.Anything,
+	).Return(failHandler, nil).Once()
+
+	metadataWriter.On("WriteBackupMetadata",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(nil).Times(1) // Only for ns1
+
+	// Run full backup and expect an error for one of the namespaces
+	handler.runFullBackup(context.Background(), time.Now())
+
+	// Assertions
+	successHandler.AssertExpectations(t)
+	failHandler.AssertExpectations(t)
+	backupService.AssertExpectations(t)
+}
+
+func clientManagerMock() *mockClientManager {
+	client := &backup.Client{}
+	clientManager := new(mockClientManager)
+	clientManager.On("GetClient", mock.Anything).Return(client, nil)
+	clientManager.On("Close", client).Return()
+	return clientManager
 }
