@@ -27,9 +27,9 @@ type RetryExecutor struct {
 }
 
 // NewRetryExecutor returns a new RetryExecutor instance.
-//   - retryInterval is the interval between run attempts
-//   - maxAttempts is the maximum number of run attempts
-//   - logger is used for logging run attempts and errors
+//   - retryInterval is the interval between retry attempts
+//   - maxAttempts is the maximum number of retry attempts
+//   - logger is used for logging retry attempts and errors
 func NewRetryExecutor(retryInterval time.Duration, maxAttempts int, logger *slog.Logger) Executor {
 	return &RetryExecutor{
 		logger:        logger,

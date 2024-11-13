@@ -27,7 +27,7 @@ func startBackup(
 		errCh: make(chan error, 1),
 	}
 
-	// Helper to run onSuccess only
+	// Helper to retry onSuccess only
 	retryOnSuccess := func(handler BackupHandler) error {
 		err := retry.run("write metadata", func() error {
 			return onSuccess(ctx, handler.GetStats())
