@@ -130,7 +130,7 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 	})
 
 	if err != nil {
-		h.logger.Error("Failed running full backup", slog.Any("error", err))
+		h.logger.Error("Full backup failed", slog.Any("error", err))
 		backupFailureCounter.Inc()
 	} else {
 		h.logger.Debug("Finished full backup")
@@ -288,7 +288,7 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 	})
 	if err != nil {
 		incrBackupFailureCounter.Inc()
-		h.logger.Error("Failed running incremental backup", slog.Any("error", err))
+		h.logger.Error("Incremental backup failed", slog.Any("error", err))
 	} else {
 		incrBackupCounter.Inc()
 		incrBackupDurationGauge.Set(float64(duration.Milliseconds()))
