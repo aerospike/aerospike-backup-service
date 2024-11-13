@@ -8,11 +8,13 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-type RetryableBackupHandler struct {
+type retryableBackupHandler struct {
 	sync.RWMutex
 	handler BackupHandler
 	errCh   chan error
 }
+
+var _ BackupHandler = (*retryableBackupHandler)(nil)
 
 func startRetryableBackup(
 	ctx context.Context,
@@ -21,7 +23,7 @@ func startRetryableBackup(
 	onFail func(ctx context.Context),
 	onSuccess func(ctx context.Context, stats *models.BackupStats) error,
 ) BackupHandler {
-	h := &RetryableBackupHandler{
+	h := &retryableBackupHandler{
 		errCh: make(chan error, 1),
 	}
 
@@ -50,13 +52,13 @@ func startRetryableBackup(
 	return h
 }
 
-func (h *RetryableBackupHandler) setHandler(handler BackupHandler) {
+func (h *retryableBackupHandler) setHandler(handler BackupHandler) {
 	h.Lock()
 	defer h.Unlock()
 	h.handler = handler
 }
 
-func (h *RetryableBackupHandler) Wait(ctx context.Context) error {
+func (h *retryableBackupHandler) Wait(ctx context.Context) error {
 	select {
 	case err := <-h.errCh:
 		return err
@@ -65,7 +67,7 @@ func (h *RetryableBackupHandler) Wait(ctx context.Context) error {
 	}
 }
 
-func (h *RetryableBackupHandler) GetStats() *models.BackupStats {
+func (h *retryableBackupHandler) GetStats() *models.BackupStats {
 	h.RLock()
 	defer h.RUnlock()
 	if h.handler != nil {

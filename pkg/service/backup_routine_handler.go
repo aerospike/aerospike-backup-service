@@ -129,7 +129,7 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 		return
 	}
 
-	client, namespaces, err := h.prepareCluster()
+	client, namespaces, err := h.prepareClusterWithRetries()
 	if err != nil {
 		return
 	}
@@ -161,9 +161,12 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 }
 
-func (h *BackupRoutineHandler) prepareCluster() (*backup.Client, []string, error) {
-	var client *backup.Client
-	var namespaces []string
+func (h *BackupRoutineHandler) prepareClusterWithRetries() (*backup.Client, []string, error) {
+	var (
+		client     *backup.Client
+		namespaces []string
+	)
+
 	err := h.retry.retry("cluster connection", func() error {
 		var err error
 		client, err = h.clientManager.GetClient(h.backupRoutine.SourceCluster)
