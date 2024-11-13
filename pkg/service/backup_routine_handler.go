@@ -307,41 +307,6 @@ func (h *BackupRoutineHandler) skipIncrementalBackup() bool {
 	return false
 }
 
-func (h *BackupRoutineHandler) waitForIncrementalBackups(
-	ctx context.Context, backupTimestamp time.Time,
-) error {
-	startTime := time.Now() // startTime is only used to measure backup time
-	var (
-		aggregatedErr error
-		hasBackup     bool
-	)
-	for _, handler := range h.incrBackupHandlers {
-		err := handler.Wait(ctx)
-		if err != nil {
-			aggregatedErr = errors.Join(aggregatedErr, err)
-			continue
-		}
-		if handler.GetStats() != nil && !handler.GetStats().IsEmpty() {
-			hasBackup = true
-		}
-	}
-
-	if !hasBackup {
-		// No backup data was written, we should delete the root folder.
-		h.deleteFolder(ctx, getIncrementalTimestampPath(h.routineName, backupTimestamp))
-	}
-
-	incrBackupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))
-	return aggregatedErr
-}
-
-func (h *BackupRoutineHandler) GetCurrentStat() *model.CurrentBackups {
-	return &model.CurrentBackups{
-		Full:        currentBackupStatus(h.fullBackupHandlers),
-		Incremental: currentBackupStatus(h.incrBackupHandlers),
-	}
-}
-
 func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context, now time.Time) error {
 	client, namespaces, err := h.prepareCluster(&SimpleExecutor{})
 	if err != nil {
@@ -394,4 +359,39 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 			return h.writeBackupMetadata(ctx, stats, now, namespace, backupFolder)
 		},
 	)
+}
+
+func (h *BackupRoutineHandler) waitForIncrementalBackups(
+	ctx context.Context, backupTimestamp time.Time,
+) error {
+	startTime := time.Now() // startTime is only used to measure backup time
+	var (
+		aggregatedErr error
+		hasBackup     bool
+	)
+	for _, handler := range h.incrBackupHandlers {
+		err := handler.Wait(ctx)
+		if err != nil {
+			aggregatedErr = errors.Join(aggregatedErr, err)
+			continue
+		}
+		if handler.GetStats() != nil && !handler.GetStats().IsEmpty() {
+			hasBackup = true
+		}
+	}
+
+	if !hasBackup {
+		// No backup data was written, we should delete the root folder.
+		h.deleteFolder(ctx, getIncrementalTimestampPath(h.routineName, backupTimestamp))
+	}
+
+	incrBackupDurationGauge.Set(float64(time.Since(startTime).Milliseconds()))
+	return aggregatedErr
+}
+
+func (h *BackupRoutineHandler) GetCurrentStat() *model.CurrentBackups {
+	return &model.CurrentBackups{
+		Full:        currentBackupStatus(h.fullBackupHandlers),
+		Incremental: currentBackupStatus(h.incrBackupHandlers),
+	}
 }
