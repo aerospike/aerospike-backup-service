@@ -24,15 +24,15 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	successCount := 0
 	failureCount := 0
 
-	start := func(ctx context.Context) (BackupHandler, error) {
+	start := func(_ context.Context) (BackupHandler, error) {
 		return mockHandler, nil
 	}
 
-	onFail := func(ctx context.Context) {
+	onFail := func(_ context.Context) {
 		failureCount++
 	}
 
-	onSuccess := func(ctx context.Context, stats *models.BackupStats) error {
+	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
 		successCount++
 		return nil
 	}
@@ -60,7 +60,7 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	successCount := 0
 	failureCount := 0
 
-	start := func(ctx context.Context) (BackupHandler, error) {
+	start := func(_ context.Context) (BackupHandler, error) {
 		attemptCount++
 		if attemptCount == 1 {
 			return failedHandler, nil
@@ -68,11 +68,11 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 		return successHandler, nil
 	}
 
-	onFail := func(ctx context.Context) {
+	onFail := func(_ context.Context) {
 		failureCount++
 	}
 
-	onSuccess := func(ctx context.Context, stats *models.BackupStats) error {
+	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
 		successCount++
 		return nil
 	}
@@ -92,7 +92,7 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	mockHandler := &mockBackupHandler{}
 
 	waitCalled := make(chan struct{})
-	mockHandler.On("Wait", mock.Anything).Run(func(args mock.Arguments) {
+	mockHandler.On("Wait", mock.Anything).Run(func(_ mock.Arguments) {
 		close(waitCalled)
 		<-ctx.Done()
 	}).Return(context.Canceled)
@@ -100,15 +100,15 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	successCount := 0
 	failureCount := 0
 
-	start := func(ctx context.Context) (BackupHandler, error) {
+	start := func(_ context.Context) (BackupHandler, error) {
 		return mockHandler, nil
 	}
 
-	onFail := func(ctx context.Context) {
+	onFail := func(_ context.Context) {
 		failureCount++
 	}
 
-	onSuccess := func(ctx context.Context, stats *models.BackupStats) error {
+	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
 		successCount++
 		return nil
 	}
@@ -135,15 +135,15 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	successCount := 0
 	failureCount := 0
 
-	start := func(ctx context.Context) (BackupHandler, error) {
+	start := func(_ context.Context) (BackupHandler, error) {
 		return mockHandler, nil
 	}
 
-	onFail := func(ctx context.Context) {
+	onFail := func(_ context.Context) {
 		failureCount++
 	}
 
-	onSuccess := func(ctx context.Context, stats *models.BackupStats) error {
+	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
 		successCount++
 		return nil
 	}
@@ -163,15 +163,15 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 	successCount := 0
 	failureCount := 0
 
-	start := func(ctx context.Context) (BackupHandler, error) {
+	start := func(_ context.Context) (BackupHandler, error) {
 		return nil, errors.New("start failed")
 	}
 
-	onFail := func(ctx context.Context) {
+	onFail := func(_ context.Context) {
 		failureCount++
 	}
 
-	onSuccess := func(ctx context.Context, stats *models.BackupStats) error {
+	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
 		successCount++
 		return nil
 	}
