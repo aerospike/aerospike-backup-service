@@ -6,15 +6,18 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 const timeout = 100 * time.Millisecond
 
+var r = NewRetryService(timeout, 3, slog.Default())
+
 func Test_timer(t *testing.T) {
-	r := NewRetryService(slog.Default())
 	counterLock := sync.Mutex{}
 	retryCounter := 2
-	r.retry(func() error {
+	err := r.retry("test", func() error {
 		counterLock.Lock()
 		defer counterLock.Unlock()
 		if retryCounter > 0 {
@@ -22,7 +25,8 @@ func Test_timer(t *testing.T) {
 			return errors.New("mock error")
 		}
 		return nil
-	}, timeout, 3)
+	})
+	require.NoError(t, err)
 
 	time.Sleep(1 * time.Second)
 	counterLock.Lock()
@@ -33,16 +37,15 @@ func Test_timer(t *testing.T) {
 }
 
 func Test_timer_expires(t *testing.T) {
-	r := NewRetryService(slog.Default())
 	counterLock := sync.Mutex{}
 	retryCounter := 0
 	const attempts = 3
-	r.retry(func() error {
+	_ = r.retry("test", func() error {
 		counterLock.Lock()
 		defer counterLock.Unlock()
 		retryCounter++
 		return errors.New("mock error")
-	}, timeout, attempts-1)
+	})
 
 	time.Sleep(1 * time.Second)
 	counterLock.Lock()
@@ -53,7 +56,6 @@ func Test_timer_expires(t *testing.T) {
 }
 
 func Test_timerRunTwice(t *testing.T) {
-	r := NewRetryService(slog.Default())
 	counterLock := sync.Mutex{}
 	retryCounter := 3
 	f := func() error {
@@ -65,8 +67,8 @@ func Test_timerRunTwice(t *testing.T) {
 		}
 		return nil
 	}
-	r.retry(f, timeout, 3)
-	r.retry(f, timeout, 3)
+	_ = r.retry("test", f)
+	_ = r.retry("test", f)
 
 	time.Sleep(1 * time.Second)
 	counterLock.Lock()
