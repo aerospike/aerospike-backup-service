@@ -27,6 +27,20 @@ func startRetryableBackup(
 		errCh: make(chan error, 1),
 	}
 
+	// Helper to retry onSuccess only
+	retryOnSuccess := func(handler BackupHandler) error {
+		err := retry.retry("write metadata", func() error {
+			return onSuccess(ctx, handler.GetStats())
+		})
+		if err != nil {
+			// Trigger onFail if onSuccess ultimately fails
+			onFail(ctx)
+		}
+
+		return err
+	}
+
+	// Process backup function.
 	processBackup := func() error {
 		handler, err := start(ctx)
 		if err != nil {
@@ -41,7 +55,7 @@ func startRetryableBackup(
 			return fmt.Errorf("backup failed: %w", err)
 		}
 
-		return onSuccess(ctx, handler.GetStats())
+		return retryOnSuccess(handler)
 	}
 
 	// Start the backup process with retries
