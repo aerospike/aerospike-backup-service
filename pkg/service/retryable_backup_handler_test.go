@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-var retry = NewRetryService(time.Millisecond, 3, slog.Default())
+var retry = NewRetryExecutor(time.Millisecond, 3, slog.Default())
 
 func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	ctx := context.Background()
@@ -38,7 +38,7 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 		return nil
 	}
 
-	handler := startRetryableBackup(ctx, retry, start, onFail, onSuccess)
+	handler := startBackup(ctx, retry, start, onFail, onSuccess)
 	err := handler.Wait(ctx)
 
 	assert.NoError(t, err)
@@ -78,7 +78,7 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 		return nil
 	}
 
-	handler := startRetryableBackup(ctx, retry, start, onFail, onSuccess)
+	handler := startBackup(ctx, retry, start, onFail, onSuccess)
 	err := handler.Wait(ctx)
 
 	assert.NoError(t, err)
@@ -117,7 +117,7 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 		return nil
 	}
 
-	handler := startRetryableBackup(ctx, retry, start, onFail, onSuccess)
+	handler := startBackup(ctx, retry, start, onFail, onSuccess)
 
 	<-waitCalled
 
@@ -155,7 +155,7 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 		return nil
 	}
 
-	handler := startRetryableBackup(ctx, retry, start, onFail, onSuccess)
+	handler := startBackup(ctx, retry, start, onFail, onSuccess)
 	err := handler.Wait(ctx)
 
 	assert.Error(t, err)
@@ -183,7 +183,7 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 		return nil
 	}
 
-	handler := startRetryableBackup(ctx, retry, start, onFail, onSuccess)
+	handler := startBackup(ctx, retry, start, onFail, onSuccess)
 	err := handler.Wait(ctx)
 
 	assert.Error(t, err)

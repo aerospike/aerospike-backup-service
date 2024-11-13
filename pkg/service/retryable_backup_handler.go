@@ -16,9 +16,9 @@ type retryableBackupHandler struct {
 
 var _ BackupHandler = (*retryableBackupHandler)(nil)
 
-func startRetryableBackup(
+func startBackup(
 	ctx context.Context,
-	retry *RetryService,
+	retry Executor,
 	start func(ctx context.Context) (BackupHandler, error),
 	onFail func(ctx context.Context),
 	onSuccess func(ctx context.Context, stats *models.BackupStats) error,
@@ -27,9 +27,9 @@ func startRetryableBackup(
 		errCh: make(chan error, 1),
 	}
 
-	// Helper to retry onSuccess only
+	// Helper to run onSuccess only
 	retryOnSuccess := func(handler BackupHandler) error {
-		err := retry.retry("write metadata", func() error {
+		err := retry.run("write metadata", func() error {
 			return onSuccess(ctx, handler.GetStats())
 		})
 		if err != nil {
@@ -60,7 +60,7 @@ func startRetryableBackup(
 
 	// Start the backup process with retries
 	go func() {
-		h.errCh <- retry.retry("backup", processBackup)
+		h.errCh <- retry.run("backup", processBackup)
 	}()
 
 	return h

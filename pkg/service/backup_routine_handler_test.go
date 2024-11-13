@@ -109,7 +109,7 @@ func setupTestHandler(
 		state:              &model.BackupState{},
 		storage:            &model.LocalStorage{Path: "/tmp"},
 		logger:             slog.Default(),
-		retry:              NewRetryService(0, 1, slog.Default()),
+		retry:              NewRetryExecutor(0, 1, slog.Default()),
 	}
 }
 
