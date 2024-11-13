@@ -124,14 +124,18 @@ func getNamespacesToBackup(namespaces []string, client backup.AerospikeClient) (
 }
 
 func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time) {
-	if len(h.fullBackupHandlers) > 0 {
-		h.logger.Info("Full backup is currently in progress, skipping full backup")
-		return
+	if err := h.runFullBackupInternal(ctx, now); err != nil {
+		h.logger.Error("failed running full backup", slog.Any("error", err))
+		backupFailureCounter.Inc()
+	} else {
+		backupCounter.Inc()
 	}
+}
 
+func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now time.Time) error {
 	client, namespaces, err := h.prepareClusterWithRetries()
 	if err != nil {
-		return
+		return err
 	}
 
 	defer func() {
@@ -145,11 +149,8 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 
 	err = h.waitForFullBackups(ctx)
 	if err != nil {
-		return
+		return err
 	}
-
-	// increment backupCounter metric
-	backupCounter.Inc()
 
 	// update the state
 	h.state.SetLastFullRun(now)
@@ -159,6 +160,8 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 	}
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
+
+	return nil
 }
 
 func (h *BackupRoutineHandler) prepareClusterWithRetries() (*backup.Client, []string, error) {

@@ -12,7 +12,7 @@ var (
 	backupCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_runs_total",
-			Help: "Backup runs counter.",
+			Help: "Successful backup runs counter",
 		})
 	// a counter metric for incremental backup run number
 	incrBackupCounter = prometheus.NewCounter(
