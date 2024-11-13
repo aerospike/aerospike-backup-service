@@ -333,6 +333,7 @@ func (h *BackupRoutineHandler) startIncrementalBackupForAllNamespaces(
 			h.logger.Warn("could not start backup",
 				slog.String("namespace", namespace),
 				slog.Any("err", err))
+			h.deleteFolder(ctx, backupFolder)
 			continue
 		}
 		h.incrBackupHandlers[namespace] = handler
