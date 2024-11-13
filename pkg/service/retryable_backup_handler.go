@@ -14,13 +14,13 @@ type RetryableBackupHandler struct {
 	errCh   chan error
 }
 
-func newRetryableBackupHandler(
+func startRetryableBackup(
 	ctx context.Context,
 	retry *RetryService,
 	start func(ctx context.Context) (BackupHandler, error),
 	onFail func(ctx context.Context),
 	onSuccess func(ctx context.Context, stats *models.BackupStats) error,
-) *RetryableBackupHandler {
+) BackupHandler {
 	h := &RetryableBackupHandler{
 		errCh: make(chan error, 1),
 	}

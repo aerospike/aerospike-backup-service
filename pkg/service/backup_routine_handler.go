@@ -183,11 +183,11 @@ func (h *BackupRoutineHandler) prepareCluster() (*backup.Client, []string, error
 
 func (h *BackupRoutineHandler) startNamespaceBackup(
 	ctx context.Context, namespace string, now time.Time, client *backup.Client,
-) *RetryableBackupHandler {
+) BackupHandler {
 	backupFolder := getFullPath(h.routineName, h.backupFullPolicy, namespace, now)
 	timebounds := h.createTimebounds(now)
 
-	return newRetryableBackupHandler(
+	return startRetryableBackup(
 		ctx,
 		h.retry,
 		func(ctx context.Context) (BackupHandler, error) { // start backup.
@@ -223,8 +223,11 @@ func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context) error {
 	}
 
 	durationMs := float64(time.Since(startTime).Milliseconds())
-	h.logger.Debug("Finished full backup", slog.Float64("duration_ms", durationMs))
 	backupDurationGauge.Set(durationMs)
+
+	if aggregatedErr == nil {
+		h.logger.Debug("Finished full backup", slog.Float64("duration_ms", durationMs))
+	}
 
 	return aggregatedErr
 }
