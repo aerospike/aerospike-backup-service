@@ -354,8 +354,8 @@ func (h *BackupRoutineHandler) waitForIncrementalBackups(
 		}
 
 		backupFolder := getIncrementalPathForNamespace(h.routineName, namespace, backupTimestamp)
-		// delete if the backup file is empty
-		if handler.GetStats().IsEmpty() {
+		// delete backup files if the backup is empty or failed
+		if err != nil || handler.GetStats().IsEmpty() {
 			h.deleteFolder(ctx, backupFolder)
 			continue
 		}
