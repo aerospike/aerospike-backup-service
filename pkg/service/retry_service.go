@@ -53,5 +53,5 @@ func (r *RetryService) retry(label string, f func() error) error {
 	}
 
 	// If we exhausted all attempts, return an error
-	return fmt.Errorf("%s failed after %d attempts: %w", label, r.policy.MaxRetries, lastErr)
+	return fmt.Errorf("%s failed after %d attempts: %w", label, totalAttempts, lastErr)
 }
