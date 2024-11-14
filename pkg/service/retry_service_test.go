@@ -12,7 +12,7 @@ import (
 )
 
 var r = NewRetryService(models.RetryPolicy{
-	MaxRetries:  5,
+	MaxRetries:  2,
 	BaseTimeout: 100 * time.Millisecond,
 	Multiplier:  1,
 }, slog.Default())
