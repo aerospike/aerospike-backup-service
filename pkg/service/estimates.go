@@ -9,7 +9,10 @@ import (
 func currentBackupStatus(handlers map[string]BackupHandler) *model.RunningJob {
 	activeHandlers := 0
 
-	var total, done uint64
+	var (
+		total, done uint64
+		startTime   time.Time
+	)
 	for _, handler := range handlers {
 		if handler.GetStats() == nil {
 			continue
@@ -18,26 +21,17 @@ func currentBackupStatus(handlers map[string]BackupHandler) *model.RunningJob {
 		activeHandlers++
 		done += handler.GetStats().GetReadRecords()
 		total += handler.GetStats().TotalRecords
+		// These are the backups of multiple namespaces in the same routine.
+		// Therefore, picking any of those is valid, since they started at
+		// the same time.
+		startTime = handler.GetStats().StartTime
 	}
 
-	if activeHandlers == 0 {
+	if activeHandlers == 0 { // no running jobs
 		return nil
 	}
 
-	// These are the backups of multiple namespaces in the same routine.
-	// Therefore, picking any of those is valid, since they started at
-	// the same time.
-	startTime := getAnyHandler(handlers).GetStats().StartTime
-
 	return NewRunningJob(startTime, done, total)
-}
-
-func getAnyHandler(m map[string]BackupHandler) BackupHandler {
-	for _, value := range m {
-		return value
-	}
-
-	return nil
 }
 
 // RestoreJobStatus returns the status of a restore job.
