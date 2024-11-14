@@ -29,15 +29,15 @@ func (r *RetryPolicy) Validate() error {
 	}
 
 	if r.BaseTimeout <= 0 {
-		return fmt.Errorf("base-timeout must be greater than 0")
+		return fmt.Errorf("base-timeout %d invalid, should be positive number", r.BaseTimeout)
 	}
 
 	if r.Multiplier < 1 {
-		return fmt.Errorf("multiplier must be greater or equal than 1")
+		return fmt.Errorf("multiplier %f invalid, must be greater or equal than 1", r.Multiplier)
 	}
 
 	if r.MaxRetries < 0 {
-		return fmt.Errorf("max-retries must be 0 or greater")
+		return fmt.Errorf("max-retries %d invalid, should be non-negative number", r.MaxRetries)
 	}
 
 	return nil
