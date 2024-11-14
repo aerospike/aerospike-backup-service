@@ -34,7 +34,7 @@ services:
       "
 
   aerospike-cluster:
-    image: aerospike/aerospike-server-enterprise:6.4.0.10
+    image: aerospike/aerospike-server-enterprise:7.2.0.3
     container_name: "aerospike-cluster"
     ports:
       - "3000:3000"
@@ -48,7 +48,7 @@ services:
       retries: 3
 
   aerospike-backup-service:
-    image: aerospike.jfrog.io/ecosystem-container-prod-local/aerospike-backup-service:latest
+    image: aerospike.jfrog.io/ecosystem-container-dev-local/aerospike-backup-service:build-latest-1
     container_name: "aerospike-backup-service"
     ports:
       - "8080:8080"
