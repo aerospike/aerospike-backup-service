@@ -26,7 +26,7 @@ type BackupRoutineHandler struct {
 	storage             model.Storage
 	secretAgent         *model.SecretAgent
 	state               *model.BackupState
-	retry               Executor
+	retry               executor
 	clientManager       ClientManager
 	logger              *slog.Logger
 	clusterConfigWriter ClusterConfigWriter
@@ -100,7 +100,7 @@ func newBackupRoutineHandler(
 		storage:          backupStorage,
 		secretAgent:      backupRoutine.SecretAgent,
 		state:            backupBackend.ReadState(),
-		retry: NewRetryExecutor(
+		retry: newRetryExecutor(
 			time.Duration(backupPolicy.GetRetryDelayOrDefault())*time.Millisecond,
 			int(backupPolicy.GetMaxRetriesOrDefault()),
 			logger),
@@ -171,7 +171,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 	return nil
 }
 
-func (h *BackupRoutineHandler) prepareCluster(retry Executor) (*backup.Client, []string, error) {
+func (h *BackupRoutineHandler) prepareCluster(retry executor) (*backup.Client, []string, error) {
 	var (
 		client     *backup.Client
 		namespaces []string
@@ -314,7 +314,7 @@ func (h *BackupRoutineHandler) skipIncrementalBackup() bool {
 }
 
 func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context, now time.Time) error {
-	client, namespaces, err := h.prepareCluster(&SimpleExecutor{})
+	client, namespaces, err := h.prepareCluster(&simpleExecutor{})
 	if err != nil {
 		return err
 	}
@@ -345,7 +345,7 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 
 	return startBackup(
 		ctx,
-		&SimpleExecutor{},
+		&simpleExecutor{},
 		func(ctx context.Context) (BackupHandler, error) { // start backup.
 			return h.backupService.BackupRun(ctx,
 				h.backupRoutine, h.backupIncrPolicy, client, h.storage, h.secretAgent,

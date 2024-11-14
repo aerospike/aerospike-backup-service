@@ -12,7 +12,7 @@ import (
 
 const timeout = 100 * time.Millisecond
 
-var r = NewRetryExecutor(timeout, 3, slog.Default())
+var r = newRetryExecutor(timeout, 3, slog.Default())
 
 func Test_timer(t *testing.T) {
 	counterLock := sync.Mutex{}

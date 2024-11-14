@@ -8,30 +8,32 @@ import (
 	"time"
 )
 
-type Executor interface {
+// executor defines an interface for executing functions with retries.
+// label defines a job, it is only used in logs and error messages.
+type executor interface {
 	run(label string, f func() error) error
 }
 
-type SimpleExecutor struct{}
+type simpleExecutor struct{}
 
-func (e *SimpleExecutor) run(_ string, f func() error) error {
+func (e *simpleExecutor) run(_ string, f func() error) error {
 	return f()
 }
 
-// RetryExecutor is a service for retrying a function with a specified interval
+// retryExecutor is a service for retrying a function with a specified interval
 // and a maximum number of attempts.
-type RetryExecutor struct {
+type retryExecutor struct {
 	logger        *slog.Logger
 	retryInterval time.Duration
 	maxAttempts   int
 }
 
-// NewRetryExecutor returns a new RetryExecutor instance.
+// newRetryExecutor returns a new retryExecutor instance.
 //   - retryInterval is the interval between retry attempts
 //   - maxAttempts is the maximum number of retry attempts
 //   - logger is used for logging retry attempts and errors
-func NewRetryExecutor(retryInterval time.Duration, maxAttempts int, logger *slog.Logger) Executor {
-	return &RetryExecutor{
+func newRetryExecutor(retryInterval time.Duration, maxAttempts int, logger *slog.Logger) executor {
+	return &retryExecutor{
 		logger:        logger,
 		retryInterval: retryInterval,
 		maxAttempts:   maxAttempts,
@@ -40,7 +42,7 @@ func NewRetryExecutor(retryInterval time.Duration, maxAttempts int, logger *slog
 
 // retry attempts to execute the given function up to maxAttempts with the specified retryInterval.
 // If all attempts fail, it returns an error.
-func (r *RetryExecutor) run(label string, f func() error) error {
+func (r *retryExecutor) run(label string, f func() error) error {
 	var lastErr error
 	for attempt := 1; attempt <= r.maxAttempts; attempt++ {
 		lastErr = f()

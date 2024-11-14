@@ -18,7 +18,7 @@ var _ BackupHandler = (*retryableBackupHandler)(nil)
 
 func startBackup(
 	ctx context.Context,
-	retry Executor,
+	retry executor,
 	start func(ctx context.Context) (BackupHandler, error),
 	onFail func(ctx context.Context),
 	onSuccess func(ctx context.Context, stats *models.BackupStats) error,
