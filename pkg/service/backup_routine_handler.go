@@ -96,12 +96,10 @@ func newBackupRoutineHandler(
 		backupIncrPolicy: backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
 		routineName:      routineName,
 		namespaces:       backupRoutine.Namespaces,
-		storage:          backupStorage,
-		secretAgent:      backupRoutine.SecretAgent,
-		state:            backupBackend.ReadState(),
+		storage:          backupStorage, secretAgent: backupRoutine.SecretAgent,
+		state: backupBackend.ReadState(),
 		retry: NewRetryService(
-			time.Duration(backupPolicy.GetRetryDelayOrDefault())*time.Millisecond,
-			int(backupPolicy.GetMaxRetriesOrDefault()),
+			backupPolicy.GetRetryPolicyOrDefault(),
 			logger),
 		fullBackupHandlers: make(map[string]BackupHandler),
 		incrBackupHandlers: make(map[string]BackupHandler),

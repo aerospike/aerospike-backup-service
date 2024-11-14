@@ -7,12 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/require"
 )
 
-const timeout = 100 * time.Millisecond
-
-var r = NewRetryService(timeout, 3, slog.Default())
+var r = NewRetryService(models.RetryPolicy{
+	MaxRetries:  5,
+	BaseTimeout: 100 * time.Millisecond,
+	Multiplier:  1,
+}, slog.Default())
 
 func Test_timer(t *testing.T) {
 	counterLock := sync.Mutex{}

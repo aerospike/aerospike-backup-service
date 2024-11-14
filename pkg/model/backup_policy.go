@@ -81,6 +81,14 @@ func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
 	}
 }
 
+func (p *BackupPolicy) GetRetryPolicyOrDefault() models.RetryPolicy {
+	if p.RetryPolicy == nil {
+		return defaultConfig.backupPolicy.retryPolicy
+	}
+
+	return *p.RetryPolicy
+}
+
 func (r *RemoveFilesType) RemoveFullBackup() bool {
 	// Full backups are deleted only if RemoveFiles is explicitly set to RemoveAll
 	return r != nil && *r == RemoveAll
