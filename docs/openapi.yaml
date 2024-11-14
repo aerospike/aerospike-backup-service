@@ -1286,15 +1286,14 @@ components:
         bandwidth: 10000
         total-timeout: 2000
         sealed: true
-        max-retries: 3
         remove-files: "{}"
         encryption: "{}"
         parallel: 1
         no-indexes: true
-        retry-delay: 500
         records-per-second: 1000
         compression: "{}"
         file-limit: 1024
+        retry-policy: "{}"
         socket-timeout: 1000
       properties:
         bandwidth:
@@ -1318,10 +1317,6 @@ components:
             File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
             a new backup file will be created.
           example: 1024
-          type: integer
-        max-retries:
-          description: Maximum number of retries before aborting the current transaction.
-          example: 3
           type: integer
         no-indexes:
           description: Do not back up any secondary index definitions.
@@ -1347,11 +1342,13 @@ components:
           - $ref: '#/components/schemas/dto.RemoveFilesType'
           description: "Whether to clear the output directory (default: KeepAll)."
           type: object
-        retry-delay:
-          description: RetryDelay defines the delay in milliseconds before retrying
-            a failed operation.
-          example: 500
-          type: integer
+        retry-policy:
+          allOf:
+          - $ref: '#/components/schemas/dto.RetryPolicy'
+          description: |-
+            RetryPolicy defines the configuration for retry attempts in case of failures.
+            If nil, default policy is used.
+          type: object
         sealed:
           description: |-
             Sealed determines whether backup should include keys updated during the backup process.
@@ -1501,15 +1498,14 @@ components:
             bandwidth: 10000
             total-timeout: 2000
             sealed: true
-            max-retries: 3
             remove-files: "{}"
             encryption: "{}"
             parallel: 1
             no-indexes: true
-            retry-delay: 500
             records-per-second: 1000
             compression: "{}"
             file-limit: 1024
+            retry-policy: "{}"
             socket-timeout: 1000
         aerospike-clusters:
           key:
@@ -2082,11 +2078,11 @@ components:
       description: RetryPolicy defines the configuration for retry attempts in case
         of failures.
       properties:
-        baseTimeout:
+        base-timeout:
           description: "BaseTimeout is the initial delay between retry attempts, in\
             \ milliseconds."
           type: integer
-        maxRetries:
+        max-retries:
           description: |-
             MaxRetries is the maximum number of retry attempts that will be made.
             If set to 0, no retries will be performed.

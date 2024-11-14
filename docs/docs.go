@@ -1632,11 +1632,6 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 1024
                 },
-                "max-retries": {
-                    "description": "Maximum number of retries before aborting the current transaction.",
-                    "type": "integer",
-                    "example": 3
-                },
                 "no-indexes": {
                     "description": "Do not back up any secondary index definitions.",
                     "type": "boolean"
@@ -1672,10 +1667,13 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "retry-delay": {
-                    "description": "RetryDelay defines the delay in milliseconds before retrying a failed operation.",
-                    "type": "integer",
-                    "example": 500
+                "retry-policy": {
+                    "description": "RetryPolicy defines the configuration for retry attempts in case of failures.\nIf nil, default policy is used.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RetryPolicy"
+                        }
+                    ]
                 },
                 "sealed": {
                     "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.",
@@ -2448,11 +2446,11 @@ const docTemplate = `{
             "description": "RetryPolicy defines the configuration for retry attempts in case of failures.",
             "type": "object",
             "properties": {
-                "baseTimeout": {
+                "base-timeout": {
                     "description": "BaseTimeout is the initial delay between retry attempts, in milliseconds.",
                     "type": "integer"
                 },
-                "maxRetries": {
+                "max-retries": {
                     "description": "MaxRetries is the maximum number of retry attempts that will be made.\nIf set to 0, no retries will be performed.",
                     "type": "integer"
                 },

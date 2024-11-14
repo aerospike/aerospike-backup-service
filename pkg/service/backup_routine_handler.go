@@ -101,8 +101,7 @@ func newBackupRoutineHandler(
 		secretAgent:      backupRoutine.SecretAgent,
 		state:            backupBackend.ReadState(),
 		retry: newRetryExecutor(
-			time.Duration(backupPolicy.GetRetryDelayOrDefault())*time.Millisecond,
-			int(backupPolicy.GetMaxRetriesOrDefault()),
+			backupPolicy.GetRetryPolicyOrDefault(),
 			logger),
 		fullBackupHandlers: make(map[string]BackupHandler),
 		incrBackupHandlers: make(map[string]BackupHandler),

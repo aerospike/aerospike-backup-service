@@ -8,9 +8,8 @@ import (
 )
 
 type backupPolicy struct {
-	maxRetries int32
-	retryDelay int32
-	sealed     bool
+	retryPolicy models.RetryPolicy
+	sealed      bool
 }
 
 // defaultConfig represents default configuration values.
@@ -36,8 +35,11 @@ var defaultConfig = struct {
 		StdoutWriter: util.Ptr(true),
 	},
 	backupPolicy: backupPolicy{
-		retryDelay: 60_000, // default retry delay is 1 minute
-		maxRetries: 3,
+		retryPolicy: models.RetryPolicy{
+			BaseTimeout: 1 * time.Minute,
+			MaxRetries:  5,
+			Multiplier:  1,
+		},
 	},
 }
 

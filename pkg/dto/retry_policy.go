@@ -11,7 +11,7 @@ import (
 // @Description RetryPolicy defines the configuration for retry attempts in case of failures.
 type RetryPolicy struct {
 	// BaseTimeout is the initial delay between retry attempts, in milliseconds.
-	BaseTimeout int64 `json:"baseTimeout" yaml:"baseTimeout"`
+	BaseTimeout int64 `json:"base-timeout" yaml:"base-timeout"`
 
 	// Multiplier is used to increase the delay between subsequent retry attempts.
 	// The actual delay is calculated as: BaseTimeout * (Multiplier ^ attemptNumber)
@@ -19,7 +19,7 @@ type RetryPolicy struct {
 
 	// MaxRetries is the maximum number of retry attempts that will be made.
 	// If set to 0, no retries will be performed.
-	MaxRetries int `json:"maxRetries" yaml:"maxRetries"`
+	MaxRetries int `json:"max-retries" yaml:"max-retries"`
 }
 
 // Validate checks if the RetryPolicy fields are valid.
@@ -29,15 +29,15 @@ func (r *RetryPolicy) Validate() error {
 	}
 
 	if r.BaseTimeout <= 0 {
-		return fmt.Errorf("BaseTimeout must be greater than 0")
+		return fmt.Errorf("base-timeout %d invalid, should be positive number", r.BaseTimeout)
 	}
 
 	if r.Multiplier < 1 {
-		return fmt.Errorf("multiplier must be greater or equal than 1")
+		return fmt.Errorf("multiplier %f invalid, must be greater or equal than 1", r.Multiplier)
 	}
 
 	if r.MaxRetries < 0 {
-		return fmt.Errorf("MaxRetries must be 0 or greater")
+		return fmt.Errorf("max-retries %d invalid, should be non-negative number", r.MaxRetries)
 	}
 
 	return nil
@@ -57,5 +57,16 @@ func (r *RetryPolicy) ToModel() *models.RetryPolicy {
 		BaseTimeout: r.GetBaseTimeout(),
 		Multiplier:  r.Multiplier,
 		MaxRetries:  uint(r.MaxRetries),
+	}
+}
+func newRetryPolicyFromModel(m *models.RetryPolicy) *RetryPolicy {
+	if m == nil {
+		return nil
+	}
+
+	return &RetryPolicy{
+		BaseTimeout: m.BaseTimeout.Milliseconds(),
+		Multiplier:  m.Multiplier,
+		MaxRetries:  int(m.MaxRetries),
 	}
 }

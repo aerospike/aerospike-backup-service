@@ -13,7 +13,11 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-var retry = newRetryExecutor(time.Millisecond, 3, slog.Default())
+var retry = newRetryExecutor(models.RetryPolicy{
+	MaxRetries:  2,
+	BaseTimeout: time.Millisecond,
+	Multiplier:  1,
+}, slog.Default())
 
 func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	ctx := context.Background()

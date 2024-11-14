@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+
+	"github.com/aerospike/backup-go/models"
 )
 
 // executor defines an interface for executing functions with retries.
@@ -23,45 +25,45 @@ func (e *simpleExecutor) run(_ string, f func() error) error {
 // retryExecutor is a service for retrying a function with a specified interval
 // and a maximum number of attempts.
 type retryExecutor struct {
-	logger        *slog.Logger
-	retryInterval time.Duration
-	maxAttempts   int
+	logger *slog.Logger
+	policy models.RetryPolicy
 }
 
 // newRetryExecutor returns a new retryExecutor instance.
-//   - retryInterval is the interval between retry attempts
-//   - maxAttempts is the maximum number of retry attempts
-//   - logger is used for logging retry attempts and errors
-func newRetryExecutor(retryInterval time.Duration, maxAttempts int, logger *slog.Logger) executor {
+func newRetryExecutor(policy models.RetryPolicy, logger *slog.Logger) executor {
 	return &retryExecutor{
-		logger:        logger,
-		retryInterval: retryInterval,
-		maxAttempts:   maxAttempts,
+		logger: logger,
+		policy: policy,
 	}
 }
 
 // retry attempts to execute the given function up to maxAttempts with the specified retryInterval.
 // If all attempts fail, it returns an error.
 func (r *retryExecutor) run(label string, f func() error) error {
-	var lastErr error
-	for attempt := 1; attempt <= r.maxAttempts; attempt++ {
-		lastErr = f()
+	var (
+		lastErr       error
+		retryInterval = r.policy.BaseTimeout
+		totalAttempts = r.policy.MaxRetries + 1
+	)
 
+	for attempt := uint(1); attempt <= totalAttempts; attempt++ {
+		lastErr = f()
 		if lastErr == nil || errors.Is(lastErr, context.Canceled) {
 			return nil // success
 		}
 
-		if attempt < r.maxAttempts { // Log and wait only if there are attempts left
+		if attempt < r.policy.MaxRetries { // Log and wait only if there are attempts left
 			r.logger.Info("Execution failed, retrying...",
 				slog.String("label", label),
-				slog.Int("attempt", attempt),
-				slog.Int("maxAttempts", r.maxAttempts),
-				slog.Any("retryInterval", r.retryInterval),
+				slog.Any("attempt", attempt),
+				slog.Any("maxAttempts", r.policy.MaxRetries),
+				slog.Any("retryInterval", retryInterval),
 				slog.Any("err", lastErr))
-			time.Sleep(r.retryInterval) // wait before the next attempt
+			time.Sleep(retryInterval) // wait before the next attempt
+			retryInterval = time.Duration(float64(retryInterval) * r.policy.Multiplier)
 		}
 	}
 
 	// If we exhausted all attempts, return an error
-	return fmt.Errorf("%s failed after %d attempts: %w", label, r.maxAttempts, lastErr)
+	return fmt.Errorf("%s failed after %d attempts: %w", label, totalAttempts, lastErr)
 }

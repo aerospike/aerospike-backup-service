@@ -12,8 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testPolicy = "testPolicy"
-const unusedTestPolicy = "unusedTestPolicy"
+const (
+	testPolicy       = "testPolicy"
+	unusedTestPolicy = "unusedTestPolicy"
+)
 
 func testConfigBackupPolicy() *dto.BackupPolicy {
 	testIn32 := int32(10)
@@ -24,8 +26,11 @@ func testConfigBackupPolicy() *dto.BackupPolicy {
 		Parallel:      &testInt,
 		SocketTimeout: &testIn32,
 		TotalTimeout:  &testIn32,
-		MaxRetries:    &testIn32,
-		RetryDelay:    &testIn32,
+		RetryPolicy: &dto.RetryPolicy{
+			BaseTimeout: 1,
+			Multiplier:  1,
+			MaxRetries:  3,
+		},
 	}
 }
 

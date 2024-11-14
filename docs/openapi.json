@@ -1813,11 +1813,6 @@
             "example" : 1024,
             "type" : "integer"
           },
-          "max-retries" : {
-            "description" : "Maximum number of retries before aborting the current transaction.",
-            "example" : 3,
-            "type" : "integer"
-          },
           "no-indexes" : {
             "description" : "Do not back up any secondary index definitions.",
             "type" : "boolean"
@@ -1847,10 +1842,12 @@
             "description" : "Whether to clear the output directory (default: KeepAll).",
             "type" : "object"
           },
-          "retry-delay" : {
-            "description" : "RetryDelay defines the delay in milliseconds before retrying a failed operation.",
-            "example" : 500,
-            "type" : "integer"
+          "retry-policy" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.RetryPolicy"
+            } ],
+            "description" : "RetryPolicy defines the configuration for retry attempts in case of failures.\nIf nil, default policy is used.",
+            "type" : "object"
           },
           "sealed" : {
             "description" : "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.",
@@ -2521,11 +2518,11 @@
       "dto.RetryPolicy" : {
         "description" : "RetryPolicy defines the configuration for retry attempts in case of failures.",
         "properties" : {
-          "baseTimeout" : {
+          "base-timeout" : {
             "description" : "BaseTimeout is the initial delay between retry attempts, in milliseconds.",
             "type" : "integer"
           },
-          "maxRetries" : {
+          "max-retries" : {
             "description" : "MaxRetries is the maximum number of retry attempts that will be made.\nIf set to 0, no retries will be performed.",
             "type" : "integer"
           },
