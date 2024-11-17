@@ -158,7 +158,6 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		return err
 	}
 
-	// update the state
 	h.state.SetLastFullRun(now)
 
 	if h.backupFullPolicy.RemoveFiles.RemoveIncrementalBackup() {
@@ -274,6 +273,7 @@ func (h *BackupRoutineHandler) deleteFolder(ctx context.Context, path string) {
 	if err != nil {
 		h.logger.Error("Could not delete folder", slog.Any("err", err))
 	}
+	h.logger.Debug("Deleted folder", slog.String("path", path))
 }
 
 func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now time.Time) {
