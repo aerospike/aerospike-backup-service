@@ -86,7 +86,7 @@ func (b *BackupBackend) readMetadataList(ctx context.Context, timebounds *model.
 		if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "is empty") {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("read metadata files error: %w", err)
 	}
 
 	var backups []model.BackupDetails
