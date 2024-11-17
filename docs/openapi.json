@@ -1900,6 +1900,14 @@
             },
             "type" : "array"
           },
+          "node-list" : {
+            "description" : "NodeList contains a list of nodes to back up.\nBackup the given cluster nodes only.\nIf it is set, ParallelNodes automatically set to true.\nThis argument is mutually exclusive to partition-list/AfterDigest arguments.",
+            "example" : [ "<IP addr 1>:<port 1>[", "<IP addr 2>:<port 2>[", "...]]" ],
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "partition-list" : {
             "description" : "Back up list of partition filters. Partition filters can be ranges, individual partitions,\nor records after a specific digest within a single partition.\nDefault number of partitions to back up: 0 to 4095: all partitions.",
             "example" : "0-1000",
