@@ -98,6 +98,8 @@ func getAllNamespacesOfCluster(client backup.AerospikeClient) ([]string, error) 
 		return nil, fmt.Errorf("failed to get cluster info: %w", err)
 	}
 	namespaces := infoRes[namespaceInfo]
+	slog.Debug("Retrieved namespace info", "result", namespaces)
+
 	return strings.Split(namespaces, ";"), nil
 }
 
@@ -138,4 +140,14 @@ func getActiveHosts(client backup.AerospikeClient) []*as.Host {
 	}
 
 	return activeHosts
+}
+
+// resolveBackupNamespaces returns the list of namespaces to back up.
+// If `namespaces` is empty, it fetches all namespaces from the cluster via the provided client.
+func resolveNamespaces(namespaces []string, client backup.AerospikeClient) ([]string, error) {
+	if len(namespaces) == 0 {
+		return getAllNamespacesOfCluster(client)
+	}
+
+	return namespaces, nil
 }

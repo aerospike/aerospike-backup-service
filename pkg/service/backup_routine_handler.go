@@ -115,14 +115,6 @@ func newBackupRoutineHandler(
 	}
 }
 
-func getNamespacesToBackup(namespaces []string, client backup.AerospikeClient) ([]string, error) {
-	if len(namespaces) == 0 {
-		return getAllNamespacesOfCluster(client)
-	}
-
-	return namespaces, nil
-}
-
 func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time) {
 	duration, err := util.MeasureDuration(func() error {
 		return h.runFullBackupInternal(ctx, now)
@@ -158,7 +150,6 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		return err
 	}
 
-	// update the state
 	h.state.SetLastFullRun(now)
 
 	if h.backupFullPolicy.RemoveFiles.RemoveIncrementalBackup() {
@@ -182,7 +173,7 @@ func (h *BackupRoutineHandler) prepareCluster(retry executor) (*backup.Client, [
 		if err != nil {
 			return fmt.Errorf("cannot get backup client: %w", err)
 		}
-		namespaces, err = getNamespacesToBackup(h.namespaces, client.AerospikeClient())
+		namespaces, err = resolveNamespaces(h.namespaces, client.AerospikeClient())
 		if err != nil {
 			return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
 		}
@@ -274,6 +265,7 @@ func (h *BackupRoutineHandler) deleteFolder(ctx context.Context, path string) {
 	if err != nil {
 		h.logger.Error("Could not delete folder", slog.Any("err", err))
 	}
+	h.logger.Debug("Deleted folder", slog.String("path", path))
 }
 
 func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now time.Time) {
