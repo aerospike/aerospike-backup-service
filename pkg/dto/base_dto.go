@@ -63,9 +63,8 @@ func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 // ConvertModelsToDTO converts an array of models to an array of DTOs
 func ConvertModelsToDTO[M any, D any](models []M, dtoConstructor func(*M) D) []D {
 	result := make([]D, len(models))
-	for i, m := range models {
-		m := m
-		result[i] = dtoConstructor(&m)
+	for i := range models {
+		result[i] = dtoConstructor(&models[i])
 	}
 	return result
 }
