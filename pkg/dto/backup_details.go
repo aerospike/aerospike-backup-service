@@ -66,6 +66,7 @@ func ConvertBackupDetailsMap(modelMap map[string][]model.BackupDetails) map[stri
 	for key, modelSlice := range modelMap {
 		dtoSlice := make([]BackupDetails, len(modelSlice))
 		for i, m := range modelSlice {
+			m := m
 			dtoSlice[i] = *NewBackupDetailsFromModel(&m)
 		}
 		result[key] = dtoSlice
