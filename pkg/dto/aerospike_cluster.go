@@ -170,7 +170,7 @@ type Credentials struct {
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
 	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
 	// Secret Agent configuration (optional).
-	SecretAgent *SecretAgent `json:"secret-agent,omitempty"`
+	SecretAgent *SecretAgent `json:"secret-agent,omitempty" example:"/secret/source.cluster.key.password.txt"`
 	// The secret keyword in Aerospike Secret Agent containing password.
 	// Only applicable when SecretAgent is specified.
 	PasswordKeySecret *string `yaml:"password-key-secret,omitempty" json:"password-key-secret,omitempty"`

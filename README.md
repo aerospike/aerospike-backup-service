@@ -42,9 +42,11 @@ For specifics and example values, see the [OpenAPI docs](https://aerospike.githu
 
 #### Configuration
 
-The endpoints defined within the configuration section permit the user to view or modify the configuration file.
-Endpoints ending in `/config` permit reading and changing the entire file at once, while `/config/cluster` endpoints
-enable more granular changes.
+The endpoints defined within the configuration section allow users to view or modify the configuration file.
+Endpoints ending with /config enable reading and modifying the entire file at once, while endpoints like 
+`/config/clusters`, `/config/policies`, `/config/routines`, and `/config/storage` provide more granular control.
+Changes made through any of these endpoints are applied immediately.
+However, backup processes already in progress will continue using the configuration that was active when they started.
 
 #### Cluster connection
 
@@ -66,12 +68,12 @@ You can also add, update, or remove a storage configuration. See
 the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities
 under `/config/storage` for detailed information.
 
-:warning: ABS currently supports only AWS S3 cloud storage.
+:warning: ABS currently supports AWS S3, GCP, Microsoft Azure cloud storage.
 
 #### Backup policy
 
-A backup policy is a set of rules that define how backups should be performed. It could include information about a
-backup schedule, criteria for what data is being backed up, and the storage destination.
+A backup policy is a set of rules that defines how backups should be performed. 
+It includes settings for performance tuning, data selection, encryption, compression, and other operational details.
 See [`GET: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readPolicies) for
 full details about what parameters are available to customize a backup policy.
 
@@ -80,12 +82,12 @@ When you run
 the [`POST: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addPolicy) command
 to create a policy, ensure that you give your policy a name that will let you quickly identify its characteristics.
 
-Aerospike recommends defining at least one backup and restore policy.
-
 #### Backup routine
 
 A backup routine is a set of procedures that actually perform backups based on the predefined backup policy.
-Routines are individually named just as policies are.
+It includes configurations for the source cluster, storage destination, scheduling (separately for full and incremental backups),
+and the scope of data to back up (such as namespaces, sets, or bins).
+
 See the [Routines](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readRoutines) section for
 command examples showing how to find all routines, get information about a specific named routine, and add, remove, or
 update an existing routine.
@@ -96,7 +98,7 @@ only on full backups.
 ### Operations
 
 - List backups: Returns the details of available backups. A time filter can be added to the request.
-- Restore from a file: Starts a restore operation from a specified backup file/folder.
+- Restore from path: Starts a restore operation from a specified backup folder.
 - Restore from a timestamp: Given a routine name, searches for the closest full backup to the given timestamp and
   applies the backup in the following order: full backup first, then incremental backups up to the given point in time,
   if they exist.
@@ -151,8 +153,8 @@ following application metrics:
 
 | Name                                                   | Description                                 |
 |--------------------------------------------------------|---------------------------------------------|
-| `aerospike_backup_service_runs_total`                  | Full backup runs counter                    |
-| `aerospike_backup_service_incremental_runs_total`      | Incremental backup runs counter             |
+| `aerospike_backup_service_runs_total`                  | Successful backup runs counter              |
+| `aerospike_backup_service_incremental_runs_total`      | Successful incremental backup runs counter  |
 | `aerospike_backup_service_skip_total`                  | Full backup skip counter                    |
 | `aerospike_backup_service_incremental_skip_total`      | Incremental backup skip counter             |
 | `aerospike_backup_service_failure_total`               | Full backup failure counter                 |
@@ -218,23 +220,31 @@ git push
 
 ## FAQ
 
-### What happens when a backup doesn’t finish before another starts?
+### What happens when a backup doesn’t finish before another starts (for the same routine)?
 
-The service will skip the next startup until the previous backup run is completed.
+- **Full Backups:**
+  - Full backups cannot overlap. If a scheduled full backup is due to start but the previous one is still running, the new backup is skipped entirely. It is not queued but will wait for the next scheduled execution.
+  - Full backups always take priority over incremental backups. If an incremental backup is running when a full backup is scheduled, the full backup will start as planned, and the incremental backup will continue running without interruption.
+
+- **Incremental Backups:**
+  - Incremental backups are skipped if any other backup (full or incremental) is still running.
+  - Incremental backups will not run until at least one full backup has been successfully completed.
+
 
 ### Can multiple backup routines be performed simultaneously?
 
-The service uses the [asbackup](https://github.com/aerospike/aerospike-tools-backup) shared library, which is not
-currently thread safe.
-Given this limitation, backup routines are performed in sequence.
+Yes, multiple backup routines can run in parallel. Furthermore, it is possible to back up different namespaces from the same cluster using separate routines with different schedules, all running simultaneously.
+
+To manage resource utilization, you can configure the `cluster.max-parallel-scans` property to limit the number of read threads operating on a single cluster.
 
 ### Which storage providers are supported?
 
-The backup service supports AWS S3 or compatible (such as MinIO) and local storage.
+The backup service supports the following storage providers:
 
-## Known Issues
-
-* The service may crash if an invalid S3 backup key is provided during configuration.
+- **AWS S3** (or compatible services such as MinIO)
+- **Microsoft Azure**
+- **Google Cloud Storage**
+- **Local storage** (files stored on the same machine where the backup service is running)
 
 ## Example requests and responses
 
@@ -329,15 +339,34 @@ GET {{baseUrl}}/v1/config/storage
 ```json
 {
   "local": {
-    "type": 0,
-    "path": "./localStorage"
+    "local-storage":  {
+      "path": "./localStorage"
+    }
   },
   "minio": {
-    "type": 1,
-    "path": "s3://as-backup-bucket/storage1",
-    "s3-region": "eu-central-1",
-    "s3-profile": "minio",
-    "s3-endpoint-override": "http://host.docker.internal:9000"
+    "s3-storage": {
+      "path": "storage1",
+      "bucket": "as-backup-bucket",
+      "s3-region": "eu-central-1",
+      "s3-profile": "minio",
+      "s3-endpoint-override": "http://host.docker.internal:9000"
+    }
+  },
+  "azure": {
+    "azure-storage": {
+      "endpoint": "http://127.0.0.1:6000/devstoreaccount1",
+      "container-name": "testcontainer",
+      "account-name": "devstoreaccount1",
+      "account-key": "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+    }
+  },
+  "gcp": {
+    "gcp-storage": {
+      "key-file": "keyfile",
+      "bucket-name": "as-backup-bucket",
+      "path": "storage2",
+      "endpoint": "http://localhost"
+    }
   }
 }
 ```
