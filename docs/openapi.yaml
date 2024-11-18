@@ -1374,7 +1374,7 @@ components:
         set-list:
         - set1
         interval-cron: 0 0 * * * *
-        backup-policy: daily
+        backup-policy: keepAll
         prefer-racks:
         - 0
         bin-list:
@@ -1388,7 +1388,7 @@ components:
       properties:
         backup-policy:
           description: The name of the corresponding backup policy.
-          example: daily
+          example: keepAll
           type: string
         bin-list:
           description: "The list of backup bin names (optional, an empty list implies\
@@ -1545,7 +1545,7 @@ components:
             set-list:
             - set1
             interval-cron: 0 0 * * * *
-            backup-policy: daily
+            backup-policy: keepAll
             prefer-racks:
             - 0
             bin-list:

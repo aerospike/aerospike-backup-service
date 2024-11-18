@@ -1704,7 +1704,7 @@ const docTemplate = `{
                 "backup-policy": {
                     "description": "The name of the corresponding backup policy.",
                     "type": "string",
-                    "example": "daily"
+                    "example": "keepAll"
                 },
                 "bin-list": {
                     "description": "The list of backup bin names (optional, an empty list implies backing up all bins).",
