@@ -49,7 +49,7 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 ) ([]*bytes.Buffer, error) {
 	var startScanFrom string
 	if fromTime != nil {
-		startScanFrom = fmt.Sprintf("%d", fromTime.UnixMilli()-1) // -1 to ensure filter is greater or equal.
+		startScanFrom = fmt.Sprintf("%s/%d", path, fromTime.UnixMilli()-1) // -1 to ensure filter is greater or equal.
 	}
 
 	reader, err := CreateReader(ctx, storage, path, false, newNameValidator(filterStr), startScanFrom)
