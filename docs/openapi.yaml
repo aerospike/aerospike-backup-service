@@ -1539,10 +1539,7 @@ components:
               host-name: localhost
             tls: "{}"
             label: testCluster
-        service:
-          logger: "{}"
-          http: "{}"
-        secret-agent:
+        secret-agents:
           key:
             tls-ca-file: /path/to/ca.pem
             address: localhost
@@ -1550,6 +1547,9 @@ components:
             connection-type: tcp
             is-base64: false
             timeout: 5000
+        service:
+          logger: "{}"
+          http: "{}"
         storage:
           key:
             azure-storage: "{}"
@@ -1590,7 +1590,7 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/dto.BackupRoutine'
           type: object
-        secret-agent:
+        secret-agents:
           additionalProperties:
             $ref: '#/components/schemas/dto.SecretAgent'
           type: object
