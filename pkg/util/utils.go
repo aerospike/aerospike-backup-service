@@ -75,3 +75,8 @@ func MeasureDuration(f func() error) (time.Duration, error) {
 	err := f()
 	return time.Since(startTime), err
 }
+
+func NowWithZeroNanoseconds() time.Time {
+	now := time.Now()
+	return now.Truncate(time.Millisecond)
+}
