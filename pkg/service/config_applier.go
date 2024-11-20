@@ -90,15 +90,41 @@ func makeHandlers(
 	oldHandlers BackupHandlerHolder,
 ) BackupHandlerHolder {
 	handlers := make(BackupHandlerHolder)
-	backupService := NewBackupGo()
-	for routineName := range config.BackupRoutines {
-		backend, _ := backends.Get(routineName)
-		var oldState *model.BackupState
-		if old, ok := oldHandlers[routineName]; ok {
-			oldState = old.state
-		}
 
-		handlers[routineName] = newBackupRoutineHandler(config, clientManager, backupService, routineName, backend, oldState)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	for routineName := range config.BackupRoutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			routine := makeHandler(clientManager, config, backends, oldHandlers, routineName)
+			mu.Lock()
+			handlers[routineName] = routine
+			mu.Unlock()
+		}()
 	}
+
+	wg.Wait()
 	return handlers
+}
+
+func makeHandler(clientManager ClientManager,
+	config *model.Config,
+	backends BackendsHolder,
+	oldHandlers BackupHandlerHolder,
+	routineName string,
+) *BackupRoutineHandler {
+	backupService := NewBackupGo()
+	backend, _ := backends.Get(routineName)
+
+	// try to reuse state from previous handler if it exists.
+	var oldState *model.BackupState
+	if old, ok := oldHandlers[routineName]; ok {
+		oldState = old.state
+	}
+	if oldState == nil {
+		oldState = backend.ReadState()
+	}
+
+	return newBackupRoutineHandler(config, clientManager, backupService, routineName, backend, oldState)
 }

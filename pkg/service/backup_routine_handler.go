@@ -90,9 +90,6 @@ func newBackupRoutineHandler(
 	backupStorage := backupRoutine.Storage
 	logger := slog.Default().With(slog.String("routine", routineName))
 
-	if state == nil {
-		state = backupBackend.ReadState()
-	}
 	return &BackupRoutineHandler{
 		backupService:    backupService,
 		metadataWriter:   backupBackend,
