@@ -1853,7 +1853,7 @@ const docTemplate = `{
                         "$ref": "#/definitions/dto.BackupRoutine"
                     }
                 },
-                "secret-agent": {
+                "secret-agents": {
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.SecretAgent"

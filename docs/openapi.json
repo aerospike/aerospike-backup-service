@@ -2005,7 +2005,7 @@
             },
             "type" : "object"
           },
-          "secret-agent" : {
+          "secret-agents" : {
             "additionalProperties" : {
               "$ref" : "#/components/schemas/dto.SecretAgent"
             },
