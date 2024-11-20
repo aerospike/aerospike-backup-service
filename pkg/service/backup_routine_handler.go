@@ -17,7 +17,7 @@ import (
 // BackupRoutineHandler implements backup logic for single routine.
 type BackupRoutineHandler struct {
 	backupService       Backup
-	metadataWriter      BackupMetadataManager
+	metadataWriter      backupMetadataManager
 	backupFullPolicy    *model.BackupPolicy
 	backupIncrPolicy    *model.BackupPolicy
 	backupRoutine       *model.BackupRoutine
@@ -25,7 +25,7 @@ type BackupRoutineHandler struct {
 	namespaces          []string
 	storage             model.Storage
 	secretAgent         *model.SecretAgent
-	state               *model.BackupState
+	lastRun             lastBackupRun
 	retry               executor
 	clientManager       ClientManager
 	logger              *slog.Logger
@@ -60,12 +60,12 @@ type BackupHandler interface {
 	Wait(context.Context) error
 }
 
-// BackupMetadataManager handles backup metadata.
-type BackupMetadataManager interface {
-	// WriteBackupMetadata writes backup metadata to storage after successful backup.
-	WriteBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
-	// ReadState scans storage for last backup state (on startup or config apply).
-	ReadState() *model.BackupState
+// backupMetadataManager handles backup metadata.
+type backupMetadataManager interface {
+	// writeBackupMetadata writes backup metadata to storage after successful backup.
+	writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
+	// findLastRun scans storage for last backup time (on startup or config apply).
+	findLastRun(ctx context.Context) lastBackupRun
 }
 
 // ClusterConfigWriter handles writing cluster configuration to storage.
@@ -82,8 +82,8 @@ func newBackupRoutineHandler(
 	clientManager ClientManager,
 	backupService Backup,
 	routineName string,
-	backupBackend BackupMetadataManager,
-	state *model.BackupState,
+	backupBackend backupMetadataManager,
+	lastRun lastBackupRun,
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
 	backupPolicy := backupRoutine.BackupPolicy
@@ -100,7 +100,7 @@ func newBackupRoutineHandler(
 		namespaces:       backupRoutine.Namespaces,
 		storage:          backupStorage,
 		secretAgent:      backupRoutine.SecretAgent,
-		state:            state,
+		lastRun:          lastRun,
 		retry: newRetryExecutor(
 			backupPolicy.GetRetryPolicyOrDefault(),
 			logger),
@@ -151,7 +151,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		return err
 	}
 
-	h.state.SetLastFullRun(now)
+	h.lastRun.full = now
 
 	if h.backupFullPolicy.RemoveFiles.RemoveIncrementalBackup() {
 		h.deleteFolder(ctx, getIncrementalRoot(h.routineName))
@@ -215,7 +215,7 @@ func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) 
 	)
 
 	if !fullBackup {
-		lastRun := h.state.LastRun()
+		lastRun := h.lastRun.lastAnyRun()
 		fromTime = &lastRun
 	}
 
@@ -251,7 +251,7 @@ func (h *BackupRoutineHandler) writeBackupMetadata(
 		UDFCount:            uint64(stats.GetUDFs()),
 	}
 
-	if err := h.metadataWriter.WriteBackupMetadata(ctx, backupFolder, metadata); err != nil {
+	if err := h.metadataWriter.writeBackupMetadata(ctx, backupFolder, metadata); err != nil {
 		h.logger.Error("Could not Write backup metadata",
 			slog.String("folder", backupFolder),
 			slog.Any("err", err))
@@ -289,7 +289,7 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 }
 
 func (h *BackupRoutineHandler) skipIncrementalBackup() bool {
-	if h.state.LastFullRunIsEmpty() {
+	if h.lastRun.noFullBackup() {
 		h.logger.Debug("Skip incremental backup until initial full backup is done")
 		return true
 	}
@@ -325,7 +325,7 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 		return err
 	}
 
-	h.state.SetLastIncrRun(now)
+	h.lastRun.incremental = now
 	return nil
 }
 

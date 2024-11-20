@@ -88,7 +88,7 @@ func startService(configFile string, remote bool) error {
 		&backupHandlers,
 	)
 
-	err = configApplier.ApplyNewConfig()
+	err = configApplier.ApplyNewConfig(ctx)
 	if err != nil {
 		return err
 	}

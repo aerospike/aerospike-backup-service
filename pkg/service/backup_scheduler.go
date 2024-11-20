@@ -102,7 +102,7 @@ func scheduleFullBackup(
 	}
 
 	jobStore.put(fullJobDetail.JobKey().String(), fullJobDetail)
-	if needToRunFullBackupNow(handler.state.LastFullRun, fullCronTrigger) {
+	if needToRunFullBackupNow(handler.lastRun.full, fullCronTrigger) {
 		slog.Debug("Schedule initial full backup", "name", routineName)
 		fullJobDetail := quartz.NewJobDetail(
 			fullJob,

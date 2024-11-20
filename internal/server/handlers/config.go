@@ -111,7 +111,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.applyConfig(config)
+	err = s.applyConfig(r.Context(), config)
 	if err != nil {
 		hLogger.Error("failed to apply config",
 			slog.Any("error", err),
@@ -137,7 +137,7 @@ func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Confi
 		return fmt.Errorf("failed to write configuration: %w", err)
 	}
 
-	err = s.configApplier.ApplyNewConfig()
+	err = s.configApplier.ApplyNewConfig(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to apply new configuration: %w", err)
 	}
@@ -145,11 +145,11 @@ func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Confi
 	return nil
 }
 
-func (s *Service) applyConfig(c *model.Config) error {
+func (s *Service) applyConfig(ctx context.Context, c *model.Config) error {
 	s.Lock()
 	defer s.Unlock()
 
 	s.config.CopyFrom(c)
 
-	return s.configApplier.ApplyNewConfig()
+	return s.configApplier.ApplyNewConfig(ctx)
 }
