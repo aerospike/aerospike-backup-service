@@ -1,6 +1,7 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -64,7 +65,7 @@ type BackupHandler interface {
 type BackupMetadataManager interface {
 	// WriteBackupMetadata writes backup metadata to storage after successful backup.
 	WriteBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
-	// ReadState scans storage for last backup state (on startup).
+	// ReadState scans storage for last backup state (on startup or config apply).
 	ReadState() *model.BackupState
 }
 
@@ -83,6 +84,7 @@ func newBackupRoutineHandler(
 	backupService Backup,
 	routineName string,
 	backupBackend BackupMetadataManager,
+	state *model.BackupState,
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
 	backupPolicy := backupRoutine.BackupPolicy
@@ -99,7 +101,7 @@ func newBackupRoutineHandler(
 		namespaces:       backupRoutine.Namespaces,
 		storage:          backupStorage,
 		secretAgent:      backupRoutine.SecretAgent,
-		state:            backupBackend.ReadState(),
+		state:            cmp.Or(state, backupBackend.ReadState()),
 		retry: newRetryExecutor(
 			backupPolicy.GetRetryPolicyOrDefault(),
 			logger),

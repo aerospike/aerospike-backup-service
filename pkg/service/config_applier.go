@@ -48,12 +48,11 @@ func (a *DefaultConfigApplier) ApplyNewConfig() error {
 	if err != nil {
 		return err
 	}
-
 	a.backends.Init(a.config)
-	clear(*a.handlerHolder)
 
 	// Refill handlers
-	newHandlers := makeHandlers(a.clientManager, a.config, a.backends)
+	newHandlers := makeHandlers(a.clientManager, a.config, a.backends, *a.handlerHolder)
+	clear(*a.handlerHolder)
 	for k, v := range newHandlers {
 		(*a.handlerHolder)[k] = v
 	}
@@ -84,15 +83,22 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 }
 
 // makeHandlers creates and returns a map of backup handlers per the configured routines.
-func makeHandlers(clientManager ClientManager,
+func makeHandlers(
+	clientManager ClientManager,
 	config *model.Config,
 	backends BackendsHolder,
+	oldHandlers BackupHandlerHolder,
 ) BackupHandlerHolder {
 	handlers := make(BackupHandlerHolder)
 	backupService := NewBackupGo()
 	for routineName := range config.BackupRoutines {
 		backend, _ := backends.Get(routineName)
-		handlers[routineName] = newBackupRoutineHandler(config, clientManager, backupService, routineName, backend)
+		var oldState *model.BackupState
+		if old, ok := oldHandlers[routineName]; ok {
+			oldState = old.state
+		}
+
+		handlers[routineName] = newBackupRoutineHandler(config, clientManager, backupService, routineName, backend, oldState)
 	}
 	return handlers
 }
