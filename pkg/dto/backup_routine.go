@@ -39,6 +39,11 @@ type BackupRoutine struct {
 	// or records after a specific digest within a single partition.
 	// Default number of partitions to back up: 0 to 4095: all partitions.
 	PartitionList *string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" example:"0-1000"`
+	// NodeList contains a list of nodes to back up.
+	// Backup the given cluster nodes only.
+	// If it is set, ParallelNodes automatically set to true.
+	// This argument is mutually exclusive to partition-list/AfterDigest arguments.
+	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty" example:"<IP addr 1>:<port 1>[,<IP addr 2>:<port 2>[,...]]"`
 }
 
 // Validate validates the backup routine configuration.
@@ -126,6 +131,7 @@ func (r *BackupRoutine) ToModel(
 		BinList:          r.BinList,
 		PreferRacks:      r.PreferRacks,
 		PartitionList:    r.PartitionList,
+		NodeList:         r.NodeList,
 	}, nil
 }
 
@@ -167,6 +173,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.Config) 
 	r.BinList = m.BinList
 	r.PreferRacks = m.PreferRacks
 	r.PartitionList = m.PartitionList
+	r.NodeList = m.NodeList
 }
 
 func findKeyByValue[V any](m map[string]*V, value *V) string {

@@ -1375,6 +1375,10 @@ components:
         - set1
         interval-cron: 0 0 * * * *
         backup-policy: daily
+        node-list:
+        - "<IP addr 1>:<port 1>["
+        - "<IP addr 2>:<port 2>["
+        - "...]]"
         prefer-racks:
         - 0
         bin-list:
@@ -1412,6 +1416,19 @@ components:
             \ implies backup up whole cluster)."
           example:
           - source-ns1
+          items:
+            type: string
+          type: array
+        node-list:
+          description: |-
+            NodeList contains a list of nodes to back up.
+            Backup the given cluster nodes only.
+            If it is set, ParallelNodes automatically set to true.
+            This argument is mutually exclusive to partition-list/AfterDigest arguments.
+          example:
+          - "<IP addr 1>:<port 1>["
+          - "<IP addr 2>:<port 2>["
+          - "...]]"
           items:
             type: string
           type: array
@@ -1546,6 +1563,10 @@ components:
             - set1
             interval-cron: 0 0 * * * *
             backup-policy: daily
+            node-list:
+            - "<IP addr 1>:<port 1>["
+            - "<IP addr 2>:<port 2>["
+            - "...]]"
             prefer-racks:
             - 0
             bin-list:
