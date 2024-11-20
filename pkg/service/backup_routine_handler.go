@@ -1,7 +1,6 @@
 package service
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -91,6 +90,9 @@ func newBackupRoutineHandler(
 	backupStorage := backupRoutine.Storage
 	logger := slog.Default().With(slog.String("routine", routineName))
 
+	if state == nil {
+		state = backupBackend.ReadState()
+	}
 	return &BackupRoutineHandler{
 		backupService:    backupService,
 		metadataWriter:   backupBackend,
@@ -101,7 +103,7 @@ func newBackupRoutineHandler(
 		namespaces:       backupRoutine.Namespaces,
 		storage:          backupStorage,
 		secretAgent:      backupRoutine.SecretAgent,
-		state:            cmp.Or(state, backupBackend.ReadState()),
+		state:            state,
 		retry: newRetryExecutor(
 			backupPolicy.GetRetryPolicyOrDefault(),
 			logger),

@@ -38,12 +38,15 @@ func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend
 }
 
 func (b *BackupBackend) ReadState() *model.BackupState {
-	fullBackupList, _ := b.FullBackupList(context.Background(), model.TimeBounds{})
-	incrementalBackupList, _ := b.IncrementalBackupList(context.Background(), model.TimeBounds{})
+	ctx := context.Background()
+	fullBackupList, _ := b.FullBackupList(ctx, model.TimeBounds{})
+	lastFullBackup := lastBackupTime(fullBackupList)
+	incrementalBackupList, _ := b.IncrementalBackupList(ctx, model.NewTimeBoundsFrom(lastFullBackup))
+	lastIncrBackup := lastBackupTime(incrementalBackupList)
 
 	return &model.BackupState{
-		LastFullRun: lastBackupTime(fullBackupList),
-		LastIncrRun: lastBackupTime(incrementalBackupList),
+		LastFullRun: lastFullBackup,
+		LastIncrRun: lastIncrBackup,
 	}
 }
 
