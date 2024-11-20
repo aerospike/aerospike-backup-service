@@ -192,7 +192,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 
 func readBackupsLogic(ctx context.Context,
 	backends service.BackendsHolder,
-	timeBounds *model.TimeBounds,
+	timeBounds model.TimeBounds,
 	isFullBackup bool,
 ) (map[string][]model.BackupDetails, error) {
 	result := make(map[string][]model.BackupDetails)
@@ -210,7 +210,7 @@ func readBackupsLogic(ctx context.Context,
 
 func backupsReadFunction(
 	backend service.BackupListReader, fullBackup bool,
-) func(context.Context, *model.TimeBounds) ([]model.BackupDetails, error) {
+) func(context.Context, model.TimeBounds) ([]model.BackupDetails, error) {
 	if fullBackup {
 		return backend.FullBackupList
 	}

@@ -123,16 +123,16 @@ func (mock restoreManagerMock) RetrieveConfiguration(routine string, _ time.Time
 
 type backupListReaderMock struct{}
 
-func (mock backupListReaderMock) FullBackupList(_ context.Context, timebounds *model.TimeBounds,
+func (mock backupListReaderMock) FullBackupList(_ context.Context, timebounds model.TimeBounds,
 ) ([]model.BackupDetails, error) {
-	if timebounds == nil {
+	if timebounds == (model.TimeBounds{}) {
 		return nil, errTest
 	}
 	return []model.BackupDetails{testBackupDetails()}, nil
 }
-func (mock backupListReaderMock) IncrementalBackupList(_ context.Context, timebounds *model.TimeBounds,
+func (mock backupListReaderMock) IncrementalBackupList(_ context.Context, timebounds model.TimeBounds,
 ) ([]model.BackupDetails, error) {
-	if timebounds == nil {
+	if timebounds == (model.TimeBounds{}) {
 		return nil, errTest
 	}
 	return []model.BackupDetails{testBackupDetails()}, nil
@@ -150,9 +150,9 @@ func (mock backupListReaderMock) FindLastFullBackup(_ time.Time) ([]model.Backup
 }
 
 func (mock backupListReaderMock) FindIncrementalBackupsForNamespace(
-	_ context.Context, bounds *model.TimeBounds, _ string,
+	_ context.Context, bounds model.TimeBounds, _ string,
 ) ([]model.BackupDetails, error) {
-	if bounds == nil {
+	if bounds == (model.TimeBounds{}) {
 		return nil, errTest
 	}
 	return []model.BackupDetails{testBackupDetails()}, nil

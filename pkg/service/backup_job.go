@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"sync/atomic"
-	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -28,9 +28,9 @@ func (j *backupJob) Execute(ctx context.Context) error {
 		defer j.isRunning.Store(false)
 		switch j.jobType {
 		case jobTypeFull:
-			j.handler.runFullBackup(ctx, time.Now())
+			j.handler.runFullBackup(ctx, util.NowWithZeroNanoseconds())
 		case jobTypeIncremental:
-			j.handler.runIncrementalBackup(ctx, time.Now())
+			j.handler.runIncrementalBackup(ctx, util.NowWithZeroNanoseconds())
 		default:
 			logger.Error("Unsupported backup type")
 		}
