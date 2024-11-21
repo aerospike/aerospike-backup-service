@@ -22,7 +22,7 @@ type DefaultConfigApplier struct {
 	config        *model.Config
 	backends      BackendsHolder
 	clientManager ClientManager
-	handlerHolder *BackupHandlerHolder
+	handlerHolder BackupHandlerHolder
 }
 
 func NewDefaultConfigApplier(
@@ -30,7 +30,7 @@ func NewDefaultConfigApplier(
 	config *model.Config,
 	backends BackendsHolder,
 	manager ClientManager,
-	handlerHolder *BackupHandlerHolder,
+	handlerHolder BackupHandlerHolder,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
 		scheduler:     scheduler,
@@ -52,13 +52,13 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	a.backends.Init(a.config)
 
 	// Refill handlers
-	newHandlers := makeHandlers(ctx, a.clientManager, a.config, a.backends, *a.handlerHolder)
-	clear(*a.handlerHolder)
+	newHandlers := makeHandlers(ctx, a.clientManager, a.config, a.backends, a.handlerHolder)
+	clear(a.handlerHolder)
 	for k, v := range newHandlers {
-		(*a.handlerHolder)[k] = v
+		(a.handlerHolder)[k] = v
 	}
 
-	err = scheduleRoutines(a.scheduler, a.config, *a.handlerHolder)
+	err = scheduleRoutines(a.scheduler, a.config, a.handlerHolder)
 	if err != nil {
 		return err
 	}

@@ -85,7 +85,7 @@ func startService(configFile string, remote bool) error {
 		config,
 		backends,
 		clientManager,
-		&backupHandlers,
+		backupHandlers,
 	)
 
 	err = configApplier.ApplyNewConfig(ctx)
