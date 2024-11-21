@@ -1374,7 +1374,7 @@ components:
         set-list:
         - set1
         interval-cron: 0 0 * * * *
-        backup-policy: daily
+        backup-policy: keepAll
         node-list:
         - "<IP addr 1>:<port 1>["
         - "<IP addr 2>:<port 2>["
@@ -1392,7 +1392,7 @@ components:
       properties:
         backup-policy:
           description: The name of the corresponding backup policy.
-          example: daily
+          example: keepAll
           type: string
         bin-list:
           description: "The list of backup bin names (optional, an empty list implies\
@@ -1562,7 +1562,7 @@ components:
             set-list:
             - set1
             interval-cron: 0 0 * * * *
-            backup-policy: daily
+            backup-policy: keepAll
             node-list:
             - "<IP addr 1>:<port 1>["
             - "<IP addr 2>:<port 2>["
