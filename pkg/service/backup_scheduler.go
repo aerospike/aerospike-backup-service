@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -68,22 +69,25 @@ func NewScheduler(ctx context.Context) quartz.Scheduler {
 // scheduleRoutines schedules the given handlers using the scheduler.
 func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config,
 	handlers BackupHandlerHolder) error {
+	var errs error
 	for routineName, routine := range config.BackupRoutines {
 		handler := handlers[routineName]
 
 		// schedule a full backup job for the routine
 		if err := scheduleFullBackup(scheduler, handler, routine.IntervalCron, routineName); err != nil {
-			return fmt.Errorf("failed to schedule full backup: %w", err)
+			errs = errors.Join(errs, fmt.Errorf("failed to schedule full backup: %w", err))
+			continue
 		}
 
 		if routine.IncrIntervalCron != "" {
 			// schedule an incremental backup job for the routine
 			if err := scheduleIncrementalBackup(scheduler, handler, routine.IncrIntervalCron, routineName); err != nil {
-				return fmt.Errorf("failed to schedule incremental backup: %w", err)
+				errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
+				continue
 			}
 		}
 	}
-	return nil
+	return errs
 }
 
 func scheduleFullBackup(
