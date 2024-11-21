@@ -21,7 +21,7 @@ func TestFullBackupRemoveFiles(t *testing.T) {
 
 	path := backend.routineName + "/backup/data/source-ns1/"
 	_ = os.MkdirAll(path, 0744)
-	_ = backend.WriteBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(10)})
+	_ = backend.writeBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(10)})
 
 	to := model.NewTimeBoundsTo(time.UnixMilli(1000))
 	list, _ := backend.FullBackupList(context.Background(), to)
@@ -43,7 +43,7 @@ func TestFullBackupKeepFiles(t *testing.T) {
 	for _, t := range []int64{10, 20, 30} {
 		path := backend.routineName + "/backup/" + strconv.FormatInt(t, 10) + "/data/source-ns1/"
 		_ = os.MkdirAll(path, 0744)
-		_ = backend.WriteBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(t)})
+		_ = backend.writeBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(t)})
 	}
 
 	bounds := model.NewTimeBoundsTo(time.UnixMilli(25))

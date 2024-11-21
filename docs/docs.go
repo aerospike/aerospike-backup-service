@@ -1736,6 +1736,18 @@ const docTemplate = `{
                         "source-ns1"
                     ]
                 },
+                "node-list": {
+                    "description": "NodeList contains a list of nodes to back up.\nBackup the given cluster nodes only.\nIf it is set, ParallelNodes automatically set to true.\nThis argument is mutually exclusive to partition-list/AfterDigest arguments.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "\u003cIP addr 1\u003e:\u003cport 1\u003e[",
+                        "\u003cIP addr 2\u003e:\u003cport 2\u003e[",
+                        "...]]"
+                    ]
+                },
                 "partition-list": {
                     "description": "Back up list of partition filters. Partition filters can be ranges, individual partitions,\nor records after a specific digest within a single partition.\nDefault number of partitions to back up: 0 to 4095: all partitions.",
                     "type": "string",
@@ -1841,7 +1853,7 @@ const docTemplate = `{
                         "$ref": "#/definitions/dto.BackupRoutine"
                     }
                 },
-                "secret-agent": {
+                "secret-agents": {
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.SecretAgent"

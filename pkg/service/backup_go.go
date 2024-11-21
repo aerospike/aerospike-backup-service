@@ -58,8 +58,11 @@ func makeBackupConfig(
 	secretAgent *model.SecretAgent,
 ) *backup.BackupConfig {
 	config := backup.NewDefaultBackupConfig()
+
 	config.Namespace = namespace
 	config.BinList = backupRoutine.BinList
+	config.NodeList = backupRoutine.NodeList
+
 	if backupPolicy.NoRecords != nil && *backupPolicy.NoRecords {
 		config.NoRecords = true
 	}

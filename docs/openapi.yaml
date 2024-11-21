@@ -1374,7 +1374,11 @@ components:
         set-list:
         - set1
         interval-cron: 0 0 * * * *
-        backup-policy: keepAll
+        backup-policy: daily
+        node-list:
+        - "<IP addr 1>:<port 1>["
+        - "<IP addr 2>:<port 2>["
+        - "...]]"
         prefer-racks:
         - 0
         bin-list:
@@ -1388,7 +1392,7 @@ components:
       properties:
         backup-policy:
           description: The name of the corresponding backup policy.
-          example: keepAll
+          example: daily
           type: string
         bin-list:
           description: "The list of backup bin names (optional, an empty list implies\
@@ -1412,6 +1416,19 @@ components:
             \ implies backup up whole cluster)."
           example:
           - source-ns1
+          items:
+            type: string
+          type: array
+        node-list:
+          description: |-
+            NodeList contains a list of nodes to back up.
+            Backup the given cluster nodes only.
+            If it is set, ParallelNodes automatically set to true.
+            This argument is mutually exclusive to partition-list/AfterDigest arguments.
+          example:
+          - "<IP addr 1>:<port 1>["
+          - "<IP addr 2>:<port 2>["
+          - "...]]"
           items:
             type: string
           type: array
@@ -1522,10 +1539,7 @@ components:
               host-name: localhost
             tls: "{}"
             label: testCluster
-        service:
-          logger: "{}"
-          http: "{}"
-        secret-agent:
+        secret-agents:
           key:
             tls-ca-file: /path/to/ca.pem
             address: localhost
@@ -1533,6 +1547,9 @@ components:
             connection-type: tcp
             is-base64: false
             timeout: 5000
+        service:
+          logger: "{}"
+          http: "{}"
         storage:
           key:
             azure-storage: "{}"
@@ -1545,7 +1562,11 @@ components:
             set-list:
             - set1
             interval-cron: 0 0 * * * *
-            backup-policy: keepAll
+            backup-policy: daily
+            node-list:
+            - "<IP addr 1>:<port 1>["
+            - "<IP addr 2>:<port 2>["
+            - "...]]"
             prefer-racks:
             - 0
             bin-list:
@@ -1569,7 +1590,7 @@ components:
           additionalProperties:
             $ref: '#/components/schemas/dto.BackupRoutine'
           type: object
-        secret-agent:
+        secret-agents:
           additionalProperties:
             $ref: '#/components/schemas/dto.SecretAgent'
           type: object

@@ -18,7 +18,7 @@ type Config struct {
 	Storage           map[string]*Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
 	BackupPolicies    map[string]*BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
 	BackupRoutines    map[string]*BackupRoutine    `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
-	SecretAgents      map[string]*SecretAgent      `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
+	SecretAgents      map[string]*SecretAgent      `yaml:"secret-agents,omitempty" json:"secret-agents,omitempty"`
 }
 
 func (c *Config) fromModel(m *model.Config) {

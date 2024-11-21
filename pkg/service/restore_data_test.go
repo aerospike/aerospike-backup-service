@@ -79,7 +79,7 @@ func makeTestRestoreService() *dataRestorer {
 type BackendMock struct {
 }
 
-func (m *BackendMock) FindIncrementalBackupsForNamespace(_ context.Context, _ *model.TimeBounds, _ string,
+func (m *BackendMock) FindIncrementalBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,
 ) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
 		BackupMetadata: model.BackupMetadata{
@@ -100,7 +100,7 @@ func (m *BackendMock) ReadClusterConfiguration(_ string) ([]byte, error) {
 	return []byte{}, nil
 }
 
-func (*BackendMock) FullBackupList(_ context.Context, _ *model.TimeBounds) ([]model.BackupDetails, error) {
+func (*BackendMock) FullBackupList(_ context.Context, _ model.TimeBounds) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
 		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(5),
@@ -110,7 +110,7 @@ func (*BackendMock) FullBackupList(_ context.Context, _ *model.TimeBounds) ([]mo
 	}}, nil
 }
 
-func (*BackendMock) IncrementalBackupList(_ context.Context, _ *model.TimeBounds) ([]model.BackupDetails, error) {
+func (*BackendMock) IncrementalBackupList(_ context.Context, _ model.TimeBounds) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
 		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(10),
@@ -149,7 +149,7 @@ func (*BackendFailMock) FindLastFullBackup(_ time.Time) ([]model.BackupDetails, 
 type BackendFailMock struct {
 }
 
-func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ context.Context, _ *model.TimeBounds, _ string,
+func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,
 ) ([]model.BackupDetails, error) {
 	return nil, nil
 }
@@ -158,11 +158,11 @@ func (m *BackendFailMock) ReadClusterConfiguration(_ string) ([]byte, error) {
 	return nil, errors.New("mock error")
 }
 
-func (*BackendFailMock) FullBackupList(_ context.Context, _ *model.TimeBounds) ([]model.BackupDetails, error) {
+func (*BackendFailMock) FullBackupList(_ context.Context, _ model.TimeBounds) ([]model.BackupDetails, error) {
 	return nil, errors.New("mock error")
 }
 
-func (*BackendFailMock) IncrementalBackupList(_ context.Context, _ *model.TimeBounds) ([]model.BackupDetails, error) {
+func (*BackendFailMock) IncrementalBackupList(_ context.Context, _ model.TimeBounds) ([]model.BackupDetails, error) {
 	return nil, errors.New("mock error")
 }
 
@@ -203,13 +203,35 @@ func TestLatestFullBackupBeforeTime(t *testing.T) {
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(30)}},
 	}
 
-	result := latestBackupBeforeTime(backupList, time.UnixMilli(25))
+	toTime := time.UnixMilli(25)
+	result := latestBackupBeforeTime(backupList, &toTime)
 
 	if result == nil {
 		t.Error("Expected a non-nil result, but got nil")
 	}
 	if len(result) != 2 {
 		t.Errorf("Expected 2 backups")
+	}
+	if result[0] != backupList[1] {
+		t.Errorf("Expected the latest backup, but got %+v", result)
+	}
+}
+
+func TestLatestFullBackupEqualTime(t *testing.T) {
+	backupList := []model.BackupDetails{
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)}},
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}}, // Should be the latest full backup
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(30)}},
+	}
+
+	toTime := time.UnixMilli(20)
+	result := latestBackupBeforeTime(backupList, &toTime)
+
+	if result == nil {
+		t.Error("Expected a non-nil result, but got nil")
+	}
+	if len(result) != 1 {
+		t.Errorf("Expected 1 backup")
 	}
 	if result[0] != backupList[1] {
 		t.Errorf("Expected the latest backup, but got %+v", result)
@@ -223,7 +245,8 @@ func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(30)}},
 	}
 
-	result := latestBackupBeforeTime(backupList, time.UnixMilli(5))
+	toTime := time.UnixMilli(5)
+	result := latestBackupBeforeTime(backupList, &toTime)
 
 	if result != nil {
 		t.Errorf("Expected a non result, but got %+v", result)

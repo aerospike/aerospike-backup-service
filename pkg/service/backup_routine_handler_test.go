@@ -68,16 +68,16 @@ type mockMetadataWriter struct {
 	mock.Mock
 }
 
-func (m *mockMetadataWriter) WriteBackupMetadata(
+func (m *mockMetadataWriter) writeBackupMetadata(
 	ctx context.Context, path string, metadata model.BackupMetadata,
 ) error {
 	args := m.Called(ctx, path, metadata)
 	return args.Error(0)
 }
 
-func (m *mockMetadataWriter) ReadState() *model.BackupState {
+func (m *mockMetadataWriter) findLastRun(context.Context) lastBackupRun {
 	args := m.Called()
-	return args.Get(0).(*model.BackupState)
+	return args.Get(0).(lastBackupRun)
 }
 
 type mockClusterConfigWriter struct {
@@ -106,7 +106,7 @@ func setupTestHandler(
 		backupFullPolicy:   &model.BackupPolicy{},
 		fullBackupHandlers: make(map[string]BackupHandler),
 		incrBackupHandlers: make(map[string]BackupHandler),
-		state:              &model.BackupState{},
+		lastRun:            lastBackupRun{},
 		storage:            &model.LocalStorage{Path: "/tmp"},
 		logger:             slog.Default(),
 		retry:              &simpleExecutor{},
@@ -150,7 +150,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mock.Anything,
 	).Return(backupHandler, nil).Once()
 
-	metadataWriter.On("WriteBackupMetadata",
+	metadataWriter.On("writeBackupMetadata",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -208,7 +208,7 @@ func TestRunIncrementalBackup_NoFullBackupYet(t *testing.T) {
 	configWriter := new(mockClusterConfigWriter)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
-	handler.state = &model.BackupState{} // Ensure empty state
+	handler.lastRun = lastBackupRun{} // Ensure empty lastRun
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
@@ -223,8 +223,8 @@ func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
 	configWriter := new(mockClusterConfigWriter)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
-	handler.state = &model.BackupState{
-		LastFullRun: time.Now(), // Set last full run
+	handler.lastRun = lastBackupRun{
+		full: time.Now(), // Set last full run
 	}
 
 	handler.fullBackupHandlers["ns1"] = &mockBackupHandler{}
@@ -242,8 +242,8 @@ func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
 	configWriter := new(mockClusterConfigWriter)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
-	handler.state = &model.BackupState{
-		LastFullRun: time.Now(), // Set last full run
+	handler.lastRun = lastBackupRun{
+		full: time.Now(), // Set last full run
 	}
 
 	handler.incrBackupHandlers["test"] = &mockBackupHandler{}
@@ -261,8 +261,8 @@ func TestRunIncrementalBackup_ClientError(t *testing.T) {
 	configWriter := new(mockClusterConfigWriter)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
-	handler.state = &model.BackupState{
-		LastFullRun: time.Now(),
+	handler.lastRun = lastBackupRun{
+		full: time.Now(),
 	}
 
 	expectedErr := errors.New("client error")
@@ -283,8 +283,8 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
 	now := time.Now()
 	lastRun := now.Add(-1 * time.Hour)
-	handler.state = &model.BackupState{
-		LastFullRun: lastRun,
+	handler.lastRun = lastBackupRun{
+		full: lastRun,
 	}
 
 	backupHandler := new(mockBackupHandler)
@@ -317,7 +317,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 		mock.Anything,
 	).Return(backupHandler, nil)
 
-	metadataWriter.On("WriteBackupMetadata",
+	metadataWriter.On("writeBackupMetadata",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -328,7 +328,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	clientManager.AssertExpectations(t)
 	backupService.AssertExpectations(t)
 	backupHandler.AssertExpectations(t)
-	assert.Equal(t, now, handler.state.LastIncrRun)
+	assert.Equal(t, now, handler.lastRun.incremental)
 }
 
 func TestRunFullBackup_PartialFailure(t *testing.T) {
@@ -371,7 +371,7 @@ func TestRunFullBackup_PartialFailure(t *testing.T) {
 		mock.Anything,
 	).Return(failHandler, nil).Once()
 
-	metadataWriter.On("WriteBackupMetadata",
+	metadataWriter.On("writeBackupMetadata",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,

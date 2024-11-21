@@ -27,4 +27,6 @@ type BackupRoutine struct {
 	// or records after a specific digest within a single partition.
 	// Default number of partitions to back up: 0 to 4095: all partitions.
 	PartitionList *string
+	// NodeList contains a list of nodes to back up.
+	NodeList []string
 }

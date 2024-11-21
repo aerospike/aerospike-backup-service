@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -12,7 +13,7 @@ import (
 
 // ConfigApplier is responsible for applying new configuration to the service.
 type ConfigApplier interface {
-	ApplyNewConfig() error
+	ApplyNewConfig(context.Context) error
 }
 
 type DefaultConfigApplier struct {
@@ -21,7 +22,7 @@ type DefaultConfigApplier struct {
 	config        *model.Config
 	backends      BackendsHolder
 	clientManager ClientManager
-	handlerHolder *BackupHandlerHolder
+	handlerHolder BackupHandlerHolder
 }
 
 func NewDefaultConfigApplier(
@@ -29,7 +30,7 @@ func NewDefaultConfigApplier(
 	config *model.Config,
 	backends BackendsHolder,
 	manager ClientManager,
-	handlerHolder *BackupHandlerHolder,
+	handlerHolder BackupHandlerHolder,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
 		scheduler:     scheduler,
@@ -40,27 +41,26 @@ func NewDefaultConfigApplier(
 	}
 }
 
-func (a *DefaultConfigApplier) ApplyNewConfig() error {
+func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	a.Lock()
 	defer a.Unlock()
 
 	err := a.clearPeriodicSchedulerJobs()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
-
 	a.backends.Init(a.config)
-	clear(*a.handlerHolder)
 
 	// Refill handlers
-	newHandlers := makeHandlers(a.clientManager, a.config, a.backends)
+	newHandlers := makeHandlers(ctx, a.clientManager, a.config, a.backends, a.handlerHolder)
+	clear(a.handlerHolder)
 	for k, v := range newHandlers {
-		(*a.handlerHolder)[k] = v
+		(a.handlerHolder)[k] = v
 	}
 
-	err = scheduleRoutines(a.scheduler, a.config, *a.handlerHolder)
+	err = scheduleRoutines(a.scheduler, a.config, a.handlerHolder)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
 
 	return nil
@@ -84,15 +84,50 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 }
 
 // makeHandlers creates and returns a map of backup handlers per the configured routines.
-func makeHandlers(clientManager ClientManager,
+func makeHandlers(
+	ctx context.Context,
+	clientManager ClientManager,
 	config *model.Config,
 	backends BackendsHolder,
+	oldHandlers BackupHandlerHolder,
 ) BackupHandlerHolder {
 	handlers := make(BackupHandlerHolder)
-	backupService := NewBackupGo()
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
 	for routineName := range config.BackupRoutines {
-		backend, _ := backends.Get(routineName)
-		handlers[routineName] = newBackupRoutineHandler(config, clientManager, backupService, routineName, backend)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			handler := makeHandler(ctx, clientManager, config, backends, oldHandlers, routineName)
+			mu.Lock()
+			handlers[routineName] = handler
+			mu.Unlock()
+		}()
 	}
+
+	wg.Wait()
 	return handlers
+}
+
+func makeHandler(
+	ctx context.Context,
+	clientManager ClientManager,
+	config *model.Config,
+	backends BackendsHolder,
+	oldHandlers BackupHandlerHolder,
+	routineName string,
+) *BackupRoutineHandler {
+	backupService := NewBackupGo()
+	backend, _ := backends.Get(routineName)
+
+	// try to reuse lastRun from previous handler if it exists.
+	var lastRun lastBackupRun
+	if old, ok := oldHandlers[routineName]; ok {
+		lastRun = old.lastRun
+	} else {
+		lastRun = backend.findLastRun(ctx) // this scan can take some time.
+	}
+
+	return newBackupRoutineHandler(config, clientManager, backupService, routineName, backend, lastRun)
 }

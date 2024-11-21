@@ -85,12 +85,12 @@ func startService(configFile string, remote bool) error {
 		config,
 		backends,
 		clientManager,
-		&backupHandlers,
+		backupHandlers,
 	)
 
-	err = configApplier.ApplyNewConfig()
+	err = configApplier.ApplyNewConfig(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to apply new config: %w", err)
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()

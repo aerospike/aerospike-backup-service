@@ -37,26 +37,27 @@ func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend
 	}
 }
 
-func (b *BackupBackend) ReadState() *model.BackupState {
-	to := model.NewTimeBoundsTo(time.Now())
-	fullBackupList, _ := b.FullBackupList(context.Background(), to)
-	incrementalBackupList, _ := b.IncrementalBackupList(context.Background(), to)
+func (b *BackupBackend) findLastRun(ctx context.Context) lastBackupRun {
+	fullBackupList, _ := b.FullBackupList(ctx, model.TimeBounds{})
+	lastFullBackup := lastBackupTime(fullBackupList)
+	incrementalBackupList, _ := b.IncrementalBackupList(ctx, model.NewTimeBoundsFrom(lastFullBackup))
+	lastIncrBackup := lastBackupTime(incrementalBackupList)
 
-	return &model.BackupState{
-		LastFullRun: lastBackupTime(fullBackupList),
-		LastIncrRun: lastBackupTime(incrementalBackupList),
+	return lastBackupRun{
+		full:        lastFullBackup,
+		incremental: lastIncrBackup,
 	}
 }
 
 func lastBackupTime(b []model.BackupDetails) time.Time {
 	if len(b) > 0 {
-		return latestBackupBeforeTime(b, time.Now())[0].Created
+		return latestBackupBeforeTime(b, nil)[0].Created
 	}
 
 	return time.Time{}
 }
 
-func (b *BackupBackend) WriteBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error {
+func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error {
 	dataYaml, err := yaml.Marshal(metadata)
 	if err != nil {
 		return err
@@ -67,18 +68,18 @@ func (b *BackupBackend) WriteBackupMetadata(ctx context.Context, path string, me
 }
 
 // FullBackupList returns a list of available full backups.
-func (b *BackupBackend) FullBackupList(ctx context.Context, timeBounds *model.TimeBounds,
+func (b *BackupBackend) FullBackupList(ctx context.Context, timeBounds model.TimeBounds,
 ) ([]model.BackupDetails, error) {
 	return b.readMetadataList(ctx, timeBounds, true)
 }
 
 // IncrementalBackupList returns a list of available incremental backups.
-func (b *BackupBackend) IncrementalBackupList(ctx context.Context, timeBounds *model.TimeBounds,
+func (b *BackupBackend) IncrementalBackupList(ctx context.Context, timeBounds model.TimeBounds,
 ) ([]model.BackupDetails, error) {
 	return b.readMetadataList(ctx, timeBounds, false)
 }
 
-func (b *BackupBackend) readMetadataList(ctx context.Context, timebounds *model.TimeBounds, isFullBackup bool,
+func (b *BackupBackend) readMetadataList(ctx context.Context, timebounds model.TimeBounds, isFullBackup bool,
 ) ([]model.BackupDetails, error) {
 	backupRoot := getBackupRootPath(b.routineName, isFullBackup)
 	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timebounds.FromTime)
@@ -114,7 +115,7 @@ func (b *BackupBackend) FindLastFullBackup(toTime time.Time) ([]model.BackupDeta
 		return nil, fmt.Errorf("cannot read full backup list: %w", err)
 	}
 
-	fullBackup := latestBackupBeforeTime(fullBackupList, toTime) // it's a list of namespaces
+	fullBackup := latestBackupBeforeTime(fullBackupList, &toTime) // it's a list of namespaces
 	if len(fullBackup) == 0 {
 		return nil, fmt.Errorf("%w: %s", errBackupNotFound, toTime)
 	}
@@ -123,13 +124,13 @@ func (b *BackupBackend) FindLastFullBackup(toTime time.Time) ([]model.BackupDeta
 
 // latestBackupBeforeTime returns list of backups with same creation time,
 // latest before upperBound.
-func latestBackupBeforeTime(allBackups []model.BackupDetails, upperBound time.Time,
+func latestBackupBeforeTime(allBackups []model.BackupDetails, upperBound *time.Time,
 ) []model.BackupDetails {
 	var result []model.BackupDetails
 	var latestTime time.Time
 	for i := range allBackups {
 		current := &allBackups[i]
-		if current.Created.After(upperBound) {
+		if upperBound != nil && current.Created.After(*upperBound) {
 			continue
 		}
 
@@ -145,7 +146,7 @@ func latestBackupBeforeTime(allBackups []model.BackupDetails, upperBound time.Ti
 
 // FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
 func (b *BackupBackend) FindIncrementalBackupsForNamespace(
-	ctx context.Context, bounds *model.TimeBounds, namespace string,
+	ctx context.Context, bounds model.TimeBounds, namespace string,
 ) ([]model.BackupDetails, error) {
 	allIncrementalBackupList, err := b.IncrementalBackupList(ctx, bounds)
 	if err != nil {
@@ -206,4 +207,24 @@ func (b *BackupBackend) packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// lastBackupRun stores the last run times for both full and incremental backups.
+type lastBackupRun struct {
+	// Last time the full backup was performed.
+	full time.Time
+	// Last time the incremental backup was performed.
+	incremental time.Time
+}
+
+func (r *lastBackupRun) noFullBackup() bool {
+	return r.full.Equal(time.Time{})
+}
+
+func (r *lastBackupRun) lastAnyRun() time.Time {
+	if r.incremental.After(r.full) {
+		return r.incremental
+	}
+
+	return r.full
 }
