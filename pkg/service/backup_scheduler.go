@@ -67,8 +67,9 @@ func NewScheduler(ctx context.Context) quartz.Scheduler {
 }
 
 // scheduleRoutines schedules the given handlers using the scheduler.
-func scheduleRoutines(scheduler quartz.Scheduler, config *model.Config,
-	handlers BackupHandlerHolder) error {
+func scheduleRoutines(
+	scheduler quartz.Scheduler, config *model.Config, handlers BackupHandlerHolder,
+) error {
 	var errs error
 	for routineName, routine := range config.BackupRoutines {
 		handler := handlers[routineName]
