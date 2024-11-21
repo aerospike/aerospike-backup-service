@@ -47,7 +47,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 
 	err := a.clearPeriodicSchedulerJobs()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
 	a.backends.Init(a.config)
 
@@ -60,7 +60,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 
 	err = scheduleRoutines(a.scheduler, a.config, a.handlerHolder)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
 
 	return nil
