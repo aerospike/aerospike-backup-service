@@ -515,3 +515,149 @@ Response:
 ```json
 123456789
 ```
+
+## Breaking API Changes (v2 → v3): 
+### Storage Object 
+
+The `Storage` object schema has been updated in **v3** to improve clarity, modularity, and support for additional storage types. 
+
+- **v2:** Unified schema with a `type` field to differentiate storage types.
+- **v3:** Separate schemas for each storage type:
+  - `local-storage`
+  - `s3-storage`
+  - `azure-storage`
+  - `gcp-storage`
+- Validation ensures **only one storage type** is configured per `dto.Storage`.
+
+**S3 Path Construction**:
+  - **v2**: S3 paths were constructed as `s3://<bucket>/<path>`.
+  - **v3**: `bucket` and `path` are now separate fields in `dto.S3Storage`.
+
+### **Example**
+```yaml
+# Example 1: Local Storage
+storage1:
+  local-storage:
+    path: /local/backups
+
+# Example 2: S3 Storage
+storage2:
+  s3-storage:
+    bucket: my-backup-bucket
+    path: backups
+    s3-profile: default
+    s3-region: eu-central-1
+
+# Example 3: Azure Storage
+storage3:
+  azure-storage:
+    account-name: my-storage-account
+    account-key: my-secret-key
+    container-name: my-container
+    endpoint: 'https://my-storage-account.blob.core.windows.net'
+    path: backups
+
+# Example 4: GCP Storage
+storage4:
+  gcp-storage:
+    bucket-name: my-gcp-bucket
+    key-file: /path/to/service-account-key.json
+    endpoint: 'https://storage.googleapis.com'
+    path: backups
+
+```
+
+### Configuration Management Update
+
+We’ve updated the behavior of the configuration API to ensure that changes are applied immediately.
+
+#### Previous Behavior
+Config changes required an explicit "apply" step after CRUD operations to update the runtime configuration.
+
+#### Key Changes
+- **Config Updates:** Each CRUD update now automatically saves the configuration to the file and applies it to the runtime system. No need for a separate "apply" operation.
+The memory config is always in sync with the runtime.
+- **Validation:** Invalid configurations will be rejected immediately, not applied and not saved.
+- **The running backup processes:** will finish as they are, but:
+  - If a routine entry is absent in the updated configuration file, it will not be rescheduled.
+  - If the routine entry is updated, it will be rescheduled with the new parameters.
+
+### Apply Endpoint
+The `apply` endpoint reads and applies the configuration from the file (after it was modified externally).
+
+### Secret Agents
+Config used to have `secret-agent` field to store list of secret agents, now it's called `secret-agents`.
+
+### Restore Request
+
+In the new version (v3) of the API, the **`restore`** request (`/v1/restore/full` and `/v1/restore/incremental`) 
+was changed to simplify and streamline the process.
+
+- **v2:** The `Storage` object contained a `path` that was reused as the backup data location.
+- **v3:** The `path` in the `Storage` object now only refers to the **root path** of the storage. 
+The specific backup data location is now specified using a new required field: **`backup-data-path`**.
+This change allows you to reuse the same storage for different restore requests.
+
+## New API functions (v2 → v3):
+### Node list
+Backup routine has a new optional `node-list` property.
+
+Node list is a comma-separated list of IP addresses and/or host names followed by port numbers.
+```text
+<IP addr 1>:<port 1>[,<IP addr 2>:<port 2>[,...]]
+<IP addr 1>:<TLS_NAME 1>:<port 1>[,<IP addr 2>:<TLS_NAME 2>:<port 2>[,...]]
+```
+Backup the given cluster nodes only.
+This argument is mutually exclusive to partition-list/after-digest arguments.
+Default: backup all nodes in the cluster
+### Extra ttl
+
+A new optional field, `extra-ttl`, has been added to the restore policy configuration.
+It specifies the amount of extra time-to-live (TTL) to add to records that have expirable void-times.
+### Secret Agent for cluster
+
+Credential object has a new optional `secret-agent` property which points to a secret agent, one of those listed in config's secret-agents.
+Secret agent is responsible for storing secrets like passwords and TLS certificates.
+In addition to `password` and `password-path`, there is new field `password-key-secret` which specifies the secret keyword in Aerospike Secret Agent containing password.
+Validation allows only one of these three fields to be present.
+```yaml
+  dto.Credentials:
+      description: Credentials represents authentication details to the Aerospike cluster.
+      properties:
+        auth-mode:
+          description: >-
+            The authentication mode string (INTERNAL, EXTERNAL,
+            EXTERNAL_INSECURE, PKI).
+          enum:
+            - INTERNAL
+            - EXTERNAL
+            - EXTERNAL_INSECURE
+            - PKI
+          type: string
+        password:
+          description: The password for the cluster authentication.
+          example: testPswd
+          type: string
+        password-key-secret:
+          description: |-
+            The secret keyword in Aerospike Secret Agent containing password.
+            Only applicable when SecretAgent is specified.
+          type: string
+        password-path:
+          description: >-
+            The file path with the password string, will take precedence over
+            the password field.
+          example: /path/to/pass.txt
+          type: string
+        secret-agent:
+          allOf:
+            - $ref: '#/components/schemas/dto.SecretAgent'
+          description: Secret Agent configuration (optional).
+          type: object
+        user:
+          description: The username for the cluster authentication.
+          example: testUser
+          type: string
+      type: object
+```
+
