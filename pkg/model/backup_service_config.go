@@ -42,10 +42,10 @@ func comparePointers[T comparable](fieldName string, oldValue, newValue *T) erro
 		return fmt.Errorf("%s removed", fieldName)
 	}
 
-	return compareSimpleValues(fieldName, *oldValue, *newValue)
+	return compareValues(fieldName, *oldValue, *newValue)
 }
 
-func compareSimpleValues[T comparable](fieldName string, oldValue, newValue T) error {
+func compareValues[T comparable](fieldName string, oldValue, newValue T) error {
 	if oldValue != newValue {
 		return fmt.Errorf("%s changed: %v -> %v", fieldName, oldValue, newValue)
 	}

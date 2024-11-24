@@ -110,19 +110,19 @@ func (f *FileLoggerConfig) Compare(other *FileLoggerConfig) error {
 
 	var err error
 
-	if e := compareSimpleValues("Filename", f.Filename, other.Filename); e != nil {
+	if e := compareValues("Filename", f.Filename, other.Filename); e != nil {
 		err = errors.Join(err, e)
 	}
-	if e := compareSimpleValues("MaxSize", f.MaxSize, other.MaxSize); e != nil {
+	if e := compareValues("MaxSize", f.MaxSize, other.MaxSize); e != nil {
 		err = errors.Join(err, e)
 	}
-	if e := compareSimpleValues("MaxAge", f.MaxAge, other.MaxAge); e != nil {
+	if e := compareValues("MaxAge", f.MaxAge, other.MaxAge); e != nil {
 		err = errors.Join(err, e)
 	}
-	if e := compareSimpleValues("MaxBackups", f.MaxBackups, other.MaxBackups); e != nil {
+	if e := compareValues("MaxBackups", f.MaxBackups, other.MaxBackups); e != nil {
 		err = errors.Join(err, e)
 	}
-	if e := compareSimpleValues("Compress", f.Compress, other.Compress); e != nil {
+	if e := compareValues("Compress", f.Compress, other.Compress); e != nil {
 		err = errors.Join(err, e)
 	}
 
