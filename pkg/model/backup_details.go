@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aerospike/backup-go/models"
 	"gopkg.in/yaml.v3"
 )
 
@@ -46,4 +47,17 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 		return nil, fmt.Errorf("error unmarshaling YAML: %w", err)
 	}
 	return &metadata, nil
+}
+
+func NewMetadataFromStats(stats *models.BackupStats, namespace string, from, now time.Time) BackupMetadata {
+	return BackupMetadata{
+		From:                from,
+		Created:             now,
+		Namespace:           namespace,
+		RecordCount:         stats.GetReadRecords(),
+		FileCount:           stats.GetFileCount(),
+		ByteCount:           stats.GetBytesWritten(),
+		SecondaryIndexCount: uint64(stats.GetSIndexes()),
+		UDFCount:            uint64(stats.GetUDFs()),
+	}
 }
