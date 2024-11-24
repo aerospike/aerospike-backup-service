@@ -116,7 +116,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 			slog.Any("error", err),
 		)
 		err := fmt.Errorf("static configuration has changed: %w", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
