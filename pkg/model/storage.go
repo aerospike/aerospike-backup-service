@@ -71,7 +71,7 @@ type AzureStorage struct {
 	// ContainerName is the name of the Azure Blob container where backups will be stored.
 	ContainerName string
 	// Auth holds the authentication details for Azure Blob storage.
-	// It can be either AzureSharedKeyAuth or AzureADAuth.
+	// It can be nil or AzureSharedKeyAuth or AzureADAuth.
 	Auth AzureAuth
 }
 
