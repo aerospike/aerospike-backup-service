@@ -212,7 +212,7 @@ func TestRateLimiterConfig_Compare(t *testing.T) {
 			errors: []string{
 				"Tps changed: 100 -> 200",
 				"Size changed: 1000 -> 2000",
-				"WhiteList changed: [127.0.0.1] -> [127.0.0.1 localhost]",
+				"WhiteList length changed: 1 -> 2",
 			},
 		},
 	}

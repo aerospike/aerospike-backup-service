@@ -3,7 +3,6 @@ package model
 import (
 	"errors"
 	"fmt"
-	"reflect"
 )
 
 // HTTPServerConfig represents the service's HTTP server configuration.
@@ -78,20 +77,13 @@ func (s *HTTPServerConfig) Compare(other *HTTPServerConfig) error {
 		return errors.New("HTTPServer removed")
 	}
 
-	var err error
+	var err = errors.Join(
+		comparePointers("Address", s.Address, other.Address),
+		comparePointers("Port", s.Port, other.Port),
+		comparePointers("ContextPath", s.ContextPath, other.ContextPath),
+		comparePointers("Timeout", s.Timeout, other.Timeout),
+	)
 
-	if e := comparePointers("Address", s.Address, other.Address); e != nil {
-		err = errors.Join(err, e)
-	}
-	if e := comparePointers("Port", s.Port, other.Port); e != nil {
-		err = errors.Join(err, e)
-	}
-	if e := comparePointers("ContextPath", s.ContextPath, other.ContextPath); e != nil {
-		err = errors.Join(err, e)
-	}
-	if e := comparePointers("Timeout", s.Timeout, other.Timeout); e != nil {
-		err = errors.Join(err, e)
-	}
 	if e := s.Rate.Compare(other.Rate); e != nil {
 		err = errors.Join(err, fmt.Errorf("rate changes: %w", e))
 	}
@@ -149,17 +141,9 @@ func (r *RateLimiterConfig) Compare(other *RateLimiterConfig) error {
 		return errors.New("RateLimiter removed")
 	}
 
-	var err error
-
-	if e := comparePointers("Tps", r.Tps, other.Tps); e != nil {
-		err = errors.Join(err, e)
-	}
-	if e := comparePointers("Size", r.Size, other.Size); e != nil {
-		err = errors.Join(err, e)
-	}
-	if !reflect.DeepEqual(r.WhiteList, other.WhiteList) {
-		err = errors.Join(err, fmt.Errorf("WhiteList changed: %v -> %v", r.WhiteList, other.WhiteList))
-	}
-
-	return err
+	return errors.Join(
+		comparePointers("Tps", r.Tps, other.Tps),
+		comparePointers("Size", r.Size, other.Size),
+		compareSlices("WhiteList", r.WhiteList, other.WhiteList),
+	)
 }

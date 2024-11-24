@@ -59,17 +59,12 @@ func (l *LoggerConfig) Compare(other *LoggerConfig) error {
 		return errors.New("logger removed")
 	}
 
-	var err error
+	var err = errors.Join(
+		comparePointers("Level", l.Level, other.Level),
+		comparePointers("Format", l.Format, other.Format),
+		comparePointers("StdoutWriter", l.StdoutWriter, other.StdoutWriter),
+	)
 
-	if e := comparePointers("Level", l.Level, other.Level); e != nil {
-		err = errors.Join(err, e)
-	}
-	if e := comparePointers("Format", l.Format, other.Format); e != nil {
-		err = errors.Join(err, e)
-	}
-	if e := comparePointers("StdoutWriter", l.StdoutWriter, other.StdoutWriter); e != nil {
-		err = errors.Join(err, e)
-	}
 	if e := l.FileWriter.Compare(other.FileWriter); e != nil {
 		err = errors.Join(err, fmt.Errorf("FileWriter changes: %w", e))
 	}
@@ -108,23 +103,11 @@ func (f *FileLoggerConfig) Compare(other *FileLoggerConfig) error {
 		return fmt.Errorf("FileLogger removed")
 	}
 
-	var err error
-
-	if e := compareValues("Filename", f.Filename, other.Filename); e != nil {
-		err = errors.Join(err, e)
-	}
-	if e := compareValues("MaxSize", f.MaxSize, other.MaxSize); e != nil {
-		err = errors.Join(err, e)
-	}
-	if e := compareValues("MaxAge", f.MaxAge, other.MaxAge); e != nil {
-		err = errors.Join(err, e)
-	}
-	if e := compareValues("MaxBackups", f.MaxBackups, other.MaxBackups); e != nil {
-		err = errors.Join(err, e)
-	}
-	if e := compareValues("Compress", f.Compress, other.Compress); e != nil {
-		err = errors.Join(err, e)
-	}
-
-	return err
+	return errors.Join(
+		compareValues("Filename", f.Filename, other.Filename),
+		compareValues("MaxSize", f.MaxSize, other.MaxSize),
+		compareValues("MaxAge", f.MaxAge, other.MaxAge),
+		compareValues("MaxBackups", f.MaxBackups, other.MaxBackups),
+		compareValues("Compress", f.Compress, other.Compress),
+	)
 }
