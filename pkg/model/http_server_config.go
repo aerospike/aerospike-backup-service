@@ -1,5 +1,11 @@
 package model
 
+import (
+	"errors"
+	"fmt"
+	"reflect"
+)
+
 // HTTPServerConfig represents the service's HTTP server configuration.
 // @Description HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
@@ -60,6 +66,39 @@ func (s *HTTPServerConfig) GetContextPathOrDefault() string {
 	return *defaultConfig.http.ContextPath
 }
 
+// Compare HTTPServerConfig object with another and return detailed errors.
+func (s *HTTPServerConfig) Compare(other *HTTPServerConfig) error {
+	if s == nil && other == nil {
+		return nil
+	}
+	if s == nil {
+		return fmt.Errorf("HTTPServer added")
+	}
+	if other == nil {
+		return fmt.Errorf("HTTPServer removed")
+	}
+
+	var err error
+
+	if e := comparePointers("Address", s.Address, other.Address); e != nil {
+		err = errors.Join(err, e)
+	}
+	if e := comparePointers("Port", s.Port, other.Port); e != nil {
+		err = errors.Join(err, e)
+	}
+	if e := comparePointers("ContextPath", s.ContextPath, other.ContextPath); e != nil {
+		err = errors.Join(err, e)
+	}
+	if e := comparePointers("Timeout", s.Timeout, other.Timeout); e != nil {
+		err = errors.Join(err, e)
+	}
+	if e := s.Rate.Compare(other.Rate); e != nil {
+		err = errors.Join(err, fmt.Errorf("rate changes: %w", e))
+	}
+
+	return err
+}
+
 // RateLimiterConfig represents the service's HTTP server rate limiter configuration.
 // @Description RateLimiterConfig is the HTTP server rate limiter configuration.
 type RateLimiterConfig struct {
@@ -96,4 +135,31 @@ func (r *RateLimiterConfig) GetWhiteListOrDefault() []string {
 		return r.WhiteList
 	}
 	return defaultConfig.http.Rate.WhiteList
+}
+
+// Compare RateLimiterConfig object with another and return detailed errors.
+func (r *RateLimiterConfig) Compare(other *RateLimiterConfig) error {
+	if r == nil && other == nil {
+		return nil
+	}
+	if r == nil {
+		return fmt.Errorf("RateLimiter added")
+	}
+	if other == nil {
+		return fmt.Errorf("RateLimiter removed")
+	}
+
+	var err error
+
+	if e := comparePointers("Tps", r.Tps, other.Tps); e != nil {
+		err = errors.Join(err, e)
+	}
+	if e := comparePointers("Size", r.Size, other.Size); e != nil {
+		err = errors.Join(err, e)
+	}
+	if !reflect.DeepEqual(r.WhiteList, other.WhiteList) {
+		err = errors.Join(err, fmt.Errorf("WhiteList changed: %v -> %v", r.WhiteList, other.WhiteList))
+	}
+
+	return err
 }

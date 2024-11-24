@@ -1,5 +1,10 @@
 package model
 
+import (
+	"errors"
+	"fmt"
+)
+
 // BackupServiceConfig represents the backup service configuration properties.
 // @Description BackupServiceConfig represents the backup service configuration properties.
 type BackupServiceConfig struct {
@@ -9,10 +14,40 @@ type BackupServiceConfig struct {
 	Logger *LoggerConfig
 }
 
-// NewBackupServiceConfigWithDefaultValues returns a new BackupServiceConfig with default values.
-func NewBackupServiceConfigWithDefaultValues() *BackupServiceConfig {
-	return &BackupServiceConfig{
-		HTTPServer: &HTTPServerConfig{},
-		Logger:     &LoggerConfig{},
+// Compare BackupServiceConfig with another and return detailed errors.
+func (c *BackupServiceConfig) Compare(other BackupServiceConfig) error {
+	var err error
+
+	if e := c.HTTPServer.Compare(other.HTTPServer); e != nil {
+		err = errors.Join(err, fmt.Errorf("HTTPServer changes: %w", e))
 	}
+
+	if e := c.Logger.Compare(other.Logger); e != nil {
+		err = errors.Join(err, fmt.Errorf("logger changes: %w", e))
+	}
+
+	return err
+}
+
+func comparePointers[T comparable](fieldName string, old, new *T) error {
+	if old == nil && new == nil {
+		return nil
+	}
+
+	if old == nil {
+		return fmt.Errorf("%s added", fieldName)
+	}
+
+	if new == nil {
+		return fmt.Errorf("%s removed", fieldName)
+	}
+
+	return compareSimpleValues(fieldName, *old, *new)
+}
+
+func compareSimpleValues[T comparable](fieldName string, old, new T) error {
+	if old != new {
+		return fmt.Errorf("%s changed: %v -> %v", fieldName, old, new)
+	}
+	return nil
 }
