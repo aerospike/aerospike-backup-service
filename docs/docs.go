@@ -1997,8 +1997,7 @@ const docTemplate = `{
         "dto.GcpStorage": {
             "type": "object",
             "required": [
-                "bucket-name",
-                "key-file"
+                "bucket-name"
             ],
             "properties": {
                 "bucket-name": {

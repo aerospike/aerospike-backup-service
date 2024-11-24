@@ -1730,7 +1730,6 @@ components:
           type: string
       required:
       - bucket-name
-      - key-file
       type: object
     dto.HTTPServerConfig:
       description: HTTPServerConfig represents the service's HTTP server configuration.
