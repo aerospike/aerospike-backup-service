@@ -1,6 +1,8 @@
 package model
 
 import (
+	"time"
+
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -23,10 +25,10 @@ type RestorePolicy struct {
 	// By default, the cluster is checked for batch write support.
 	DisableBatchWrites *bool
 	// The max number of outstanding async record batch write calls at a time.
-	MaxAsyncBatches *int32
+	MaxAsyncBatches *int
 	// The max allowed number of records per an async batch write call.
 	// Default is 128 with batch writes enabled, or 16 without batch writes.
-	BatchSize *int32
+	BatchSize *int
 	// Namespace details for the restore operation.
 	// By default, the data is restored to the namespace from which it was taken.
 	Namespace *RestoreNamespace
@@ -75,4 +77,25 @@ func (p *RestorePolicy) GetParallelOrDefault() int {
 		return *p.Parallel
 	}
 	return *defaultConfig.restorePolicy.Parallel
+}
+
+func (p *RestorePolicy) GetMaxAsyncBatchesOrDefault() int {
+	if p.MaxAsyncBatches != nil {
+		return *p.MaxAsyncBatches
+	}
+	return *defaultConfig.restorePolicy.MaxAsyncBatches
+}
+
+func (p *RestorePolicy) GetBatchSizeOrDefault() int {
+	if p.BatchSize != nil {
+		return *p.BatchSize
+	}
+	return *defaultConfig.restorePolicy.MaxAsyncBatches
+}
+
+func (p *RestorePolicy) GetTimeoutOrDefault() time.Duration {
+	if p.Timeout != nil {
+		return time.Duration(*p.Timeout) * time.Millisecond
+	}
+	return time.Duration(*defaultConfig.restorePolicy.Timeout) * time.Millisecond
 }

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
@@ -78,12 +77,9 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 
 	config.Parallel = restoreRequest.Policy.GetParallelOrDefault()
 
-	if restoreRequest.Policy.MaxAsyncBatches != nil {
-		config.MaxAsyncBatches = int(*restoreRequest.Policy.MaxAsyncBatches)
-	}
-	if restoreRequest.Policy.BatchSize != nil {
-		config.BatchSize = int(*restoreRequest.Policy.BatchSize)
-	}
+	config.MaxAsyncBatches = restoreRequest.Policy.GetMaxAsyncBatchesOrDefault()
+	config.BatchSize = restoreRequest.Policy.GetBatchSizeOrDefault()
+
 	if restoreRequest.Policy.DisableBatchWrites != nil {
 		config.DisableBatchWrites = *restoreRequest.Policy.DisableBatchWrites
 	}
@@ -131,10 +127,8 @@ func makeWritePolicy(restoreRequest *model.RestoreRequest) *a.WritePolicy {
 	writePolicy.RecordExistsAction = recordExistsAction(
 		restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
 
-	if restoreRequest.Policy.Timeout != nil && *restoreRequest.Policy.Timeout > 0 {
-		writePolicy.TotalTimeout = time.Duration(*restoreRequest.Policy.Timeout) *
-			time.Millisecond
-	}
+	writePolicy.SocketTimeout = restoreRequest.Policy.GetTimeoutOrDefault()
+	writePolicy.TotalTimeout = 0 // actual timeout will be socketTimeout * maxRetries
 
 	return writePolicy
 }

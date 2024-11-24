@@ -49,5 +49,8 @@ var defaultConfig = struct {
 			MaxRetries:  5,
 			Multiplier:  2,
 		},
+		MaxAsyncBatches: util.Ptr(640),
+		BatchSize:       util.Ptr(128),
+		Timeout:         util.Ptr(int32(10_000)),
 	},
 }

@@ -26,10 +26,10 @@ type RestorePolicy struct {
 	// By default, the cluster is checked for batch write support.
 	DisableBatchWrites *bool `json:"disable-batch-writes,omitempty"`
 	// The max number of outstanding async record batch write calls at a time.
-	MaxAsyncBatches *int32 `json:"max-async-batches,omitempty" example:"32"`
+	MaxAsyncBatches *int `json:"max-async-batches,omitempty" example:"32"`
 	// The max allowed number of records per an async batch write call.
 	// Default is 128 with batch writes enabled, or 16 without batch writes.
-	BatchSize *int32 `json:"batch-size,omitempty" example:"128"`
+	BatchSize *int `json:"batch-size,omitempty" example:"128"`
 	// Namespace details for the restore operation.
 	// By default, the data is restored to the namespace from which it was taken.
 	Namespace *RestoreNamespace `json:"namespace,omitempty"`
