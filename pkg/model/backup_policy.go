@@ -37,7 +37,7 @@ type BackupPolicy struct {
 	// Do not back up any UDF modules.
 	NoUdfs *bool
 	// Throttles backup write operations to the backup file(s) to not exceed the given
-	// bandwidth in MiB/s.
+	// bandwidth in Bytes/s.
 	Bandwidth *int
 	// Limit total returned records per second (RPS). If RPS is zero (the default),
 	// the records-per-second limit is not applied.
