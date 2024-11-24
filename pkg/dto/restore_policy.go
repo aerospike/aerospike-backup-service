@@ -123,7 +123,7 @@ func (p *RestorePolicy) ToModel() *model.RestorePolicy {
 		NoRecords:          p.NoRecords,
 		NoIndexes:          p.NoIndexes,
 		NoUdfs:             p.NoUdfs,
-		Timeout:            p.Timeout,
+		Timeout:            millisToDuration(p.Timeout),
 		DisableBatchWrites: p.DisableBatchWrites,
 		MaxAsyncBatches:    p.MaxAsyncBatches,
 		BatchSize:          p.BatchSize,

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
@@ -46,10 +47,10 @@ type BackupPolicy struct {
 	Bandwidth *int64 `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
 	// Limit total returned records per second (RPS). If RPS is zero (the default),
 	// the records-per-second limit is not applied.
-	RecordsPerSecond *int32 `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000"`
+	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000"`
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created.
-	FileLimit *int64 `yaml:"file-limit,omitempty" json:"file-limit,omitempty" example:"1024"`
+	FileLimit *int `yaml:"file-limit,omitempty" json:"file-limit,omitempty" example:"1024"`
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details.
@@ -116,8 +117,8 @@ func (p *BackupPolicy) Validate() error {
 func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 	return &model.BackupPolicy{
 		Parallel:          p.Parallel,
-		SocketTimeout:     p.SocketTimeout,
-		TotalTimeout:      p.TotalTimeout,
+		SocketTimeout:     millisToDuration(p.SocketTimeout),
+		TotalTimeout:      millisToDuration(p.TotalTimeout),
 		RetryPolicy:       p.RetryPolicy.ToModel(),
 		RemoveFiles:       (*model.RemoveFilesType)(p.RemoveFiles),
 		NoRecords:         p.NoRecords,
@@ -132,6 +133,22 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 	}
 }
 
+func millisToDuration(ms *int32) *time.Duration {
+	if ms == nil {
+		return nil
+	}
+	duration := time.Duration(*ms) * time.Millisecond
+	return &duration
+}
+
+func durationToMillis(d *time.Duration) *int32 {
+	if d == nil {
+		return nil
+	}
+	ms := int32((*d) / time.Millisecond)
+	return &ms
+}
+
 func NewBackupPolicyFromModel(m *model.BackupPolicy) *BackupPolicy {
 	if m == nil {
 		return nil
@@ -144,8 +161,8 @@ func NewBackupPolicyFromModel(m *model.BackupPolicy) *BackupPolicy {
 
 func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.Parallel = m.Parallel
-	p.SocketTimeout = m.SocketTimeout
-	p.TotalTimeout = m.TotalTimeout
+	p.SocketTimeout = durationToMillis(m.SocketTimeout)
+	p.TotalTimeout = durationToMillis(m.TotalTimeout)
 	p.RetryPolicy = newRetryPolicyFromModel(m.RetryPolicy)
 	p.RemoveFiles = (*RemoveFilesType)(m.RemoveFiles)
 	p.NoRecords = m.NoRecords

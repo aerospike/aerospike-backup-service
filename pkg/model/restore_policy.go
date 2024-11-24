@@ -19,8 +19,8 @@ type RestorePolicy struct {
 	NoIndexes *bool
 	// Do not restore any UDF modules.
 	NoUdfs *bool
-	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-	Timeout *int32
+	// Timeout for Aerospike commands to write records, create indexes and create UDFs.
+	Timeout *time.Duration
 	// Disables the use of batch writes when restoring records to the Aerospike cluster.
 	// By default, the cluster is checked for batch write support.
 	DisableBatchWrites *bool

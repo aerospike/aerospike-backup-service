@@ -220,7 +220,7 @@ func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) 
 		fromTime = &lastRun
 	}
 
-	if h.backupFullPolicy.IsSealed() {
+	if h.backupFullPolicy.IsSealedOrDefault() {
 		toTime = &now
 	}
 

@@ -1,6 +1,8 @@
 package model
 
 import (
+	"time"
+
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"github.com/aerospike/backup-go/models"
 )
@@ -21,9 +23,9 @@ type BackupPolicy struct {
 	Parallel *int
 	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int32
+	SocketTimeout *time.Duration
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
-	TotalTimeout *int32
+	TotalTimeout *time.Duration
 	// RetryPolicy defines the configuration for retry attempts in case of failures.
 	RetryPolicy *models.RetryPolicy
 	// Whether to clear the output directory (default: KeepAll).
@@ -39,10 +41,10 @@ type BackupPolicy struct {
 	Bandwidth *int64
 	// Limit total returned records per second (RPS). If RPS is zero (the default),
 	// the records-per-second limit is not applied.
-	RecordsPerSecond *int32
+	RecordsPerSecond *int
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created.
-	FileLimit *int64
+	FileLimit *int
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy
 	// Compression details.
@@ -53,13 +55,13 @@ type BackupPolicy struct {
 	Sealed *bool
 }
 
-// IsSealed returns the value of the Sealed property.
+// IsSealedOrDefault returns the value of the Sealed property.
 // If the property is not set, it returns the default value.
-func (p *BackupPolicy) IsSealed() bool {
+func (p *BackupPolicy) IsSealedOrDefault() bool {
 	if p.Sealed != nil {
 		return *p.Sealed
 	}
-	return defaultConfig.backupPolicy.sealed
+	return defaultConfig.backupPolicy.Sealed != nil && *defaultConfig.backupPolicy.Sealed
 }
 
 // CopySMDDisabled creates a new instance of the BackupPolicy struct with identical field values.
@@ -82,11 +84,43 @@ func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
 }
 
 func (p *BackupPolicy) GetRetryPolicyOrDefault() models.RetryPolicy {
-	if p.RetryPolicy == nil {
-		return defaultConfig.backupPolicy.retryPolicy
+	if p.RetryPolicy != nil {
+		return *p.RetryPolicy
 	}
 
-	return *p.RetryPolicy
+	return *defaultConfig.backupPolicy.RetryPolicy
+}
+
+func (p *BackupPolicy) GetParallelOrDefault() int {
+	if p.Parallel != nil {
+		return *p.Parallel
+	}
+
+	return *defaultConfig.backupPolicy.Parallel
+}
+
+func (p *BackupPolicy) GetFileLimitOrDefault() int {
+	if p.FileLimit != nil {
+		return *p.FileLimit
+	}
+
+	return *defaultConfig.backupPolicy.FileLimit
+}
+
+func (p *BackupPolicy) GetSocketTimeoutOrDefault() time.Duration {
+	if p.SocketTimeout != nil {
+		return *p.SocketTimeout
+	}
+
+	return *defaultConfig.backupPolicy.SocketTimeout
+}
+
+func (p *BackupPolicy) GetTotalTimeoutOrDefault() time.Duration {
+	if p.TotalTimeout != nil {
+		return *p.TotalTimeout
+	}
+
+	return *defaultConfig.backupPolicy.TotalTimeout
 }
 
 func (r *RemoveFilesType) RemoveFullBackup() bool {

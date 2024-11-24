@@ -7,6 +7,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 )
@@ -77,18 +78,10 @@ func makeBackupConfig(
 		config.SetList = backupRoutine.SetList
 	}
 
-	if backupPolicy.Parallel != nil {
-		config.ParallelRead = *backupPolicy.Parallel
-		config.ParallelWrite = *backupPolicy.Parallel
-	}
-
-	if backupPolicy.FileLimit != nil {
-		config.FileLimit = *backupPolicy.FileLimit * 1_048_576 // lib expects limit in bytes.
-	}
-
-	if backupPolicy.RecordsPerSecond != nil {
-		config.RecordsPerSecond = int(*backupPolicy.RecordsPerSecond)
-	}
+	config.ParallelRead = backupPolicy.GetParallelOrDefault()
+	config.ParallelWrite = backupPolicy.GetParallelOrDefault()
+	config.FileLimit = int64(backupPolicy.GetFileLimitOrDefault()) * 1_048_576 // lib expects limit in bytes.
+	config.RecordsPerSecond = util.ValueOrZero(backupPolicy.RecordsPerSecond)
 
 	config.ModBefore = timebounds.ToTime
 	config.ModAfter = timebounds.FromTime
