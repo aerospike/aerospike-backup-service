@@ -15,7 +15,7 @@ import (
 )
 
 func testConfigRestorePolicy() *dto.RestorePolicy {
-	testIn32 := int32(10)
+	testIn32 := 10
 	return &dto.RestorePolicy{
 		Parallel: &testIn32,
 	}
