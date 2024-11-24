@@ -269,16 +269,14 @@ func NewStorageFromModel(m model.Storage) *Storage {
 			Path:          s.Path,
 		}
 
-		if s.Auth != nil {
-			switch auth := s.Auth.(type) {
-			case model.AzureSharedKeyAuth:
-				azureStorage.AccountName = auth.AccountName
-				azureStorage.AccountKey = auth.AccountKey
-			case model.AzureADAuth:
-				azureStorage.TenantID = auth.TenantID
-				azureStorage.ClientID = auth.ClientID
-				azureStorage.ClientSecret = auth.ClientSecret
-			}
+		switch auth := s.Auth.(type) {
+		case model.AzureSharedKeyAuth:
+			azureStorage.AccountName = auth.AccountName
+			azureStorage.AccountKey = auth.AccountKey
+		case model.AzureADAuth:
+			azureStorage.TenantID = auth.TenantID
+			azureStorage.ClientID = auth.ClientID
+			azureStorage.ClientSecret = auth.ClientSecret
 		}
 
 		return &Storage{
