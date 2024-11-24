@@ -95,7 +95,7 @@ func (p *RestorePolicy) GetBatchSizeOrDefault() int {
 
 func (p *RestorePolicy) GetTimeoutOrDefault() time.Duration {
 	if p.Timeout != nil {
-		return time.Duration(*p.Timeout) * time.Millisecond
+		return *p.Timeout
 	}
-	return time.Duration(*defaultConfig.restorePolicy.Timeout) * time.Millisecond
+	return *defaultConfig.restorePolicy.Timeout
 }

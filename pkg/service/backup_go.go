@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
@@ -50,7 +49,6 @@ func (b *BackupGo) BackupRun(
 	return handler, nil
 }
 
-//nolint:funlen
 func makeBackupConfig(
 	namespace string,
 	backupRoutine *model.BackupRoutine,
@@ -87,17 +85,10 @@ func makeBackupConfig(
 	config.ModAfter = timebounds.FromTime
 
 	config.ScanPolicy = a.NewScanPolicy()
-	if backupPolicy.TotalTimeout != nil && *backupPolicy.TotalTimeout > 0 {
-		config.ScanPolicy.TotalTimeout = time.Duration(*backupPolicy.TotalTimeout) *
-			time.Millisecond
-	}
-	if backupPolicy.SocketTimeout != nil && *backupPolicy.SocketTimeout > 0 {
-		config.ScanPolicy.SocketTimeout = time.Duration(*backupPolicy.SocketTimeout) *
-			time.Millisecond
-	}
-	if backupPolicy.Bandwidth != nil {
-		config.Bandwidth = int(*backupPolicy.Bandwidth)
-	}
+	config.ScanPolicy.TotalTimeout = backupPolicy.GetTotalTimeoutOrDefault()
+	config.ScanPolicy.SocketTimeout = backupPolicy.GetSocketTimeoutOrDefault()
+
+	config.Bandwidth = util.ValueOrZero(backupPolicy.Bandwidth) * 1_048_576 // lib expects bandwidth in bytes.
 
 	if backupPolicy.CompressionPolicy != nil {
 		config.CompressionPolicy = &backup.CompressionPolicy{

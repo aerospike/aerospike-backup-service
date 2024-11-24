@@ -44,7 +44,7 @@ type BackupPolicy struct {
 	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty"`
 	// Throttles backup write operations to the backup file(s) to not exceed the given
 	// bandwidth in MiB/s.
-	Bandwidth *int64 `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
+	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
 	// Limit total returned records per second (RPS). If RPS is zero (the default),
 	// the records-per-second limit is not applied.
 	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000"`
