@@ -203,7 +203,8 @@ func (h *BackupRoutineHandler) startNamespaceBackup(
 			h.deleteFolder(ctx, backupFolder)
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success.
-			return h.writeBackupMetadata(ctx, stats, now, namespace, backupFolder)
+			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
+			return h.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
 	)
 }
@@ -238,19 +239,8 @@ func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context) error {
 }
 
 func (h *BackupRoutineHandler) writeBackupMetadata(
-	ctx context.Context, stats *models.BackupStats, created time.Time, namespace string, backupFolder string,
+	ctx context.Context, metadata model.BackupMetadata, backupFolder string,
 ) error {
-	metadata := model.BackupMetadata{
-		From:                time.Time{},
-		Created:             created,
-		Namespace:           namespace,
-		RecordCount:         stats.GetReadRecords(),
-		FileCount:           stats.GetFileCount(),
-		ByteCount:           stats.GetBytesWritten(),
-		SecondaryIndexCount: uint64(stats.GetSIndexes()),
-		UDFCount:            uint64(stats.GetUDFs()),
-	}
-
 	if err := h.metadataWriter.writeBackupMetadata(ctx, backupFolder, metadata); err != nil {
 		h.logger.Error("Could not Write backup metadata",
 			slog.String("folder", backupFolder),
@@ -353,8 +343,8 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 				h.deleteFolder(ctx, backupFolder)
 				return nil
 			}
-
-			return h.writeBackupMetadata(ctx, stats, now, namespace, backupFolder)
+			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
+			return h.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
 	)
 }
