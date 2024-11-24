@@ -45,7 +45,6 @@ func (r *RestoreRunner) Run(
 	return handler, nil
 }
 
-//nolint:funlen
 func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 ) *backup.RestoreConfig {
 	config := backup.NewDefaultRestoreConfig()
@@ -54,19 +53,10 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 
 	config.RetryPolicy = restoreRequest.Policy.GetRetryPolicyOrDefault()
 
-	config.RecordsPerSecond = util.ValueOrZero(restoreRequest.Policy.Tps)
-	config.Bandwidth = util.ValueOrZero(restoreRequest.Policy.Bandwidth)
-
 	config.WritePolicy = makeWritePolicy(restoreRequest)
-	if restoreRequest.Policy.NoRecords != nil && *restoreRequest.Policy.NoRecords {
-		config.NoRecords = true
-	}
-	if restoreRequest.Policy.NoIndexes != nil && *restoreRequest.Policy.NoIndexes {
-		config.NoIndexes = true
-	}
-	if restoreRequest.Policy.NoUdfs != nil && *restoreRequest.Policy.NoUdfs {
-		config.NoUDFs = true
-	}
+	config.NoRecords = util.ValueOrZero(restoreRequest.Policy.NoRecords)
+	config.NoIndexes = util.ValueOrZero(restoreRequest.Policy.NoIndexes)
+	config.NoUDFs = util.ValueOrZero(restoreRequest.Policy.NoUdfs)
 
 	if restoreRequest.Policy.Namespace != nil {
 		config.Namespace = &backup.RestoreNamespaceConfig{
@@ -75,14 +65,13 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 		}
 	}
 
+	config.RecordsPerSecond = util.ValueOrZero(restoreRequest.Policy.Tps)
+	config.Bandwidth = util.ValueOrZero(restoreRequest.Policy.Bandwidth)
 	config.Parallel = restoreRequest.Policy.GetParallelOrDefault()
-
 	config.MaxAsyncBatches = restoreRequest.Policy.GetMaxAsyncBatchesOrDefault()
 	config.BatchSize = restoreRequest.Policy.GetBatchSizeOrDefault()
+	config.DisableBatchWrites = util.ValueOrZero(restoreRequest.Policy.DisableBatchWrites)
 
-	if restoreRequest.Policy.DisableBatchWrites != nil {
-		config.DisableBatchWrites = *restoreRequest.Policy.DisableBatchWrites
-	}
 	if restoreRequest.Policy.CompressionPolicy != nil {
 		config.CompressionPolicy = &backup.CompressionPolicy{
 			Mode:  restoreRequest.Policy.CompressionPolicy.Mode,
@@ -98,9 +87,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 		}
 	}
 
-	if restoreRequest.Policy.ExtraTTL != nil {
-		config.ExtraTTL = *restoreRequest.Policy.ExtraTTL
-	}
+	config.ExtraTTL = util.ValueOrZero(restoreRequest.Policy.ExtraTTL)
 
 	if restoreRequest.SecretAgent != nil {
 		config.SecretAgentConfig = &backup.SecretAgentConfig{

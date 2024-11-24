@@ -61,25 +61,17 @@ func makeBackupConfig(
 	config.Namespace = namespace
 	config.BinList = backupRoutine.BinList
 	config.NodeList = backupRoutine.NodeList
+	config.SetList = backupRoutine.SetList
 
-	if backupPolicy.NoRecords != nil && *backupPolicy.NoRecords {
-		config.NoRecords = true
-	}
-	if backupPolicy.NoIndexes != nil && *backupPolicy.NoIndexes {
-		config.NoIndexes = true
-	}
-	if backupPolicy.NoUdfs != nil && *backupPolicy.NoUdfs {
-		config.NoUDFs = true
-	}
-
-	if len(backupRoutine.SetList) > 0 {
-		config.SetList = backupRoutine.SetList
-	}
+	config.NoRecords = util.ValueOrZero(backupPolicy.NoRecords)
+	config.NoIndexes = util.ValueOrZero(backupPolicy.NoIndexes)
+	config.NoUDFs = util.ValueOrZero(backupPolicy.NoUdfs)
 
 	config.ParallelRead = backupPolicy.GetParallelOrDefault()
 	config.ParallelWrite = backupPolicy.GetParallelOrDefault()
 	config.FileLimit = int64(backupPolicy.GetFileLimitOrDefault()) * 1_048_576 // lib expects limit in bytes.
 	config.RecordsPerSecond = util.ValueOrZero(backupPolicy.RecordsPerSecond)
+	config.Bandwidth = util.ValueOrZero(backupPolicy.Bandwidth) * 1_048_576 // lib expects bandwidth in bytes.
 
 	config.ModBefore = timebounds.ToTime
 	config.ModAfter = timebounds.FromTime
@@ -87,8 +79,6 @@ func makeBackupConfig(
 	config.ScanPolicy = a.NewScanPolicy()
 	config.ScanPolicy.TotalTimeout = backupPolicy.GetTotalTimeoutOrDefault()
 	config.ScanPolicy.SocketTimeout = backupPolicy.GetSocketTimeoutOrDefault()
-
-	config.Bandwidth = util.ValueOrZero(backupPolicy.Bandwidth) * 1_048_576 // lib expects bandwidth in bytes.
 
 	if backupPolicy.CompressionPolicy != nil {
 		config.CompressionPolicy = &backup.CompressionPolicy{
