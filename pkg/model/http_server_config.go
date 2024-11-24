@@ -72,10 +72,10 @@ func (s *HTTPServerConfig) Compare(other *HTTPServerConfig) error {
 		return nil
 	}
 	if s == nil {
-		return fmt.Errorf("HTTPServer added")
+		return errors.New("HTTPServer added")
 	}
 	if other == nil {
-		return fmt.Errorf("HTTPServer removed")
+		return errors.New("HTTPServer removed")
 	}
 
 	var err error
@@ -143,10 +143,10 @@ func (r *RateLimiterConfig) Compare(other *RateLimiterConfig) error {
 		return nil
 	}
 	if r == nil {
-		return fmt.Errorf("RateLimiter added")
+		return errors.New("RateLimiter added")
 	}
 	if other == nil {
-		return fmt.Errorf("RateLimiter removed")
+		return errors.New("RateLimiter removed")
 	}
 
 	var err error

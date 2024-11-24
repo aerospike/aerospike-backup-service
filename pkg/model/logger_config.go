@@ -53,10 +53,10 @@ func (l *LoggerConfig) Compare(other *LoggerConfig) error {
 		return nil
 	}
 	if l == nil {
-		return fmt.Errorf("Logger added")
+		return errors.New("logger added")
 	}
 	if other == nil {
-		return fmt.Errorf("Logger removed")
+		return errors.New("logger removed")
 	}
 
 	var err error

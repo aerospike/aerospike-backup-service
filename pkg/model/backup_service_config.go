@@ -29,25 +29,26 @@ func (c *BackupServiceConfig) Compare(other BackupServiceConfig) error {
 	return err
 }
 
-func comparePointers[T comparable](fieldName string, old, new *T) error {
-	if old == nil && new == nil {
+func comparePointers[T comparable](fieldName string, oldValue, newValue *T) error {
+	if oldValue == nil && newValue == nil {
 		return nil
 	}
 
-	if old == nil {
+	if oldValue == nil {
 		return fmt.Errorf("%s added", fieldName)
 	}
 
-	if new == nil {
+	if newValue == nil {
 		return fmt.Errorf("%s removed", fieldName)
 	}
 
-	return compareSimpleValues(fieldName, *old, *new)
+	return compareSimpleValues(fieldName, *oldValue, *newValue)
 }
 
-func compareSimpleValues[T comparable](fieldName string, old, new T) error {
-	if old != new {
-		return fmt.Errorf("%s changed: %v -> %v", fieldName, old, new)
+func compareSimpleValues[T comparable](fieldName string, oldValue, newValue T) error {
+	if oldValue != newValue {
+		return fmt.Errorf("%s changed: %v -> %v", fieldName, oldValue, newValue)
 	}
+
 	return nil
 }
