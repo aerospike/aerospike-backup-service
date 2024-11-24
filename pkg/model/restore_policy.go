@@ -7,8 +7,8 @@ import (
 // RestorePolicy represents a policy for the restore operation.
 // @Description RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
-	// The number of concurrent record readers from backup files.
-	Parallel *int32
+	// The number of concurrent record readers from backup files. Default: 20
+	Parallel *int
 	// Do not restore any record data (metadata or bin data).
 	// By default, record data, secondary index definitions, and UDF modules
 	// will be restored.
@@ -67,5 +67,12 @@ func (p *RestorePolicy) GetRetryPolicyOrDefault() *models.RetryPolicy {
 		return p.RetryPolicy
 	}
 
-	return defaultRetry
+	return defaultConfig.restorePolicy.RetryPolicy
+}
+
+func (p *RestorePolicy) GetParallelOrDefault() int {
+	if p.Parallel != nil {
+		return *p.Parallel
+	}
+	return *defaultConfig.restorePolicy.Parallel
 }

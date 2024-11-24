@@ -79,9 +79,8 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 		}
 	}
 
-	if restoreRequest.Policy.Parallel != nil {
-		config.Parallel = int(*restoreRequest.Policy.Parallel)
-	}
+	config.Parallel = restoreRequest.Policy.GetParallelOrDefault()
+
 	if restoreRequest.Policy.MaxAsyncBatches != nil {
 		config.MaxAsyncBatches = int(*restoreRequest.Policy.MaxAsyncBatches)
 	}

@@ -11,7 +11,7 @@ import (
 // @Description RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
 	// The number of concurrent record readers from backup files.
-	Parallel *int32 `json:"parallel,omitempty" example:"8"`
+	Parallel *int `json:"parallel,omitempty" example:"8"`
 	// Do not restore any record data (metadata or bin data).
 	// By default, record data, secondary index definitions, and UDF modules
 	// will be restored.

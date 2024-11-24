@@ -14,9 +14,10 @@ type backupPolicy struct {
 
 // defaultConfig represents default configuration values.
 var defaultConfig = struct {
-	http         HTTPServerConfig
-	logger       LoggerConfig
-	backupPolicy backupPolicy
+	http          HTTPServerConfig
+	logger        LoggerConfig
+	backupPolicy  backupPolicy
+	restorePolicy RestorePolicy
 }{
 	http: HTTPServerConfig{
 		Address: util.Ptr("0.0.0.0"),
@@ -41,10 +42,12 @@ var defaultConfig = struct {
 			Multiplier:  1,
 		},
 	},
-}
-
-var defaultRetry = &models.RetryPolicy{
-	BaseTimeout: 2 * time.Second,
-	MaxRetries:  5,
-	Multiplier:  2,
+	restorePolicy: RestorePolicy{
+		Parallel: util.Ptr(20),
+		RetryPolicy: &models.RetryPolicy{
+			BaseTimeout: 2 * time.Second,
+			MaxRetries:  5,
+			Multiplier:  2,
+		},
+	},
 }
