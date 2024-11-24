@@ -50,10 +50,10 @@ type RestorePolicy struct {
 	// the namespace, regardless of generation numbers.
 	NoGeneration *bool `json:"no-generation,omitempty"`
 	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.
-	Bandwidth *int64 `json:"bandwidth,omitempty" example:"50000"`
+	Bandwidth *int `json:"bandwidth,omitempty" example:"50000"`
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions
 	// per second.
-	Tps *int32 `json:"tps,omitempty" example:"4000"`
+	Tps *int `json:"tps,omitempty" example:"4000"`
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details.

@@ -47,10 +47,10 @@ type RestorePolicy struct {
 	// the namespace, regardless of generation numbers.
 	NoGeneration *bool
 	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.
-	Bandwidth *int64
+	Bandwidth *int
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions
 	// per second.
-	Tps *int32
+	Tps *int
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy
 	// Compression details.

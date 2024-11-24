@@ -7,6 +7,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asb"
@@ -54,12 +55,8 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 
 	config.RetryPolicy = restoreRequest.Policy.GetRetryPolicyOrDefault()
 
-	if restoreRequest.Policy.Tps != nil {
-		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)
-	}
-	if restoreRequest.Policy.Bandwidth != nil {
-		config.Bandwidth = int(*restoreRequest.Policy.Bandwidth)
-	}
+	config.RecordsPerSecond = util.ValueOrZero(restoreRequest.Policy.Tps)
+	config.Bandwidth = util.ValueOrZero(restoreRequest.Policy.Bandwidth)
 
 	config.WritePolicy = makeWritePolicy(restoreRequest)
 	if restoreRequest.Policy.NoRecords != nil && *restoreRequest.Policy.NoRecords {
