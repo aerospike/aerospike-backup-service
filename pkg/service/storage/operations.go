@@ -50,7 +50,8 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 ) ([]*bytes.Buffer, error) {
 	var startScanFrom string
 	if fromTime != nil {
-		startScanFrom = filepath.Join(path, strconv.FormatInt(fromTime.UnixMilli()-1, 10)) // -1 to ensure filter is greater or equal.
+		fromTimeStr := strconv.FormatInt(fromTime.UnixMilli()-1, 10) // -1 to ensure filter is greater or equal.
+		startScanFrom = filepath.Join(path, fromTimeStr)
 	}
 
 	reader, err := CreateReader(ctx, storage, path, false, newNameValidator(filterStr), startScanFrom)
