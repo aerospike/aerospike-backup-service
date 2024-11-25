@@ -234,7 +234,7 @@ backup-routines:
     interval-cron: "@yearly"
     incr-interval-cron: "*/9 * * * * *"
     source-cluster: absDefaultCluster
-    storage: minio
+    storage: local
     namespaces: ["source-ns14"]
     backup-policy: keepFilesPolicy
 
