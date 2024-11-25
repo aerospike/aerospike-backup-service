@@ -154,13 +154,6 @@ func (c *Config) ToModel(nsValidator service.NamespaceValidator) (*model.Config,
 		SecretAgents:      make(map[string]*model.SecretAgent),
 	}
 
-	for k, v := range c.AerospikeClusters {
-		toModel := v.ToModel()
-		if err := modelConfig.AddCluster(k, toModel); err != nil {
-			return nil, err
-		}
-	}
-
 	for k, v := range c.Storage {
 		if err := modelConfig.AddStorage(k, v.ToModel()); err != nil {
 			return nil, err
@@ -179,10 +172,21 @@ func (c *Config) ToModel(nsValidator service.NamespaceValidator) (*model.Config,
 		}
 	}
 
+	for k, v := range c.AerospikeClusters {
+		toModel, err := v.ToModel(modelConfig)
+		if err != nil {
+			return nil, fmt.Errorf("invalid cluster %q: %w", k, err)
+		}
+
+		if err := modelConfig.AddCluster(k, toModel); err != nil {
+			return nil, err
+		}
+	}
+
 	for k, v := range c.BackupRoutines {
 		toModel, err := v.ToModel(modelConfig, nsValidator)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid backup routine %q: %w", k, err)
 		}
 
 		if err := modelConfig.AddRoutine(k, toModel); err != nil {

@@ -59,7 +59,12 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.AddCluster(name, newCluster.ToModel())
+		cluster, err := newCluster.ToModel(config)
+		if err != nil {
+			return fmt.Errorf("invalid cluster %q: %w", name, err)
+		}
+
+		return config.AddCluster(name, cluster)
 	})
 	if err != nil {
 		hLogger.Error("failed to add cluster",
@@ -178,8 +183,15 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
+	cluster, err := updatedCluster.ToModel(s.config)
+	if err != nil {
+		err = fmt.Errorf("invalid cluster %q: %w", clusterName, err)
 
-	cluster := updatedCluster.ToModel()
+		hLogger.Error("invalid cluster", slog.Any("error", err))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	err = s.nsValidator.ValidateRoutines(cluster, s.config)
 	if err != nil {
 		hLogger.Error("cluster namespace validation failed",
