@@ -338,11 +338,9 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success.
 			if stats.IsEmpty() {
-				// Backup finished successfully, but there were no records to back up.
-				// We need to delete empty backup folders.
-				h.deleteFolder(ctx, backupFolder)
 				return nil
 			}
+
 			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
 			return h.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
@@ -352,24 +350,12 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 func (h *BackupRoutineHandler) waitForIncrementalBackups(
 	ctx context.Context, backupTimestamp time.Time,
 ) error {
-	var (
-		aggregatedErr error
-		hasBackup     bool
-	)
+	var aggregatedErr error
 	for ns, handler := range h.incrBackupHandlers {
 		err := handler.Wait(ctx)
 		if err != nil {
 			aggregatedErr = errors.Join(aggregatedErr, fmt.Errorf("namespace %s: %w", ns, err))
-			continue
 		}
-		if handler.GetStats() != nil && !handler.GetStats().IsEmpty() {
-			hasBackup = true
-		}
-	}
-
-	if !hasBackup {
-		// No backup data was written, we should delete the root folder.
-		h.deleteFolder(ctx, getIncrementalTimestampPath(h.routineName, backupTimestamp))
 	}
 
 	return aggregatedErr
