@@ -30,7 +30,7 @@ func (a *GcpStorageAccessor) createReader(
 	opts := []gcp.Opt{
 		gcp.WithValidator(filter),
 		gcp.WithNestedDir(),
-		gcp.WithStartOffset(startScanFrom),
+		gcp.WithStartOffset(filepath.Join(gcps.Path, startScanFrom)),
 	}
 	fullPath := filepath.Join(gcps.Path, path)
 	if isFile {

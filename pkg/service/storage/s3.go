@@ -30,7 +30,7 @@ func (a *S3StorageAccessor) createReader(
 	opts := []s3.Opt{
 		s3.WithValidator(filter),
 		s3.WithNestedDir(),
-		s3.WithStartAfter(startScanFrom),
+		s3.WithStartAfter(filepath.Join(s3s.Path, startScanFrom)),
 	}
 	fullPath := filepath.Join(s3s.Path, path)
 	if isFile {

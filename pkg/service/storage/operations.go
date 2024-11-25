@@ -3,8 +3,9 @@ package storage
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
+	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
@@ -49,7 +50,8 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 ) ([]*bytes.Buffer, error) {
 	var startScanFrom string
 	if fromTime != nil {
-		startScanFrom = fmt.Sprintf("%s/%d", path, fromTime.UnixMilli()-1) // -1 to ensure filter is greater or equal.
+		fromTimeStr := strconv.FormatInt(fromTime.UnixMilli()-1, 10) // -1 to ensure filter is greater or equal.
+		startScanFrom = filepath.Join(path, fromTimeStr)
 	}
 
 	reader, err := CreateReader(ctx, storage, path, false, newNameValidator(filterStr), startScanFrom)
