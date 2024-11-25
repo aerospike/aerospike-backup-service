@@ -175,9 +175,9 @@ type Credentials struct {
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
 	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
 	// Secret Agent configuration (optional).
-	SecretAgent *SecretAgent `json:"secret-agent,omitempty" yaml:"secret-agent,omitempty"`
+	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 	// Secret Agent configuration (optional). Link to one of preconfigured agents.
-	SecretAgentName *string `json:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
+	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
 	// The secret keyword in Aerospike Secret Agent containing password.
 	// Only applicable when SecretAgent is specified.
 	PasswordKeySecret *string `yaml:"password-key-secret,omitempty" json:"password-key-secret,omitempty"`
@@ -219,7 +219,6 @@ func (c *Credentials) Validate() error {
 		if c.SecretAgent != nil && c.SecretAgentName != nil {
 			return errors.New("both SecretAgent and SecretAgentName cannot be specified at the same time")
 		}
-
 	}
 
 	if methodCount > 1 {
@@ -252,7 +251,7 @@ func (c *Credentials) secretAgent(config *model.Config) (*model.SecretAgent, err
 	if c.SecretAgentName != nil {
 		agent, ok := config.SecretAgents[*c.SecretAgentName]
 		if !ok {
-			return nil, fmt.Errorf("unknown secret agent %q", *c.SecretAgent)
+			return nil, fmt.Errorf("unknown secret agent %q", *c.SecretAgentName)
 		}
 		return agent, nil
 	}

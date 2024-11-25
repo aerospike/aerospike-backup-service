@@ -2,9 +2,11 @@ package dto
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 )
 
 // RestoreRequest represents a restore operation request from custom storage
@@ -73,26 +75,32 @@ func (r *RestoreTimestampRequest) Validate(config *model.Config) error {
 	return nil
 }
 
-func (r RestoreTimestampRequest) ToModel() *model.RestoreTimestampRequest {
+func (r RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
+	cluster, err := r.DestinationCluster.ToModel(config)
+	if err != nil {
+		return nil, fmt.Errorf("invalid cluster: %w", err)
+	}
+
 	return &model.RestoreTimestampRequest{
-		DestinationCluster: r.DestinationCluster.ToModel(),
+		DestinationCluster: cluster,
 		Policy:             r.Policy.ToModel(),
 		SecretAgent:        r.SecretAgent.ToModel(),
 		Time:               time.UnixMilli(r.Time),
 		Routine:            r.Routine,
-	}
+	}, nil
 }
 
-func (r *RestoreRequest) ToModel() *model.RestoreRequest {
-	path := ""
-	if r.BackupDataPath != nil {
-		path = *r.BackupDataPath
+func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, error) {
+	cluster, err := r.DestinationCluster.ToModel(config)
+	if err != nil {
+		return nil, fmt.Errorf("invalid cluster: %w", err)
 	}
+
 	return &model.RestoreRequest{
-		DestinationCluster: r.DestinationCluster.ToModel(),
+		DestinationCluster: cluster,
 		Policy:             r.Policy.ToModel(),
 		SourceStorage:      r.SourceStorage.ToModel(),
 		SecretAgent:        r.SecretAgent.ToModel(),
-		BackupDataPath:     path,
-	}
+		BackupDataPath:     util.ValueOrZero(r.BackupDataPath),
+	}, nil
 }
