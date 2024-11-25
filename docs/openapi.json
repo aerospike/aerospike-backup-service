@@ -2152,7 +2152,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "bucket-name", "key-file" ],
+        "required" : [ "bucket-name" ],
         "type" : "object"
       },
       "dto.HTTPServerConfig" : {
