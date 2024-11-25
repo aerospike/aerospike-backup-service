@@ -569,10 +569,9 @@ storage4:
 
 ### Configuration Management Update
 
-We’ve updated the behavior of the configuration API to ensure that changes are applied immediately.
+Changes to the configuration API take effect immediately in version 3.0.
 
-#### Previous Behavior
-Config changes required an explicit "apply" step after CRUD operations to update the runtime configuration.
+Configuration changes in versions prior to 3.0 required an explicit "apply" step after CRUD operations to update the runtime configuration.
 
 #### Key Changes
 - **Config Updates:** Each CRUD update now automatically saves the configuration to the file and applies it to the runtime system. No need for a separate "apply" operation.
@@ -586,7 +585,7 @@ The memory config is always in sync with the runtime.
 The `apply` endpoint reads and applies the configuration from the file (after it was modified externally).
 
 ### Secret Agents
-Config used to have `secret-agent` field to store list of secret agents, now it's called `secret-agents`.
+The `secret-agent` configuration field to store the list of secret agents is now named `secret-agents`.
 
 ### Restore Request
 
@@ -607,18 +606,19 @@ Node list is a comma-separated list of IP addresses and/or host names followed b
 <IP addr 1>:<port 1>[,<IP addr 2>:<port 2>[,...]]
 <IP addr 1>:<TLS_NAME 1>:<port 1>[,<IP addr 2>:<TLS_NAME 2>:<port 2>[,...]]
 ```
-Backup the given cluster nodes only.
+Back up the given cluster nodes only.
 This argument is mutually exclusive to partition-list/after-digest arguments.
-Default: backup all nodes in the cluster
+Default: back up all nodes in the cluster
 ### Extra ttl
 
 A new optional field, `extra-ttl`, has been added to the restore policy configuration.
 It specifies the amount of extra time-to-live (TTL) to add to records that have expirable void-times.
+
 ### Secret Agent for cluster
 
-Credential object has a new optional `secret-agent` property which points to a secret agent, one of those listed in config's secret-agents.
+The credential object has a new optional `secret-agent` property that points to a secret agent, one of those listed in the `secret-agents` configuration parameter.
 Secret agent is responsible for storing secrets like passwords and TLS certificates.
-In addition to `password` and `password-path`, there is new field `password-key-secret` which specifies the secret keyword in Aerospike Secret Agent containing password.
+In addition to `password` and `password-path`, there is a new field `password-key-secret`, which specifies the secret keyword in Aerospike Secret Agent containing the password.
 Validation allows only one of these three fields to be present.
 ```yaml
   dto.Credentials:
