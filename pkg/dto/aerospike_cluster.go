@@ -187,6 +187,7 @@ func (c *Credentials) fromModel(m *model.Credentials, config *model.Config) {
 	c.User = m.User
 	c.Password = m.Password
 	c.PasswordPath = m.PasswordPath
+	c.PasswordKeySecret = m.PasswordKeySecret
 	c.AuthMode = m.AuthMode
 
 	secretAgentName := findKeyByValue(config.SecretAgents, m.SecretAgent)
