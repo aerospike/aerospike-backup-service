@@ -26,7 +26,7 @@ func (c *Config) fromModel(m *model.Config) {
 
 	c.AerospikeClusters = make(map[string]*AerospikeCluster)
 	for name, a := range m.AerospikeClusters {
-		c.AerospikeClusters[name] = NewClusterFromModel(a)
+		c.AerospikeClusters[name] = NewClusterFromModel(a, m)
 	}
 
 	c.Storage = make(map[string]*Storage)

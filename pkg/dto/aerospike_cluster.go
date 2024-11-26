@@ -62,17 +62,17 @@ func NewClusterFromReader(r io.Reader, format SerializationFormat) (*AerospikeCl
 	return a, nil
 }
 
-func NewClusterFromModel(m *model.AerospikeCluster) *AerospikeCluster {
+func NewClusterFromModel(m *model.AerospikeCluster, config *model.Config) *AerospikeCluster {
 	if m == nil {
 		return nil
 	}
 
 	a := &AerospikeCluster{}
-	a.fromModel(m)
+	a.fromModel(m, config)
 	return a
 }
 
-func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster) {
+func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster, config *model.Config) {
 	a.ClusterLabel = m.ClusterLabel
 	a.SeedNodes = make([]SeedNode, len(m.SeedNodes))
 	for i, v := range m.SeedNodes {
@@ -81,7 +81,7 @@ func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster) {
 	a.ConnTimeout = m.ConnTimeout
 	a.UseServicesAlternate = m.UseServicesAlternate
 	a.Credentials = &Credentials{}
-	a.Credentials.fromModel(m.Credentials)
+	a.Credentials.fromModel(m.Credentials, config)
 	if m.TLS != nil {
 		a.TLS = &TLS{}
 		a.TLS.fromModel(m.TLS)
@@ -183,12 +183,18 @@ type Credentials struct {
 	PasswordKeySecret *string `yaml:"password-key-secret,omitempty" json:"password-key-secret,omitempty"`
 }
 
-func (c *Credentials) fromModel(m *model.Credentials) {
+func (c *Credentials) fromModel(m *model.Credentials, config *model.Config) {
 	c.User = m.User
 	c.Password = m.Password
 	c.PasswordPath = m.PasswordPath
 	c.AuthMode = m.AuthMode
-	c.SecretAgent = NewSecretAgentFromModel(m.SecretAgent)
+
+	secretAgentName := findKeyByValue(config.SecretAgents, m.SecretAgent)
+	if secretAgentName != "" {
+		c.SecretAgentName = &secretAgentName
+	} else {
+		c.SecretAgent = NewSecretAgentFromModel(m.SecretAgent)
+	}
 }
 
 // Validate validates the credentials configuration

@@ -89,7 +89,9 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAerospikeClusters"))
 
-	toDTO := dto.ConvertModelMapToDTO(s.config.AerospikeClusters, dto.NewClusterFromModel)
+	toDTO := dto.ConvertModelMapToDTO(s.config.AerospikeClusters, func(m *model.AerospikeCluster) *dto.AerospikeCluster {
+		return dto.NewClusterFromModel(m, s.config)
+	})
 	jsonResponse, err := dto.Serialize(toDTO, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal clusters",
@@ -138,7 +140,7 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cluster %s could not be found", clusterName), http.StatusNotFound)
 		return
 	}
-	jsonResponse, err := dto.Serialize(dto.NewClusterFromModel(cluster), dto.JSON)
+	jsonResponse, err := dto.Serialize(dto.NewClusterFromModel(cluster, s.config), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal cluster",
 			slog.Any("error", err),
