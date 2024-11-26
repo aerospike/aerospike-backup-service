@@ -246,7 +246,7 @@ func (h *BackupRoutineHandler) writeBackupMetadata(
 		h.logger.Error("Could not Write backup metadata",
 			slog.String("folder", backupFolder),
 			slog.Any("err", err))
-		return fmt.Errorf("could not write backup metadata to %q: %v", backupFolder, err)
+		return fmt.Errorf("could not write backup metadata to %q: %w", backupFolder, err)
 	}
 
 	h.logger.Info("Write backup metadata",
