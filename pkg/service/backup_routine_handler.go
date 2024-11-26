@@ -203,6 +203,7 @@ func (h *BackupRoutineHandler) startNamespaceBackup(
 			h.deleteFolder(ctx, backupFolder)
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success.
+			// for full backup metadata file is written every time, even for empty backup.
 			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
 			return h.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
@@ -337,7 +338,7 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 			h.deleteFolder(ctx, backupFolder)
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success.
-			if stats.IsEmpty() {
+			if stats.IsEmpty() { // do not write metadata for empty backup.
 				return nil
 			}
 
