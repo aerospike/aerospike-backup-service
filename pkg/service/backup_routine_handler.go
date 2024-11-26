@@ -310,7 +310,7 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 		h.incrBackupHandlers[namespace] = h.startIncrementalNamespaceBackup(ctx, namespace, now, client)
 	}
 
-	err = h.waitForIncrementalBackups(ctx, now)
+	err = h.waitForIncrementalBackups(ctx)
 	if err != nil {
 		return err
 	}
@@ -347,9 +347,7 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 	)
 }
 
-func (h *BackupRoutineHandler) waitForIncrementalBackups(
-	ctx context.Context, backupTimestamp time.Time,
-) error {
+func (h *BackupRoutineHandler) waitForIncrementalBackups(ctx context.Context) error {
 	var aggregatedErr error
 	for ns, handler := range h.incrBackupHandlers {
 		err := handler.Wait(ctx)
