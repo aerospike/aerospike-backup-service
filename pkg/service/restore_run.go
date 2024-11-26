@@ -127,6 +127,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 func makeWritePolicy(restoreRequest *model.RestoreRequest) *a.WritePolicy {
 	writePolicy := a.NewWritePolicy(0, 0)
 	writePolicy.GenerationPolicy = a.EXPECT_GEN_GT
+	writePolicy.SendKey = true
 	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
 		writePolicy.GenerationPolicy = a.NONE
 	}
