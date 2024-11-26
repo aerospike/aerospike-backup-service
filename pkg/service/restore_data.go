@@ -183,8 +183,6 @@ func (r *dataRestorer) restoreNamespace(
 	jobID model.RestoreJobID,
 	fullBackup model.BackupDetails,
 ) error {
-	allBackups := []model.BackupDetails{fullBackup}
-
 	// Find incremental backups
 	bounds, err := model.NewTimeBounds(&fullBackup.Created, &request.Time)
 	if err != nil {
@@ -197,7 +195,7 @@ func (r *dataRestorer) restoreNamespace(
 	}
 
 	// Append incremental backups to allBackups
-	allBackups = append(allBackups, incrementalBackups...)
+	allBackups := append([]model.BackupDetails{fullBackup}, incrementalBackups...)
 
 	for _, b := range allBackups {
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
@@ -205,6 +203,10 @@ func (r *dataRestorer) restoreNamespace(
 
 	// Now restore all backups in order
 	for _, b := range allBackups {
+		if b.FileCount == 0 { // skip empty namespaces
+			continue
+		}
+
 		handler, err := r.restoreFromPath(ctx, client, request, b.Key)
 		if err != nil {
 			return err
