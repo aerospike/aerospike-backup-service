@@ -85,12 +85,14 @@ func (m *BackendMock) FindIncrementalBackupsForNamespace(_ context.Context, _ mo
 		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(10),
 			Namespace: "ns1",
+			FileCount: 1,
 		},
 		Key: "key",
 	}, {
 		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(20),
 			Namespace: "ns1",
+			FileCount: 1,
 		},
 		Key: "key2",
 	}}, nil
@@ -105,6 +107,7 @@ func (*BackendMock) FullBackupList(_ context.Context, _ model.TimeBounds) ([]mod
 		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(5),
 			Namespace: "ns1",
+			FileCount: 1,
 		},
 		Key: validBackupPath,
 	}}, nil
@@ -115,12 +118,14 @@ func (*BackendMock) IncrementalBackupList(_ context.Context, _ model.TimeBounds)
 		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(10),
 			Namespace: "ns1",
+			FileCount: 1,
 		},
 		Key: "key",
 	}, {
 		BackupMetadata: model.BackupMetadata{
 			Created:   time.UnixMilli(20),
 			Namespace: "ns1",
+			FileCount: 1,
 		},
 		Key: "key2",
 	}}, nil
@@ -134,6 +139,7 @@ func (*BackendMock) FindLastFullBackup(t time.Time) ([]model.BackupDetails, erro
 			BackupMetadata: model.BackupMetadata{
 				Created:   created,
 				Namespace: "ns1",
+				FileCount: 1,
 			},
 			Key: validBackupPath,
 		}}, nil

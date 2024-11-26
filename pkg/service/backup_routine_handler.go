@@ -125,7 +125,7 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 		h.logger.Error("Full backup failed", slog.Any("error", err))
 		backupFailureCounter.Inc()
 	} else {
-		h.logger.Debug("Finished full backup")
+		h.logger.Debug("Finished full backup", slog.Int64("time", now.UnixMilli()))
 		backupDurationGauge.Set(float64(duration.Milliseconds()))
 		backupCounter.Inc()
 	}
@@ -203,6 +203,7 @@ func (h *BackupRoutineHandler) startNamespaceBackup(
 			h.deleteFolder(ctx, backupFolder)
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success.
+			// for full backup metadata file is written every time, even for empty backup.
 			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
 			return h.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
@@ -245,8 +246,12 @@ func (h *BackupRoutineHandler) writeBackupMetadata(
 		h.logger.Error("Could not Write backup metadata",
 			slog.String("folder", backupFolder),
 			slog.Any("err", err))
-		return err
+		return fmt.Errorf("could not write backup metadata to %q: %w", backupFolder, err)
 	}
+
+	h.logger.Info("Write backup metadata",
+		slog.Any("folder", backupFolder),
+		slog.Any("metadata", metadata))
 
 	return nil
 }
@@ -274,7 +279,7 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 	} else {
 		incrBackupCounter.Inc()
 		incrBackupDurationGauge.Set(float64(duration.Milliseconds()))
-		h.logger.Debug("Finished incremental backup")
+		h.logger.Debug("Finished incremental backup", slog.Int64("time", now.UnixMilli()))
 	}
 }
 
@@ -310,7 +315,7 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 		h.incrBackupHandlers[namespace] = h.startIncrementalNamespaceBackup(ctx, namespace, now, client)
 	}
 
-	err = h.waitForIncrementalBackups(ctx, now)
+	err = h.waitForIncrementalBackups(ctx)
 	if err != nil {
 		return err
 	}
@@ -337,39 +342,23 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 			h.deleteFolder(ctx, backupFolder)
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success.
-			if stats.IsEmpty() {
-				// Backup finished successfully, but there were no records to back up.
-				// We need to delete empty backup folders.
-				h.deleteFolder(ctx, backupFolder)
+			if stats.IsEmpty() { // do not write metadata for empty backup.
 				return nil
 			}
+
 			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
 			return h.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
 	)
 }
 
-func (h *BackupRoutineHandler) waitForIncrementalBackups(
-	ctx context.Context, backupTimestamp time.Time,
-) error {
-	var (
-		aggregatedErr error
-		hasBackup     bool
-	)
+func (h *BackupRoutineHandler) waitForIncrementalBackups(ctx context.Context) error {
+	var aggregatedErr error
 	for ns, handler := range h.incrBackupHandlers {
 		err := handler.Wait(ctx)
 		if err != nil {
 			aggregatedErr = errors.Join(aggregatedErr, fmt.Errorf("namespace %s: %w", ns, err))
-			continue
 		}
-		if handler.GetStats() != nil && !handler.GetStats().IsEmpty() {
-			hasBackup = true
-		}
-	}
-
-	if !hasBackup {
-		// No backup data was written, we should delete the root folder.
-		h.deleteFolder(ctx, getIncrementalTimestampPath(h.routineName, backupTimestamp))
 	}
 
 	return aggregatedErr
