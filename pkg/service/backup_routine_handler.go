@@ -125,7 +125,7 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 		h.logger.Error("Full backup failed", slog.Any("error", err))
 		backupFailureCounter.Inc()
 	} else {
-		h.logger.Debug("Finished full backup")
+		h.logger.Debug("Finished full backup", slog.Int64("time", now.UnixMilli()))
 		backupDurationGauge.Set(float64(duration.Milliseconds()))
 		backupCounter.Inc()
 	}
@@ -246,8 +246,12 @@ func (h *BackupRoutineHandler) writeBackupMetadata(
 		h.logger.Error("Could not Write backup metadata",
 			slog.String("folder", backupFolder),
 			slog.Any("err", err))
-		return err
+		return fmt.Errorf("could not write backup metadata to %q: %v", backupFolder, err)
 	}
+
+	h.logger.Info("Write backup metadata",
+		slog.Any("folder", backupFolder),
+		slog.Any("metadata", metadata))
 
 	return nil
 }
@@ -275,7 +279,7 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 	} else {
 		incrBackupCounter.Inc()
 		incrBackupDurationGauge.Set(float64(duration.Milliseconds()))
-		h.logger.Debug("Finished incremental backup")
+		h.logger.Debug("Finished incremental backup", slog.Int64("time", now.UnixMilli()))
 	}
 }
 
