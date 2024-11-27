@@ -44,7 +44,13 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, err := s.restoreManager.Restore(request.ToModel())
+	restoreRequest, err := request.ToModel(s.config)
+	if err != nil {
+		hLogger.Error("invalid restore request", slog.Any("error", err))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	jobID, err := s.restoreManager.Restore(restoreRequest)
 	if err != nil {
 		hLogger.Error("failed to restore",
 			slog.Any("error", err),
@@ -91,7 +97,14 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	jobID, err := s.restoreManager.Restore(request.ToModel())
+	restoreRequest, err := request.ToModel(s.config)
+	if err != nil {
+		hLogger.Error("invalid restore request", slog.Any("error", err))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	jobID, err := s.restoreManager.Restore(restoreRequest)
 	if err != nil {
 		hLogger.Error("failed to restore",
 			slog.Any("error", err),
@@ -139,7 +152,15 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	jobID, err := s.restoreManager.RestoreByTime(request.ToModel())
+
+	restoreRequest, err := request.ToModel(s.config)
+	if err != nil {
+		hLogger.Error("invalid restore request", slog.Any("error", err))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	jobID, err := s.restoreManager.RestoreByTime(restoreRequest)
 	if err != nil {
 		hLogger.Error("failed to restore by timestamp",
 			slog.Any("routine", request.Routine),
