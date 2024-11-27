@@ -21,7 +21,11 @@ type RestorePolicy struct {
 	// Do not restore any UDF modules.
 	NoUdfs *bool `json:"no-udfs,omitempty"`
 	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-	Timeout *int32 `json:"timeout,omitempty" example:"1000"`
+	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
+	// If both are 0, there is no socket idle time limit.
+	SocketTimeout *int32 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000" default:"10000"`
+	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
+	TotalTimeout *int32 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000" default:"0"`
 	// Disables the use of batch writes when restoring records to the Aerospike cluster.
 	// By default, the cluster is checked for batch write support.
 	DisableBatchWrites *bool `json:"disable-batch-writes,omitempty"`
@@ -74,8 +78,11 @@ func (p *RestorePolicy) Validate() error {
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
 	}
-	if p.Timeout != nil && *p.Timeout <= 0 {
-		return fmt.Errorf("timeout %d invalid, should be positive number", *p.Timeout)
+	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
+		return fmt.Errorf("total timeout %d invalid, should be positive number", *p.TotalTimeout)
+	}
+	if p.SocketTimeout != nil && *p.SocketTimeout <= 0 {
+		return fmt.Errorf("socket timeout %d invalid, should be positive number", *p.SocketTimeout)
 	}
 	if p.MaxAsyncBatches != nil && *p.MaxAsyncBatches <= 0 {
 		return fmt.Errorf("maxAsyncBatches %d invalid, should be positive number", *p.MaxAsyncBatches)
@@ -123,7 +130,8 @@ func (p *RestorePolicy) ToModel() *model.RestorePolicy {
 		NoRecords:          p.NoRecords,
 		NoIndexes:          p.NoIndexes,
 		NoUdfs:             p.NoUdfs,
-		Timeout:            millisToDuration(p.Timeout),
+		TotalTimeout:       millisToDuration(p.TotalTimeout),
+		SocketTimeout:      millisToDuration(p.SocketTimeout),
 		DisableBatchWrites: p.DisableBatchWrites,
 		MaxAsyncBatches:    p.MaxAsyncBatches,
 		BatchSize:          p.BatchSize,

@@ -19,8 +19,10 @@ type RestorePolicy struct {
 	NoIndexes *bool
 	// Do not restore any UDF modules.
 	NoUdfs *bool
-	// Timeout for Aerospike commands to write records, create indexes and create UDFs.
-	Timeout *time.Duration
+	// Socket timeout for write transactions.
+	SocketTimeout *time.Duration
+	// Total socket timeout for write transactions.
+	TotalTimeout *time.Duration
 	// Disables the use of batch writes when restoring records to the Aerospike cluster.
 	// By default, the cluster is checked for batch write support.
 	DisableBatchWrites *bool
@@ -93,9 +95,21 @@ func (p *RestorePolicy) GetBatchSizeOrDefault() int {
 	return *defaultConfig.restorePolicy.MaxAsyncBatches
 }
 
-func (p *RestorePolicy) GetTimeoutOrDefault() time.Duration {
-	if p.Timeout != nil {
-		return *p.Timeout
+func (p *RestorePolicy) GetTotalTimeoutOrDefault() time.Duration {
+	if p.TotalTimeout != nil {
+		return *p.TotalTimeout
 	}
-	return *defaultConfig.restorePolicy.Timeout
+	return *defaultConfig.restorePolicy.TotalTimeout
+}
+
+func (p *RestorePolicy) GetSocketTimeoutOrDefault() time.Duration {
+	if p.SocketTimeout == nil {
+		return *defaultConfig.restorePolicy.SocketTimeout
+	}
+	// If this value is 0, its set to total-timeout.
+	if *p.SocketTimeout == 0 {
+		return p.GetTotalTimeoutOrDefault()
+	}
+
+	return *p.SocketTimeout
 }

@@ -28,9 +28,9 @@ type BackupPolicy struct {
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
 	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int32 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
+	SocketTimeout *int32 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000" default:"10000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
-	TotalTimeout *int32 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`
+	TotalTimeout *int32 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000" default:"0"`
 	// RetryPolicy defines the configuration for retry attempts in case of failures.
 	// If nil, default policy is used.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`

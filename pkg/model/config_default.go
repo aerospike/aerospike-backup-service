@@ -50,6 +50,7 @@ var defaultConfig = struct {
 		},
 		MaxAsyncBatches: util.Ptr(640),
 		BatchSize:       util.Ptr(128),
-		Timeout:         util.Ptr(10 * time.Second),
+		SocketTimeout:   util.Ptr(10 * time.Second),
+		TotalTimeout:    util.Ptr(time.Duration(0)),
 	},
 }
