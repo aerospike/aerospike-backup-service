@@ -1633,6 +1633,10 @@ components:
           - $ref: '#/components/schemas/dto.SecretAgent'
           description: Secret Agent configuration (optional).
           type: object
+        secret-agent-name:
+          description: Secret Agent configuration (optional). Link to one of preconfigured
+            agents.
+          type: string
         user:
           description: The username for the cluster authentication.
           example: testUser
@@ -1730,7 +1734,6 @@ components:
           type: string
       required:
       - bucket-name
-      - key-file
       type: object
     dto.HTTPServerConfig:
       description: HTTPServerConfig represents the service's HTTP server configuration.

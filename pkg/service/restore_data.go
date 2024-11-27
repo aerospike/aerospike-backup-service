@@ -183,8 +183,6 @@ func (r *dataRestorer) restoreNamespace(
 	jobID model.RestoreJobID,
 	fullBackup model.BackupDetails,
 ) error {
-	allBackups := []model.BackupDetails{fullBackup}
-
 	// Find incremental backups
 	bounds, err := model.NewTimeBounds(&fullBackup.Created, &request.Time)
 	if err != nil {
@@ -196,19 +194,19 @@ func (r *dataRestorer) restoreNamespace(
 		return fmt.Errorf("could not find incremental backups for namespace %s: %w", fullBackup.Namespace, err)
 	}
 
-	// Append incremental backups to allBackups
-	allBackups = append(allBackups, incrementalBackups...)
-
-	for _, b := range allBackups {
-		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
-	}
-
 	// Now restore all backups in order
+	allBackups := append([]model.BackupDetails{fullBackup}, incrementalBackups...)
 	for _, b := range allBackups {
+		if b.FileCount == 0 { // skip empty namespaces
+			continue
+		}
+
 		handler, err := r.restoreFromPath(ctx, client, request, b.Key)
 		if err != nil {
 			return err
 		}
+
+		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 		r.restoreJobs.addHandler(jobID, handler)
 
 		err = handler.Wait(ctx)

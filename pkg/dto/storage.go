@@ -113,7 +113,7 @@ func (s *S3Storage) Validate() error {
 // GcpStorage represents the configuration for GCP storage.
 type GcpStorage struct {
 	// Path to file containing Service Account JSON Key.
-	KeyFile string `yaml:"key-file" json:"key-file" validate:"required"`
+	KeyFile string `yaml:"key-file" json:"key-file"`
 	// GCP storage bucket name.
 	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
 	// The root path for the backup repository. If not specified, backups will be saved in the bucket's root.
@@ -125,9 +125,6 @@ type GcpStorage struct {
 
 // Validate checks if the GcpStorage is valid.
 func (g *GcpStorage) Validate() error {
-	if g.KeyFile == "" {
-		return errors.New("GCP key file is not specified")
-	}
 	if g.BucketName == "" {
 		return errors.New("GCP bucket name is not specified")
 	}
@@ -204,29 +201,33 @@ func (s *Storage) ToModel() model.Storage {
 		}
 	}
 	if s.AzureStorage != nil {
-		azureStorage := &model.AzureStorage{
+		return &model.AzureStorage{
 			Endpoint:      s.AzureStorage.Endpoint,
 			ContainerName: s.AzureStorage.ContainerName,
 			Path:          s.AzureStorage.Path,
+			Auth:          getAzureAuth(s),
 		}
-
-		switch {
-		case s.AzureStorage.AccountName != "" && s.AzureStorage.AccountKey != "":
-			azureStorage.Auth = model.AzureSharedKeyAuth{
-				AccountName: s.AzureStorage.AccountName,
-				AccountKey:  s.AzureStorage.AccountKey,
-			}
-		case s.AzureStorage.TenantID != "" && s.AzureStorage.ClientID != "" && s.AzureStorage.ClientSecret != "":
-			azureStorage.Auth = model.AzureADAuth{
-				TenantID:     s.AzureStorage.TenantID,
-				ClientID:     s.AzureStorage.ClientID,
-				ClientSecret: s.AzureStorage.ClientSecret,
-			}
-		}
-
-		return azureStorage
 	}
 	slog.Info("error converting storage dto to model: no storage configuration provided")
+	return nil
+}
+
+func getAzureAuth(s *Storage) model.AzureAuth {
+	if s.AzureStorage.AccountName != "" && s.AzureStorage.AccountKey != "" {
+		return model.AzureSharedKeyAuth{
+			AccountName: s.AzureStorage.AccountName,
+			AccountKey:  s.AzureStorage.AccountKey,
+		}
+	}
+
+	if s.AzureStorage.TenantID != "" && s.AzureStorage.ClientID != "" && s.AzureStorage.ClientSecret != "" {
+		return model.AzureADAuth{
+			TenantID:     s.AzureStorage.TenantID,
+			ClientID:     s.AzureStorage.ClientID,
+			ClientSecret: s.AzureStorage.ClientSecret,
+		}
+	}
+
 	return nil
 }
 

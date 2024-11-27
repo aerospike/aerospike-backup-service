@@ -111,6 +111,15 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := model.CompareStaticConfiguration(s.config, config); err != nil {
+		hLogger.Error("static configuration has changed",
+			slog.Any("error", err),
+		)
+		err := fmt.Errorf("static configuration has changed: %w", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	err = s.applyConfig(r.Context(), config)
 	if err != nil {
 		hLogger.Error("failed to apply config",

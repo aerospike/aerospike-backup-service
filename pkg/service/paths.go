@@ -40,10 +40,6 @@ func getIncrementalPathForNamespace(routineName string, namespace string, timest
 	return filepath.Join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
 }
 
-func getIncrementalTimestampPath(routineName string, timestamp time.Time) string {
-	return filepath.Join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp))
-}
-
 func getConfigurationPath(routineName string, policy *model.BackupPolicy, timestamp time.Time, index int) string {
 	if policy.RemoveFiles.RemoveFullBackup() {
 		return filepath.Join(routineName, fullBackupDirectory, configurationBackupDirectory, getConfigFileName(index))

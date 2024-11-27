@@ -59,7 +59,12 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.AddCluster(name, newCluster.ToModel())
+		cluster, err := newCluster.ToModel(config)
+		if err != nil {
+			return fmt.Errorf("invalid cluster %q: %w", name, err)
+		}
+
+		return config.AddCluster(name, cluster)
 	})
 	if err != nil {
 		hLogger.Error("failed to add cluster",
@@ -84,7 +89,9 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAerospikeClusters"))
 
-	toDTO := dto.ConvertModelMapToDTO(s.config.AerospikeClusters, dto.NewClusterFromModel)
+	toDTO := dto.ConvertModelMapToDTO(s.config.AerospikeClusters, func(m *model.AerospikeCluster) *dto.AerospikeCluster {
+		return dto.NewClusterFromModel(m, s.config)
+	})
 	jsonResponse, err := dto.Serialize(toDTO, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal clusters",
@@ -133,7 +140,7 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cluster %s could not be found", clusterName), http.StatusNotFound)
 		return
 	}
-	jsonResponse, err := dto.Serialize(dto.NewClusterFromModel(cluster), dto.JSON)
+	jsonResponse, err := dto.Serialize(dto.NewClusterFromModel(cluster, s.config), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal cluster",
 			slog.Any("error", err),
@@ -178,8 +185,15 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
+	cluster, err := updatedCluster.ToModel(s.config)
+	if err != nil {
+		err = fmt.Errorf("invalid cluster %q: %w", clusterName, err)
 
-	cluster := updatedCluster.ToModel()
+		hLogger.Error("invalid cluster", slog.Any("error", err))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	err = s.nsValidator.ValidateRoutines(cluster, s.config)
 	if err != nil {
 		hLogger.Error("cluster namespace validation failed",
