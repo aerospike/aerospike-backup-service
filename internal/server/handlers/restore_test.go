@@ -3,12 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
