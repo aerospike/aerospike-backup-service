@@ -1906,6 +1906,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.",
+                    "type": "string"
+                },
                 "user": {
                     "description": "The username for the cluster authentication.",
                     "type": "string",

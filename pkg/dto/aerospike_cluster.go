@@ -62,17 +62,17 @@ func NewClusterFromReader(r io.Reader, format SerializationFormat) (*AerospikeCl
 	return a, nil
 }
 
-func NewClusterFromModel(m *model.AerospikeCluster) *AerospikeCluster {
+func NewClusterFromModel(m *model.AerospikeCluster, config *model.Config) *AerospikeCluster {
 	if m == nil {
 		return nil
 	}
 
 	a := &AerospikeCluster{}
-	a.fromModel(m)
+	a.fromModel(m, config)
 	return a
 }
 
-func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster) {
+func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster, config *model.Config) {
 	a.ClusterLabel = m.ClusterLabel
 	a.SeedNodes = make([]SeedNode, len(m.SeedNodes))
 	for i, v := range m.SeedNodes {
@@ -81,7 +81,7 @@ func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster) {
 	a.ConnTimeout = m.ConnTimeout
 	a.UseServicesAlternate = m.UseServicesAlternate
 	a.Credentials = &Credentials{}
-	a.Credentials.fromModel(m.Credentials)
+	a.Credentials.fromModel(m.Credentials, config)
 	if m.TLS != nil {
 		a.TLS = &TLS{}
 		a.TLS.fromModel(m.TLS)
@@ -89,16 +89,21 @@ func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster) {
 	a.MaxParallelScans = m.MaxParallelScans
 }
 
-func (a *AerospikeCluster) ToModel() *model.AerospikeCluster {
+func (a *AerospikeCluster) ToModel(config *model.Config) (*model.AerospikeCluster, error) {
+	credentials, err := a.Credentials.toModel(config)
+	if err != nil {
+		return nil, fmt.Errorf("credentials error: %w", err)
+	}
+
 	return &model.AerospikeCluster{
 		ClusterLabel:         a.ClusterLabel,
 		SeedNodes:            a.seedNodesToModel(),
 		ConnTimeout:          a.ConnTimeout,
 		UseServicesAlternate: a.UseServicesAlternate,
-		Credentials:          a.Credentials.toModel(),
+		Credentials:          credentials,
 		TLS:                  a.TLS.toModel(),
 		MaxParallelScans:     a.MaxParallelScans,
-	}
+	}, nil
 }
 
 func (a *AerospikeCluster) seedNodesToModel() []model.SeedNode {
@@ -170,17 +175,27 @@ type Credentials struct {
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
 	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
 	// Secret Agent configuration (optional).
-	SecretAgent *SecretAgent `json:"secret-agent,omitempty"`
+	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
+	// Secret Agent configuration (optional). Link to one of preconfigured agents.
+	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
 	// The secret keyword in Aerospike Secret Agent containing password.
 	// Only applicable when SecretAgent is specified.
 	PasswordKeySecret *string `yaml:"password-key-secret,omitempty" json:"password-key-secret,omitempty"`
 }
 
-func (c *Credentials) fromModel(m *model.Credentials) {
+func (c *Credentials) fromModel(m *model.Credentials, config *model.Config) {
 	c.User = m.User
 	c.Password = m.Password
 	c.PasswordPath = m.PasswordPath
+	c.PasswordKeySecret = m.PasswordKeySecret
 	c.AuthMode = m.AuthMode
+
+	secretAgentName := findKeyByValue(config.SecretAgents, m.SecretAgent)
+	if secretAgentName != "" {
+		c.SecretAgentName = &secretAgentName
+	} else {
+		c.SecretAgent = NewSecretAgentFromModel(m.SecretAgent)
+	}
 }
 
 // Validate validates the credentials configuration
@@ -204,18 +219,17 @@ func (c *Credentials) Validate() error {
 		methodCount++
 	}
 
-	if c.SecretAgent != nil || c.PasswordKeySecret != nil {
-		if c.SecretAgent == nil {
-			return errors.New("secret agent is required when key secret is specified")
+	if c.PasswordKeySecret != nil {
+		methodCount++
+		if c.SecretAgent == nil && c.SecretAgentName == nil {
+			return errors.New("either SecretAgent or SecretAgentName must be specified when key secret is provided")
 		}
-		if c.PasswordKeySecret == nil {
-			return errors.New("key secret is required when secret agent is specified")
+		if c.SecretAgent != nil && c.SecretAgentName != nil {
+			return errors.New("both SecretAgent and SecretAgentName cannot be specified at the same time")
 		}
 		if err := c.SecretAgent.validate(); err != nil {
-			return err
+			return fmt.Errorf("secret agent validation error: %w", err)
 		}
-
-		methodCount++
 	}
 
 	if methodCount > 1 {
@@ -224,10 +238,14 @@ func (c *Credentials) Validate() error {
 
 	return nil
 }
-
-func (c *Credentials) toModel() *model.Credentials {
+func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) {
 	if c == nil {
-		return nil
+		return nil, nil
+	}
+
+	agent, err := c.secretAgent(config)
+	if err != nil {
+		return nil, err
 	}
 
 	return &model.Credentials{
@@ -236,8 +254,24 @@ func (c *Credentials) toModel() *model.Credentials {
 		PasswordPath:      c.PasswordPath,
 		AuthMode:          c.AuthMode,
 		PasswordKeySecret: c.PasswordKeySecret,
-		SecretAgent:       c.SecretAgent.ToModel(),
+		SecretAgent:       agent,
+	}, nil
+}
+
+func (c *Credentials) secretAgent(config *model.Config) (*model.SecretAgent, error) {
+	if c.SecretAgentName != nil {
+		agent, ok := config.SecretAgents[*c.SecretAgentName]
+		if !ok {
+			return nil, fmt.Errorf("unknown secret agent %q", *c.SecretAgentName)
+		}
+		return agent, nil
 	}
+
+	if c.SecretAgent != nil {
+		return c.SecretAgent.ToModel(), nil
+	}
+
+	return nil, nil
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.
