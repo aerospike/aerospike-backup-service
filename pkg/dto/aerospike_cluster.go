@@ -227,6 +227,9 @@ func (c *Credentials) Validate() error {
 		if c.SecretAgent != nil && c.SecretAgentName != nil {
 			return errors.New("both SecretAgent and SecretAgentName cannot be specified at the same time")
 		}
+		if err := c.SecretAgent.validate(); err != nil {
+			return fmt.Errorf("secret agent validation error: %w", err)
+		}
 	}
 
 	if methodCount > 1 {
