@@ -1680,7 +1680,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "socket-timeout": {
-                    "description": "Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "example": 1000
                 },
@@ -2363,10 +2363,15 @@ const docTemplate = `{
                         "set2"
                     ]
                 },
-                "timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.",
+                "socket-timeout": {
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "example": 1000
+                },
+                "total-timeout": {
+                    "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
+                    "type": "integer",
+                    "example": 2000
                 },
                 "tps": {
                     "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions\nper second.",

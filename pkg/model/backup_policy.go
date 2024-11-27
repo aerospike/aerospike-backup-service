@@ -37,12 +37,12 @@ type BackupPolicy struct {
 	// Do not back up any UDF modules.
 	NoUdfs *bool
 	// Throttles backup write operations to the backup file(s) to not exceed the given
-	// bandwidth in Bytes/s.
+	// bandwidth in MiB/s.
 	Bandwidth *int
 	// Limit total returned records per second (RPS). If RPS is zero (the default),
 	// the records-per-second limit is not applied.
 	RecordsPerSecond *int
-	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
+	// File size limit (in MiB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created.
 	FileLimit *int
 	// Encryption details.

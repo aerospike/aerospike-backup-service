@@ -37,7 +37,7 @@ var defaultConfig = struct {
 			Multiplier:  1,
 		},
 		Parallel:      util.Ptr(1),
-		FileLimit:     util.Ptr(0),
+		FileLimit:     util.Ptr(250),
 		TotalTimeout:  util.Ptr(time.Duration(0)),
 		SocketTimeout: util.Ptr(10 * time.Second),
 	},
