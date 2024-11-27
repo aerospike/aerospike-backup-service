@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"net/http"
 	"testing"
 	"time"
@@ -15,9 +16,8 @@ import (
 )
 
 func testConfigRestorePolicy() *dto.RestorePolicy {
-	testIn32 := 10
 	return &dto.RestorePolicy{
-		Parallel: &testIn32,
+		Parallel: util.Ptr(10),
 	}
 }
 
