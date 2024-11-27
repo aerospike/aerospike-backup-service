@@ -6,9 +6,9 @@ require (
 	cloud.google.com/go/storage v1.47.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.5.0
-	github.com/aerospike/aerospike-client-go/v7 v7.7.2
+	github.com/aerospike/aerospike-client-go/v7 v7.7.3-0.20241127171252-085b911028cb
 	github.com/aerospike/aerospike-management-lib v1.5.0
-	github.com/aerospike/backup-go v0.2.1-0.20241127094941-e229b058bf78
+	github.com/aerospike/backup-go v0.2.1-0.20241127174208-c6b8058e5ed0
 	github.com/aws/aws-sdk-go-v2/config v1.28.5
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.69.0
 	github.com/aws/smithy-go v1.22.1
