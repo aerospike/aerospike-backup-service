@@ -10,10 +10,6 @@ import (
 
 // ConfigurationApplicable checks if new config changes are allowed as per dynamic consideration.
 func ConfigurationApplicable(oldConf, newConf *dto.Config) error {
-	if err := ValidateConfiguration(newConf); err != nil {
-		return err
-	}
-
 	// currently, only ServiceConfig can not be changed dynamically.
 	return oldConf.ServiceConfig.Compare(newConf.ServiceConfig)
 }
