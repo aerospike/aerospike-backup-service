@@ -1,14 +1,16 @@
 package model
 
 import (
+	"time"
+
 	"github.com/aerospike/backup-go/models"
 )
 
 // RestorePolicy represents a policy for the restore operation.
 // @Description RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
-	// The number of concurrent record readers from backup files.
-	Parallel *int32
+	// The number of concurrent record readers from backup files. Default: 20
+	Parallel *int
 	// Do not restore any record data (metadata or bin data).
 	// By default, record data, secondary index definitions, and UDF modules
 	// will be restored.
@@ -17,16 +19,18 @@ type RestorePolicy struct {
 	NoIndexes *bool
 	// Do not restore any UDF modules.
 	NoUdfs *bool
-	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-	Timeout *int32
+	// Socket timeout for write transactions.
+	SocketTimeout *time.Duration
+	// Total socket timeout for write transactions.
+	TotalTimeout *time.Duration
 	// Disables the use of batch writes when restoring records to the Aerospike cluster.
 	// By default, the cluster is checked for batch write support.
 	DisableBatchWrites *bool
 	// The max number of outstanding async record batch write calls at a time.
-	MaxAsyncBatches *int32
+	MaxAsyncBatches *int
 	// The max allowed number of records per an async batch write call.
 	// Default is 128 with batch writes enabled, or 16 without batch writes.
-	BatchSize *int32
+	BatchSize *int
 	// Namespace details for the restore operation.
 	// By default, the data is restored to the namespace from which it was taken.
 	Namespace *RestoreNamespace
@@ -47,10 +51,10 @@ type RestorePolicy struct {
 	// the namespace, regardless of generation numbers.
 	NoGeneration *bool
 	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.
-	Bandwidth *int64
+	Bandwidth *int
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions
 	// per second.
-	Tps *int32
+	Tps *int
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy
 	// Compression details.
@@ -67,5 +71,45 @@ func (p *RestorePolicy) GetRetryPolicyOrDefault() *models.RetryPolicy {
 		return p.RetryPolicy
 	}
 
-	return defaultRetry
+	return defaultConfig.restorePolicy.RetryPolicy
+}
+
+func (p *RestorePolicy) GetParallelOrDefault() int {
+	if p.Parallel != nil {
+		return *p.Parallel
+	}
+	return *defaultConfig.restorePolicy.Parallel
+}
+
+func (p *RestorePolicy) GetMaxAsyncBatchesOrDefault() int {
+	if p.MaxAsyncBatches != nil {
+		return *p.MaxAsyncBatches
+	}
+	return *defaultConfig.restorePolicy.MaxAsyncBatches
+}
+
+func (p *RestorePolicy) GetBatchSizeOrDefault() int {
+	if p.BatchSize != nil {
+		return *p.BatchSize
+	}
+	return *defaultConfig.restorePolicy.MaxAsyncBatches
+}
+
+func (p *RestorePolicy) GetTotalTimeoutOrDefault() time.Duration {
+	if p.TotalTimeout != nil {
+		return *p.TotalTimeout
+	}
+	return *defaultConfig.restorePolicy.TotalTimeout
+}
+
+func (p *RestorePolicy) GetSocketTimeoutOrDefault() time.Duration {
+	if p.SocketTimeout == nil {
+		return *defaultConfig.restorePolicy.SocketTimeout
+	}
+	// If this value is 0, its set to total-timeout.
+	if *p.SocketTimeout == 0 {
+		return p.GetTotalTimeoutOrDefault()
+	}
+
+	return *p.SocketTimeout
 }

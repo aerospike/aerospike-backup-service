@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"
@@ -15,9 +16,8 @@ import (
 )
 
 func testConfigRestorePolicy() *dto.RestorePolicy {
-	testIn32 := int32(10)
 	return &dto.RestorePolicy{
-		Parallel: &testIn32,
+		Parallel: util.Ptr(10),
 	}
 }
 
