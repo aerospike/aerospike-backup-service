@@ -1565,7 +1565,7 @@ const docTemplate = `{
                     "example": 1
                 },
                 "from": {
-                    "description": "The lower time bound of backup entities in the ISO 8601 format (for incremental backups).",
+                    "description": "The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).",
                     "type": "string",
                     "example": "2023-03-19T14:50:00Z"
                 },
