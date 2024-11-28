@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
@@ -58,10 +59,6 @@ func (l *LoggerConfig) ToModel() *model.LoggerConfig {
 }
 
 func (l *LoggerConfig) fromModel(m *model.LoggerConfig) {
-	if m == nil {
-		return
-	}
-
 	l.Level = m.Level
 	l.Format = m.Format
 	l.StdoutWriter = m.StdoutWriter
@@ -69,6 +66,31 @@ func (l *LoggerConfig) fromModel(m *model.LoggerConfig) {
 		l.FileWriter = &FileLoggerConfig{}
 		l.FileWriter.fromModel(m.FileWriter)
 	}
+}
+
+// Compare compares two LoggerConfig structs and returns an error if they differ.
+func (l *LoggerConfig) Compare(other *LoggerConfig) error {
+	if l == nil && other == nil {
+		return nil
+	}
+	if l == nil {
+		return errors.New("logger added")
+	}
+	if other == nil {
+		return errors.New("logger removed")
+	}
+
+	var err = errors.Join(
+		comparePointers("Level", l.Level, other.Level),
+		comparePointers("Format", l.Format, other.Format),
+		comparePointers("StdoutWriter", l.StdoutWriter, other.StdoutWriter),
+	)
+
+	if e := l.FileWriter.Compare(other.FileWriter); e != nil {
+		err = errors.Join(err, fmt.Errorf("FileWriter changes: %w", e))
+	}
+
+	return err
 }
 
 // FileLoggerConfig represents the configuration for the file logger writer.
@@ -133,4 +155,25 @@ func (f *FileLoggerConfig) fromModel(m *model.FileLoggerConfig) {
 	f.MaxAge = m.MaxAge
 	f.MaxBackups = m.MaxBackups
 	f.Compress = m.Compress
+}
+
+// Compare FileLoggerConfig with another and return detailed errors.
+func (f *FileLoggerConfig) Compare(other *FileLoggerConfig) error {
+	if f == nil && other == nil {
+		return nil
+	}
+	if f == nil {
+		return fmt.Errorf("FileLogger added")
+	}
+	if other == nil {
+		return fmt.Errorf("FileLogger removed")
+	}
+
+	return errors.Join(
+		compareValues("Filename", f.Filename, other.Filename),
+		compareValues("MaxSize", f.MaxSize, other.MaxSize),
+		compareValues("MaxAge", f.MaxAge, other.MaxAge),
+		compareValues("MaxBackups", f.MaxBackups, other.MaxBackups),
+		compareValues("Compress", f.Compress, other.Compress),
+	)
 }

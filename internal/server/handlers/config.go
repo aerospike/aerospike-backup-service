@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/validation"
 )
 
 func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +112,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := model.CompareStaticConfiguration(s.config, config); err != nil {
+	if err := validation.ConfigurationApplicable(dto.NewConfigFromModel(s.config), dto.NewConfigFromModel(s.config)); err != nil {
 		hLogger.Error("static configuration has changed",
 			slog.Any("error", err),
 		)

@@ -117,15 +117,15 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 
 func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
-	reader, found := r.backends.GetReader(request.Routine)
+	reader, found := r.backends.GetReader(request.RoutineName)
 	if !found {
-		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.Routine)
+		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.RoutineName)
 	}
 	fullBackups, err := reader.FindLastFullBackup(request.Time)
 	if err != nil {
 		return 0, fmt.Errorf("restore failed: %w", err)
 	}
-	jobID := r.restoreJobs.newJob(request.Routine)
+	jobID := r.restoreJobs.newJob(request.RoutineName)
 	ctx := context.TODO()
 	go r.restoreByTimeSync(ctx, reader, request, jobID, fullBackups)
 
@@ -159,7 +159,7 @@ func (r *dataRestorer) restoreByTimeSync(
 			if err := r.restoreNamespace(ctx, client, backend, request, jobID, nsBackup); err != nil {
 				multiError.Append(
 					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
-						request.Routine, nsBackup.Namespace, err))
+						request.RoutineName, nsBackup.Namespace, err))
 			}
 		}(nsBackup)
 	}
@@ -235,7 +235,7 @@ func (r *dataRestorer) restoreFromPath(
 }
 
 func (r *dataRestorer) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
-	routine := r.config.BackupRoutines[request.Routine]
+	routine := r.config.BackupRoutines[request.RoutineName]
 	return model.NewRestoreRequest(
 		request.DestinationCluster,
 		request.Policy,

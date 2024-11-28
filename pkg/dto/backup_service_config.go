@@ -1,6 +1,11 @@
 package dto
 
-import "github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+)
 
 // BackupServiceConfig represents the backup service configuration properties.
 // @Description BackupServiceConfig represents the backup service configuration properties.
@@ -39,4 +44,19 @@ func (b *BackupServiceConfig) fromModel(m *model.BackupServiceConfig) {
 		b.Logger = &LoggerConfig{}
 		b.Logger.fromModel(m.Logger)
 	}
+}
+
+// Compare BackupServiceConfig with another and return detailed errors.
+func (c *BackupServiceConfig) Compare(other BackupServiceConfig) error {
+	var err error
+
+	if e := c.HTTPServer.Compare(other.HTTPServer); e != nil {
+		err = errors.Join(err, fmt.Errorf("HTTPServer changes: %w", e))
+	}
+
+	if e := c.Logger.Compare(other.Logger); e != nil {
+		err = errors.Join(err, fmt.Errorf("logger changes: %w", e))
+	}
+
+	return err
 }

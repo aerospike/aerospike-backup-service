@@ -265,8 +265,8 @@ func Test_RestoreTimestamp(t *testing.T) {
 		Policy: &model.RestorePolicy{
 			SetList: []string{"set1"},
 		},
-		Time:    time.UnixMilli(100),
-		Routine: "routine",
+		Time:        time.UnixMilli(100),
+		RoutineName: "routine",
 	}
 
 	jobID, err := restoreService.RestoreByTime(&request)
@@ -291,7 +291,7 @@ func Test_WrongStatus(t *testing.T) {
 
 func Test_RestoreByTimeFailNoBackend(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
-		Routine: "wrongRoutine",
+		RoutineName: "wrongRoutine",
 	}
 
 	_, err := restoreService.RestoreByTime(request)
@@ -302,7 +302,7 @@ func Test_RestoreByTimeFailNoBackend(t *testing.T) {
 
 func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
-		Routine: "routine",
+		RoutineName: "routine",
 	}
 
 	_, err := restoreService.RestoreByTime(request)
@@ -313,8 +313,8 @@ func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
 
 func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
-		Routine: "routine",
-		Time:    time.UnixMilli(1),
+		RoutineName: "routine",
+		Time:        time.UnixMilli(1),
 	}
 
 	_, err := restoreService.RestoreByTime(request)
@@ -325,7 +325,7 @@ func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 
 func Test_restoreTimestampFail(t *testing.T) {
 	request := &model.RestoreTimestampRequest{
-		Routine:            "routine_fail_restore",
+		RoutineName:        "routine_fail_restore",
 		Time:               time.UnixMilli(10),
 		DestinationCluster: &model.AerospikeCluster{},
 	}

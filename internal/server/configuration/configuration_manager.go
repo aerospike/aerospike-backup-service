@@ -52,7 +52,7 @@ func readConfig(reader io.Reader, nsValidator service.NamespaceValidator) (*mode
 	}
 	slog.Info("Service configuration:\n" + string(configBytes))
 
-	config := dto.NewConfigWithDefaultValues()
+	config := &dto.Config{}
 	if err := yaml.Unmarshal(configBytes, config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
