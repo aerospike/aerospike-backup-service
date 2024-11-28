@@ -47,14 +47,14 @@ func (b *BackupServiceConfig) fromModel(m *model.BackupServiceConfig) {
 }
 
 // Compare BackupServiceConfig with another and return detailed errors.
-func (c *BackupServiceConfig) Compare(other BackupServiceConfig) error {
+func (b *BackupServiceConfig) Compare(other BackupServiceConfig) error {
 	var err error
 
-	if e := c.HTTPServer.Compare(other.HTTPServer); e != nil {
+	if e := b.HTTPServer.Compare(other.HTTPServer); e != nil {
 		err = errors.Join(err, fmt.Errorf("HTTPServer changes: %w", e))
 	}
 
-	if e := c.Logger.Compare(other.Logger); e != nil {
+	if e := b.Logger.Compare(other.Logger); e != nil {
 		err = errors.Join(err, fmt.Errorf("logger changes: %w", e))
 	}
 

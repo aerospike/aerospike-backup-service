@@ -26,7 +26,7 @@ func ValidateConfiguration(conf *dto.Config) error {
 }
 
 func ValidateRequest(request dto.RestoreRequest, conf *dto.Config) error {
-	model, err := conf.ToModel(nil)
+	model, err := conf.ToModel(&service.NoopNamespaceValidator{})
 	if err != nil {
 		return fmt.Errorf("config invalid: %w", err)
 	}
@@ -41,7 +41,7 @@ func ValidateRequest(request dto.RestoreRequest, conf *dto.Config) error {
 }
 
 func ValidateRestoreTimestamp(request dto.RestoreTimestampRequest, conf *dto.Config) error {
-	model, err := conf.ToModel(nil)
+	model, err := conf.ToModel(&service.NoopNamespaceValidator{})
 	if err != nil {
 		return fmt.Errorf("config invalid: %w", err)
 	}

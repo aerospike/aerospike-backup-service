@@ -22,18 +22,13 @@ type Storage struct {
 	AzureStorage *AzureStorage `yaml:"azure-storage,omitempty" json:"azure-storage,omitempty"`
 }
 
-// StorageValidator interface for storage types that can be validated.
-type StorageValidator interface {
-	Validate() error
-}
-
 // Validate checks if the Storage is valid.
 func (s *Storage) Validate() error {
 	if s == nil {
 		return errors.New("storage is not specified")
 	}
 
-	var validStorage StorageValidator
+	var validStorage Validator
 	count := 0
 
 	if s.LocalStorage != nil {

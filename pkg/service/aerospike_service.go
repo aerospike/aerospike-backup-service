@@ -151,3 +151,16 @@ func resolveNamespaces(namespaces []string, client backup.AerospikeClient) ([]st
 
 	return namespaces, nil
 }
+
+// NoopNamespaceValidator is a noop implementation of the NamespaceValidator interface.
+type NoopNamespaceValidator struct{}
+
+// MissingNamespaces returns an empty slice, indicating no namespaces are missing.
+func (n *NoopNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ []string) []string {
+	return nil
+}
+
+// ValidateRoutines returns nil, indicating no error in validation.
+func (n *NoopNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ *model.Config) error {
+	return nil
+}

@@ -112,7 +112,9 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validation.ConfigurationApplicable(dto.NewConfigFromModel(s.config), dto.NewConfigFromModel(s.config)); err != nil {
+	newConfig := dto.NewConfigFromModel(s.config)
+	oldConfig := dto.NewConfigFromModel(config)
+	if err := validation.ConfigurationApplicable(oldConfig, newConfig); err != nil {
 		hLogger.Error("static configuration has changed",
 			slog.Any("error", err),
 		)
