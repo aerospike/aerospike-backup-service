@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asb"
@@ -45,7 +45,6 @@ func (r *RestoreRunner) Run(
 	return handler, nil
 }
 
-//nolint:funlen
 func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 ) *backup.RestoreConfig {
 	config := backup.NewDefaultRestoreConfig()
@@ -54,23 +53,10 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 
 	config.RetryPolicy = restoreRequest.Policy.GetRetryPolicyOrDefault()
 
-	if restoreRequest.Policy.Tps != nil {
-		config.RecordsPerSecond = int(*restoreRequest.Policy.Tps)
-	}
-	if restoreRequest.Policy.Bandwidth != nil {
-		config.Bandwidth = int(*restoreRequest.Policy.Bandwidth)
-	}
-
 	config.WritePolicy = makeWritePolicy(restoreRequest)
-	if restoreRequest.Policy.NoRecords != nil && *restoreRequest.Policy.NoRecords {
-		config.NoRecords = true
-	}
-	if restoreRequest.Policy.NoIndexes != nil && *restoreRequest.Policy.NoIndexes {
-		config.NoIndexes = true
-	}
-	if restoreRequest.Policy.NoUdfs != nil && *restoreRequest.Policy.NoUdfs {
-		config.NoUDFs = true
-	}
+	config.NoRecords = util.ValueOrZero(restoreRequest.Policy.NoRecords)
+	config.NoIndexes = util.ValueOrZero(restoreRequest.Policy.NoIndexes)
+	config.NoUDFs = util.ValueOrZero(restoreRequest.Policy.NoUdfs)
 
 	if restoreRequest.Policy.Namespace != nil {
 		config.Namespace = &backup.RestoreNamespaceConfig{
@@ -79,18 +65,13 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 		}
 	}
 
-	if restoreRequest.Policy.Parallel != nil {
-		config.Parallel = int(*restoreRequest.Policy.Parallel)
-	}
-	if restoreRequest.Policy.MaxAsyncBatches != nil {
-		config.MaxAsyncBatches = int(*restoreRequest.Policy.MaxAsyncBatches)
-	}
-	if restoreRequest.Policy.BatchSize != nil {
-		config.BatchSize = int(*restoreRequest.Policy.BatchSize)
-	}
-	if restoreRequest.Policy.DisableBatchWrites != nil {
-		config.DisableBatchWrites = *restoreRequest.Policy.DisableBatchWrites
-	}
+	config.RecordsPerSecond = util.ValueOrZero(restoreRequest.Policy.Tps)
+	config.Bandwidth = util.ValueOrZero(restoreRequest.Policy.Bandwidth)
+	config.Parallel = restoreRequest.Policy.GetParallelOrDefault()
+	config.MaxAsyncBatches = restoreRequest.Policy.GetMaxAsyncBatchesOrDefault()
+	config.BatchSize = restoreRequest.Policy.GetBatchSizeOrDefault()
+	config.DisableBatchWrites = util.ValueOrZero(restoreRequest.Policy.DisableBatchWrites)
+
 	if restoreRequest.Policy.CompressionPolicy != nil {
 		config.CompressionPolicy = &backup.CompressionPolicy{
 			Mode:  restoreRequest.Policy.CompressionPolicy.Mode,
@@ -106,9 +87,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 		}
 	}
 
-	if restoreRequest.Policy.ExtraTTL != nil {
-		config.ExtraTTL = *restoreRequest.Policy.ExtraTTL
-	}
+	config.ExtraTTL = util.ValueOrZero(restoreRequest.Policy.ExtraTTL)
 
 	if restoreRequest.SecretAgent != nil {
 		config.SecretAgentConfig = &backup.SecretAgentConfig{
@@ -135,10 +114,9 @@ func makeWritePolicy(restoreRequest *model.RestoreRequest) *a.WritePolicy {
 	writePolicy.RecordExistsAction = recordExistsAction(
 		restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
 
-	if restoreRequest.Policy.Timeout != nil && *restoreRequest.Policy.Timeout > 0 {
-		writePolicy.TotalTimeout = time.Duration(*restoreRequest.Policy.Timeout) *
-			time.Millisecond
-	}
+	writePolicy.SocketTimeout = restoreRequest.Policy.GetSocketTimeoutOrDefault()
+	writePolicy.TotalTimeout = restoreRequest.Policy.GetTotalTimeoutOrDefault()
+	writePolicy.MaxRetries = int(restoreRequest.Policy.GetRetryPolicyOrDefault().MaxRetries)
 
 	return writePolicy
 }

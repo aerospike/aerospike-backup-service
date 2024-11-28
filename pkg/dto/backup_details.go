@@ -19,8 +19,8 @@ type BackupDetails struct {
 type BackupMetadata struct {
 	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created" json:"created" example:"2023-03-20T14:50:00Z"`
-	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups).
-	From time.Time `yaml:"from" json:"from" example:"2023-03-19T14:50:00Z"`
+	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).
+	From time.Time `yaml:"from,omitempty" json:"from,omitempty" example:"2023-03-19T14:50:00Z"`
 	// The namespace of a backup.
 	Namespace string `yaml:"namespace" json:"namespace" example:"testNamespace"`
 	// The total number of records backed up.

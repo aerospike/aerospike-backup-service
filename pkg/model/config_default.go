@@ -7,16 +7,12 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-type backupPolicy struct {
-	retryPolicy models.RetryPolicy
-	sealed      bool
-}
-
 // defaultConfig represents default configuration values.
 var defaultConfig = struct {
-	http         HTTPServerConfig
-	logger       LoggerConfig
-	backupPolicy backupPolicy
+	http          HTTPServerConfig
+	logger        LoggerConfig
+	backupPolicy  BackupPolicy
+	restorePolicy RestorePolicy
 }{
 	http: HTTPServerConfig{
 		Address: util.Ptr("0.0.0.0"),
@@ -34,17 +30,27 @@ var defaultConfig = struct {
 		Format:       util.Ptr("PLAIN"),
 		StdoutWriter: util.Ptr(true),
 	},
-	backupPolicy: backupPolicy{
-		retryPolicy: models.RetryPolicy{
+	backupPolicy: BackupPolicy{
+		RetryPolicy: &models.RetryPolicy{
 			BaseTimeout: 1 * time.Minute,
 			MaxRetries:  5,
 			Multiplier:  1,
 		},
+		Parallel:      util.Ptr(1),
+		FileLimit:     util.Ptr(250),
+		TotalTimeout:  util.Ptr(time.Duration(0)),
+		SocketTimeout: util.Ptr(10 * time.Second),
 	},
-}
-
-var defaultRetry = &models.RetryPolicy{
-	BaseTimeout: 2 * time.Second,
-	MaxRetries:  5,
-	Multiplier:  2,
+	restorePolicy: RestorePolicy{
+		Parallel: util.Ptr(20),
+		RetryPolicy: &models.RetryPolicy{
+			BaseTimeout: 2 * time.Second,
+			MaxRetries:  5,
+			Multiplier:  2,
+		},
+		MaxAsyncBatches: util.Ptr(640),
+		BatchSize:       util.Ptr(128),
+		SocketTimeout:   util.Ptr(10 * time.Second),
+		TotalTimeout:    util.Ptr(time.Duration(0)),
+	},
 }

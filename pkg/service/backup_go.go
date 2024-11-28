@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v7"
 	"github.com/aerospike/backup-go"
 )
@@ -49,7 +49,6 @@ func (b *BackupGo) BackupRun(
 	return handler, nil
 }
 
-//nolint:funlen
 func makeBackupConfig(
 	namespace string,
 	backupRoutine *model.BackupRoutine,
@@ -62,49 +61,24 @@ func makeBackupConfig(
 	config.Namespace = namespace
 	config.BinList = backupRoutine.BinList
 	config.NodeList = backupRoutine.NodeList
+	config.SetList = backupRoutine.SetList
 
-	if backupPolicy.NoRecords != nil && *backupPolicy.NoRecords {
-		config.NoRecords = true
-	}
-	if backupPolicy.NoIndexes != nil && *backupPolicy.NoIndexes {
-		config.NoIndexes = true
-	}
-	if backupPolicy.NoUdfs != nil && *backupPolicy.NoUdfs {
-		config.NoUDFs = true
-	}
+	config.NoRecords = util.ValueOrZero(backupPolicy.NoRecords)
+	config.NoIndexes = util.ValueOrZero(backupPolicy.NoIndexes)
+	config.NoUDFs = util.ValueOrZero(backupPolicy.NoUdfs)
 
-	if len(backupRoutine.SetList) > 0 {
-		config.SetList = backupRoutine.SetList
-	}
-
-	if backupPolicy.Parallel != nil {
-		config.ParallelRead = *backupPolicy.Parallel
-		config.ParallelWrite = *backupPolicy.Parallel
-	}
-
-	if backupPolicy.FileLimit != nil {
-		config.FileLimit = *backupPolicy.FileLimit * 1_048_576 // lib expects limit in bytes.
-	}
-
-	if backupPolicy.RecordsPerSecond != nil {
-		config.RecordsPerSecond = int(*backupPolicy.RecordsPerSecond)
-	}
+	config.ParallelRead = backupPolicy.GetParallelOrDefault()
+	config.ParallelWrite = backupPolicy.GetParallelOrDefault()
+	config.FileLimit = int64(backupPolicy.GetFileLimitOrDefault()) * 1_048_576 // lib expects limit in bytes.
+	config.RecordsPerSecond = util.ValueOrZero(backupPolicy.RecordsPerSecond)
+	config.Bandwidth = util.ValueOrZero(backupPolicy.Bandwidth) * 1_048_576 // lib expects file size in bytes.
 
 	config.ModBefore = timebounds.ToTime
 	config.ModAfter = timebounds.FromTime
 
 	config.ScanPolicy = a.NewScanPolicy()
-	if backupPolicy.TotalTimeout != nil && *backupPolicy.TotalTimeout > 0 {
-		config.ScanPolicy.TotalTimeout = time.Duration(*backupPolicy.TotalTimeout) *
-			time.Millisecond
-	}
-	if backupPolicy.SocketTimeout != nil && *backupPolicy.SocketTimeout > 0 {
-		config.ScanPolicy.SocketTimeout = time.Duration(*backupPolicy.SocketTimeout) *
-			time.Millisecond
-	}
-	if backupPolicy.Bandwidth != nil {
-		config.Bandwidth = int(*backupPolicy.Bandwidth)
-	}
+	config.ScanPolicy.TotalTimeout = backupPolicy.GetTotalTimeoutOrDefault()
+	config.ScanPolicy.SocketTimeout = backupPolicy.GetSocketTimeoutOrDefault()
 
 	if backupPolicy.CompressionPolicy != nil {
 		config.CompressionPolicy = &backup.CompressionPolicy{

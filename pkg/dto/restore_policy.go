@@ -11,7 +11,7 @@ import (
 // @Description RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
 	// The number of concurrent record readers from backup files.
-	Parallel *int32 `json:"parallel,omitempty" example:"8"`
+	Parallel *int `json:"parallel,omitempty" example:"8"`
 	// Do not restore any record data (metadata or bin data).
 	// By default, record data, secondary index definitions, and UDF modules
 	// will be restored.
@@ -21,15 +21,19 @@ type RestorePolicy struct {
 	// Do not restore any UDF modules.
 	NoUdfs *bool `json:"no-udfs,omitempty"`
 	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-	Timeout *int32 `json:"timeout,omitempty" example:"1000"`
+	// Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
+	// If both are 0, there is no socket idle time limit.
+	SocketTimeout *int32 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
+	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
+	TotalTimeout *int32 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`
 	// Disables the use of batch writes when restoring records to the Aerospike cluster.
 	// By default, the cluster is checked for batch write support.
 	DisableBatchWrites *bool `json:"disable-batch-writes,omitempty"`
 	// The max number of outstanding async record batch write calls at a time.
-	MaxAsyncBatches *int32 `json:"max-async-batches,omitempty" example:"32"`
+	MaxAsyncBatches *int `json:"max-async-batches,omitempty" example:"32"`
 	// The max allowed number of records per an async batch write call.
 	// Default is 128 with batch writes enabled, or 16 without batch writes.
-	BatchSize *int32 `json:"batch-size,omitempty" example:"128"`
+	BatchSize *int `json:"batch-size,omitempty" example:"128"`
 	// Namespace details for the restore operation.
 	// By default, the data is restored to the namespace from which it was taken.
 	Namespace *RestoreNamespace `json:"namespace,omitempty"`
@@ -50,10 +54,10 @@ type RestorePolicy struct {
 	// the namespace, regardless of generation numbers.
 	NoGeneration *bool `json:"no-generation,omitempty"`
 	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.
-	Bandwidth *int64 `json:"bandwidth,omitempty" example:"50000"`
+	Bandwidth *int `json:"bandwidth,omitempty" example:"50000"`
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions
 	// per second.
-	Tps *int32 `json:"tps,omitempty" example:"4000"`
+	Tps *int `json:"tps,omitempty" example:"4000"`
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details.
@@ -74,8 +78,11 @@ func (p *RestorePolicy) Validate() error {
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
 	}
-	if p.Timeout != nil && *p.Timeout <= 0 {
-		return fmt.Errorf("timeout %d invalid, should be positive number", *p.Timeout)
+	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
+		return fmt.Errorf("total timeout %d invalid, should be positive number", *p.TotalTimeout)
+	}
+	if p.SocketTimeout != nil && *p.SocketTimeout <= 0 {
+		return fmt.Errorf("socket timeout %d invalid, should be positive number", *p.SocketTimeout)
 	}
 	if p.MaxAsyncBatches != nil && *p.MaxAsyncBatches <= 0 {
 		return fmt.Errorf("maxAsyncBatches %d invalid, should be positive number", *p.MaxAsyncBatches)
@@ -123,7 +130,8 @@ func (p *RestorePolicy) ToModel() *model.RestorePolicy {
 		NoRecords:          p.NoRecords,
 		NoIndexes:          p.NoIndexes,
 		NoUdfs:             p.NoUdfs,
-		Timeout:            p.Timeout,
+		TotalTimeout:       millisToDuration(p.TotalTimeout),
+		SocketTimeout:      millisToDuration(p.SocketTimeout),
 		DisableBatchWrites: p.DisableBatchWrites,
 		MaxAsyncBatches:    p.MaxAsyncBatches,
 		BatchSize:          p.BatchSize,
