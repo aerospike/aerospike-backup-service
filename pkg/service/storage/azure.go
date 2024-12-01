@@ -76,7 +76,7 @@ func getAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
 	case model.AzureADAuth:
 		return clientFromAD(a.Endpoint, auth)
 	default:
-		return clientWithNoCredential(a.Endpoint)
+		return clientWithDefaultCredential(a.Endpoint)
 	}
 }
 
@@ -108,10 +108,15 @@ func clientFromAD(endpoint string, auth model.AzureADAuth) (*azblob.Client, erro
 	return client, nil
 }
 
-func clientWithNoCredential(endpoint string) (*azblob.Client, error) {
-	client, err := azblob.NewClientWithNoCredential(endpoint, nil)
+func clientWithDefaultCredential(endpoint string) (*azblob.Client, error) {
+	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Azure Blob client with no credentials: %w", err)
+		return nil, fmt.Errorf("failed to obtain default Azure credentials: %w", err)
+	}
+
+	client, err := azblob.NewClient(endpoint, cred, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Azure Blob client with default credentials: %w", err)
 	}
 
 	return client, nil
