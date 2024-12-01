@@ -1871,7 +1871,7 @@
         "properties" : {
           "backup-policy" : {
             "description" : "The name of the corresponding backup policy.",
-            "example" : "daily",
+            "example" : "keepAll",
             "type" : "string"
           },
           "bin-list" : {

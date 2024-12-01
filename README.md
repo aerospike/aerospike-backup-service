@@ -42,9 +42,11 @@ For specifics and example values, see the [OpenAPI docs](https://aerospike.githu
 
 #### Configuration
 
-The endpoints defined within the configuration section permit the user to view or modify the configuration file.
-Endpoints ending in `/config` permit reading and changing the entire file at once, while `/config/cluster` endpoints
-enable more granular changes.
+The endpoints defined within the configuration section allow users to view or modify the configuration file.
+Endpoints ending with /config enable reading and modifying the entire file at once, while endpoints like 
+`/config/clusters`, `/config/policies`, `/config/routines`, and `/config/storage` provide more granular control.
+Changes made through any of these endpoints are applied immediately.
+However, backup processes already in progress will continue using the configuration that was active when they started.
 
 #### Cluster connection
 
@@ -66,12 +68,12 @@ You can also add, update, or remove a storage configuration. See
 the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities
 under `/config/storage` for detailed information.
 
-:warning: ABS currently supports only AWS S3 cloud storage.
+:warning: ABS currently supports AWS S3, GCP, Microsoft Azure cloud storage.
 
 #### Backup policy
 
-A backup policy is a set of rules that define how backups should be performed. It could include information about a
-backup schedule, criteria for what data is being backed up, and the storage destination.
+A backup policy is a set of rules that defines how backups should be performed. 
+It includes settings for performance tuning, data selection, encryption, compression, and other operational details.
 See [`GET: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readPolicies) for
 full details about what parameters are available to customize a backup policy.
 
@@ -80,12 +82,12 @@ When you run
 the [`POST: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addPolicy) command
 to create a policy, ensure that you give your policy a name that will let you quickly identify its characteristics.
 
-Aerospike recommends defining at least one backup and restore policy.
-
 #### Backup routine
 
 A backup routine is a set of procedures that actually perform backups based on the predefined backup policy.
-Routines are individually named just as policies are.
+It includes configurations for the source cluster, storage destination, scheduling (separately for full and incremental backups),
+and the scope of data to back up (such as namespaces, sets, or bins).
+
 See the [Routines](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readRoutines) section for
 command examples showing how to find all routines, get information about a specific named routine, and add, remove, or
 update an existing routine.
@@ -96,7 +98,7 @@ only on full backups.
 ### Operations
 
 - List backups: Returns the details of available backups. A time filter can be added to the request.
-- Restore from a file: Starts a restore operation from a specified backup file/folder.
+- Restore from path: Starts a restore operation from a specified backup folder.
 - Restore from a timestamp: Given a routine name, searches for the closest full backup to the given timestamp and
   applies the backup in the following order: full backup first, then incremental backups up to the given point in time,
   if they exist.
@@ -151,8 +153,8 @@ following application metrics:
 
 | Name                                                   | Description                                 |
 |--------------------------------------------------------|---------------------------------------------|
-| `aerospike_backup_service_runs_total`                  | Full backup runs counter                    |
-| `aerospike_backup_service_incremental_runs_total`      | Incremental backup runs counter             |
+| `aerospike_backup_service_runs_total`                  | Successful backup runs counter              |
+| `aerospike_backup_service_incremental_runs_total`      | Successful incremental backup runs counter  |
 | `aerospike_backup_service_skip_total`                  | Full backup skip counter                    |
 | `aerospike_backup_service_incremental_skip_total`      | Incremental backup skip counter             |
 | `aerospike_backup_service_failure_total`               | Full backup failure counter                 |
@@ -218,23 +220,31 @@ git push
 
 ## FAQ
 
-### What happens when a backup doesn’t finish before another starts?
+### What happens when a backup doesn’t finish before another starts (for the same routine)?
 
-The service will skip the next startup until the previous backup run is completed.
+- **Full Backups:**
+  - Full backups cannot overlap. If a scheduled full backup is due to start but the previous one is still running, the new backup is skipped entirely. It is not queued but will wait for the next scheduled execution.
+  - Full backups always take priority over incremental backups. If an incremental backup is running when a full backup is scheduled, the full backup will start as planned, and the incremental backup will continue running without interruption.
+
+- **Incremental Backups:**
+  - Incremental backups are skipped if any other backup (full or incremental) is still running.
+  - Incremental backups will not run until at least one full backup has been successfully completed.
+
 
 ### Can multiple backup routines be performed simultaneously?
 
-The service uses the [asbackup](https://github.com/aerospike/aerospike-tools-backup) shared library, which is not
-currently thread safe.
-Given this limitation, backup routines are performed in sequence.
+Yes, multiple backup routines can run in parallel. Furthermore, it is possible to back up different namespaces from the same cluster using separate routines with different schedules, all running simultaneously.
+
+To manage resource utilization, you can configure the `cluster.max-parallel-scans` property to limit the number of read threads operating on a single cluster.
 
 ### Which storage providers are supported?
 
-The backup service supports AWS S3 or compatible (such as MinIO) and local storage.
+The backup service supports the following storage providers:
 
-## Known Issues
-
-* The service may crash if an invalid S3 backup key is provided during configuration.
+- **AWS S3** (or compatible services such as MinIO)
+- **Microsoft Azure**
+- **Google Cloud Storage**
+- **Local storage** (files stored on the same machine where the backup service is running)
 
 ## Example requests and responses
 
@@ -329,15 +339,34 @@ GET {{baseUrl}}/v1/config/storage
 ```json
 {
   "local": {
-    "type": 0,
-    "path": "./localStorage"
+    "local-storage":  {
+      "path": "./localStorage"
+    }
   },
   "minio": {
-    "type": 1,
-    "path": "s3://as-backup-bucket/storage1",
-    "s3-region": "eu-central-1",
-    "s3-profile": "minio",
-    "s3-endpoint-override": "http://host.docker.internal:9000"
+    "s3-storage": {
+      "path": "storage1",
+      "bucket": "as-backup-bucket",
+      "s3-region": "eu-central-1",
+      "s3-profile": "minio",
+      "s3-endpoint-override": "http://host.docker.internal:9000"
+    }
+  },
+  "azure": {
+    "azure-storage": {
+      "endpoint": "http://127.0.0.1:6000/devstoreaccount1",
+      "container-name": "testcontainer",
+      "account-name": "devstoreaccount1",
+      "account-key": "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+    }
+  },
+  "gcp": {
+    "gcp-storage": {
+      "key-file": "keyfile",
+      "bucket-name": "as-backup-bucket",
+      "path": "storage2",
+      "endpoint": "http://localhost"
+    }
   }
 }
 ```
@@ -486,3 +515,149 @@ Response:
 ```json
 123456789
 ```
+
+## Breaking API Changes (v2 → v3): 
+### Storage Object 
+
+The `Storage` object schema has been updated in **v3** to improve clarity, modularity, and support for additional storage types. 
+
+- **v2:** Unified schema with a `type` field to differentiate storage types.
+- **v3:** Separate schemas for each storage type:
+  - `local-storage`
+  - `s3-storage`
+  - `azure-storage`
+  - `gcp-storage`
+- Validation ensures **only one storage type** is configured per `dto.Storage`.
+
+**S3 Path Construction**:
+  - **v2**: S3 paths were constructed as `s3://<bucket>/<path>`.
+  - **v3**: `bucket` and `path` are now separate fields in `dto.S3Storage`.
+
+### **Example**
+```yaml
+# Example 1: Local Storage
+storage1:
+  local-storage:
+    path: /local/backups
+
+# Example 2: S3 Storage
+storage2:
+  s3-storage:
+    bucket: my-backup-bucket
+    path: backups
+    s3-profile: default
+    s3-region: eu-central-1
+
+# Example 3: Azure Storage
+storage3:
+  azure-storage:
+    account-name: my-storage-account
+    account-key: my-secret-key
+    container-name: my-container
+    endpoint: 'https://my-storage-account.blob.core.windows.net'
+    path: backups
+
+# Example 4: GCP Storage
+storage4:
+  gcp-storage:
+    bucket-name: my-gcp-bucket
+    key-file: /path/to/service-account-key.json
+    endpoint: 'https://storage.googleapis.com'
+    path: backups
+
+```
+
+### Configuration Management Update
+
+Changes to the configuration API take effect immediately in version 3.0.
+
+Configuration changes in versions prior to 3.0 required an explicit "apply" step after CRUD operations to update the runtime configuration.
+
+#### Key Changes
+- **Config Updates:** Each CRUD update now automatically saves the configuration to the file and applies it to the runtime system. No need for a separate "apply" operation.
+The memory config is always in sync with the runtime.
+- **Validation:** Invalid configurations will be rejected immediately, not applied and not saved.
+- **The running backup processes:** will finish as they are, but:
+  - If a routine entry is absent in the updated configuration file, it will not be rescheduled.
+  - If the routine entry is updated, it will be rescheduled with the new parameters.
+
+### Apply Endpoint
+The `apply` endpoint reads and applies the configuration from the file (after it was modified externally).
+
+### Secret Agents
+The `secret-agent` configuration field to store the list of secret agents is now named `secret-agents`.
+
+### Restore Request
+
+In the new version (v3) of the API, the **`restore`** request (`/v1/restore/full` and `/v1/restore/incremental`) 
+was changed to simplify and streamline the process.
+
+- **v2:** The `Storage` object contained a `path` that was reused as the backup data location.
+- **v3:** The `path` in the `Storage` object now only refers to the **root path** of the storage. 
+The specific backup data location is now specified using a new required field: **`backup-data-path`**.
+This change allows you to reuse the same storage for different restore requests.
+
+## New API functions (v2 → v3):
+### Node list
+Backup routine has a new optional `node-list` property.
+
+Node list is a comma-separated list of IP addresses and/or host names followed by port numbers.
+```text
+<IP addr 1>:<port 1>[,<IP addr 2>:<port 2>[,...]]
+<IP addr 1>:<TLS_NAME 1>:<port 1>[,<IP addr 2>:<TLS_NAME 2>:<port 2>[,...]]
+```
+Back up the given cluster nodes only.
+This argument is mutually exclusive to partition-list/after-digest arguments.
+Default: back up all nodes in the cluster
+### Extra ttl
+
+A new optional field, `extra-ttl`, has been added to the restore policy configuration.
+It specifies the amount of extra time-to-live (TTL) to add to records that have expirable void-times.
+
+### Secret Agent for cluster
+
+The credential object has a new optional `secret-agent` property that points to a secret agent, one of those listed in the `secret-agents` configuration parameter.
+Secret agent is responsible for storing secrets like passwords and TLS certificates.
+In addition to `password` and `password-path`, there is a new field `password-key-secret`, which specifies the secret keyword in Aerospike Secret Agent containing the password.
+Validation allows only one of these three fields to be present.
+```yaml
+  dto.Credentials:
+      description: Credentials represents authentication details to the Aerospike cluster.
+      properties:
+        auth-mode:
+          description: >-
+            The authentication mode string (INTERNAL, EXTERNAL,
+            EXTERNAL_INSECURE, PKI).
+          enum:
+            - INTERNAL
+            - EXTERNAL
+            - EXTERNAL_INSECURE
+            - PKI
+          type: string
+        password:
+          description: The password for the cluster authentication.
+          example: testPswd
+          type: string
+        password-key-secret:
+          description: |-
+            The secret keyword in Aerospike Secret Agent containing password.
+            Only applicable when SecretAgent is specified.
+          type: string
+        password-path:
+          description: >-
+            The file path with the password string, will take precedence over
+            the password field.
+          example: /path/to/pass.txt
+          type: string
+        secret-agent:
+          allOf:
+            - $ref: '#/components/schemas/dto.SecretAgent'
+          description: Secret Agent configuration (optional).
+          type: object
+        user:
+          description: The username for the cluster authentication.
+          example: testUser
+          type: string
+      type: object
+```
+

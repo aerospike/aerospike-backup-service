@@ -11,8 +11,8 @@ aerospike-clusters:
 
 storage:
   local:
-    type: "local"
-    path: "/var/lib/aerospike-backup-service"
+    local-storage:
+      path: "/var/lib/aerospike-backup-service"
 
 backup-policies:
   policy:
