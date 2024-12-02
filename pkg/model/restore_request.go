@@ -30,7 +30,7 @@ type RestoreTimestampRequest struct {
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
 	Time time.Time
 	// The backup routine name.
-	Routine string
+	RoutineName string
 }
 
 // String satisfies the fmt.Stringer interface.

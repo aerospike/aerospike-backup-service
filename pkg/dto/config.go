@@ -21,6 +21,16 @@ type Config struct {
 	SecretAgents      map[string]*SecretAgent      `yaml:"secret-agents,omitempty" json:"secret-agents,omitempty"`
 }
 
+func NewConfigFromModel(m *model.Config) *Config {
+	if m == nil {
+		return nil
+	}
+
+	config := &Config{}
+	config.fromModel(m)
+	return config
+}
+
 func (c *Config) fromModel(m *model.Config) {
 	c.ServiceConfig.fromModel(&m.ServiceConfig)
 
@@ -48,27 +58,6 @@ func (c *Config) fromModel(m *model.Config) {
 	for name, s := range m.SecretAgents {
 		c.SecretAgents[name] = NewSecretAgentFromModel(s)
 	}
-}
-
-// NewConfigWithDefaultValues returns a new Config with default values.
-func NewConfigWithDefaultValues() *Config {
-	return &Config{
-		ServiceConfig:     NewBackupServiceConfigWithDefaultValues(),
-		Storage:           map[string]*Storage{},
-		BackupRoutines:    map[string]*BackupRoutine{},
-		BackupPolicies:    map[string]*BackupPolicy{},
-		AerospikeClusters: map[string]*AerospikeCluster{},
-	}
-}
-
-func NewConfigFromModel(m *model.Config) *Config {
-	if m == nil {
-		return nil
-	}
-
-	config := &Config{}
-	config.fromModel(m)
-	return config
 }
 
 // NewConfigFromReader creates a new Config object from a given reader

@@ -17,6 +17,11 @@ const (
 	YAML
 )
 
+// Validator interface for types that can be validated.
+type Validator interface {
+	Validate() error
+}
+
 // Serialize handles serialization
 func Serialize(v any, format SerializationFormat) ([]byte, error) {
 	var (

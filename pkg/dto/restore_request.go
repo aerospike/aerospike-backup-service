@@ -56,7 +56,7 @@ func (r *RestoreRequest) Validate() error {
 }
 
 // Validate validates the restore operation request.
-func (r *RestoreTimestampRequest) Validate(config *model.Config) error {
+func (r *RestoreTimestampRequest) Validate() error {
 	if err := r.DestinationCluster.Validate(); err != nil {
 		return err
 	}
@@ -69,16 +69,16 @@ func (r *RestoreTimestampRequest) Validate(config *model.Config) error {
 	if r.Routine == "" {
 		return emptyFieldValidationError(r.Routine)
 	}
-	if _, ok := config.BackupRoutines[r.Routine]; !ok {
-		return notFoundValidationError("routine", r.Routine)
-	}
 	return nil
 }
 
-func (r RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
+func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
 	cluster, err := r.DestinationCluster.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid cluster: %w", err)
+	}
+	if _, ok := config.BackupRoutines[r.Routine]; !ok {
+		return nil, notFoundValidationError("routine", r.Routine)
 	}
 
 	return &model.RestoreTimestampRequest{
@@ -86,7 +86,7 @@ func (r RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTi
 		Policy:             r.Policy.ToModel(),
 		SecretAgent:        r.SecretAgent.ToModel(),
 		Time:               time.UnixMilli(r.Time),
-		Routine:            r.Routine,
+		RoutineName:        r.Routine,
 	}, nil
 }
 

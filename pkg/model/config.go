@@ -252,9 +252,3 @@ func (c *Config) CopyFrom(other *Config) {
 	c.BackupRoutines = other.BackupRoutines
 	c.SecretAgents = other.SecretAgents
 }
-
-// CompareStaticConfiguration checks if new config changes are allowed as per dynamic consideration.
-func CompareStaticConfiguration(oldConf, newConf *Config) error {
-	// currently, only ServiceConfig can not be changed dynamically.
-	return oldConf.ServiceConfig.Compare(newConf.ServiceConfig)
-}

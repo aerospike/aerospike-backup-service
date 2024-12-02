@@ -1,10 +1,5 @@
 package model
 
-import (
-	"errors"
-	"fmt"
-)
-
 // HTTPServerConfig represents the service's HTTP server configuration.
 // @Description HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
@@ -65,32 +60,6 @@ func (s *HTTPServerConfig) GetContextPathOrDefault() string {
 	return *defaultConfig.http.ContextPath
 }
 
-// Compare HTTPServerConfig object with another and return detailed errors.
-func (s *HTTPServerConfig) Compare(other *HTTPServerConfig) error {
-	if s == nil && other == nil {
-		return nil
-	}
-	if s == nil {
-		return errors.New("HTTPServer added")
-	}
-	if other == nil {
-		return errors.New("HTTPServer removed")
-	}
-
-	var err = errors.Join(
-		comparePointers("Address", s.Address, other.Address),
-		comparePointers("Port", s.Port, other.Port),
-		comparePointers("ContextPath", s.ContextPath, other.ContextPath),
-		comparePointers("Timeout", s.Timeout, other.Timeout),
-	)
-
-	if e := s.Rate.Compare(other.Rate); e != nil {
-		err = errors.Join(err, fmt.Errorf("rate changes: %w", e))
-	}
-
-	return err
-}
-
 // RateLimiterConfig represents the service's HTTP server rate limiter configuration.
 // @Description RateLimiterConfig is the HTTP server rate limiter configuration.
 type RateLimiterConfig struct {
@@ -127,23 +96,4 @@ func (r *RateLimiterConfig) GetWhiteListOrDefault() []string {
 		return r.WhiteList
 	}
 	return defaultConfig.http.Rate.WhiteList
-}
-
-// Compare RateLimiterConfig object with another and return detailed errors.
-func (r *RateLimiterConfig) Compare(other *RateLimiterConfig) error {
-	if r == nil && other == nil {
-		return nil
-	}
-	if r == nil {
-		return errors.New("RateLimiter added")
-	}
-	if other == nil {
-		return errors.New("RateLimiter removed")
-	}
-
-	return errors.Join(
-		comparePointers("Tps", r.Tps, other.Tps),
-		comparePointers("Size", r.Size, other.Size),
-		compareSlices("WhiteList", r.WhiteList, other.WhiteList),
-	)
 }
