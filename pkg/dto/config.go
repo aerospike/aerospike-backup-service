@@ -128,6 +128,17 @@ func (c *Config) validate() error {
 	return nil
 }
 
+// NewConfigWithDefaultValues returns a new Config with default values.
+func NewConfigWithDefaultValues() *Config {
+	return &Config{
+		ServiceConfig:     NewBackupServiceConfigWithDefaultValues(),
+		Storage:           map[string]*Storage{},
+		BackupRoutines:    map[string]*BackupRoutine{},
+		BackupPolicies:    map[string]*BackupPolicy{},
+		AerospikeClusters: map[string]*AerospikeCluster{},
+	}
+}
+
 func (c *Config) ToModel(nsValidator service.NamespaceValidator) (*model.Config, error) {
 	if err := c.validate(); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
