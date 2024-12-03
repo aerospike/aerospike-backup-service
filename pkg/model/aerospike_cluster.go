@@ -15,7 +15,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v7"
-	"github.com/aerospike/backup-go"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -114,12 +113,9 @@ func (c *AerospikeCluster) loadSecretAgentPassword() *string {
 		return nil
 	}
 
-	agent := *c.Credentials.SecretAgent
-	password, err := backup.ParseSecret(agent.ToSecretAgentConfig(), *c.Credentials.PasswordKeySecret)
+	password, err := (*c.Credentials.SecretAgent).Read(*c.Credentials.PasswordKeySecret)
 	if err != nil {
-		slog.Error("Failed to get password from secret agent",
-			slog.Any("agent", agent),
-			slog.Any("err", err))
+		slog.Error("Failed to get password from secret agent", slog.Any("err", err))
 		return nil
 	}
 
