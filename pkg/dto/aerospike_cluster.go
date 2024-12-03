@@ -204,7 +204,7 @@ func (c *Credentials) Validate() error {
 		return nil
 	}
 
-	hasAuth := c.Password != nil || c.PasswordPath != nil || c.SecretAgent != nil || c.PasswordKeySecret != nil
+	hasAuth := c.Password != nil || c.PasswordPath != nil || c.PasswordKeySecret != nil
 
 	if hasAuth && c.User == nil {
 		return errors.New("username is required when using authentication")
@@ -221,14 +221,8 @@ func (c *Credentials) Validate() error {
 
 	if c.PasswordKeySecret != nil {
 		methodCount++
-		if c.SecretAgent == nil && c.SecretAgentName == nil {
-			return errors.New("either SecretAgent or SecretAgentName must be specified when key secret is provided")
-		}
-		if c.SecretAgent != nil && c.SecretAgentName != nil {
-			return errors.New("both SecretAgent and SecretAgentName cannot be specified at the same time")
-		}
-		if err := c.SecretAgent.validate(); err != nil {
-			return fmt.Errorf("secret agent validation error: %w", err)
+		if err := validateSecretAgent(c.SecretAgent, c.SecretAgentName); err != nil {
+			return err
 		}
 	}
 
@@ -238,6 +232,21 @@ func (c *Credentials) Validate() error {
 
 	return nil
 }
+
+func validateSecretAgent(agent *SecretAgent, name *string) error {
+	if agent == nil && name == nil {
+		return errors.New("either secret-agent or secret-agent-name must be specified")
+	}
+	if agent != nil && name != nil {
+		return errors.New("secret-agent-name and secret-agent are mutually exclusive")
+	}
+	if err := agent.validate(); err != nil {
+		return fmt.Errorf("secret-agent validation error: %w", err)
+	}
+
+	return nil
+}
+
 func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) {
 	if c == nil {
 		return nil, nil

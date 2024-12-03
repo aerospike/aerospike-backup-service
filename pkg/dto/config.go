@@ -145,14 +145,8 @@ func (c *Config) ToModel(nsValidator service.NamespaceValidator) (*model.Config,
 	}
 
 	config := c.ServiceConfig
-	modelConfig := &model.Config{
-		ServiceConfig:     *config.ToModel(),
-		AerospikeClusters: make(map[string]*model.AerospikeCluster),
-		Storage:           make(map[string]model.Storage),
-		BackupPolicies:    make(map[string]*model.BackupPolicy),
-		BackupRoutines:    make(map[string]*model.BackupRoutine),
-		SecretAgents:      make(map[string]*model.SecretAgent),
-	}
+	modelConfig := model.NewConfig()
+	modelConfig.ServiceConfig = *config.ToModel()
 
 	for k, v := range c.SecretAgents {
 		if err := modelConfig.AddSecretAgent(k, v.ToModel()); err != nil {

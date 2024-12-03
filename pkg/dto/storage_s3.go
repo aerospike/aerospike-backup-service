@@ -30,6 +30,8 @@ type S3Storage struct {
 	MaxConnsPerHost int `yaml:"max_async_connections,omitempty" json:"max_async_connections,omitempty" example:"16"`
 	// Secret Agent configuration (optional). Link to one of preconfigured agents.
 	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
+	// Secret Agent configuration (optional).
+	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 	// Authentication information. These are paths to secret agent
 	AccessKeyID     *string `yaml:"access-key-id" json:"access-key-id"`
 	SecretAccessKey *string `yaml:"secret-access-key" json:"secret-access-key"`
@@ -44,17 +46,17 @@ func (s *S3Storage) Validate() error {
 		return errors.New("S3 region is not specified")
 	}
 
-	allAuthFieldsSet := s.SecretAgentName != nil && s.AccessKeyID != nil && s.SecretAccessKey != nil
-	allAuthFieldsNil := s.SecretAgentName == nil && s.AccessKeyID == nil && s.SecretAccessKey == nil
+	if s.AccessKeyID != nil && s.SecretAccessKey == nil {
+		return fmt.Errorf("access-key-id is set but secret-access-key is missing")
+	}
+	if s.AccessKeyID == nil && s.SecretAccessKey != nil {
+		return fmt.Errorf("secret-access-key is set but access-key-id is missing")
+	}
 
-	if !(allAuthFieldsSet || allAuthFieldsNil) {
-		return fmt.Errorf(
-			"invalid authentication configuration: all fields must be set or all nil; "+
-				"SecretAgentName: %v, AccessKeyID: %v, SecretAccessKey: %v",
-			s.SecretAgentName != nil,
-			s.AccessKeyID != nil,
-			s.SecretAccessKey != nil,
-		)
+	if s.AccessKeyID != nil {
+		if err := validateSecretAgent(s.SecretAgent, s.SecretAgentName); err != nil {
+			return err
+		}
 	}
 
 	return nil
