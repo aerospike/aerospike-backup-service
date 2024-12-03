@@ -26,18 +26,18 @@ type S3Storage struct {
 }
 
 type S3Authentication struct {
-	keyIDSecret     string
-	accessKeySecret string
-	secretAgent     *SecretAgent
+	KeyIDSecret     string
+	AccessKeySecret string
+	SecretAgent     *SecretAgent
 }
 
 func (a *S3Authentication) ReadSecrets() (keyID, accessKey string, err error) {
-	keyID, err = a.secretAgent.Read(a.keyIDSecret)
+	keyID, err = a.SecretAgent.Read(a.KeyIDSecret)
 	if err != nil {
 		return
 	}
 
-	accessKey, err = a.secretAgent.Read(a.accessKeySecret)
+	accessKey, err = a.SecretAgent.Read(a.AccessKeySecret)
 	if err != nil {
 		return
 	}

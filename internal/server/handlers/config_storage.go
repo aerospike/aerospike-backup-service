@@ -52,8 +52,13 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.AddStorage(name, newStorage.ToModel())
+		storage, err := newStorage.ToModel(config)
+		if err != nil {
+			return fmt.Errorf("failed to convert storage: %w", err)
+		}
+		return config.AddStorage(name, storage)
 	})
+
 	if err != nil {
 		hLogger.Error("failed to add storage",
 			slog.String("name", name),
@@ -170,7 +175,11 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.UpdateStorage(storageName, updatedStorage.ToModel())
+		storage, err := updatedStorage.ToModel(config)
+		if err != nil {
+			return fmt.Errorf("failed to convert storage: %w", err)
+		}
+		return config.UpdateStorage(storageName, storage)
 	})
 	if err != nil {
 		hLogger.Error("failed to update storage",
