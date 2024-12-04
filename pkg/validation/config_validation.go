@@ -24,9 +24,12 @@ func ValidateConfiguration(conf *dto.Config) error {
 	return err
 }
 
-func ValidateRestoreRequest(request dto.RestoreRequest, conf *dto.Config) error {
+func ValidateRestoreRequest(request *dto.RestoreRequest, conf *dto.Config) error {
 	if conf == nil {
 		return fmt.Errorf("config is nil")
+	}
+	if request == nil {
+		return fmt.Errorf("restore request is nil")
 	}
 
 	model, err := conf.ToModel(nsValidator)
@@ -43,9 +46,12 @@ func ValidateRestoreRequest(request dto.RestoreRequest, conf *dto.Config) error 
 	return err
 }
 
-func ValidateRestoreTimestampRequest(request dto.RestoreTimestampRequest, conf *dto.Config) error {
+func ValidateRestoreTimestampRequest(request *dto.RestoreTimestampRequest, conf *dto.Config) error {
 	if conf == nil {
 		return fmt.Errorf("config is nil")
+	}
+	if request == nil {
+		return fmt.Errorf("restore request is nil")
 	}
 
 	model, err := conf.ToModel(nsValidator)
