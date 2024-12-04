@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"strings"
 
-	_ "github.com/aerospike/aerospike-backup-service/v2/modules/schema" // it's required to load configuration schemas in init method
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v7"
