@@ -64,7 +64,7 @@ func (s *S3Storage) Validate() error {
 
 func (s *S3Storage) ToModel(config *model.Config) (*model.S3Storage, error) {
 	var auth *model.S3Authentication
-	if s.SecretAgentName != nil {
+	if s.AccessKeyID != nil {
 		agent, ok := config.SecretAgents[*s.SecretAgentName]
 		if !ok {
 			return nil, fmt.Errorf("unknown secret agent %q", *s.SecretAgentName)

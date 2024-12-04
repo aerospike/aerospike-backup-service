@@ -190,12 +190,18 @@ func (c *Credentials) fromModel(m *model.Credentials, config *model.Config) {
 	c.PasswordKeySecret = m.PasswordKeySecret
 	c.AuthMode = m.AuthMode
 
-	secretAgentName := findKeyByValue(config.SecretAgents, m.SecretAgent)
+	secretAgentName, secretAgent := secretAgentToDto(m.SecretAgent, config)
+	c.SecretAgentName = secretAgentName
+	c.SecretAgent = secretAgent
+}
+
+func secretAgentToDto(s *model.SecretAgent, config *model.Config) (*string, *SecretAgent) {
+	secretAgentName := findKeyByValue(config.SecretAgents, s)
 	if secretAgentName != "" {
-		c.SecretAgentName = &secretAgentName
-	} else {
-		c.SecretAgent = NewSecretAgentFromModel(m.SecretAgent)
+		return &secretAgentName, nil
 	}
+
+	return nil, NewSecretAgentFromModel(s)
 }
 
 // Validate validates the credentials configuration
@@ -252,7 +258,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 		return nil, nil
 	}
 
-	agent, err := c.secretAgent(config)
+	agent, err := config.ResolveSecretAgent(c.SecretAgentName, c.SecretAgent.ToModel())
 	if err != nil {
 		return nil, err
 	}
@@ -265,22 +271,6 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 		PasswordKeySecret: c.PasswordKeySecret,
 		SecretAgent:       agent,
 	}, nil
-}
-
-func (c *Credentials) secretAgent(config *model.Config) (*model.SecretAgent, error) {
-	if c.SecretAgentName != nil {
-		agent, ok := config.SecretAgents[*c.SecretAgentName]
-		if !ok {
-			return nil, fmt.Errorf("unknown secret agent %q", *c.SecretAgentName)
-		}
-		return agent, nil
-	}
-
-	if c.SecretAgent != nil {
-		return c.SecretAgent.ToModel(), nil
-	}
-
-	return nil, nil
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.
