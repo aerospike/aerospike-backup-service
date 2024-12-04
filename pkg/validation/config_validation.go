@@ -16,11 +16,19 @@ func ValidateStaticFieldChanges(oldConf, newConf *dto.Config) error {
 }
 
 func ValidateConfiguration(conf *dto.Config) error {
+	if conf == nil {
+		return fmt.Errorf("config is nil")
+	}
+
 	_, err := conf.ToModel(nsValidator)
 	return err
 }
 
 func ValidateRestoreRequest(request dto.RestoreRequest, conf *dto.Config) error {
+	if conf == nil {
+		return fmt.Errorf("config is nil")
+	}
+
 	model, err := conf.ToModel(nsValidator)
 	if err != nil {
 		return fmt.Errorf("config invalid: %w", err)
@@ -36,6 +44,10 @@ func ValidateRestoreRequest(request dto.RestoreRequest, conf *dto.Config) error 
 }
 
 func ValidateRestoreTimestampRequest(request dto.RestoreTimestampRequest, conf *dto.Config) error {
+	if conf == nil {
+		return fmt.Errorf("config is nil")
+	}
+
 	model, err := conf.ToModel(nsValidator)
 	if err != nil {
 		return fmt.Errorf("config invalid: %w", err)
