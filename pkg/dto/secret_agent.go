@@ -16,9 +16,9 @@ import (
 // @Description for a backup/restore operation.
 type SecretAgent struct {
 	// Connection type: tcp, unix.
-	ConnectionType *string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp"`
+	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp"`
 	// Address of the Secret Agent.
-	Address *string `yaml:"address,omitempty" json:"address,omitempty" example:"localhost"`
+	Address string `yaml:"address,omitempty" json:"address,omitempty" example:"localhost"`
 	// Port the Secret Agent is running on.
 	Port *int `yaml:"port,omitempty" json:"port,omitempty" example:"8080"`
 	// Timeout in milliseconds.
@@ -69,7 +69,7 @@ func (s *SecretAgent) validate() error {
 		return nil
 	}
 
-	if s.Address == nil || *s.Address == "" {
+	if s.Address == "" {
 		return fmt.Errorf("address is required")
 	}
 
@@ -77,13 +77,8 @@ func (s *SecretAgent) validate() error {
 		return fmt.Errorf("invalid timeout: %d", *s.Timeout)
 	}
 
-	if s.ConnectionType == nil {
-		return fmt.Errorf("connection type is required")
-	}
-
-	if s.ConnectionType != nil &&
-		(*s.ConnectionType != saClient.ConnectionTypeTCP && *s.ConnectionType != saClient.ConnectionTypeUDS) {
-		return fmt.Errorf("unsupported connection type: %s", *s.ConnectionType)
+	if s.ConnectionType != saClient.ConnectionTypeTCP && s.ConnectionType != saClient.ConnectionTypeUDS {
+		return fmt.Errorf("unsupported connection type: %s", s.ConnectionType)
 	}
 
 	return nil

@@ -58,8 +58,10 @@ func (s *HTTPServerConfig) fromModel(m *model.HTTPServerConfig) {
 	}
 	s.Address = m.Address
 	s.Port = m.Port
-	s.Rate = &RateLimiterConfig{}
-	s.Rate.fromModel(m.Rate)
+	if s.Rate != nil {
+		s.Rate = &RateLimiterConfig{}
+		s.Rate.fromModel(m.Rate)
+	}
 	s.ContextPath = m.ContextPath
 	s.Timeout = m.Timeout
 }

@@ -80,8 +80,10 @@ func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster, config *model.Co
 	}
 	a.ConnTimeout = m.ConnTimeout
 	a.UseServicesAlternate = m.UseServicesAlternate
-	a.Credentials = &Credentials{}
-	a.Credentials.fromModel(m.Credentials, config)
+	if m.Credentials != nil {
+		a.Credentials = &Credentials{}
+		a.Credentials.fromModel(m.Credentials, config)
+	}
 	if m.TLS != nil {
 		a.TLS = &TLS{}
 		a.TLS.fromModel(m.TLS)

@@ -19,9 +19,9 @@ import (
 type SecretAgent struct {
 	once sync.Once
 	// Connection type: tcp, unix.
-	ConnectionType *string
+	ConnectionType string
 	// Address of the Secret Agent.
-	Address *string
+	Address string
 	// Port the Secret Agent is running on.
 	Port *int
 	// Timeout in milliseconds.
@@ -39,8 +39,8 @@ func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
 	}
 
 	return &backup.SecretAgentConfig{
-		ConnectionType:     s.ConnectionType,
-		Address:            s.Address,
+		ConnectionType:     &s.ConnectionType,
+		Address:            &s.Address,
 		Port:               s.Port,
 		TimeoutMillisecond: s.Timeout,
 		CaFile:             s.TLSCAString,
@@ -55,7 +55,7 @@ func (s *SecretAgent) Read(path string) (string, error) {
 		readFromSecretAgentfunc := func(key string) (string, error) {
 			secret, err := backup.ParseSecret(agentConfig, key)
 			if err != nil {
-				return "", fmt.Errorf("failed to read secret %q from %s:%d: %v", key, *s.Address, *s.Port, err)
+				return "", fmt.Errorf("failed to read secret %q from %s:%d: %v", key, s.Address, *s.Port, err)
 			}
 
 			return secret, nil
