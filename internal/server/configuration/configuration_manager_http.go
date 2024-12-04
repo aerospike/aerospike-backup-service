@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 )
 
 // httpConfigurationManager implements the Manager interface,
