@@ -192,18 +192,9 @@ func (c *Credentials) fromModel(m *model.Credentials, config *model.Config) {
 	c.PasswordKeySecret = m.PasswordKeySecret
 	c.AuthMode = m.AuthMode
 
-	secretAgentName, secretAgent := secretAgentToDto(m.SecretAgent, config)
+	secretAgentName, secretAgent := ResolveSecretAgentFromModel(m.SecretAgent, config)
 	c.SecretAgentName = secretAgentName
 	c.SecretAgent = secretAgent
-}
-
-func secretAgentToDto(s *model.SecretAgent, config *model.Config) (*string, *SecretAgent) {
-	secretAgentName := findKeyByValue(config.SecretAgents, s)
-	if secretAgentName != "" {
-		return &secretAgentName, nil
-	}
-
-	return nil, NewSecretAgentFromModel(s)
 }
 
 // Validate validates the credentials configuration

@@ -34,15 +34,29 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 					},
 				},
 			}},
-		Storage: map[string]*Storage{"storage1": {
-			S3Storage: &S3Storage{
-				Bucket:          "bucket",
-				S3Region:        "region",
-				AccessKeyID:     util.Ptr("id"),
-				SecretAccessKey: util.Ptr("key"),
-				SecretAgentName: util.Ptr("agent1"),
+		Storage: map[string]*Storage{
+			"storage1": {
+				S3Storage: &S3Storage{
+					Bucket:          "bucket",
+					S3Region:        "region",
+					AccessKeyID:     util.Ptr("id"),
+					SecretAccessKey: util.Ptr("key"),
+					SecretAgentName: util.Ptr("agent1"),
+				},
 			},
-		}},
+			"storage2": {
+				S3Storage: &S3Storage{
+					Bucket:          "bucket2",
+					S3Region:        "region2",
+					AccessKeyID:     util.Ptr("id2"),
+					SecretAccessKey: util.Ptr("key2"),
+					SecretAgent: &SecretAgent{
+						Address:        "host3",
+						ConnectionType: saClient.ConnectionTypeTCP,
+					},
+				},
+			},
+		},
 		BackupPolicies: map[string]*BackupPolicy{"policy1": {}},
 		BackupRoutines: map[string]*BackupRoutine{"routine1": {
 			BackupPolicy:  "policy1",

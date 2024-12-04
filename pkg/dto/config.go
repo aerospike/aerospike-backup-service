@@ -56,7 +56,7 @@ func (c *Config) fromModel(m *model.Config) {
 
 	c.SecretAgents = make(map[string]*SecretAgent)
 	for name, s := range m.SecretAgents {
-		c.SecretAgents[name] = NewSecretAgentFromModel(s)
+		c.SecretAgents[name] = newSecretAgentFromModel(s)
 	}
 }
 

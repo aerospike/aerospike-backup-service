@@ -65,10 +65,11 @@ func (s *S3Storage) Validate() error {
 func (s *S3Storage) ToModel(config *model.Config) (*model.S3Storage, error) {
 	var auth *model.S3Authentication
 	if s.AccessKeyID != nil {
-		agent, ok := config.SecretAgents[*s.SecretAgentName]
-		if !ok {
-			return nil, fmt.Errorf("unknown secret agent %q", *s.SecretAgentName)
+		agent, err := config.ResolveSecretAgent(s.SecretAgentName, s.SecretAgent.ToModel())
+		if err != nil {
+			return nil, err
 		}
+
 		auth = &model.S3Authentication{
 			KeyIDSecret:     *s.AccessKeyID,
 			AccessKeySecret: *s.SecretAccessKey,
@@ -100,7 +101,7 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.Config) *S3Storage 
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 	}
 	if s.Auth != nil {
-		secretAgentName, secretAgent := secretAgentToDto(s.Auth.SecretAgent, config)
+		secretAgentName, secretAgent := ResolveSecretAgentFromModel(s.Auth.SecretAgent, config)
 		result.SecretAgentName = secretAgentName
 		result.SecretAgent = secretAgent
 		result.AccessKeyID = &s.Auth.KeyIDSecret
