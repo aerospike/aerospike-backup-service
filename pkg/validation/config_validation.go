@@ -3,8 +3,8 @@ package validation
 import (
 	"fmt"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 )
 
 var nsValidator = &aerospike.NoopNamespaceValidator{}

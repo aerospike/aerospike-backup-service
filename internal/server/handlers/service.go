@@ -5,9 +5,9 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/configuration"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/quartz"
 )
 

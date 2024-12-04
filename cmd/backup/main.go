@@ -15,9 +15,9 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/util"
-	aerospike2 "github.com/aerospike/aerospike-backup-service/v2/pkg/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/spf13/cobra"
 )
@@ -65,8 +65,8 @@ func run() int {
 
 func startService(configFile string, remote bool) error {
 	ctx := systemCtx()
-	clientManager := aerospike2.NewClientManager(&aerospike2.DefaultClientFactory{}, 10*time.Second)
-	nsValidator := aerospike2.NewNamespaceValidator(clientManager)
+	clientManager := aerospike.NewClientManager(&aerospike.DefaultClientFactory{}, 10*time.Second)
+	nsValidator := aerospike.NewNamespaceValidator(clientManager)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
 	if err != nil {
