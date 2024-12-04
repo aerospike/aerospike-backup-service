@@ -87,3 +87,24 @@ func (s *S3Storage) ToModel(config *model.Config) (*model.S3Storage, error) {
 		Auth:               auth,
 	}, nil
 }
+
+func newS3StorageFromModel(s *model.S3Storage, config *model.Config) *S3Storage {
+	result := &S3Storage{
+		Bucket:             s.Bucket,
+		Path:               s.Path,
+		S3Region:           s.S3Region,
+		S3Profile:          s.S3Profile,
+		S3EndpointOverride: s.S3EndpointOverride,
+		S3LogLevel:         s.S3LogLevel,
+		MinPartSize:        s.MinPartSize,
+		MaxConnsPerHost:    s.MaxConnsPerHost,
+	}
+	if s.Auth != nil {
+		secretAgentName, secretAgent := secretAgentToDto(s.Auth.SecretAgent, config)
+		result.SecretAgentName = secretAgentName
+		result.SecretAgent = secretAgent
+		result.AccessKeyID = &s.Auth.KeyIDSecret
+		result.SecretAccessKey = &s.Auth.AccessKeySecret
+	}
+	return result
+}

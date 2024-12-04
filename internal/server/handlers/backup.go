@@ -103,7 +103,7 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 		return
 	}
 
-	response, err := dto.Serialize(dto.ConvertBackupDetailsMap(backups), dto.JSON)
+	response, err := dto.Serialize(dto.ConvertBackupDetailsMap(backups, s.config), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal backup list",
 			slog.Any("error", err),
@@ -169,7 +169,9 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	backupDetails := dto.ConvertModelsToDTO(backups, dto.NewBackupDetailsFromModel)
+	backupDetails := dto.ConvertModelsToDTO(backups, func(m *model.BackupDetails) *dto.BackupDetails {
+		return dto.NewBackupDetailsFromModel(m, s.config)
+	})
 	response, err := dto.Serialize(backupDetails, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal backup list",

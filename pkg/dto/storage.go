@@ -183,7 +183,7 @@ func getAzureAuth(s *Storage) model.AzureAuth {
 }
 
 // NewStorageFromModel creates a new Storage DTO from the model.
-func NewStorageFromModel(m model.Storage) *Storage {
+func NewStorageFromModel(m model.Storage, config *model.Config) *Storage {
 	switch s := m.(type) {
 	case *model.LocalStorage:
 		return &Storage{
@@ -193,16 +193,7 @@ func NewStorageFromModel(m model.Storage) *Storage {
 		}
 	case *model.S3Storage:
 		return &Storage{
-			S3Storage: &S3Storage{
-				Bucket:             s.Bucket,
-				Path:               s.Path,
-				S3Region:           s.S3Region,
-				S3Profile:          s.S3Profile,
-				S3EndpointOverride: s.S3EndpointOverride,
-				S3LogLevel:         s.S3LogLevel,
-				MinPartSize:        s.MinPartSize,
-				MaxConnsPerHost:    s.MaxConnsPerHost,
-			},
+			S3Storage: newS3StorageFromModel(s, config),
 		}
 	case *model.GcpStorage:
 		return &Storage{

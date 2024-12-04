@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,13 +14,33 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 	// Step 1: Create a sample Config object with sample data
 	originalConfig := &Config{
 		ServiceConfig: NewBackupServiceConfigWithDefaultValues(),
-		AerospikeClusters: map[string]*AerospikeCluster{"cluster1": {
-			SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
-		}},
+		AerospikeClusters: map[string]*AerospikeCluster{
+			"cluster1": {
+				SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
+				Credentials: &Credentials{
+					User:              util.Ptr("tester"),
+					PasswordKeySecret: util.Ptr("psw"),
+					SecretAgentName:   util.Ptr("agent1"),
+				},
+			},
+			"cluster2": {
+				SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
+				Credentials: &Credentials{
+					User:              util.Ptr("tester"),
+					PasswordKeySecret: util.Ptr("psw"),
+					SecretAgent: &SecretAgent{
+						Address:        "host2",
+						ConnectionType: saClient.ConnectionTypeTCP,
+					},
+				},
+			}},
 		Storage: map[string]*Storage{"storage1": {
 			S3Storage: &S3Storage{
-				Bucket:   "bucket",
-				S3Region: "region",
+				Bucket:          "bucket",
+				S3Region:        "region",
+				AccessKeyID:     util.Ptr("id"),
+				SecretAccessKey: util.Ptr("key"),
+				SecretAgentName: util.Ptr("agent1"),
 			},
 		}},
 		BackupPolicies: map[string]*BackupPolicy{"policy1": {}},

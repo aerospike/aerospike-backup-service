@@ -41,7 +41,7 @@ func (c *Config) fromModel(m *model.Config) {
 
 	c.Storage = make(map[string]*Storage)
 	for name, s := range m.Storage {
-		c.Storage[name] = NewStorageFromModel(s)
+		c.Storage[name] = NewStorageFromModel(s, m)
 	}
 
 	c.BackupPolicies = make(map[string]*BackupPolicy)

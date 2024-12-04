@@ -82,7 +82,7 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAllStorage"))
 
-	toDTO := dto.ConvertStorageMapToDTO(s.config.Storage)
+	toDTO := dto.ConvertStorageMapToDTO(s.config.Storage, s.config)
 	jsonResponse, err := dto.Serialize(toDTO, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal storage",
@@ -113,6 +113,8 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified storage could not be found"
 // @Failure     500 {string} string
+//
+//nolint:dupl
 func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readStorage"))
 
@@ -128,7 +130,7 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResponse, err := dto.Serialize(dto.NewStorageFromModel(storage), dto.JSON)
+	jsonResponse, err := dto.Serialize(dto.NewStorageFromModel(storage, s.config), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal storage",
 			slog.Any("error", err),
