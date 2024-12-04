@@ -53,10 +53,8 @@ func (s *S3Storage) Validate() error {
 		return fmt.Errorf("secret-access-key is set but access-key-id is missing")
 	}
 
-	if s.AccessKeyID != nil {
-		if err := validateSecretAgent(s.SecretAgent, s.SecretAgentName); err != nil {
-			return err
-		}
+	if err := validateSecretAgent(s.SecretAgent, s.SecretAgentName); err != nil {
+		return err
 	}
 
 	return nil

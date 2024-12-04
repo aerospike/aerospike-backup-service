@@ -233,9 +233,6 @@ func (c *Credentials) Validate() error {
 }
 
 func validateSecretAgent(agent *SecretAgent, name *string) error {
-	if agent == nil && name == nil {
-		return errors.New("either secret-agent or secret-agent-name must be specified")
-	}
 	if agent != nil && name != nil {
 		return errors.New("secret-agent-name and secret-agent are mutually exclusive")
 	}
