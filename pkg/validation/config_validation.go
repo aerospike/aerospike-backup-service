@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 )
 
-var nsValidator = &service.NoopNamespaceValidator{}
+var nsValidator = &aerospike.NoopNamespaceValidator{}
 
 // ValidateStaticFieldChanges checks if new config changes are allowed as per dynamic consideration.
 func ValidateStaticFieldChanges(oldConf, newConf *dto.Config) error {

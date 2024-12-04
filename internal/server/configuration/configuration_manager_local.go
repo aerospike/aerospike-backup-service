@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 )
 
 // fileConfigurationManager implements the Manager interface,
@@ -16,13 +16,13 @@ import (
 type fileConfigurationManager struct {
 	sync.Mutex
 	FilePath    string
-	nsValidator service.NamespaceValidator
+	nsValidator aerospike.NamespaceValidator
 }
 
 var _ Manager = (*fileConfigurationManager)(nil)
 
 // newFileConfigurationManager returns a new fileConfigurationManager.
-func newFileConfigurationManager(path string, nsValidator service.NamespaceValidator) Manager {
+func newFileConfigurationManager(path string, nsValidator aerospike.NamespaceValidator) Manager {
 	return &fileConfigurationManager{
 		FilePath:    path,
 		nsValidator: nsValidator,

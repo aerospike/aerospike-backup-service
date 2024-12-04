@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	"github.com/aerospike/backup-go"
 	"github.com/prometheus/client_golang/prometheus"
@@ -25,8 +26,8 @@ type dataRestorer struct {
 	restoreJobs    *RestoreJobsHolder
 	restoreService Restore
 	backends       BackendsHolder
-	clientManager  ClientManager
-	nsValidator    NamespaceValidator
+	clientManager  aerospike.ClientManager
+	nsValidator    aerospike.NamespaceValidator
 }
 
 var _ RestoreManager = (*dataRestorer)(nil)
@@ -35,9 +36,9 @@ var _ RestoreManager = (*dataRestorer)(nil)
 func NewRestoreManager(backends BackendsHolder,
 	config *model.Config,
 	restoreService Restore,
-	clientManager ClientManager,
+	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,
-	nsValidator NamespaceValidator,
+	nsValidator aerospike.NamespaceValidator,
 ) RestoreManager {
 	return &dataRestorer{
 		configRetriever: configRetriever{

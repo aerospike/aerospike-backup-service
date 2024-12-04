@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 )
 
@@ -14,11 +14,11 @@ import (
 // it stores service configuration in provided Storage (Local, s3 aws etc.)
 type storageManager struct {
 	storage     model.Storage
-	nsValidator service.NamespaceValidator
+	nsValidator aerospike.NamespaceValidator
 }
 
 // newStorageManager returns new instance of storageManager
-func newStorageManager(configStorage model.Storage, nsValidator service.NamespaceValidator) Manager {
+func newStorageManager(configStorage model.Storage, nsValidator aerospike.NamespaceValidator) Manager {
 	return &storageManager{
 		storage:     configStorage,
 		nsValidator: nsValidator,

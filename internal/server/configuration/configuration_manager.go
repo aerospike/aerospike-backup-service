@@ -11,7 +11,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,7 +26,7 @@ func Load(
 	ctx context.Context,
 	configFile string,
 	remote bool,
-	nsValidator service.NamespaceValidator,
+	nsValidator aerospike.NamespaceValidator,
 ) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
@@ -45,7 +45,7 @@ func Load(
 	return config, manager, nil
 }
 
-func readConfig(reader io.Reader, nsValidator service.NamespaceValidator) (*model.Config, error) {
+func readConfig(reader io.Reader, nsValidator aerospike.NamespaceValidator) (*model.Config, error) {
 	configBytes, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration content: %w", err)
@@ -75,7 +75,7 @@ func writeConfig(writer io.Writer, config *model.Config) error {
 	return err
 }
 
-func newConfigManager(configFile string, remote bool, nsValidator service.NamespaceValidator) (Manager, error) {
+func newConfigManager(configFile string, remote bool, nsValidator aerospike.NamespaceValidator) (Manager, error) {
 	if remote {
 		storage, err := readStorage(configFile)
 		if err != nil {

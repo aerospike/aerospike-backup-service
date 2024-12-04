@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -83,7 +83,7 @@ func (r *BackupRoutine) Validate() error {
 
 func (r *BackupRoutine) ToModel(
 	config *model.Config,
-	nsValidator service.NamespaceValidator,
+	nsValidator aerospike.NamespaceValidator,
 ) (*model.BackupRoutine, error) {
 	policy, found := config.BackupPolicies[r.BackupPolicy]
 	if !found {

@@ -1,6 +1,6 @@
 //go:build !ci
 
-package service
+package aerospike
 
 import (
 	"testing"
