@@ -1894,7 +1894,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "password-path": {
-                    "description": "The file path with the password string, will take precedence over the password field.",
+                    "description": "The file path with the password string.",
                     "type": "string",
                     "example": "/path/to/pass.txt"
                 },
@@ -2518,6 +2518,10 @@ const docTemplate = `{
                 "s3-region"
             ],
             "properties": {
+                "access-key-id": {
+                    "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+                    "type": "string"
+                },
                 "bucket": {
                     "description": "The S3 bucket name.",
                     "type": "string"
@@ -2557,6 +2561,22 @@ const docTemplate = `{
                     "description": "The S3 region string.",
                     "type": "string",
                     "example": "eu-central-1"
+                },
+                "secret-access-key": {
+                    "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+                    "type": "string"
+                },
+                "secret-agent": {
+                    "description": "Secret Agent configuration (optional).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    ]
+                },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.",
+                    "type": "string"
                 }
             }
         },

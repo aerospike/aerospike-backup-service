@@ -1624,8 +1624,7 @@ components:
             Only applicable when SecretAgent is specified.
           type: string
         password-path:
-          description: "The file path with the password string, will take precedence\
-            \ over the password field."
+          description: The file path with the password string.
           example: /path/to/pass.txt
           type: string
         secret-agent:
@@ -2160,6 +2159,11 @@ components:
       type: object
     dto.S3Storage:
       properties:
+        access-key-id:
+          description: |-
+            Access Key ID for authentication with S3 StaticCredentialsProvider.
+            Can be a path in secret agent or an actual value.
+          type: string
         bucket:
           description: The S3 bucket name.
           type: string
@@ -2193,6 +2197,20 @@ components:
         s3-region:
           description: The S3 region string.
           example: eu-central-1
+          type: string
+        secret-access-key:
+          description: |-
+            Secret Access Key for authentication with S3 StaticCredentialsProvider.
+            Can be a path in secret agent or an actual value.
+          type: string
+        secret-agent:
+          allOf:
+          - $ref: '#/components/schemas/dto.SecretAgent'
+          description: Secret Agent configuration (optional).
+          type: object
+        secret-agent-name:
+          description: Secret Agent configuration (optional). Link to one of preconfigured
+            agents.
           type: string
       required:
       - bucket

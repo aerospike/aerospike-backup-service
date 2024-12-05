@@ -172,7 +172,7 @@ type Credentials struct {
 	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"`
 	// The password for the cluster authentication.
 	Password *string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"`
-	// The file path with the password string, will take precedence over the password field.
+	// The file path with the password string.
 	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"`
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
 	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`

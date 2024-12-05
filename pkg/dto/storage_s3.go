@@ -32,8 +32,11 @@ type S3Storage struct {
 	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
 	// Secret Agent configuration (optional).
 	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
-	// Authentication information. These are paths to secret agent
-	AccessKeyID     *string `yaml:"access-key-id" json:"access-key-id"`
+	// Access Key ID for authentication with S3 StaticCredentialsProvider.
+	// Can be a path in secret agent or an actual value.
+	AccessKeyID *string `yaml:"access-key-id" json:"access-key-id"`
+	// Secret Access Key for authentication with S3 StaticCredentialsProvider.
+	// Can be a path in secret agent or an actual value.
 	SecretAccessKey *string `yaml:"secret-access-key" json:"secret-access-key"`
 }
 
