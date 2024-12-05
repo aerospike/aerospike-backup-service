@@ -3,7 +3,7 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 	"github.com/stretchr/testify/assert"
@@ -33,7 +33,12 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 						ConnectionType: saClient.ConnectionTypeTCP,
 					},
 				},
-			}},
+			},
+			"cluster3": {
+				ClusterLabel: util.Ptr("No credentials"),
+				SeedNodes:    []SeedNode{{HostName: "host", Port: 80}},
+			},
+		},
 		Storage: map[string]*Storage{
 			"storage1": {
 				S3Storage: &S3Storage{
@@ -70,7 +75,7 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 		}},
 	}
 
-	nsValidator := &service.NoopNamespaceValidator{}
+	nsValidator := &aerospike.NoopNamespaceValidator{}
 	modelConfig, err := originalConfig.ToModel(nsValidator)
 	require.NoError(t, err, "ToModel should not return an error")
 
