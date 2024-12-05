@@ -2221,7 +2221,7 @@ components:
       type: object
     dto.SecretAgent:
       description: SecretAgent represents the configuration of an Aerospike Secret
-        Agent for a backup/restore operation.
+        Agent.
       example:
         tls-ca-file: /path/to/ca.pem
         address: localhost

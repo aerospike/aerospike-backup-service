@@ -35,8 +35,7 @@ func (c SecretAgentConfig) validate() error {
 // Aerospike Secret Agent acts as a proxy layer between Aerospike server and one or more
 // external secrets management services, fetching secrets on behalf of the server.
 //
-// @Description SecretAgent represents the configuration of an Aerospike Secret Agent
-// @Description for a backup/restore operation.
+// @Description SecretAgent represents the configuration of an Aerospike Secret Agent.
 type SecretAgent struct {
 	// Connection type: tcp, unix.
 	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp"`

@@ -2577,7 +2577,7 @@ const docTemplate = `{
             }
         },
         "dto.SecretAgent": {
-            "description": "SecretAgent represents the configuration of an Aerospike Secret Agent for a backup/restore operation.",
+            "description": "SecretAgent represents the configuration of an Aerospike Secret Agent.",
             "type": "object",
             "properties": {
                 "address": {

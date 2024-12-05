@@ -2642,7 +2642,7 @@
         "type" : "object"
       },
       "dto.SecretAgent" : {
-        "description" : "SecretAgent represents the configuration of an Aerospike Secret Agent for a backup/restore operation.",
+        "description" : "SecretAgent represents the configuration of an Aerospike Secret Agent.",
         "properties" : {
           "address" : {
             "description" : "Address of the Secret Agent.",
