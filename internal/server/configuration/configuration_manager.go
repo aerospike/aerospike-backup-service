@@ -107,7 +107,7 @@ func readStorage(configURI string) (model.Storage, error) {
 		return nil, fmt.Errorf("validate storage configuration error: %w", err)
 	}
 
-	return configStorage.ToModel(), nil
+	return configStorage.ToModel(model.NewConfig())
 }
 
 func loadFileContent(configFile string) ([]byte, error) {

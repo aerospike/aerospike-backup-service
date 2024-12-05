@@ -41,7 +41,7 @@ func (c *Config) fromModel(m *model.Config) {
 
 	c.Storage = make(map[string]*Storage)
 	for name, s := range m.Storage {
-		c.Storage[name] = NewStorageFromModel(s)
+		c.Storage[name] = NewStorageFromModel(s, m)
 	}
 
 	c.BackupPolicies = make(map[string]*BackupPolicy)
@@ -56,7 +56,7 @@ func (c *Config) fromModel(m *model.Config) {
 
 	c.SecretAgents = make(map[string]*SecretAgent)
 	for name, s := range m.SecretAgents {
-		c.SecretAgents[name] = NewSecretAgentFromModel(s)
+		c.SecretAgents[name] = newSecretAgentFromModel(s)
 	}
 }
 
@@ -145,17 +145,22 @@ func (c *Config) ToModel(nsValidator aerospike.NamespaceValidator) (*model.Confi
 	}
 
 	config := c.ServiceConfig
-	modelConfig := &model.Config{
-		ServiceConfig:     *config.ToModel(),
-		AerospikeClusters: make(map[string]*model.AerospikeCluster),
-		Storage:           make(map[string]model.Storage),
-		BackupPolicies:    make(map[string]*model.BackupPolicy),
-		BackupRoutines:    make(map[string]*model.BackupRoutine),
-		SecretAgents:      make(map[string]*model.SecretAgent),
+	modelConfig := model.NewConfig()
+	modelConfig.ServiceConfig = *config.ToModel()
+
+	for k, v := range c.SecretAgents {
+		if err := modelConfig.AddSecretAgent(k, v.ToModel()); err != nil {
+			return nil, err
+		}
 	}
 
+	// storage must be added after secret agents.
 	for k, v := range c.Storage {
-		if err := modelConfig.AddStorage(k, v.ToModel()); err != nil {
+		toModel, err := v.ToModel(modelConfig)
+		if err != nil {
+			return nil, fmt.Errorf("invalid storage %q: %w", k, err)
+		}
+		if err := modelConfig.AddStorage(k, toModel); err != nil {
 			return nil, err
 		}
 	}
@@ -166,12 +171,7 @@ func (c *Config) ToModel(nsValidator aerospike.NamespaceValidator) (*model.Confi
 		}
 	}
 
-	for k, v := range c.SecretAgents {
-		if err := modelConfig.AddSecretAgent(k, v.ToModel()); err != nil {
-			return nil, err
-		}
-	}
-
+	// clusters must be added after secret agents.
 	for k, v := range c.AerospikeClusters {
 		toModel, err := v.ToModel(modelConfig)
 		if err != nil {
@@ -183,6 +183,7 @@ func (c *Config) ToModel(nsValidator aerospike.NamespaceValidator) (*model.Confi
 		}
 	}
 
+	// routines must be added after storage, secret agents and policies.
 	for k, v := range c.BackupRoutines {
 		toModel, err := v.ToModel(modelConfig, nsValidator)
 		if err != nil {

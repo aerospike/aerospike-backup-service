@@ -2032,16 +2032,12 @@
             "type" : "string"
           },
           "password" : {
-            "description" : "The password for the cluster authentication.",
+            "description" : "The password for the cluster authentication.\nIt can be either plain text or path into the secret agent.",
             "example" : "testPswd",
             "type" : "string"
           },
-          "password-key-secret" : {
-            "description" : "The secret keyword in Aerospike Secret Agent containing password.\nOnly applicable when SecretAgent is specified.",
-            "type" : "string"
-          },
           "password-path" : {
-            "description" : "The file path with the password string, will take precedence over the password field.",
+            "description" : "The file path with the password string.",
             "example" : "/path/to/pass.txt",
             "type" : "string"
           },
@@ -2049,11 +2045,11 @@
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.SecretAgent"
             } ],
-            "description" : "Secret Agent configuration (optional).",
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
             "type" : "object"
           },
           "secret-agent-name" : {
-            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.",
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
             "type" : "string"
           },
           "user" : {
@@ -2583,6 +2579,10 @@
       },
       "dto.S3Storage" : {
         "properties" : {
+          "access-key-id" : {
+            "description" : "Access Key ID for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+            "type" : "string"
+          },
           "bucket" : {
             "description" : "The S3 bucket name.",
             "type" : "string"
@@ -2621,13 +2621,28 @@
             "description" : "The S3 region string.",
             "example" : "eu-central-1",
             "type" : "string"
+          },
+          "secret-access-key" : {
+            "description" : "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+            "type" : "string"
+          },
+          "secret-agent" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.SecretAgent"
+            } ],
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+            "type" : "object"
+          },
+          "secret-agent-name" : {
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+            "type" : "string"
           }
         },
         "required" : [ "bucket", "s3-region" ],
         "type" : "object"
       },
       "dto.SecretAgent" : {
-        "description" : "SecretAgent represents the configuration of an Aerospike Secret Agent for a backup/restore operation.",
+        "description" : "SecretAgent represents the configuration of an Aerospike Secret Agent.",
         "properties" : {
           "address" : {
             "description" : "Address of the Secret Agent.",

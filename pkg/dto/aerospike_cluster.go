@@ -80,8 +80,10 @@ func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster, config *model.Co
 	}
 	a.ConnTimeout = m.ConnTimeout
 	a.UseServicesAlternate = m.UseServicesAlternate
-	a.Credentials = &Credentials{}
-	a.Credentials.fromModel(m.Credentials, config)
+	if m.Credentials != nil {
+		a.Credentials = &Credentials{}
+		a.Credentials.fromModel(m.Credentials, config)
+	}
 	if m.TLS != nil {
 		a.TLS = &TLS{}
 		a.TLS.fromModel(m.TLS)
@@ -166,36 +168,25 @@ func (t *TLS) toModel() *model.TLS {
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
+	SecretAgentConfig
 	// The username for the cluster authentication.
 	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"`
 	// The password for the cluster authentication.
+	// It can be either plain text or path into the secret agent.
 	Password *string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"`
-	// The file path with the password string, will take precedence over the password field.
+	// The file path with the password string.
 	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"`
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
 	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
-	// Secret Agent configuration (optional).
-	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
-	// Secret Agent configuration (optional). Link to one of preconfigured agents.
-	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
-	// The secret keyword in Aerospike Secret Agent containing password.
-	// Only applicable when SecretAgent is specified.
-	PasswordKeySecret *string `yaml:"password-key-secret,omitempty" json:"password-key-secret,omitempty"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.Config) {
 	c.User = m.User
 	c.Password = m.Password
 	c.PasswordPath = m.PasswordPath
-	c.PasswordKeySecret = m.PasswordKeySecret
 	c.AuthMode = m.AuthMode
 
-	secretAgentName := findKeyByValue(config.SecretAgents, m.SecretAgent)
-	if secretAgentName != "" {
-		c.SecretAgentName = &secretAgentName
-	} else {
-		c.SecretAgent = NewSecretAgentFromModel(m.SecretAgent)
-	}
+	c.SecretAgentConfig = ResolveSecretAgentFromModel(m.SecretAgent, config)
 }
 
 // Validate validates the credentials configuration
@@ -204,74 +195,36 @@ func (c *Credentials) Validate() error {
 		return nil
 	}
 
-	hasAuth := c.Password != nil || c.PasswordPath != nil || c.SecretAgent != nil || c.PasswordKeySecret != nil
+	hasAuth := c.Password != nil || c.PasswordPath != nil
 
 	if hasAuth && c.User == nil {
 		return errors.New("username is required when using authentication")
 	}
 
-	methodCount := 0
-	if c.Password != nil {
-		methodCount++
+	if c.Password != nil && c.PasswordPath != nil {
+		return fmt.Errorf("password and password-path are mutually exclusive")
 	}
 
-	if c.PasswordPath != nil {
-		methodCount++
-	}
-
-	if c.PasswordKeySecret != nil {
-		methodCount++
-		if c.SecretAgent == nil && c.SecretAgentName == nil {
-			return errors.New("either SecretAgent or SecretAgentName must be specified when key secret is provided")
-		}
-		if c.SecretAgent != nil && c.SecretAgentName != nil {
-			return errors.New("both SecretAgent and SecretAgentName cannot be specified at the same time")
-		}
-		if err := c.SecretAgent.validate(); err != nil {
-			return fmt.Errorf("secret agent validation error: %w", err)
-		}
-	}
-
-	if methodCount > 1 {
-		return fmt.Errorf("only one authentication method must be specified, got %d", methodCount)
-	}
-
-	return nil
+	return c.SecretAgentConfig.validate()
 }
+
 func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) {
 	if c == nil {
 		return nil, nil
 	}
 
-	agent, err := c.secretAgent(config)
+	agent, err := config.ResolveSecretAgent(c.SecretAgentName, c.SecretAgent.ToModel())
 	if err != nil {
 		return nil, err
 	}
 
 	return &model.Credentials{
-		User:              c.User,
-		Password:          c.Password,
-		PasswordPath:      c.PasswordPath,
-		AuthMode:          c.AuthMode,
-		PasswordKeySecret: c.PasswordKeySecret,
-		SecretAgent:       agent,
+		User:         c.User,
+		Password:     c.Password,
+		PasswordPath: c.PasswordPath,
+		AuthMode:     c.AuthMode,
+		SecretAgent:  agent,
 	}, nil
-}
-
-func (c *Credentials) secretAgent(config *model.Config) (*model.SecretAgent, error) {
-	if c.SecretAgentName != nil {
-		agent, ok := config.SecretAgents[*c.SecretAgentName]
-		if !ok {
-			return nil, fmt.Errorf("unknown secret agent %q", *c.SecretAgentName)
-		}
-		return agent, nil
-	}
-
-	if c.SecretAgent != nil {
-		return c.SecretAgent.ToModel(), nil
-	}
-
-	return nil, nil
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.

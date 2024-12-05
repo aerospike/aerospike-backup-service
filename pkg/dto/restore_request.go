@@ -96,10 +96,15 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 		return nil, fmt.Errorf("invalid cluster: %w", err)
 	}
 
+	storage, err := r.SourceStorage.ToModel(config)
+	if err != nil {
+		return nil, fmt.Errorf("invalid storage: %w", err)
+	}
+
 	return &model.RestoreRequest{
 		DestinationCluster: cluster,
 		Policy:             r.Policy.ToModel(),
-		SourceStorage:      r.SourceStorage.ToModel(),
+		SourceStorage:      storage,
 		SecretAgent:        r.SecretAgent.ToModel(),
 		BackupDataPath:     util.ValueOrZero(r.BackupDataPath),
 	}, nil
