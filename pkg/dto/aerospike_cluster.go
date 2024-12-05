@@ -186,7 +186,7 @@ func (c *Credentials) fromModel(m *model.Credentials, config *model.Config) {
 	c.PasswordPath = m.PasswordPath
 	c.AuthMode = m.AuthMode
 
-	c.SecretAgentName, c.SecretAgent = ResolveSecretAgentFromModel(m.SecretAgent, config)
+	c.SecretAgentConfig = ResolveSecretAgentFromModel(m.SecretAgent, config)
 }
 
 // Validate validates the credentials configuration

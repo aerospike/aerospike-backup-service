@@ -66,13 +66,17 @@ func (s *SecretAgent) ToModel() *model.SecretAgent {
 	}
 }
 
-func ResolveSecretAgentFromModel(s *model.SecretAgent, config *model.Config) (*string, *SecretAgent) {
+func ResolveSecretAgentFromModel(s *model.SecretAgent, config *model.Config) SecretAgentConfig {
 	secretAgentName := findKeyByValue(config.SecretAgents, s)
 	if secretAgentName != "" {
-		return &secretAgentName, nil
+		return SecretAgentConfig{
+			SecretAgentName: &secretAgentName,
+		}
 	}
 
-	return nil, newSecretAgentFromModel(s)
+	return SecretAgentConfig{
+		SecretAgent: newSecretAgentFromModel(s),
+	}
 }
 
 func newSecretAgentFromModel(m *model.SecretAgent) *SecretAgent {
