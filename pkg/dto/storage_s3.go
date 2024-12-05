@@ -102,9 +102,7 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.Config) *S3Storage 
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 	}
 	if s.Auth != nil {
-		secretAgentName, secretAgent := ResolveSecretAgentFromModel(s.Auth.SecretAgent, config)
-		result.SecretAgentName = secretAgentName
-		result.SecretAgent = secretAgent
+		result.SecretAgentName, result.SecretAgent = ResolveSecretAgentFromModel(s.Auth.SecretAgent, config)
 		result.AccessKeyID = &s.Auth.KeyIDSecret
 		result.SecretAccessKey = &s.Auth.AccessKeySecret
 	}
