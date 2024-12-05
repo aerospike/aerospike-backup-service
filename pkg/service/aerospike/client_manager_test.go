@@ -1,4 +1,4 @@
-package service
+package aerospike
 
 import (
 	"errors"
@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockClientFactory is a mock implementation of the AerospikeClientFactory interface.
+// MockClientFactory is a mock implementation of the ClientFactory interface.
 type MockClientFactory struct {
 	ShouldFail            bool
 	IsClusterDisconnected bool

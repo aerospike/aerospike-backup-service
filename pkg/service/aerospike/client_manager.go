@@ -1,4 +1,4 @@
-package service
+package aerospike
 
 import (
 	"errors"
@@ -20,13 +20,13 @@ type ClientManager interface {
 	Close(*backup.Client)
 }
 
-// AerospikeClientFactory defines an interface for creating and checking clients.
-type AerospikeClientFactory interface {
+// ClientFactory defines an interface for creating and checking clients.
+type ClientFactory interface {
 	NewClientWithPolicyAndHost(policy *as.ClientPolicy, hosts ...*as.Host) (backup.AerospikeClient, error)
 	IsClusterHealthy(client backup.AerospikeClient) bool
 }
 
-// DefaultClientFactory is the default implementation of AerospikeClientFactory.
+// DefaultClientFactory is the default implementation of ClientFactory.
 type DefaultClientFactory struct{}
 
 // NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
@@ -61,7 +61,7 @@ func (f *DefaultClientFactory) IsClusterHealthy(client backup.AerospikeClient) b
 type ClientManagerImpl struct {
 	mu            sync.RWMutex
 	clients       map[*model.AerospikeCluster]*clientInfo
-	clientFactory AerospikeClientFactory
+	clientFactory ClientFactory
 	closeDelay    time.Duration
 }
 
@@ -72,7 +72,7 @@ type clientInfo struct {
 }
 
 // NewClientManager creates a new ClientManagerImpl.
-func NewClientManager(aerospikeClientFactory AerospikeClientFactory, closeDelay time.Duration) *ClientManagerImpl {
+func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Duration) *ClientManagerImpl {
 	return &ClientManagerImpl{
 		clients:       make(map[*model.AerospikeCluster]*clientInfo),
 		clientFactory: aerospikeClientFactory,
