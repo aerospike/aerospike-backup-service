@@ -83,11 +83,11 @@ func (p *BackupPolicy) Validate() error {
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
 	}
-	if p.SocketTimeout != nil && *p.SocketTimeout <= 0 {
-		return fmt.Errorf("socketTimeout %d invalid, should be positive number", *p.SocketTimeout)
+	if p.SocketTimeout != nil && *p.SocketTimeout < 0 {
+		return fmt.Errorf("socketTimeout %d invalid, should not be negative number", *p.SocketTimeout)
 	}
-	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
-		return fmt.Errorf("totalTimeout %d invalid, should be positive number", *p.TotalTimeout)
+	if p.TotalTimeout != nil && *p.TotalTimeout < 0 {
+		return fmt.Errorf("totalTimeout %d invalid, should not be negative number", *p.TotalTimeout)
 	}
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retryPolicy validation failed: %w", err)
