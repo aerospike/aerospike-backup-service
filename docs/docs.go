@@ -1885,13 +1885,9 @@ const docTemplate = `{
                     ]
                 },
                 "password": {
-                    "description": "The password for the cluster authentication.",
+                    "description": "The password for the cluster authentication.\nIt can be either plain text or path into the secret agent.",
                     "type": "string",
                     "example": "testPswd"
-                },
-                "password-key-secret": {
-                    "description": "The secret keyword in Aerospike Secret Agent containing password.\nOnly applicable when SecretAgent is specified.",
-                    "type": "string"
                 },
                 "password-path": {
                     "description": "The file path with the password string.",
@@ -1899,7 +1895,7 @@ const docTemplate = `{
                     "example": "/path/to/pass.txt"
                 },
                 "secret-agent": {
-                    "description": "Secret Agent configuration (optional).",
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.SecretAgent"
@@ -1907,7 +1903,7 @@ const docTemplate = `{
                     ]
                 },
                 "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.",
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
                     "type": "string"
                 },
                 "user": {
@@ -2567,7 +2563,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "secret-agent": {
-                    "description": "Secret Agent configuration (optional).",
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.SecretAgent"
@@ -2575,7 +2571,7 @@ const docTemplate = `{
                     ]
                 },
                 "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.",
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
                     "type": "string"
                 }
             }

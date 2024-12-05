@@ -1615,13 +1615,10 @@ components:
           - PKI
           type: string
         password:
-          description: The password for the cluster authentication.
-          example: testPswd
-          type: string
-        password-key-secret:
           description: |-
-            The secret keyword in Aerospike Secret Agent containing password.
-            Only applicable when SecretAgent is specified.
+            The password for the cluster authentication.
+            It can be either plain text or path into the secret agent.
+          example: testPswd
           type: string
         password-path:
           description: The file path with the password string.
@@ -1630,11 +1627,14 @@ components:
         secret-agent:
           allOf:
           - $ref: '#/components/schemas/dto.SecretAgent'
-          description: Secret Agent configuration (optional).
+          description: |-
+            Secret Agent configuration (optional).
+            Mutually exclusive with secret-agent-name.
           type: object
         secret-agent-name:
-          description: Secret Agent configuration (optional). Link to one of preconfigured
-            agents.
+          description: |-
+            Secret Agent configuration (optional). Link to one of preconfigured agents.
+            Mutually exclusive with secret-agent.
           type: string
         user:
           description: The username for the cluster authentication.
@@ -2206,11 +2206,14 @@ components:
         secret-agent:
           allOf:
           - $ref: '#/components/schemas/dto.SecretAgent'
-          description: Secret Agent configuration (optional).
+          description: |-
+            Secret Agent configuration (optional).
+            Mutually exclusive with secret-agent-name.
           type: object
         secret-agent-name:
-          description: Secret Agent configuration (optional). Link to one of preconfigured
-            agents.
+          description: |-
+            Secret Agent configuration (optional). Link to one of preconfigured agents.
+            Mutually exclusive with secret-agent.
           type: string
       required:
       - bucket

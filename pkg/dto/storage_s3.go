@@ -11,6 +11,7 @@ import (
 //
 //nolint:lll
 type S3Storage struct {
+	SecretAgentConfig
 	// The S3 bucket name.
 	Bucket string `yaml:"bucket" json:"bucket" validate:"required"`
 	// The root path for the backup repository within the bucket.
@@ -28,10 +29,6 @@ type S3Storage struct {
 	MinPartSize int `yaml:"min_part_size,omitempty" json:"min_part_size,omitempty" example:"10" default:"5242880"`
 	// The maximum number of simultaneous requests from S3.
 	MaxConnsPerHost int `yaml:"max_async_connections,omitempty" json:"max_async_connections,omitempty" example:"16"`
-	// Secret Agent configuration (optional). Link to one of preconfigured agents.
-	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
-	// Secret Agent configuration (optional).
-	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 	// Access Key ID for authentication with S3 StaticCredentialsProvider.
 	// Can be a path in secret agent or an actual value.
 	AccessKeyID *string `yaml:"access-key-id" json:"access-key-id"`
@@ -56,11 +53,7 @@ func (s *S3Storage) Validate() error {
 		return fmt.Errorf("secret-access-key is set but access-key-id is missing")
 	}
 
-	if err := validateSecretAgent(s.SecretAgent, s.SecretAgentName); err != nil {
-		return err
-	}
-
-	return nil
+	return s.SecretAgentConfig.validate()
 }
 
 func (s *S3Storage) ToModel(config *model.Config) (*model.S3Storage, error) {

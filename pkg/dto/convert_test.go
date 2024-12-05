@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
@@ -18,9 +19,11 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 			"cluster1": {
 				SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 				Credentials: &Credentials{
-					User:            util.Ptr("tester"),
-					Password:        util.Ptr("psw"),
-					SecretAgentName: util.Ptr("agent1"),
+					User:     util.Ptr("tester"),
+					Password: util.Ptr("psw"),
+					SecretAgentConfig: SecretAgentConfig{
+						SecretAgentName: util.Ptr("agent1"),
+					},
 				},
 			},
 			"cluster2": {
@@ -28,9 +31,11 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 				Credentials: &Credentials{
 					User:     util.Ptr("tester"),
 					Password: util.Ptr("psw"),
-					SecretAgent: &SecretAgent{
-						Address:        "host2",
-						ConnectionType: saClient.ConnectionTypeTCP,
+					SecretAgentConfig: SecretAgentConfig{
+						SecretAgent: &SecretAgent{
+							Address:        "host2",
+							ConnectionType: saClient.ConnectionTypeTCP,
+						},
 					},
 				},
 			},
@@ -46,7 +51,9 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 					S3Region:        "region",
 					AccessKeyID:     util.Ptr("id"),
 					SecretAccessKey: util.Ptr("key"),
-					SecretAgentName: util.Ptr("agent1"),
+					SecretAgentConfig: SecretAgentConfig{
+						SecretAgentName: util.Ptr("agent1"),
+					},
 				},
 			},
 			"storage2": {
@@ -55,9 +62,11 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 					S3Region:        "region2",
 					AccessKeyID:     util.Ptr("id2"),
 					SecretAccessKey: util.Ptr("key2"),
-					SecretAgent: &SecretAgent{
-						Address:        "host3",
-						ConnectionType: saClient.ConnectionTypeTCP,
+					SecretAgentConfig: SecretAgentConfig{
+						SecretAgent: &SecretAgent{
+							Address:        "host3",
+							ConnectionType: saClient.ConnectionTypeTCP,
+						},
 					},
 				},
 			},
@@ -75,6 +84,10 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 		}},
 	}
 
+	indent, _ := json.MarshalIndent(originalConfig, "", "    ")
+	t.Logf("\nOriginal config:\n%s\n", string(indent))
+
+	// Step 2: Convert the Config to a model.Config
 	nsValidator := &aerospike.NoopNamespaceValidator{}
 	modelConfig, err := originalConfig.ToModel(nsValidator)
 	require.NoError(t, err, "ToModel should not return an error")

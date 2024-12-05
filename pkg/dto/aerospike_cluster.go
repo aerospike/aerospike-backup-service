@@ -165,9 +165,32 @@ func (t *TLS) toModel() *model.TLS {
 	}
 }
 
+// SecretAgentConfig aggregates the SecretAgent configuration.
+// It is intended to be embedded into DTOs that require Secret Agent configuration.
+type SecretAgentConfig struct {
+	// Secret Agent configuration (optional).
+	// Mutually exclusive with secret-agent-name.
+	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
+	// Secret Agent configuration (optional). Link to one of preconfigured agents.
+	// Mutually exclusive with secret-agent.
+	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
+}
+
+func (c SecretAgentConfig) validate() error {
+	if c.SecretAgent != nil && c.SecretAgentName != nil {
+		return errors.New("secret-agent-name and secret-agent are mutually exclusive")
+	}
+	if err := c.SecretAgent.validate(); err != nil {
+		return fmt.Errorf("secret-agent validation error: %w", err)
+	}
+
+	return nil
+}
+
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
+	SecretAgentConfig
 	// The username for the cluster authentication.
 	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"`
 	// The password for the cluster authentication.
@@ -177,10 +200,6 @@ type Credentials struct {
 	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"`
 	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
 	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
-	// Secret Agent configuration (optional).
-	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
-	// Secret Agent configuration (optional). Link to one of preconfigured agents.
-	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.Config) {
@@ -208,22 +227,7 @@ func (c *Credentials) Validate() error {
 		return fmt.Errorf("password and password-path are mutually exclusive")
 	}
 
-	if err := validateSecretAgent(c.SecretAgent, c.SecretAgentName); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func validateSecretAgent(agent *SecretAgent, name *string) error {
-	if agent != nil && name != nil {
-		return errors.New("secret-agent-name and secret-agent are mutually exclusive")
-	}
-	if err := agent.validate(); err != nil {
-		return fmt.Errorf("secret-agent validation error: %w", err)
-	}
-
-	return nil
+	return c.SecretAgentConfig.validate()
 }
 
 func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) {
