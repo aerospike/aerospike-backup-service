@@ -171,6 +171,7 @@ type Credentials struct {
 	// The username for the cluster authentication.
 	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"`
 	// The password for the cluster authentication.
+	// It can be either plain text or path into the secret agent.
 	Password *string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"`
 	// The file path with the password string.
 	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"`
@@ -180,16 +181,12 @@ type Credentials struct {
 	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 	// Secret Agent configuration (optional). Link to one of preconfigured agents.
 	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
-	// The secret keyword in Aerospike Secret Agent containing password.
-	// Only applicable when SecretAgent is specified.
-	PasswordKeySecret *string `yaml:"password-key-secret,omitempty" json:"password-key-secret,omitempty"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.Config) {
 	c.User = m.User
 	c.Password = m.Password
 	c.PasswordPath = m.PasswordPath
-	c.PasswordKeySecret = m.PasswordKeySecret
 	c.AuthMode = m.AuthMode
 
 	c.SecretAgentName, c.SecretAgent = ResolveSecretAgentFromModel(m.SecretAgent, config)
@@ -201,30 +198,18 @@ func (c *Credentials) Validate() error {
 		return nil
 	}
 
-	hasAuth := c.Password != nil || c.PasswordPath != nil || c.PasswordKeySecret != nil
+	hasAuth := c.Password != nil || c.PasswordPath != nil
 
 	if hasAuth && c.User == nil {
 		return errors.New("username is required when using authentication")
 	}
 
-	methodCount := 0
-	if c.Password != nil {
-		methodCount++
+	if c.Password != nil && c.PasswordPath != nil {
+		return fmt.Errorf("password and password-path are mutually exclusive")
 	}
 
-	if c.PasswordPath != nil {
-		methodCount++
-	}
-
-	if c.PasswordKeySecret != nil {
-		methodCount++
-		if err := validateSecretAgent(c.SecretAgent, c.SecretAgentName); err != nil {
-			return err
-		}
-	}
-
-	if methodCount > 1 {
-		return fmt.Errorf("only one authentication method must be specified, got %d", methodCount)
+	if err := validateSecretAgent(c.SecretAgent, c.SecretAgentName); err != nil {
+		return err
 	}
 
 	return nil
@@ -252,12 +237,11 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 	}
 
 	return &model.Credentials{
-		User:              c.User,
-		Password:          c.Password,
-		PasswordPath:      c.PasswordPath,
-		AuthMode:          c.AuthMode,
-		PasswordKeySecret: c.PasswordKeySecret,
-		SecretAgent:       agent,
+		User:         c.User,
+		Password:     c.Password,
+		PasswordPath: c.PasswordPath,
+		AuthMode:     c.AuthMode,
+		SecretAgent:  agent,
 	}, nil
 }
 

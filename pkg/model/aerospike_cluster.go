@@ -65,7 +65,7 @@ func (c *AerospikeCluster) GetPassword() *string {
 		return nil
 	}
 
-	password := c.loadPassword()
+	password := c.Credentials.loadPassword()
 	if password != nil {
 		c.pwd.Store(password)
 	}
@@ -73,16 +73,22 @@ func (c *AerospikeCluster) GetPassword() *string {
 	return password
 }
 
-func (c *AerospikeCluster) loadPassword() *string {
-	if c.Credentials.Password != nil {
-		return c.Credentials.Password
+func (c *Credentials) loadPassword() *string {
+	if c.Password != nil {
+		if c.SecretAgent == nil {
+			return c.Password
+		}
+
+		password, err := c.SecretAgent.Read(*c.Password)
+		if err != nil {
+			slog.Warn("Failed to read password from secret agent", slog.Any("err", err))
+			return nil
+		}
+
+		return &password
 	}
 
 	if password := c.loadPasswordFromFile(); password != nil {
-		return password
-	}
-
-	if password := c.loadSecretAgentPassword(); password != nil {
 		return password
 	}
 
@@ -90,35 +96,21 @@ func (c *AerospikeCluster) loadPassword() *string {
 	return nil
 }
 
-func (c *AerospikeCluster) loadPasswordFromFile() *string {
-	if c.Credentials.PasswordPath == nil {
+func (c *Credentials) loadPasswordFromFile() *string {
+	if c.PasswordPath == nil {
 		return nil
 	}
 
-	data, err := os.ReadFile(*c.Credentials.PasswordPath)
+	data, err := os.ReadFile(*c.PasswordPath)
 	if err != nil {
 		slog.Error("Failed to read password",
-			slog.String("path", *c.Credentials.PasswordPath),
+			slog.String("path", *c.PasswordPath),
 			slog.Any("err", err))
 		return nil
 	}
 
-	slog.Debug("Successfully read password", "path", *c.Credentials.PasswordPath)
+	slog.Debug("Successfully read password", "path", *c.PasswordPath)
 	password := string(data)
-	return &password
-}
-
-func (c *AerospikeCluster) loadSecretAgentPassword() *string {
-	if c.Credentials.SecretAgent == nil || c.Credentials.PasswordKeySecret == nil {
-		return nil
-	}
-
-	password, err := (*c.Credentials.SecretAgent).Read(*c.Credentials.PasswordKeySecret)
-	if err != nil {
-		slog.Error("Failed to get password from secret agent", slog.Any("err", err))
-		return nil
-	}
-
 	return &password
 }
 
@@ -307,6 +299,7 @@ type Credentials struct {
 	// The username for the cluster authentication.
 	User *string
 	// The password for the cluster authentication.
+	// It can be either plain text or path into the secret agent.
 	Password *string
 	// The file path with the password string, will take precedence over the password field.
 	PasswordPath *string
@@ -314,9 +307,6 @@ type Credentials struct {
 	AuthMode *string
 	// The name of the configured Secret Agent to use for authentication.
 	SecretAgent *SecretAgent
-	// The secret keyword in Aerospike Secret Agent containing password.
-	// Only applicable when SecretAgent is specified.
-	PasswordKeySecret *string
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.

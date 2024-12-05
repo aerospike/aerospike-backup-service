@@ -18,16 +18,16 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 			"cluster1": {
 				SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 				Credentials: &Credentials{
-					User:              util.Ptr("tester"),
-					PasswordKeySecret: util.Ptr("psw"),
-					SecretAgentName:   util.Ptr("agent1"),
+					User:            util.Ptr("tester"),
+					Password:        util.Ptr("psw"),
+					SecretAgentName: util.Ptr("agent1"),
 				},
 			},
 			"cluster2": {
 				SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 				Credentials: &Credentials{
-					User:              util.Ptr("tester"),
-					PasswordKeySecret: util.Ptr("psw"),
+					User:     util.Ptr("tester"),
+					Password: util.Ptr("psw"),
 					SecretAgent: &SecretAgent{
 						Address:        "host2",
 						ConnectionType: saClient.ConnectionTypeTCP,
