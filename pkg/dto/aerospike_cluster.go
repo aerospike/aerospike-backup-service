@@ -165,28 +165,6 @@ func (t *TLS) toModel() *model.TLS {
 	}
 }
 
-// SecretAgentConfig aggregates the SecretAgent configuration.
-// It is intended to be embedded into DTOs that require Secret Agent configuration.
-type SecretAgentConfig struct {
-	// Secret Agent configuration (optional).
-	// Mutually exclusive with secret-agent-name.
-	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
-	// Secret Agent configuration (optional). Link to one of preconfigured agents.
-	// Mutually exclusive with secret-agent.
-	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
-}
-
-func (c SecretAgentConfig) validate() error {
-	if c.SecretAgent != nil && c.SecretAgentName != nil {
-		return errors.New("secret-agent-name and secret-agent are mutually exclusive")
-	}
-	if err := c.SecretAgent.validate(); err != nil {
-		return fmt.Errorf("secret-agent validation error: %w", err)
-	}
-
-	return nil
-}
-
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {

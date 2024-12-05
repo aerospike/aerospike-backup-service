@@ -1,11 +1,34 @@
 package dto
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 )
+
+// SecretAgentConfig aggregates the SecretAgent configuration.
+// It is intended to be embedded into DTOs that require Secret Agent configuration.
+type SecretAgentConfig struct {
+	// Secret Agent configuration (optional).
+	// Mutually exclusive with secret-agent-name.
+	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
+	// Secret Agent configuration (optional). Link to one of preconfigured agents.
+	// Mutually exclusive with secret-agent.
+	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
+}
+
+func (c SecretAgentConfig) validate() error {
+	if c.SecretAgent != nil && c.SecretAgentName != nil {
+		return errors.New("secret-agent-name and secret-agent are mutually exclusive")
+	}
+	if err := c.SecretAgent.validate(); err != nil {
+		return fmt.Errorf("secret-agent validation error: %w", err)
+	}
+
+	return nil
+}
 
 // SecretAgent represents the configuration of an Aerospike Secret Agent
 // for a backup/restore operation.
@@ -88,6 +111,10 @@ func (s *SecretAgent) validate() error {
 
 	if s.ConnectionType != saClient.ConnectionTypeTCP && s.ConnectionType != saClient.ConnectionTypeUDS {
 		return fmt.Errorf("unsupported connection type: %s", s.ConnectionType)
+	}
+
+	if s.Port != nil && (*s.Port <= 0 || *s.Port > 65535) {
+		return fmt.Errorf("'port' must be between 1 and 65535, got: %d", *s.Port)
 	}
 
 	return nil
