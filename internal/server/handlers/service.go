@@ -7,6 +7,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -20,7 +21,7 @@ type Service struct {
 	handlerHolder        service.BackupHandlerHolder
 	configurationManager configuration.Manager
 	logger               *slog.Logger
-	nsValidator          service.NamespaceValidator
+	nsValidator          aerospike.NamespaceValidator
 }
 
 func NewService(
@@ -32,7 +33,7 @@ func NewService(
 	handlerHolder service.BackupHandlerHolder,
 	configurationManager configuration.Manager,
 	logger *slog.Logger,
-	nsValidator service.NamespaceValidator,
+	nsValidator aerospike.NamespaceValidator,
 ) *Service {
 	return &Service{
 		config:               config,

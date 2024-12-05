@@ -7,20 +7,20 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 )
 
 // httpConfigurationManager implements the Manager interface,
 // performing I/O operations via the HTTP(S) protocol.
 type httpConfigurationManager struct {
 	configURL   string
-	nsValidator service.NamespaceValidator
+	nsValidator aerospike.NamespaceValidator
 }
 
 var _ Manager = (*httpConfigurationManager)(nil)
 
 // newHTTPConfigurationManager returns a new httpConfigurationManager.
-func newHTTPConfigurationManager(uri string, nsValidator service.NamespaceValidator) Manager {
+func newHTTPConfigurationManager(uri string, nsValidator aerospike.NamespaceValidator) Manager {
 	return &httpConfigurationManager{
 		configURL:   uri,
 		nsValidator: nsValidator,

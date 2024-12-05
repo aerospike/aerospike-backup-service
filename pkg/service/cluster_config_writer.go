@@ -38,7 +38,7 @@ func (w *DefaultClusterConfigWriter) Write(
 	client backup.AerospikeClient,
 	timestamp time.Time,
 ) {
-	infos := getClusterConfiguration(client)
+	infos := scanClusterConfiguration(client, w.logger)
 	if len(infos) == 0 {
 		w.logger.Warn("Could not read aerospike configuration")
 		return

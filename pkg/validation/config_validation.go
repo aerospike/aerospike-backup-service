@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 )
 
-var nsValidator = &service.NoopNamespaceValidator{}
+var nsValidator = &aerospike.NoopNamespaceValidator{}
 
 // ValidateStaticFieldChanges checks if new config changes are allowed as per dynamic consideration.
 func ValidateStaticFieldChanges(oldConf, newConf *dto.Config) error {
@@ -16,11 +16,22 @@ func ValidateStaticFieldChanges(oldConf, newConf *dto.Config) error {
 }
 
 func ValidateConfiguration(conf *dto.Config) error {
+	if conf == nil {
+		return fmt.Errorf("config is nil")
+	}
+
 	_, err := conf.ToModel(nsValidator)
 	return err
 }
 
-func ValidateRestoreRequest(request dto.RestoreRequest, conf *dto.Config) error {
+func ValidateRestoreRequest(request *dto.RestoreRequest, conf *dto.Config) error {
+	if conf == nil {
+		return fmt.Errorf("config is nil")
+	}
+	if request == nil {
+		return fmt.Errorf("restore request is nil")
+	}
+
 	model, err := conf.ToModel(nsValidator)
 	if err != nil {
 		return fmt.Errorf("config invalid: %w", err)
@@ -35,7 +46,14 @@ func ValidateRestoreRequest(request dto.RestoreRequest, conf *dto.Config) error 
 	return err
 }
 
-func ValidateRestoreTimestampRequest(request dto.RestoreTimestampRequest, conf *dto.Config) error {
+func ValidateRestoreTimestampRequest(request *dto.RestoreTimestampRequest, conf *dto.Config) error {
+	if conf == nil {
+		return fmt.Errorf("config is nil")
+	}
+	if request == nil {
+		return fmt.Errorf("restore request is nil")
+	}
+
 	model, err := conf.ToModel(nsValidator)
 	if err != nil {
 		return fmt.Errorf("config invalid: %w", err)

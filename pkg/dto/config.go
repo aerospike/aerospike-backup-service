@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 )
 
 // Config represents the service configuration file.
@@ -139,7 +139,7 @@ func NewConfigWithDefaultValues() *Config {
 	}
 }
 
-func (c *Config) ToModel(nsValidator service.NamespaceValidator) (*model.Config, error) {
+func (c *Config) ToModel(nsValidator aerospike.NamespaceValidator) (*model.Config, error) {
 	if err := c.validate(); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}

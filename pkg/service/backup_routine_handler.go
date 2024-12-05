@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"github.com/aerospike/backup-go"
@@ -27,7 +28,7 @@ type BackupRoutineHandler struct {
 	secretAgent         *model.SecretAgent
 	lastRun             lastBackupRun
 	retry               executor
-	clientManager       ClientManager
+	clientManager       aerospike.ClientManager
 	logger              *slog.Logger
 	clusterConfigWriter ClusterConfigWriter
 
@@ -79,7 +80,7 @@ type BackupHandlerHolder map[string]*BackupRoutineHandler
 // newBackupRoutineHandler returns a new BackupRoutineHandler instance.
 func newBackupRoutineHandler(
 	config *model.Config,
-	clientManager ClientManager,
+	clientManager aerospike.ClientManager,
 	backupService Backup,
 	routineName string,
 	backupBackend backupMetadataManager,
@@ -174,7 +175,7 @@ func (h *BackupRoutineHandler) prepareCluster(retry executor) (*backup.Client, [
 		if err != nil {
 			return fmt.Errorf("cannot get backup client: %w", err)
 		}
-		namespaces, err = resolveNamespaces(h.namespaces, client.AerospikeClient())
+		namespaces, err = aerospike.ResolveNamespaces(h.namespaces, client.AerospikeClient())
 		if err != nil {
 			return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
 		}
