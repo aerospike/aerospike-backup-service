@@ -55,7 +55,7 @@ func (s *SecretAgent) Read(path string) (string, error) {
 		readFromSecretAgentfunc := func(key string) (string, error) {
 			secret, err := backup.ParseSecret(agentConfig, key)
 			if err != nil {
-				return "", fmt.Errorf("failed to read secret %q from %s:%d: %v", key, s.Address, *s.Port, err)
+				return "", fmt.Errorf("failed to read secret %q from %s: %v", key, s.Address, err)
 			}
 
 			return secret, nil
