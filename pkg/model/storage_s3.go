@@ -32,6 +32,10 @@ type S3Authentication struct {
 }
 
 func (a *S3Authentication) ReadSecrets() (keyID, accessKey string, err error) {
+	if a.SecretAgent == nil {
+		return a.KeyIDSecret, a.AccessKeySecret, nil
+	}
+
 	keyID, err = a.SecretAgent.Read(a.KeyIDSecret)
 	if err != nil {
 		return
