@@ -112,6 +112,28 @@ var jsonExamples = map[string]any{
 			},
 		}},
 	},
+	"RestoreFullRequest": dto.RestoreRequest{
+		DestinationCluster: &dto.AerospikeCluster{
+			SeedNodes: []dto.SeedNode{{
+				HostName: "host.docker.internal", Port: 3000},
+			},
+			Credentials: &dto.Credentials{
+				User:     util.Ptr("user"),
+				Password: util.Ptr("password"),
+			},
+		},
+		Policy: &dto.RestorePolicy{
+			NoGeneration: util.Ptr(true),
+		},
+		SourceStorage: &dto.Storage{
+			S3Storage: &dto.S3Storage{
+				Bucket:   "as-backup-bucket",
+				Path:     "backups",
+				S3Region: "eu-central-1",
+			},
+		},
+		BackupDataPath: "routine1/backup/1704110400000/source-ns1",
+	},
 }
 
 func main() {
