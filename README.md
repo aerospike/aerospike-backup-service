@@ -300,6 +300,7 @@ GET {{baseUrl}}/v1/config/routines
 <details>
     <summary>Response:</summary>
 
+<!-- RoutinesResponse -->
 ```json
 {
   "routine1": {
@@ -307,16 +308,25 @@ GET {{baseUrl}}/v1/config/routines
     "source-cluster": "absDefaultCluster",
     "storage": "local",
     "interval-cron": "@yearly",
-    "namespaces": ["source-ns7"]
+    "namespaces": [
+      "test-namespace"
+    ]
   },
   "routine2": {
     "backup-policy": "removeFilesPolicy",
     "source-cluster": "absDefaultCluster",
     "storage": "local",
-    "interval-cron": "@yearly",
-    "namespaces": ["source-ns8"],
-    "set-list": ["backupSet"],
-    "bin-list": ["backupBin"]
+    "interval-cron": "@monthly",
+    "incr-interval-cron": "@daily",
+    "namespaces": [
+      "test-namespace"
+    ],
+    "set-list": [
+      "backupSet"
+    ],
+    "bin-list": [
+      "backupBin"
+    ]
   }
 }
 ```

@@ -22,6 +22,25 @@ var jsonExamples = map[string]any{
 			},
 		},
 	},
+	"RoutinesResponse": map[string]dto.BackupRoutine{
+		"routine1": {
+			BackupPolicy:  "keepFilesPolicy",
+			SourceCluster: "absDefaultCluster",
+			Storage:       "local",
+			IntervalCron:  "@yearly",
+			Namespaces:    []string{"test-namespace"},
+		},
+		"routine2": {
+			BackupPolicy:     "removeFilesPolicy",
+			SourceCluster:    "absDefaultCluster",
+			Storage:          "local",
+			IntervalCron:     "@monthly",
+			IncrIntervalCron: "@daily",
+			Namespaces:       []string{"test-namespace"},
+			SetList:          []string{"backupSet"},
+			BinList:          []string{"backupBin"},
+		},
+	},
 }
 
 func main() {

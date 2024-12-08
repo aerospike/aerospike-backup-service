@@ -26,7 +26,7 @@ type BackupRoutine struct {
 	// The interval for full backup as a cron expression string.
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron" example:"0 0 * * * *" validate:"required"`
 	// The interval for incremental backup as a cron expression string (optional).
-	IncrIntervalCron string `yaml:"incr-interval-cron" json:"incr-interval-cron" example:"*/10 * * * * *"`
+	IncrIntervalCron string `yaml:"incr-interval-cron,omitempty" json:"incr-interval-cron,omitempty" example:"*/10 * * * * *"`
 	// The list of the namespaces to back up (optional, empty list implies backup up whole cluster).
 	Namespaces []string `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"source-ns1"`
 	// The list of backup set names (optional, an empty list implies backing up all sets).
