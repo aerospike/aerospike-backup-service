@@ -89,7 +89,7 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 					},
 				},
 			},
-			"azure": {
+			"azure 1": {
 				AzureStorage: &AzureStorage{
 					SecretAgentConfig: SecretAgentConfig{
 						SecretAgentName: util.Ptr("agent1"),
@@ -97,11 +97,29 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 					Endpoint:      "http://localhost",
 					ContainerName: "container",
 					Path:          "backup",
-					AccountName:   "",
-					AccountKey:    "",
+					AccountName:   "hello",
+					AccountKey:    "world",
 					TenantID:      "",
 					ClientID:      "",
 					ClientSecret:  "",
+				},
+			},
+			"azure 2": {
+				AzureStorage: &AzureStorage{
+					SecretAgentConfig: SecretAgentConfig{
+						SecretAgent: &SecretAgent{
+							Address:        "host4",
+							ConnectionType: saClient.ConnectionTypeUDS,
+						},
+					},
+					Endpoint:      "http://localhost",
+					ContainerName: "container",
+					Path:          "backup",
+					AccountName:   "",
+					AccountKey:    "",
+					TenantID:      "1",
+					ClientID:      "2",
+					ClientSecret:  "3",
 				},
 			},
 		},
@@ -118,6 +136,7 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 		}},
 	}
 
+	require.NoError(t, originalConfig.validate())
 	indent, _ := json.MarshalIndent(originalConfig, "", "    ")
 	t.Logf("\nOriginal config:\n%s\n", string(indent))
 
