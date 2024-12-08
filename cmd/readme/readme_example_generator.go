@@ -134,6 +134,22 @@ var jsonExamples = map[string]any{
 		},
 		BackupDataPath: "routine1/backup/1704110400000/source-ns1",
 	},
+	"RestoreTimestampRequest": dto.RestoreTimestampRequest{
+		DestinationCluster: &dto.AerospikeCluster{
+			SeedNodes: []dto.SeedNode{{
+				HostName: "host.docker.internal", Port: 3000},
+			},
+			Credentials: &dto.Credentials{
+				User:     util.Ptr("user"),
+				Password: util.Ptr("password"),
+			},
+		},
+		Policy: &dto.RestorePolicy{
+			NoGeneration: util.Ptr(true),
+		},
+		Time:    1704110400000,
+		Routine: "routine1",
+	},
 }
 
 func main() {

@@ -72,7 +72,7 @@ under `/config/storage` for detailed information.
 
 #### Backup policy
 
-A backup policy is a set of rules that defines how backups should be performed. 
+A backup policy is a set of rules that defines how backups should be performed.
 It includes settings for performance tuning, data selection, encryption, compression, and other operational details.
 See [`GET: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readPolicies) for
 full details about what parameters are available to customize a backup policy.
@@ -85,7 +85,8 @@ to create a policy, ensure that you give your policy a name that will let you qu
 #### Backup routine
 
 A backup routine is a set of procedures that actually perform backups based on the predefined backup policy.
-It includes configurations for the source cluster, storage destination, scheduling (separately for full and incremental backups),
+It includes configurations for the source cluster, storage destination, scheduling (separately for full and incremental
+backups),
 and the scope of data to back up (such as namespaces, sets, or bins).
 
 See the [Routines](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readRoutines) section for
@@ -505,10 +506,12 @@ POST {{baseUrl}}/v1/restore/full
   "backup-data-path": "routine1/backup/1704110400000/source-ns1"
 }
 ```
+
 </details>
 
 The response is a job ID. You can get job status with the
-endpoint [`GET {{baseUrl}}/v1/restore/status/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
+endpoint [
+`GET {{baseUrl}}/v1/restore/status/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
 
 Response:
 
@@ -528,29 +531,33 @@ Request:
 POST {{baseUrl}}/v1/restore/timestamp
 ```
 
-Request body:
+<details>
+    <summary>Response:</summary>
 
+<!-- RestoreTimestampRequest -->
 ```json
 {
   "destination": {
     "seed-nodes": [
       {
-        "host-name": "localhost",
+        "host-name": "host.docker.internal",
         "port": 3000
       }
     ],
     "credentials": {
-      "user": "tester",
-      "password": "psw"
+      "user": "user",
+      "password": "password"
     }
   },
   "policy": {
-    "no-generation": "true"
+    "no-generation": true
   },
-  "routine": "routine1",
-  "time": "1710671632452"
+  "time": 1704110400000,
+  "routine": "routine1"
 }
 ```
+
+</details>
 
 The response is a job ID. You can get job status with the
 endpoint [
