@@ -13,7 +13,7 @@ type GcpStorage struct {
 	// Endpoint is an alternative URL for the GCS API.
 	// This should only be used for testing or in specific non-production scenarios.
 	Endpoint string
-	// Optional secret agent configuration to fetch keyfile from a secret store.
+	// SecretAgent configuration to fetch keyfile from a secret store (optional).
 	SecretAgent *SecretAgent
 }
 

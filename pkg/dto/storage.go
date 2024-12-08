@@ -56,104 +56,22 @@ func (s *Storage) Validate() error {
 	return validStorage.Validate()
 }
 
-// LocalStorage represents the configuration for local storage.
-type LocalStorage struct {
-	// The root path for the backup repository.
-	Path string `yaml:"path" json:"path" example:"backups" validate:"required"`
-}
-
-// Validate checks if the LocalStorage is valid.
-func (l *LocalStorage) Validate() error {
-	if l.Path == "" {
-		return errors.New("local storage path is not specified")
-	}
-	return nil
-}
-
-// AzureStorage represents the configuration for Azure Blob storage.
-type AzureStorage struct {
-	// Endpoint is the Azure Blob service endpoint URL.
-	Endpoint string `yaml:"endpoint" json:"endpoint" validate:"required"`
-	// ContainerName is the name of the Azure Blob container.
-	ContainerName string `yaml:"container-name" json:"container-name" validate:"required"`
-	// Path is the root path for the backup repository within the container.
-	// If not specified, backups will be saved in the container's root.
-	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups"`
-	// AccountName is the Azure storage account name for Shared Key authentication.
-	AccountName string `yaml:"account-name,omitempty" json:"account-name,omitempty"`
-	// AccountKey is the Azure storage account key for Shared Key authentication.
-	AccountKey string `yaml:"account-key,omitempty" json:"account-key,omitempty"`
-	// TenantID is the Azure Active Directory tenant ID for AAD authentication.
-	TenantID string `yaml:"tenant-id,omitempty" json:"tenant-id,omitempty"`
-	// ClientID is the Azure Active Directory client ID for AAD authentication.
-	ClientID string `yaml:"client-id,omitempty" json:"client-id,omitempty"`
-	// ClientSecret is the Azure Active Directory client secret for AAD authentication.
-	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty"`
-}
-
-// Validate checks if the AzureStorage is valid.
-func (a *AzureStorage) Validate() error {
-	if a.Endpoint == "" {
-		return errors.New("azure storage endpoint is not specified")
-	}
-	if a.ContainerName == "" {
-		return errors.New("azure storage container name is not specified")
-	}
-
-	// Check for valid authentication method.
-	hasSharedKey := a.AccountName != "" && a.AccountKey != ""
-	hasAAD := a.TenantID != "" && a.ClientID != "" && a.ClientSecret != ""
-
-	if hasSharedKey && hasAAD {
-		return errors.New(`azure storage authentication method is ambiguous:
-use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
-	}
-
-	return nil
-}
-
 // ToModel converts the Storage DTO to its corresponding model.
 func (s *Storage) ToModel(c *model.Config) (model.Storage, error) {
 	if s.LocalStorage != nil {
-		return &model.LocalStorage{
-			Path: s.LocalStorage.Path,
-		}, nil
+		return s.LocalStorage.toModel()
 	}
 	if s.S3Storage != nil {
-		return s.S3Storage.ToModel(c)
+		return s.S3Storage.toModel(c)
 	}
 	if s.GcpStorage != nil {
 		return s.GcpStorage.toModel(c)
 	}
 	if s.AzureStorage != nil {
-		return &model.AzureStorage{
-			Endpoint:      s.AzureStorage.Endpoint,
-			ContainerName: s.AzureStorage.ContainerName,
-			Path:          s.AzureStorage.Path,
-			Auth:          getAzureAuth(s),
-		}, nil
+		return s.AzureStorage.toModel(c)
 	}
 
 	return nil, errors.New("error converting storage dto to model: no storage configuration provided")
-}
-
-func getAzureAuth(s *Storage) model.AzureAuth {
-	if s.AzureStorage.AccountName != "" && s.AzureStorage.AccountKey != "" {
-		return model.AzureSharedKeyAuth{
-			AccountName: s.AzureStorage.AccountName,
-			AccountKey:  s.AzureStorage.AccountKey,
-		}
-	}
-
-	if s.AzureStorage.TenantID != "" && s.AzureStorage.ClientID != "" && s.AzureStorage.ClientSecret != "" {
-		return model.AzureADAuth{
-			TenantID:     s.AzureStorage.TenantID,
-			ClientID:     s.AzureStorage.ClientID,
-			ClientSecret: s.AzureStorage.ClientSecret,
-		}
-	}
-
-	return nil
 }
 
 // NewStorageFromModel creates a new Storage DTO from the model.
@@ -161,9 +79,7 @@ func NewStorageFromModel(m model.Storage, config *model.Config) *Storage {
 	switch s := m.(type) {
 	case *model.LocalStorage:
 		return &Storage{
-			LocalStorage: &LocalStorage{
-				Path: s.Path,
-			},
+			LocalStorage: newLocalStorageFromModel(s),
 		}
 	case *model.S3Storage:
 		return &Storage{
@@ -174,24 +90,8 @@ func NewStorageFromModel(m model.Storage, config *model.Config) *Storage {
 			GcpStorage: newGcpStorageFromModel(s, config),
 		}
 	case *model.AzureStorage:
-		azureStorage := &AzureStorage{
-			Endpoint:      s.Endpoint,
-			ContainerName: s.ContainerName,
-			Path:          s.Path,
-		}
-
-		switch auth := s.Auth.(type) {
-		case model.AzureSharedKeyAuth:
-			azureStorage.AccountName = auth.AccountName
-			azureStorage.AccountKey = auth.AccountKey
-		case model.AzureADAuth:
-			azureStorage.TenantID = auth.TenantID
-			azureStorage.ClientID = auth.ClientID
-			azureStorage.ClientSecret = auth.ClientSecret
-		}
-
 		return &Storage{
-			AzureStorage: azureStorage,
+			AzureStorage: newAzureStorageFromModel(s, config),
 		}
 	default:
 		return nil

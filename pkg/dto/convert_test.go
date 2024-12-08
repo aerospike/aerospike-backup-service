@@ -89,6 +89,21 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 					},
 				},
 			},
+			"azure": {
+				AzureStorage: &AzureStorage{
+					SecretAgentConfig: SecretAgentConfig{
+						SecretAgentName: util.Ptr("agent1"),
+					},
+					Endpoint:      "http://localhost",
+					ContainerName: "container",
+					Path:          "backup",
+					AccountName:   "",
+					AccountKey:    "",
+					TenantID:      "",
+					ClientID:      "",
+					ClientSecret:  "",
+				},
+			},
 		},
 		BackupPolicies: map[string]*BackupPolicy{"policy1": {}},
 		BackupRoutines: map[string]*BackupRoutine{"routine1": {
@@ -109,7 +124,7 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 	// Step 2: Convert the Config to a model.Config
 	nsValidator := &aerospike.NoopNamespaceValidator{}
 	modelConfig, err := originalConfig.ToModel(nsValidator)
-	require.NoError(t, err, "ToModel should not return an error")
+	require.NoError(t, err, "toModel should not return an error")
 
 	// Step 3: Convert the model.Config back to a Config
 	newConfig := NewConfigFromModel(modelConfig)
