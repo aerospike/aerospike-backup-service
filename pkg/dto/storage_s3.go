@@ -11,7 +11,7 @@ import (
 //
 //nolint:lll
 type S3Storage struct {
-	SecretAgentConfig
+	SecretAgentConfig `yaml:",inline"`
 	// The S3 bucket name.
 	Bucket string `yaml:"bucket" json:"bucket" validate:"required"`
 	// The root path for the backup repository within the bucket.

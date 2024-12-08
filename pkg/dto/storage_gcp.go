@@ -8,7 +8,7 @@ import (
 
 // GcpStorage represents the configuration for GCP storage.
 type GcpStorage struct {
-	SecretAgentConfig
+	SecretAgentConfig `yaml:",inline"`
 	// Path to file containing Service Account JSON Key.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	KeyFile string `yaml:"key-file" json:"key-file"`
