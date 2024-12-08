@@ -347,36 +347,38 @@ GET {{baseUrl}}/v1/config/storage
 <details>
     <summary>Response:</summary>
 
+<!-- StorageResponse -->
 ```json
 {
-  "local": {
-    "local-storage":  {
-      "path": "./localStorage"
-    }
-  },
-  "minio": {
+  "aws-s3": {
     "s3-storage": {
-      "path": "storage1",
       "bucket": "as-backup-bucket",
+      "path": "backups",
       "s3-region": "eu-central-1",
-      "s3-profile": "minio",
-      "s3-endpoint-override": "http://host.docker.internal:9000"
+      "access-key-id": "id",
+      "secret-access-key": "key"
     }
   },
-  "azure": {
+  "azure-blob-storage": {
     "azure-storage": {
       "endpoint": "http://127.0.0.1:6000/devstoreaccount1",
       "container-name": "testcontainer",
+      "path": "backups",
       "account-name": "devstoreaccount1",
       "account-key": "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
     }
   },
-  "gcp": {
+  "gcp-gcs": {
     "gcp-storage": {
-      "key-file": "keyfile",
-      "bucket-name": "as-backup-bucket",
-      "path": "storage2",
-      "endpoint": "http://localhost"
+      "key-file": "key-file.json",
+      "bucket-name": "gcp-backup-bucket",
+      "path": "backups",
+      "endpoint": "http://127.0.0.1:9020"
+    }
+  },
+  "local": {
+    "local-storage": {
+      "path": "backups"
     }
   }
 }

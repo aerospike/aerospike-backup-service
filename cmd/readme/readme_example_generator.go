@@ -41,11 +41,44 @@ var jsonExamples = map[string]any{
 			BinList:          []string{"backupBin"},
 		},
 	},
+	"StorageResponse": map[string]dto.Storage{
+		"local": {
+			LocalStorage: &dto.LocalStorage{
+				Path: "backups",
+			},
+		},
+		"aws-s3": {
+			S3Storage: &dto.S3Storage{
+				Bucket:          "as-backup-bucket",
+				Path:            "backups",
+				S3Region:        "eu-central-1",
+				AccessKeyID:     util.Ptr("id"),
+				SecretAccessKey: util.Ptr("key"),
+			},
+		},
+		"gcp-gcs": {
+			GcpStorage: &dto.GcpStorage{
+				Path:       "backups",
+				KeyFile:    "key-file.json",
+				BucketName: "gcp-backup-bucket",
+				Endpoint:   "http://127.0.0.1:9020",
+			},
+		},
+		"azure-blob-storage": {
+			AzureStorage: &dto.AzureStorage{
+				Path:          "backups",
+				Endpoint:      "http://127.0.0.1:6000/devstoreaccount1",
+				AccountName:   "devstoreaccount1",
+				ContainerName: "testcontainer",
+				AccountKey:    "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+			},
+		},
+	},
 }
 
 func main() {
 	_ = dto.AerospikeCluster{}
-	readme, err := os.ReadFile("/Users/ak/work/aerospike-backup-service/README.md")
+	readme, err := os.ReadFile("README.md")
 	if err != nil {
 		panic(err)
 	}
