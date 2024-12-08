@@ -354,9 +354,7 @@ GET {{baseUrl}}/v1/config/storage
     "s3-storage": {
       "bucket": "as-backup-bucket",
       "path": "backups",
-      "s3-region": "eu-central-1",
-      "access-key-id": "id",
-      "secret-access-key": "key"
+      "s3-region": "eu-central-1"
     }
   },
   "azure-blob-storage": {
@@ -402,26 +400,47 @@ GET {{baseUrl}}/v1/backups/full
 <details>
     <summary>Response:</summary>
 
+<!-- FullBackupsResponse -->
 ```json
 {
   "routine1": [
     {
-      "created": "2024-03-14T13:13:28.96962301Z",
+      "created": "2024-01-01T12:00:00Z",
       "from": "0001-01-01T00:00:00Z",
-      "namespace": "source-ns7",
-      "byte-count": 48,
+      "namespace": "source-ns1",
+      "record-count": 42,
+      "byte-count": 480000,
       "file-count": 1,
-      "Key": "s3://as-backup-bucket/storage1/minio/backup/1710422008983/source-ns4"
+      "secondary-index-count": 5,
+      "udf-count": 1,
+      "key": "routine1/backup/1704110400000/source-ns1",
+      "storage": {
+        "s3-storage": {
+          "bucket": "as-backup-bucket",
+          "path": "backups",
+          "s3-region": "eu-central-1"
+        }
+      }
     }
   ],
   "routine2": [
     {
-      "created": "2024-03-14T13:13:29.105744927Z",
+      "created": "2024-01-01T12:00:00Z",
       "from": "0001-01-01T00:00:00Z",
-      "namespace": "source-ns8",
-      "byte-count": 48,
-      "file-count": 1,
-      "key": "localStorage/filterBySetAndBin/backup/source-ns8"
+      "namespace": "source-ns2",
+      "record-count": 1890,
+      "byte-count": 1234567890,
+      "file-count": 4,
+      "secondary-index-count": 0,
+      "udf-count": 0,
+      "key": "routine2/backup/1704110400000/source-ns2",
+      "storage": {
+        "s3-storage": {
+          "bucket": "as-backup-bucket",
+          "path": "backups",
+          "s3-region": "eu-central-1"
+        }
+      }
     }
   ]
 }
