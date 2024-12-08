@@ -2016,6 +2016,18 @@ const docTemplate = `{
                     "description": "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
                     "type": "string",
                     "example": "backups"
+                },
+                "secret-agent": {
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    ]
+                },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+                    "type": "string"
                 }
             }
         },

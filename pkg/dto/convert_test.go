@@ -45,7 +45,15 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 			},
 		},
 		Storage: map[string]*Storage{
-			"storage1": {
+			"aws 0": { // no secret agent
+				S3Storage: &S3Storage{
+					Bucket:          "bucket",
+					S3Region:        "region",
+					AccessKeyID:     util.Ptr("id"),
+					SecretAccessKey: util.Ptr("key"),
+				},
+			},
+			"aws 1": { // secret agent by name
 				S3Storage: &S3Storage{
 					Bucket:          "bucket",
 					S3Region:        "region",
@@ -56,7 +64,7 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 					},
 				},
 			},
-			"storage2": {
+			"aws 2": { // secret agent by full definition
 				S3Storage: &S3Storage{
 					Bucket:          "bucket2",
 					S3Region:        "region2",
@@ -70,12 +78,23 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 					},
 				},
 			},
+			"gcp": {
+				GcpStorage: &GcpStorage{
+					KeyFile:    "key-file",
+					BucketName: "bucket",
+					Path:       "path",
+					Endpoint:   "http://localhost",
+					SecretAgentConfig: SecretAgentConfig{
+						SecretAgentName: util.Ptr("agent1"),
+					},
+				},
+			},
 		},
 		BackupPolicies: map[string]*BackupPolicy{"policy1": {}},
 		BackupRoutines: map[string]*BackupRoutine{"routine1": {
 			BackupPolicy:  "policy1",
 			SourceCluster: "cluster1",
-			Storage:       "storage1",
+			Storage:       "aws 1",
 			IntervalCron:  "@daily",
 		}},
 		SecretAgents: map[string]*SecretAgent{"agent1": {

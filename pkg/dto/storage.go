@@ -70,27 +70,6 @@ func (l *LocalStorage) Validate() error {
 	return nil
 }
 
-// GcpStorage represents the configuration for GCP storage.
-type GcpStorage struct {
-	// Path to file containing Service Account JSON Key.
-	KeyFile string `yaml:"key-file" json:"key-file"`
-	// GCP storage bucket name.
-	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
-	// The root path for the backup repository. If not specified, backups will be saved in the bucket's root.
-	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups"`
-	// Alternative url.
-	// It is not recommended to use an alternate URL in a production environment.
-	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
-}
-
-// Validate checks if the GcpStorage is valid.
-func (g *GcpStorage) Validate() error {
-	if g.BucketName == "" {
-		return errors.New("GCP bucket name is not specified")
-	}
-	return nil
-}
-
 // AzureStorage represents the configuration for Azure Blob storage.
 type AzureStorage struct {
 	// Endpoint is the Azure Blob service endpoint URL.
@@ -144,12 +123,7 @@ func (s *Storage) ToModel(c *model.Config) (model.Storage, error) {
 		return s.S3Storage.ToModel(c)
 	}
 	if s.GcpStorage != nil {
-		return &model.GcpStorage{
-			KeyFile:    s.GcpStorage.KeyFile,
-			BucketName: s.GcpStorage.BucketName,
-			Path:       s.GcpStorage.Path,
-			Endpoint:   s.GcpStorage.Endpoint,
-		}, nil
+		return s.GcpStorage.toModel(c)
 	}
 	if s.AzureStorage != nil {
 		return &model.AzureStorage{
@@ -197,12 +171,7 @@ func NewStorageFromModel(m model.Storage, config *model.Config) *Storage {
 		}
 	case *model.GcpStorage:
 		return &Storage{
-			GcpStorage: &GcpStorage{
-				KeyFile:    s.KeyFile,
-				BucketName: s.BucketName,
-				Path:       s.Path,
-				Endpoint:   s.Endpoint,
-			},
+			GcpStorage: newGcpStorageFromModel(s, config),
 		}
 	case *model.AzureStorage:
 		azureStorage := &AzureStorage{

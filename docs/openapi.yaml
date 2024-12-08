@@ -1731,6 +1731,18 @@ components:
             \ backups will be saved in the bucket's root."
           example: backups
           type: string
+        secret-agent:
+          allOf:
+          - $ref: '#/components/schemas/dto.SecretAgent'
+          description: |-
+            Secret Agent configuration (optional).
+            Mutually exclusive with secret-agent-name.
+          type: object
+        secret-agent-name:
+          description: |-
+            Secret Agent configuration (optional). Link to one of preconfigured agents.
+            Mutually exclusive with secret-agent.
+          type: string
       required:
       - bucket-name
       type: object

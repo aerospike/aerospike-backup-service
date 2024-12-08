@@ -25,7 +25,7 @@ func (a *GcpStorageAccessor) createReader(
 	gcps := storage.(*model.GcpStorage)
 	client, err := getGcpClient(ctx, gcps)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reader failed to create GCP client: %w", err)
 	}
 	opts := []gcp.Opt{
 		gcp.WithValidator(filter),
@@ -47,7 +47,7 @@ func (a *GcpStorageAccessor) createWriter(
 	gcps := storage.(*model.GcpStorage)
 	client, err := getGcpClient(ctx, gcps)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("writer failed to create GCP client: %w", err)
 	}
 	fullPath := filepath.Join(gcps.Path, path)
 	var opts []gcp.Opt
@@ -73,17 +73,16 @@ func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, er
 	opts := make([]option.ClientOption, 0)
 
 	if g.KeyFile != "" {
-		opts = append(opts, option.WithCredentialsFile(g.KeyFile))
+		keyFile, err := g.SecretAgent.Read(g.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, option.WithCredentialsFile(keyFile))
 	}
 
 	if g.Endpoint != "" {
 		opts = append(opts, option.WithEndpoint(g.Endpoint), option.WithoutAuthentication())
 	}
 
-	gcpClient, err := storage.NewClient(ctx, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GCP client: %w", err)
-	}
-
-	return gcpClient, nil
+	return storage.NewClient(ctx, opts...)
 }
