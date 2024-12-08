@@ -10,6 +10,7 @@ import (
 type GcpStorage struct {
 	SecretAgentConfig
 	// Path to file containing Service Account JSON Key.
+	// This is sensitive information. Can be a path in secret agent or an actual value.
 	KeyFile string `yaml:"key-file" json:"key-file"`
 	// GCP storage bucket name.
 	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`

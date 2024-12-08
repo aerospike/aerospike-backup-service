@@ -1509,7 +1509,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "account-key": {
-                    "description": "AccountKey is the Azure storage account key for Shared Key authentication.",
+                    "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
                     "type": "string"
                 },
                 "account-name": {
@@ -1521,7 +1521,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "client-secret": {
-                    "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.",
+                    "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
                     "type": "string"
                 },
                 "container-name": {
@@ -1536,6 +1536,18 @@ const docTemplate = `{
                     "description": "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
                     "type": "string",
                     "example": "backups"
+                },
+                "secret-agent": {
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    ]
+                },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+                    "type": "string"
                 },
                 "tenant-id": {
                     "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.",
@@ -2009,7 +2021,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "key-file": {
-                    "description": "Path to file containing Service Account JSON Key.",
+                    "description": "Path to file containing Service Account JSON Key.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
                     "type": "string"
                 },
                 "path": {
@@ -2527,7 +2539,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "access-key-id": {
-                    "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+                    "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
                     "type": "string"
                 },
                 "bucket": {
@@ -2571,7 +2583,7 @@ const docTemplate = `{
                     "example": "eu-central-1"
                 },
                 "secret-access-key": {
-                    "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+                    "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
                     "type": "string"
                 },
                 "secret-agent": {
