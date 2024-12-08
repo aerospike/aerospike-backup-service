@@ -267,9 +267,10 @@ GET {{baseUrl}}/v1/config/clusters
 <details>
     <summary>Response:</summary>
 
+<!-- ClustersResponse -->
 ```json
-{
-  "absDefaultCluster": {
+[
+  {
     "seed-nodes": [
       {
         "host-name": "host.docker.internal",
@@ -277,11 +278,11 @@ GET {{baseUrl}}/v1/config/clusters
       }
     ],
     "credentials": {
-      "user": "tester",
-      "password": "psw"
+      "user": "user",
+      "password": "password"
     }
   }
-}
+]
 ```
 
 </details>

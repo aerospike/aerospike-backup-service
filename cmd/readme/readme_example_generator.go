@@ -5,11 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"os"
 	"regexp"
 )
 
-var jsonExamples = map[string]interface{}{}
+var jsonExamples = map[string]any{
+	"ClustersResponse": []dto.AerospikeCluster{
+		{
+			SeedNodes: []dto.SeedNode{
+				{HostName: "host.docker.internal", Port: 3000},
+			},
+			Credentials: &dto.Credentials{
+				User:     util.Ptr("user"),
+				Password: util.Ptr("password"),
+			},
+		},
+	},
+}
 
 func main() {
 	_ = dto.AerospikeCluster{}
@@ -37,7 +50,7 @@ func main() {
 		}
 
 		var buffer bytes.Buffer
-		buffer.WriteString(fmt.Sprintf("Example: %s\n```json\n", name))
+		buffer.WriteString(fmt.Sprintf("<!-- %s -->\n```json\n", name))
 		buffer.Write(formattedJSON)
 		buffer.WriteString("\n```")
 		return buffer.Bytes()
