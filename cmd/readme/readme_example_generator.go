@@ -184,7 +184,7 @@ func main() {
 		return buffer.Bytes()
 	})
 
-	err = os.WriteFile("README.md", updatedReadme, 0644)
+	err = os.WriteFile("README.md", updatedReadme, 0600)
 	if err != nil {
 		panic(err)
 	}
