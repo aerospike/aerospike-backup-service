@@ -168,7 +168,7 @@ func (t *TLS) toModel() *model.TLS {
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
-	SecretAgentConfig
+	SecretAgentConfig `yaml:",inline"`
 	// The username for the cluster authentication.
 	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"`
 	// The password for the cluster authentication.

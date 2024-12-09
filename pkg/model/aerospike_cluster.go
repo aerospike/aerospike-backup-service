@@ -75,10 +75,6 @@ func (c *AerospikeCluster) GetPassword() *string {
 
 func (c *Credentials) loadPassword() *string {
 	if c.Password != nil {
-		if c.SecretAgent == nil {
-			return c.Password
-		}
-
 		password, err := c.SecretAgent.Read(*c.Password)
 		if err != nil {
 			slog.Warn("Failed to read password from secret agent", slog.Any("err", err))

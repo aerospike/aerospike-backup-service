@@ -48,7 +48,14 @@ func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
 	}
 }
 
+// Read reads the secret at the given path using the Secret Agent.
+// If no secret agent is configured, it returns the original path.
+// If given path is not SA path (not starts with "secrets:"), it returns the original path.
 func (s *SecretAgent) Read(path string) (string, error) {
+	if s == nil { // If no secret agent configured, return original path.
+		return path, nil
+	}
+
 	// Initialize cache only once.
 	s.once.Do(func() {
 		agentConfig := s.ToSecretAgentConfig()
