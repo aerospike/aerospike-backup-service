@@ -103,9 +103,17 @@ func clientFromSharedKey(
 func clientFromAD(endpoint string, auth model.AzureADAuth, sa *model.SecretAgent) (*azblob.Client, error) {
 	clientSecret, err := sa.Read(auth.ClientSecret)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve client secret from secret agent: %w", err)
+		return nil, fmt.Errorf("failed to retrieve client-secret from secret agent: %w", err)
 	}
-	cred, err := azidentity.NewClientSecretCredential(auth.TenantID, auth.ClientID, clientSecret, nil)
+	tenantID, err := sa.Read(auth.TenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve tenant-id from secret agent: %w", err)
+	}
+	clientID, err := sa.Read(auth.ClientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve client-id from secret agent: %w", err)
+	}
+	cred, err := azidentity.NewClientSecretCredential(tenantID, clientID, clientSecret, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure AAD credentials: %w", err)
 	}
