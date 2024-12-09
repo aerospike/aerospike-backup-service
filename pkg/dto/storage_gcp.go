@@ -11,7 +11,7 @@ type GcpStorage struct {
 	SecretAgentConfig `yaml:",inline"`
 	// Path to file containing Service Account JSON Key.
 	KeyFile string `yaml:"key-file-path" json:"key-file-path"`
-	// Secret key value
+	// KeyJSON is the contents of Service Account JSON Key.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	KeyJSON string `yaml:"key-json" json:"key-json"`
 	// GCP storage bucket name.

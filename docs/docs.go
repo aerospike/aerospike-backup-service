@@ -2020,8 +2020,12 @@ const docTemplate = `{
                     "description": "Alternative url.\nIt is not recommended to use an alternate URL in a production environment.",
                     "type": "string"
                 },
-                "key-file": {
-                    "description": "Path to file containing Service Account JSON Key.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                "key-file-path": {
+                    "description": "Path to file containing Service Account JSON Key.",
+                    "type": "string"
+                },
+                "key-json": {
+                    "description": "KeyJSON is the contents of Service Account JSON Key.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
                     "type": "string"
                 },
                 "path": {
