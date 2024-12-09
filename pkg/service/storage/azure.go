@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
@@ -113,6 +114,10 @@ func clientFromAD(endpoint string, auth model.AzureADAuth, sa *model.SecretAgent
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve client-id from secret agent: %w", err)
 	}
+	slog.Info("clientFromAD", // TODO: remove before release
+		slog.String("client_id", clientID),
+		slog.String("tenant_id", tenantID),
+		slog.String("client-secret", clientSecret))
 	cred, err := azidentity.NewClientSecretCredential(tenantID, clientID, clientSecret, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure AAD credentials: %w", err)
