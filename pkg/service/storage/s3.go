@@ -8,7 +8,9 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/aws/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -70,7 +72,12 @@ func init() {
 }
 
 func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error) {
+	credentialsProvider, err := withCredentialsProvider(s.Auth)
+	if err != nil {
+		return nil, err
+	}
 	cfg, err := config.LoadDefaultConfig(ctx,
+		credentialsProvider,
 		config.WithSharedConfigProfile(s.S3Profile),
 		config.WithRegion(s.S3Region),
 	)
@@ -95,4 +102,22 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 	})
 
 	return client, nil
+}
+
+func withCredentialsProvider(a *model.S3Authentication) (config.LoadOptionsFunc, error) {
+	if a == nil {
+		return func(*config.LoadOptions) error {
+			return nil // No-op implementation
+		}, nil
+	}
+
+	keyID, accessKey, err := a.ReadSecrets()
+	if err != nil {
+		return nil, err
+	}
+	return config.WithCredentialsProvider(credentials.StaticCredentialsProvider{
+		Value: aws.Credentials{
+			AccessKeyID: keyID, SecretAccessKey: accessKey,
+		},
+	}), nil
 }

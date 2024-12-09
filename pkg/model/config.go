@@ -252,3 +252,16 @@ func (c *Config) CopyFrom(other *Config) {
 	c.BackupRoutines = other.BackupRoutines
 	c.SecretAgents = other.SecretAgents
 }
+
+func (c *Config) ResolveSecretAgent(name *string, defaultAgent *SecretAgent) (*SecretAgent, error) {
+	if name != nil {
+		agent, ok := c.SecretAgents[*name]
+		if !ok {
+			return nil, fmt.Errorf("unknown secret agent %q", *name)
+		}
+
+		return agent, nil
+	}
+
+	return defaultAgent, nil
+}

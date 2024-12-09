@@ -1885,21 +1885,17 @@ const docTemplate = `{
                     ]
                 },
                 "password": {
-                    "description": "The password for the cluster authentication.",
+                    "description": "The password for the cluster authentication.\nIt can be either plain text or path into the secret agent.",
                     "type": "string",
                     "example": "testPswd"
                 },
-                "password-key-secret": {
-                    "description": "The secret keyword in Aerospike Secret Agent containing password.\nOnly applicable when SecretAgent is specified.",
-                    "type": "string"
-                },
                 "password-path": {
-                    "description": "The file path with the password string, will take precedence over the password field.",
+                    "description": "The file path with the password string.",
                     "type": "string",
                     "example": "/path/to/pass.txt"
                 },
                 "secret-agent": {
-                    "description": "Secret Agent configuration (optional).",
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.SecretAgent"
@@ -1907,7 +1903,7 @@ const docTemplate = `{
                     ]
                 },
                 "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.",
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
                     "type": "string"
                 },
                 "user": {
@@ -2518,6 +2514,10 @@ const docTemplate = `{
                 "s3-region"
             ],
             "properties": {
+                "access-key-id": {
+                    "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+                    "type": "string"
+                },
                 "bucket": {
                     "description": "The S3 bucket name.",
                     "type": "string"
@@ -2557,11 +2557,27 @@ const docTemplate = `{
                     "description": "The S3 region string.",
                     "type": "string",
                     "example": "eu-central-1"
+                },
+                "secret-access-key": {
+                    "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+                    "type": "string"
+                },
+                "secret-agent": {
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    ]
+                },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+                    "type": "string"
                 }
             }
         },
         "dto.SecretAgent": {
-            "description": "SecretAgent represents the configuration of an Aerospike Secret Agent for a backup/restore operation.",
+            "description": "SecretAgent represents the configuration of an Aerospike Secret Agent.",
             "type": "object",
             "properties": {
                 "address": {

@@ -52,8 +52,13 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.AddStorage(name, newStorage.ToModel())
+		storage, err := newStorage.ToModel(config)
+		if err != nil {
+			return fmt.Errorf("failed to convert storage: %w", err)
+		}
+		return config.AddStorage(name, storage)
 	})
+
 	if err != nil {
 		hLogger.Error("failed to add storage",
 			slog.String("name", name),
@@ -77,7 +82,7 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAllStorage"))
 
-	toDTO := dto.ConvertStorageMapToDTO(s.config.Storage)
+	toDTO := dto.ConvertStorageMapToDTO(s.config.Storage, s.config)
 	jsonResponse, err := dto.Serialize(toDTO, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal storage",
@@ -108,6 +113,8 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified storage could not be found"
 // @Failure     500 {string} string
+//
+//nolint:dupl
 func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readStorage"))
 
@@ -123,7 +130,7 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResponse, err := dto.Serialize(dto.NewStorageFromModel(storage), dto.JSON)
+	jsonResponse, err := dto.Serialize(dto.NewStorageFromModel(storage, s.config), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal storage",
 			slog.Any("error", err),
@@ -170,7 +177,11 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.UpdateStorage(storageName, updatedStorage.ToModel())
+		storage, err := updatedStorage.ToModel(config)
+		if err != nil {
+			return fmt.Errorf("failed to convert storage: %w", err)
+		}
+		return config.UpdateStorage(storageName, storage)
 	})
 	if err != nil {
 		hLogger.Error("failed to update storage",

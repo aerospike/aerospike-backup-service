@@ -1,24 +1,46 @@
 package dto
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 )
 
+// SecretAgentConfig aggregates the SecretAgent configuration.
+// It is intended to be embedded into DTOs that require Secret Agent configuration.
+type SecretAgentConfig struct {
+	// Secret Agent configuration (optional).
+	// Mutually exclusive with secret-agent-name.
+	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
+	// Secret Agent configuration (optional). Link to one of preconfigured agents.
+	// Mutually exclusive with secret-agent.
+	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
+}
+
+func (c SecretAgentConfig) validate() error {
+	if c.SecretAgent != nil && c.SecretAgentName != nil {
+		return errors.New("secret-agent-name and secret-agent are mutually exclusive")
+	}
+	if err := c.SecretAgent.validate(); err != nil {
+		return fmt.Errorf("secret-agent validation error: %w", err)
+	}
+
+	return nil
+}
+
 // SecretAgent represents the configuration of an Aerospike Secret Agent
 // for a backup/restore operation.
 // Aerospike Secret Agent acts as a proxy layer between Aerospike server and one or more
 // external secrets management services, fetching secrets on behalf of the server.
 //
-// @Description SecretAgent represents the configuration of an Aerospike Secret Agent
-// @Description for a backup/restore operation.
+// @Description SecretAgent represents the configuration of an Aerospike Secret Agent.
 type SecretAgent struct {
 	// Connection type: tcp, unix.
-	ConnectionType *string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp"`
+	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp"`
 	// Address of the Secret Agent.
-	Address *string `yaml:"address,omitempty" json:"address,omitempty" example:"localhost"`
+	Address string `yaml:"address,omitempty" json:"address,omitempty" example:"localhost"`
 	// Port the Secret Agent is running on.
 	Port *int `yaml:"port,omitempty" json:"port,omitempty" example:"8080"`
 	// Timeout in milliseconds.
@@ -44,7 +66,20 @@ func (s *SecretAgent) ToModel() *model.SecretAgent {
 	}
 }
 
-func NewSecretAgentFromModel(m *model.SecretAgent) *SecretAgent {
+func ResolveSecretAgentFromModel(s *model.SecretAgent, config *model.Config) SecretAgentConfig {
+	secretAgentName := findKeyByValue(config.SecretAgents, s)
+	if secretAgentName != "" {
+		return SecretAgentConfig{
+			SecretAgentName: &secretAgentName,
+		}
+	}
+
+	return SecretAgentConfig{
+		SecretAgent: newSecretAgentFromModel(s),
+	}
+}
+
+func newSecretAgentFromModel(m *model.SecretAgent) *SecretAgent {
 	if m == nil {
 		return nil
 	}
@@ -69,7 +104,7 @@ func (s *SecretAgent) validate() error {
 		return nil
 	}
 
-	if s.Address == nil || *s.Address == "" {
+	if s.Address == "" {
 		return fmt.Errorf("address is required")
 	}
 
@@ -77,13 +112,12 @@ func (s *SecretAgent) validate() error {
 		return fmt.Errorf("invalid timeout: %d", *s.Timeout)
 	}
 
-	if s.ConnectionType == nil {
-		return fmt.Errorf("connection type is required")
+	if s.ConnectionType != saClient.ConnectionTypeTCP && s.ConnectionType != saClient.ConnectionTypeUDS {
+		return fmt.Errorf("unsupported connection type: %s", s.ConnectionType)
 	}
 
-	if s.ConnectionType != nil &&
-		(*s.ConnectionType != saClient.ConnectionTypeTCP && *s.ConnectionType != saClient.ConnectionTypeUDS) {
-		return fmt.Errorf("unsupported connection type: %s", *s.ConnectionType)
+	if s.Port != nil && (*s.Port <= 0 || *s.Port > 65535) {
+		return fmt.Errorf("'port' must be between 1 and 65535, got: %d", *s.Port)
 	}
 
 	return nil

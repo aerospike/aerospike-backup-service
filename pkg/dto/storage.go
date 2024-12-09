@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
@@ -67,40 +66,6 @@ type LocalStorage struct {
 func (l *LocalStorage) Validate() error {
 	if l.Path == "" {
 		return errors.New("local storage path is not specified")
-	}
-	return nil
-}
-
-// S3Storage represents the configuration for S3 storage.
-//
-//nolint:lll
-type S3Storage struct {
-	// The S3 bucket name.
-	Bucket string `yaml:"bucket" json:"bucket" validate:"required"`
-	// The root path for the backup repository within the bucket.
-	// If not specified, backups will be saved in the bucket's root.
-	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups"`
-	// The S3 region string.
-	S3Region string `yaml:"s3-region" json:"s3-region" example:"eu-central-1" validate:"required"`
-	// The S3 profile name (AWS S3 optional).
-	S3Profile string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty" example:"default"`
-	// An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).
-	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000"`
-	// The log level of the AWS S3 SDK (AWS S3 optional).
-	S3LogLevel *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enum:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
-	// The minimum size in bytes of individual S3 UploadParts.
-	MinPartSize int `yaml:"min_part_size,omitempty" json:"min_part_size,omitempty" example:"10" default:"5242880"`
-	// The maximum number of simultaneous requests from S3.
-	MaxConnsPerHost int `yaml:"max_async_connections,omitempty" json:"max_async_connections,omitempty" example:"16"`
-}
-
-// Validate checks if the S3Storage is valid.
-func (s *S3Storage) Validate() error {
-	if s.Bucket == "" {
-		return errors.New("S3 bucket is not specified")
-	}
-	if s.S3Region == "" {
-		return errors.New("S3 region is not specified")
 	}
 	return nil
 }
@@ -169,23 +134,14 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 }
 
 // ToModel converts the Storage DTO to its corresponding model.
-func (s *Storage) ToModel() model.Storage {
+func (s *Storage) ToModel(c *model.Config) (model.Storage, error) {
 	if s.LocalStorage != nil {
 		return &model.LocalStorage{
 			Path: s.LocalStorage.Path,
-		}
+		}, nil
 	}
 	if s.S3Storage != nil {
-		return &model.S3Storage{
-			Bucket:             s.S3Storage.Bucket,
-			Path:               s.S3Storage.Path,
-			S3Region:           s.S3Storage.S3Region,
-			S3Profile:          s.S3Storage.S3Profile,
-			S3EndpointOverride: s.S3Storage.S3EndpointOverride,
-			S3LogLevel:         s.S3Storage.S3LogLevel,
-			MinPartSize:        s.S3Storage.MinPartSize,
-			MaxConnsPerHost:    s.S3Storage.MaxConnsPerHost,
-		}
+		return s.S3Storage.ToModel(c)
 	}
 	if s.GcpStorage != nil {
 		return &model.GcpStorage{
@@ -193,7 +149,7 @@ func (s *Storage) ToModel() model.Storage {
 			BucketName: s.GcpStorage.BucketName,
 			Path:       s.GcpStorage.Path,
 			Endpoint:   s.GcpStorage.Endpoint,
-		}
+		}, nil
 	}
 	if s.AzureStorage != nil {
 		return &model.AzureStorage{
@@ -201,10 +157,10 @@ func (s *Storage) ToModel() model.Storage {
 			ContainerName: s.AzureStorage.ContainerName,
 			Path:          s.AzureStorage.Path,
 			Auth:          getAzureAuth(s),
-		}
+		}, nil
 	}
-	slog.Info("error converting storage dto to model: no storage configuration provided")
-	return nil
+
+	return nil, errors.New("error converting storage dto to model: no storage configuration provided")
 }
 
 func getAzureAuth(s *Storage) model.AzureAuth {
@@ -227,7 +183,7 @@ func getAzureAuth(s *Storage) model.AzureAuth {
 }
 
 // NewStorageFromModel creates a new Storage DTO from the model.
-func NewStorageFromModel(m model.Storage) *Storage {
+func NewStorageFromModel(m model.Storage, config *model.Config) *Storage {
 	switch s := m.(type) {
 	case *model.LocalStorage:
 		return &Storage{
@@ -237,16 +193,7 @@ func NewStorageFromModel(m model.Storage) *Storage {
 		}
 	case *model.S3Storage:
 		return &Storage{
-			S3Storage: &S3Storage{
-				Bucket:             s.Bucket,
-				Path:               s.Path,
-				S3Region:           s.S3Region,
-				S3Profile:          s.S3Profile,
-				S3EndpointOverride: s.S3EndpointOverride,
-				S3LogLevel:         s.S3LogLevel,
-				MinPartSize:        s.MinPartSize,
-				MaxConnsPerHost:    s.MaxConnsPerHost,
-			},
+			S3Storage: newS3StorageFromModel(s, config),
 		}
 	case *model.GcpStorage:
 		return &Storage{
