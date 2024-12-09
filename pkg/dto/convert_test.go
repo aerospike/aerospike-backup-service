@@ -13,17 +13,19 @@ import (
 
 func TestConfigModelConversionIsLossless(t *testing.T) {
 	// Step 1: Create a sample Config object with sample data
+	secretAgentConfig := SecretAgentConfig{
+		SecretAgentName: util.Ptr("agent1"),
+	}
+
 	originalConfig := &Config{
 		ServiceConfig: NewBackupServiceConfigWithDefaultValues(),
 		AerospikeClusters: map[string]*AerospikeCluster{
 			"cluster1": {
 				SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 				Credentials: &Credentials{
-					User:     util.Ptr("tester"),
-					Password: util.Ptr("psw"),
-					SecretAgentConfig: SecretAgentConfig{
-						SecretAgentName: util.Ptr("agent1"),
-					},
+					User:              util.Ptr("tester"),
+					Password:          util.Ptr("psw"),
+					SecretAgentConfig: secretAgentConfig,
 				},
 			},
 			"cluster2": {
@@ -55,13 +57,11 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 			},
 			"aws 1": { // secret agent by name
 				S3Storage: &S3Storage{
-					Bucket:          "bucket",
-					S3Region:        "region",
-					AccessKeyID:     util.Ptr("id"),
-					SecretAccessKey: util.Ptr("key"),
-					SecretAgentConfig: SecretAgentConfig{
-						SecretAgentName: util.Ptr("agent1"),
-					},
+					Bucket:            "bucket",
+					S3Region:          "region",
+					AccessKeyID:       util.Ptr("id"),
+					SecretAccessKey:   util.Ptr("key"),
+					SecretAgentConfig: secretAgentConfig,
 				},
 			},
 			"aws 2": { // secret agent by full definition
@@ -80,28 +80,38 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 			},
 			"gcp": {
 				GcpStorage: &GcpStorage{
-					KeyFile:    "key-file",
+					KeyFile:           "key-file",
+					BucketName:        "bucket",
+					Path:              "path",
+					Endpoint:          "http://localhost",
+					SecretAgentConfig: secretAgentConfig,
+				},
+			},
+			"gcp2": {
+				GcpStorage: &GcpStorage{
+					KeyJSON:    "key-json",
 					BucketName: "bucket",
 					Path:       "path",
 					Endpoint:   "http://localhost",
 					SecretAgentConfig: SecretAgentConfig{
-						SecretAgentName: util.Ptr("agent1"),
+						SecretAgent: &SecretAgent{
+							Address:        "host3",
+							ConnectionType: saClient.ConnectionTypeTCP,
+						},
 					},
 				},
 			},
 			"azure 1": {
 				AzureStorage: &AzureStorage{
-					SecretAgentConfig: SecretAgentConfig{
-						SecretAgentName: util.Ptr("agent1"),
-					},
-					Endpoint:      "http://localhost",
-					ContainerName: "container",
-					Path:          "backup",
-					AccountName:   "hello",
-					AccountKey:    "world",
-					TenantID:      "",
-					ClientID:      "",
-					ClientSecret:  "",
+					SecretAgentConfig: secretAgentConfig,
+					Endpoint:          "http://localhost",
+					ContainerName:     "container",
+					Path:              "backup",
+					AccountName:       "hello",
+					AccountKey:        "world",
+					TenantID:          "",
+					ClientID:          "",
+					ClientSecret:      "",
 				},
 			},
 			"azure 2": {

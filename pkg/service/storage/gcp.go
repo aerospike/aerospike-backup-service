@@ -73,11 +73,15 @@ func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, er
 	opts := make([]option.ClientOption, 0)
 
 	if g.KeyFile != "" {
-		keyFile, err := g.SecretAgent.Read(g.KeyFile)
+		opts = append(opts, option.WithCredentialsFile(g.KeyFile))
+	}
+	if g.KeyJSON != "" {
+		key, err := g.SecretAgent.Read(g.KeyJSON)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read key json from secret agent: %w", err)
 		}
-		opts = append(opts, option.WithCredentialsFile(keyFile))
+
+		opts = append(opts, option.WithCredentialsJSON([]byte(key)))
 	}
 
 	if g.Endpoint != "" {

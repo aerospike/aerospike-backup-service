@@ -10,8 +10,10 @@ import (
 type GcpStorage struct {
 	SecretAgentConfig `yaml:",inline"`
 	// Path to file containing Service Account JSON Key.
+	KeyFile string `yaml:"key-file-path" json:"key-file-path"`
+	// Secret key value
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	KeyFile string `yaml:"key-file" json:"key-file"`
+	KeyJSON string `yaml:"key-json" json:"key-json"`
 	// GCP storage bucket name.
 	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
 	// The root path for the backup repository. If not specified, backups will be saved in the bucket's root.
@@ -25,6 +27,9 @@ type GcpStorage struct {
 func (s *GcpStorage) Validate() error {
 	if s.BucketName == "" {
 		return errors.New("GCP bucket name is not specified")
+	}
+	if s.KeyFile != "" && s.KeyJSON != "" {
+		return errors.New("key-file-path and key-json are mutually exclusive")
 	}
 	return nil
 }
@@ -40,6 +45,7 @@ func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
 		BucketName:  s.BucketName,
 		Path:        s.Path,
 		Endpoint:    s.Endpoint,
+		KeyJSON:     s.KeyJSON,
 		SecretAgent: agent,
 	}, nil
 }
@@ -50,6 +56,7 @@ func newGcpStorageFromModel(s *model.GcpStorage, config *model.Config) *GcpStora
 		BucketName:        s.BucketName,
 		Path:              s.Path,
 		Endpoint:          s.Endpoint,
+		KeyJSON:           s.KeyJSON,
 		SecretAgentConfig: ResolveSecretAgentFromModel(s.SecretAgent, config),
 	}
 }
