@@ -1737,13 +1737,14 @@ components:
             Alternative url.
             It is not recommended to use an alternate URL in a production environment.
           type: string
-        key-file-path:
-          description: Path to file containing Service Account JSON Key.
-          type: string
-        key-json:
+        key:
           description: |-
-            KeyJSON is the contents of Service Account JSON Key.
+            Key is the service account key in JSON format.
             This is sensitive information. Can be a path in secret agent or an actual value.
+          type: string
+        key-file-path:
+          description: Path to the file containing the service account key in JSON
+            format.
           type: string
         path:
           description: "The root path for the backup repository. If not specified,\

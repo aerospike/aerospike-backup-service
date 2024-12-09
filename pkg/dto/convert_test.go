@@ -89,7 +89,7 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 			},
 			"gcp2": {
 				GcpStorage: &GcpStorage{
-					KeyJSON:    "key-json",
+					Key:        "key-json",
 					BucketName: "bucket",
 					Path:       "path",
 					Endpoint:   "http://localhost",
