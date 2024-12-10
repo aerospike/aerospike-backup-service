@@ -90,9 +90,9 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 		}
 		r.restoreJobs.addTotalRecords(jobID, totalRecords)
 		ctx, cancel := context.WithCancel(ctx)
-		r.restoreJobs.addJob(jobID, &RestoreJob{
-			handler: handler,
-			cancel:  cancel,
+		r.restoreJobs.addJob(jobID, &RestoreHandlerWithCancel{
+			RestoreHandler: handler,
+			cancel:         cancel,
 		})
 
 		// Wait for the restore operation to complete
@@ -208,9 +208,9 @@ func (r *dataRestorer) restoreNamespace(
 
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 		ctx, cancel := context.WithCancel(ctx)
-		r.restoreJobs.addJob(jobID, &RestoreJob{
-			handler: handler,
-			cancel:  cancel,
+		r.restoreJobs.addJob(jobID, &RestoreHandlerWithCancel{
+			RestoreHandler: handler,
+			cancel:         cancel,
 		})
 
 		err = handler.Wait(ctx)

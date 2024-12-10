@@ -17,17 +17,17 @@ type RestoreHandler interface {
 	Wait(context.Context) error
 }
 
-type RestoreJob struct {
-	handler RestoreHandler
-	cancel  func()
+type RestoreHandlerWithCancel struct {
+	RestoreHandler
+	cancel func()
 }
 
-func (rj *RestoreJob) Cancel() {
+func (rj *RestoreHandlerWithCancel) Cancel() {
 	rj.cancel()
 }
 
-func (rj *RestoreJob) GetStats() *models.RestoreStats {
-	return rj.handler.GetStats()
+func (rj *RestoreHandlerWithCancel) GetStats() *models.RestoreStats {
+	return rj.RestoreHandler.GetStats()
 }
 
 // Restore represents a restore service.

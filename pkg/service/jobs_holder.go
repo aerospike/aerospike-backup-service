@@ -11,7 +11,7 @@ import (
 )
 
 type jobInfo struct {
-	handlers     []*RestoreJob
+	handlers     []*RestoreHandlerWithCancel
 	status       model.JobStatus
 	err          error
 	totalRecords uint64
@@ -47,7 +47,7 @@ func (h *RestoreJobsHolder) newJob(label string) model.RestoreJobID {
 }
 
 // addJob should be called for each backup (full or incremental) handler.
-func (h *RestoreJobsHolder) addJob(id model.RestoreJobID, handler *RestoreJob) {
+func (h *RestoreJobsHolder) addJob(id model.RestoreJobID, handler *RestoreHandlerWithCancel) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.jobs[id]; exists {
