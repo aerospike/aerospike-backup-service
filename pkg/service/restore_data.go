@@ -287,5 +287,6 @@ func (r *dataRestorer) CancelRestore(jobID model.RestoreJobID) error {
 		j.Cancel()
 	}
 
-	return nil
+	r.restoreJobs.setCancelled(jobID)
+	return err
 }

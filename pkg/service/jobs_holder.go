@@ -80,6 +80,14 @@ func (h *RestoreJobsHolder) setFailed(id model.RestoreJobID, err error) {
 	}
 }
 
+func (h *RestoreJobsHolder) setCancelled(id model.RestoreJobID) {
+	h.Lock()
+	defer h.Unlock()
+	if job, exists := h.jobs[id]; exists {
+		job.status = model.JobStatusCancelled
+	}
+}
+
 func (h *RestoreJobsHolder) getStatus(id model.RestoreJobID) (*model.RestoreJobStatus, error) {
 	h.Lock()
 	defer h.Unlock()

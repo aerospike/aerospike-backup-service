@@ -178,9 +178,7 @@ func TestRestoreOK(t *testing.T) {
 	})
 	restoreRequest := &model.RestoreRequest{
 		DestinationCluster: model.NewLocalAerospikeCluster(),
-		Policy: &model.RestorePolicy{
-			SetList: []string{"set1"},
-		},
+		Policy:             &model.RestorePolicy{},
 		SourceStorage: &model.LocalStorage{
 			Path: validBackupPath,
 		},
@@ -190,21 +188,10 @@ func TestRestoreOK(t *testing.T) {
 	require.NoError(t, err)
 	jobStatus, err := restoreService.JobStatus(jobID)
 	require.NoError(t, err)
-	if jobStatus.Status != model.JobStatusRunning {
-		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
-	}
-	deadline := time.Now().Add(1 * time.Second)
-	for time.Now().Before(deadline) {
-		jobStatus, err = restoreService.JobStatus(jobID)
-		require.NoError(t, err)
+	require.Equal(t, model.JobStatusRunning, jobStatus.Status)
 
-		if jobStatus.Status == model.JobStatusDone {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	require.Equal(t, model.JobStatusDone, jobStatus.Status)
+	_, err = waitForJob(t, jobID)
+	require.NoError(t, err)
 }
 
 func TestLatestFullBackupBeforeTime(t *testing.T) {
@@ -218,15 +205,9 @@ func TestLatestFullBackupBeforeTime(t *testing.T) {
 	toTime := time.UnixMilli(25)
 	result := latestBackupBeforeTime(backupList, &toTime)
 
-	if result == nil {
-		t.Error("Expected a non-nil result, but got nil")
-	}
-	if len(result) != 2 {
-		t.Errorf("Expected 2 backups")
-	}
-	if result[0] != backupList[1] {
-		t.Errorf("Expected the latest backup, but got %+v", result)
-	}
+	require.NotNil(t, result)
+	require.Equal(t, 2, len(result))
+	require.Equal(t, result[0], backupList[1])
 }
 
 func TestLatestFullBackupEqualTime(t *testing.T) {
@@ -239,15 +220,9 @@ func TestLatestFullBackupEqualTime(t *testing.T) {
 	toTime := time.UnixMilli(20)
 	result := latestBackupBeforeTime(backupList, &toTime)
 
-	if result == nil {
-		t.Error("Expected a non-nil result, but got nil")
-	}
-	if len(result) != 1 {
-		t.Errorf("Expected 1 backup")
-	}
-	if result[0] != backupList[1] {
-		t.Errorf("Expected the latest backup, but got %+v", result)
-	}
+	require.NotNil(t, result)
+	require.Equal(t, 1, len(result))
+	require.Equal(t, result[0], backupList[1])
 }
 
 func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
@@ -260,46 +235,28 @@ func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
 	toTime := time.UnixMilli(5)
 	result := latestBackupBeforeTime(backupList, &toTime)
 
-	if result != nil {
-		t.Errorf("Expected a non result, but got %+v", result)
-	}
+	require.Nil(t, result)
 }
 
 func Test_RestoreTimestamp(t *testing.T) {
 	request := model.RestoreTimestampRequest{
 		DestinationCluster: model.NewLocalAerospikeCluster(),
-		Policy: &model.RestorePolicy{
-			SetList: []string{"set1"},
-		},
-		Time:        time.UnixMilli(100),
-		RoutineName: "routine",
+		Policy:             &model.RestorePolicy{},
+		Time:               time.UnixMilli(100),
+		RoutineName:        "routine",
 	}
 
 	jobID, err := restoreService.RestoreByTime(&request)
 	require.NoError(t, err, "RestoreByTime should not return an error")
 
-	deadline := time.Now().Add(1 * time.Second)
-	var jobStatus *model.RestoreJobStatus
-	for time.Now().Before(deadline) {
-		jobStatus, err = restoreService.JobStatus(jobID)
-		require.NoError(t, err)
-
-		if jobStatus.Status == model.JobStatusDone {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-
-	require.NotNil(t, jobStatus)
-	require.Equal(t, model.JobStatusDone, jobStatus.Status)
+	jobStatus, err := waitForJob(t, jobID)
+	require.NoError(t, err)
 	require.Equal(t, 3, int(jobStatus.ReadRecords), "Expected 3 (one full and 2 incremental backups)")
 }
 
 func Test_WrongStatus(t *testing.T) {
-	wrongJobStatus, err := restoreService.JobStatus(1111)
-	if err == nil {
-		t.Errorf("Expected not found, but got %v", wrongJobStatus)
-	}
+	_, err := restoreService.JobStatus(1111)
+	require.Error(t, err)
 }
 
 func Test_RestoreByTimeFailNoBackend(t *testing.T) {
@@ -308,9 +265,7 @@ func Test_RestoreByTimeFailNoBackend(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !errors.Is(err, errBackendNotFound) {
-		t.Errorf("Expected error %v, but got %v", errBackendNotFound, err)
-	}
+	require.ErrorIs(t, err, errBackendNotFound)
 }
 
 func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
@@ -319,9 +274,7 @@ func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !errors.Is(err, errBackupNotFound) {
-		t.Errorf("Expected error %v, but got %v", errBackupNotFound, err)
-	}
+	require.ErrorIs(t, err, errBackupNotFound)
 }
 
 func Test_RestoreByTimeFailNoBackup(t *testing.T) {
@@ -331,9 +284,7 @@ func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 	}
 
 	_, err := restoreService.RestoreByTime(request)
-	if err == nil || !errors.Is(err, errBackupNotFound) {
-		t.Errorf("Expected error %v, but got %v", errBackupNotFound, err)
-	}
+	require.ErrorIs(t, err, errBackupNotFound)
 }
 
 func Test_restoreTimestampFail(t *testing.T) {
@@ -364,4 +315,55 @@ func (m *MockClientManager) CreateClient(cluster *model.AerospikeCluster) (*back
 	}
 
 	return &backup.Client{}, nil
+}
+
+func TestRestoreCancel(t *testing.T) {
+	makeTestFolders()
+	t.Cleanup(func() {
+		cleanTestFolder()
+	})
+	restoreRequest := &model.RestoreRequest{
+		DestinationCluster: model.NewLocalAerospikeCluster(),
+		Policy:             &model.RestorePolicy{},
+		SourceStorage: &model.LocalStorage{
+			Path: validBackupPath,
+		},
+		BackupDataPath: "namespace",
+	}
+	jobID, err := restoreService.Restore(restoreRequest)
+	require.NoError(t, err)
+	time.Sleep(10 * time.Millisecond)
+	err = restoreService.CancelRestore(jobID)
+	require.NoError(t, err)
+	jobStatus, err := restoreService.JobStatus(jobID)
+	require.NoError(t, err)
+	require.Equal(t, model.JobStatusCancelled, jobStatus.Status)
+	handler := restoreService.restoreJobs.jobs[jobID].jobs[0].handler
+	mockHandler := handler.(*MockRestoreHandler)
+	require.True(t, mockHandler.wasCancelled)
+}
+
+func waitForJob(t *testing.T, jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
+	t.Helper()
+	return wait(func() (*model.RestoreJobStatus, bool) {
+		status, err := restoreService.JobStatus(jobID)
+		require.NoError(t, err)
+		require.NotNil(t, status)
+		return status, status.Status == model.JobStatusDone
+	})
+}
+
+func wait[T any](f func() (T, bool)) (T, error) {
+	deadline := time.Now().Add(1 * time.Second)
+	for time.Now().Before(deadline) {
+		val, success := f()
+		if success {
+			return val, nil
+		}
+
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	var result T
+	return result, errors.New("timeout reached")
 }

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/backup-go"
@@ -21,6 +22,7 @@ func NewRestoreMock() *RestoreMock {
 
 // MockRestoreHandler is a mock implementation of the RestoreHandler interface.
 type MockRestoreHandler struct {
+	wasCancelled bool
 }
 
 func (m *MockRestoreHandler) GetStats() *models.RestoreStats {
@@ -29,8 +31,15 @@ func (m *MockRestoreHandler) GetStats() *models.RestoreStats {
 	return &stats
 }
 
-func (m *MockRestoreHandler) Wait(_ context.Context) error {
-	return nil
+func (m *MockRestoreHandler) Wait(ctx context.Context) error {
+	select {
+	case <-time.After(100 * time.Millisecond):
+		// Simulate work completion after 100ms
+		return nil
+	case <-ctx.Done():
+		m.wasCancelled = true
+		return ctx.Err()
+	}
 }
 
 // Run mocks the interface method.
