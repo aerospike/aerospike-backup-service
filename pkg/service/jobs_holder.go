@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"math/rand"
 	"sync"
 	"time"
@@ -63,28 +65,20 @@ func (h *RestoreJobsHolder) addTotalRecords(id model.RestoreJobID, t uint64) {
 	}
 }
 
-func (h *RestoreJobsHolder) setDone(id model.RestoreJobID) {
+func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.jobs[id]; exists {
-		job.status = model.JobStatusDone
-	}
-}
-
-func (h *RestoreJobsHolder) setFailed(id model.RestoreJobID, err error) {
-	h.Lock()
-	defer h.Unlock()
-	if job, exists := h.jobs[id]; exists {
+		if err == nil {
+			job.status = model.JobStatusDone
+			return
+		}
+		if errors.Is(err, context.Canceled) {
+			job.status = model.JobStatusCancelled
+			return
+		}
 		job.status = model.JobStatusFailed
 		job.err = err
-	}
-}
-
-func (h *RestoreJobsHolder) setCancelled(id model.RestoreJobID) {
-	h.Lock()
-	defer h.Unlock()
-	if job, exists := h.jobs[id]; exists {
-		job.status = model.JobStatusCancelled
 	}
 }
 

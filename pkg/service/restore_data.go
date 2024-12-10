@@ -12,7 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	"github.com/aerospike/backup-go"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var errBackendNotFound = errors.New("backend not found")
@@ -75,7 +74,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 			slog.Error("Failed to restore by path",
 				slog.Any("cluster", request.DestinationCluster.ClusterLabel),
 				slog.Any("err", err))
-			r.restoreJobs.setFailed(jobID, err)
+			r.restoreJobs.finishJob(jobID, err)
 			return
 		}
 		defer r.clientManager.Close(client)
@@ -86,7 +85,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 
 		handler, err := r.restoreService.Run(ctx, client, request)
 		if err != nil {
-			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed to start restore operation: %w", err))
+			r.restoreJobs.finishJob(jobID, fmt.Errorf("failed to start restore operation: %w", err))
 			return
 		}
 		r.restoreJobs.addTotalRecords(jobID, totalRecords)
@@ -98,16 +97,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 
 		// Wait for the restore operation to complete
 		err = handler.Wait(ctx)
-		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				r.restoreJobs.setCancelled(jobID)
-			} else {
-				r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
-			}
-			return
-		}
-
-		r.restoreJobs.setDone(jobID)
+		r.restoreJobs.finishJob(jobID, err)
 	}()
 
 	return jobID, nil
@@ -124,7 +114,7 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 			slog.Error("Failed to restore by path",
 				slog.Any("cluster label", request.DestinationCluster.ClusterLabel),
 				slog.Any("err", err))
-			r.restoreJobs.setFailed(jobID, err)
+			r.restoreJobs.finishJob(jobID, err)
 			return true
 		}
 	}
@@ -161,20 +151,19 @@ func (r *dataRestorer) restoreByTimeSync(
 		slog.Error("Failed to restore by timestamp",
 			slog.Any("cluster", request.DestinationCluster.ClusterLabel),
 			slog.Any("err", err))
-		r.restoreJobs.setFailed(jobID, err)
+		r.restoreJobs.finishJob(jobID, err)
 		return
 	}
 	defer r.clientManager.Close(client)
 
 	var wg sync.WaitGroup
-
-	multiError := prometheus.MultiError{}
+	var multiError error
 	for _, nsBackup := range fullBackups {
 		wg.Add(1)
 		go func(nsBackup model.BackupDetails) {
 			defer wg.Done()
 			if err := r.restoreNamespace(ctx, client, backend, request, jobID, nsBackup); err != nil {
-				multiError.Append(
+				multiError = errors.Join(multiError,
 					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
 						request.RoutineName, nsBackup.Namespace, err))
 			}
@@ -183,13 +172,7 @@ func (r *dataRestorer) restoreByTimeSync(
 
 	wg.Wait()
 
-	err = multiError.MaybeUnwrap()
-	if err != nil {
-		r.restoreJobs.setFailed(jobID, err)
-		return
-	}
-
-	r.restoreJobs.setDone(jobID)
+	r.restoreJobs.finishJob(jobID, multiError)
 }
 
 func (r *dataRestorer) restoreNamespace(
