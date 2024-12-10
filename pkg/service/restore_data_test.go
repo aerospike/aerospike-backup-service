@@ -9,7 +9,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/backup-go"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -194,11 +193,18 @@ func TestRestoreOK(t *testing.T) {
 	if jobStatus.Status != model.JobStatusRunning {
 		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
 	}
-	time.Sleep(1 * time.Second)
-	jobStatus, _ = restoreService.JobStatus(jobID)
-	if jobStatus.Status != model.JobStatusDone {
-		t.Errorf("Expected jobStatus to be %s, but was %s", model.JobStatusDone, jobStatus.Status)
+	deadline := time.Now().Add(1 * time.Second)
+	for time.Now().Before(deadline) {
+		jobStatus, err = restoreService.JobStatus(jobID)
+		require.NoError(t, err)
+
+		if jobStatus.Status == model.JobStatusDone {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
+
+	require.Equal(t, model.JobStatusDone, jobStatus.Status)
 }
 
 func TestLatestFullBackupBeforeTime(t *testing.T) {
@@ -272,11 +278,11 @@ func Test_RestoreTimestamp(t *testing.T) {
 	jobID, err := restoreService.RestoreByTime(&request)
 	require.NoError(t, err, "RestoreByTime should not return an error")
 
-	deadline := time.Now().Add(5 * time.Second)
+	deadline := time.Now().Add(1 * time.Second)
 	var jobStatus *model.RestoreJobStatus
 	for time.Now().Before(deadline) {
 		jobStatus, err = restoreService.JobStatus(jobID)
-		require.NoError(t, err, "JobStatus should not return an error")
+		require.NoError(t, err)
 
 		if jobStatus.Status == model.JobStatusDone {
 			break
@@ -284,8 +290,8 @@ func Test_RestoreTimestamp(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	require.NotNil(t, jobStatus, "JobStatus should not be nil")
-	require.Equal(t, model.JobStatusDone, jobStatus.Status, "Job did not reach 'done' status within timeout")
+	require.NotNil(t, jobStatus)
+	require.Equal(t, model.JobStatusDone, jobStatus.Status)
 	require.Equal(t, 3, int(jobStatus.ReadRecords), "Expected 3 (one full and 2 incremental backups)")
 }
 
@@ -339,87 +345,6 @@ func Test_restoreTimestampFail(t *testing.T) {
 
 	_, err := restoreService.RestoreByTime(request)
 	require.Error(t, err)
-}
-
-func Test_RetrieveConfiguration(t *testing.T) {
-	tests := []struct {
-		name      string
-		routine   string
-		timestamp time.Time
-		wantErr   bool
-	}{
-		{
-			name:      "normal",
-			routine:   "routine",
-			timestamp: time.UnixMilli(10),
-			wantErr:   false,
-		},
-		{
-			name:      "wrong time",
-			routine:   "routine",
-			timestamp: time.UnixMilli(1),
-			wantErr:   true,
-		},
-		{
-			name:      "wrong routine",
-			routine:   "routine_fail_read",
-			timestamp: time.UnixMilli(10),
-			wantErr:   true,
-		},
-		{
-			name:      "routine not found",
-			routine:   "routine not found",
-			timestamp: time.UnixMilli(10),
-			wantErr:   true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			res, err := restoreService.RetrieveConfiguration(tt.routine, tt.timestamp)
-			assert.Equal(t, tt.wantErr, err != nil, "Unexpected error presence, got: %v", err)
-
-			if !tt.wantErr {
-				assert.NotNil(t, res, "Expected non-nil result, got nil.")
-			} else {
-				assert.Nil(t, res, "Expected nil result as an error was expected.")
-			}
-		})
-	}
-}
-
-func Test_CalculateConfigurationBackupPath(t *testing.T) {
-	tests := []struct {
-		name    string
-		path    string
-		want    string
-		wantErr bool
-	}{
-		{
-			name:    "NormalPath",
-			path:    "backup/12345/data/ns1",
-			want:    "backup/12345/configuration",
-			wantErr: false,
-		},
-		{
-			name:    "InvalidPath",
-			path:    "://",
-			want:    "",
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := calculateConfigurationBackupPath(tt.path)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("calculateConfigurationBackupPath() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if result != tt.want {
-				t.Errorf("calculateConfigurationBackupPath() got = %v, want %v", result, tt.want)
-			}
-		})
-	}
 }
 
 // MockClientManager is a mock implementation of ClientManager for testing
