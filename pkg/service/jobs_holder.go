@@ -11,7 +11,7 @@ import (
 )
 
 type jobInfo struct {
-	jobs         []*RestoreJob
+	handlers     []*RestoreJob
 	status       model.JobStatus
 	err          error
 	totalRecords uint64
@@ -51,7 +51,7 @@ func (h *RestoreJobsHolder) addJob(id model.RestoreJobID, handler *RestoreJob) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.jobs[id]; exists {
-		job.jobs = append(job.jobs, handler)
+		job.handlers = append(job.handlers, handler)
 	}
 }
 

@@ -270,8 +270,8 @@ func (r *dataRestorer) CancelRestore(jobID model.RestoreJobID) error {
 	if err != nil {
 		return err
 	}
-	for _, j := range job.jobs {
-		j.Cancel()
+	for _, h := range job.handlers {
+		h.Cancel()
 	}
 
 	return err

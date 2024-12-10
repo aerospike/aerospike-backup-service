@@ -52,7 +52,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	}
 	a.backends.Init(a.config)
 
-	// Refill jobs
+	// Refill handlers
 	newHandlers := makeHandlers(ctx, a.clientManager, a.config, a.backends, a.handlerHolder)
 	clear(a.handlerHolder)
 	for k, v := range newHandlers {
@@ -84,7 +84,7 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 	return nil
 }
 
-// makeHandlers creates and returns a map of backup jobs per the configured routines.
+// makeHandlers creates and returns a map of backup handlers per the configured routines.
 func makeHandlers(
 	ctx context.Context,
 	clientManager aerospike.ClientManager,

@@ -44,7 +44,7 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 		Status: job.status,
 	}
 
-	for _, handler := range job.jobs {
+	for _, handler := range job.handlers {
 		stats := handler.GetStats()
 		status.ReadRecords += stats.GetReadRecords()
 		status.InsertedRecords += stats.GetRecordsInserted()

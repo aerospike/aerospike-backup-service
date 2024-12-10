@@ -343,7 +343,7 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 			h.deleteFolder(ctx, backupFolder)
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success.
-			if stats.IsEmpty() {                                     // do not write metadata for empty backup.
+			if stats.IsEmpty() { // do not write metadata for empty backup.
 				return nil
 			}
 
