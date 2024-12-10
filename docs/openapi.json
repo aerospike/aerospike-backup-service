@@ -1366,6 +1366,64 @@
         "x-codegen-request-body-name" : "storage"
       }
     },
+    "/v1/restore/cancel/{jobID}" : {
+      "post" : {
+        "operationId" : "cancelRestore",
+        "parameters" : [ {
+          "description" : "Restore job ID",
+          "in" : "path",
+          "name" : "jobID",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Restore job canceled successfully"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Invalid job ID"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Job not found"
+          },
+          "500" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          }
+        },
+        "summary" : "Cancel a running restore operation.",
+        "tags" : [ "Restore" ]
+      }
+    },
     "/v1/restore/full" : {
       "post" : {
         "operationId" : "restoreFull",

@@ -1219,6 +1219,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/restore/cancel/{jobID}": {
+            "post": {
+                "tags": [
+                    "Restore"
+                ],
+                "summary": "Cancel a running restore operation.",
+                "operationId": "cancelRestore",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Restore job ID",
+                        "name": "jobID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restore job canceled successfully",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid job ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Job not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/restore/full": {
             "post": {
                 "consumes": [
