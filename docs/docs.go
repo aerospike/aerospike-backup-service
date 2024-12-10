@@ -2132,12 +2132,14 @@ const docTemplate = `{
             "enum": [
                 "Running",
                 "Done",
-                "Failed"
+                "Failed",
+                "Cancelled"
             ],
             "x-enum-varnames": [
                 "JobStatusRunning",
                 "JobStatusDone",
-                "JobStatusFailed"
+                "JobStatusFailed",
+                "JobStatusCancelled"
             ]
         },
         "dto.LocalStorage": {
@@ -2284,16 +2286,7 @@ const docTemplate = `{
                     "example": 4
                 },
                 "status": {
-                    "enum": [
-                        "Running",
-                        "Done",
-                        "Failed"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.JobStatus"
-                        }
-                    ]
+                    "$ref": "#/definitions/dto.JobStatus"
                 },
                 "total-bytes": {
                     "type": "integer",
