@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var restoreService = makeTestRestoreService()
+var restoreService = makeTestRestoreService(nil)
 var validBackupPath = "testout/backup/data"
 
 type BackendHolderMock struct{}
@@ -39,7 +40,7 @@ func (b *BackendHolderMock) GetAllReaders() map[string]BackupListReader {
 func (b *BackendHolderMock) Init(_ *model.Config) {
 }
 
-func makeTestRestoreService() *dataRestorer {
+func makeTestRestoreService(wg *sync.WaitGroup) *dataRestorer {
 	storage := &model.LocalStorage{}
 	config := model.NewConfig()
 	_ = config.AddStorage("s", storage)
@@ -57,7 +58,7 @@ func makeTestRestoreService() *dataRestorer {
 			backends: &BackendHolderMock{},
 		},
 		restoreJobs:    NewRestoreJobsHolder(),
-		restoreService: NewRestoreMock(),
+		restoreService: NewRestoreMock(wg),
 		backends:       &BackendHolderMock{},
 		config:         config,
 		clientManager:  &MockClientManager{},
@@ -303,6 +304,8 @@ func (m *MockClientManager) CreateClient(cluster *model.AerospikeCluster) (*back
 }
 
 func TestRestoreCancel(t *testing.T) {
+	wg := &sync.WaitGroup{}
+	restoreService = makeTestRestoreService(wg)
 	restoreRequest := &model.RestoreRequest{
 		DestinationCluster: model.NewLocalAerospikeCluster(),
 		Policy:             &model.RestorePolicy{},
@@ -311,9 +314,12 @@ func TestRestoreCancel(t *testing.T) {
 		},
 		BackupDataPath: "namespace",
 	}
+	wg.Add(1)
+	NewRestoreMock(nil).restoreWaitWg = wg
 	jobID, err := restoreService.Restore(restoreRequest)
 	require.NoError(t, err)
-	time.Sleep(10 * time.Millisecond)
+
+	wg.Wait() // wait until restore starts
 	err = restoreService.CancelRestore(jobID)
 	require.NoError(t, err)
 	_, err = waitForJobStatus(t, jobID, model.JobStatusCancelled)
