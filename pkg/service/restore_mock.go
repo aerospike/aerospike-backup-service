@@ -22,7 +22,6 @@ func NewRestoreMock() *RestoreMock {
 
 // MockRestoreHandler is a mock implementation of the RestoreHandler interface.
 type MockRestoreHandler struct {
-	wasCancelled bool
 }
 
 func (m *MockRestoreHandler) GetStats() *models.RestoreStats {
@@ -37,7 +36,6 @@ func (m *MockRestoreHandler) Wait(ctx context.Context) error {
 		// Simulate work completion after 100ms
 		return nil
 	case <-ctx.Done():
-		m.wasCancelled = true
 		return ctx.Err()
 	}
 }

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -13,17 +12,7 @@ import (
 )
 
 var restoreService = makeTestRestoreService()
-var validBackupPath = "./testout/backup/data"
-
-func makeTestFolders() {
-	_ = os.MkdirAll(validBackupPath, os.ModePerm)
-	create, _ := os.Create(validBackupPath + "/backup.asb")
-	_ = create.Close()
-}
-
-func cleanTestFolder() {
-	_ = os.RemoveAll("./testout")
-}
+var validBackupPath = "testout/backup/data"
 
 type BackendHolderMock struct{}
 
@@ -172,10 +161,6 @@ func (*BackendFailMock) IncrementalBackupList(_ context.Context, _ model.TimeBou
 }
 
 func TestRestoreOK(t *testing.T) {
-	makeTestFolders()
-	t.Cleanup(func() {
-		cleanTestFolder()
-	})
 	restoreRequest := &model.RestoreRequest{
 		DestinationCluster: model.NewLocalAerospikeCluster(),
 		Policy:             &model.RestorePolicy{},
@@ -190,7 +175,7 @@ func TestRestoreOK(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, model.JobStatusRunning, jobStatus.Status)
 
-	_, err = waitForJob(t, jobID)
+	_, err = waitForJobStatus(t, jobID, model.JobStatusDone)
 	require.NoError(t, err)
 }
 
@@ -249,7 +234,7 @@ func Test_RestoreTimestamp(t *testing.T) {
 	jobID, err := restoreService.RestoreByTime(&request)
 	require.NoError(t, err, "RestoreByTime should not return an error")
 
-	jobStatus, err := waitForJob(t, jobID)
+	jobStatus, err := waitForJobStatus(t, jobID, model.JobStatusDone)
 	require.NoError(t, err)
 	require.Equal(t, 3, int(jobStatus.ReadRecords), "Expected 3 (one full and 2 incremental backups)")
 }
@@ -318,10 +303,6 @@ func (m *MockClientManager) CreateClient(cluster *model.AerospikeCluster) (*back
 }
 
 func TestRestoreCancel(t *testing.T) {
-	makeTestFolders()
-	t.Cleanup(func() {
-		cleanTestFolder()
-	})
 	restoreRequest := &model.RestoreRequest{
 		DestinationCluster: model.NewLocalAerospikeCluster(),
 		Policy:             &model.RestorePolicy{},
@@ -335,21 +316,19 @@ func TestRestoreCancel(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	err = restoreService.CancelRestore(jobID)
 	require.NoError(t, err)
-	jobStatus, err := restoreService.JobStatus(jobID)
+	_, err = waitForJobStatus(t, jobID, model.JobStatusCancelled)
 	require.NoError(t, err)
-	require.Equal(t, model.JobStatusCancelled, jobStatus.Status)
-	handler := restoreService.restoreJobs.jobs[jobID].jobs[0].handler
-	mockHandler := handler.(*MockRestoreHandler)
-	require.True(t, mockHandler.wasCancelled)
 }
 
-func waitForJob(t *testing.T, jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
+func waitForJobStatus(
+	t *testing.T, jobID model.RestoreJobID, expected model.JobStatus,
+) (*model.RestoreJobStatus, error) {
 	t.Helper()
 	return wait(func() (*model.RestoreJobStatus, bool) {
 		status, err := restoreService.JobStatus(jobID)
 		require.NoError(t, err)
 		require.NotNil(t, status)
-		return status, status.Status == model.JobStatusDone
+		return status, status.Status == expected
 	})
 }
 

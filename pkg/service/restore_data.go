@@ -62,13 +62,13 @@ func NewRestoreManager(backends BackendsHolder,
 }
 
 func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
-	jobID := r.restoreJobs.newJob(request.BackupDataPath)
 	ctx := context.TODO()
 	totalRecords, err := recordsInBackup(ctx, request)
 	if err != nil {
 		slog.Info("Could not read backup metadata", slog.Any("err", err))
 	}
 
+	jobID := r.restoreJobs.newJob(request.BackupDataPath)
 	go func() {
 		client, err := r.clientManager.GetClient(request.DestinationCluster)
 		if err != nil {
@@ -99,7 +99,11 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 		// Wait for the restore operation to complete
 		err = handler.Wait(ctx)
 		if err != nil {
-			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
+			if errors.Is(err, context.Canceled) {
+				r.restoreJobs.setCancelled(jobID)
+			} else {
+				r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
+			}
 			return
 		}
 
@@ -287,6 +291,5 @@ func (r *dataRestorer) CancelRestore(jobID model.RestoreJobID) error {
 		j.Cancel()
 	}
 
-	r.restoreJobs.setCancelled(jobID)
 	return err
 }
