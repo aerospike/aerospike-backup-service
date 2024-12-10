@@ -192,26 +192,17 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreStatusHandler"))
 
-	jobIDParam := mux.Vars(r)["jobId"]
-
-	if jobIDParam == "" {
-		hLogger.Error("job id required")
-		http.Error(w, "jobId required", http.StatusBadRequest)
-		return
-	}
-	jobID, err := strconv.Atoi(jobIDParam)
+	jobID, err := extractJobID(r)
 	if err != nil {
-		hLogger.Error("failed to parse job id",
-			slog.String("jobIDParam", jobIDParam),
-			slog.Any("error", err))
+		hLogger.Error("invalid job id", slog.Any("error", err))
 		http.Error(w, "invalid job id", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	status, err := s.restoreManager.JobStatus(model.RestoreJobID(jobID))
+	status, err := s.restoreManager.JobStatus(jobID)
 	if err != nil {
 		if errors.Is(err, &service.ErrJobNotFound{}) {
-			hLogger.Error("job not found", slog.Int("jobID", jobID))
+			hLogger.Error("job not found", slog.Any("jobID", jobID))
 			http.Error(w, fmt.Sprintf("Job with ID %d not found", jobID), http.StatusNotFound)
 		} else {
 			hLogger.Error("failed to get job status", slog.Any("error", err))
@@ -236,6 +227,18 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 			slog.Any("error", err),
 		)
 	}
+}
+
+func extractJobID(r *http.Request) (model.RestoreJobID, error) {
+	jobIDParam := mux.Vars(r)["jobId"]
+	if jobIDParam == "" {
+		return 0, fmt.Errorf("jobId required")
+	}
+	jobID, err := strconv.Atoi(jobIDParam)
+	if err != nil {
+		return 0, fmt.Errorf("invalid jobId %q", jobIDParam)
+	}
+	return model.RestoreJobID(jobID), nil
 }
 
 // RetrieveConfig
@@ -308,21 +311,18 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 func (s *Service) CancelRestoreHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "CancelRestoreHandler"))
 
-	// Extract jobID from the URL path parameter
-	vars := mux.Vars(r)
-	jobIDStr := vars["jobID"]
-	jobID, err := strconv.ParseInt(jobIDStr, 10, 64)
+	jobID, err := extractJobID(r)
 	if err != nil {
-		hLogger.Error("invalid jobID", slog.Any("error", err))
-		http.Error(w, "Invalid job ID", http.StatusBadRequest)
+		hLogger.Error("invalid job id",
+			slog.Any("error", err))
+		http.Error(w, "invalid job id", http.StatusBadRequest)
 		return
 	}
 
-	// Attempt to cancel the restore job
-	err = s.restoreManager.CancelRestore(model.RestoreJobID(jobID))
+	err = s.restoreManager.CancelRestore(jobID)
 	if err != nil {
 		if errors.Is(err, &service.ErrJobNotFound{}) {
-			hLogger.Error("job not found", slog.Int64("jobID", jobID))
+			hLogger.Error("job not found", slog.Any("jobID", jobID))
 			http.Error(w, fmt.Sprintf("Job with ID %d not found", jobID), http.StatusNotFound)
 		} else {
 			hLogger.Error("failed to cancel restore", slog.Any("error", err))
@@ -332,7 +332,7 @@ func (s *Service) CancelRestoreHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return a success response
-	hLogger.Info("Restore job canceled successfully", slog.Int64("jobID", jobID))
+	hLogger.Info("Restore job canceled successfully", slog.Any("jobID", jobID))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = fmt.Fprint(w, "Restore job canceled successfully")
