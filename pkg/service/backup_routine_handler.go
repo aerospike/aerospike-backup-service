@@ -32,7 +32,7 @@ type BackupRoutineHandler struct {
 	logger              *slog.Logger
 	clusterConfigWriter ClusterConfigWriter
 
-	// backup handlers by namespace
+	// backup jobs by namespace
 	fullBackupHandlers map[string]BackupHandler
 	incrBackupHandlers map[string]BackupHandler
 }

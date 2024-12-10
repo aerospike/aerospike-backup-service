@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -10,7 +9,7 @@ import (
 )
 
 type jobInfo struct {
-	handlers     []RestoreHandler
+	jobs         []*RestoreJob
 	status       model.JobStatus
 	err          error
 	totalRecords uint64
@@ -45,12 +44,12 @@ func (h *RestoreJobsHolder) newJob(label string) model.RestoreJobID {
 	return id
 }
 
-// addHandler should be called for each backup (full or incremental) handler.
-func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler RestoreHandler) {
+// addJob should be called for each backup (full or incremental) handler.
+func (h *RestoreJobsHolder) addJob(id model.RestoreJobID, handler *RestoreJob) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.jobs[id]; exists {
-		job.handlers = append(job.handlers, handler)
+		job.jobs = append(job.jobs, handler)
 	}
 }
 
@@ -87,5 +86,14 @@ func (h *RestoreJobsHolder) getStatus(id model.RestoreJobID) (*model.RestoreJobS
 	if job, exists := h.jobs[id]; exists {
 		return RestoreJobStatus(job), nil
 	}
-	return nil, fmt.Errorf("job with ID %d not found", id)
+	return nil, &ErrJobNotFound{JobID: id}
+}
+
+func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*jobInfo, error) {
+	h.Lock()
+	defer h.Unlock()
+	if job, exists := h.jobs[id]; exists {
+		return job, nil
+	}
+	return nil, &ErrJobNotFound{JobID: id}
 }

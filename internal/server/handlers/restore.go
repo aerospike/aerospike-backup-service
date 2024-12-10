@@ -3,6 +3,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
 	"github.com/gorilla/mux"
 )
 
@@ -208,12 +210,16 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	status, err := s.restoreManager.JobStatus(model.RestoreJobID(jobID))
 	if err != nil {
-		hLogger.Error("failed to get job status",
-			slog.Int("jobID", jobID),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusNotFound)
+		if errors.Is(err, &service.ErrJobNotFound{}) {
+			hLogger.Error("job not found", slog.Int("jobID", jobID))
+			http.Error(w, fmt.Sprintf("Job with ID %d not found", jobID), http.StatusNotFound)
+		} else {
+			hLogger.Error("failed to get job status", slog.Any("error", err))
+			http.Error(w, "Failed to get job status", http.StatusInternalServerError)
+		}
+		return
 	}
+
 	jsonResponse, err := dto.Serialize(dto.NewResultFromModel(status), dto.JSON)
 	w.WriteHeader(http.StatusOK)
 	if err != nil {
@@ -287,4 +293,47 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 			slog.Any("error", err),
 		)
 	}
+}
+
+// CancelRestoreHandler
+// @Summary     Cancel a running restore operation.
+// @ID          cancelRestore
+// @Tags        Restore
+// @Router      /v1/restore/cancel/{jobID} [post]
+// @Param       jobID path int64 true "Restore job ID"
+// @Success     200 {string} string "Restore job canceled successfully"
+// @Failure     400 {string} string "Invalid job ID"
+// @Failure     404 {string} string "Job not found"
+// @Failure     500 {string} string "Internal server error"
+func (s *Service) CancelRestoreHandler(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "CancelRestoreHandler"))
+
+	// Extract jobID from the URL path parameter
+	vars := mux.Vars(r)
+	jobIDStr := vars["jobID"]
+	jobID, err := strconv.ParseInt(jobIDStr, 10, 64)
+	if err != nil {
+		hLogger.Error("invalid jobID", slog.Any("error", err))
+		http.Error(w, "Invalid job ID", http.StatusBadRequest)
+		return
+	}
+
+	// Attempt to cancel the restore job
+	err = s.restoreManager.CancelRestore(model.RestoreJobID(jobID))
+	if err != nil {
+		if errors.Is(err, &service.ErrJobNotFound{}) {
+			hLogger.Error("job not found", slog.Int64("jobID", jobID))
+			http.Error(w, fmt.Sprintf("Job with ID %d not found", jobID), http.StatusNotFound)
+		} else {
+			hLogger.Error("failed to cancel restore", slog.Any("error", err))
+			http.Error(w, "Failed to cancel restore", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Return a success response
+	hLogger.Info("Restore job canceled successfully", slog.Int64("jobID", jobID))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = fmt.Fprint(w, "Restore job canceled successfully")
 }

@@ -20,4 +20,6 @@ type RestoreManager interface {
 
 	// RetrieveConfiguration return backed up Aerospike configuration.
 	RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error)
+
+	CancelRestore(jobID model.RestoreJobID) error
 }

@@ -121,6 +121,14 @@ func (mock restoreManagerMock) RetrieveConfiguration(routine string, _ time.Time
 	return []byte(fmt.Sprintf(`{ "dir": "%s" }`, testDir)), nil
 }
 
+func (mock restoreManagerMock) CancelRestore(jobID model.RestoreJobID) error {
+	if jobID != model.RestoreJobID(testJobID) {
+		return errTest
+	}
+
+	return nil
+}
+
 type backupListReaderMock struct{}
 
 func (mock backupListReaderMock) FullBackupList(_ context.Context, timebounds model.TimeBounds,

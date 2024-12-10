@@ -18,6 +18,14 @@ import (
 var errBackendNotFound = errors.New("backend not found")
 var errBackupNotFound = errors.New("backup not found")
 
+type ErrJobNotFound struct {
+	JobID model.RestoreJobID
+}
+
+func (e *ErrJobNotFound) Error() string {
+	return fmt.Sprintf("restore job with ID %d not found", e.JobID)
+}
+
 // dataRestorer implements the RestoreManager interface.
 // Stores job information locally within a map.
 type dataRestorer struct {
@@ -82,7 +90,11 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 			return
 		}
 		r.restoreJobs.addTotalRecords(jobID, totalRecords)
-		r.restoreJobs.addHandler(jobID, handler)
+		ctx, cancel := context.WithCancel(ctx)
+		r.restoreJobs.addJob(jobID, &RestoreJob{
+			handler: handler,
+			cancel:  cancel,
+		})
 
 		// Wait for the restore operation to complete
 		err = handler.Wait(ctx)
@@ -208,7 +220,11 @@ func (r *dataRestorer) restoreNamespace(
 		}
 
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
-		r.restoreJobs.addHandler(jobID, handler)
+		ctx, cancel := context.WithCancel(ctx)
+		r.restoreJobs.addJob(jobID, &RestoreJob{
+			handler: handler,
+			cancel:  cancel,
+		})
 
 		err = handler.Wait(ctx)
 		if err != nil {
@@ -260,4 +276,16 @@ func recordsInBackup(ctx context.Context, request *model.RestoreRequest) (uint64
 		return 0, err
 	}
 	return metadata.RecordCount, nil
+}
+
+func (r *dataRestorer) CancelRestore(jobID model.RestoreJobID) error {
+	job, err := r.restoreJobs.getJob(jobID)
+	if err != nil {
+		return err
+	}
+	for _, j := range job.jobs {
+		j.Cancel()
+	}
+
+	return nil
 }
