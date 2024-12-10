@@ -270,16 +270,23 @@ func Test_RestoreTimestamp(t *testing.T) {
 	}
 
 	jobID, err := restoreService.RestoreByTime(&request)
-	if err != nil {
-		t.Errorf("expected nil, got %s", err.Error())
+	require.NoError(t, err, "RestoreByTime should not return an error")
+
+	deadline := time.Now().Add(5 * time.Second)
+	var jobStatus *model.RestoreJobStatus
+	for time.Now().Before(deadline) {
+		jobStatus, err = restoreService.JobStatus(jobID)
+		require.NoError(t, err, "JobStatus should not return an error")
+
+		if jobStatus.Status == model.JobStatusDone {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 
-	time.Sleep(1 * time.Second)
-	jobStatus, _ := restoreService.JobStatus(jobID)
-	require.Equal(t, model.JobStatusDone, jobStatus.Status)
-	if jobStatus.ReadRecords != 3 {
-		t.Errorf("Expected 3 (one full and 2 incremental backups), got %d", jobStatus.ReadRecords)
-	}
+	require.NotNil(t, jobStatus, "JobStatus should not be nil")
+	require.Equal(t, model.JobStatusDone, jobStatus.Status, "Job did not reach 'done' status within timeout")
+	require.Equal(t, 3, int(jobStatus.ReadRecords), "Expected 3 (one full and 2 incremental backups)")
 }
 
 func Test_WrongStatus(t *testing.T) {
