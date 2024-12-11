@@ -201,9 +201,10 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	status, err := s.restoreManager.JobStatus(jobID)
 	if err != nil {
-		if errors.Is(err, &service.ErrJobNotFound{}) {
-			hLogger.Error("job not found", slog.Any("jobID", jobID))
-			http.Error(w, fmt.Sprintf("Job with ID %d not found", jobID), http.StatusNotFound)
+		var jobErr *service.ErrJobNotFound
+		if errors.As(err, &jobErr) {
+			hLogger.Error("job not found", slog.Any("jobID", jobErr.JobID))
+			http.Error(w, fmt.Sprintf("Job with ID %d not found", jobErr.JobID), http.StatusNotFound)
 		} else {
 			hLogger.Error("failed to get job status", slog.Any("error", err))
 			http.Error(w, "Failed to get job status", http.StatusInternalServerError)
