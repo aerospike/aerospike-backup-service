@@ -3,9 +3,10 @@ package model
 type JobStatus string
 
 const (
-	JobStatusRunning JobStatus = "Running"
-	JobStatusDone    JobStatus = "Done"
-	JobStatusFailed  JobStatus = "Failed"
+	JobStatusRunning   JobStatus = "Running"
+	JobStatusDone      JobStatus = "Done"
+	JobStatusFailed    JobStatus = "Failed"
+	JobStatusCancelled JobStatus = "Cancelled"
 )
 
 // RestoreJobStatus represents a restore job status.

@@ -12,11 +12,22 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	"github.com/aerospike/backup-go"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var errBackendNotFound = errors.New("backend not found")
 var errBackupNotFound = errors.New("backup not found")
+
+type ErrJobNotFound struct {
+	JobID model.RestoreJobID
+}
+
+func (e *ErrJobNotFound) Error() string {
+	return fmt.Sprintf("restore job with ID %d not found", e.JobID)
+}
+
+func NewErrJobNotFound(id model.RestoreJobID) *ErrJobNotFound {
+	return &ErrJobNotFound{id}
+}
 
 // dataRestorer implements the RestoreManager interface.
 // Stores job information locally within a map.
@@ -54,20 +65,20 @@ func NewRestoreManager(backends BackendsHolder,
 }
 
 func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
-	jobID := r.restoreJobs.newJob(request.BackupDataPath)
 	ctx := context.TODO()
 	totalRecords, err := recordsInBackup(ctx, request)
 	if err != nil {
 		slog.Info("Could not read backup metadata", slog.Any("err", err))
 	}
 
+	jobID := r.restoreJobs.newJob(request.BackupDataPath)
 	go func() {
 		client, err := r.clientManager.GetClient(request.DestinationCluster)
 		if err != nil {
 			slog.Error("Failed to restore by path",
 				slog.Any("cluster", request.DestinationCluster.ClusterLabel),
 				slog.Any("err", err))
-			r.restoreJobs.setFailed(jobID, err)
+			r.restoreJobs.finishJob(jobID, err)
 			return
 		}
 		defer r.clientManager.Close(client)
@@ -78,20 +89,19 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 
 		handler, err := r.restoreService.Run(ctx, client, request)
 		if err != nil {
-			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed to start restore operation: %w", err))
+			r.restoreJobs.finishJob(jobID, fmt.Errorf("failed to start restore operation: %w", err))
 			return
 		}
 		r.restoreJobs.addTotalRecords(jobID, totalRecords)
-		r.restoreJobs.addHandler(jobID, handler)
+		ctx, cancel := context.WithCancel(ctx)
+		r.restoreJobs.addJob(jobID, &RestoreHandlerWithCancel{
+			RestoreHandler: handler,
+			cancel:         cancel,
+		})
 
 		// Wait for the restore operation to complete
 		err = handler.Wait(ctx)
-		if err != nil {
-			r.restoreJobs.setFailed(jobID, fmt.Errorf("failed restore operation: %w", err))
-			return
-		}
-
-		r.restoreJobs.setDone(jobID)
+		r.restoreJobs.finishJob(jobID, err)
 	}()
 
 	return jobID, nil
@@ -108,7 +118,7 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 			slog.Error("Failed to restore by path",
 				slog.Any("cluster label", request.DestinationCluster.ClusterLabel),
 				slog.Any("err", err))
-			r.restoreJobs.setFailed(jobID, err)
+			r.restoreJobs.finishJob(jobID, err)
 			return true
 		}
 	}
@@ -145,20 +155,19 @@ func (r *dataRestorer) restoreByTimeSync(
 		slog.Error("Failed to restore by timestamp",
 			slog.Any("cluster", request.DestinationCluster.ClusterLabel),
 			slog.Any("err", err))
-		r.restoreJobs.setFailed(jobID, err)
+		r.restoreJobs.finishJob(jobID, err)
 		return
 	}
 	defer r.clientManager.Close(client)
 
 	var wg sync.WaitGroup
-
-	multiError := prometheus.MultiError{}
+	var multiError error
 	for _, nsBackup := range fullBackups {
 		wg.Add(1)
 		go func(nsBackup model.BackupDetails) {
 			defer wg.Done()
 			if err := r.restoreNamespace(ctx, client, backend, request, jobID, nsBackup); err != nil {
-				multiError.Append(
+				multiError = errors.Join(multiError,
 					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
 						request.RoutineName, nsBackup.Namespace, err))
 			}
@@ -167,13 +176,7 @@ func (r *dataRestorer) restoreByTimeSync(
 
 	wg.Wait()
 
-	err = multiError.MaybeUnwrap()
-	if err != nil {
-		r.restoreJobs.setFailed(jobID, err)
-		return
-	}
-
-	r.restoreJobs.setDone(jobID)
+	r.restoreJobs.finishJob(jobID, multiError)
 }
 
 func (r *dataRestorer) restoreNamespace(
@@ -208,7 +211,11 @@ func (r *dataRestorer) restoreNamespace(
 		}
 
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
-		r.restoreJobs.addHandler(jobID, handler)
+		ctx, cancel := context.WithCancel(ctx)
+		r.restoreJobs.addJob(jobID, &RestoreHandlerWithCancel{
+			RestoreHandler: handler,
+			cancel:         cancel,
+		})
 
 		err = handler.Wait(ctx)
 		if err != nil {
@@ -260,4 +267,18 @@ func recordsInBackup(ctx context.Context, request *model.RestoreRequest) (uint64
 		return 0, err
 	}
 	return metadata.RecordCount, nil
+}
+
+// CancelRestore cancels an ongoing restore.
+func (r *dataRestorer) CancelRestore(jobID model.RestoreJobID) error {
+	job, err := r.restoreJobs.getJob(jobID)
+	if err != nil {
+		return err
+	}
+	slog.Debug("Canceling restore job", slog.Any("job ID", jobID))
+	for _, h := range job.handlers {
+		h.Cancel()
+	}
+
+	return nil
 }

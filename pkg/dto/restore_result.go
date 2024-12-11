@@ -5,9 +5,10 @@ import "github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 type JobStatus string
 
 const (
-	JobStatusRunning JobStatus = "Running"
-	JobStatusDone    JobStatus = "Done"
-	JobStatusFailed  JobStatus = "Failed"
+	JobStatusRunning   JobStatus = "Running"
+	JobStatusDone      JobStatus = "Done"
+	JobStatusFailed    JobStatus = "Failed"
+	JobStatusCancelled JobStatus = "Cancelled"
 )
 
 // RestoreJobStatus represents a restore job status.
@@ -15,7 +16,7 @@ const (
 type RestoreJobStatus struct {
 	RestoreStats
 	CurrentRestore *RunningJob `yaml:"current-restore,omitempty" json:"current-job,omitempty"`
-	Status         JobStatus   `yaml:"status,omitempty" json:"status,omitempty" enums:"Running,Done,Failed"`
+	Status         JobStatus   `yaml:"status,omitempty" json:"status,omitempty"`
 	Error          string      `yaml:"error,omitempty" json:"error,omitempty"`
 }
 

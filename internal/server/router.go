@@ -76,6 +76,9 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 	// Restore job status endpoint
 	apiRouter.HandleFunc("/restore/status/{jobId}", h.RestoreStatusHandler).Methods(http.MethodGet)
 
+	// Cancel restore job
+	apiRouter.HandleFunc("/restore/cancel/{jobId}", h.CancelRestoreHandler).Methods(http.MethodPost)
+
 	// Return backed up Aerospike configuration
 	apiRouter.HandleFunc("/retrieve/configuration/{name}/{timestamp}", h.RetrieveConfig).Methods(http.MethodGet)
 

@@ -944,6 +944,44 @@ paths:
       tags:
       - Configuration
       x-codegen-request-body-name: storage
+  /v1/restore/cancel/{jobID}:
+    post:
+      operationId: cancelRestore
+      parameters:
+      - description: Restore job ID
+        in: path
+        name: jobID
+        required: true
+        schema:
+          type: integer
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Restore job canceled successfully
+        "400":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Invalid job ID
+        "404":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Job not found
+        "500":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Internal server error
+      summary: Cancel a running restore operation.
+      tags:
+      - Restore
   /v1/restore/full:
     post:
       operationId: restoreFull
@@ -959,7 +997,6 @@ paths:
           content:
             '*/*':
               schema:
-                format: int64
                 type: integer
           description: Restore operation job id
         "400":
@@ -993,7 +1030,6 @@ paths:
           content:
             '*/*':
               schema:
-                format: int64
                 type: integer
           description: Restore operation job id
         "400":
@@ -1021,7 +1057,6 @@ paths:
         name: jobId
         required: true
         schema:
-          format: int64
           type: integer
       responses:
         "200":
@@ -1055,7 +1090,6 @@ paths:
           content:
             '*/*':
               schema:
-                format: int64
                 type: integer
           description: Restore operation job id
         "400":
@@ -1796,11 +1830,13 @@ components:
       - Running
       - Done
       - Failed
+      - Cancelled
       type: string
       x-enum-varnames:
       - JobStatusRunning
       - JobStatusDone
       - JobStatusFailed
+      - JobStatusCancelled
     dto.LocalStorage:
       properties:
         path:
@@ -1889,7 +1925,7 @@ components:
         fresher-records: 5
         skipped-records: 4
         index-count: 3
-        status: "{}"
+        status: Running
       properties:
         current-job:
           $ref: '#/components/schemas/dto.RunningJob'
@@ -1928,9 +1964,7 @@ components:
           format: int64
           type: integer
         status:
-          allOf:
-          - $ref: '#/components/schemas/dto.JobStatus'
-          type: object
+          $ref: '#/components/schemas/dto.JobStatus'
         total-bytes:
           example: 2000
           format: int64

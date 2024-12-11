@@ -1366,6 +1366,64 @@
         "x-codegen-request-body-name" : "storage"
       }
     },
+    "/v1/restore/cancel/{jobID}" : {
+      "post" : {
+        "operationId" : "cancelRestore",
+        "parameters" : [ {
+          "description" : "Restore job ID",
+          "in" : "path",
+          "name" : "jobID",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Restore job canceled successfully"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Invalid job ID"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Job not found"
+          },
+          "500" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          }
+        },
+        "summary" : "Cancel a running restore operation.",
+        "tags" : [ "Restore" ]
+      }
+    },
     "/v1/restore/full" : {
       "post" : {
         "operationId" : "restoreFull",
@@ -1385,7 +1443,6 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "format" : "int64",
                   "type" : "integer"
                 }
               }
@@ -1437,7 +1494,6 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "format" : "int64",
                   "type" : "integer"
                 }
               }
@@ -1479,7 +1535,6 @@
           "name" : "jobId",
           "required" : true,
           "schema" : {
-            "format" : "int64",
             "type" : "integer"
           }
         } ],
@@ -1529,7 +1584,6 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "format" : "int64",
                   "type" : "integer"
                 }
               }
@@ -2215,9 +2269,9 @@
         "type" : "object"
       },
       "dto.JobStatus" : {
-        "enum" : [ "Running", "Done", "Failed" ],
+        "enum" : [ "Running", "Done", "Failed", "Cancelled" ],
         "type" : "string",
-        "x-enum-varnames" : [ "JobStatusRunning", "JobStatusDone", "JobStatusFailed" ]
+        "x-enum-varnames" : [ "JobStatusRunning", "JobStatusDone", "JobStatusFailed", "JobStatusCancelled" ]
       },
       "dto.LocalStorage" : {
         "properties" : {
@@ -2339,10 +2393,7 @@
             "type" : "integer"
           },
           "status" : {
-            "allOf" : [ {
-              "$ref" : "#/components/schemas/dto.JobStatus"
-            } ],
-            "type" : "object"
+            "$ref" : "#/components/schemas/dto.JobStatus"
           },
           "total-bytes" : {
             "example" : 2000,

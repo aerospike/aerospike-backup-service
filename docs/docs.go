@@ -1219,6 +1219,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/restore/cancel/{jobID}": {
+            "post": {
+                "tags": [
+                    "Restore"
+                ],
+                "summary": "Cancel a running restore operation.",
+                "operationId": "cancelRestore",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Restore job ID",
+                        "name": "jobID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restore job canceled successfully",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid job ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Job not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/restore/full": {
             "post": {
                 "consumes": [
@@ -1244,7 +1288,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Restore operation job id",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer"
                         }
                     },
                     "400": {
@@ -1287,7 +1331,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Restore operation job id",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer"
                         }
                     },
                     "400": {
@@ -1318,7 +1362,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "Job ID to retrieve the status",
                         "name": "jobId",
                         "in": "path",
@@ -1367,7 +1410,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Restore operation job id",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer"
                         }
                     },
                     "400": {
@@ -2088,12 +2131,14 @@ const docTemplate = `{
             "enum": [
                 "Running",
                 "Done",
-                "Failed"
+                "Failed",
+                "Cancelled"
             ],
             "x-enum-varnames": [
                 "JobStatusRunning",
                 "JobStatusDone",
-                "JobStatusFailed"
+                "JobStatusFailed",
+                "JobStatusCancelled"
             ]
         },
         "dto.LocalStorage": {
@@ -2240,16 +2285,7 @@ const docTemplate = `{
                     "example": 4
                 },
                 "status": {
-                    "enum": [
-                        "Running",
-                        "Done",
-                        "Failed"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.JobStatus"
-                        }
-                    ]
+                    "$ref": "#/definitions/dto.JobStatus"
                 },
                 "total-bytes": {
                     "type": "integer",
