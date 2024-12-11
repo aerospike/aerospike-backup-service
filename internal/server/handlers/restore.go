@@ -194,8 +194,8 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 
 	jobID, err := extractJobID(r)
 	if err != nil {
-		hLogger.Error("invalid job id", slog.Any("error", err))
-		http.Error(w, "invalid job id", http.StatusBadRequest)
+		hLogger.Error("failed to extract job id", slog.Any("error", err))
+		http.Error(w, "failed to extract job id", http.StatusBadRequest)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -314,9 +314,8 @@ func (s *Service) CancelRestoreHandler(w http.ResponseWriter, r *http.Request) {
 
 	jobID, err := extractJobID(r)
 	if err != nil {
-		hLogger.Error("invalid job id",
-			slog.Any("error", err))
-		http.Error(w, "invalid job id", http.StatusBadRequest)
+		hLogger.Error("failed to extract job id", slog.Any("error", err))
+		http.Error(w, "failed to extract job id", http.StatusBadRequest)
 		return
 	}
 
