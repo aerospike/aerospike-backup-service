@@ -72,16 +72,22 @@ func init() {
 func getAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
 	switch auth := a.Auth.(type) {
 	case model.AzureSharedKeyAuth:
-		return clientFromSharedKey(a.Endpoint, auth)
+		return clientFromSharedKey(a.Endpoint, auth, a.SecretAgent)
 	case model.AzureADAuth:
-		return clientFromAD(a.Endpoint, auth)
+		return clientFromAD(a.Endpoint, auth, a.SecretAgent)
 	default:
 		return clientWithDefaultCredential(a.Endpoint)
 	}
 }
 
-func clientFromSharedKey(endpoint string, auth model.AzureSharedKeyAuth) (*azblob.Client, error) {
-	cred, err := azblob.NewSharedKeyCredential(auth.AccountName, auth.AccountKey)
+func clientFromSharedKey(
+	endpoint string, auth model.AzureSharedKeyAuth, sa *model.SecretAgent,
+) (*azblob.Client, error) {
+	accountKey, err := sa.Read(auth.AccountKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve account key from secret agent: %w", err)
+	}
+	cred, err := azblob.NewSharedKeyCredential(auth.AccountName, accountKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure shared key credentials: %w", err)
 	}
@@ -94,8 +100,20 @@ func clientFromSharedKey(endpoint string, auth model.AzureSharedKeyAuth) (*azblo
 	return client, nil
 }
 
-func clientFromAD(endpoint string, auth model.AzureADAuth) (*azblob.Client, error) {
-	cred, err := azidentity.NewClientSecretCredential(auth.TenantID, auth.ClientID, auth.ClientSecret, nil)
+func clientFromAD(endpoint string, auth model.AzureADAuth, sa *model.SecretAgent) (*azblob.Client, error) {
+	clientSecret, err := sa.Read(auth.ClientSecret)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve client-secret from secret agent: %w", err)
+	}
+	tenantID, err := sa.Read(auth.TenantID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve tenant-id from secret agent: %w", err)
+	}
+	clientID, err := sa.Read(auth.ClientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve client-id from secret agent: %w", err)
+	}
+	cred, err := azidentity.NewClientSecretCredential(tenantID, clientID, clientSecret, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure AAD credentials: %w", err)
 	}
