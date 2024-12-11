@@ -175,7 +175,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 		p.EncryptionPolicy = &EncryptionPolicy{}
 		p.EncryptionPolicy.FromModel(m.EncryptionPolicy)
 	}
-	if p.CompressionPolicy != nil {
+	if m.CompressionPolicy != nil {
 		p.CompressionPolicy = &CompressionPolicy{}
 		p.CompressionPolicy.fromModel(m.CompressionPolicy)
 	}
