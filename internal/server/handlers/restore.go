@@ -326,7 +326,7 @@ func (s *Service) CancelRestoreHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Job with ID %d not found", jobID), http.StatusNotFound)
 		} else {
 			hLogger.Error("failed to cancel restore", slog.Any("error", err))
-			http.Error(w, "Failed to cancel restore", http.StatusInternalServerError)
+			http.Error(w, "Failed to cancel restore: "+err.Error(), http.StatusInternalServerError)
 		}
 		return
 	}
