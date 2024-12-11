@@ -25,6 +25,10 @@ func (e *ErrJobNotFound) Error() string {
 	return fmt.Sprintf("restore job with ID %d not found", e.JobID)
 }
 
+func NewErrJobNotFound(id model.RestoreJobID) *ErrJobNotFound {
+	return &ErrJobNotFound{id}
+}
+
 // dataRestorer implements the RestoreManager interface.
 // Stores job information locally within a map.
 type dataRestorer struct {

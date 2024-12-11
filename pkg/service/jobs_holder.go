@@ -88,7 +88,7 @@ func (h *RestoreJobsHolder) getStatus(id model.RestoreJobID) (*model.RestoreJobS
 	if job, exists := h.jobs[id]; exists {
 		return RestoreJobStatus(job), nil
 	}
-	return nil, &ErrJobNotFound{JobID: id}
+	return nil, NewErrJobNotFound(id)
 }
 
 func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*jobInfo, error) {
@@ -97,5 +97,5 @@ func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*jobInfo, error) {
 	if job, exists := h.jobs[id]; exists {
 		return job, nil
 	}
-	return nil, &ErrJobNotFound{JobID: id}
+	return nil, NewErrJobNotFound(id)
 }
