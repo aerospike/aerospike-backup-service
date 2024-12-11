@@ -98,8 +98,8 @@ func (p *BackupPolicy) Validate() error {
 	if p.RecordsPerSecond != nil && *p.RecordsPerSecond <= 0 {
 		return fmt.Errorf("recordsPerSecond %d invalid, should be positive number", *p.RecordsPerSecond)
 	}
-	if p.FileLimit != nil && *p.FileLimit <= 0 {
-		return fmt.Errorf("fileLimit %d invalid, should be positive number", *p.FileLimit)
+	if p.FileLimit != nil && *p.FileLimit < 0 {
+		return fmt.Errorf("fileLimit %d invalid, should not be negative number", *p.FileLimit)
 	}
 	if p.RemoveFiles != nil &&
 		*p.RemoveFiles != KeepAll && *p.RemoveFiles != RemoveAll && *p.RemoveFiles != RemoveIncremental {
