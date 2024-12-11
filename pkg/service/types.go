@@ -17,15 +17,18 @@ type RestoreHandler interface {
 	Wait(context.Context) error
 }
 
+// RestoreHandlerWithCancel is a wrapper around a RestoreHandler that adds a cancel function.
 type RestoreHandlerWithCancel struct {
 	RestoreHandler
 	cancel func()
 }
 
+// Cancel cancels the restore job.
 func (rj *RestoreHandlerWithCancel) Cancel() {
 	rj.cancel()
 }
 
+// GetStats returns the statistics of the restore job.
 func (rj *RestoreHandlerWithCancel) GetStats() *models.RestoreStats {
 	return rj.RestoreHandler.GetStats()
 }

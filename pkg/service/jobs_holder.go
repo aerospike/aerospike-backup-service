@@ -11,7 +11,7 @@ import (
 )
 
 type jobInfo struct {
-	handlers     []*RestoreHandlerWithCancel
+	handlers     []*RestoreHandlerWithCancel // Each handler restores one namespace.
 	status       model.JobStatus
 	err          error
 	totalRecords uint64

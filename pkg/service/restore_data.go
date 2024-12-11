@@ -269,11 +269,13 @@ func recordsInBackup(ctx context.Context, request *model.RestoreRequest) (uint64
 	return metadata.RecordCount, nil
 }
 
+// CancelRestore cancels an ongoing restore.
 func (r *dataRestorer) CancelRestore(jobID model.RestoreJobID) error {
 	job, err := r.restoreJobs.getJob(jobID)
 	if err != nil {
 		return err
 	}
+	slog.Debug("Canceling restore job", slog.Any("job ID", jobID))
 	for _, h := range job.handlers {
 		h.Cancel()
 	}
