@@ -23,7 +23,7 @@ import (
 // @Router      /v1/restore/full [post]
 // @Accept      json
 // @Param       request body dto.RestoreRequest true "Restore request details"
-// @Success     202 {int64} int64 "Restore operation job id"
+// @Success     202 {integer} int "Restore operation job id"
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +76,7 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 // @Router      /v1/restore/incremental [post]
 // @Accept      json
 // @Param       request body dto.RestoreRequest true "Restore request details"
-// @Success     202 {int64} int64 "Restore operation job id"
+// @Success     202 {integer} int "Restore operation job id"
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +131,7 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 // @Router      /v1/restore/timestamp [post]
 // @Accept      json
 // @Param       request body dto.RestoreTimestampRequest true "Restore request details"
-// @Success     202 {int64} int64 "Restore operation job id"
+// @Success     202 {integer} int "Restore operation job id"
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
@@ -185,7 +185,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 // @ID	        restoreStatus
 // @Tags        Restore
 // @Produce     json
-// @Param       jobId path int true "Job ID to retrieve the status" format(int64)
+// @Param       jobId path int true "Job ID to retrieve the status"
 // @Router      /v1/restore/status/{jobId} [get]
 // @Success     200 {object} dto.RestoreJobStatus "Restore job status details"
 // @Failure     400 {string} string
@@ -303,7 +303,7 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 // @ID          cancelRestore
 // @Tags        Restore
 // @Router      /v1/restore/cancel/{jobID} [post]
-// @Param       jobID path int64 true "Restore job ID"
+// @Param       jobID path int true "Restore job ID"
 // @Success     200 {string} string "Restore job canceled successfully"
 // @Failure     400 {string} string "Invalid job ID"
 // @Failure     404 {string} string "Job not found"

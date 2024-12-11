@@ -1443,7 +1443,6 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "format" : "int64",
                   "type" : "integer"
                 }
               }
@@ -1495,7 +1494,6 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "format" : "int64",
                   "type" : "integer"
                 }
               }
@@ -1537,7 +1535,6 @@
           "name" : "jobId",
           "required" : true,
           "schema" : {
-            "format" : "int64",
             "type" : "integer"
           }
         } ],
@@ -1587,7 +1584,6 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "format" : "int64",
                   "type" : "integer"
                 }
               }

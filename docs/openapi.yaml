@@ -997,7 +997,6 @@ paths:
           content:
             '*/*':
               schema:
-                format: int64
                 type: integer
           description: Restore operation job id
         "400":
@@ -1031,7 +1030,6 @@ paths:
           content:
             '*/*':
               schema:
-                format: int64
                 type: integer
           description: Restore operation job id
         "400":
@@ -1059,7 +1057,6 @@ paths:
         name: jobId
         required: true
         schema:
-          format: int64
           type: integer
       responses:
         "200":
@@ -1093,7 +1090,6 @@ paths:
           content:
             '*/*':
               schema:
-                format: int64
                 type: integer
           description: Restore operation job id
         "400":

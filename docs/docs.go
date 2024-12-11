@@ -1288,7 +1288,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Restore operation job id",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer"
                         }
                     },
                     "400": {
@@ -1331,7 +1331,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Restore operation job id",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer"
                         }
                     },
                     "400": {
@@ -1362,7 +1362,6 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "format": "int64",
                         "description": "Job ID to retrieve the status",
                         "name": "jobId",
                         "in": "path",
@@ -1411,7 +1410,7 @@ const docTemplate = `{
                     "202": {
                         "description": "Restore operation job id",
                         "schema": {
-                            "type": "int64"
+                            "type": "integer"
                         }
                     },
                     "400": {
