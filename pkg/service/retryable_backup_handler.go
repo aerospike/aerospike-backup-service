@@ -8,12 +8,6 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-type WrappedBackupHandler interface {
-	Wait(context.Context) error
-	GetStats() *models.BackupStats
-	Cancel()
-}
-
 // and cancelable
 type retryableBackupHandler struct {
 	sync.RWMutex
@@ -30,7 +24,7 @@ func startBackup(
 	start func(ctx context.Context) (BackupHandler, error),
 	onFail func(ctx context.Context),
 	onSuccess func(ctx context.Context, stats *models.BackupStats) error,
-) WrappedBackupHandler {
+) CancelableBackupHandler {
 	ctx, cancel := context.WithCancel(ctx)
 	h := &retryableBackupHandler{
 		errCh:  make(chan error, 1),
