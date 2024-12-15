@@ -33,8 +33,8 @@ type BackupRoutineHandler struct {
 	clusterConfigWriter ClusterConfigWriter
 
 	// backup handlers by namespace
-	fullBackupHandlers map[string]BackupHandler
-	incrBackupHandlers map[string]BackupHandler
+	fullBackupHandlers map[string]WrappedBackupHandler
+	incrBackupHandlers map[string]WrappedBackupHandler
 }
 
 // Backup represents a backup service.
@@ -105,8 +105,8 @@ func newBackupRoutineHandler(
 		retry: newRetryExecutor(
 			backupPolicy.GetRetryPolicyOrDefault(),
 			logger),
-		fullBackupHandlers: make(map[string]BackupHandler),
-		incrBackupHandlers: make(map[string]BackupHandler),
+		fullBackupHandlers: make(map[string]WrappedBackupHandler),
+		incrBackupHandlers: make(map[string]WrappedBackupHandler),
 		clientManager:      clientManager,
 		clusterConfigWriter: NewClusterConfigWriter(
 			backupStorage,
@@ -188,7 +188,7 @@ func (h *BackupRoutineHandler) prepareCluster(retry executor) (*backup.Client, [
 
 func (h *BackupRoutineHandler) startNamespaceBackup(
 	ctx context.Context, namespace string, now time.Time, client *backup.Client,
-) BackupHandler {
+) WrappedBackupHandler {
 	backupFolder := getFullPath(h.routineName, h.backupFullPolicy, namespace, now)
 	timebounds := h.createTimebounds(true, now)
 
@@ -327,7 +327,7 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 
 func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 	ctx context.Context, namespace string, now time.Time, client *backup.Client,
-) BackupHandler {
+) WrappedBackupHandler {
 	backupFolder := getIncrementalPathForNamespace(h.routineName, namespace, now)
 	timebounds := h.createTimebounds(false, now)
 

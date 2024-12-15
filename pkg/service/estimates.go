@@ -6,7 +6,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
-func currentBackupStatus(handlers map[string]BackupHandler) *model.RunningJob {
+func currentBackupStatus(handlers map[string]WrappedBackupHandler) *model.RunningJob {
 	activeHandlers := 0
 
 	var (

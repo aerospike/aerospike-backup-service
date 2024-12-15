@@ -64,6 +64,8 @@ func (m *mockBackupHandler) Wait(ctx context.Context) error {
 	return args.Error(0)
 }
 
+func (m *mockBackupHandler) Cancel() {}
+
 type mockMetadataWriter struct {
 	mock.Mock
 }
@@ -104,8 +106,8 @@ func setupTestHandler(
 			SourceCluster: &model.AerospikeCluster{},
 		},
 		backupFullPolicy:   &model.BackupPolicy{},
-		fullBackupHandlers: make(map[string]BackupHandler),
-		incrBackupHandlers: make(map[string]BackupHandler),
+		fullBackupHandlers: make(map[string]WrappedBackupHandler),
+		incrBackupHandlers: make(map[string]WrappedBackupHandler),
 		lastRun:            lastBackupRun{},
 		storage:            &model.LocalStorage{Path: "/tmp"},
 		logger:             slog.Default(),
