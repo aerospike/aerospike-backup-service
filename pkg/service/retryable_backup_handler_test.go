@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 var retry = newRetryExecutor(models.RetryPolicy{
@@ -194,4 +196,57 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to start backup")
 	assert.Equal(t, 0, failureCount)
 	assert.Equal(t, 0, successCount)
+}
+
+type mockCancelBackupHandler struct {
+}
+
+func (m *mockCancelBackupHandler) GetStats() *models.BackupStats {
+	panic("process should be cancelled before GetStats is called")
+}
+
+func (m *mockCancelBackupHandler) Wait(ctx context.Context) error {
+	select {
+	case <-time.After(1 * time.Second):
+		return fmt.Errorf("cancel was not called")
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func TestStartRetryableBackup_Cancel(t *testing.T) {
+	ctx := context.Background()
+	mockHandler := &mockCancelBackupHandler{}
+
+	successCount := 0
+	failureCount := 0
+
+	start := func(_ context.Context) (BackupHandler, error) {
+		return mockHandler, nil
+	}
+
+	onFail := func(_ context.Context) {
+		failureCount++
+	}
+
+	onSuccess := func(_ context.Context, _ *models.BackupStats) error {
+		successCount++
+		return nil
+	}
+
+	handler := startBackup(ctx, retry, start, onFail, onSuccess)
+	var err error
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		err = handler.Wait(ctx)
+		wg.Done()
+	}()
+
+	handler.Cancel()
+	wg.Wait()
+
+	require.ErrorIs(t, err, context.Canceled)
+	require.Equal(t, 1, failureCount) // fail was run to clean up backup
+	require.Equal(t, 0, successCount)
 }
