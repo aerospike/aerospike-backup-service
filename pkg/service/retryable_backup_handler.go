@@ -8,7 +8,8 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// and cancelable
+// retryableBackupHandler is a wrapper around BackupHandler that adds
+// retry logic and cancellation support
 type retryableBackupHandler struct {
 	sync.RWMutex
 	handler BackupHandler
