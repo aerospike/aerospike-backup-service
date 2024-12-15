@@ -371,3 +371,7 @@ func (h *BackupRoutineHandler) GetCurrentStat() *model.CurrentBackups {
 		Incremental: currentBackupStatus(h.incrBackupHandlers),
 	}
 }
+
+func (h *BackupRoutineHandler) Cancel() error {
+	return nil
+}

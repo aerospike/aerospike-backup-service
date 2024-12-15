@@ -273,3 +273,40 @@ func TestService_GetCurrentBackupInfo(t *testing.T) {
 			End()
 	}
 }
+
+func TestService_CancelRunningBackup(t *testing.T) {
+	t.Parallel()
+	h := newServiceMock(t)
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/backups/cancel/{name}",
+		h.CancelCurrentBackup,
+	).Methods(http.MethodPost)
+
+	const name = testRoutineName
+
+	testCases := []struct {
+		method     string
+		statusCode int
+		name       string
+	}{
+		{http.MethodPost, http.StatusNotFound, name},
+		{http.MethodPost, http.StatusNotFound, ""},
+		{http.MethodGet, http.StatusMethodNotAllowed, name},
+		{http.MethodConnect, http.StatusMethodNotAllowed, name},
+		{http.MethodDelete, http.StatusMethodNotAllowed, name},
+		{http.MethodPatch, http.StatusMethodNotAllowed, name},
+		{http.MethodPut, http.StatusMethodNotAllowed, name},
+		{http.MethodTrace, http.StatusMethodNotAllowed, name},
+	}
+
+	for _, tt := range testCases {
+		apitest.New().
+			Handler(router).
+			Method(tt.method).
+			URL(fmt.Sprintf("/backups/cancel/%s", tt.name)).
+			Expect(t).
+			Status(tt.statusCode).
+			End()
+	}
+}
