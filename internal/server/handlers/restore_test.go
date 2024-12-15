@@ -247,3 +247,40 @@ func TestService_RetrieveConfig(t *testing.T) {
 			End()
 	}
 }
+
+func TestService_CancelRestore(t *testing.T) {
+	t.Parallel()
+	h := newServiceMock(t)
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/v1/restore/cancel/{jobId}",
+		h.CancelRestoreHandler,
+	).Methods(http.MethodPost)
+
+	const jobID = "1"
+
+	testCases := []struct {
+		method     string
+		statusCode int
+		jobID      string
+	}{
+		{http.MethodPost, http.StatusOK, jobID},
+		{http.MethodPost, http.StatusBadRequest, "a"},
+		{http.MethodGet, http.StatusMethodNotAllowed, jobID},
+		{http.MethodConnect, http.StatusMethodNotAllowed, jobID},
+		{http.MethodDelete, http.StatusMethodNotAllowed, jobID},
+		{http.MethodPatch, http.StatusMethodNotAllowed, jobID},
+		{http.MethodPut, http.StatusMethodNotAllowed, jobID},
+		{http.MethodTrace, http.StatusMethodNotAllowed, jobID},
+	}
+
+	for _, tt := range testCases {
+		apitest.New().
+			Handler(router).
+			Method(tt.method).
+			URL(fmt.Sprintf("/v1/restore/cancel/%s", tt.jobID)).
+			Expect(t).
+			Status(tt.statusCode).
+			End()
+	}
+}
