@@ -91,7 +91,7 @@
       }
     },
     "/v1/backups/cancel/{name}" : {
-      "delete" : {
+      "post" : {
         "operationId" : "cancelCurrentBackup",
         "parameters" : [ {
           "description" : "Backup routine name",

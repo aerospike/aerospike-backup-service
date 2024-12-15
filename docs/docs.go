@@ -97,7 +97,7 @@ const docTemplate = `{
             }
         },
         "/v1/backups/cancel/{name}": {
-            "delete": {
+            "post": {
                 "tags": [
                     "Backup"
                 ],

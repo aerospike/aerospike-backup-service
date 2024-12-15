@@ -337,7 +337,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 // @ID       cancelCurrentBackup
 // @Tags     Backup
 // @Param    name path string true "Backup routine name"
-// @Router   /v1/backups/cancel/{name} [delete]
+// @Router   /v1/backups/cancel/{name} [post]
 // @Success  204
 // @Failure  404 {string} string
 // @Failure  500 {string} string
