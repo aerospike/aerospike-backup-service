@@ -247,6 +247,6 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 	wg.Wait()
 
 	require.ErrorIs(t, err, context.Canceled)
-	require.Equal(t, 1, failureCount) // fail was run to clean up backup
+	require.Equal(t, 1, failureCount)
 	require.Equal(t, 0, successCount)
 }
