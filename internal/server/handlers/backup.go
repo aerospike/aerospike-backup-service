@@ -338,7 +338,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 // @Tags     Backup
 // @Param    name path string true "Backup routine name"
 // @Router   /v1/backups/cancel/{name} [post]
-// @Success  204
+// @Success  202
 // @Failure  404 {string} string
 // @Failure  500 {string} string
 func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
@@ -360,15 +360,8 @@ func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := handler.Cancel()
-	if err != nil {
-		hLogger.Error("failed to cancel backup",
-			slog.Any("error", err),
-		)
-		http.Error(w, "failed to cancel backup: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	handler.Cancel()
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusAccepted)
 }

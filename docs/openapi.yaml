@@ -78,9 +78,9 @@ paths:
         schema:
           type: string
       responses:
-        "204":
+        "202":
           content: {}
-          description: No Content
+          description: Accepted
         "404":
           content:
             '*/*':

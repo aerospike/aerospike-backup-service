@@ -377,12 +377,11 @@ func (h *BackupRoutineHandler) GetCurrentStat() *model.CurrentBackups {
 	}
 }
 
-func (h *BackupRoutineHandler) Cancel() error {
+func (h *BackupRoutineHandler) Cancel() {
 	for _, handler := range h.fullBackupHandlers {
 		handler.Cancel()
 	}
 	for _, handler := range h.incrBackupHandlers {
 		handler.Cancel()
 	}
-	return nil
 }
