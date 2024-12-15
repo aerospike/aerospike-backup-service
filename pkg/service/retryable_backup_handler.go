@@ -31,8 +31,10 @@ func startBackup(
 	onFail func(ctx context.Context),
 	onSuccess func(ctx context.Context, stats *models.BackupStats) error,
 ) WrappedBackupHandler {
+	ctx, cancel := context.WithCancel(ctx)
 	h := &retryableBackupHandler{
-		errCh: make(chan error, 1),
+		errCh:  make(chan error, 1),
+		cancel: cancel,
 	}
 
 	// Helper to retry onSuccess only
