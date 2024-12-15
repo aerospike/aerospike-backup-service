@@ -234,6 +234,7 @@ func TestService_ScheduleFullBackup(t *testing.T) {
 	}
 }
 
+//nolint:dupl
 func TestService_GetCurrentBackupInfo(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock(t)
@@ -274,6 +275,7 @@ func TestService_GetCurrentBackupInfo(t *testing.T) {
 	}
 }
 
+//nolint:dupl
 func TestService_CancelRunningBackup(t *testing.T) {
 	t.Parallel()
 	h := newServiceMock(t)
