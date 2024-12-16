@@ -265,6 +265,11 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
+	_, ok := s.config.BackupRoutines[routineName]
+	if !ok {
+		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)
+		return
+	}
 
 	err := s.changeConfig(r.Context(), func(config *model.Config) error {
 		return config.ToggleRoutineDisabled(routineName, true)
@@ -297,6 +302,11 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
+		return
+	}
+	_, ok := s.config.BackupRoutines[routineName]
+	if !ok {
+		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)
 		return
 	}
 
