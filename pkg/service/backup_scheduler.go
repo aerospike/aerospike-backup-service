@@ -72,6 +72,9 @@ func scheduleRoutines(
 ) error {
 	var errs error
 	for routineName, routine := range config.BackupRoutines {
+		if routine.Disabled {
+			continue
+		}
 		handler := handlers[routineName]
 
 		// schedule a full backup job for the routine

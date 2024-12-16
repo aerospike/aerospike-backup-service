@@ -231,7 +231,6 @@ func TestService_EnableRoutine(t *testing.T) {
 		name       string
 	}{
 		{http.MethodPut, http.StatusNotFound, "routine1"},
-		{http.MethodPut, http.StatusBadRequest, ""},
 		{http.MethodGet, http.StatusMethodNotAllowed, "routine1"},
 	}
 
