@@ -34,7 +34,7 @@ func NewRestoreJobsHolder() *RestoreJobsHolder {
 // newJob creates a new restore job and return its id.
 func (h *RestoreJobsHolder) newJob(label string) model.RestoreJobID {
 	// #nosec G404
-	id := model.RestoreJobID(rand.Int())
+	id := model.RestoreJobID(rand.Int63())
 	h.Lock()
 	defer h.Unlock()
 

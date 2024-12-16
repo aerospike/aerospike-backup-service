@@ -331,3 +331,37 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 }
+
+// CancelCurrentBackup
+// @Summary  Cancel current backup.
+// @ID       cancelCurrentBackup
+// @Tags     Backup
+// @Param    name path string true "Backup routine name"
+// @Router   /v1/backups/cancel/{name} [post]
+// @Success  202
+// @Failure  404 {string} string
+// @Failure  500 {string} string
+func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "CancelCurrentBackup"))
+
+	routineName := mux.Vars(r)["name"]
+	if routineName == "" {
+		hLogger.Error("routine name required")
+		http.Error(w, "routine name required", http.StatusBadRequest)
+		return
+	}
+
+	handler, found := s.handlerHolder[routineName]
+	if !found {
+		hLogger.Error("unknown routine name",
+			slog.String("name", routineName),
+		)
+		http.Error(w, "unknown routine name "+routineName, http.StatusNotFound)
+		return
+	}
+
+	handler.Cancel()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+}
