@@ -312,7 +312,7 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler.Cancel()
+	handler.Cancel() // cancel any running job for this routine before disabling it.
 
 	err := s.changeConfig(r.Context(), func(config *model.Config) error {
 		return config.ToggleRoutineDisabled(routineName, false)

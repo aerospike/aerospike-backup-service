@@ -25,6 +25,10 @@ const (
 	jobTypeIncremental jobType = "incremental"
 )
 
+type Scheduler interface {
+	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error
+}
+
 var jobStore = &backupJobs{jobs: make(map[string]*quartz.JobDetail)}
 
 type backupJobs struct {
@@ -68,7 +72,7 @@ func NewScheduler(ctx context.Context) quartz.Scheduler {
 
 // scheduleRoutines schedules the given handlers using the scheduler.
 func scheduleRoutines(
-	scheduler quartz.Scheduler, config *model.Config, handlers BackupHandlerHolder,
+	scheduler Scheduler, config *model.Config, handlers BackupHandlerHolder,
 ) error {
 	var errs error
 	for routineName, routine := range config.BackupRoutines {
@@ -95,7 +99,7 @@ func scheduleRoutines(
 }
 
 func scheduleFullBackup(
-	scheduler quartz.Scheduler, handler *BackupRoutineHandler, interval string, routineName string,
+	scheduler Scheduler, handler *BackupRoutineHandler, interval string, routineName string,
 ) error {
 	fullCronTrigger, err := quartz.NewCronTrigger(interval)
 	if err != nil {
@@ -124,7 +128,7 @@ func scheduleFullBackup(
 }
 
 func scheduleIncrementalBackup(
-	scheduler quartz.Scheduler, handler *BackupRoutineHandler, interval string, routineName string,
+	scheduler Scheduler, handler *BackupRoutineHandler, interval string, routineName string,
 ) error {
 	incrCronTrigger, err := quartz.NewCronTrigger(interval)
 	if err != nil {
