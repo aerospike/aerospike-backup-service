@@ -378,6 +378,7 @@ func (h *BackupRoutineHandler) GetCurrentStat() *model.CurrentBackups {
 }
 
 func (h *BackupRoutineHandler) Cancel() {
+	h.logger.Info("Canceling backup")
 	for _, handler := range h.fullBackupHandlers {
 		handler.Cancel()
 	}

@@ -13,7 +13,7 @@ import (
 type retryableBackupHandler struct {
 	sync.RWMutex
 	handler BackupHandler
-	cancel  func()
+	cancel  context.CancelFunc
 	errCh   chan error
 }
 
