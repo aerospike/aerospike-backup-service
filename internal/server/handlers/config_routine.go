@@ -248,7 +248,7 @@ func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// enableRoutine
+// EnableRoutine
 // @Summary     Enable a backup routine.
 // @Tags        Configuration
 // @ID          enableRoutine
@@ -256,7 +256,7 @@ func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success     204 "Routine successfully enabled."
 // @Failure     404 {string} string
 // @Router      /v1/config/routines/{name}/enable [put]
-func (s *Service) enableRoutine(w http.ResponseWriter, r *http.Request) {
+func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "enableRoutine"))
 
 	routineName := mux.Vars(r)["name"]
@@ -281,7 +281,7 @@ func (s *Service) enableRoutine(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// disableRoutine
+// DisableRoutine
 // @Summary     Disable a backup routine.
 // @Tags        Configuration
 // @ID          disableRoutine
@@ -290,7 +290,7 @@ func (s *Service) enableRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure     404 {string} string
 // @Failure     500 {string} string "Unexpected error occurred."
 // @Router      /v1/config/routines/{name}/disable [put]
-func (s *Service) disableRoutine(w http.ResponseWriter, r *http.Request) {
+func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "disableRoutine"))
 
 	routineName := mux.Vars(r)["name"]
