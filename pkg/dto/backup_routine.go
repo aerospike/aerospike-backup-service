@@ -44,6 +44,8 @@ type BackupRoutine struct {
 	// If it is set, ParallelNodes automatically set to true.
 	// This argument is mutually exclusive to partition-list/AfterDigest arguments.
 	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty" example:"<IP addr 1>:<port 1>[,<IP addr 2>:<port 2>[,...]]"`
+	// Whether this routine is disabled and should not run.
+	Disabled bool `json:"disabled,omitempty"`
 }
 
 // Validate validates the backup routine configuration.
@@ -132,6 +134,7 @@ func (r *BackupRoutine) ToModel(
 		PreferRacks:      r.PreferRacks,
 		PartitionList:    r.PartitionList,
 		NodeList:         r.NodeList,
+		Disabled:         r.Disabled,
 	}, nil
 }
 
@@ -174,6 +177,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.Config) 
 	r.PreferRacks = m.PreferRacks
 	r.PartitionList = m.PartitionList
 	r.NodeList = m.NodeList
+	r.Disabled = m.Disabled
 }
 
 func findKeyByValue[V any](m map[string]*V, value *V) string {

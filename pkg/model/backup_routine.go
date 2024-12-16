@@ -29,4 +29,6 @@ type BackupRoutine struct {
 	PartitionList *string
 	// NodeList contains a list of nodes to back up.
 	NodeList []string
+	// Whether this routine is disabled and should not run.
+	Disabled bool
 }

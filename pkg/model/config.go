@@ -265,3 +265,17 @@ func (c *Config) ResolveSecretAgent(name *string, defaultAgent *SecretAgent) (*S
 
 	return defaultAgent, nil
 }
+
+// ToggleRoutineDisabled sets the Disabled field of the BackupRoutine based on the provided state.
+func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	_, exists := c.BackupRoutines[name]
+	if !exists {
+		return fmt.Errorf("toggle disable for backup routine %q: %w", name, ErrNotFound)
+	}
+
+	c.BackupRoutines[name].Disabled = isDisabled
+	return nil
+}
