@@ -83,11 +83,11 @@ func (p *BackupPolicy) Validate() error {
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
 	}
-	if p.SocketTimeout != nil && *p.SocketTimeout <= 0 {
-		return fmt.Errorf("socketTimeout %d invalid, should be positive number", *p.SocketTimeout)
+	if p.SocketTimeout != nil && *p.SocketTimeout < 0 {
+		return fmt.Errorf("socketTimeout %d invalid, should not be negative number", *p.SocketTimeout)
 	}
-	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
-		return fmt.Errorf("totalTimeout %d invalid, should be positive number", *p.TotalTimeout)
+	if p.TotalTimeout != nil && *p.TotalTimeout < 0 {
+		return fmt.Errorf("totalTimeout %d invalid, should not be negative number", *p.TotalTimeout)
 	}
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retryPolicy validation failed: %w", err)
@@ -98,8 +98,8 @@ func (p *BackupPolicy) Validate() error {
 	if p.RecordsPerSecond != nil && *p.RecordsPerSecond <= 0 {
 		return fmt.Errorf("recordsPerSecond %d invalid, should be positive number", *p.RecordsPerSecond)
 	}
-	if p.FileLimit != nil && *p.FileLimit <= 0 {
-		return fmt.Errorf("fileLimit %d invalid, should be positive number", *p.FileLimit)
+	if p.FileLimit != nil && *p.FileLimit < 0 {
+		return fmt.Errorf("fileLimit %d invalid, should not be negative number", *p.FileLimit)
 	}
 	if p.RemoveFiles != nil &&
 		*p.RemoveFiles != KeepAll && *p.RemoveFiles != RemoveAll && *p.RemoveFiles != RemoveIncremental {
@@ -175,7 +175,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 		p.EncryptionPolicy = &EncryptionPolicy{}
 		p.EncryptionPolicy.FromModel(m.EncryptionPolicy)
 	}
-	if p.CompressionPolicy != nil {
+	if m.CompressionPolicy != nil {
 		p.CompressionPolicy = &CompressionPolicy{}
 		p.CompressionPolicy.fromModel(m.CompressionPolicy)
 	}
