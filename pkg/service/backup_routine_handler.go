@@ -33,8 +33,8 @@ type BackupRoutineHandler struct {
 	clusterConfigWriter ClusterConfigWriter
 
 	// backup handlers by namespace
-	fullBackupHandlers map[string]BackupHandler
-	incrBackupHandlers map[string]BackupHandler
+	fullBackupHandlers map[string]CancelableBackupHandler
+	incrBackupHandlers map[string]CancelableBackupHandler
 }
 
 // Backup represents a backup service.
@@ -56,9 +56,14 @@ type Backup interface {
 type BackupHandler interface {
 	// GetStats returns the statistics of the backup job.
 	GetStats() *models.BackupStats
-	// Wait waits for the backup job to complete and returns an error if the
-	// job failed.
+	// Wait waits for the backup job to complete and returns an error if the job failed.
 	Wait(context.Context) error
+}
+
+type CancelableBackupHandler interface {
+	BackupHandler
+	// Cancel cancels the backup operation.
+	Cancel()
 }
 
 // backupMetadataManager handles backup metadata.
@@ -105,8 +110,8 @@ func newBackupRoutineHandler(
 		retry: newRetryExecutor(
 			backupPolicy.GetRetryPolicyOrDefault(),
 			logger),
-		fullBackupHandlers: make(map[string]BackupHandler),
-		incrBackupHandlers: make(map[string]BackupHandler),
+		fullBackupHandlers: make(map[string]CancelableBackupHandler),
+		incrBackupHandlers: make(map[string]CancelableBackupHandler),
 		clientManager:      clientManager,
 		clusterConfigWriter: NewClusterConfigWriter(
 			backupStorage,
@@ -188,7 +193,7 @@ func (h *BackupRoutineHandler) prepareCluster(retry executor) (*backup.Client, [
 
 func (h *BackupRoutineHandler) startNamespaceBackup(
 	ctx context.Context, namespace string, now time.Time, client *backup.Client,
-) BackupHandler {
+) CancelableBackupHandler {
 	backupFolder := getFullPath(h.routineName, h.backupFullPolicy, namespace, now)
 	timebounds := h.createTimebounds(true, now)
 
@@ -327,7 +332,7 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 
 func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 	ctx context.Context, namespace string, now time.Time, client *backup.Client,
-) BackupHandler {
+) CancelableBackupHandler {
 	backupFolder := getIncrementalPathForNamespace(h.routineName, namespace, now)
 	timebounds := h.createTimebounds(false, now)
 
@@ -369,5 +374,15 @@ func (h *BackupRoutineHandler) GetCurrentStat() *model.CurrentBackups {
 	return &model.CurrentBackups{
 		Full:        currentBackupStatus(h.fullBackupHandlers),
 		Incremental: currentBackupStatus(h.incrBackupHandlers),
+	}
+}
+
+func (h *BackupRoutineHandler) Cancel() {
+	h.logger.Info("Canceling backup")
+	for _, handler := range h.fullBackupHandlers {
+		handler.Cancel()
+	}
+	for _, handler := range h.incrBackupHandlers {
+		handler.Cancel()
 	}
 }

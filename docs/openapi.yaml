@@ -67,6 +67,35 @@ paths:
       summary: Readiness endpoint.
       tags:
       - System
+  /v1/backups/cancel/{name}:
+    post:
+      operationId: cancelCurrentBackup
+      parameters:
+      - description: Backup routine name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "202":
+          content: {}
+          description: Accepted
+        "404":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Not Found
+        "500":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Internal Server Error
+      summary: Cancel current backup.
+      tags:
+      - Backup
   /v1/backups/currentBackup/{name}:
     get:
       operationId: getCurrentBackup
@@ -1005,6 +1034,7 @@ paths:
         name: jobID
         required: true
         schema:
+          format: int64
           type: integer
       responses:
         "200":
@@ -1049,6 +1079,7 @@ paths:
           content:
             '*/*':
               schema:
+                format: int64
                 type: integer
           description: Restore operation job id
         "400":
@@ -1082,6 +1113,7 @@ paths:
           content:
             '*/*':
               schema:
+                format: int64
                 type: integer
           description: Restore operation job id
         "400":
@@ -1109,6 +1141,7 @@ paths:
         name: jobId
         required: true
         schema:
+          format: int64
           type: integer
       responses:
         "200":
@@ -1142,6 +1175,7 @@ paths:
           content:
             '*/*':
               schema:
+                format: int64
                 type: integer
           description: Restore operation job id
         "400":

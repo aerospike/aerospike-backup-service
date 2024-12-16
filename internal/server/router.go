@@ -96,6 +96,9 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 	// Get information on currently running backups
 	apiRouter.HandleFunc("/backups/currentBackup/{name}", h.GetCurrentBackupInfo).Methods(http.MethodGet)
 
+	// Cancel running backup
+	apiRouter.HandleFunc("/backups/cancel/{name}", h.CancelCurrentBackup).Methods(http.MethodPost)
+
 	return r
 }
 
