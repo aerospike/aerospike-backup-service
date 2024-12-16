@@ -26,7 +26,7 @@ func startBackup(
 	onFail func(ctx context.Context),
 	onSuccess func(ctx context.Context, stats *models.BackupStats) error,
 ) CancelableBackupHandler {
-	ctx, cancel := context.WithCancel(ctx)
+	ctxWithCancel, cancel := context.WithCancel(ctx)
 	h := &retryableBackupHandler{
 		errCh:  make(chan error, 1),
 		cancel: cancel,
@@ -54,7 +54,7 @@ func startBackup(
 
 		h.setHandler(handler)
 
-		if err = handler.Wait(ctx); err != nil {
+		if err = handler.Wait(ctxWithCancel); err != nil {
 			onFail(ctx)
 			h.setHandler(nil)
 			return fmt.Errorf("backup failed: %w", err)
