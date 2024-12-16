@@ -238,10 +238,6 @@ func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context) error {
 	var aggregatedErr error
 	for ns, handler := range h.fullBackupHandlers {
 		if err := handler.Wait(ctx); err != nil {
-			if errors.Is(err, context.Canceled) {
-				h.logger.Info("Full backup canceled", slog.String("namespace", ns))
-				continue
-			}
 			aggregatedErr = errors.Join(aggregatedErr, fmt.Errorf("namespace %s: %w", ns, err))
 		}
 	}
@@ -367,10 +363,6 @@ func (h *BackupRoutineHandler) waitForIncrementalBackups(ctx context.Context) er
 	for ns, handler := range h.incrBackupHandlers {
 		err := handler.Wait(ctx)
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				h.logger.Info("Incremental backup canceled", slog.String("namespace", ns))
-				continue
-			}
 			aggregatedErr = errors.Join(aggregatedErr, fmt.Errorf("namespace %s: %w", ns, err))
 		}
 	}
