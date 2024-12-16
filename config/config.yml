@@ -44,7 +44,7 @@ backup-policies:
   keepFilesPolicySlow:
     parallel: 8
     remove-files: KeepAll
-    bandwidth: 120000
+    bandwidth: 1
     sealed: true
   encryptedCompressedPolicy128:
     parallel: 8
