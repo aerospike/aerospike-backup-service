@@ -1038,6 +1038,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/config/routines/{name}/disable": {
+            "put": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Disable a backup routine.",
+                "operationId": "disableRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The name of the backup routine.",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Routine successfully disabled."
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected error occurred.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/config/routines/{name}/enable": {
+            "put": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Enable a backup routine.",
+                "operationId": "enableRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Routine successfully enabled."
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/config/storage": {
             "get": {
                 "produces": [
@@ -1770,6 +1834,10 @@ const docTemplate = `{
                     "example": [
                         "dataBin"
                     ]
+                },
+                "disabled": {
+                    "description": "Whether this routine is disabled and should not run.",
+                    "type": "boolean"
                 },
                 "incr-interval-cron": {
                     "description": "The interval for incremental backup as a cron expression string (optional).",

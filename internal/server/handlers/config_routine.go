@@ -254,7 +254,7 @@ func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 // @ID          enableRoutine
 // @Param       name path string true "Backup routine name"
 // @Success     204 "Routine successfully enabled."
-// @Failure     404 {string}
+// @Failure     404 {string} string
 // @Router      /v1/config/routines/{name}/enable [put]
 func (s *Service) enableRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "enableRoutine"))
