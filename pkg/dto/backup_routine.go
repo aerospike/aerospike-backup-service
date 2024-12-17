@@ -45,7 +45,7 @@ type BackupRoutine struct {
 	// This argument is mutually exclusive to partition-list/AfterDigest arguments.
 	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty" example:"<IP addr 1>:<port 1>[,<IP addr 2>:<port 2>[,...]]"`
 	// Whether this routine is disabled and should not run.
-	Disabled bool `json:"disabled,omitempty"`
+	Disabled bool `json:"disabled,omitempty" yaml:"disabled,omitempty"`
 }
 
 // Validate validates the backup routine configuration.
