@@ -62,6 +62,8 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 	apiRouter.HandleFunc("/config/routines/{name}", h.ConfigRoutineActionHandler).
 		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
 	apiRouter.HandleFunc("/config/routines", h.ReadRoutines).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/config/routines/{name}/disable", h.DisableRoutine).Methods(http.MethodPut)
+	apiRouter.HandleFunc("/config/routines/{name}/enable", h.EnableRoutine).Methods(http.MethodPut)
 
 	// Restore job endpoints
 	// Restore from full backup (by folder)

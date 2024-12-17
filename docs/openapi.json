@@ -1204,6 +1204,80 @@
         "x-codegen-request-body-name" : "routine"
       }
     },
+    "/v1/config/routines/{name}/disable" : {
+      "put" : {
+        "operationId" : "disableRoutine",
+        "parameters" : [ {
+          "description" : "The name of the backup routine.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "content" : { },
+            "description" : "Routine successfully disabled."
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "500" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Unexpected error occurred."
+          }
+        },
+        "summary" : "Disable a backup routine.",
+        "tags" : [ "Configuration" ]
+      }
+    },
+    "/v1/config/routines/{name}/enable" : {
+      "put" : {
+        "operationId" : "enableRoutine",
+        "parameters" : [ {
+          "description" : "Backup routine name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "content" : { },
+            "description" : "Routine successfully enabled."
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Not Found"
+          }
+        },
+        "summary" : "Enable a backup routine.",
+        "tags" : [ "Configuration" ]
+      }
+    },
     "/v1/config/storage" : {
       "get" : {
         "operationId" : "ReadAllStorage",
@@ -1993,6 +2067,10 @@
               "type" : "string"
             },
             "type" : "array"
+          },
+          "disabled" : {
+            "description" : "Whether this routine is disabled and should not run.",
+            "type" : "boolean"
           },
           "incr-interval-cron" : {
             "description" : "The interval for incremental backup as a cron expression string (optional).",
