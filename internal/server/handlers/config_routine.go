@@ -273,7 +273,7 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.ToggleRoutineDisabled(routineName, true)
+		return config.ToggleRoutineDisabled(routineName, false)
 	})
 	if err != nil {
 		hLogger.Error("failed to enable routine",
@@ -315,7 +315,7 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 	handler.Cancel() // cancel any running job for this routine before disabling it.
 
 	err := s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.ToggleRoutineDisabled(routineName, false)
+		return config.ToggleRoutineDisabled(routineName, true)
 	})
 	if err != nil {
 		hLogger.Error("failed to disable routine",
