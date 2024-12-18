@@ -159,9 +159,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 
 	h.lastRun.full = now
 
-	if h.backupFullPolicy.RemoveFiles.RemoveIncrementalBackup() {
-		h.deleteFolder(ctx, getIncrementalRoot(h.routineName))
-	}
+	// TODO: delete old backups here?
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
@@ -194,7 +192,7 @@ func (h *BackupRoutineHandler) prepareCluster(retry executor) (*backup.Client, [
 func (h *BackupRoutineHandler) startNamespaceBackup(
 	ctx context.Context, namespace string, now time.Time, client *backup.Client,
 ) CancelableBackupHandler {
-	backupFolder := getFullPath(h.routineName, h.backupFullPolicy, namespace, now)
+	backupFolder := getFullPath(h.routineName, namespace, now)
 	timebounds := h.createTimebounds(true, now)
 
 	return startBackup(

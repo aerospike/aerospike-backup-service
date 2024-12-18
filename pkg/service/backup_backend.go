@@ -21,19 +21,16 @@ import (
 // BackupBackend handles the backup management logic, employing a StorageAccessor
 // implementation for I/O operations.
 type BackupBackend struct {
-	storage          model.Storage
-	routineName      string
-	removeFullBackup bool
+	storage     model.Storage
+	routineName string
 }
 
 var _ BackupListReader = (*BackupBackend)(nil)
 
 func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend {
-	removeFullBackup := routine.BackupPolicy.RemoveFiles.RemoveFullBackup()
 	return &BackupBackend{
-		storage:          routine.Storage,
-		routineName:      routineName,
-		removeFullBackup: removeFullBackup,
+		storage:     routine.Storage,
+		routineName: routineName,
 	}
 }
 
@@ -99,7 +96,7 @@ func (b *BackupBackend) readMetadataList(ctx context.Context, timebounds model.T
 		if timebounds.Contains(metadata.Created) {
 			backups = append(backups, model.BackupDetails{
 				BackupMetadata: *metadata,
-				Key:            getKey(b.routineName, isFullBackup, metadata, b.removeFullBackup && isFullBackup),
+				Key:            getKey(b.routineName, isFullBackup, metadata),
 				Storage:        b.storage,
 			})
 		}
