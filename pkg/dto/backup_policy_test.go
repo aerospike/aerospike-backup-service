@@ -8,8 +8,8 @@ import (
 
 func TestBackupPolicyConversionIsLossless(t *testing.T) {
 	parallel := 4
-	socketTimeout := int32(5000)
-	totalTimeout := int32(10000)
+	socketTimeout := 5000
+	totalTimeout := 10000
 	retryPolicy := &RetryPolicy{MaxRetries: 3}
 	removeFiles := KeepAll
 	noRecords := true

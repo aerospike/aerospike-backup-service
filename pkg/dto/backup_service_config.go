@@ -16,14 +16,6 @@ type BackupServiceConfig struct {
 	Logger *LoggerConfig `yaml:"logger,omitempty" json:"logger,omitempty"`
 }
 
-// NewBackupServiceConfigWithDefaultValues returns a new BackupServiceConfig with default values.
-func NewBackupServiceConfigWithDefaultValues() BackupServiceConfig {
-	return BackupServiceConfig{
-		HTTPServer: &HTTPServerConfig{},
-		Logger:     &LoggerConfig{},
-	}
-}
-
 func (b *BackupServiceConfig) ToModel() *model.BackupServiceConfig {
 	return &model.BackupServiceConfig{
 		HTTPServer: b.HTTPServer.ToModel(),

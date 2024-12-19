@@ -7,6 +7,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
+	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +19,11 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 	}
 
 	originalConfig := &Config{
-		ServiceConfig: NewBackupServiceConfigWithDefaultValues(),
+		ServiceConfig: BackupServiceConfig{
+			HTTPServer: &HTTPServerConfig{
+				Address: ptr.String("localhost"),
+			},
+		},
 		AerospikeClusters: map[string]*AerospikeCluster{
 			"cluster1": {
 				SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
