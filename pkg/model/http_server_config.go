@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 // HTTPServerConfig represents the service's HTTP server configuration.
 // @Description HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
@@ -11,8 +13,8 @@ type HTTPServerConfig struct {
 	Rate *RateLimiterConfig
 	// ContextPath customizes path for the API endpoints.
 	ContextPath *string
-	// Timeout for http server operations in milliseconds.
-	Timeout *int
+	// Timeout for http server operations.
+	Timeout *time.Duration
 }
 
 // GetAddressOrDefault returns the value of the Address property.
@@ -33,9 +35,9 @@ func (s *HTTPServerConfig) GetPortOrDefault() int {
 	return *defaultConfig.http.Port
 }
 
-// GetTimeout returns the value of the Timeout property.
+// GetTimeoutOrDefault returns the value of the Timeout property.
 // If the property is not set, it returns the default value = 5s.
-func (s *HTTPServerConfig) GetTimeout() int {
+func (s *HTTPServerConfig) GetTimeoutOrDefault() time.Duration {
 	if s.Timeout != nil {
 		return *s.Timeout
 	}

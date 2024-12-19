@@ -10,7 +10,7 @@ import (
 
 func validConfig() *Config {
 	return &Config{
-		ServiceConfig: NewBackupServiceConfigWithDefaultValues(),
+		ServiceConfig: BackupServiceConfig{},
 		BackupRoutines: map[string]*BackupRoutine{
 			"routine1": {
 				SourceCluster: "cluster1",

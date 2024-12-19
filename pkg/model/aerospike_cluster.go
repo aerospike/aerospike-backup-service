@@ -26,7 +26,7 @@ type AerospikeCluster struct {
 	// The seed nodes details.
 	SeedNodes []SeedNode
 	// The connection timeout in milliseconds.
-	ConnTimeout *int32
+	ConnTimeout *time.Duration
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
 	UseServicesAlternate *bool
 	// The authentication details to the Aerospike cluster.

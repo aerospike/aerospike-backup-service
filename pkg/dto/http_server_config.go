@@ -48,7 +48,7 @@ func (s *HTTPServerConfig) ToModel() *model.HTTPServerConfig {
 		Port:        s.Port,
 		Rate:        s.Rate.ToModel(),
 		ContextPath: s.ContextPath,
-		Timeout:     s.Timeout,
+		Timeout:     millisToDuration(s.Timeout),
 	}
 }
 
@@ -63,7 +63,7 @@ func (s *HTTPServerConfig) fromModel(m *model.HTTPServerConfig) {
 		s.Rate.fromModel(m.Rate)
 	}
 	s.ContextPath = m.ContextPath
-	s.Timeout = m.Timeout
+	s.Timeout = durationToMillis(m.Timeout)
 }
 
 // Compare HTTPServerConfig object with another and return detailed errors.

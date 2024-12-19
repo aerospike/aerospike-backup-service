@@ -17,7 +17,7 @@ type AerospikeCluster struct {
 	// The seed nodes details.
 	SeedNodes []SeedNode `yaml:"seed-nodes,omitempty" json:"seed-nodes,omitempty"`
 	// The connection timeout in milliseconds.
-	ConnTimeout *int32 `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty" example:"5000"`
+	ConnTimeout *int `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty" example:"5000"`
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
 	UseServicesAlternate *bool `yaml:"use-services-alternate,omitempty" json:"use-services-alternate,omitempty"`
 	// The authentication details to the Aerospike cluster.
@@ -78,7 +78,7 @@ func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster, config *model.Co
 	for i, v := range m.SeedNodes {
 		a.SeedNodes[i].fromModel(v)
 	}
-	a.ConnTimeout = m.ConnTimeout
+	a.ConnTimeout = durationToMillis(m.ConnTimeout)
 	a.UseServicesAlternate = m.UseServicesAlternate
 	if m.Credentials != nil {
 		a.Credentials = &Credentials{}
@@ -100,7 +100,7 @@ func (a *AerospikeCluster) ToModel(config *model.Config) (*model.AerospikeCluste
 	return &model.AerospikeCluster{
 		ClusterLabel:         a.ClusterLabel,
 		SeedNodes:            a.seedNodesToModel(),
-		ConnTimeout:          a.ConnTimeout,
+		ConnTimeout:          millisToDuration(a.ConnTimeout),
 		UseServicesAlternate: a.UseServicesAlternate,
 		Credentials:          credentials,
 		TLS:                  a.TLS.toModel(),
