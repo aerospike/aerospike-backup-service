@@ -25,7 +25,7 @@ type AerospikeCluster struct {
 	ClusterLabel *string
 	// The seed nodes details.
 	SeedNodes []SeedNode
-	// The connection timeout in milliseconds.
+	// The connection timeout.
 	ConnTimeout *time.Duration
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
 	UseServicesAlternate *bool
@@ -136,7 +136,7 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 		}
 	}
 	if c.ConnTimeout != nil {
-		policy.Timeout = time.Duration(*c.ConnTimeout) * time.Millisecond
+		policy.Timeout = *c.ConnTimeout
 	}
 	if c.UseServicesAlternate != nil {
 		policy.UseServicesAlternate = *c.UseServicesAlternate
