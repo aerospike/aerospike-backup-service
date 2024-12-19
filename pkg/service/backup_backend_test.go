@@ -14,9 +14,8 @@ const tempFolder = "./tmp"
 
 func TestFullBackupRemoveFiles(t *testing.T) {
 	backend := &BackupBackend{
-		storage:          &model.LocalStorage{Path: tempFolder},
-		routineName:      "routine",
-		removeFullBackup: true,
+		storage:     &model.LocalStorage{Path: tempFolder},
+		routineName: "routine",
 	}
 
 	path := backend.routineName + "/backup/data/source-ns1/"
@@ -35,9 +34,8 @@ func TestFullBackupRemoveFiles(t *testing.T) {
 
 func TestFullBackupKeepFiles(t *testing.T) {
 	backend := &BackupBackend{
-		storage:          &model.LocalStorage{Path: tempFolder},
-		routineName:      "routine",
-		removeFullBackup: false,
+		storage:     &model.LocalStorage{Path: tempFolder},
+		routineName: "routine",
 	}
 
 	for _, t := range []int64{10, 20, 30} {

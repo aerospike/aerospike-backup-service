@@ -159,6 +159,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 
 	h.lastRun.full = now
 
+	h.deleteFolder()
 	// TODO: delete old backups here?
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
