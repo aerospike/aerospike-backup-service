@@ -18,7 +18,7 @@ const (
 )
 
 func testConfigBackupPolicy() *dto.BackupPolicy {
-	testIn32 := int32(10)
+	testIn32 := 10
 	testInt := 10
 	keepFiles := dto.KeepAll
 	return &dto.BackupPolicy{
