@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 	"log"
 	"slices"
+
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 )
 
 type RetentionManager interface {
@@ -34,12 +35,12 @@ func NewBackupRetentionManager(
 }
 
 func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, namespace string) {
-	if e.policy == nil || ((*e.policy).FullBackups == nil && (*e.policy).IncrBackups == nil) {
+	if e.policy == nil || e.policy.FullBackups == nil && e.policy.IncrBackups == nil {
 		return // Retention policy is not enabled, do nothing.
 	}
 
 	// Fetch full backups once
-	fullBackups, err := e.backend.FullBackupList(ctx, model.TimeBounds{})
+	fullBackups, err := e.backend.FindFullBackupsForNamespace(ctx, model.TimeBounds{}, namespace)
 	if err != nil {
 		log.Printf("Error fetching full backups: %v", err)
 		return
@@ -54,11 +55,13 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, namespace s
 	}
 
 	if e.policy.IncrBackups != nil {
-		e.deleteExcessIncrementalBackups(ctx, fullBackups, *e.policy.IncrBackups)
+		e.deleteExcessIncrementalBackups(ctx, fullBackups, *e.policy.IncrBackups, namespace)
 	}
 }
 
-func (e *RetentionManagerImpl) deleteExcessFullBackups(ctx context.Context, fullBackups []model.BackupDetails, retainCount int) {
+func (e *RetentionManagerImpl) deleteExcessFullBackups(
+	ctx context.Context, fullBackups []model.BackupDetails, retainCount int,
+) {
 	if len(fullBackups) <= retainCount {
 		return // No need to delete any backups.
 	}
@@ -68,7 +71,9 @@ func (e *RetentionManagerImpl) deleteExcessFullBackups(ctx context.Context, full
 	e.deleteBackupSlice(ctx, backupsToDelete)
 }
 
-func (e *RetentionManagerImpl) deleteExcessIncrementalBackups(ctx context.Context, fullBackups []model.BackupDetails, retainCount int) {
+func (e *RetentionManagerImpl) deleteExcessIncrementalBackups(
+	ctx context.Context, fullBackups []model.BackupDetails, retainCount int, namespace string,
+) {
 	if len(fullBackups) <= retainCount {
 		return // No need to delete incremental backups.
 	}
@@ -76,9 +81,9 @@ func (e *RetentionManagerImpl) deleteExcessIncrementalBackups(ctx context.Contex
 	fullBackupsToKeep := fullBackups[len(fullBackups)-retainCount:]
 
 	earliestToKeep := fullBackupsToKeep[0].Created
-	incrBackups, err := e.backend.IncrementalBackupList(ctx, model.TimeBounds{
+	incrBackups, err := e.backend.FindIncrementalBackupsForNamespace(ctx, model.TimeBounds{
 		ToTime: &earliestToKeep,
-	})
+	}, namespace)
 	if err != nil {
 		log.Printf("Error fetching incremental backups: %v", err)
 		return

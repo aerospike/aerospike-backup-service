@@ -34,26 +34,6 @@ func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend
 	}
 }
 
-func (b *BackupBackend) findLastRun(ctx context.Context) lastBackupRun {
-	fullBackupList, _ := b.FullBackupList(ctx, model.TimeBounds{})
-	lastFullBackup := lastBackupTime(fullBackupList)
-	incrementalBackupList, _ := b.IncrementalBackupList(ctx, model.NewTimeBoundsFrom(lastFullBackup))
-	lastIncrBackup := lastBackupTime(incrementalBackupList)
-
-	return lastBackupRun{
-		full:        lastFullBackup,
-		incremental: lastIncrBackup,
-	}
-}
-
-func lastBackupTime(b []model.BackupDetails) time.Time {
-	if len(b) > 0 {
-		return latestBackupBeforeTime(b, nil)[0].Created
-	}
-
-	return time.Time{}
-}
-
 func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error {
 	dataYaml, err := yaml.Marshal(metadata)
 	if err != nil {
@@ -146,6 +126,29 @@ func (b *BackupBackend) FindIncrementalBackupsForNamespace(
 	ctx context.Context, bounds model.TimeBounds, namespace string,
 ) ([]model.BackupDetails, error) {
 	allIncrementalBackupList, err := b.IncrementalBackupList(ctx, bounds)
+	if err != nil {
+		return nil, err
+	}
+
+	var filteredIncrementalBackups []model.BackupDetails
+	for _, b := range allIncrementalBackupList {
+		if b.Namespace == namespace {
+			filteredIncrementalBackups = append(filteredIncrementalBackups, b)
+		}
+	}
+	// Sort in place
+	sort.Slice(filteredIncrementalBackups, func(i, j int) bool {
+		return filteredIncrementalBackups[i].Created.Before(filteredIncrementalBackups[j].Created)
+	})
+
+	return filteredIncrementalBackups, nil
+}
+
+// FindFullBackupsForNamespace returns all incremental backups in given range, sorted by time.
+func (b *BackupBackend) FindFullBackupsForNamespace(
+	ctx context.Context, bounds model.TimeBounds, namespace string,
+) ([]model.BackupDetails, error) {
+	allIncrementalBackupList, err := b.FullBackupList(ctx, bounds)
 	if err != nil {
 		return nil, err
 	}

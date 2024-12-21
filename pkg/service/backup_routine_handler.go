@@ -71,8 +71,6 @@ type CancelableBackupHandler interface {
 type backupMetadataManager interface {
 	// writeBackupMetadata writes backup metadata to storage after successful backup.
 	writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
-	// findLastRun scans storage for last backup time (on startup or config apply).
-	findLastRun(ctx context.Context) lastBackupRun
 }
 
 // ClusterConfigWriter handles writing cluster configuration to storage.

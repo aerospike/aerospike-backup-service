@@ -68,6 +68,12 @@ func makeTestRestoreService(wg *sync.WaitGroup) *dataRestorer {
 type BackendMock struct {
 }
 
+func (m *BackendMock) FindFullBackupsForNamespace(
+	_ context.Context, _ model.TimeBounds, _ string,
+) ([]model.BackupDetails, error) {
+	return []model.BackupDetails{}, nil
+}
+
 func (m *BackendMock) FindIncrementalBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,
 ) ([]model.BackupDetails, error) {
 	return []model.BackupDetails{{
@@ -145,6 +151,11 @@ type BackendFailMock struct {
 }
 
 func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,
+) ([]model.BackupDetails, error) {
+	return nil, nil
+}
+
+func (m *BackendFailMock) FindFullBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,
 ) ([]model.BackupDetails, error) {
 	return nil, nil
 }

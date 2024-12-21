@@ -11,8 +11,6 @@ import (
 
 // BackupPolicy represents a scheduled backup policy.
 // @Description BackupPolicy represents a scheduled backup policy.
-//
-//nolint:lll
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel.
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
@@ -172,8 +170,10 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 }
 
 type RetentionPolicy struct {
-	FullBackups *int `json:"full,omitempty" yaml:"full-backups,omitempty"`        // Number of full backups to store
-	IncrBackups *int `json:"incremental,omitempty" yaml:"incr-backups,omitempty"` // Number of full backups to store incremental backups for
+	// Number of full backups to store
+	FullBackups *int `json:"full,omitempty" yaml:"full-backups,omitempty"`
+	// Number of full backups to store incremental backups for
+	IncrBackups *int `json:"incremental,omitempty" yaml:"incr-backups,omitempty"`
 }
 
 func (rp *RetentionPolicy) Validate() error {
@@ -181,15 +181,15 @@ func (rp *RetentionPolicy) Validate() error {
 		return nil
 	}
 	if rp.FullBackups != nil && *rp.FullBackups < 0 {
-		return fmt.Errorf(fmt.Sprintf("full %d invalid, cannot be negative", *rp.FullBackups))
+		return fmt.Errorf("full %d invalid, cannot be negative", *rp.FullBackups)
 	}
 
 	if rp.IncrBackups != nil {
 		if *rp.IncrBackups < 0 {
-			return fmt.Errorf(fmt.Sprintf("incremental %d invalid, cannot be negative", *rp.IncrBackups))
+			return fmt.Errorf("incremental %d invalid, cannot be negative", *rp.IncrBackups)
 		}
 		if rp.FullBackups != nil && *rp.IncrBackups > *rp.FullBackups {
-			return fmt.Errorf(fmt.Sprintf("full %d cannot exceed incr %d", *rp.FullBackups, *rp.IncrBackups))
+			return fmt.Errorf("full %d cannot exceed incr %d", *rp.FullBackups, *rp.IncrBackups)
 		}
 	}
 	return nil

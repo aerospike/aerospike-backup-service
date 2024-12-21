@@ -131,6 +131,11 @@ func (mock restoreManagerMock) CancelRestore(jobID model.RestoreJobID) error {
 
 type backupListReaderMock struct{}
 
+func (mock backupListReaderMock) FindFullBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,
+) ([]model.BackupDetails, error) {
+	return []model.BackupDetails{}, nil
+}
+
 func (mock backupListReaderMock) FullBackupList(_ context.Context, timebounds model.TimeBounds,
 ) ([]model.BackupDetails, error) {
 	if timebounds == (model.TimeBounds{}) {

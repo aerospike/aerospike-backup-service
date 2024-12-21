@@ -77,11 +77,6 @@ func (m *mockMetadataWriter) writeBackupMetadata(
 	return args.Error(0)
 }
 
-func (m *mockMetadataWriter) findLastRun(context.Context) lastBackupRun {
-	args := m.Called()
-	return args.Get(0).(lastBackupRun)
-}
-
 type mockClusterConfigWriter struct {
 	mock.Mock
 }
