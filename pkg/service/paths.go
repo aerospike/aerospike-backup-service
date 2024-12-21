@@ -25,15 +25,11 @@ func getBackupRootPath(routineName string, isFullBackup bool) string {
 	return filepath.Join(routineName, incrementalBackupDirectory)
 }
 
-func getIncrementalRoot(routineName string) string {
-	return getBackupRootPath(routineName, false)
-}
-
 func getFullPath(routineName string, namespace string, timestamp time.Time) string {
 	return filepath.Join(routineName, fullBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
 }
 
-func getIncrementalPathForNamespace(routineName string, namespace string, timestamp time.Time) string {
+func getIncrementalPath(routineName string, namespace string, timestamp time.Time) string {
 	return filepath.Join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
 }
 

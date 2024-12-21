@@ -31,6 +31,7 @@ type BackupRoutineHandler struct {
 	clientManager       aerospike.ClientManager
 	logger              *slog.Logger
 	clusterConfigWriter ClusterConfigWriter
+	oldBackupsEraser    RetentionManager
 
 	// backup handlers by namespace
 	fullBackupHandlers map[string]CancelableBackupHandler
@@ -159,9 +160,6 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 
 	h.lastRun.full = now
 
-	h.deleteFolder()
-	// TODO: delete old backups here?
-
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
 	return nil
@@ -208,6 +206,7 @@ func (h *BackupRoutineHandler) startNamespaceBackup(
 			h.deleteFolder(ctx, backupFolder)
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success.
+			h.oldBackupsEraser.deleteOldBackups(ctx, namespace)
 			// for full backup metadata file is written every time, even for empty backup.
 			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
 			return h.writeBackupMetadata(ctx, metadata, backupFolder)
@@ -332,7 +331,7 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 	ctx context.Context, namespace string, now time.Time, client *backup.Client,
 ) CancelableBackupHandler {
-	backupFolder := getIncrementalPathForNamespace(h.routineName, namespace, now)
+	backupFolder := getIncrementalPath(h.routineName, namespace, now)
 	timebounds := h.createTimebounds(false, now)
 
 	return startBackup(

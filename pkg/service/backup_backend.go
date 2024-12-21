@@ -225,26 +225,3 @@ func (r *lastBackupRun) lastAnyRun() time.Time {
 
 	return r.full
 }
-
-// DeleteAllExceptN retains only the N latest backups and deletes the rest.
-func (b *BackupBackend) DeleteAllExceptN(ctx context.Context, n int) error {
-	// Retrieve full and incremental backups
-	backups, err := b.FullBackupList(ctx, model.TimeBounds{})
-	if err != nil {
-		return fmt.Errorf("failed to list full backups: %w", err)
-	}
-	// If the number of backups is less than or equal to N, nothing to delete
-	if len(backups) <= n {
-		return nil
-	}
-
-	sort.Slice(backups, func(i, j int) bool {
-		return backups[i].Created.After(backups[j].Created)
-	})
-
-	for _, backup := range backups[n:] {
-		b.deleteFolder(ctx, backup.Key)
-	}
-
-	return nil
-}
