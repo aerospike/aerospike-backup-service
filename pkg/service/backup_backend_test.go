@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
 	"os"
 	"strconv"
 	"testing"
@@ -10,9 +11,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
-const tempFolder = "./tmp"
-
 func TestFullBackupRemoveFiles(t *testing.T) {
+	tempFolder := t.TempDir()
 	backend := &BackupBackend{
 		storage:     &model.LocalStorage{Path: tempFolder},
 		routineName: "routine",
@@ -24,15 +24,11 @@ func TestFullBackupRemoveFiles(t *testing.T) {
 
 	to := model.NewTimeBoundsTo(time.UnixMilli(1000))
 	list, _ := backend.FullBackupList(context.Background(), to)
-	if len(list) != 1 {
-		t.Errorf("Expected list size 1, got %v", list)
-	}
-	t.Cleanup(func() {
-		_ = os.RemoveAll(tempFolder)
-	})
+	require.Equal(t, 1, len(list))
 }
 
 func TestFullBackupKeepFiles(t *testing.T) {
+	tempFolder := t.TempDir()
 	backend := &BackupBackend{
 		storage:     &model.LocalStorage{Path: tempFolder},
 		routineName: "routine",
@@ -46,10 +42,5 @@ func TestFullBackupKeepFiles(t *testing.T) {
 
 	bounds := model.NewTimeBoundsTo(time.UnixMilli(25))
 	list, _ := backend.FullBackupList(context.Background(), bounds)
-	if len(list) != 2 {
-		t.Errorf("Expected list size 2, got %v", list)
-	}
-	t.Cleanup(func() {
-		_ = os.RemoveAll(tempFolder)
-	})
+	require.Equal(t, 2, len(list))
 }

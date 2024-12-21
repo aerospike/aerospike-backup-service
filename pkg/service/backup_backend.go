@@ -27,9 +27,9 @@ type BackupBackend struct {
 
 var _ BackupListReader = (*BackupBackend)(nil)
 
-func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend {
+func newBackend(routineName string, storage model.Storage) *BackupBackend {
 	return &BackupBackend{
-		storage:     routine.Storage,
+		storage:     storage,
 		routineName: routineName,
 	}
 }
