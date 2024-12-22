@@ -189,7 +189,8 @@ func (rp *RetentionPolicy) Validate() error {
 			return fmt.Errorf("incremental backups retention %d is invalid, cannot be negative", *rp.IncrBackups)
 		}
 		if rp.FullBackups != nil && *rp.IncrBackups > *rp.FullBackups {
-			return fmt.Errorf("incremental backups retention %d cannot exceed full backups retention %d", *rp.IncrBackups, *rp.FullBackups)
+			return fmt.Errorf("incremental backups retention %d cannot exceed full backups retention %d",
+				*rp.IncrBackups, *rp.FullBackups)
 		}
 	}
 
