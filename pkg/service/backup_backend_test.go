@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -20,7 +19,7 @@ func TestFullBackupReadFiles(t *testing.T) {
 	}
 
 	for _, t := range []int64{10, 20, 30} {
-		path := fmt.Sprintf("routine/backup/%d/data/source-ns1/", t)
+		path := getFullPath(name, "source-ns1", time.UnixMilli(t))
 		_ = os.MkdirAll(path, 0744)
 		_ = backend.writeBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(t)})
 	}
