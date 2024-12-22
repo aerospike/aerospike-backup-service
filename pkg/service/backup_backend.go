@@ -34,6 +34,26 @@ func newBackend(routineName string, storage model.Storage) *BackupBackend {
 	}
 }
 
+func (b *BackupBackend) findLastRun(ctx context.Context) lastBackupRun {
+	fullBackupList, _ := b.FullBackupList(ctx, model.TimeBounds{})
+	lastFullBackup := lastBackupTime(fullBackupList)
+	incrementalBackupList, _ := b.IncrementalBackupList(ctx, model.NewTimeBoundsFrom(lastFullBackup))
+	lastIncrBackup := lastBackupTime(incrementalBackupList)
+
+	return lastBackupRun{
+		full:        lastFullBackup,
+		incremental: lastIncrBackup,
+	}
+}
+
+func lastBackupTime(b []model.BackupDetails) time.Time {
+	if len(b) > 0 {
+		return latestBackupBeforeTime(b, nil)[0].Created
+	}
+
+	return time.Time{}
+}
+
 func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error {
 	dataYaml, err := yaml.Marshal(metadata)
 	if err != nil {

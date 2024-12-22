@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
@@ -123,33 +122,12 @@ func makeHandler(
 	backupService := NewBackupGo()
 	backend, _ := backends.Get(routineName)
 
-	lastRun := lastRun(ctx, oldHandlers, routineName, backend)
+	var lastRun lastBackupRun
+	if old, ok := oldHandlers[routineName]; ok {
+		lastRun = old.lastRun
+	} else {
+		lastRun = backend.findLastRun(ctx) // this scan can take some time.
+	}
 
 	return newBackupRoutineHandler(config, clientManager, backupService, routineName, backend, lastRun)
-}
-
-func lastRun(
-	ctx context.Context, oldHandlers BackupHandlerHolder, routineName string, backend *BackupBackend,
-) lastBackupRun {
-	// try to reuse lastRun from previous handler if it exists.
-	if old, ok := oldHandlers[routineName]; ok {
-		return old.lastRun
-	}
-
-	fullBackupList, _ := backend.FullBackupList(ctx, model.TimeBounds{})
-	lastFullBackup := lastBackupTime(fullBackupList)
-	incrementalBackupList, _ := backend.IncrementalBackupList(ctx, model.NewTimeBoundsFrom(lastFullBackup))
-	lastIncrBackup := lastBackupTime(incrementalBackupList)
-	return lastBackupRun{
-		full:        lastFullBackup,
-		incremental: lastIncrBackup,
-	}
-}
-
-func lastBackupTime(b []model.BackupDetails) time.Time {
-	if len(b) > 0 {
-		return latestBackupBeforeTime(b, nil)[0].Created
-	}
-
-	return time.Time{}
 }
