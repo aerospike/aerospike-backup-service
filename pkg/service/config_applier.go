@@ -122,6 +122,7 @@ func makeHandler(
 	backupService := NewBackupGo()
 	backend, _ := backends.Get(routineName)
 
+	// try to reuse lastRun from previous handler if it exists.
 	var lastRun lastBackupRun
 	if old, ok := oldHandlers[routineName]; ok {
 		lastRun = old.lastRun
