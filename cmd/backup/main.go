@@ -113,7 +113,7 @@ func startService(configFile string, remote bool) error {
 	)
 
 	// run HTTP server
-	err = runHTTPServer(ctx, config.ServiceConfig.HTTPServer, httpService)
+	err = runHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService)
 
 	// stop the scheduler
 	scheduler.Stop()
@@ -123,7 +123,7 @@ func startService(configFile string, remote bool) error {
 
 func setDefaultLoggers(ctx context.Context, config *model.Config) *slog.Logger {
 	appLogger := slog.New(
-		util.LogHandler(config.ServiceConfig.Logger),
+		util.LogHandler(config.ServiceConfig.GetLoggerOrDefault()),
 	)
 	slog.SetDefault(appLogger)
 	logger.SetDefault(util.NewQuartzLogger(ctx))

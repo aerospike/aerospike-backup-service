@@ -11,10 +11,10 @@ import (
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel.
 	Parallel *int
-	// Socket timeout in milliseconds. If this value is 0, it is set to total-timeout.
+	// Socket timeout. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
 	SocketTimeout *time.Duration
-	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
+	// Total socket timeout. Default is 0, that is, no timeout.
 	TotalTimeout *time.Duration
 	// RetryPolicy defines the configuration for retry attempts in case of failures.
 	RetryPolicy *models.RetryPolicy

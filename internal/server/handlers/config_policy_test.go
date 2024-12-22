@@ -18,12 +18,11 @@ const (
 )
 
 func testConfigBackupPolicy() *dto.BackupPolicy {
-	testIn32 := int32(10)
 	testInt := 10
 	return &dto.BackupPolicy{
 		Parallel:      &testInt,
-		SocketTimeout: &testIn32,
-		TotalTimeout:  &testIn32,
+		SocketTimeout: &testInt,
+		TotalTimeout:  &testInt,
 		RetryPolicy: &dto.RetryPolicy{
 			BaseTimeout: 1,
 			Multiplier:  1,

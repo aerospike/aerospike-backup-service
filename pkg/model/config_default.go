@@ -23,7 +23,7 @@ var defaultConfig = struct {
 			WhiteList: []string{},
 		},
 		ContextPath: util.Ptr("/"),
-		Timeout:     util.Ptr(5000),
+		Timeout:     util.Ptr(5 * time.Second),
 	},
 	logger: LoggerConfig{
 		Level:        util.Ptr("DEBUG"),

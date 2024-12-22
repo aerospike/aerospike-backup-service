@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v2/internal/server/middleware"
@@ -27,14 +26,14 @@ type HTTPServer struct {
 // NewHTTPServer returns a new instance of HTTPServer.
 func NewHTTPServer(serverConfig *model.HTTPServerConfig, h *handlers.Service) *HTTPServer {
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
-	httpTimeout := time.Duration(serverConfig.GetTimeout()) * time.Millisecond
 
+	rateLimiterConfig := serverConfig.GetRateOrDefault()
 	rateLimiter := util.NewIPRateLimiter(
-		rate.Limit(serverConfig.GetRateOrDefault().GetTpsOrDefault()),
-		serverConfig.GetRateOrDefault().GetSizeOrDefault(),
+		rate.Limit(rateLimiterConfig.GetTpsOrDefault()),
+		rateLimiterConfig.GetSizeOrDefault(),
 	)
 
-	whitelist := util.NewIPWhiteList(serverConfig.GetRateOrDefault().GetWhiteListOrDefault())
+	whitelist := util.NewIPWhiteList(rateLimiterConfig.GetWhiteListOrDefault())
 	mw := middleware.RateLimiter(rateLimiter, whitelist)
 
 	router := NewRouter(
@@ -46,7 +45,7 @@ func NewHTTPServer(serverConfig *model.HTTPServerConfig, h *handlers.Service) *H
 	return &HTTPServer{
 		server: &http.Server{
 			Addr:              addr,
-			ReadHeaderTimeout: httpTimeout,
+			ReadHeaderTimeout: serverConfig.GetTimeoutOrDefault(),
 			Handler:           router,
 		},
 	}
