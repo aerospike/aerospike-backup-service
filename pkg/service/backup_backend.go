@@ -164,29 +164,6 @@ func (b *BackupBackend) FindIncrementalBackupsForNamespace(
 	return filteredIncrementalBackups, nil
 }
 
-// FindFullBackupsForNamespace returns all incremental backups in given range, sorted by time.
-func (b *BackupBackend) FindFullBackupsForNamespace(
-	ctx context.Context, bounds model.TimeBounds, namespace string,
-) ([]model.BackupDetails, error) {
-	allIncrementalBackupList, err := b.FullBackupList(ctx, bounds)
-	if err != nil {
-		return nil, err
-	}
-
-	var filteredIncrementalBackups []model.BackupDetails
-	for _, b := range allIncrementalBackupList {
-		if b.Namespace == namespace {
-			filteredIncrementalBackups = append(filteredIncrementalBackups, b)
-		}
-	}
-	// Sort in place
-	sort.Slice(filteredIncrementalBackups, func(i, j int) bool {
-		return filteredIncrementalBackups[i].Created.Before(filteredIncrementalBackups[j].Created)
-	})
-
-	return filteredIncrementalBackups, nil
-}
-
 func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
 	configBackups, err := storage.ReadFiles(context.Background(), b.storage, path, configExt, nil)
 	if err != nil {

@@ -47,13 +47,13 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context) error {
 
 	timestamps := getTimestamps(fullBackups)
 	if e.policy.FullBackups != nil {
-		if err := e.deleteExcessFullBackups(ctx, timestamps, *e.policy.FullBackups); err != nil {
+		if err := e.deleteFullBackups(ctx, timestamps, *e.policy.FullBackups); err != nil {
 			return fmt.Errorf("failed to delete excess full backups: %w", err)
 		}
 	}
 
 	if e.policy.IncrBackups != nil {
-		if err := e.deleteExcessIncrementalBackups(ctx, timestamps, *e.policy.IncrBackups); err != nil {
+		if err := e.deleteIncrementalBackups(ctx, timestamps, *e.policy.IncrBackups); err != nil {
 			return fmt.Errorf("failed to delete excess incremental backups: %w", err)
 		}
 	}
@@ -61,7 +61,7 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context) error {
 	return nil
 }
 
-func (e *RetentionManagerImpl) deleteExcessFullBackups(
+func (e *RetentionManagerImpl) deleteFullBackups(
 	ctx context.Context, timestamps []time.Time, retainCount int,
 ) error {
 	if len(timestamps) <= retainCount {
@@ -78,7 +78,7 @@ func (e *RetentionManagerImpl) deleteExcessFullBackups(
 	return nil
 }
 
-func (e *RetentionManagerImpl) deleteExcessIncrementalBackups(
+func (e *RetentionManagerImpl) deleteIncrementalBackups(
 	ctx context.Context, timestamps []time.Time, retainCount int,
 ) error {
 	if len(timestamps) <= retainCount {

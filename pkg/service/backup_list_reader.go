@@ -30,9 +30,4 @@ type BackupListReader interface {
 	FindIncrementalBackupsForNamespace(
 		ctx context.Context, bounds model.TimeBounds, namespace string,
 	) ([]model.BackupDetails, error)
-
-	// FindFullBackupsForNamespace returns all full backups in given range, sorted by time.
-	FindFullBackupsForNamespace(
-		ctx context.Context, bounds model.TimeBounds, namespace string,
-	) ([]model.BackupDetails, error)
 }
