@@ -31,7 +31,7 @@ type BackupRoutineHandler struct {
 	clientManager       aerospike.ClientManager
 	logger              *slog.Logger
 	clusterConfigWriter ClusterConfigWriter
-	oldBackupsEraser    RetentionManager
+	retentionManager    RetentionManager
 
 	// backup handlers by namespace
 	fullBackupHandlers map[string]CancelableBackupHandler
@@ -87,7 +87,7 @@ func newBackupRoutineHandler(
 	clientManager aerospike.ClientManager,
 	backupService Backup,
 	routineName string,
-	backupBackend backupMetadataManager,
+	backupBackend *BackupBackend,
 	lastRun lastBackupRun,
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
@@ -118,6 +118,8 @@ func newBackupRoutineHandler(
 			backupPolicy,
 			logger),
 		logger: logger,
+		retentionManager: NewBackupRetentionManager(
+			backupBackend, backupStorage, routineName, backupPolicy.Retention),
 	}
 }
 
@@ -204,7 +206,7 @@ func (h *BackupRoutineHandler) startNamespaceBackup(
 			h.deleteFolder(ctx, backupFolder)
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success.
-			h.oldBackupsEraser.deleteOldBackups(ctx, namespace)
+			h.retentionManager.deleteOldBackups(ctx, namespace)
 			// for full backup metadata file is written every time, even for empty backup.
 			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
 			return h.writeBackupMetadata(ctx, metadata, backupFolder)
