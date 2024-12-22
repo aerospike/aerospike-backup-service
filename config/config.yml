@@ -34,10 +34,15 @@ backup-policies:
   removeFilesPolicy:
     parallel: 8
     sealed: true
+    retention:
+      full: 1
+      incremental: 0
   removeIncrementalPolicy:
     parallel: 8
     remove-files: RemoveIncremental
     sealed: true
+    retention:
+      incremental: 0
   keepFilesPolicySlow:
     parallel: 8
     bandwidth: 1
