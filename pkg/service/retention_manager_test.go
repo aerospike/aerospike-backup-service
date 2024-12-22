@@ -40,7 +40,8 @@ func TestMultipleBackups(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	r.deleteOldBackups(ctx, namespace)
+	err := r.deleteOldBackups(ctx)
+	require.NoError(t, err)
 
 	full, _ := backend.FullBackupList(ctx, model.TimeBounds{})
 	require.Equal(t, len(full), 3) // 30, 40, 50
@@ -78,7 +79,9 @@ func TestZeroRetentionLimit(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	r.deleteOldBackups(ctx, namespace)
+	err := r.deleteOldBackups(ctx)
+	require.NoError(t, err)
+
 	// all incremental backups should be deleted.
 
 	full, _ := backend.FullBackupList(ctx, model.TimeBounds{})
@@ -92,7 +95,6 @@ func TestNoBackups(t *testing.T) {
 	dir := t.TempDir()
 	s := &model.LocalStorage{Path: dir}
 	routineName := "routine1"
-	namespace := "ns1"
 	backend := newBackend(routineName, s)
 
 	r := NewBackupRetentionManager(
@@ -106,7 +108,9 @@ func TestNoBackups(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	r.deleteOldBackups(ctx, namespace)
+	err := r.deleteOldBackups(ctx)
+	require.NoError(t, err)
+
 	// nothing should be deleted as there are no backups.
 
 	full, _ := backend.FullBackupList(ctx, model.TimeBounds{})
@@ -146,7 +150,9 @@ func TestExactRetentionLimit(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	r.deleteOldBackups(ctx, namespace)
+	err := r.deleteOldBackups(ctx)
+	require.NoError(t, err)
+
 	// nothing should be deleted as retention limits are exactly met.
 
 	full, _ := backend.FullBackupList(ctx, model.TimeBounds{})
@@ -177,7 +183,9 @@ func TestNilRetentionPolicy(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	r.deleteOldBackups(ctx, namespace)
+	err := r.deleteOldBackups(ctx)
+	require.NoError(t, err)
+
 	// Nothing should be deleted since the retention policy is nil.
 
 	full, _ := backend.FullBackupList(ctx, model.TimeBounds{})
@@ -208,7 +216,9 @@ func TestHighRetentionLimits(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	r.deleteOldBackups(ctx, namespace)
+	err := r.deleteOldBackups(ctx)
+	require.NoError(t, err)
+
 	// Retention limits are higher than the number of existing backups.
 	// Nothing should be deleted.
 

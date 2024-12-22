@@ -162,6 +162,11 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
+	err = h.retentionManager.deleteOldBackups(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to clean up old backups: %w", err)
+	}
+
 	return nil
 }
 
@@ -206,7 +211,6 @@ func (h *BackupRoutineHandler) startNamespaceBackup(
 			h.deleteFolder(ctx, backupFolder)
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success.
-			h.retentionManager.deleteOldBackups(ctx, namespace)
 			// for full backup metadata file is written every time, even for empty backup.
 			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
 			return h.writeBackupMetadata(ctx, metadata, backupFolder)

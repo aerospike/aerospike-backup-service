@@ -89,8 +89,9 @@ type mockRetentionManager struct {
 	mock.Mock
 }
 
-func (m *mockRetentionManager) deleteOldBackups(ctx context.Context, namespace string) {
-	m.Called(ctx, namespace)
+func (m *mockRetentionManager) deleteOldBackups(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
 }
 
 func setupTestHandler(

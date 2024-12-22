@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"slices"
 	"time"
 
@@ -11,7 +11,7 @@ import (
 )
 
 type RetentionManager interface {
-	deleteOldBackups(ctx context.Context, namespace string)
+	deleteOldBackups(ctx context.Context) error
 }
 
 type RetentionManagerImpl struct {
@@ -35,69 +35,91 @@ func NewBackupRetentionManager(
 	}
 }
 
-func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, namespace string) {
-	if e.policy == nil || e.policy.FullBackups == nil && e.policy.IncrBackups == nil {
-		return // Retention policy is not enabled, do nothing.
+func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context) error {
+	if e.policy == nil || (e.policy.FullBackups == nil && e.policy.IncrBackups == nil) {
+		return nil // Retention policy is not enabled, do nothing.
 	}
 
-	// Fetch full backups once
-	fullBackups, err := e.backend.FindFullBackupsForNamespace(ctx, model.TimeBounds{}, namespace)
+	fullBackups, err := e.backend.FullBackupList(ctx, model.TimeBounds{})
 	if err != nil {
-		log.Printf("Error fetching full backups: %v", err)
-		return
+		return fmt.Errorf("failed to get full backups: %w", err)
 	}
 
-	slices.SortFunc(fullBackups, func(a, b model.BackupDetails) int {
-		return a.Created.Compare(b.Created)
-	})
-
+	timestamps := getTimestamps(fullBackups)
 	if e.policy.FullBackups != nil {
-		e.deleteExcessFullBackups(ctx, fullBackups, *e.policy.FullBackups)
+		if err := e.deleteExcessFullBackups(ctx, timestamps, *e.policy.FullBackups); err != nil {
+			return fmt.Errorf("failed to delete excess full backups: %w", err)
+		}
 	}
 
 	if e.policy.IncrBackups != nil {
-		e.deleteExcessIncrementalBackups(ctx, fullBackups, *e.policy.IncrBackups, namespace)
+		if err := e.deleteExcessIncrementalBackups(ctx, timestamps, *e.policy.IncrBackups); err != nil {
+			return fmt.Errorf("failed to delete excess incremental backups: %w", err)
+		}
 	}
+
+	return nil
 }
 
 func (e *RetentionManagerImpl) deleteExcessFullBackups(
-	ctx context.Context, fullBackups []model.BackupDetails, retainCount int,
-) {
-	if len(fullBackups) <= retainCount {
-		return // No need to delete any backups.
+	ctx context.Context, timestamps []time.Time, retainCount int,
+) error {
+	if len(timestamps) <= retainCount {
+		return nil
 	}
 
-	// Identify backups to delete
-	backupsToDelete := fullBackups[:len(fullBackups)-retainCount]
-	e.deleteBackupSlice(ctx, backupsToDelete)
+	for _, t := range timestamps[:len(timestamps)-retainCount] {
+		path := getTimestampPath(e.routineName, t, true)
+		if err := storage.DeleteFolder(ctx, e.storage, path); err != nil {
+			return fmt.Errorf("failed to delete folder at %v: %w", path, err)
+		}
+	}
+
+	return nil
 }
 
 func (e *RetentionManagerImpl) deleteExcessIncrementalBackups(
-	ctx context.Context, fullBackups []model.BackupDetails, retainCount int, namespace string,
-) {
-	if len(fullBackups) <= retainCount {
-		return // No need to delete incremental backups.
+	ctx context.Context, timestamps []time.Time, retainCount int,
+) error {
+	if len(timestamps) <= retainCount {
+		return nil
 	}
 
-	var earliestToKeep time.Time
-	if retainCount == 0 {
-		earliestToKeep = time.Now()
-	} else {
-		earliestToKeep = fullBackups[len(fullBackups)-retainCount].Created
+	if retainCount == 0 { // Delete all incremental backups.
+		return storage.DeleteFolder(ctx, e.storage, getBackupRootPath(e.routineName, false))
 	}
 
-	incrBackups, err := e.backend.FindIncrementalBackupsForNamespace(ctx, model.NewTimeBoundsTo(earliestToKeep), namespace)
+	earliestToKeep := timestamps[len(timestamps)-retainCount]
+	incrBackups, err := e.backend.IncrementalBackupList(ctx, model.NewTimeBoundsTo(earliestToKeep))
 	if err != nil {
-		log.Printf("Error fetching incremental backups: %v", err)
-		return
+		return fmt.Errorf("failed to fetch incremental backups: %w", err)
 	}
 
-	// Delete old incremental backups
-	e.deleteBackupSlice(ctx, incrBackups)
+	for _, b := range incrBackups {
+		path := getTimestampPath(e.routineName, b.Created, false)
+		if err := storage.DeleteFolder(ctx, e.storage, path); err != nil {
+			return fmt.Errorf("failed to delete folder at %v: %w", path, err)
+		}
+	}
+
+	return nil
 }
 
-func (e *RetentionManagerImpl) deleteBackupSlice(ctx context.Context, backups []model.BackupDetails) {
-	for _, backup := range backups {
-		_ = storage.DeleteFolder(ctx, e.storage, backup.Key)
+func getTimestamps(backups []model.BackupDetails) []time.Time {
+	timeSet := make(map[time.Time]struct{}, len(backups))
+
+	for _, obj := range backups {
+		timeSet[obj.Created] = struct{}{}
 	}
+
+	times := make([]time.Time, 0, len(timeSet))
+	for t := range timeSet {
+		times = append(times, t)
+	}
+
+	slices.SortFunc(times, func(a, b time.Time) int {
+		return a.Compare(b)
+	})
+
+	return times
 }
