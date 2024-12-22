@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"slices"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
@@ -78,12 +79,14 @@ func (e *RetentionManagerImpl) deleteExcessIncrementalBackups(
 		return // No need to delete incremental backups.
 	}
 
-	fullBackupsToKeep := fullBackups[len(fullBackups)-retainCount:]
+	var earliestToKeep time.Time
+	if retainCount == 0 {
+		earliestToKeep = time.Now()
+	} else {
+		earliestToKeep = fullBackups[len(fullBackups)-retainCount].Created
+	}
 
-	earliestToKeep := fullBackupsToKeep[0].Created
-	incrBackups, err := e.backend.FindIncrementalBackupsForNamespace(ctx, model.TimeBounds{
-		ToTime: &earliestToKeep,
-	}, namespace)
+	incrBackups, err := e.backend.FindIncrementalBackupsForNamespace(ctx, model.NewTimeBoundsTo(earliestToKeep), namespace)
 	if err != nil {
 		log.Printf("Error fetching incremental backups: %v", err)
 		return
