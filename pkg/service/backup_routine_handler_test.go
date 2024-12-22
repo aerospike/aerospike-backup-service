@@ -394,6 +394,7 @@ func TestRunFullBackup_PartialFailure(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	).Return(nil).Times(1) // Only for ns1
+	retentionManager.On("deleteOldBackups", mock.Anything, mock.Anything).Return()
 
 	// Run full backup and expect an error for one of the namespaces
 	handler.runFullBackup(context.Background(), time.Now())
