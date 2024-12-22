@@ -171,9 +171,9 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 
 type RetentionPolicy struct {
 	// Number of full backups to store
-	FullBackups *int `json:"full,omitempty" yaml:"full-backups,omitempty"`
+	FullBackups *int `json:"full,omitempty" yaml:"full,omitempty"`
 	// Number of full backups to store incremental backups for
-	IncrBackups *int `json:"incremental,omitempty" yaml:"incr-backups,omitempty"`
+	IncrBackups *int `json:"incremental,omitempty" yaml:"incremental,omitempty"`
 }
 
 func (rp *RetentionPolicy) Validate() error {
