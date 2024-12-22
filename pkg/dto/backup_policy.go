@@ -180,21 +180,21 @@ func (rp *RetentionPolicy) Validate() error {
 	if rp == nil {
 		return nil
 	}
-	if rp.FullBackups != nil && *rp.FullBackups < 0 {
-		return fmt.Errorf("full %d invalid, cannot be negative", *rp.FullBackups)
+	if rp.FullBackups != nil && *rp.FullBackups < 1 {
+		return fmt.Errorf("full backups retention %d is invalid, must be at least 1", *rp.FullBackups)
 	}
 
 	if rp.IncrBackups != nil {
 		if *rp.IncrBackups < 0 {
-			return fmt.Errorf("incremental %d invalid, cannot be negative", *rp.IncrBackups)
+			return fmt.Errorf("incremental backups retention %d is invalid, cannot be negative", *rp.IncrBackups)
 		}
 		if rp.FullBackups != nil && *rp.IncrBackups > *rp.FullBackups {
-			return fmt.Errorf("full %d cannot exceed incr %d", *rp.FullBackups, *rp.IncrBackups)
+			return fmt.Errorf("incremental backups retention %d cannot exceed full backups retention %d", *rp.IncrBackups, *rp.FullBackups)
 		}
 	}
+
 	return nil
 }
-
 func (rp *RetentionPolicy) toModel() *model.RetentionPolicy {
 	if rp == nil {
 		return nil
