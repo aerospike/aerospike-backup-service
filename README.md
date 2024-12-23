@@ -43,7 +43,7 @@ For specifics and example values, see the [OpenAPI docs](https://aerospike.githu
 #### Configuration
 
 The endpoints defined within the configuration section allow users to view or modify the configuration file.
-Endpoints ending with /config enable reading and modifying the entire file at once, while endpoints like 
+Endpoints ending with /config enable reading and modifying the entire file at once, while endpoints like
 `/config/clusters`, `/config/policies`, `/config/routines`, and `/config/storage` provide more granular control.
 Changes made through any of these endpoints are applied immediately.
 However, backup processes already in progress will continue using the configuration that was active when they started.
@@ -72,7 +72,7 @@ under `/config/storage` for detailed information.
 
 #### Backup policy
 
-A backup policy is a set of rules that defines how backups should be performed. 
+A backup policy is a set of rules that defines how backups should be performed.
 It includes settings for performance tuning, data selection, encryption, compression, and other operational details.
 See [`GET: /config/policies`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readPolicies) for
 full details about what parameters are available to customize a backup policy.
@@ -85,7 +85,8 @@ to create a policy, ensure that you give your policy a name that will let you qu
 #### Backup routine
 
 A backup routine is a set of procedures that actually perform backups based on the predefined backup policy.
-It includes configurations for the source cluster, storage destination, scheduling (separately for full and incremental backups),
+It includes configurations for the source cluster, storage destination, scheduling (separately for full and incremental
+backups),
 and the scope of data to back up (such as namespaces, sets, or bins).
 
 See the [Routines](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readRoutines) section for
@@ -124,11 +125,11 @@ Flags:
 Set the configuration file path with `-c`.
 
 Without the `-r` flag, the file specified after `-c` is the actual configuration file.
-With the `-r` flag, the file specified after `-c` contains the path or URL to the actual configuration file. 
+With the `-r` flag, the file specified after `-c` contains the path or URL to the actual configuration file.
 
-For example, you may store your configurations remotely, such as on AWS S3 storage. 
-In this case, you could have a remote_config.yaml file containing S3 details, and you would run the server with `-c remote_config.yaml -r`.
-
+For example, you may store your configurations remotely, such as on AWS S3 storage.
+In this case, you could have a remote_config.yaml file containing S3 details, and you would run the server with
+`-c remote_config.yaml -r`.
 
 ### Run
 
@@ -204,12 +205,15 @@ TAG="<tag>" make docker-build
 
 ### Build Linux packages
 
-Run `make packages`. 
-This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`linux/arm64`) with respective `sha256` checksum file in the `build/target` directory.
+Run `make packages`.
+This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`linux/arm64`) with respective `sha256`
+checksum file in the `build/target` directory.
 See the quick [guide](build/package/README.md) on how to get started with the Linux packages.
 
 ### Release
+
 Use the following commands before a release to update the version.
+
 ```bash
 NEXT_VERSION="<version>" make release
 git add --all
@@ -223,19 +227,23 @@ git push
 ### What happens when a backup doesn’t finish before another starts (for the same routine)?
 
 - **Full Backups:**
-  - Full backups cannot overlap. If a scheduled full backup is due to start but the previous one is still running, the new backup is skipped entirely. It is not queued but will wait for the next scheduled execution.
-  - Full backups always take priority over incremental backups. If an incremental backup is running when a full backup is scheduled, the full backup will start as planned, and the incremental backup will continue running without interruption.
+    - Full backups cannot overlap. If a scheduled full backup is due to start but the previous one is still running, the
+      new backup is skipped entirely. It is not queued but will wait for the next scheduled execution.
+    - Full backups always take priority over incremental backups. If an incremental backup is running when a full backup
+      is scheduled, the full backup will start as planned, and the incremental backup will continue running without
+      interruption.
 
 - **Incremental Backups:**
-  - Incremental backups are skipped if any other backup (full or incremental) is still running.
-  - Incremental backups will not run until at least one full backup has been successfully completed.
-
+    - Incremental backups are skipped if any other backup (full or incremental) is still running.
+    - Incremental backups will not run until at least one full backup has been successfully completed.
 
 ### Can multiple backup routines be performed simultaneously?
 
-Yes, multiple backup routines can run in parallel. Furthermore, it is possible to back up different namespaces from the same cluster using separate routines with different schedules, all running simultaneously.
+Yes, multiple backup routines can run in parallel. Furthermore, it is possible to back up different namespaces from the
+same cluster using separate routines with different schedules, all running simultaneously.
 
-To manage resource utilization, you can configure the `cluster.max-parallel-scans` property to limit the number of read threads operating on a single cluster.
+To manage resource utilization, you can configure the `cluster.max-parallel-scans` property to limit the number of read
+threads operating on a single cluster.
 
 ### Which storage providers are supported?
 
@@ -267,9 +275,10 @@ GET {{baseUrl}}/v1/config/clusters
 <details>
     <summary>Response:</summary>
 
+<!-- ClustersResponse -->
 ```json
-{
-  "absDefaultCluster": {
+[
+  {
     "seed-nodes": [
       {
         "host-name": "host.docker.internal",
@@ -277,11 +286,11 @@ GET {{baseUrl}}/v1/config/clusters
       }
     ],
     "credentials": {
-      "user": "tester",
-      "password": "psw"
+      "user": "user",
+      "password": "password"
     }
   }
-}
+]
 ```
 
 </details>
@@ -299,6 +308,7 @@ GET {{baseUrl}}/v1/config/routines
 <details>
     <summary>Response:</summary>
 
+<!-- RoutinesResponse -->
 ```json
 {
   "routine1": {
@@ -306,16 +316,25 @@ GET {{baseUrl}}/v1/config/routines
     "source-cluster": "absDefaultCluster",
     "storage": "local",
     "interval-cron": "@yearly",
-    "namespaces": ["source-ns7"]
+    "namespaces": [
+      "test-namespace"
+    ]
   },
   "routine2": {
     "backup-policy": "removeFilesPolicy",
     "source-cluster": "absDefaultCluster",
     "storage": "local",
-    "interval-cron": "@yearly",
-    "namespaces": ["source-ns8"],
-    "set-list": ["backupSet"],
-    "bin-list": ["backupBin"]
+    "interval-cron": "@monthly",
+    "incr-interval-cron": "@daily",
+    "namespaces": [
+      "test-namespace"
+    ],
+    "set-list": [
+      "backupSet"
+    ],
+    "bin-list": [
+      "backupBin"
+    ]
   }
 }
 ```
@@ -336,36 +355,36 @@ GET {{baseUrl}}/v1/config/storage
 <details>
     <summary>Response:</summary>
 
+<!-- StorageResponse -->
 ```json
 {
-  "local": {
-    "local-storage":  {
-      "path": "./localStorage"
-    }
-  },
-  "minio": {
+  "aws-s3": {
     "s3-storage": {
-      "path": "storage1",
       "bucket": "as-backup-bucket",
-      "s3-region": "eu-central-1",
-      "s3-profile": "minio",
-      "s3-endpoint-override": "http://host.docker.internal:9000"
+      "path": "backups",
+      "s3-region": "eu-central-1"
     }
   },
-  "azure": {
+  "azure-blob-storage": {
     "azure-storage": {
       "endpoint": "http://127.0.0.1:6000/devstoreaccount1",
       "container-name": "testcontainer",
+      "path": "backups",
       "account-name": "devstoreaccount1",
       "account-key": "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
     }
   },
-  "gcp": {
+  "gcp-gcs": {
     "gcp-storage": {
-      "key-file": "keyfile",
-      "bucket-name": "as-backup-bucket",
-      "path": "storage2",
-      "endpoint": "http://localhost"
+      "key-file-path": "key-file.json",
+      "bucket-name": "gcp-backup-bucket",
+      "path": "backups",
+      "endpoint": "http://127.0.0.1:9020"
+    }
+  },
+  "local": {
+    "local-storage": {
+      "path": "backups"
     }
   }
 }
@@ -389,26 +408,47 @@ GET {{baseUrl}}/v1/backups/full
 <details>
     <summary>Response:</summary>
 
+<!-- FullBackupsResponse -->
 ```json
 {
   "routine1": [
     {
-      "created": "2024-03-14T13:13:28.96962301Z",
+      "created": "2024-01-01T12:00:00Z",
       "from": "0001-01-01T00:00:00Z",
-      "namespace": "source-ns7",
-      "byte-count": 48,
+      "namespace": "source-ns1",
+      "record-count": 42,
+      "byte-count": 480000,
       "file-count": 1,
-      "Key": "s3://as-backup-bucket/storage1/minio/backup/1710422008983/source-ns4"
+      "secondary-index-count": 5,
+      "udf-count": 1,
+      "key": "routine1/backup/1704110400000/source-ns1",
+      "storage": {
+        "s3-storage": {
+          "bucket": "as-backup-bucket",
+          "path": "backups",
+          "s3-region": "eu-central-1"
+        }
+      }
     }
   ],
   "routine2": [
     {
-      "created": "2024-03-14T13:13:29.105744927Z",
+      "created": "2024-01-01T12:00:00Z",
       "from": "0001-01-01T00:00:00Z",
-      "namespace": "source-ns8",
-      "byte-count": 48,
-      "file-count": 1,
-      "key": "localStorage/filterBySetAndBin/backup/source-ns8"
+      "namespace": "source-ns2",
+      "record-count": 1890,
+      "byte-count": 1234567890,
+      "file-count": 4,
+      "secondary-index-count": 0,
+      "udf-count": 0,
+      "key": "routine2/backup/1704110400000/source-ns2",
+      "storage": {
+        "s3-storage": {
+          "bucket": "as-backup-bucket",
+          "path": "backups",
+          "s3-region": "eu-central-1"
+        }
+      }
     }
   ]
 }
@@ -435,35 +475,43 @@ Request:
 POST {{baseUrl}}/v1/restore/full
 ```
 
-Request body:
+<details>
+    <summary>Request body:</summary>
 
+<!-- RestoreFullRequest -->
 ```json
 {
   "destination": {
     "seed-nodes": [
       {
-        "host-name": "localhost",
+        "host-name": "host.docker.internal",
         "port": 3000
       }
     ],
     "credentials": {
-      "user": "tester",
-      "password": "psw"
+      "user": "user",
+      "password": "password"
     }
   },
   "policy": {
-    "no-generation": "true"
+    "no-generation": true
   },
   "source": {
-    "path": "s3://as-backup-bucket/storage1/minio/backup/1710422008983/source-ns4",
-    "type": 1,
-    "s3-region": "eu-central-1"
-  }
+    "s3-storage": {
+      "bucket": "as-backup-bucket",
+      "path": "backups",
+      "s3-region": "eu-central-1"
+    }
+  },
+  "backup-data-path": "routine1/backup/1704110400000/source-ns1"
 }
 ```
 
+</details>
+
 The response is a job ID. You can get job status with the
-endpoint [`GET {{baseUrl}}/v1/restore/status/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
+endpoint [
+`GET {{baseUrl}}/v1/restore/status/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
 
 Response:
 
@@ -483,32 +531,37 @@ Request:
 POST {{baseUrl}}/v1/restore/timestamp
 ```
 
-Request body:
+<details>
+    <summary>Response:</summary>
 
+<!-- RestoreTimestampRequest -->
 ```json
 {
   "destination": {
     "seed-nodes": [
       {
-        "host-name": "localhost",
+        "host-name": "host.docker.internal",
         "port": 3000
       }
     ],
     "credentials": {
-      "user": "tester",
-      "password": "psw"
+      "user": "user",
+      "password": "password"
     }
   },
   "policy": {
-    "no-generation": "true"
+    "no-generation": true
   },
-  "routine": "routine1",
-  "time": "1710671632452"
+  "time": 1704110400000,
+  "routine": "routine1"
 }
 ```
 
+</details>
+
 The response is a job ID. You can get job status with the
-endpoint [`GET {{baseUrl}}/v1/restore/status/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
+endpoint [
+`GET {{baseUrl}}/v1/restore/status/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
 
 Response:
 
@@ -516,54 +569,51 @@ Response:
 123456789
 ```
 
-## Breaking API Changes (v2 → v3): 
-### Storage Object 
+## Breaking API Changes (v2 → v3):
 
-The `Storage` object schema has been updated in **v3** to improve clarity, modularity, and support for additional storage types. 
+### Storage Object
+
+The `Storage` object schema has been updated in **v3** to improve clarity, modularity, and support for additional
+storage types.
 
 - **v2:** Unified schema with a `type` field to differentiate storage types.
 - **v3:** Separate schemas for each storage type:
-  - `local-storage`
-  - `s3-storage`
-  - `azure-storage`
-  - `gcp-storage`
+    - `local-storage`
+    - `s3-storage`
+    - `azure-storage`
+    - `gcp-storage`
 - Validation ensures **only one storage type** is configured per `dto.Storage`.
 
 **S3 Path Construction**:
-  - **v2**: S3 paths were constructed as `s3://<bucket>/<path>`.
-  - **v3**: `bucket` and `path` are now separate fields in `dto.S3Storage`.
+
+- **v2**: S3 paths were constructed as `s3://<bucket>/<path>`.
+- **v3**: `bucket` and `path` are now separate fields in `dto.S3Storage`.
 
 ### **Example**
+
+<!-- Storage -->
 ```yaml
-# Example 1: Local Storage
-storage1:
-  local-storage:
-    path: /local/backups
-
-# Example 2: S3 Storage
-storage2:
-  s3-storage:
-    bucket: my-backup-bucket
-    path: backups
-    s3-profile: default
-    s3-region: eu-central-1
-
-# Example 3: Azure Storage
-storage3:
-  azure-storage:
-    account-name: my-storage-account
-    account-key: my-secret-key
-    container-name: my-container
-    endpoint: 'https://my-storage-account.blob.core.windows.net'
-    path: backups
-
-# Example 4: GCP Storage
-storage4:
-  gcp-storage:
-    bucket-name: my-gcp-bucket
-    key-file: /path/to/service-account-key.json
-    endpoint: 'https://storage.googleapis.com'
-    path: backups
+aws-s3:
+    s3-storage:
+        bucket: as-backup-bucket
+        path: backups
+        s3-region: eu-central-1
+azure-blob-storage:
+    azure-storage:
+        endpoint: http://127.0.0.1:6000/devstoreaccount1
+        container-name: testcontainer
+        path: backups
+        account-name: devstoreaccount1
+        account-key: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
+gcp-gcs:
+    gcp-storage:
+        key-file-path: key-file.json
+        bucket-name: gcp-backup-bucket
+        path: backups
+        endpoint: http://127.0.0.1:9020
+local:
+    local-storage:
+        path: backups
 
 ```
 
@@ -571,44 +621,54 @@ storage4:
 
 Changes to the configuration API take effect immediately in version 3.0.
 
-Configuration changes in versions prior to 3.0 required an explicit "apply" step after CRUD operations to update the runtime configuration.
+Configuration changes in versions prior to 3.0 required an explicit "apply" step after CRUD operations to update the
+runtime configuration.
 
 #### Key Changes
-- **Config Updates:** Each CRUD update now automatically saves the configuration to the file and applies it to the runtime system. No need for a separate "apply" operation.
-The memory config is always in sync with the runtime.
+
+- **Config Updates:** Each CRUD update now automatically saves the configuration to the file and applies it to the
+  runtime system. No need for a separate "apply" operation.
+  The memory config is always in sync with the runtime.
 - **Validation:** Invalid configurations will be rejected immediately, not applied and not saved.
 - **The running backup processes:** will finish as they are, but:
-  - If a routine entry is absent in the updated configuration file, it will not be rescheduled.
-  - If the routine entry is updated, it will be rescheduled with the new parameters.
+    - If a routine entry is absent in the updated configuration file, it will not be rescheduled.
+    - If the routine entry is updated, it will be rescheduled with the new parameters.
 
 ### Apply Endpoint
+
 The `apply` endpoint reads and applies the configuration from the file (after it was modified externally).
 
 ### Secret Agents
+
 The `secret-agent` configuration field to store the list of secret agents is now named `secret-agents`.
 
 ### Restore Request
 
-In the new version (v3) of the API, the **`restore`** request (`/v1/restore/full` and `/v1/restore/incremental`) 
+In the new version (v3) of the API, the **`restore`** request (`/v1/restore/full` and `/v1/restore/incremental`)
 was changed to simplify and streamline the process.
 
 - **v2:** The `Storage` object contained a `path` that was reused as the backup data location.
-- **v3:** The `path` in the `Storage` object now only refers to the **root path** of the storage. 
-The specific backup data location is now specified using a new required field: **`backup-data-path`**.
-This change allows you to reuse the same storage for different restore requests.
+- **v3:** The `path` in the `Storage` object now only refers to the **root path** of the storage.
+  The specific backup data location is now specified using a new required field: **`backup-data-path`**.
+  This change allows you to reuse the same storage for different restore requests.
 
 ## New API functions (v2 → v3):
+
 ### Node list
+
 Backup routine has a new optional `node-list` property.
 
 Node list is a comma-separated list of IP addresses and/or host names followed by port numbers.
+
 ```text
 <IP addr 1>:<port 1>[,<IP addr 2>:<port 2>[,...]]
 <IP addr 1>:<TLS_NAME 1>:<port 1>[,<IP addr 2>:<TLS_NAME 2>:<port 2>[,...]]
 ```
+
 Back up the given cluster nodes only.
 This argument is mutually exclusive to partition-list/after-digest arguments.
 Default: back up all nodes in the cluster
+
 ### Extra ttl
 
 A new optional field, `extra-ttl`, has been added to the restore policy configuration.
@@ -616,10 +676,13 @@ It specifies the amount of extra time-to-live (TTL) to add to records that have 
 
 ### Secret Agent for cluster
 
-The credential object has a new optional `secret-agent` property that points to a secret agent, one of those listed in the `secret-agents` configuration parameter.
+The credential object has a new optional `secret-agent` property that points to a secret agent, one of those listed in
+the `secret-agents` configuration parameter.
 Secret agent is responsible for storing secrets like passwords and TLS certificates.
-In addition to `password` and `password-path`, there is a new field `password-key-secret`, which specifies the secret keyword in Aerospike Secret Agent containing the password.
+In addition to `password` and `password-path`, there is a new field `password-key-secret`, which specifies the secret
+keyword in Aerospike Secret Agent containing the password.
 Validation allows only one of these three fields to be present.
+
 ```yaml
   dto.Credentials:
     description: Credentials represents authentication details to the Aerospike cluster.

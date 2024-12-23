@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 )
 
 // RestoreRequest represents a restore operation request from custom storage
@@ -17,7 +16,7 @@ type RestoreRequest struct {
 	SourceStorage      *Storage          `json:"source,omitempty" validate:"required"`
 	SecretAgent        *SecretAgent      `json:"secret-agent,omitempty"`
 	// Path to the data from storage root.
-	BackupDataPath *string `json:"backup-data-path" validate:"required"`
+	BackupDataPath string `json:"backup-data-path" validate:"required"`
 }
 
 // RestoreTimestampRequest represents a restore by timestamp operation request.
@@ -37,7 +36,7 @@ type RestoreTimestampRequest struct {
 
 // Validate validates the restore operation request.
 func (r *RestoreRequest) Validate() error {
-	if r.BackupDataPath == nil {
+	if len(r.BackupDataPath) == 0 {
 		return errors.New("path is not specified")
 	}
 	if err := r.DestinationCluster.Validate(); err != nil {
@@ -106,6 +105,6 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 		Policy:             r.Policy.ToModel(),
 		SourceStorage:      storage,
 		SecretAgent:        r.SecretAgent.ToModel(),
-		BackupDataPath:     util.ValueOrZero(r.BackupDataPath),
+		BackupDataPath:     r.BackupDataPath,
 	}, nil
 }
