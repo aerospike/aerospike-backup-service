@@ -69,14 +69,15 @@ func (e *RetentionManagerImpl) deleteFullBackups(
 		return nil
 	}
 
+	var errs error
 	for _, t := range timestamps[:len(timestamps)-retainCount] {
 		path := getTimestampPath(e.routineName, t, jobTypeFull)
 		if err := storage.DeleteFolder(ctx, e.storage, path); err != nil {
-			return fmt.Errorf("failed to delete folder at %v: %w", path, err)
+			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", path, err))
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func (e *RetentionManagerImpl) deleteIncrementalBackups(
