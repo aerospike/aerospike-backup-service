@@ -62,6 +62,8 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 	apiRouter.HandleFunc("/config/routines/{name}", h.ConfigRoutineActionHandler).
 		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
 	apiRouter.HandleFunc("/config/routines", h.ReadRoutines).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/config/routines/{name}/disable", h.DisableRoutine).Methods(http.MethodPut)
+	apiRouter.HandleFunc("/config/routines/{name}/enable", h.EnableRoutine).Methods(http.MethodPut)
 
 	// Restore job endpoints
 	// Restore from full backup (by folder)
@@ -75,6 +77,9 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 
 	// Restore job status endpoint
 	apiRouter.HandleFunc("/restore/status/{jobId}", h.RestoreStatusHandler).Methods(http.MethodGet)
+
+	// Cancel restore job
+	apiRouter.HandleFunc("/restore/cancel/{jobId}", h.CancelRestoreHandler).Methods(http.MethodPost)
 
 	// Return backed up Aerospike configuration
 	apiRouter.HandleFunc("/retrieve/configuration/{name}/{timestamp}", h.RetrieveConfig).Methods(http.MethodGet)
@@ -90,6 +95,9 @@ func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.
 
 	// Get information on currently running backups
 	apiRouter.HandleFunc("/backups/currentBackup/{name}", h.GetCurrentBackupInfo).Methods(http.MethodGet)
+
+	// Cancel running backup
+	apiRouter.HandleFunc("/backups/cancel/{name}", h.CancelCurrentBackup).Methods(http.MethodPost)
 
 	return r
 }

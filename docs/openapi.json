@@ -90,6 +90,48 @@
         "tags" : [ "System" ]
       }
     },
+    "/v1/backups/cancel/{name}" : {
+      "post" : {
+        "operationId" : "cancelCurrentBackup",
+        "parameters" : [ {
+          "description" : "Backup routine name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "202" : {
+            "content" : { },
+            "description" : "Accepted"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "500" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          }
+        },
+        "summary" : "Cancel current backup.",
+        "tags" : [ "Backup" ]
+      }
+    },
     "/v1/backups/currentBackup/{name}" : {
       "get" : {
         "operationId" : "getCurrentBackup",
@@ -1162,6 +1204,80 @@
         "x-codegen-request-body-name" : "routine"
       }
     },
+    "/v1/config/routines/{name}/disable" : {
+      "put" : {
+        "operationId" : "disableRoutine",
+        "parameters" : [ {
+          "description" : "The name of the backup routine.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "content" : { },
+            "description" : "Routine successfully disabled."
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Not Found"
+          },
+          "500" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Unexpected error occurred."
+          }
+        },
+        "summary" : "Disable a backup routine.",
+        "tags" : [ "Configuration" ]
+      }
+    },
+    "/v1/config/routines/{name}/enable" : {
+      "put" : {
+        "operationId" : "enableRoutine",
+        "parameters" : [ {
+          "description" : "Backup routine name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "content" : { },
+            "description" : "Routine successfully enabled."
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Not Found"
+          }
+        },
+        "summary" : "Enable a backup routine.",
+        "tags" : [ "Configuration" ]
+      }
+    },
     "/v1/config/storage" : {
       "get" : {
         "operationId" : "ReadAllStorage",
@@ -1364,6 +1480,65 @@
         "summary" : "Updates an existing storage in the configuration.",
         "tags" : [ "Configuration" ],
         "x-codegen-request-body-name" : "storage"
+      }
+    },
+    "/v1/restore/cancel/{jobID}" : {
+      "post" : {
+        "operationId" : "cancelRestore",
+        "parameters" : [ {
+          "description" : "Restore job ID",
+          "in" : "path",
+          "name" : "jobID",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Restore job canceled successfully"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Invalid job ID"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Job not found"
+          },
+          "500" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Internal server error"
+          }
+        },
+        "summary" : "Cancel a running restore operation.",
+        "tags" : [ "Restore" ]
       }
     },
     "/v1/restore/full" : {
@@ -1691,7 +1866,7 @@
       "dto.AzureStorage" : {
         "properties" : {
           "account-key" : {
-            "description" : "AccountKey is the Azure storage account key for Shared Key authentication.",
+            "description" : "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
             "type" : "string"
           },
           "account-name" : {
@@ -1703,7 +1878,7 @@
             "type" : "string"
           },
           "client-secret" : {
-            "description" : "ClientSecret is the Azure Active Directory client secret for AAD authentication.",
+            "description" : "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
             "type" : "string"
           },
           "container-name" : {
@@ -1717,6 +1892,17 @@
           "path" : {
             "description" : "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
             "example" : "backups",
+            "type" : "string"
+          },
+          "secret-agent" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.SecretAgent"
+            } ],
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+            "type" : "object"
+          },
+          "secret-agent-name" : {
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
             "type" : "string"
           },
           "tenant-id" : {
@@ -1881,6 +2067,10 @@
               "type" : "string"
             },
             "type" : "array"
+          },
+          "disabled" : {
+            "description" : "Whether this routine is disabled and should not run.",
+            "type" : "boolean"
           },
           "incr-interval-cron" : {
             "description" : "The interval for incremental backup as a cron expression string (optional).",
@@ -2142,13 +2332,28 @@
             "description" : "Alternative url.\nIt is not recommended to use an alternate URL in a production environment.",
             "type" : "string"
           },
-          "key-file" : {
-            "description" : "Path to file containing Service Account JSON Key.",
+          "key" : {
+            "description" : "Key is the service account key in JSON format.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+            "type" : "string"
+          },
+          "key-file-path" : {
+            "description" : "Path to the file containing the service account key in JSON format.",
             "type" : "string"
           },
           "path" : {
             "description" : "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
             "example" : "backups",
+            "type" : "string"
+          },
+          "secret-agent" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.SecretAgent"
+            } ],
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+            "type" : "object"
+          },
+          "secret-agent-name" : {
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
             "type" : "string"
           }
         },
@@ -2189,9 +2394,9 @@
         "type" : "object"
       },
       "dto.JobStatus" : {
-        "enum" : [ "Running", "Done", "Failed" ],
+        "enum" : [ "Running", "Done", "Failed", "Cancelled" ],
         "type" : "string",
-        "x-enum-varnames" : [ "JobStatusRunning", "JobStatusDone", "JobStatusFailed" ]
+        "x-enum-varnames" : [ "JobStatusRunning", "JobStatusDone", "JobStatusFailed", "JobStatusCancelled" ]
       },
       "dto.LocalStorage" : {
         "properties" : {
@@ -2313,10 +2518,7 @@
             "type" : "integer"
           },
           "status" : {
-            "allOf" : [ {
-              "$ref" : "#/components/schemas/dto.JobStatus"
-            } ],
-            "type" : "object"
+            "$ref" : "#/components/schemas/dto.JobStatus"
           },
           "total-bytes" : {
             "example" : 2000,
@@ -2580,7 +2782,7 @@
       "dto.S3Storage" : {
         "properties" : {
           "access-key-id" : {
-            "description" : "Access Key ID for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+            "description" : "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
             "type" : "string"
           },
           "bucket" : {
@@ -2623,7 +2825,7 @@
             "type" : "string"
           },
           "secret-access-key" : {
-            "description" : "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+            "description" : "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
             "type" : "string"
           },
           "secret-agent" : {

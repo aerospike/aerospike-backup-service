@@ -49,7 +49,7 @@ func (r *retryExecutor) run(label string, f func() error) error {
 	for attempt := uint(1); attempt <= totalAttempts; attempt++ {
 		lastErr = f()
 		if lastErr == nil || errors.Is(lastErr, context.Canceled) {
-			return nil // success
+			return lastErr // success
 		}
 
 		if attempt < r.policy.MaxRetries { // Log and wait only if there are attempts left

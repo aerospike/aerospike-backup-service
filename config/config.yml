@@ -44,7 +44,7 @@ backup-policies:
   keepFilesPolicySlow:
     parallel: 8
     remove-files: KeepAll
-    bandwidth: 120000
+    bandwidth: 1
     sealed: true
   encryptedCompressedPolicy128:
     parallel: 8
@@ -201,7 +201,7 @@ backup-routines:
     namespaces: [ "source-ns15", "source-ns16", "source-ns17" ]
     backup-policy: keepFilesPolicy
   fullBackupSlow:
-    interval-cron: "*/20 * * * * *"
+    interval-cron: "@yearly"
     source-cluster: absDefaultCluster
     storage: local
     namespaces: [ "source-ns13" ]
@@ -236,6 +236,13 @@ backup-routines:
     source-cluster: absDefaultCluster
     storage: local
     namespaces: [ "source-ns14" ]
+    backup-policy: keepFilesPolicy
+  everySecondBackup:
+    interval-cron: "* * * * * *"
+    source-cluster: absDefaultCluster
+    storage: local
+    namespaces: [ "source-ns20" ]
+    disabled: true
     backup-policy: keepFilesPolicy
 
 service:

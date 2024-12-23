@@ -11,7 +11,7 @@ import (
 //
 //nolint:lll
 type S3Storage struct {
-	SecretAgentConfig
+	SecretAgentConfig `yaml:",inline"`
 	// The S3 bucket name.
 	Bucket string `yaml:"bucket" json:"bucket" validate:"required"`
 	// The root path for the backup repository within the bucket.
@@ -30,11 +30,11 @@ type S3Storage struct {
 	// The maximum number of simultaneous requests from S3.
 	MaxConnsPerHost int `yaml:"max_async_connections,omitempty" json:"max_async_connections,omitempty" example:"16"`
 	// Access Key ID for authentication with S3 StaticCredentialsProvider.
-	// Can be a path in secret agent or an actual value.
-	AccessKeyID *string `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty"`
+	// This is sensitive information. Can be a path in secret agent or an actual value.
+	AccessKeyID *string `yaml:"access-key-id" json:"access-key-id"`
 	// Secret Access Key for authentication with S3 StaticCredentialsProvider.
-	// Can be a path in secret agent or an actual value.
-	SecretAccessKey *string `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty"`
+	// This is sensitive information. Can be a path in secret agent or an actual value.
+	SecretAccessKey *string `yaml:"secret-access-key" json:"secret-access-key"`
 }
 
 // Validate checks if the S3Storage is valid.
@@ -56,7 +56,7 @@ func (s *S3Storage) Validate() error {
 	return s.SecretAgentConfig.validate()
 }
 
-func (s *S3Storage) ToModel(config *model.Config) (*model.S3Storage, error) {
+func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 	var auth *model.S3Authentication
 	if s.AccessKeyID != nil {
 		agent, err := config.ResolveSecretAgent(s.SecretAgentName, s.SecretAgent.ToModel())

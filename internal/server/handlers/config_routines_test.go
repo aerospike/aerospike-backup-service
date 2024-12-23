@@ -215,3 +215,32 @@ func TestService_ReadRoutines(t *testing.T) {
 			End()
 	}
 }
+
+func TestService_EnableRoutine(t *testing.T) {
+	t.Parallel()
+	h := newServiceMock(t)
+	router := mux.NewRouter()
+	router.HandleFunc(
+		"/config/routines/{name}/enable",
+		h.EnableRoutine,
+	).Methods(http.MethodPut)
+
+	testCases := []struct {
+		method     string
+		statusCode int
+		name       string
+	}{
+		{http.MethodPut, http.StatusNotFound, "routine1"},
+		{http.MethodGet, http.StatusMethodNotAllowed, "routine1"},
+	}
+
+	for _, tt := range testCases {
+		apitest.New().
+			Handler(router).
+			Method(tt.method).
+			URL(fmt.Sprintf("/config/routines/%s/enable", tt.name)).
+			Expect(t).
+			Status(tt.statusCode).
+			End()
+	}
+}

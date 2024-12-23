@@ -8,9 +8,12 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
+// retryableBackupHandler is a wrapper around BackupHandler that adds
+// retry logic and cancellation support
 type retryableBackupHandler struct {
 	sync.RWMutex
 	handler BackupHandler
+	cancel  context.CancelFunc
 	errCh   chan error
 }
 
@@ -22,9 +25,11 @@ func startBackup(
 	start func(ctx context.Context) (BackupHandler, error),
 	onFail func(ctx context.Context),
 	onSuccess func(ctx context.Context, stats *models.BackupStats) error,
-) BackupHandler {
+) CancelableBackupHandler {
+	ctxWithCancel, cancel := context.WithCancel(ctx)
 	h := &retryableBackupHandler{
-		errCh: make(chan error, 1),
+		errCh:  make(chan error, 1),
+		cancel: cancel,
 	}
 
 	// Helper to retry onSuccess only
@@ -49,7 +54,7 @@ func startBackup(
 
 		h.setHandler(handler)
 
-		if err = handler.Wait(ctx); err != nil {
+		if err = handler.Wait(ctxWithCancel); err != nil {
 			onFail(ctx)
 			h.setHandler(nil)
 			return fmt.Errorf("backup failed: %w", err)
@@ -89,4 +94,12 @@ func (h *retryableBackupHandler) GetStats() *models.BackupStats {
 	}
 
 	return nil
+}
+
+func (h *retryableBackupHandler) Cancel() {
+	h.Lock()
+	defer h.Unlock()
+	if h.cancel != nil {
+		h.cancel()
+	}
 }

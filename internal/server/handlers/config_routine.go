@@ -247,3 +247,84 @@ func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// EnableRoutine
+// @Summary     Enable a backup routine.
+// @Tags        Configuration
+// @ID          enableRoutine
+// @Param       name path string true "Backup routine name"
+// @Success     204 "Routine successfully enabled."
+// @Failure     404 {string} string
+// @Router      /v1/config/routines/{name}/enable [put]
+func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "enableRoutine"))
+
+	routineName := mux.Vars(r)["name"]
+	if routineName == "" {
+		hLogger.Error("routine name required")
+		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
+		return
+	}
+	_, ok := s.handlerHolder[routineName]
+	if !ok {
+		hLogger.Error("unknown routine name", slog.String("name", routineName))
+		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)
+		return
+	}
+
+	err := s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.ToggleRoutineDisabled(routineName, false)
+	})
+	if err != nil {
+		hLogger.Error("failed to enable routine",
+			slog.String("name", routineName),
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DisableRoutine
+// @Summary     Disable a backup routine.
+// @Tags        Configuration
+// @ID          disableRoutine
+// @Param       name path string true "The name of the backup routine."
+// @Success     204 "Routine successfully disabled."
+// @Failure     404 {string} string
+// @Failure     500 {string} string "Unexpected error occurred."
+// @Router      /v1/config/routines/{name}/disable [put]
+func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
+	hLogger := s.logger.With(slog.String("handler", "disableRoutine"))
+
+	routineName := mux.Vars(r)["name"]
+	if routineName == "" {
+		hLogger.Error("routine name required")
+		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
+		return
+	}
+	handler, found := s.handlerHolder[routineName]
+	if !found {
+		hLogger.Error("unknown routine name", slog.String("name", routineName))
+		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)
+		return
+	}
+
+	handler.Cancel() // cancel any running job for this routine before disabling it.
+
+	err := s.changeConfig(r.Context(), func(config *model.Config) error {
+		return config.ToggleRoutineDisabled(routineName, true)
+	})
+	if err != nil {
+		hLogger.Error("failed to disable routine",
+			slog.String("name", routineName),
+			slog.Any("error", err),
+		)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}

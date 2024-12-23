@@ -67,6 +67,35 @@ paths:
       summary: Readiness endpoint.
       tags:
       - System
+  /v1/backups/cancel/{name}:
+    post:
+      operationId: cancelCurrentBackup
+      parameters:
+      - description: Backup routine name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "202":
+          content: {}
+          description: Accepted
+        "404":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Not Found
+        "500":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Internal Server Error
+      summary: Cancel current backup.
+      tags:
+      - Backup
   /v1/backups/currentBackup/{name}:
     get:
       operationId: getCurrentBackup
@@ -803,6 +832,58 @@ paths:
       tags:
       - Configuration
       x-codegen-request-body-name: routine
+  /v1/config/routines/{name}/disable:
+    put:
+      operationId: disableRoutine
+      parameters:
+      - description: The name of the backup routine.
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          content: {}
+          description: Routine successfully disabled.
+        "404":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Not Found
+        "500":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Unexpected error occurred.
+      summary: Disable a backup routine.
+      tags:
+      - Configuration
+  /v1/config/routines/{name}/enable:
+    put:
+      operationId: enableRoutine
+      parameters:
+      - description: Backup routine name
+        in: path
+        name: name
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          content: {}
+          description: Routine successfully enabled.
+        "404":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Not Found
+      summary: Enable a backup routine.
+      tags:
+      - Configuration
   /v1/config/storage:
     get:
       operationId: ReadAllStorage
@@ -944,6 +1025,45 @@ paths:
       tags:
       - Configuration
       x-codegen-request-body-name: storage
+  /v1/restore/cancel/{jobID}:
+    post:
+      operationId: cancelRestore
+      parameters:
+      - description: Restore job ID
+        in: path
+        name: jobID
+        required: true
+        schema:
+          format: int64
+          type: integer
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Restore job canceled successfully
+        "400":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Invalid job ID
+        "404":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Job not found
+        "500":
+          content:
+            '*/*':
+              schema:
+                type: string
+          description: Internal server error
+      summary: Cancel a running restore operation.
+      tags:
+      - Restore
   /v1/restore/full:
     post:
       operationId: restoreFull
@@ -1182,8 +1302,9 @@ components:
     dto.AzureStorage:
       properties:
         account-key:
-          description: AccountKey is the Azure storage account key for Shared Key
-            authentication.
+          description: |-
+            AccountKey is the Azure storage account key for Shared Key authentication.
+            This is sensitive information. Can be a path in secret agent or an actual value.
           type: string
         account-name:
           description: AccountName is the Azure storage account name for Shared Key
@@ -1193,8 +1314,9 @@ components:
           description: ClientID is the Azure Active Directory client ID for AAD authentication.
           type: string
         client-secret:
-          description: ClientSecret is the Azure Active Directory client secret for
-            AAD authentication.
+          description: |-
+            ClientSecret is the Azure Active Directory client secret for AAD authentication.
+            This is sensitive information. Can be a path in secret agent or an actual value.
           type: string
         container-name:
           description: ContainerName is the name of the Azure Blob container.
@@ -1207,6 +1329,18 @@ components:
             Path is the root path for the backup repository within the container.
             If not specified, backups will be saved in the container's root.
           example: backups
+          type: string
+        secret-agent:
+          allOf:
+          - $ref: '#/components/schemas/dto.SecretAgent'
+          description: |-
+            Secret Agent configuration (optional).
+            Mutually exclusive with secret-agent-name.
+          type: object
+        secret-agent-name:
+          description: |-
+            Secret Agent configuration (optional). Link to one of preconfigured agents.
+            Mutually exclusive with secret-agent.
           type: string
         tenant-id:
           description: TenantID is the Azure Active Directory tenant ID for AAD authentication.
@@ -1370,6 +1504,10 @@ components:
     dto.BackupRoutine:
       description: BackupRoutine represents a scheduled backup operation routine.
       example:
+        bin-list:
+        - dataBin
+        secret-agent: sa
+        storage: aws
         incr-interval-cron: '*/10 * * * * *'
         set-list:
         - set1
@@ -1381,11 +1519,8 @@ components:
         - "...]]"
         prefer-racks:
         - 0
-        bin-list:
-        - dataBin
         source-cluster: testCluster
-        secret-agent: sa
-        storage: aws
+        disabled: true
         partition-list: 0-1000
         namespaces:
         - source-ns1
@@ -1402,6 +1537,9 @@ components:
           items:
             type: string
           type: array
+        disabled:
+          description: Whether this routine is disabled and should not run.
+          type: boolean
         incr-interval-cron:
           description: The interval for incremental backup as a cron expression string
             (optional).
@@ -1558,6 +1696,10 @@ components:
             local-storage: "{}"
         backup-routines:
           key:
+            bin-list:
+            - dataBin
+            secret-agent: sa
+            storage: aws
             incr-interval-cron: '*/10 * * * * *'
             set-list:
             - set1
@@ -1569,11 +1711,8 @@ components:
             - "...]]"
             prefer-racks:
             - 0
-            bin-list:
-            - dataBin
             source-cluster: testCluster
-            secret-agent: sa
-            storage: aws
+            disabled: true
             partition-list: 0-1000
             namespaces:
             - source-ns1
@@ -1723,13 +1862,31 @@ components:
             Alternative url.
             It is not recommended to use an alternate URL in a production environment.
           type: string
-        key-file:
-          description: Path to file containing Service Account JSON Key.
+        key:
+          description: |-
+            Key is the service account key in JSON format.
+            This is sensitive information. Can be a path in secret agent or an actual value.
+          type: string
+        key-file-path:
+          description: Path to the file containing the service account key in JSON
+            format.
           type: string
         path:
           description: "The root path for the backup repository. If not specified,\
             \ backups will be saved in the bucket's root."
           example: backups
+          type: string
+        secret-agent:
+          allOf:
+          - $ref: '#/components/schemas/dto.SecretAgent'
+          description: |-
+            Secret Agent configuration (optional).
+            Mutually exclusive with secret-agent-name.
+          type: object
+        secret-agent-name:
+          description: |-
+            Secret Agent configuration (optional). Link to one of preconfigured agents.
+            Mutually exclusive with secret-agent.
           type: string
       required:
       - bucket-name
@@ -1764,11 +1921,13 @@ components:
       - Running
       - Done
       - Failed
+      - Cancelled
       type: string
       x-enum-varnames:
       - JobStatusRunning
       - JobStatusDone
       - JobStatusFailed
+      - JobStatusCancelled
     dto.LocalStorage:
       properties:
         path:
@@ -1857,7 +2016,7 @@ components:
         fresher-records: 5
         skipped-records: 4
         index-count: 3
-        status: "{}"
+        status: Running
       properties:
         current-job:
           $ref: '#/components/schemas/dto.RunningJob'
@@ -1896,9 +2055,7 @@ components:
           format: int64
           type: integer
         status:
-          allOf:
-          - $ref: '#/components/schemas/dto.JobStatus'
-          type: object
+          $ref: '#/components/schemas/dto.JobStatus'
         total-bytes:
           example: 2000
           format: int64
@@ -2162,7 +2319,7 @@ components:
         access-key-id:
           description: |-
             Access Key ID for authentication with S3 StaticCredentialsProvider.
-            Can be a path in secret agent or an actual value.
+            This is sensitive information. Can be a path in secret agent or an actual value.
           type: string
         bucket:
           description: The S3 bucket name.
@@ -2201,7 +2358,7 @@ components:
         secret-access-key:
           description: |-
             Secret Access Key for authentication with S3 StaticCredentialsProvider.
-            Can be a path in secret agent or an actual value.
+            This is sensitive information. Can be a path in secret agent or an actual value.
           type: string
         secret-agent:
           allOf:

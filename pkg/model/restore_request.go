@@ -6,7 +6,7 @@ import (
 )
 
 // RestoreJobID represents the restore operation job id.
-type RestoreJobID int
+type RestoreJobID int64
 
 // RestoreRequest represents a restore operation request.
 // @Description RestoreRequest represents a restore operation request.

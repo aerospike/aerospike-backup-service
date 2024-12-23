@@ -28,9 +28,9 @@ type BackupPolicy struct {
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
 	// Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int32 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
+	SocketTimeout *int `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
-	TotalTimeout *int32 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`
+	TotalTimeout *int `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`
 	// RetryPolicy defines the configuration for retry attempts in case of failures.
 	// If nil, default policy is used.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
@@ -83,11 +83,11 @@ func (p *BackupPolicy) Validate() error {
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
 	}
-	if p.SocketTimeout != nil && *p.SocketTimeout <= 0 {
-		return fmt.Errorf("socketTimeout %d invalid, should be positive number", *p.SocketTimeout)
+	if p.SocketTimeout != nil && *p.SocketTimeout < 0 {
+		return fmt.Errorf("socketTimeout %d invalid, should not be negative number", *p.SocketTimeout)
 	}
-	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
-		return fmt.Errorf("totalTimeout %d invalid, should be positive number", *p.TotalTimeout)
+	if p.TotalTimeout != nil && *p.TotalTimeout < 0 {
+		return fmt.Errorf("totalTimeout %d invalid, should not be negative number", *p.TotalTimeout)
 	}
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retryPolicy validation failed: %w", err)
@@ -98,8 +98,8 @@ func (p *BackupPolicy) Validate() error {
 	if p.RecordsPerSecond != nil && *p.RecordsPerSecond <= 0 {
 		return fmt.Errorf("recordsPerSecond %d invalid, should be positive number", *p.RecordsPerSecond)
 	}
-	if p.FileLimit != nil && *p.FileLimit <= 0 {
-		return fmt.Errorf("fileLimit %d invalid, should be positive number", *p.FileLimit)
+	if p.FileLimit != nil && *p.FileLimit < 0 {
+		return fmt.Errorf("fileLimit %d invalid, should not be negative number", *p.FileLimit)
 	}
 	if p.RemoveFiles != nil &&
 		*p.RemoveFiles != KeepAll && *p.RemoveFiles != RemoveAll && *p.RemoveFiles != RemoveIncremental {
@@ -133,7 +133,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 	}
 }
 
-func millisToDuration(ms *int32) *time.Duration {
+func millisToDuration(ms *int) *time.Duration {
 	if ms == nil {
 		return nil
 	}
@@ -141,11 +141,11 @@ func millisToDuration(ms *int32) *time.Duration {
 	return &duration
 }
 
-func durationToMillis(d *time.Duration) *int32 {
+func durationToMillis(d *time.Duration) *int {
 	if d == nil {
 		return nil
 	}
-	ms := int32((*d) / time.Millisecond)
+	ms := int((*d) / time.Millisecond)
 	return &ms
 }
 
@@ -175,7 +175,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 		p.EncryptionPolicy = &EncryptionPolicy{}
 		p.EncryptionPolicy.FromModel(m.EncryptionPolicy)
 	}
-	if p.CompressionPolicy != nil {
+	if m.CompressionPolicy != nil {
 		p.CompressionPolicy = &CompressionPolicy{}
 		p.CompressionPolicy.fromModel(m.CompressionPolicy)
 	}

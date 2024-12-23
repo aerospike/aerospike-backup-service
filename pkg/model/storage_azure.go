@@ -2,40 +2,6 @@ package model
 
 import "fmt"
 
-// Storage represents the configuration for a backup storage details.
-// This interface is implemented by all specific storage types.
-type Storage interface {
-	storage()
-}
-
-type LocalStorage struct {
-	// Path is the root directory where backups will be stored locally.
-	Path string
-}
-
-func (s *LocalStorage) storage() {}
-func (s *LocalStorage) String() string {
-	return fmt.Sprintf("LocalStorage(Path: %s)", s.Path)
-}
-
-type GcpStorage struct {
-	// KeyFile is the path to the JSON file containing the Google Cloud service account key.
-	// This file is used for authentication with GCP services.
-	KeyFile string
-	// BucketName is the name of the GCP bucket where backups will be stored.
-	BucketName string
-	// Path is the root directory within the GCS bucket where backups will be stored.
-	Path string
-	// Endpoint is an alternative URL for the GCS API.
-	// This should only be used for testing or in specific non-production scenarios.
-	Endpoint string
-}
-
-func (s *GcpStorage) storage() {}
-func (s *GcpStorage) String() string {
-	return fmt.Sprintf("GcpStorage(Bucket: %s, Path: %s)", s.BucketName, s.Path)
-}
-
 // AzureStorage represents the configuration for Azure Blob storage.
 type AzureStorage struct {
 	// Path is the root directory within the Azure Blob container where backups will be stored.
@@ -47,6 +13,8 @@ type AzureStorage struct {
 	// Auth holds the authentication details for Azure Blob storage.
 	// It can be nil or AzureSharedKeyAuth or AzureADAuth.
 	Auth AzureAuth
+	// SecretAgent configuration to fetch keyfile from a secret store (optional).
+	SecretAgent *SecretAgent
 }
 
 func (s *AzureStorage) storage() {}

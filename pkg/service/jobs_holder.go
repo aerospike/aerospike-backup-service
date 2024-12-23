@@ -1,7 +1,8 @@
 package service
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"math/rand"
 	"sync"
 	"time"
@@ -10,7 +11,7 @@ import (
 )
 
 type jobInfo struct {
-	handlers     []RestoreHandler
+	handlers     []*RestoreHandlerWithCancel // Each handler restores one namespace.
 	status       model.JobStatus
 	err          error
 	totalRecords uint64
@@ -33,7 +34,7 @@ func NewRestoreJobsHolder() *RestoreJobsHolder {
 // newJob creates a new restore job and return its id.
 func (h *RestoreJobsHolder) newJob(label string) model.RestoreJobID {
 	// #nosec G404
-	id := model.RestoreJobID(rand.Int())
+	id := model.RestoreJobID(rand.Int63())
 	h.Lock()
 	defer h.Unlock()
 
@@ -45,8 +46,8 @@ func (h *RestoreJobsHolder) newJob(label string) model.RestoreJobID {
 	return id
 }
 
-// addHandler should be called for each backup (full or incremental) handler.
-func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler RestoreHandler) {
+// addJob should be called for each backup (full or incremental) handler.
+func (h *RestoreJobsHolder) addJob(id model.RestoreJobID, handler *RestoreHandlerWithCancel) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.jobs[id]; exists {
@@ -64,18 +65,18 @@ func (h *RestoreJobsHolder) addTotalRecords(id model.RestoreJobID, t uint64) {
 	}
 }
 
-func (h *RestoreJobsHolder) setDone(id model.RestoreJobID) {
+func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
 	h.Lock()
 	defer h.Unlock()
 	if job, exists := h.jobs[id]; exists {
-		job.status = model.JobStatusDone
-	}
-}
-
-func (h *RestoreJobsHolder) setFailed(id model.RestoreJobID, err error) {
-	h.Lock()
-	defer h.Unlock()
-	if job, exists := h.jobs[id]; exists {
+		if err == nil {
+			job.status = model.JobStatusDone
+			return
+		}
+		if errors.Is(err, context.Canceled) {
+			job.status = model.JobStatusCancelled
+			return
+		}
 		job.status = model.JobStatusFailed
 		job.err = err
 	}
@@ -87,5 +88,14 @@ func (h *RestoreJobsHolder) getStatus(id model.RestoreJobID) (*model.RestoreJobS
 	if job, exists := h.jobs[id]; exists {
 		return RestoreJobStatus(job), nil
 	}
-	return nil, fmt.Errorf("job with ID %d not found", id)
+	return nil, NewErrJobNotFound(id)
+}
+
+func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*jobInfo, error) {
+	h.Lock()
+	defer h.Unlock()
+	if job, exists := h.jobs[id]; exists {
+		return job, nil
+	}
+	return nil, NewErrJobNotFound(id)
 }

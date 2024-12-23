@@ -96,6 +96,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/backups/cancel/{name}": {
+            "post": {
+                "tags": [
+                    "Backup"
+                ],
+                "summary": "Cancel current backup.",
+                "operationId": "cancelCurrentBackup",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/backups/currentBackup/{name}": {
             "get": {
                 "produces": [
@@ -1038,6 +1073,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/config/routines/{name}/disable": {
+            "put": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Disable a backup routine.",
+                "operationId": "disableRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The name of the backup routine.",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Routine successfully disabled."
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected error occurred.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/config/routines/{name}/enable": {
+            "put": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Enable a backup routine.",
+                "operationId": "enableRoutine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Backup routine name",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Routine successfully enabled."
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/config/storage": {
             "get": {
                 "produces": [
@@ -1212,6 +1311,51 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/restore/cancel/{jobID}": {
+            "post": {
+                "tags": [
+                    "Restore"
+                ],
+                "summary": "Cancel a running restore operation.",
+                "operationId": "cancelRestore",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int64",
+                        "description": "Restore job ID",
+                        "name": "jobID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Restore job canceled successfully",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid job ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Job not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "type": "string"
                         }
@@ -1509,7 +1653,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "account-key": {
-                    "description": "AccountKey is the Azure storage account key for Shared Key authentication.",
+                    "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
                     "type": "string"
                 },
                 "account-name": {
@@ -1521,7 +1665,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "client-secret": {
-                    "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.",
+                    "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
                     "type": "string"
                 },
                 "container-name": {
@@ -1536,6 +1680,18 @@ const docTemplate = `{
                     "description": "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
                     "type": "string",
                     "example": "backups"
+                },
+                "secret-agent": {
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    ]
+                },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+                    "type": "string"
                 },
                 "tenant-id": {
                     "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.",
@@ -1715,6 +1871,10 @@ const docTemplate = `{
                     "example": [
                         "dataBin"
                     ]
+                },
+                "disabled": {
+                    "description": "Whether this routine is disabled and should not run.",
+                    "type": "boolean"
                 },
                 "incr-interval-cron": {
                     "description": "The interval for incremental backup as a cron expression string (optional).",
@@ -2008,14 +2168,30 @@ const docTemplate = `{
                     "description": "Alternative url.\nIt is not recommended to use an alternate URL in a production environment.",
                     "type": "string"
                 },
-                "key-file": {
-                    "description": "Path to file containing Service Account JSON Key.",
+                "key": {
+                    "description": "Key is the service account key in JSON format.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
+                    "type": "string"
+                },
+                "key-file-path": {
+                    "description": "Path to the file containing the service account key in JSON format.",
                     "type": "string"
                 },
                 "path": {
                     "description": "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
                     "type": "string",
                     "example": "backups"
+                },
+                "secret-agent": {
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    ]
+                },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+                    "type": "string"
                 }
             }
         },
@@ -2060,12 +2236,14 @@ const docTemplate = `{
             "enum": [
                 "Running",
                 "Done",
-                "Failed"
+                "Failed",
+                "Cancelled"
             ],
             "x-enum-varnames": [
                 "JobStatusRunning",
                 "JobStatusDone",
-                "JobStatusFailed"
+                "JobStatusFailed",
+                "JobStatusCancelled"
             ]
         },
         "dto.LocalStorage": {
@@ -2212,16 +2390,7 @@ const docTemplate = `{
                     "example": 4
                 },
                 "status": {
-                    "enum": [
-                        "Running",
-                        "Done",
-                        "Failed"
-                    ],
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.JobStatus"
-                        }
-                    ]
+                    "$ref": "#/definitions/dto.JobStatus"
                 },
                 "total-bytes": {
                     "type": "integer",
@@ -2515,7 +2684,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "access-key-id": {
-                    "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+                    "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
                     "type": "string"
                 },
                 "bucket": {
@@ -2559,7 +2728,7 @@ const docTemplate = `{
                     "example": "eu-central-1"
                 },
                 "secret-access-key": {
-                    "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nCan be a path in secret agent or an actual value.",
+                    "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
                     "type": "string"
                 },
                 "secret-agent": {

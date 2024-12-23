@@ -25,7 +25,7 @@ func testSeedNode() dto.SeedNode {
 
 func testConfigCluster() *dto.AerospikeCluster {
 	label := "label"
-	timeout := int32(10)
+	timeout := 10
 	useAlternate := false
 	queueSize := 1
 	return &dto.AerospikeCluster{

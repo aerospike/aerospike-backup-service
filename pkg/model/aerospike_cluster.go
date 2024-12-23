@@ -25,8 +25,8 @@ type AerospikeCluster struct {
 	ClusterLabel *string
 	// The seed nodes details.
 	SeedNodes []SeedNode
-	// The connection timeout in milliseconds.
-	ConnTimeout *int32
+	// The connection timeout.
+	ConnTimeout *time.Duration
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
 	UseServicesAlternate *bool
 	// The authentication details to the Aerospike cluster.
@@ -75,10 +75,6 @@ func (c *AerospikeCluster) GetPassword() *string {
 
 func (c *Credentials) loadPassword() *string {
 	if c.Password != nil {
-		if c.SecretAgent == nil {
-			return c.Password
-		}
-
 		password, err := c.SecretAgent.Read(*c.Password)
 		if err != nil {
 			slog.Warn("Failed to read password from secret agent", slog.Any("err", err))
@@ -140,7 +136,7 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 		}
 	}
 	if c.ConnTimeout != nil {
-		policy.Timeout = time.Duration(*c.ConnTimeout) * time.Millisecond
+		policy.Timeout = *c.ConnTimeout
 	}
 	if c.UseServicesAlternate != nil {
 		policy.UseServicesAlternate = *c.UseServicesAlternate
