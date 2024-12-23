@@ -1420,7 +1420,6 @@ components:
         bandwidth: 10000
         total-timeout: 2000
         sealed: true
-        remove-files: "{}"
         encryption: "{}"
         parallel: 1
         no-indexes: true
@@ -1429,6 +1428,7 @@ components:
         file-limit: 1024
         retry-policy: "{}"
         socket-timeout: 1000
+        retention: "{}"
       properties:
         bandwidth:
           description: |-
@@ -1471,10 +1471,10 @@ components:
             the records-per-second limit is not applied.
           example: 1000
           type: integer
-        remove-files:
+        retention:
           allOf:
-          - $ref: '#/components/schemas/dto.RemoveFilesType'
-          description: "Whether to clear the output directory (default: KeepAll)."
+          - $ref: '#/components/schemas/dto.RetentionPolicy'
+          description: Specifies how long to retain full and incremental backups.
           type: object
         retry-policy:
           allOf:
@@ -1512,7 +1512,7 @@ components:
         set-list:
         - set1
         interval-cron: 0 0 * * * *
-        backup-policy: keepAll
+        backup-policy: keepAllPolicy
         node-list:
         - "<IP addr 1>:<port 1>["
         - "<IP addr 2>:<port 2>["
@@ -1527,7 +1527,7 @@ components:
       properties:
         backup-policy:
           description: The name of the corresponding backup policy.
-          example: keepAll
+          example: keepAllPolicy
           type: string
         bin-list:
           description: "The list of backup bin names (optional, an empty list implies\
@@ -1653,7 +1653,6 @@ components:
             bandwidth: 10000
             total-timeout: 2000
             sealed: true
-            remove-files: "{}"
             encryption: "{}"
             parallel: 1
             no-indexes: true
@@ -1662,6 +1661,7 @@ components:
             file-limit: 1024
             retry-policy: "{}"
             socket-timeout: 1000
+            retention: "{}"
         aerospike-clusters:
           key:
             credentials: "{}"
@@ -1704,7 +1704,7 @@ components:
             set-list:
             - set1
             interval-cron: 0 0 * * * *
-            backup-policy: keepAll
+            backup-policy: keepAllPolicy
             node-list:
             - "<IP addr 1>:<port 1>["
             - "<IP addr 2>:<port 2>["
@@ -1985,17 +1985,6 @@ components:
             type: string
           type: array
       type: object
-    dto.RemoveFilesType:
-      description: RemoveFilesType represents the type of the backup storage.
-      enum:
-      - KeepAll
-      - RemoveAll
-      - RemoveIncremental
-      type: string
-      x-enum-varnames:
-      - KeepAll
-      - RemoveAll
-      - RemoveIncremental
     dto.RestoreJobStatus:
       description: RestoreJobStatus represents a restore job status.
       example:
@@ -2260,6 +2249,24 @@ components:
       - policy
       - routine
       - time
+      type: object
+    dto.RetentionPolicy:
+      properties:
+        full:
+          description: |-
+            Number of full backups to store:
+            - If nil, retain all full backups.
+            - If N is specified, retain the last N full backups.
+            - The minimum value is 1.
+          type: integer
+        incremental:
+          description: |-
+            Number of full backups to store incremental backups for:
+            - If nil, retain all incremental backups.
+            - If N is specified, retain incremental backups for the last N full backups.
+            - If set to 0, do not retain any incremental backups.
+            - Must not exceed the value of FullBackups.
+          type: integer
       type: object
     dto.RetryPolicy:
       description: RetryPolicy defines the configuration for retry attempts in case

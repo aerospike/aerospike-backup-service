@@ -1810,16 +1810,11 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 1000
                 },
-                "remove-files": {
-                    "description": "Whether to clear the output directory (default: KeepAll).",
-                    "enum": [
-                        "KeepAll",
-                        "RemoveAll",
-                        "RemoveIncremental"
-                    ],
+                "retention": {
+                    "description": "Specifies how long to retain full and incremental backups.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/dto.RemoveFilesType"
+                            "$ref": "#/definitions/dto.RetentionPolicy"
                         }
                     ]
                 },
@@ -1860,7 +1855,7 @@ const docTemplate = `{
                 "backup-policy": {
                     "description": "The name of the corresponding backup policy.",
                     "type": "string",
-                    "example": "keepAll"
+                    "example": "keepAllPolicy"
                 },
                 "bin-list": {
                     "description": "The list of backup bin names (optional, an empty list implies backing up all bins).",
@@ -2325,20 +2320,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.RemoveFilesType": {
-            "description": "RemoveFilesType represents the type of the backup storage.",
-            "type": "string",
-            "enum": [
-                "KeepAll",
-                "RemoveAll",
-                "RemoveIncremental"
-            ],
-            "x-enum-varnames": [
-                "KeepAll",
-                "RemoveAll",
-                "RemoveIncremental"
-            ]
-        },
         "dto.RestoreJobStatus": {
             "description": "RestoreJobStatus represents a restore job status.",
             "type": "object",
@@ -2624,6 +2605,19 @@ const docTemplate = `{
                     "type": "integer",
                     "format": "int64",
                     "example": 1739538000000
+                }
+            }
+        },
+        "dto.RetentionPolicy": {
+            "type": "object",
+            "properties": {
+                "full": {
+                    "description": "Number of full backups to store:\n- If nil, retain all full backups.\n- If N is specified, retain the last N full backups.\n- The minimum value is 1.",
+                    "type": "integer"
+                },
+                "incremental": {
+                    "description": "Number of full backups to store incremental backups for:\n- If nil, retain all incremental backups.\n- If N is specified, retain incremental backups for the last N full backups.\n- If set to 0, do not retain any incremental backups.\n- Must not exceed the value of FullBackups.",
+                    "type": "integer"
                 }
             }
         },

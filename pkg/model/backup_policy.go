@@ -7,16 +7,6 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-const (
-	KeepAll           RemoveFilesType = "KeepAll"
-	RemoveAll         RemoveFilesType = "RemoveAll"
-	RemoveIncremental RemoveFilesType = "RemoveIncremental"
-)
-
-// RemoveFilesType represents the type of the backup storage.
-// @Description RemoveFilesType represents the type of the backup storage.
-type RemoveFilesType string
-
 // BackupPolicy represents a scheduled backup policy.
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel.
@@ -28,8 +18,8 @@ type BackupPolicy struct {
 	TotalTimeout *time.Duration
 	// RetryPolicy defines the configuration for retry attempts in case of failures.
 	RetryPolicy *models.RetryPolicy
-	// Whether to clear the output directory (default: KeepAll).
-	RemoveFiles *RemoveFilesType
+	// Specifies how long to retain full and incremental backups.
+	RetentionPolicy *RetentionPolicy
 	// Do not back up any record data (metadata or bin data).
 	NoRecords *bool
 	// Do not back up any secondary index definitions.
@@ -72,7 +62,7 @@ func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
 		SocketTimeout:    p.SocketTimeout,
 		TotalTimeout:     p.TotalTimeout,
 		RetryPolicy:      p.RetryPolicy,
-		RemoveFiles:      p.RemoveFiles,
+		RetentionPolicy:  p.RetentionPolicy,
 		NoRecords:        p.NoRecords,
 		NoIndexes:        util.Ptr(true),
 		NoUdfs:           util.Ptr(true),
@@ -128,12 +118,7 @@ func (p *BackupPolicy) GetSocketTimeoutOrDefault() time.Duration {
 	return *p.SocketTimeout
 }
 
-func (r *RemoveFilesType) RemoveFullBackup() bool {
-	// Full backups are deleted only if RemoveFiles is explicitly set to RemoveAll
-	return r != nil && *r == RemoveAll
-}
-
-func (r *RemoveFilesType) RemoveIncrementalBackup() bool {
-	// Incremental backups are deleted only if RemoveFiles is explicitly set to RemoveAll or RemoveIncremental
-	return r != nil && (*r == RemoveIncremental || *r == RemoveAll)
+type RetentionPolicy struct {
+	FullBackups *int // Number of full backups to store
+	IncrBackups *int // Number of full backups to store incremental backups for
 }

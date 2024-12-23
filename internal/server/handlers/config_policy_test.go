@@ -19,9 +19,7 @@ const (
 
 func testConfigBackupPolicy() *dto.BackupPolicy {
 	testInt := 10
-	keepFiles := dto.KeepAll
 	return &dto.BackupPolicy{
-		RemoveFiles:   &keepFiles,
 		Parallel:      &testInt,
 		SocketTimeout: &testInt,
 		TotalTimeout:  &testInt,
