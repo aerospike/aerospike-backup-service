@@ -376,7 +376,7 @@ GET {{baseUrl}}/v1/config/storage
   },
   "gcp-gcs": {
     "gcp-storage": {
-      "key-file": "key-file.json",
+      "key-file-path": "key-file.json",
       "bucket-name": "gcp-backup-bucket",
       "path": "backups",
       "endpoint": "http://127.0.0.1:9020"
