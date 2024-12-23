@@ -69,7 +69,7 @@ func (e *RetentionManagerImpl) deleteFullBackups(
 	}
 
 	for _, t := range timestamps[:len(timestamps)-retainCount] {
-		path := getTimestampPath(e.routineName, t, true)
+		path := getTimestampPath(e.routineName, t, jobTypeFull)
 		if err := storage.DeleteFolder(ctx, e.storage, path); err != nil {
 			return fmt.Errorf("failed to delete folder at %v: %w", path, err)
 		}
@@ -86,7 +86,7 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 	}
 
 	if retainCount == 0 { // Delete all incremental backups.
-		return storage.DeleteFolder(ctx, e.storage, getBackupRootPath(e.routineName, false))
+		return storage.DeleteFolder(ctx, e.storage, getBackupRootPath(e.routineName, jobTypeIncremental))
 	}
 
 	earliestToKeep := timestamps[len(timestamps)-retainCount]
@@ -96,7 +96,7 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 	}
 
 	for _, b := range incrBackups {
-		path := getTimestampPath(e.routineName, b.Created, false)
+		path := getTimestampPath(e.routineName, b.Created, jobTypeIncremental)
 		if err := storage.DeleteFolder(ctx, e.storage, path); err != nil {
 			return fmt.Errorf("failed to delete folder at %v: %w", path, err)
 		}

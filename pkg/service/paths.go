@@ -18,15 +18,16 @@ const (
 	dataDirectory                = "data"
 )
 
-func getBackupRootPath(routineName string, isFullBackup bool) string {
-	if isFullBackup {
+func getBackupRootPath(routineName string, backupType jobType) string {
+	if backupType == jobTypeFull {
 		return filepath.Join(routineName, fullBackupDirectory)
 	}
+
 	return filepath.Join(routineName, incrementalBackupDirectory)
 }
 
-func getTimestampPath(routineName string, timestamp time.Time, isFullBackup bool) string {
-	return filepath.Join(getBackupRootPath(routineName, isFullBackup), formatTimestamp(timestamp))
+func getTimestampPath(routineName string, timestamp time.Time, backupType jobType) string {
+	return filepath.Join(getBackupRootPath(routineName, backupType), formatTimestamp(timestamp))
 }
 
 func getFullPath(routineName string, namespace string, timestamp time.Time) string {
@@ -42,13 +43,9 @@ func getConfigurationPath(routineName string, timestamp time.Time, index int) st
 		configurationBackupDirectory, getConfigFileName(index))
 }
 
-func getKey(routineName string, isFullBackup bool, metadata *model.BackupMetadata) string {
-	backupDir := fullBackupDirectory
-	if !isFullBackup {
-		backupDir = incrementalBackupDirectory
-	}
-
-	return filepath.Join(routineName, backupDir, formatTimestamp(metadata.Created), dataDirectory, metadata.Namespace)
+func getKey(routineName string, backupType jobType, metadata *model.BackupMetadata) string {
+	rootPath := getBackupRootPath(routineName, backupType)
+	return filepath.Join(rootPath, formatTimestamp(metadata.Created), dataDirectory, metadata.Namespace)
 }
 
 func formatTimestamp(t time.Time) string {
