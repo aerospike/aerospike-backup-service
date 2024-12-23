@@ -591,36 +591,30 @@ storage types.
 
 ### **Example**
 
+<!-- Storage -->
 ```yaml
-# Example 1: Local Storage
-storage1:
-  local-storage:
-    path: /local/backups
-
-# Example 2: S3 Storage
-storage2:
-  s3-storage:
-    bucket: my-backup-bucket
-    path: backups
-    s3-profile: default
-    s3-region: eu-central-1
-
-# Example 3: Azure Storage
-storage3:
-  azure-storage:
-    account-name: my-storage-account
-    account-key: my-secret-key
-    container-name: my-container
-    endpoint: 'https://my-storage-account.blob.core.windows.net'
-    path: backups
-
-# Example 4: GCP Storage
-storage4:
-  gcp-storage:
-    bucket-name: my-gcp-bucket
-    key-file: /path/to/service-account-key.json
-    endpoint: 'https://storage.googleapis.com'
-    path: backups
+Amazon s3:
+    s3-storage:
+        bucket: my-backup-bucket
+        path: backups
+        s3-region: eu-central-1
+        s3-profile: default
+Google cloud storage:
+    gcp-storage:
+        key-file-path: /path/to/service-account-key.json
+        bucket-name: my-gcp-bucket
+        path: backups
+        endpoint: https://storage.googleapis.com
+Local storage:
+    local-storage:
+        path: /local/backups
+Microsoft Azure blob:
+    azure-storage:
+        endpoint: https://my-storage-account.blob.core.windows.net
+        container-name: my-container
+        path: backups
+        account-name: my-storage-account
+        account-key: my-secret-key
 
 ```
 

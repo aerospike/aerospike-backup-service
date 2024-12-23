@@ -10,6 +10,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
+	"gopkg.in/yaml.v3"
 )
 
 var jsonExamples = map[string]any{
@@ -152,6 +153,41 @@ var jsonExamples = map[string]any{
 	},
 }
 
+var yamlExamples = map[string]any{
+	"Storage": map[string]dto.Storage{
+		"Local storage": {
+			LocalStorage: &dto.LocalStorage{
+				Path: "/local/backups",
+			},
+		},
+		"Amazon s3": {
+			S3Storage: &dto.S3Storage{
+				Bucket:    "my-backup-bucket",
+				Path:      "backups",
+				S3Profile: "default",
+				S3Region:  "eu-central-1",
+			},
+		},
+		"Microsoft Azure blob": {
+			AzureStorage: &dto.AzureStorage{
+				Endpoint:      "https://my-storage-account.blob.core.windows.net",
+				ContainerName: "my-container",
+				AccountName:   "my-storage-account",
+				AccountKey:    "my-secret-key",
+				Path:          "backups",
+			},
+		},
+		"Google cloud storage": {
+			GcpStorage: &dto.GcpStorage{
+				BucketName: "my-gcp-bucket",
+				KeyFile:    "/path/to/service-account-key.json",
+				Endpoint:   "https://storage.googleapis.com",
+				Path:       "backups",
+			},
+		},
+	},
+}
+
 func main() {
 	_ = dto.AerospikeCluster{}
 	readme, err := os.ReadFile("README.md")
@@ -160,32 +196,44 @@ func main() {
 	}
 
 	// comment containing an example name (e.g.,key from jsonExamples)
-	// followed by ```json and the example JSON code block.
-	re := regexp.MustCompile("<!--\\s*(\\w+)\\s*-->\\s*```json[\\s\\S]*?```")
+	// followed by ```json/```yaml and the example code block.
+	re := regexp.MustCompile("<!--\\s*(\\w+)\\s*-->\\s*```(json|yaml)[\\s\\S]*?```")
+
 	updatedReadme := re.ReplaceAllFunc(readme, func(match []byte) []byte {
 		submatches := re.FindSubmatch(match)
-		if len(submatches) < 2 {
+		if len(submatches) < 3 {
 			return match
 		}
 
 		name := string(submatches[1])
-		example, exists := jsonExamples[name]
-		if !exists {
+		format := string(submatches[2])
+
+		var example any
+		var exists bool
+		var formattedExample []byte
+
+		if format == "json" {
+			example, exists = jsonExamples[name]
+			if exists {
+				formattedExample, err = json.MarshalIndent(example, "", "  ")
+			}
+		} else if format == "yaml" {
+			example, exists = yamlExamples[name]
+			if exists {
+				formattedExample, err = yaml.Marshal(example)
+			}
+		}
+
+		if !exists || err != nil {
 			return match
 		}
 
-		formattedJSON, err := json.MarshalIndent(example, "", "  ")
-		if err != nil {
-			panic(err)
-		}
-
 		var buffer bytes.Buffer
-		buffer.WriteString(fmt.Sprintf("<!-- %s -->\n```json\n", name))
-		buffer.Write(formattedJSON)
+		buffer.WriteString(fmt.Sprintf("<!-- %s -->\n```%s\n", name, format))
+		buffer.Write(formattedExample)
 		buffer.WriteString("\n```")
 		return buffer.Bytes()
 	})
-
 	err = os.WriteFile("README.md", updatedReadme, 0600)
 	if err != nil {
 		panic(err)
