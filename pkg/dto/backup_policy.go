@@ -23,7 +23,7 @@ type BackupPolicy struct {
 	// If nil, default policy is used.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Specifies how long to retain full and incremental backups.
-	Retention *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty"`
+	RetentionPolicy *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty"`
 	// Do not back up any record data (metadata or bin data).
 	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty"`
 	// Do not back up any secondary index definitions.
@@ -89,7 +89,7 @@ func (p *BackupPolicy) Validate() error {
 	if p.FileLimit != nil && *p.FileLimit < 0 {
 		return fmt.Errorf("fileLimit %d invalid, should not be negative number", *p.FileLimit)
 	}
-	if err := p.Retention.Validate(); err != nil {
+	if err := p.RetentionPolicy.Validate(); err != nil {
 		return fmt.Errorf("invalid retention policy: %w", err)
 	}
 	if err := p.EncryptionPolicy.Validate(); err != nil {
@@ -107,7 +107,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		SocketTimeout:     millisToDuration(p.SocketTimeout),
 		TotalTimeout:      millisToDuration(p.TotalTimeout),
 		RetryPolicy:       p.RetryPolicy.ToModel(),
-		Retention:         p.Retention.toModel(),
+		RetentionPolicy:   p.RetentionPolicy.toModel(),
 		NoRecords:         p.NoRecords,
 		NoIndexes:         p.NoIndexes,
 		NoUdfs:            p.NoUdfs,
@@ -151,7 +151,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.SocketTimeout = durationToMillis(m.SocketTimeout)
 	p.TotalTimeout = durationToMillis(m.TotalTimeout)
 	p.RetryPolicy = newRetryPolicyFromModel(m.RetryPolicy)
-	p.Retention = newRetentionPolicyFromModel(m.Retention)
+	p.RetentionPolicy = newRetentionPolicyFromModel(m.RetentionPolicy)
 	p.NoRecords = m.NoRecords
 	p.NoIndexes = m.NoIndexes
 	p.NoUdfs = m.NoUdfs

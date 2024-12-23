@@ -119,7 +119,7 @@ func newBackupRoutineHandler(
 			logger),
 		logger: logger,
 		retentionManager: NewBackupRetentionManager(
-			backupBackend, backupStorage, routineName, backupPolicy.Retention),
+			backupBackend, backupStorage, routineName, backupPolicy.RetentionPolicy),
 	}
 }
 

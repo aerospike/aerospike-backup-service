@@ -19,7 +19,7 @@ type BackupPolicy struct {
 	// RetryPolicy defines the configuration for retry attempts in case of failures.
 	RetryPolicy *models.RetryPolicy
 	// Specifies how long to retain full and incremental backups.
-	Retention *RetentionPolicy
+	RetentionPolicy *RetentionPolicy
 	// Do not back up any record data (metadata or bin data).
 	NoRecords *bool
 	// Do not back up any secondary index definitions.
@@ -62,7 +62,7 @@ func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
 		SocketTimeout:    p.SocketTimeout,
 		TotalTimeout:     p.TotalTimeout,
 		RetryPolicy:      p.RetryPolicy,
-		Retention:        p.Retention,
+		RetentionPolicy:  p.RetentionPolicy,
 		NoRecords:        p.NoRecords,
 		NoIndexes:        util.Ptr(true),
 		NoUdfs:           util.Ptr(true),

@@ -26,7 +26,7 @@ func TestBackupPolicyConversionIsLossless(t *testing.T) {
 		SocketTimeout: &socketTimeout,
 		TotalTimeout:  &totalTimeout,
 		RetryPolicy:   retryPolicy,
-		Retention: &RetentionPolicy{
+		RetentionPolicy: &RetentionPolicy{
 			FullBackups: util.Ptr(10),
 			IncrBackups: util.Ptr(5),
 		},
