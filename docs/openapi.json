@@ -2727,11 +2727,11 @@
       "dto.RetentionPolicy" : {
         "properties" : {
           "full" : {
-            "description" : "Number of full backups to store",
+            "description" : "Number of full backups to store:\n- If nil, retain all full backups.\n- If N is specified, retain the last N full backups.\n- The minimum value is 1.",
             "type" : "integer"
           },
           "incremental" : {
-            "description" : "Number of full backups to store incremental backups for",
+            "description" : "Number of full backups to store incremental backups for:\n- If nil, retain all incremental backups.\n- If N is specified, retain incremental backups for the last N full backups.\n- If set to 0, do not retain any incremental backups.\n- Must not exceed the value of FullBackups.",
             "type" : "integer"
           }
         },

@@ -169,10 +169,19 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.Sealed = m.Sealed
 }
 
+// RetentionPolicy specifies how many full and incremental backups to keep.
 type RetentionPolicy struct {
-	// Number of full backups to store
+	// Number of full backups to store:
+	// - If nil, retain all full backups.
+	// - If N is specified, retain the last N full backups.
+	// - The minimum value is 1.
 	FullBackups *int `json:"full,omitempty" yaml:"full,omitempty"`
-	// Number of full backups to store incremental backups for
+
+	// Number of full backups to store incremental backups for:
+	// - If nil, retain all incremental backups.
+	// - If N is specified, retain incremental backups for the last N full backups.
+	// - If set to 0, do not retain any incremental backups.
+	// - Must not exceed the value of FullBackups.
 	IncrBackups *int `json:"incremental,omitempty" yaml:"incremental,omitempty"`
 }
 
