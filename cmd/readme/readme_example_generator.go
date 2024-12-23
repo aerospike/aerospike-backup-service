@@ -159,6 +159,8 @@ func main() {
 		panic(err)
 	}
 
+	// comment containing an example name (e.g.,key from jsonExamples)
+	// followed by ```json and the example JSON code block.
 	re := regexp.MustCompile("<!--\\s*(\\w+)\\s*-->\\s*```json[\\s\\S]*?```")
 	updatedReadme := re.ReplaceAllFunc(readme, func(match []byte) []byte {
 		submatches := re.FindSubmatch(match)
