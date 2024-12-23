@@ -31,6 +31,7 @@ type BackupRoutineHandler struct {
 	clientManager       aerospike.ClientManager
 	logger              *slog.Logger
 	clusterConfigWriter ClusterConfigWriter
+	retentionManager    RetentionManager
 
 	// backup handlers by namespace
 	fullBackupHandlers map[string]CancelableBackupHandler
@@ -70,8 +71,6 @@ type CancelableBackupHandler interface {
 type backupMetadataManager interface {
 	// writeBackupMetadata writes backup metadata to storage after successful backup.
 	writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
-	// findLastRun scans storage for last backup time (on startup or config apply).
-	findLastRun(ctx context.Context) lastBackupRun
 }
 
 // ClusterConfigWriter handles writing cluster configuration to storage.
@@ -88,7 +87,7 @@ func newBackupRoutineHandler(
 	clientManager aerospike.ClientManager,
 	backupService Backup,
 	routineName string,
-	backupBackend backupMetadataManager,
+	backupBackend *BackupBackend,
 	lastRun lastBackupRun,
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
@@ -119,6 +118,8 @@ func newBackupRoutineHandler(
 			backupPolicy,
 			logger),
 		logger: logger,
+		retentionManager: NewBackupRetentionManager(
+			backupBackend, backupStorage, routineName, backupPolicy.RetentionPolicy),
 	}
 }
 
@@ -159,11 +160,12 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 
 	h.lastRun.full = now
 
-	if h.backupFullPolicy.RemoveFiles.RemoveIncrementalBackup() {
-		h.deleteFolder(ctx, getIncrementalRoot(h.routineName))
-	}
-
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
+
+	err = h.retentionManager.deleteOldBackups(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to clean up old backups: %w", err)
+	}
 
 	return nil
 }
@@ -194,7 +196,7 @@ func (h *BackupRoutineHandler) prepareCluster(retry executor) (*backup.Client, [
 func (h *BackupRoutineHandler) startNamespaceBackup(
 	ctx context.Context, namespace string, now time.Time, client *backup.Client,
 ) CancelableBackupHandler {
-	backupFolder := getFullPath(h.routineName, h.backupFullPolicy, namespace, now)
+	backupFolder := getFullPath(h.routineName, namespace, now)
 	timebounds := h.createTimebounds(true, now)
 
 	return startBackup(
@@ -333,7 +335,7 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 	ctx context.Context, namespace string, now time.Time, client *backup.Client,
 ) CancelableBackupHandler {
-	backupFolder := getIncrementalPathForNamespace(h.routineName, namespace, now)
+	backupFolder := getIncrementalPath(h.routineName, namespace, now)
 	timebounds := h.createTimebounds(false, now)
 
 	return startBackup(

@@ -10,10 +10,10 @@ import (
 type GcpStorage struct {
 	SecretAgentConfig `yaml:",inline"`
 	// Path to the file containing the service account key in JSON format.
-	KeyFile string `yaml:"key-file-path" json:"key-file-path"`
+	KeyFile string `yaml:"key-file-path,omitempty" json:"key-file-path,omitempty"`
 	// Key is the service account key in JSON format.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	Key string `yaml:"key" json:"key"`
+	Key string `yaml:"key,omitempty" json:"key,omitempty"`
 	// GCP storage bucket name.
 	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
 	// The root path for the backup repository. If not specified, backups will be saved in the bucket's root.

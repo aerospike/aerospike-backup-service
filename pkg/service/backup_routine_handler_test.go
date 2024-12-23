@@ -77,11 +77,6 @@ func (m *mockMetadataWriter) writeBackupMetadata(
 	return args.Error(0)
 }
 
-func (m *mockMetadataWriter) findLastRun(context.Context) lastBackupRun {
-	args := m.Called()
-	return args.Get(0).(lastBackupRun)
-}
-
 type mockClusterConfigWriter struct {
 	mock.Mock
 }
@@ -90,11 +85,21 @@ func (m *mockClusterConfigWriter) Write(ctx context.Context, client backup.Aeros
 	m.Called(ctx, client, timestamp)
 }
 
+type mockRetentionManager struct {
+	mock.Mock
+}
+
+func (m *mockRetentionManager) deleteOldBackups(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
 func setupTestHandler(
 	backupService *mockBackupService,
 	clientManager *mockClientManager,
 	metadataWriter *mockMetadataWriter,
 	configWriter *mockClusterConfigWriter,
+	retentionManager *mockRetentionManager,
 ) *BackupRoutineHandler {
 	return &BackupRoutineHandler{
 		namespaces:          []string{"ns1", "ns2"},
@@ -112,6 +117,7 @@ func setupTestHandler(
 		storage:            &model.LocalStorage{Path: "/tmp"},
 		logger:             slog.Default(),
 		retry:              &simpleExecutor{},
+		retentionManager:   retentionManager,
 	}
 }
 
@@ -120,8 +126,9 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
+	retentionManager := new(mockRetentionManager)
 
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 
 	backupHandler := new(mockBackupHandler)
 	backupHandler.On("Wait", mock.Anything).Return(nil)
@@ -164,12 +171,15 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mock.Anything,
 	).Return()
 
+	retentionManager.On("deleteOldBackups", mock.Anything).Return(nil)
+
 	handler.runFullBackup(context.Background(), time.Now())
 
 	clientManager.AssertExpectations(t)
 	backupService.AssertExpectations(t)
 	metadataWriter.AssertExpectations(t)
 	configWriter.AssertExpectations(t)
+	retentionManager.AssertExpectations(t)
 }
 
 func TestRunFullBackupInternal_WaitError(t *testing.T) {
@@ -177,8 +187,9 @@ func TestRunFullBackupInternal_WaitError(t *testing.T) {
 	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
+	retentionManager := new(mockRetentionManager)
 
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 
 	backupHandler := new(mockBackupHandler)
 	expectedErr := errors.New("wait error")
@@ -208,8 +219,9 @@ func TestRunIncrementalBackup_NoFullBackupYet(t *testing.T) {
 	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
+	retentionManager := new(mockRetentionManager)
 
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	handler.lastRun = lastBackupRun{} // Ensure empty lastRun
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
@@ -223,8 +235,9 @@ func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
 	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
+	retentionManager := new(mockRetentionManager)
 
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	handler.lastRun = lastBackupRun{
 		full: time.Now(), // Set last full run
 	}
@@ -242,8 +255,9 @@ func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
 	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
+	retentionManager := new(mockRetentionManager)
 
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	handler.lastRun = lastBackupRun{
 		full: time.Now(), // Set last full run
 	}
@@ -261,8 +275,9 @@ func TestRunIncrementalBackup_ClientError(t *testing.T) {
 	clientManager := new(mockClientManager)
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
+	retentionManager := new(mockRetentionManager)
 
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	handler.lastRun = lastBackupRun{
 		full: time.Now(),
 	}
@@ -281,8 +296,9 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	clientManager := clientManagerMock()
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
+	retentionManager := new(mockRetentionManager)
 
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	now := time.Now()
 	lastRun := now.Add(-1 * time.Hour)
 	handler.lastRun = lastBackupRun{
@@ -338,8 +354,9 @@ func TestRunFullBackup_PartialFailure(t *testing.T) {
 	metadataWriter := new(mockMetadataWriter)
 	configWriter := new(mockClusterConfigWriter)
 	clientManager := clientManagerMock()
+	retentionManager := new(mockRetentionManager)
 
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter)
+	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 
 	successHandler := new(mockBackupHandler)
 	successHandler.On("Wait", mock.Anything).Return(nil)
@@ -378,6 +395,7 @@ func TestRunFullBackup_PartialFailure(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	).Return(nil).Times(1) // Only for ns1
+	retentionManager.On("deleteOldBackups", mock.Anything).Return(nil)
 
 	// Run full backup and expect an error for one of the namespaces
 	handler.runFullBackup(context.Background(), time.Now())

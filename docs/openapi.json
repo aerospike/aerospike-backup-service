@@ -2021,11 +2021,11 @@
             "example" : 1000,
             "type" : "integer"
           },
-          "remove-files" : {
+          "retention" : {
             "allOf" : [ {
-              "$ref" : "#/components/schemas/dto.RemoveFilesType"
+              "$ref" : "#/components/schemas/dto.RetentionPolicy"
             } ],
-            "description" : "Whether to clear the output directory (default: KeepAll).",
+            "description" : "Specifies how long to retain full and incremental backups.",
             "type" : "object"
           },
           "retry-policy" : {
@@ -2057,7 +2057,7 @@
         "properties" : {
           "backup-policy" : {
             "description" : "The name of the corresponding backup policy.",
-            "example" : "keepAll",
+            "example" : "keepAllPolicy",
             "type" : "string"
           },
           "bin-list" : {
@@ -2462,12 +2462,6 @@
         },
         "type" : "object"
       },
-      "dto.RemoveFilesType" : {
-        "description" : "RemoveFilesType represents the type of the backup storage.",
-        "enum" : [ "KeepAll", "RemoveAll", "RemoveIncremental" ],
-        "type" : "string",
-        "x-enum-varnames" : [ "KeepAll", "RemoveAll", "RemoveIncremental" ]
-      },
       "dto.RestoreJobStatus" : {
         "description" : "RestoreJobStatus represents a restore job status.",
         "properties" : {
@@ -2728,6 +2722,19 @@
           }
         },
         "required" : [ "destination", "policy", "routine", "time" ],
+        "type" : "object"
+      },
+      "dto.RetentionPolicy" : {
+        "properties" : {
+          "full" : {
+            "description" : "Number of full backups to store:\n- If nil, retain all full backups.\n- If N is specified, retain the last N full backups.\n- The minimum value is 1.",
+            "type" : "integer"
+          },
+          "incremental" : {
+            "description" : "Number of full backups to store incremental backups for:\n- If nil, retain all incremental backups.\n- If N is specified, retain incremental backups for the last N full backups.\n- If set to 0, do not retain any incremental backups.\n- Must not exceed the value of FullBackups.",
+            "type" : "integer"
+          }
+        },
         "type" : "object"
       },
       "dto.RetryPolicy" : {

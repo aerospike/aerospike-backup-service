@@ -27,6 +27,7 @@ type BackupListReader interface {
 	FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error)
 
 	// FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
-	FindIncrementalBackupsForNamespace(ctx context.Context, bounds model.TimeBounds, namespace string,
+	FindIncrementalBackupsForNamespace(
+		ctx context.Context, bounds model.TimeBounds, namespace string,
 	) ([]model.BackupDetails, error)
 }

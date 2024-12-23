@@ -18,46 +18,34 @@ const (
 	dataDirectory                = "data"
 )
 
-func getBackupRootPath(routineName string, isFullBackup bool) string {
-	if isFullBackup {
+func getBackupRootPath(routineName string, backupType jobType) string {
+	if backupType == jobTypeFull {
 		return filepath.Join(routineName, fullBackupDirectory)
 	}
+
 	return filepath.Join(routineName, incrementalBackupDirectory)
 }
 
-func getIncrementalRoot(routineName string) string {
-	return getBackupRootPath(routineName, false)
+func getTimestampPath(routineName string, timestamp time.Time, backupType jobType) string {
+	return filepath.Join(getBackupRootPath(routineName, backupType), formatTimestamp(timestamp))
 }
 
-func getFullPath(routineName string, policy *model.BackupPolicy, namespace string, timestamp time.Time) string {
-	if policy.RemoveFiles.RemoveFullBackup() {
-		return filepath.Join(routineName, fullBackupDirectory, dataDirectory, namespace)
-	}
+func getFullPath(routineName string, namespace string, timestamp time.Time) string {
 	return filepath.Join(routineName, fullBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
 }
 
-func getIncrementalPathForNamespace(routineName string, namespace string, timestamp time.Time) string {
+func getIncrementalPath(routineName string, namespace string, timestamp time.Time) string {
 	return filepath.Join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
 }
 
-func getConfigurationPath(routineName string, policy *model.BackupPolicy, timestamp time.Time, index int) string {
-	if policy.RemoveFiles.RemoveFullBackup() {
-		return filepath.Join(routineName, fullBackupDirectory, configurationBackupDirectory, getConfigFileName(index))
-	}
+func getConfigurationPath(routineName string, timestamp time.Time, index int) string {
 	return filepath.Join(routineName, fullBackupDirectory, formatTimestamp(timestamp),
 		configurationBackupDirectory, getConfigFileName(index))
 }
 
-func getKey(routineName string, isFullBackup bool, metadata *model.BackupMetadata, noTimestampInPath bool) string {
-	backupDir := fullBackupDirectory
-	if !isFullBackup {
-		backupDir = incrementalBackupDirectory
-	}
-
-	if noTimestampInPath {
-		return filepath.Join(routineName, backupDir, dataDirectory, metadata.Namespace)
-	}
-	return filepath.Join(routineName, backupDir, formatTimestamp(metadata.Created), dataDirectory, metadata.Namespace)
+func getKey(routineName string, backupType jobType, metadata *model.BackupMetadata) string {
+	rootPath := getBackupRootPath(routineName, backupType)
+	return filepath.Join(rootPath, formatTimestamp(metadata.Created), dataDirectory, metadata.Namespace)
 }
 
 func formatTimestamp(t time.Time) string {

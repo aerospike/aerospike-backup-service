@@ -9,20 +9,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
 
-const (
-	KeepAll           RemoveFilesType = "KeepAll"
-	RemoveAll         RemoveFilesType = "RemoveAll"
-	RemoveIncremental RemoveFilesType = "RemoveIncremental"
-)
-
-// RemoveFilesType represents the type of the backup storage.
-// @Description RemoveFilesType represents the type of the backup storage.
-type RemoveFilesType string
-
 // BackupPolicy represents a scheduled backup policy.
 // @Description BackupPolicy represents a scheduled backup policy.
-//
-//nolint:lll
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel.
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
@@ -34,8 +22,8 @@ type BackupPolicy struct {
 	// RetryPolicy defines the configuration for retry attempts in case of failures.
 	// If nil, default policy is used.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
-	// Whether to clear the output directory (default: KeepAll).
-	RemoveFiles *RemoveFilesType `yaml:"remove-files,omitempty" json:"remove-files,omitempty" enums:"KeepAll,RemoveAll,RemoveIncremental"`
+	// Specifies how long to retain full and incremental backups.
+	RetentionPolicy *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty"`
 	// Do not back up any record data (metadata or bin data).
 	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty"`
 	// Do not back up any secondary index definitions.
@@ -101,9 +89,8 @@ func (p *BackupPolicy) Validate() error {
 	if p.FileLimit != nil && *p.FileLimit < 0 {
 		return fmt.Errorf("fileLimit %d invalid, should not be negative number", *p.FileLimit)
 	}
-	if p.RemoveFiles != nil &&
-		*p.RemoveFiles != KeepAll && *p.RemoveFiles != RemoveAll && *p.RemoveFiles != RemoveIncremental {
-		return fmt.Errorf("invalid RemoveFiles: %s. Possible values: KeepAll, RemoveAll, RemoveIncremental", *p.RemoveFiles)
+	if err := p.RetentionPolicy.Validate(); err != nil {
+		return fmt.Errorf("invalid retention policy: %w", err)
 	}
 	if err := p.EncryptionPolicy.Validate(); err != nil {
 		return err
@@ -120,7 +107,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		SocketTimeout:     millisToDuration(p.SocketTimeout),
 		TotalTimeout:      millisToDuration(p.TotalTimeout),
 		RetryPolicy:       p.RetryPolicy.ToModel(),
-		RemoveFiles:       (*model.RemoveFilesType)(p.RemoveFiles),
+		RetentionPolicy:   p.RetentionPolicy.toModel(),
 		NoRecords:         p.NoRecords,
 		NoIndexes:         p.NoIndexes,
 		NoUdfs:            p.NoUdfs,
@@ -164,7 +151,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.SocketTimeout = durationToMillis(m.SocketTimeout)
 	p.TotalTimeout = durationToMillis(m.TotalTimeout)
 	p.RetryPolicy = newRetryPolicyFromModel(m.RetryPolicy)
-	p.RemoveFiles = (*RemoveFilesType)(m.RemoveFiles)
+	p.RetentionPolicy = newRetentionPolicyFromModel(m.RetentionPolicy)
 	p.NoRecords = m.NoRecords
 	p.NoIndexes = m.NoIndexes
 	p.NoUdfs = m.NoUdfs
@@ -180,4 +167,62 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 		p.CompressionPolicy.fromModel(m.CompressionPolicy)
 	}
 	p.Sealed = m.Sealed
+}
+
+// RetentionPolicy specifies how many full and incremental backups to keep.
+type RetentionPolicy struct {
+	// Number of full backups to store:
+	// - If nil, retain all full backups.
+	// - If N is specified, retain the last N full backups.
+	// - The minimum value is 1.
+	FullBackups *int `json:"full,omitempty" yaml:"full,omitempty"`
+
+	// Number of full backups to store incremental backups for:
+	// - If nil, retain all incremental backups.
+	// - If N is specified, retain incremental backups for the last N full backups.
+	// - If set to 0, do not retain any incremental backups.
+	// - Must not exceed the value of FullBackups.
+	IncrBackups *int `json:"incremental,omitempty" yaml:"incremental,omitempty"`
+}
+
+func (rp *RetentionPolicy) Validate() error {
+	if rp == nil {
+		return nil
+	}
+	if rp.FullBackups != nil && *rp.FullBackups < 1 {
+		return fmt.Errorf("full backups retention %d is invalid, must be at least 1", *rp.FullBackups)
+	}
+
+	if rp.IncrBackups != nil {
+		if *rp.IncrBackups < 0 {
+			return fmt.Errorf("incremental backups retention %d is invalid, cannot be negative", *rp.IncrBackups)
+		}
+		if rp.FullBackups != nil && *rp.IncrBackups > *rp.FullBackups {
+			return fmt.Errorf("incremental backups retention %d cannot exceed full backups retention %d",
+				*rp.IncrBackups, *rp.FullBackups)
+		}
+	}
+
+	return nil
+}
+func (rp *RetentionPolicy) toModel() *model.RetentionPolicy {
+	if rp == nil {
+		return nil
+	}
+
+	return &model.RetentionPolicy{
+		FullBackups: rp.FullBackups,
+		IncrBackups: rp.IncrBackups,
+	}
+}
+
+func newRetentionPolicyFromModel(m *model.RetentionPolicy) *RetentionPolicy {
+	if m == nil {
+		return nil
+	}
+
+	return &RetentionPolicy{
+		FullBackups: m.FullBackups,
+		IncrBackups: m.IncrBackups,
+	}
 }
