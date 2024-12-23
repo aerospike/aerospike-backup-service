@@ -11,7 +11,9 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
 )
 
+// RetentionManager defines the interface for deleting old backups.
 type RetentionManager interface {
+	// Run runs the retention manager. It deletes old backups based on the configured retention policy.
 	deleteOldBackups(ctx context.Context) error
 }
 
