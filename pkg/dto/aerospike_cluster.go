@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 )
@@ -176,8 +177,8 @@ type Credentials struct {
 	Password *string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"`
 	// The file path with the password string.
 	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"`
-	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
-	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,EXTERNAL_INSECURE,PKI"`
+	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
+	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.Config) {
@@ -203,6 +204,13 @@ func (c *Credentials) Validate() error {
 
 	if c.Password != nil && c.PasswordPath != nil {
 		return fmt.Errorf("password and password-path are mutually exclusive")
+	}
+
+	if c.AuthMode != nil &&
+		!(strings.ToUpper(*c.AuthMode) == "INTERNAL" ||
+			strings.ToUpper(*c.AuthMode) == "EXTERNAL" ||
+			strings.ToUpper(*c.AuthMode) == "PKI") {
+		return fmt.Errorf("auth-mode %q incorrect, should be one of: INTERNAL,EXTERNAL,PKI", *c.AuthMode)
 	}
 
 	return c.SecretAgentConfig.validate()

@@ -2217,8 +2217,8 @@
         "description" : "Credentials represents authentication details to the Aerospike cluster.",
         "properties" : {
           "auth-mode" : {
-            "description" : "The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).",
-            "enum" : [ "INTERNAL", "EXTERNAL", "EXTERNAL_INSECURE", "PKI" ],
+            "description" : "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
+            "enum" : [ "INTERNAL", "EXTERNAL", "PKI" ],
             "type" : "string"
           },
           "password" : {

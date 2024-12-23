@@ -299,7 +299,7 @@ type Credentials struct {
 	Password *string
 	// The file path with the password string, will take precedence over the password field.
 	PasswordPath *string
-	// The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).
+	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
 	AuthMode *string
 	// The name of the configured Secret Agent to use for authentication.
 	SecretAgent *SecretAgent

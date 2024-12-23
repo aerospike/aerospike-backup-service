@@ -689,12 +689,10 @@ Validation allows only one of these three fields to be present.
     properties:
       auth-mode:
         description: >-
-          The authentication mode string (INTERNAL, EXTERNAL,
-          EXTERNAL_INSECURE, PKI).
+          The authentication mode string (INTERNAL, EXTERNAL, PKI).
         enum:
           - INTERNAL
           - EXTERNAL
-          - EXTERNAL_INSECURE
           - PKI
         type: string
       password:
