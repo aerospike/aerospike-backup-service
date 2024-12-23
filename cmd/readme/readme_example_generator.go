@@ -13,18 +13,50 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var jsonExamples = map[string]any{
-	"ClustersResponse": []dto.AerospikeCluster{
-		{
-			SeedNodes: []dto.SeedNode{{
-				HostName: "host.docker.internal", Port: 3000},
-			},
-			Credentials: &dto.Credentials{
-				User:     util.Ptr("user"),
-				Password: util.Ptr("password"),
-			},
+var allStorageTypes = map[string]dto.Storage{
+	"local": {
+		LocalStorage: &dto.LocalStorage{
+			Path: "backups",
 		},
 	},
+	"aws-s3": {
+		S3Storage: &dto.S3Storage{
+			Bucket:   "as-backup-bucket",
+			Path:     "backups",
+			S3Region: "eu-central-1",
+		},
+	},
+	"gcp-gcs": {
+		GcpStorage: &dto.GcpStorage{
+			Path:       "backups",
+			KeyFile:    "key-file.json",
+			BucketName: "gcp-backup-bucket",
+			Endpoint:   "http://127.0.0.1:9020",
+		},
+	},
+	"azure-blob-storage": {
+		AzureStorage: &dto.AzureStorage{
+			Path:          "backups",
+			Endpoint:      "http://127.0.0.1:6000/devstoreaccount1",
+			AccountName:   "devstoreaccount1",
+			ContainerName: "testcontainer",
+			AccountKey:    "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+		},
+	},
+}
+
+var cluster = dto.AerospikeCluster{
+	SeedNodes: []dto.SeedNode{{
+		HostName: "host.docker.internal", Port: 3000},
+	},
+	Credentials: &dto.Credentials{
+		User:     util.Ptr("user"),
+		Password: util.Ptr("password"),
+	},
+}
+
+var jsonExamples = map[string]any{
+	"ClustersResponse": []dto.AerospikeCluster{cluster},
 	"RoutinesResponse": map[string]dto.BackupRoutine{
 		"routine1": {
 			BackupPolicy:  "keepFilesPolicy",
@@ -44,37 +76,7 @@ var jsonExamples = map[string]any{
 			BinList:          []string{"backupBin"},
 		},
 	},
-	"StorageResponse": map[string]dto.Storage{
-		"local": {
-			LocalStorage: &dto.LocalStorage{
-				Path: "backups",
-			},
-		},
-		"aws-s3": {
-			S3Storage: &dto.S3Storage{
-				Bucket:   "as-backup-bucket",
-				Path:     "backups",
-				S3Region: "eu-central-1",
-			},
-		},
-		"gcp-gcs": {
-			GcpStorage: &dto.GcpStorage{
-				Path:       "backups",
-				KeyFile:    "key-file.json",
-				BucketName: "gcp-backup-bucket",
-				Endpoint:   "http://127.0.0.1:9020",
-			},
-		},
-		"azure-blob-storage": {
-			AzureStorage: &dto.AzureStorage{
-				Path:          "backups",
-				Endpoint:      "http://127.0.0.1:6000/devstoreaccount1",
-				AccountName:   "devstoreaccount1",
-				ContainerName: "testcontainer",
-				AccountKey:    "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
-			},
-		},
-	},
+	"StorageResponse": allStorageTypes,
 	"FullBackupsResponse": map[string][]dto.BackupDetails{
 		"routine1": {{
 			BackupMetadata: dto.BackupMetadata{
@@ -114,15 +116,7 @@ var jsonExamples = map[string]any{
 		}},
 	},
 	"RestoreFullRequest": dto.RestoreRequest{
-		DestinationCluster: &dto.AerospikeCluster{
-			SeedNodes: []dto.SeedNode{{
-				HostName: "host.docker.internal", Port: 3000},
-			},
-			Credentials: &dto.Credentials{
-				User:     util.Ptr("user"),
-				Password: util.Ptr("password"),
-			},
-		},
+		DestinationCluster: &cluster,
 		Policy: &dto.RestorePolicy{
 			NoGeneration: util.Ptr(true),
 		},
@@ -136,15 +130,7 @@ var jsonExamples = map[string]any{
 		BackupDataPath: "routine1/backup/1704110400000/source-ns1",
 	},
 	"RestoreTimestampRequest": dto.RestoreTimestampRequest{
-		DestinationCluster: &dto.AerospikeCluster{
-			SeedNodes: []dto.SeedNode{{
-				HostName: "host.docker.internal", Port: 3000},
-			},
-			Credentials: &dto.Credentials{
-				User:     util.Ptr("user"),
-				Password: util.Ptr("password"),
-			},
-		},
+		DestinationCluster: &cluster,
 		Policy: &dto.RestorePolicy{
 			NoGeneration: util.Ptr(true),
 		},
@@ -154,38 +140,7 @@ var jsonExamples = map[string]any{
 }
 
 var yamlExamples = map[string]any{
-	"Storage": map[string]dto.Storage{
-		"Local storage": {
-			LocalStorage: &dto.LocalStorage{
-				Path: "/local/backups",
-			},
-		},
-		"Amazon s3": {
-			S3Storage: &dto.S3Storage{
-				Bucket:    "my-backup-bucket",
-				Path:      "backups",
-				S3Profile: "default",
-				S3Region:  "eu-central-1",
-			},
-		},
-		"Microsoft Azure blob": {
-			AzureStorage: &dto.AzureStorage{
-				Endpoint:      "https://my-storage-account.blob.core.windows.net",
-				ContainerName: "my-container",
-				AccountName:   "my-storage-account",
-				AccountKey:    "my-secret-key",
-				Path:          "backups",
-			},
-		},
-		"Google cloud storage": {
-			GcpStorage: &dto.GcpStorage{
-				BucketName: "my-gcp-bucket",
-				KeyFile:    "/path/to/service-account-key.json",
-				Endpoint:   "https://storage.googleapis.com",
-				Path:       "backups",
-			},
-		},
-	},
+	"Storage": allStorageTypes,
 }
 
 func main() {

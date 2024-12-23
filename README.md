@@ -593,28 +593,27 @@ storage types.
 
 <!-- Storage -->
 ```yaml
-Amazon s3:
+aws-s3:
     s3-storage:
-        bucket: my-backup-bucket
+        bucket: as-backup-bucket
         path: backups
         s3-region: eu-central-1
-        s3-profile: default
-Google cloud storage:
-    gcp-storage:
-        key-file-path: /path/to/service-account-key.json
-        bucket-name: my-gcp-bucket
-        path: backups
-        endpoint: https://storage.googleapis.com
-Local storage:
-    local-storage:
-        path: /local/backups
-Microsoft Azure blob:
+azure-blob-storage:
     azure-storage:
-        endpoint: https://my-storage-account.blob.core.windows.net
-        container-name: my-container
+        endpoint: http://127.0.0.1:6000/devstoreaccount1
+        container-name: testcontainer
         path: backups
-        account-name: my-storage-account
-        account-key: my-secret-key
+        account-name: devstoreaccount1
+        account-key: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
+gcp-gcs:
+    gcp-storage:
+        key-file-path: key-file.json
+        bucket-name: gcp-backup-bucket
+        path: backups
+        endpoint: http://127.0.0.1:9020
+local:
+    local-storage:
+        path: backups
 
 ```
 
