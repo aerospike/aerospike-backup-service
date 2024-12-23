@@ -622,42 +622,40 @@ In addition to `password` and `password-path`, there is a new field `password-ke
 Validation allows only one of these three fields to be present.
 ```yaml
   dto.Credentials:
-      description: Credentials represents authentication details to the Aerospike cluster.
-      properties:
-        auth-mode:
-          description: >-
-            The authentication mode string (INTERNAL, EXTERNAL,
-            EXTERNAL_INSECURE, PKI).
-          enum:
-            - INTERNAL
-            - EXTERNAL
-            - EXTERNAL_INSECURE
-            - PKI
-          type: string
-        password:
-          description: The password for the cluster authentication.
-          example: testPswd
-          type: string
-        password-key-secret:
-          description: |-
-            The secret keyword in Aerospike Secret Agent containing password.
-            Only applicable when SecretAgent is specified.
-          type: string
-        password-path:
-          description: >-
-            The file path with the password string, will take precedence over
-            the password field.
-          example: /path/to/pass.txt
-          type: string
-        secret-agent:
-          allOf:
-            - $ref: '#/components/schemas/dto.SecretAgent'
-          description: Secret Agent configuration (optional).
-          type: object
-        user:
-          description: The username for the cluster authentication.
-          example: testUser
-          type: string
-      type: object
+    description: Credentials represents authentication details to the Aerospike cluster.
+    properties:
+      auth-mode:
+        description: >-
+          The authentication mode string (INTERNAL, EXTERNAL, PKI).
+        enum:
+          - INTERNAL
+          - EXTERNAL
+          - PKI
+        type: string
+      password:
+        description: The password for the cluster authentication.
+        example: testPswd
+        type: string
+      password-key-secret:
+        description: |-
+          The secret keyword in Aerospike Secret Agent containing password.
+          Only applicable when SecretAgent is specified.
+        type: string
+      password-path:
+        description: >-
+          The file path with the password string, will take precedence over
+          the password field.
+        example: /path/to/pass.txt
+        type: string
+      secret-agent:
+        allOf:
+          - $ref: '#/components/schemas/dto.SecretAgent'
+        description: Secret Agent configuration (optional).
+        type: object
+      user:
+        description: The username for the cluster authentication.
+        example: testUser
+        type: string
+    type: object
 ```
 

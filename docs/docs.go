@@ -2030,12 +2030,11 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "auth-mode": {
-                    "description": "The authentication mode string (INTERNAL, EXTERNAL, EXTERNAL_INSECURE, PKI).",
+                    "description": "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
                     "type": "string",
                     "enum": [
                         "INTERNAL",
                         "EXTERNAL",
-                        "EXTERNAL_INSECURE",
                         "PKI"
                     ]
                 },
