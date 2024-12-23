@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -95,14 +96,15 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 		return fmt.Errorf("failed to fetch incremental backups: %w", err)
 	}
 
+	var errs error
 	for _, b := range incrBackups {
 		path := getTimestampPath(e.routineName, b.Created, jobTypeIncremental)
 		if err := storage.DeleteFolder(ctx, e.storage, path); err != nil {
-			return fmt.Errorf("failed to delete folder at %v: %w", path, err)
+			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", path, err))
 		}
 	}
 
-	return nil
+	return errs
 }
 
 func getTimestamps(backups []model.BackupDetails) []time.Time {
