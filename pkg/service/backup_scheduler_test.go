@@ -40,7 +40,7 @@ func TestDisabledRoutine(t *testing.T) {
 		}},
 	}
 
-	err := scheduleRoutines(mockScheduler, config, handlers)
+	err := scheduleRoutines(mockScheduler, config.BackupRoutines, handlers)
 
 	require.NoError(t, err)
 	mockScheduler.AssertNumberOfCalls(t, "ScheduleJob", 1)

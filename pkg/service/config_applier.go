@@ -59,7 +59,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 		(a.handlerHolder)[k] = v
 	}
 
-	err = scheduleRoutines(a.scheduler, a.config, a.handlerHolder)
+	err = scheduleRoutines(a.scheduler, a.config.BackupRoutines, a.handlerHolder)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
