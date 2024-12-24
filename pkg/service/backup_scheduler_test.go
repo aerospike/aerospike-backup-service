@@ -121,12 +121,11 @@ func TestScheduleRoutines(t *testing.T) {
 			scheduler := new(MockScheduler)
 			scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
 
-			jobsBefore := len(jobStore.jobs)
 			err := scheduleRoutines(scheduler, tt.routines, holder)
 
 			require.NoError(t, err)
 			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)
-			require.Equal(t, len(jobStore.jobs), jobsBefore+tt.expectedJobsAdded)
+			require.Equal(t, len(jobStore.jobs), tt.expectedJobsAdded)
 		})
 	}
 }

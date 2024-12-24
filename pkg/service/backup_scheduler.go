@@ -41,6 +41,12 @@ func (b *backupJobs) put(key string, value *quartz.JobDetail) {
 	b.jobs[key] = value
 }
 
+func (b *backupJobs) clear() {
+	b.Lock()
+	defer b.Unlock()
+	clear(b.jobs)
+}
+
 // NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
 func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
 	jobStore.Lock()
@@ -73,6 +79,8 @@ func NewScheduler(ctx context.Context) quartz.Scheduler {
 func scheduleRoutines(
 	scheduler Scheduler, routines map[string]*model.BackupRoutine, handlers BackupHandlerHolder,
 ) error {
+	jobStore.clear()
+
 	var errs error
 	for routineName, routine := range routines {
 		if routine.Disabled {
