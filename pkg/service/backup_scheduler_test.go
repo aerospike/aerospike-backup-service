@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -44,4 +45,82 @@ func TestDisabledRoutine(t *testing.T) {
 
 	require.NoError(t, err)
 	mockScheduler.AssertNumberOfCalls(t, "ScheduleJob", 1)
+}
+
+// MockBackupRunner is a mock implementation of backupRunner interface
+type MockBackupRunner struct {
+	mock.Mock
+}
+
+func (m *MockBackupRunner) runFullBackup(ctx context.Context, t time.Time) {
+	m.Called(ctx, t)
+}
+
+func (m *MockBackupRunner) runIncrementalBackup(ctx context.Context, t time.Time) {
+	m.Called(ctx, t)
+}
+
+func (m *MockBackupRunner) Cancel() {
+	m.Called()
+}
+
+func (m *MockBackupRunner) CurrentStat() *model.CurrentBackups {
+	args := m.Called()
+	return args.Get(0).(*model.CurrentBackups)
+}
+
+func TestScheduleRoutines(t *testing.T) {
+	holder := BackupHandlerHolder{
+		"routine":          &MockBackupRunner{},
+		"disabled-routine": &MockBackupRunner{},
+		"full-only":        &MockBackupRunner{},
+	}
+	tests := []struct {
+		name          string
+		routines      map[string]*model.BackupRoutine
+		expectedCalls int
+	}{
+		{
+			name: "successful scheduling of full and incremental backups",
+			routines: map[string]*model.BackupRoutine{
+				"routine": {
+					IntervalCron:     "0 0 * * * *",
+					IncrIntervalCron: "0 */6 * * * *",
+				},
+			},
+			expectedCalls: 2, // One for full backup, one for incremental
+		},
+		{
+			name: "skip disabled routine",
+			routines: map[string]*model.BackupRoutine{
+				"disabled-routine": {
+					IntervalCron:     "0 0 * * * *",
+					IncrIntervalCron: "0 */6 * * * *",
+					Disabled:         true,
+				},
+			},
+			expectedCalls: 0, // No calls expected for disabled routine
+		},
+		{
+			name: "full backup only",
+			routines: map[string]*model.BackupRoutine{
+				"full-only": {
+					IntervalCron: "0 0 * * * *",
+				},
+			},
+			expectedCalls: 1, // One call for full backup only
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheduler := new(MockScheduler)
+			scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
+
+			err := scheduleRoutines(scheduler, tt.routines, holder)
+
+			require.NoError(t, err)
+			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)
+		})
+	}
 }
