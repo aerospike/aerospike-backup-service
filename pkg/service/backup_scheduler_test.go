@@ -76,9 +76,10 @@ func TestScheduleRoutines(t *testing.T) {
 		"full-only":        &MockBackupRunner{},
 	}
 	tests := []struct {
-		name          string
-		routines      map[string]*model.BackupRoutine
-		expectedCalls int
+		name              string
+		routines          map[string]*model.BackupRoutine
+		expectedCalls     int
+		expectedJobsAdded int
 	}{
 		{
 			name: "successful scheduling of full and incremental backups",
@@ -88,7 +89,8 @@ func TestScheduleRoutines(t *testing.T) {
 					IncrIntervalCron: "0 */6 * * * *",
 				},
 			},
-			expectedCalls: 2, // One for full backup, one for incremental
+			expectedCalls:     2, // One for full backup, one for incremental
+			expectedJobsAdded: 1, // Only full backup job added
 		},
 		{
 			name: "skip disabled routine",
@@ -99,7 +101,8 @@ func TestScheduleRoutines(t *testing.T) {
 					Disabled:         true,
 				},
 			},
-			expectedCalls: 0, // No calls expected for disabled routine
+			expectedCalls:     0, // No calls expected for disabled routine
+			expectedJobsAdded: 0,
 		},
 		{
 			name: "full backup only",
@@ -108,7 +111,8 @@ func TestScheduleRoutines(t *testing.T) {
 					IntervalCron: "0 0 * * * *",
 				},
 			},
-			expectedCalls: 1, // One call for full backup only
+			expectedCalls:     1, // One call for full backup only
+			expectedJobsAdded: 1, // Only full backup job added
 		},
 	}
 
@@ -117,10 +121,12 @@ func TestScheduleRoutines(t *testing.T) {
 			scheduler := new(MockScheduler)
 			scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
 
+			jobsBefore := len(jobStore.jobs)
 			err := scheduleRoutines(scheduler, tt.routines, holder)
 
 			require.NoError(t, err)
 			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)
+			require.Equal(t, len(jobStore.jobs), jobsBefore+tt.expectedJobsAdded)
 		})
 	}
 }
