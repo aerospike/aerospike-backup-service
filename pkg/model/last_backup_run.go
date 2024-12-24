@@ -1,6 +1,8 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 // LastBackupRun stores the last run times for both full and incremental backups.
 type LastBackupRun struct {
@@ -10,8 +12,8 @@ type LastBackupRun struct {
 	Incremental *time.Time
 }
 
-func NewLastRun(lastFullBackup *time.Time, lastIncrBackup *time.Time) LastBackupRun {
-	return LastBackupRun{
+func NewLastRun(lastFullBackup *time.Time, lastIncrBackup *time.Time) *LastBackupRun {
+	return &LastBackupRun{
 		Full:        lastFullBackup,
 		Incremental: lastIncrBackup,
 	}
@@ -21,7 +23,7 @@ func (r *LastBackupRun) NoFullBackup() bool {
 	return r.Full == nil
 }
 
-func (r *LastBackupRun) LastAnyRun() *time.Time {
+func (r *LastBackupRun) LatestRun() *time.Time {
 	if r.Incremental != nil && r.Full != nil && r.Incremental.After(*r.Full) {
 		return r.Incremental
 	}

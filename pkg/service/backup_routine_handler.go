@@ -239,7 +239,7 @@ func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) 
 	)
 
 	if !fullBackup {
-		lastRun := h.lastRun.LastAnyRun()
+		lastRun := h.lastRun.LatestRun()
 		fromTime = lastRun
 	}
 
