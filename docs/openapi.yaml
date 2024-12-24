@@ -1781,7 +1781,9 @@ components:
     dto.CurrentBackups:
       example:
         incremental: "{}"
+        last-incremental: last-incremental
         full: "{}"
+        last-full: last-full
       properties:
         full:
           allOf:
@@ -1795,6 +1797,16 @@ components:
           description: Incremental represents the state of an incremental backup.
             Nil if no incremental backup is running.
           type: object
+        last-full:
+          description: |-
+            LastFull: the timestamp of the last successful full backup.
+            A nil value indicates that there has never been a full backup.
+          type: string
+        last-incremental:
+          description: |-
+            LastIncremental: the timestamp of the last successful incremental backup.
+            A nil value indicates that there has never been an incremental backup.
+          type: string
       type: object
     dto.EncryptionPolicy:
       description: EncryptionPolicy contains backup encryption information.
