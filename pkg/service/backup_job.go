@@ -5,19 +5,10 @@ import (
 	"fmt"
 	"log/slog"
 	"sync/atomic"
-	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
 )
-
-type backupRunner interface {
-	runFullBackup(context.Context, time.Time)
-	runIncrementalBackup(context.Context, time.Time)
-	Cancel()
-	CurrentStat() *model.CurrentBackups
-}
 
 // backupJob implements the quartz.Job interface.
 type backupJob struct {

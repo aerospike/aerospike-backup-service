@@ -78,7 +78,21 @@ type ClusterConfigWriter interface {
 	Write(ctx context.Context, client backup.AerospikeClient, timestamp time.Time)
 }
 
-// BackupHandlerHolder stores backupHandlers by routine name
+// backupRunner runs backup operations.
+type backupRunner interface {
+	// runFullBackup starts full backup.
+	runFullBackup(context.Context, time.Time)
+	// runIncrementalBackup starts incremental backup.
+	runIncrementalBackup(context.Context, time.Time)
+	// Cancel cancels all running backup jobs.
+	Cancel()
+	// CurrentStat returns current status of backup routines.
+	CurrentStat() *model.CurrentBackups
+}
+
+var _ backupRunner = (*BackupRoutineHandler)(nil)
+
+// BackupHandlerHolder stores backupRunners by routine name
 type BackupHandlerHolder map[string]backupRunner
 
 // newBackupRoutineHandler returns a new BackupRoutineHandler instance.
