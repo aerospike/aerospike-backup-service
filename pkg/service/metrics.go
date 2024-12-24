@@ -121,7 +121,7 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 	backupProgress.Reset()
 
 	for routineName, handler := range mc.backupHandler {
-		currentStat := handler.GetCurrentStat()
+		currentStat := handler.CurrentStat()
 
 		// Update Full backup metric if running
 		if currentStat.Full != nil {

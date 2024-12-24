@@ -34,24 +34,21 @@ func newBackend(routineName string, storage model.Storage) *BackupBackend {
 	}
 }
 
-func (b *BackupBackend) findLastRun(ctx context.Context) lastBackupRun {
+func (b *BackupBackend) findLastRun(ctx context.Context) model.LastBackupRun {
 	fullBackupList, _ := b.FullBackupList(ctx, model.TimeBounds{})
 	lastFullBackup := lastBackupTime(fullBackupList)
-	incrementalBackupList, _ := b.IncrementalBackupList(ctx, model.NewTimeBoundsFrom(lastFullBackup))
+	incrementalBackupList, _ := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})
 	lastIncrBackup := lastBackupTime(incrementalBackupList)
 
-	return lastBackupRun{
-		full:        lastFullBackup,
-		incremental: lastIncrBackup,
-	}
+	return model.NewLastRun(lastFullBackup, lastIncrBackup)
 }
 
-func lastBackupTime(b []model.BackupDetails) time.Time {
+func lastBackupTime(b []model.BackupDetails) *time.Time {
 	if len(b) > 0 {
-		return latestBackupBeforeTime(b, nil)[0].Created
+		return &latestBackupBeforeTime(b, nil)[0].Created
 	}
 
-	return time.Time{}
+	return nil
 }
 
 func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error {
@@ -205,24 +202,4 @@ func (b *BackupBackend) packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
-}
-
-// lastBackupRun stores the last run times for both full and incremental backups.
-type lastBackupRun struct {
-	// Last time the full backup was performed.
-	full time.Time
-	// Last time the incremental backup was performed.
-	incremental time.Time
-}
-
-func (r *lastBackupRun) noFullBackup() bool {
-	return r.full.Equal(time.Time{})
-}
-
-func (r *lastBackupRun) lastAnyRun() time.Time {
-	if r.incremental.After(r.full) {
-		return r.incremental
-	}
-
-	return r.full
 }

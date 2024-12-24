@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
@@ -113,7 +114,7 @@ func setupTestHandler(
 		backupFullPolicy:   &model.BackupPolicy{},
 		fullBackupHandlers: make(map[string]CancelableBackupHandler),
 		incrBackupHandlers: make(map[string]CancelableBackupHandler),
-		lastRun:            lastBackupRun{},
+		lastRun:            model.LastBackupRun{},
 		storage:            &model.LocalStorage{Path: "/tmp"},
 		logger:             slog.Default(),
 		retry:              &simpleExecutor{},
@@ -222,7 +223,7 @@ func TestRunIncrementalBackup_NoFullBackupYet(t *testing.T) {
 	retentionManager := new(mockRetentionManager)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	handler.lastRun = lastBackupRun{} // Ensure empty lastRun
+	handler.lastRun = model.LastBackupRun{} // Ensure empty lastRun
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
@@ -238,8 +239,8 @@ func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
 	retentionManager := new(mockRetentionManager)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	handler.lastRun = lastBackupRun{
-		full: time.Now(), // Set last full run
+	handler.lastRun = model.LastBackupRun{
+		Full: util.Ptr(time.Now()), // Set last full run
 	}
 
 	handler.fullBackupHandlers["ns1"] = &mockBackupHandler{}
@@ -258,8 +259,8 @@ func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
 	retentionManager := new(mockRetentionManager)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	handler.lastRun = lastBackupRun{
-		full: time.Now(), // Set last full run
+	handler.lastRun = model.LastBackupRun{
+		Full: util.Ptr(time.Now()), // Set last full run
 	}
 
 	handler.incrBackupHandlers["test"] = &mockBackupHandler{}
@@ -278,8 +279,8 @@ func TestRunIncrementalBackup_ClientError(t *testing.T) {
 	retentionManager := new(mockRetentionManager)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	handler.lastRun = lastBackupRun{
-		full: time.Now(),
+	handler.lastRun = model.LastBackupRun{
+		Full: util.Ptr(time.Now()),
 	}
 
 	expectedErr := errors.New("client error")
@@ -301,8 +302,8 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	now := time.Now()
 	lastRun := now.Add(-1 * time.Hour)
-	handler.lastRun = lastBackupRun{
-		full: lastRun,
+	handler.lastRun = model.LastBackupRun{
+		Full: &lastRun,
 	}
 
 	backupHandler := new(mockBackupHandler)
@@ -346,7 +347,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	clientManager.AssertExpectations(t)
 	backupService.AssertExpectations(t)
 	backupHandler.AssertExpectations(t)
-	assert.Equal(t, now, handler.lastRun.incremental)
+	assert.Equal(t, now, *handler.CurrentStat().LastRunTime.Incremental)
 }
 
 func TestRunFullBackup_PartialFailure(t *testing.T) {
