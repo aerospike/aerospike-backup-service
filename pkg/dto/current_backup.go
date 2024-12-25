@@ -33,8 +33,8 @@ func NewCurrentBackupsFromModel(m *model.CurrentBackups) *CurrentBackups {
 func (c *CurrentBackups) fromModel(m *model.CurrentBackups) {
 	c.Full = NewRunningJobFromModel(m.Full)
 	c.Incremental = NewRunningJobFromModel(m.Incremental)
-	c.LastFull = m.LastRunTime.Full
-	c.LastIncremental = m.LastRunTime.Incremental
+	c.LastFull = m.LastRunTime.FullBackupTime()
+	c.LastIncremental = m.LastRunTime.IncrementalBackupTime()
 }
 
 // RunningJob tracks progress of currently running job.

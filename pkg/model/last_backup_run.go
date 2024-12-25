@@ -9,42 +9,54 @@ import (
 type LastBackupRun struct {
 	mu sync.RWMutex
 	// Last time the Full backup was performed.
-	Full *time.Time
+	full *time.Time
 	// Last time the Incremental backup was performed.
-	Incremental *time.Time
+	incremental *time.Time
 }
 
-func NewLastRun(lastFullBackup *time.Time, lastIncrBackup *time.Time) *LastBackupRun {
+func NewLastBackupRun(lastFullBackup *time.Time, lastIncrBackup *time.Time) *LastBackupRun {
 	return &LastBackupRun{
-		Full:        lastFullBackup,
-		Incremental: lastIncrBackup,
+		full:        lastFullBackup,
+		incremental: lastIncrBackup,
 	}
 }
 
 func (r *LastBackupRun) NoFullBackup() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return r.Full == nil
+	return r.full == nil
 }
 
 func (r *LastBackupRun) LatestRun() *time.Time {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	if r.Incremental != nil && r.Full != nil && r.Incremental.After(*r.Full) {
-		return r.Incremental
+	if r.incremental != nil && r.full != nil && r.incremental.After(*r.full) {
+		return r.incremental
 	}
-	return r.Full
+	return r.full
 }
 
 func (r *LastBackupRun) SetFullBackupTime(t *time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.Full = t
+	r.full = t
 }
 
 func (r *LastBackupRun) SetIncrementalBackupTime(t *time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.Incremental = t
+	r.incremental = t
+}
+
+func (r *LastBackupRun) FullBackupTime() *time.Time {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.full
+}
+
+func (r *LastBackupRun) IncrementalBackupTime() *time.Time {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.incremental
 }

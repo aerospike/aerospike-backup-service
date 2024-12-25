@@ -239,9 +239,7 @@ func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
 	retentionManager := new(mockRetentionManager)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	handler.lastRun = &model.LastBackupRun{
-		Full: util.Ptr(time.Now()), // Set last full run
-	}
+	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
 
 	handler.fullBackupHandlers["ns1"] = &mockBackupHandler{}
 
@@ -259,9 +257,7 @@ func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
 	retentionManager := new(mockRetentionManager)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	handler.lastRun = &model.LastBackupRun{
-		Full: util.Ptr(time.Now()), // Set last full run
-	}
+	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
 
 	handler.incrBackupHandlers["test"] = &mockBackupHandler{}
 
@@ -279,9 +275,7 @@ func TestRunIncrementalBackup_ClientError(t *testing.T) {
 	retentionManager := new(mockRetentionManager)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	handler.lastRun = &model.LastBackupRun{
-		Full: util.Ptr(time.Now()),
-	}
+	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
 
 	expectedErr := errors.New("client error")
 	clientManager.On("GetClient", mock.Anything).Return(nil, expectedErr)
@@ -302,9 +296,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	now := time.Now()
 	lastRun := now.Add(-1 * time.Hour)
-	handler.lastRun = &model.LastBackupRun{
-		Full: &lastRun,
-	}
+	handler.lastRun = model.NewLastBackupRun(&lastRun, nil)
 
 	backupHandler := new(mockBackupHandler)
 	stats := &models.BackupStats{}
@@ -347,7 +339,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	clientManager.AssertExpectations(t)
 	backupService.AssertExpectations(t)
 	backupHandler.AssertExpectations(t)
-	assert.Equal(t, now, *handler.CurrentStat().LastRunTime.Incremental)
+	assert.Equal(t, now, *handler.CurrentStat().LastRunTime.IncrementalBackupTime())
 }
 
 func TestRunFullBackup_PartialFailure(t *testing.T) {
