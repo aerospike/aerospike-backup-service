@@ -59,7 +59,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 		(a.handlerHolder)[k] = v
 	}
 
-	err = scheduleRoutines(a.scheduler, a.config, a.handlerHolder)
+	err = scheduleRoutines(a.scheduler, a.config.BackupRoutines, a.handlerHolder)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
@@ -123,9 +123,9 @@ func makeHandler(
 	backend, _ := backends.Get(routineName)
 
 	// try to reuse lastRun from previous handler if it exists.
-	var lastRun lastBackupRun
+	var lastRun *model.LastBackupRun
 	if old, ok := oldHandlers[routineName]; ok {
-		lastRun = old.lastRun
+		lastRun = old.CurrentStat().LastRunTime
 	} else {
 		lastRun = backend.findLastRun(ctx) // this scan can take some time.
 	}

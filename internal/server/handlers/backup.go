@@ -311,7 +311,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentBackups := dto.NewCurrentBackupsFromModel(handler.GetCurrentStat())
+	currentBackups := dto.NewCurrentBackupsFromModel(handler.CurrentStat())
 	response, err := dto.Serialize(currentBackups, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal statistics",

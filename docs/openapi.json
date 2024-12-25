@@ -2265,6 +2265,14 @@
             } ],
             "description" : "Incremental represents the state of an incremental backup. Nil if no incremental backup is running.",
             "type" : "object"
+          },
+          "last-full" : {
+            "description" : "LastFull: the timestamp of the last successful full backup.\nA nil value indicates that there has never been a full backup.",
+            "type" : "string"
+          },
+          "last-incremental" : {
+            "description" : "LastIncremental: the timestamp of the last successful incremental backup.\nA nil value indicates that there has never been an incremental backup.",
+            "type" : "string"
           }
         },
         "type" : "object"

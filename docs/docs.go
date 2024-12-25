@@ -2085,6 +2085,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.RunningJob"
                         }
                     ]
+                },
+                "last-full": {
+                    "description": "LastFull: the timestamp of the last successful full backup.\nA nil value indicates that there has never been a full backup.",
+                    "type": "string"
+                },
+                "last-incremental": {
+                    "description": "LastIncremental: the timestamp of the last successful incremental backup.\nA nil value indicates that there has never been an incremental backup.",
+                    "type": "string"
                 }
             }
         },

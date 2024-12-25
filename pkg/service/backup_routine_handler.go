@@ -26,7 +26,7 @@ type BackupRoutineHandler struct {
 	namespaces          []string
 	storage             model.Storage
 	secretAgent         *model.SecretAgent
-	lastRun             lastBackupRun
+	lastRun             *model.LastBackupRun
 	retry               executor
 	clientManager       aerospike.ClientManager
 	logger              *slog.Logger
@@ -78,8 +78,22 @@ type ClusterConfigWriter interface {
 	Write(ctx context.Context, client backup.AerospikeClient, timestamp time.Time)
 }
 
-// BackupHandlerHolder stores backupHandlers by routine name
-type BackupHandlerHolder map[string]*BackupRoutineHandler
+// backupRunner runs backup operations.
+type backupRunner interface {
+	// runFullBackup starts full backup.
+	runFullBackup(context.Context, time.Time)
+	// runIncrementalBackup starts incremental backup.
+	runIncrementalBackup(context.Context, time.Time)
+	// Cancel cancels all running backup jobs.
+	Cancel()
+	// CurrentStat returns current status of backup routines.
+	CurrentStat() *model.CurrentBackups
+}
+
+var _ backupRunner = (*BackupRoutineHandler)(nil)
+
+// BackupHandlerHolder stores backupRunners by routine name
+type BackupHandlerHolder map[string]backupRunner
 
 // newBackupRoutineHandler returns a new BackupRoutineHandler instance.
 func newBackupRoutineHandler(
@@ -88,7 +102,7 @@ func newBackupRoutineHandler(
 	backupService Backup,
 	routineName string,
 	backupBackend *BackupBackend,
-	lastRun lastBackupRun,
+	lastRun *model.LastBackupRun,
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
 	backupPolicy := backupRoutine.BackupPolicy
@@ -158,7 +172,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		return err
 	}
 
-	h.lastRun.full = now
+	h.lastRun.SetFullBackupTime(&now)
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
@@ -225,8 +239,8 @@ func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) 
 	)
 
 	if !fullBackup {
-		lastRun := h.lastRun.lastAnyRun()
-		fromTime = &lastRun
+		lastRun := h.lastRun.LatestRun()
+		fromTime = lastRun
 	}
 
 	if h.backupFullPolicy.IsSealedOrDefault() {
@@ -292,7 +306,7 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 }
 
 func (h *BackupRoutineHandler) skipIncrementalBackup() bool {
-	if h.lastRun.noFullBackup() {
+	if h.lastRun.NoFullBackup() {
 		h.logger.Debug("Skip incremental backup until initial full backup is done")
 		return true
 	}
@@ -328,7 +342,7 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 		return err
 	}
 
-	h.lastRun.incremental = now
+	h.lastRun.SetIncrementalBackupTime(&now)
 	return nil
 }
 
@@ -372,10 +386,11 @@ func (h *BackupRoutineHandler) waitForIncrementalBackups(ctx context.Context) er
 	return aggregatedErr
 }
 
-func (h *BackupRoutineHandler) GetCurrentStat() *model.CurrentBackups {
+func (h *BackupRoutineHandler) CurrentStat() *model.CurrentBackups {
 	return &model.CurrentBackups{
 		Full:        currentBackupStatus(h.fullBackupHandlers),
 		Incremental: currentBackupStatus(h.incrBackupHandlers),
+		LastRunTime: h.lastRun,
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"sync"
 	"time"
 
@@ -42,12 +41,18 @@ func (b *backupJobs) put(key string, value *quartz.JobDetail) {
 	b.jobs[key] = value
 }
 
+func (b *backupJobs) clear() {
+	b.Lock()
+	defer b.Unlock()
+	clear(b.jobs)
+}
+
 // NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
 func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
 	jobStore.Lock()
 	defer jobStore.Unlock()
 
-	key := fullJobKey(routineName).String()
+	key := jobKey(routineName, jobTypeFull).String()
 	job := jobStore.jobs[key]
 	if job == nil {
 		return nil
@@ -72,10 +77,12 @@ func NewScheduler(ctx context.Context) quartz.Scheduler {
 
 // scheduleRoutines schedules the given handlers using the scheduler.
 func scheduleRoutines(
-	scheduler Scheduler, config *model.Config, handlers BackupHandlerHolder,
+	scheduler Scheduler, routines map[string]*model.BackupRoutine, handlers BackupHandlerHolder,
 ) error {
+	jobStore.clear()
+
 	var errs error
-	for routineName, routine := range config.BackupRoutines {
+	for routineName, routine := range routines {
 		if routine.Disabled {
 			continue
 		}
@@ -87,95 +94,54 @@ func scheduleRoutines(
 			continue
 		}
 
-		if routine.IncrIntervalCron != "" {
-			// schedule an incremental backup job for the routine
-			if err := scheduleIncrementalBackup(scheduler, handler, routine.IncrIntervalCron, routineName); err != nil {
-				errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
-				continue
-			}
+		// schedule an incremental backup job for the routine
+		if err := scheduleIncrementalBackup(scheduler, handler, routine.IncrIntervalCron, routineName); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
 		}
 	}
+
 	return errs
 }
 
 func scheduleFullBackup(
-	scheduler Scheduler, handler *BackupRoutineHandler, interval string, routineName string,
+	scheduler Scheduler, handler backupRunner, interval string, routineName string,
 ) error {
-	fullCronTrigger, err := quartz.NewCronTrigger(interval)
-	if err != nil {
-		return err
-	}
-
-	fullJob := newBackupJob(handler, jobTypeFull)
-	fullJobDetail := quartz.NewJobDetail(fullJob, fullJobKey(routineName))
-
-	if err = scheduler.ScheduleJob(fullJobDetail, fullCronTrigger); err != nil {
-		return err
-	}
-
-	jobStore.put(fullJobDetail.JobKey().String(), fullJobDetail)
-	if needToRunFullBackupNow(handler.lastRun.full, fullCronTrigger) {
-		slog.Debug("Schedule initial full backup", "name", routineName)
-		fullJobDetail := quartz.NewJobDetail(
-			fullJob,
-			quartz.NewJobKey(routineName),
-		)
-		if err = scheduler.ScheduleJob(fullJobDetail, quartz.NewRunOnceTrigger(0)); err != nil {
-			return err
-		}
-	}
-	return nil
+	job := createJobDetail(handler, routineName, jobTypeFull)
+	jobStore.put(job.JobKey().String(), job)
+	return schedule(scheduler, interval, job)
 }
 
 func scheduleIncrementalBackup(
-	scheduler Scheduler, handler *BackupRoutineHandler, interval string, routineName string,
+	scheduler Scheduler, handler backupRunner, interval string, routineName string,
 ) error {
-	incrCronTrigger, err := quartz.NewCronTrigger(interval)
+	if len(interval) == 0 { // no need to schedule if there is no interval set
+		return nil
+	}
+
+	job := createJobDetail(handler, routineName, jobTypeIncremental)
+	return schedule(scheduler, interval, job)
+}
+
+func createJobDetail(handler backupRunner, routineName string, jobType jobType) *quartz.JobDetail {
+	job := newBackupJob(handler, jobType, routineName)
+	return quartz.NewJobDetail(job, jobKey(routineName, jobType))
+}
+
+func schedule(scheduler Scheduler, interval string, jobDetail *quartz.JobDetail) error {
+	cronTrigger, err := quartz.NewCronTrigger(interval)
 	if err != nil {
 		return err
 	}
 
-	incrementalJob := newBackupJob(handler, jobTypeIncremental)
-	incrJobDetail := quartz.NewJobDetail(
-		incrementalJob,
-		incrJobKey(routineName),
-	)
-
-	if err = scheduler.ScheduleJob(incrJobDetail, incrCronTrigger); err != nil {
-		return err
-	}
-
-	jobStore.put(incrJobDetail.JobKey().String(), incrJobDetail)
-	return nil
+	return scheduler.ScheduleJob(jobDetail, cronTrigger)
 }
 
-func incrJobKey(routineName string) *quartz.JobKey {
-	jobName := fmt.Sprintf("%s-%s", routineName, jobTypeIncremental)
-	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupScheduled))
-}
-
-func fullJobKey(routineName string) *quartz.JobKey {
-	jobName := fmt.Sprintf("%s-%s", routineName, jobTypeFull)
+func jobKey(routineName string, jobType jobType) *quartz.JobKey {
+	jobName := fmt.Sprintf("%s-%s", routineName, jobType)
 	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupScheduled))
 }
 
 func adhocKey(name string) *quartz.JobKey {
 	jobName := fmt.Sprintf("%s-adhoc-%d", name, time.Now().UnixMilli())
 	return quartz.NewJobKeyWithGroup(jobName, string(quartzGroupAdHoc))
-}
-
-func needToRunFullBackupNow(lastFullRun time.Time, trigger *quartz.CronTrigger) bool {
-	if lastFullRun.Equal(time.Time{}) {
-		return true // no previous run
-	}
-
-	fireTimeNano, err := trigger.NextFireTime(lastFullRun.UnixNano())
-	if err != nil {
-		return true // some error, run backup to be safe
-	}
-	if time.Unix(0, fireTimeNano).Before(time.Now()) {
-		return true // next scheduled backup is in the past
-	}
-
-	return false
 }

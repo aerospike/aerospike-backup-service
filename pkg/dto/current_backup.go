@@ -12,6 +12,12 @@ type CurrentBackups struct {
 	Full *RunningJob `json:"full,omitempty"`
 	// Incremental represents the state of an incremental backup. Nil if no incremental backup is running.
 	Incremental *RunningJob `json:"incremental,omitempty"`
+	// LastFull: the timestamp of the last successful full backup.
+	// A nil value indicates that there has never been a full backup.
+	LastFull *time.Time `json:"last-full,omitempty"`
+	// LastIncremental: the timestamp of the last successful incremental backup.
+	// A nil value indicates that there has never been an incremental backup.
+	LastIncremental *time.Time `json:"last-incremental,omitempty"`
 }
 
 func NewCurrentBackupsFromModel(m *model.CurrentBackups) *CurrentBackups {
@@ -27,6 +33,8 @@ func NewCurrentBackupsFromModel(m *model.CurrentBackups) *CurrentBackups {
 func (c *CurrentBackups) fromModel(m *model.CurrentBackups) {
 	c.Full = NewRunningJobFromModel(m.Full)
 	c.Incremental = NewRunningJobFromModel(m.Incremental)
+	c.LastFull = m.LastRunTime.FullBackupTime()
+	c.LastIncremental = m.LastRunTime.IncrementalBackupTime()
 }
 
 // RunningJob tracks progress of currently running job.
