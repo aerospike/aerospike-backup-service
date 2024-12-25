@@ -7,8 +7,10 @@ import (
 
 // LastBackupRun stores the last run times for both full and incremental backups.
 type LastBackupRun struct {
-	mu          sync.RWMutex
-	Full        *time.Time
+	mu sync.RWMutex
+	// Last time the Full backup was performed.
+	Full *time.Time
+	// Last time the Incremental backup was performed.
 	Incremental *time.Time
 }
 
