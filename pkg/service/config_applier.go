@@ -123,7 +123,7 @@ func makeHandler(
 	backend, _ := backends.Get(routineName)
 
 	// try to reuse lastRun from previous handler if it exists.
-	var lastRun model.LastBackupRun
+	var lastRun *model.LastBackupRun
 	if old, ok := oldHandlers[routineName]; ok {
 		lastRun = old.CurrentStat().LastRunTime
 	} else {

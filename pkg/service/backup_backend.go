@@ -34,13 +34,13 @@ func newBackend(routineName string, storage model.Storage) *BackupBackend {
 	}
 }
 
-func (b *BackupBackend) findLastRun(ctx context.Context) model.LastBackupRun {
+func (b *BackupBackend) findLastRun(ctx context.Context) *model.LastBackupRun {
 	fullBackupList, _ := b.FullBackupList(ctx, model.TimeBounds{})
 	lastFullBackup := lastBackupTime(fullBackupList)
 	incrementalBackupList, _ := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})
 	lastIncrBackup := lastBackupTime(incrementalBackupList)
 
-	return *model.NewLastRun(lastFullBackup, lastIncrBackup)
+	return model.NewLastRun(lastFullBackup, lastIncrBackup)
 }
 
 func lastBackupTime(b []model.BackupDetails) *time.Time {

@@ -26,7 +26,7 @@ type BackupRoutineHandler struct {
 	namespaces          []string
 	storage             model.Storage
 	secretAgent         *model.SecretAgent
-	lastRun             model.LastBackupRun
+	lastRun             *model.LastBackupRun
 	retry               executor
 	clientManager       aerospike.ClientManager
 	logger              *slog.Logger
@@ -102,7 +102,7 @@ func newBackupRoutineHandler(
 	backupService Backup,
 	routineName string,
 	backupBackend *BackupBackend,
-	lastRun model.LastBackupRun,
+	lastRun *model.LastBackupRun,
 ) *BackupRoutineHandler {
 	backupRoutine := config.BackupRoutines[routineName]
 	backupPolicy := backupRoutine.BackupPolicy
@@ -172,7 +172,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		return err
 	}
 
-	h.lastRun.Full = &now
+	h.lastRun.SetFullBackupTime(&now)
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
@@ -342,7 +342,7 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 		return err
 	}
 
-	h.lastRun.Incremental = &now
+	h.lastRun.SetIncrementalBackupTime(&now)
 	return nil
 }
 

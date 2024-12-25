@@ -11,7 +11,7 @@ type CurrentBackups struct {
 	// Incremental represents the state of an incremental backup. Nil if no incremental backup is running.
 	Incremental *RunningJob
 	// LastRunTime contains information about the latest run time for both full and incremental backups.
-	LastRunTime LastBackupRun
+	LastRunTime *LastBackupRun
 }
 
 // RunningJob tracks progress of currently running job.

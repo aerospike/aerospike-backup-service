@@ -36,7 +36,7 @@ func TestDisabledRoutine(t *testing.T) {
 
 	handlers := BackupHandlerHolder{
 		"routine1": &BackupRoutineHandler{},
-		"routine2": &BackupRoutineHandler{lastRun: model.LastBackupRun{
+		"routine2": &BackupRoutineHandler{lastRun: &model.LastBackupRun{
 			Full: util.Ptr(time.Now()),
 		}},
 	}
