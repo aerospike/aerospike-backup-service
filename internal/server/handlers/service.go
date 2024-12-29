@@ -12,7 +12,7 @@ import (
 )
 
 type Service struct {
-	sync.Mutex
+	sync.RWMutex
 	config               *model.Config
 	configApplier        service.ConfigApplier
 	scheduler            quartz.Scheduler
