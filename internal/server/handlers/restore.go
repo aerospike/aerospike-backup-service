@@ -27,6 +27,9 @@ import (
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
+	s.RLock()
+	defer s.RUnlock()
+
 	hLogger := s.logger.With(slog.String("handler", "RestoreFullHandler"))
 
 	var request dto.RestoreRequest
@@ -80,6 +83,9 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
+	s.RLock()
+	defer s.RUnlock()
+
 	hLogger := s.logger.With(slog.String("handler", "RestoreIncrementalHandler"))
 
 	var request dto.RestoreRequest
@@ -135,6 +141,9 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
+	s.RLock()
+	defer s.RUnlock()
+
 	hLogger := s.logger.With(slog.String("handler", "RestoreByTimeHandler"))
 
 	var request dto.RestoreTimestampRequest

@@ -83,13 +83,12 @@ func startService(configFile string, remote bool) error {
 
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,
-		config,
 		backends,
 		clientManager,
 		backupHandlers,
 	)
 
-	err = configApplier.ApplyNewConfig(ctx)
+	err = configApplier.ApplyNewConfig(ctx, config)
 	if err != nil {
 		return fmt.Errorf("failed to apply new config: %w", err)
 	}

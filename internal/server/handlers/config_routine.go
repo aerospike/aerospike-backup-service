@@ -38,6 +38,9 @@ func (s *Service) ConfigRoutineActionHandler(w http.ResponseWriter, r *http.Requ
 //
 //nolint:dupl
 func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
+	s.Lock()
+	defer s.Unlock()
+
 	hLogger := s.logger.With(slog.String("handler", "addRoutine"))
 
 	newRoutine, err := dto.NewRoutineFromReader(r.Body, dto.JSON)
@@ -89,6 +92,9 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success  	200 {object} map[string]dto.BackupRoutine
 // @Failure     400 {string} string
 func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
+	s.RLock()
+	defer s.RUnlock()
+
 	hLogger := s.logger.With(slog.String("handler", "ReadRoutines"))
 
 	toDTO := dto.ConvertModelMapToDTO(s.config.BackupRoutines, func(m *model.BackupRoutine) *dto.BackupRoutine {
@@ -127,6 +133,9 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 //
 //nolint:dupl
 func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
+	s.RLock()
+	defer s.RUnlock()
+
 	hLogger := s.logger.With(slog.String("handler", "readRoutine"))
 
 	routineName := mux.Vars(r)["name"]
@@ -172,6 +181,9 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 //
 //nolint:dupl
 func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
+	s.Lock()
+	defer s.Unlock()
+
 	hLogger := s.logger.With(slog.String("handler", "updateRoutine"))
 
 	updatedRoutine, err := dto.NewRoutineFromReader(r.Body, dto.JSON)
@@ -223,7 +235,12 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup routine name"
 // @Success     204
 // @Failure     400 {string} string
+//
+//nolint:dupl
 func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
+	s.Lock()
+	defer s.Unlock()
+
 	hLogger := s.logger.With(slog.String("handler", "deleteRoutine"))
 
 	routineName := mux.Vars(r)["name"]
@@ -257,6 +274,9 @@ func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure     404 {string} string
 // @Router      /v1/config/routines/{name}/enable [put]
 func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
+	s.Lock()
+	defer s.Unlock()
+
 	hLogger := s.logger.With(slog.String("handler", "enableRoutine"))
 
 	routineName := mux.Vars(r)["name"]
@@ -297,6 +317,9 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure     500 {string} string "Unexpected error occurred."
 // @Router      /v1/config/routines/{name}/disable [put]
 func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
+	s.Lock()
+	defer s.Unlock()
+
 	hLogger := s.logger.With(slog.String("handler", "disableRoutine"))
 
 	routineName := mux.Vars(r)["name"]

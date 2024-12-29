@@ -77,6 +77,9 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 }
 
 func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
+	s.RLock()
+	defer s.RUnlock()
+
 	hLogger := s.logger.With(slog.String("handler", "readAllBackups"))
 
 	from := r.URL.Query().Get("from")
@@ -125,6 +128,9 @@ func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullB
 
 //nolint:funlen // Function is long because of logging.
 func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
+	s.RLock()
+	defer s.RUnlock()
+
 	hLogger := s.logger.With(slog.String("handler", "readBackupsForRoutine"))
 
 	from := r.URL.Query().Get("from")
@@ -231,6 +237,9 @@ func backupsReadFunction(
 // @Failure  404 {string} string
 // @Failure  500 {string} string
 func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
+	s.RLock()
+	defer s.RUnlock()
+
 	hLogger := s.logger.With(slog.String("handler", "ScheduleFullBackup"))
 
 	routineName := mux.Vars(r)["name"]
@@ -293,6 +302,9 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
+	s.RLock()
+	defer s.RUnlock()
+
 	hLogger := s.logger.With(slog.String("handler", "GetCurrentBackupInfo"))
 
 	routineName := mux.Vars(r)["name"]
@@ -342,6 +354,9 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 // @Failure  404 {string} string
 // @Failure  500 {string} string
 func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
+	s.RLock()
+	defer s.RUnlock()
+
 	hLogger := s.logger.With(slog.String("handler", "CancelCurrentBackup"))
 
 	routineName := mux.Vars(r)["name"]

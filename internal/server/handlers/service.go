@@ -12,7 +12,7 @@ import (
 )
 
 type Service struct {
-	sync.RWMutex
+	sync.RWMutex         // config should be used only under lock
 	config               *model.Config
 	configApplier        service.ConfigApplier
 	scheduler            quartz.Scheduler

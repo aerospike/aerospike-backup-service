@@ -14,13 +14,11 @@ import (
 
 // ConfigApplier is responsible for applying new configuration to the service.
 type ConfigApplier interface {
-	ApplyNewConfig(context.Context) error
+	ApplyNewConfig(ctx context.Context, config *model.Config) error
 }
 
 type DefaultConfigApplier struct {
-	sync.Mutex
 	scheduler     quartz.Scheduler
-	config        *model.Config
 	backends      BackendsHolder
 	clientManager aerospike.ClientManager
 	handlerHolder BackupHandlerHolder
@@ -28,38 +26,33 @@ type DefaultConfigApplier struct {
 
 func NewDefaultConfigApplier(
 	scheduler quartz.Scheduler,
-	config *model.Config,
 	backends BackendsHolder,
 	manager aerospike.ClientManager,
 	handlerHolder BackupHandlerHolder,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
 		scheduler:     scheduler,
-		config:        config,
 		backends:      backends,
 		clientManager: manager,
 		handlerHolder: handlerHolder,
 	}
 }
 
-func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
-	a.Lock()
-	defer a.Unlock()
-
+func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context, config *model.Config) error {
 	err := a.clearPeriodicSchedulerJobs()
 	if err != nil {
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
-	a.backends.Init(a.config)
+	a.backends.Init(config)
 
 	// Refill handlers
-	newHandlers := makeHandlers(ctx, a.clientManager, a.config, a.backends, a.handlerHolder)
+	newHandlers := makeHandlers(ctx, a.clientManager, config, a.backends, a.handlerHolder)
 	clear(a.handlerHolder)
 	for k, v := range newHandlers {
 		(a.handlerHolder)[k] = v
 	}
 
-	err = scheduleRoutines(a.scheduler, a.config.BackupRoutines, a.handlerHolder)
+	err = scheduleRoutines(a.scheduler, config.BackupRoutines, a.handlerHolder)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}

@@ -38,6 +38,9 @@ func (s *Service) ConfigPolicyActionHandler(w http.ResponseWriter, r *http.Reque
 //
 //nolint:dupl
 func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
+	s.Lock()
+	defer s.Unlock()
+
 	hLogger := s.logger.With(slog.String("handler", "addPolicy"))
 
 	newPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
@@ -78,7 +81,12 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Produce     json
 // @Success  	200 {object} map[string]dto.BackupPolicy
 // @Failure     500 {string} string
+//
+//nolint:dupl
 func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
+	s.RLock()
+	defer s.RUnlock()
+
 	hLogger := s.logger.With(slog.String("handler", "ReadPolicies"))
 
 	policies := dto.ConvertModelMapToDTO(s.config.BackupPolicies, dto.NewBackupPolicyFromModel)
@@ -113,6 +121,9 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Failure     404 {string} string "The specified policy could not be found"
 // @Failure     500 {string} string "The specified policy could not be found"
 func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
+	s.RLock()
+	defer s.Unlock()
+
 	hLogger := s.logger.With(slog.String("handler", "readPolicy"))
 
 	policyName := mux.Vars(r)["name"]
@@ -159,6 +170,9 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 //
 //nolint:dupl
 func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
+	s.Lock()
+	defer s.Unlock()
+
 	hLogger := s.logger.With(slog.String("handler", "updatePolicy"))
 
 	updatedPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
@@ -200,7 +214,12 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup policy name"
 // @Success     204
 // @Failure     400 {string} string
+//
+//nolint:dupl
 func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
+	s.Lock()
+	defer s.Unlock()
+
 	hLogger := s.logger.With(slog.String("handler", "deletePolicy"))
 
 	policyName := mux.Vars(r)["name"]
