@@ -55,11 +55,11 @@ else
 fi
 
 docker login aerospike.jfrog.io -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-docker buildx rm builder || true
-
-docker buildx create --name builder --driver docker-container --use
-docker buildx inspect --bootstrap
+#docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+#docker buildx rm builder || true
+#
+#docker buildx create --name builder --driver docker-container --use
+#docker buildx inspect --bootstrap
 
 PLATFORMS="$PLATFORMS" \
 TAG="$TAG" \
@@ -74,5 +74,5 @@ docker buildx bake default \
 --progress plain \
 --file "$WORKSPACE/build/docker-build/docker-bake.hcl"
 
-docker context use default
-docker buildx rm builder
+#docker context use default
+#docker buildx rm builder
