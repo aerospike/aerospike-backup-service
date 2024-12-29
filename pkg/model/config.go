@@ -7,7 +7,7 @@ import (
 
 // Config represents the service configuration.
 type Config struct {
-	mu                sync.Mutex
+	sync.Mutex
 	ServiceConfig     BackupServiceConfig
 	AerospikeClusters map[string]*AerospikeCluster
 	Storage           map[string]Storage // Storage is an interface
@@ -33,9 +33,6 @@ var (
 )
 
 func (c *Config) AddStorage(name string, s Storage) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	if _, exists := c.Storage[name]; exists {
 		return fmt.Errorf("add storage %q: %w", name, ErrAlreadyExists)
 	}
@@ -44,8 +41,8 @@ func (c *Config) AddStorage(name string, s Storage) error {
 }
 
 func (c *Config) DeleteStorage(name string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	s, exists := c.Storage[name]
 	if !exists {
@@ -59,8 +56,8 @@ func (c *Config) DeleteStorage(name string) error {
 }
 
 func (c *Config) UpdateStorage(name string, s Storage) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	if _, exists := c.Storage[name]; !exists {
 		return fmt.Errorf("update storage %q: %w", name, ErrNotFound)
@@ -88,8 +85,8 @@ func (c *Config) routineUsesStorage(s Storage) string {
 }
 
 func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	if _, exists := c.BackupPolicies[name]; exists {
 		return fmt.Errorf("add backup policy %q: %w", name, ErrAlreadyExists)
@@ -99,8 +96,8 @@ func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
 }
 
 func (c *Config) DeletePolicy(name string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	p, exists := c.BackupPolicies[name]
 	if !exists {
@@ -114,8 +111,8 @@ func (c *Config) DeletePolicy(name string) error {
 }
 
 func (c *Config) UpdatePolicy(name string, p *BackupPolicy) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	if _, exists := c.BackupPolicies[name]; !exists {
 		return fmt.Errorf("update backup policy %q: %w", name, ErrNotFound)
@@ -142,8 +139,8 @@ func (c *Config) routineUsesPolicy(p *BackupPolicy) string {
 }
 
 func (c *Config) AddRoutine(name string, r *BackupRoutine) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	if _, exists := c.BackupRoutines[name]; exists {
 		return fmt.Errorf("add backup routine %q: %w", name, ErrAlreadyExists)
@@ -153,8 +150,8 @@ func (c *Config) AddRoutine(name string, r *BackupRoutine) error {
 }
 
 func (c *Config) DeleteRoutine(name string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	if _, exists := c.BackupRoutines[name]; !exists {
 		return fmt.Errorf("delete backup routine %q: %w", name, ErrNotFound)
@@ -164,8 +161,8 @@ func (c *Config) DeleteRoutine(name string) error {
 }
 
 func (c *Config) UpdateRoutine(name string, r *BackupRoutine) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	if _, exists := c.BackupRoutines[name]; !exists {
 		return fmt.Errorf("update backup routine %q: %w", name, ErrNotFound)
@@ -175,8 +172,8 @@ func (c *Config) UpdateRoutine(name string, r *BackupRoutine) error {
 }
 
 func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	if _, exists := c.AerospikeClusters[name]; exists {
 		return fmt.Errorf("add Aerospike cluster %q: %w", name, ErrAlreadyExists)
@@ -186,8 +183,8 @@ func (c *Config) AddCluster(name string, cluster *AerospikeCluster) error {
 }
 
 func (c *Config) DeleteCluster(name string) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	cluster, exists := c.AerospikeClusters[name]
 	if !exists {
@@ -201,8 +198,8 @@ func (c *Config) DeleteCluster(name string) error {
 }
 
 func (c *Config) UpdateCluster(name string, cluster *AerospikeCluster) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	if _, exists := c.AerospikeClusters[name]; !exists {
 		return fmt.Errorf("update Aerospike cluster %q: %w", name, ErrNotFound)
@@ -230,8 +227,8 @@ func (c *Config) routineUsesCluster(cluster *AerospikeCluster) string {
 }
 
 func (c *Config) AddSecretAgent(name string, agent *SecretAgent) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	if _, exists := c.SecretAgents[name]; exists {
 		return fmt.Errorf("add Secret agent %q: %w", name, ErrAlreadyExists)
@@ -241,10 +238,10 @@ func (c *Config) AddSecretAgent(name string, agent *SecretAgent) error {
 }
 
 func (c *Config) CopyFrom(other *Config) {
-	c.mu.Lock()
-	other.mu.Lock()
-	defer c.mu.Unlock()
-	defer other.mu.Unlock()
+	c.Lock()
+	other.Lock()
+	defer c.Unlock()
+	defer other.Unlock()
 
 	c.AerospikeClusters = other.AerospikeClusters
 	c.Storage = other.Storage
@@ -268,8 +265,8 @@ func (c *Config) ResolveSecretAgent(name *string, defaultAgent *SecretAgent) (*S
 
 // ToggleRoutineDisabled sets the Disabled field of the BackupRoutine based on the provided state.
 func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	_, exists := c.BackupRoutines[name]
 	if !exists {
