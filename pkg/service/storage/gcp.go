@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"cloud.google.com/go/storage"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go"
 	gcp "github.com/aerospike/backup-go/io/gcp/storage"
 	"google.golang.org/api/option"

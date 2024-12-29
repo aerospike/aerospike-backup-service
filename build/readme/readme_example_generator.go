@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"gopkg.in/yaml.v3"
 )
 

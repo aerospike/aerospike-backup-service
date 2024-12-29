@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/v2/internal/server/handlers"
-	"github.com/aerospike/aerospike-backup-service/v2/internal/server/middleware"
-	"github.com/aerospike/aerospike-backup-service/v2/internal/util"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/server/middleware"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"golang.org/x/time/rate"
 )
 

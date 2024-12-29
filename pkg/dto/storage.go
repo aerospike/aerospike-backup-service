@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // Storage represents the configuration for a backup storage details.

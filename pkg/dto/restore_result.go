@@ -1,6 +1,6 @@
 package dto
 
-import "github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+import "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 
 type JobStatus string
 

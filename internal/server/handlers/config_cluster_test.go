@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/gorilla/mux"
 	"github.com/steinfletcher/apitest"

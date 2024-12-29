@@ -3,7 +3,7 @@ package dto
 import (
 	"errors"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // LocalStorage represents the configuration for local storage.

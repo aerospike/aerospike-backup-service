@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
