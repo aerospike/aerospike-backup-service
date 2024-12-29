@@ -96,11 +96,11 @@ func makeHandlers(
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	for routineName := range config.BackupRoutines {
+	for routineName, routine := range config.BackupRoutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			handler := makeHandler(ctx, clientManager, config, backends, oldHandlers, routineName)
+			handler := makeHandler(ctx, clientManager, backends, oldHandlers, routineName, routine)
 			mu.Lock()
 			handlers[routineName] = handler
 			mu.Unlock()
@@ -114,10 +114,10 @@ func makeHandlers(
 func makeHandler(
 	ctx context.Context,
 	clientManager aerospike.ClientManager,
-	config *model.Config,
 	backends BackendsHolder,
 	oldHandlers BackupHandlerHolder,
 	routineName string,
+	routine *model.BackupRoutine,
 ) *BackupRoutineHandler {
 	backupService := NewBackupGo()
 	backend, _ := backends.Get(routineName)
@@ -130,5 +130,5 @@ func makeHandler(
 		lastRun = backend.findLastRun(ctx) // this scan can take some time.
 	}
 
-	return newBackupRoutineHandler(config, clientManager, backupService, routineName, backend, lastRun)
+	return newBackupRoutineHandler(clientManager, backupService, routineName, routine, backend, lastRun)
 }

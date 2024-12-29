@@ -73,7 +73,7 @@ func startService(configFile string, remote bool) error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	appLogger := setDefaultLoggers(ctx, config)
+	appLogger := setDefaultLoggers(ctx, config.ServiceConfig.GetLoggerOrDefault())
 	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 
 	// schedule all configured backups
@@ -121,9 +121,9 @@ func startService(configFile string, remote bool) error {
 	return err
 }
 
-func setDefaultLoggers(ctx context.Context, config *model.Config) *slog.Logger {
+func setDefaultLoggers(ctx context.Context, loggerConfig *model.LoggerConfig) *slog.Logger {
 	appLogger := slog.New(
-		util.LogHandler(config.ServiceConfig.GetLoggerOrDefault()),
+		util.LogHandler(loggerConfig),
 	)
 	slog.SetDefault(appLogger)
 	logger.SetDefault(util.NewQuartzLogger(ctx))
