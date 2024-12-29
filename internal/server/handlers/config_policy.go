@@ -122,7 +122,7 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Failure     500 {string} string "The specified policy could not be found"
 func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 	s.RLock()
-	defer s.Unlock()
+	defer s.RUnlock()
 
 	hLogger := s.logger.With(slog.String("handler", "readPolicy"))
 
