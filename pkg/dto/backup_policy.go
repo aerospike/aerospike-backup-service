@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // BackupPolicy represents a scheduled backup policy.

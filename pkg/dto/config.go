@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
 // Config represents the service configuration file.

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/stretchr/testify/require"
 )

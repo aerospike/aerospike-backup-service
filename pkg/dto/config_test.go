@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
 func validConfig() *Config {

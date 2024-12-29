@@ -3,7 +3,7 @@ package dto
 import (
 	"fmt"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // RestoreNamespace specifies an alternative namespace name for the restore

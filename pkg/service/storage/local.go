@@ -4,7 +4,7 @@ import (
 	"context"
 	"path/filepath"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/local"
 )

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"gopkg.in/yaml.v3"
 )
 

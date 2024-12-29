@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.

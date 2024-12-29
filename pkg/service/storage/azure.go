@@ -7,7 +7,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go"
 	azure "github.com/aerospike/backup-go/io/azure/blob"
 )

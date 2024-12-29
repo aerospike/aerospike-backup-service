@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/dto"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/validation"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/validation"
 )
 
 func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {

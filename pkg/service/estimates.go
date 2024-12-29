@@ -3,7 +3,7 @@ package service
 import (
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v2/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 func currentBackupStatus(handlers map[string]CancelableBackupHandler) *model.RunningJob {
