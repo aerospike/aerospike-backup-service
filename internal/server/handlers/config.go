@@ -71,13 +71,24 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	oldConfig := dto.NewConfigFromModel(s.config)
+	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
+		hLogger.Error("static configuration has changed",
+			slog.Any("error", err),
+		)
+		err := fmt.Errorf("static configuration has changed: %w", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	newConfigModel, err := newConfig.ToModel(s.nsValidator)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		config.CopyFrom(newConfigModel)
+		config.SetBackupConfig(newConfigModel.GetBackupConfig())
 		return nil
 	})
 
@@ -124,7 +135,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.config.CopyFrom(config)
+	s.config.SetBackupConfig(config.GetBackupConfig())
 	err = s.configApplier.ApplyNewRoutines(r.Context(), s.config.GetBackupConfig().BackupRoutines)
 
 	if err != nil {

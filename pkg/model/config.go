@@ -288,11 +288,10 @@ func (c *Config) AddSecretAgent(name string, agent *SecretAgent) error {
 	return nil
 }
 
-func (c *Config) CopyFrom(other *Config) {
+func (c *Config) SetBackupConfig(other *BackupConfig) {
 	c.Lock()
 	defer c.Unlock()
-	other.RLock()
-	defer other.RUnlock()
+	c.backupConfig = *other
 }
 
 func (c *Config) ResolveSecretAgent(name *string, defaultAgent *SecretAgent) (*SecretAgent, error) {
