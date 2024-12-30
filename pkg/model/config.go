@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"maps"
 	"sync"
 )
 
@@ -33,21 +34,11 @@ func (bc *BackupConfig) copy() *BackupConfig {
 		SecretAgents:      make(map[string]*SecretAgent, len(bc.SecretAgents)),
 	}
 
-	for k, v := range bc.AerospikeClusters {
-		newConfig.AerospikeClusters[k] = v
-	}
-	for k, v := range bc.Storage {
-		newConfig.Storage[k] = v
-	}
-	for k, v := range bc.BackupPolicies {
-		newConfig.BackupPolicies[k] = v
-	}
-	for k, v := range bc.BackupRoutines {
-		newConfig.BackupRoutines[k] = v
-	}
-	for k, v := range bc.SecretAgents {
-		newConfig.SecretAgents[k] = v
-	}
+	maps.Copy(newConfig.AerospikeClusters, bc.AerospikeClusters)
+	maps.Copy(newConfig.Storage, bc.Storage)
+	maps.Copy(newConfig.BackupRoutines, bc.BackupRoutines)
+	maps.Copy(newConfig.BackupPolicies, bc.BackupPolicies)
+	maps.Copy(newConfig.SecretAgents, bc.SecretAgents)
 
 	return newConfig
 }
@@ -194,9 +185,7 @@ func (c *Config) Routines() map[string]*BackupRoutine {
 	defer c.mu.RUnlock()
 
 	routines := make(map[string]*BackupRoutine, len(c.backupConfig.BackupRoutines))
-	for key, value := range c.backupConfig.BackupRoutines {
-		routines[key] = value
-	}
+	maps.Copy(routines, c.backupConfig.BackupRoutines)
 
 	return routines
 }
