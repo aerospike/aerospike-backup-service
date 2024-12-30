@@ -78,8 +78,6 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 // @Produce     json
 // @Success  	200 {object} map[string]dto.BackupPolicy
 // @Failure     500 {string} string
-//
-//nolint:dupl
 func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadPolicies"))
 
@@ -202,8 +200,6 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup policy name"
 // @Success     204
 // @Failure     400 {string} string
-//
-//nolint:dupl
 func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deletePolicy"))
 

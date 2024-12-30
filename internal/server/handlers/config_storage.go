@@ -79,8 +79,6 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 // @Produce     json
 // @Success  	200 {object} map[string]dto.Storage
 // @Failure     500 {string} string
-//
-//nolint:dupl
 func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAllStorage"))
 
@@ -205,8 +203,6 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 // @Param       name path string true "Backup storage name"
 // @Success     204
 // @Failure     400 {string} string
-//
-//nolint:dupl
 func (s *Service) deleteStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deleteStorage"))
 

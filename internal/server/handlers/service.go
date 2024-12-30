@@ -1,12 +1,13 @@
 package handlers
 
 import (
+	"log/slog"
+
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/quartz"
-	"log/slog"
 )
 
 type Service struct {

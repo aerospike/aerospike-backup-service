@@ -6,7 +6,7 @@ import (
 
 // Config represents the service configuration.
 type Config struct {
-	//sync.RWMutex
+	// sync.RWMutex
 	ServiceConfig     BackupServiceConfig
 	AerospikeClusters map[string]*AerospikeCluster
 	Storage           map[string]Storage // Storage is an interface
