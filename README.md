@@ -659,6 +659,21 @@ was changed to simplify and streamline the process.
   The specific backup data location is now specified using a new required field: **`backup-data-path`**.
   This change allows you to reuse the same storage for different restore requests.
 
+### Backup Retention Policy
+
+This release introduces a new, configurable **RetentionPolicy** for managing backup storage more effectively.
+The feature allows users to specify retention rules for both full and incremental backups, replacing the previous rigid options (`KeepAll`, `RemoveAll`, `RemoveIncremental`).
+Retention policy is (optional) part of Backup Policy. It consists of 2 integer fields.
+
+* `full`: The total number of full backups to retain. If absent, all full backups are kept. Minimum is 1, it means that each new full backup will delete the previous one.
+* `incremental`: The number of full backups to retain along with their incremental backups. Cannot exceed `full`. Minimum is 0, it means that all old incremental backups will be deleted after each full. 
+
+If no RetentionPolicy is specified, the system will default to retaining all backups, mimicking the previous KeepAll behavior.
+
+After each successfull full backup, all existing backups are scanned to count full and incremental backups.
+Service then removes older full backups and their associated incrementals as needed to retain only
+the last `full` backups and incremental backups for the most recent `incemental` backups.
+
 ## New API functions (v2 → v3):
 
 ### Node list
