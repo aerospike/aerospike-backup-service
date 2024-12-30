@@ -197,7 +197,7 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = s.nsValidator.ValidateRoutines(cluster, s.config.BackupConfigCopy().BackupRoutines)
+	err = s.nsValidator.ValidateRoutines(cluster, s.config.Routines())
 	if err != nil {
 		hLogger.Error("cluster namespace validation failed",
 			slog.String("name", clusterName),
