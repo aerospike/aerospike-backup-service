@@ -91,8 +91,7 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadRoutines"))
 
-	routines := s.config.GetBackupConfig().BackupRoutines
-	toDTO := dto.ConvertModelMapToDTO(routines, func(m *model.BackupRoutine) *dto.BackupRoutine {
+	toDTO := dto.ConvertModelMapToDTO(s.config.Routines(), func(m *model.BackupRoutine) *dto.BackupRoutine {
 		return dto.NewRoutineFromModel(m, s.config)
 	})
 
@@ -134,7 +133,7 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	routine, ok := s.config.GetBackupConfig().BackupRoutines[routineName]
+	routine, ok := s.config.Routines()[routineName]
 	if !ok {
 		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)
 		return

@@ -134,7 +134,8 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	cluster, ok := s.config.GetBackupConfig().AerospikeClusters[clusterName]
+	backupConfig := s.config.GetBackupConfig()
+	cluster, ok := backupConfig.AerospikeClusters[clusterName]
 	if !ok {
 		hLogger.Error("cluster not found",
 			slog.String("name", clusterName),
@@ -142,7 +143,7 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("cluster %s could not be found", clusterName), http.StatusNotFound)
 		return
 	}
-	jsonResponse, err := dto.Serialize(dto.NewClusterFromModel(cluster, s.config.GetBackupConfig()), dto.JSON)
+	jsonResponse, err := dto.Serialize(dto.NewClusterFromModel(cluster, backupConfig), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal cluster",
 			slog.Any("error", err),

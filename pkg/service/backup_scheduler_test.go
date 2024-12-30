@@ -36,7 +36,7 @@ func TestDisabledRoutine(t *testing.T) {
 		"routine2": &BackupRoutineHandler{lastRun: model.NewLastBackupRun(util.Ptr(time.Now()), nil)},
 	}
 
-	err := scheduleRoutines(mockScheduler, config.GetBackupConfig().BackupRoutines, handlers)
+	err := scheduleRoutines(mockScheduler, config.Routines(), handlers)
 
 	require.NoError(t, err)
 	mockScheduler.AssertNumberOfCalls(t, "ScheduleJob", 1)

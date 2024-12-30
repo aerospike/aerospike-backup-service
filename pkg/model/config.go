@@ -189,6 +189,18 @@ func (c *Config) routineUsesPolicy(p *BackupPolicy) string {
 	return ""
 }
 
+func (c *Config) Routines() map[string]*BackupRoutine {
+	c.RLock()
+	defer c.RUnlock()
+
+	routines := make(map[string]*BackupRoutine, len(c.backupConfig.BackupRoutines))
+	for key, value := range c.backupConfig.BackupRoutines {
+		routines[key] = value
+	}
+
+	return routines
+}
+
 func (c *Config) AddRoutine(name string, r *BackupRoutine) error {
 	c.Lock()
 	defer c.Unlock()
