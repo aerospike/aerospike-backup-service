@@ -37,9 +37,6 @@ func (s *Service) ConfigClusterActionHandler(w http.ResponseWriter, r *http.Requ
 // @Failure     400 {string} string
 // @Failure     500 {string} string
 func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	s.Lock()
-	defer s.Unlock()
-
 	hLogger := s.logger.With(slog.String("handler", "addAerospikeCluster"))
 
 	newCluster, err := dto.NewClusterFromReader(r.Body, dto.JSON)
@@ -90,9 +87,6 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Success  	200 {object} map[string]dto.AerospikeCluster
 // @Failure     500 {string} string
 func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
-	s.RLock()
-	defer s.RUnlock()
-
 	hLogger := s.logger.With(slog.String("handler", "ReadAerospikeClusters"))
 
 	toDTO := dto.ConvertModelMapToDTO(s.config.AerospikeClusters, func(m *model.AerospikeCluster) *dto.AerospikeCluster {
@@ -130,9 +124,6 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 // @Failure     404 {string} string "The specified cluster could not be found"
 // @Failure     500 {string} string "The specified cluster could not be found"
 func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	s.RLock()
-	defer s.RUnlock()
-
 	hLogger := s.logger.With(slog.String("handler", "readAerospikeCluster"))
 
 	clusterName := mux.Vars(r)["name"]
@@ -180,9 +171,6 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	s.Lock()
-	defer s.Unlock()
-
 	hLogger := s.logger.With(slog.String("handler", "updateAerospikeCluster"))
 
 	updatedCluster, err := dto.NewClusterFromReader(r.Body, dto.JSON)
@@ -242,9 +230,6 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 //
 //nolint:dupl
 func (s *Service) deleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
-	s.Lock()
-	defer s.Unlock()
-
 	hLogger := s.logger.With(slog.String("handler", "deleteAerospikeCluster"))
 
 	clusterName := mux.Vars(r)["name"]

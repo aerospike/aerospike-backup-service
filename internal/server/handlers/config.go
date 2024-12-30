@@ -31,9 +31,6 @@ func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {
 // @Success     200 {object} dto.Config
 // @Failure     500 {string} string
 func (s *Service) readConfig(w http.ResponseWriter) {
-	s.RLock()
-	defer s.RUnlock()
-
 	hLogger := s.logger.With(slog.String("handler", "readConfig"))
 
 	configuration, err := dto.Serialize(dto.NewConfigFromModel(s.config), dto.JSON)
@@ -63,9 +60,6 @@ func (s *Service) readConfig(w http.ResponseWriter) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
-	s.Lock()
-	defer s.Unlock()
-
 	hLogger := s.logger.With(slog.String("handler", "updateConfig"))
 
 	newConfig, err := dto.NewConfigFromReader(r.Body, dto.JSON)
@@ -107,9 +101,6 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
-	s.Lock()
-	defer s.Unlock()
-
 	hLogger := s.logger.With(slog.String("handler", "ApplyConfig"))
 
 	config, err := s.configurationManager.Read(r.Context())

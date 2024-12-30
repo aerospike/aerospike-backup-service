@@ -36,9 +36,6 @@ func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Requ
 // @Success     201
 // @Failure     400 {string} string
 func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
-	s.Lock()
-	defer s.Unlock()
-
 	hLogger := s.logger.With(slog.String("handler", "addStorage"))
 
 	newStorage, err := dto.NewStorageFromReader(r.Body, dto.JSON)
@@ -85,9 +82,6 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 //
 //nolint:dupl
 func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
-	s.RLock()
-	defer s.RUnlock()
-
 	hLogger := s.logger.With(slog.String("handler", "ReadAllStorage"))
 
 	toDTO := dto.ConvertStorageMapToDTO(s.config.Storage, s.config)
@@ -124,9 +118,6 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 //
 //nolint:dupl
 func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
-	s.RLock()
-	defer s.RUnlock()
-
 	hLogger := s.logger.With(slog.String("handler", "readStorage"))
 
 	storageName := mux.Vars(r)["name"]
@@ -171,9 +162,6 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
-	s.Lock()
-	defer s.Unlock()
-
 	hLogger := s.logger.With(slog.String("handler", "updateStorage"))
 
 	updatedStorage, err := dto.NewStorageFromReader(r.Body, dto.JSON)
@@ -220,9 +208,6 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 //
 //nolint:dupl
 func (s *Service) deleteStorage(w http.ResponseWriter, r *http.Request) {
-	s.Lock()
-	defer s.Unlock()
-
 	hLogger := s.logger.With(slog.String("handler", "deleteStorage"))
 
 	storageName := mux.Vars(r)["name"]

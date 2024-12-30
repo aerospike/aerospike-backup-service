@@ -1,18 +1,15 @@
 package handlers
 
 import (
-	"log/slog"
-	"sync"
-
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/quartz"
+	"log/slog"
 )
 
 type Service struct {
-	sync.RWMutex         // config should be used only under lock
 	config               *model.Config
 	configApplier        service.ConfigApplier
 	scheduler            quartz.Scheduler
