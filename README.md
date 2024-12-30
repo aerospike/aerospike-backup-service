@@ -668,7 +668,7 @@ Retention policy is (optional) part of Backup Policy. It consists of 2 integer f
 * `full`: The total number of full backups to retain. If not specified, all full backups are kept. The minimum is 1, meaning each new full backup deletes the previous one.
 * `incremental`: The number of full backups to retain their incremental backups. Cannot exceed `full`. Minimum is 0, it means that all old incremental backups will be deleted after each full. 
 
-If no RetentionPolicy is specified, the system will default to retaining all backups, mimicking the previous KeepAll behavior.
+If no retention policy is specified, the system defaults to retaining all full and incremental backups, the same as the `KeepAll` value in older versions.
 
 After each successfull full backup, all existing backups are scanned to count full and incremental backups.
 Service then removes older full backups and their associated incrementals as needed to retain only
