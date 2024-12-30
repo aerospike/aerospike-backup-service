@@ -33,7 +33,7 @@ func NewConfigFromModel(m *model.Config) *Config {
 
 func (c *Config) fromModel(m *model.Config) {
 	c.ServiceConfig.fromModel(&m.ServiceConfig)
-	backupConfig := m.GetBackupConfig()
+	backupConfig := m.BackupConfigCopy()
 
 	c.AerospikeClusters = make(map[string]*AerospikeCluster)
 	for name, a := range backupConfig.AerospikeClusters {
@@ -173,7 +173,7 @@ func (c *Config) ToModel(nsValidator aerospike.NamespaceValidator) (*model.Confi
 		}
 	}
 
-	backupConfig := modelConfig.GetBackupConfig()
+	backupConfig := modelConfig.BackupConfigCopy()
 	// routines must be added after storage, secret agents and policies.
 	for k, v := range c.BackupRoutines {
 		toModel, err := v.ToModel(backupConfig, nsValidator)

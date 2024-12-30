@@ -74,7 +74,7 @@ var (
 	ErrInUse         = fmt.Errorf("item is in use")
 )
 
-func (c *Config) GetBackupConfig() *BackupConfig {
+func (c *Config) BackupConfigCopy() *BackupConfig {
 	c.RLock()
 	defer c.RUnlock()
 	return c.backupConfig.copy()

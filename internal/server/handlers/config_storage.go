@@ -82,7 +82,7 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAllStorage"))
 
-	backupConfig := s.config.GetBackupConfig()
+	backupConfig := s.config.BackupConfigCopy()
 	toDTO := dto.ConvertStorageMapToDTO(backupConfig.Storage, backupConfig)
 	jsonResponse, err := dto.Serialize(toDTO, dto.JSON)
 	if err != nil {
@@ -123,7 +123,7 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	backupConfig := s.config.GetBackupConfig()
+	backupConfig := s.config.BackupConfigCopy()
 	storage, ok := backupConfig.Storage[storageName]
 	if !ok {
 		http.Error(w, fmt.Sprintf("Storage %s could not be found", storageName), http.StatusNotFound)

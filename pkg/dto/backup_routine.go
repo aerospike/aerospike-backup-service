@@ -158,7 +158,7 @@ func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRo
 	}
 
 	b := &BackupRoutine{}
-	b.fromModel(m, config.GetBackupConfig())
+	b.fromModel(m, config.BackupConfigCopy())
 	return b
 }
 

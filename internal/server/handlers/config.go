@@ -88,7 +88,7 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		config.SetBackupConfig(newConfigModel.GetBackupConfig())
+		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
 		return nil
 	})
 
@@ -135,7 +135,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	backupConfig := config.GetBackupConfig()
+	backupConfig := config.BackupConfigCopy()
 	s.config.SetBackupConfig(backupConfig)
 	err = s.configApplier.ApplyNewRoutines(r.Context(), backupConfig.BackupRoutines)
 

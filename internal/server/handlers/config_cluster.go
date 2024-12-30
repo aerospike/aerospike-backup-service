@@ -89,7 +89,7 @@ func (s *Service) addAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAerospikeClusters"))
 
-	backupConfig := s.config.GetBackupConfig()
+	backupConfig := s.config.BackupConfigCopy()
 	clusters := backupConfig.AerospikeClusters
 	toDTO := dto.ConvertModelMapToDTO(clusters, func(m *model.AerospikeCluster) *dto.AerospikeCluster {
 		return dto.NewClusterFromModel(m, backupConfig)
@@ -134,7 +134,7 @@ func (s *Service) readAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, clusterNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	backupConfig := s.config.GetBackupConfig()
+	backupConfig := s.config.BackupConfigCopy()
 	cluster, ok := backupConfig.AerospikeClusters[clusterName]
 	if !ok {
 		hLogger.Error("cluster not found",
@@ -197,7 +197,7 @@ func (s *Service) updateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = s.nsValidator.ValidateRoutines(cluster, s.config.GetBackupConfig().BackupRoutines)
+	err = s.nsValidator.ValidateRoutines(cluster, s.config.BackupConfigCopy().BackupRoutines)
 	if err != nil {
 		hLogger.Error("cluster namespace validation failed",
 			slog.String("name", clusterName),
