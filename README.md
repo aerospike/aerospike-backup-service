@@ -671,7 +671,7 @@ Retention policy is (optional) part of Backup Policy. It consists of 2 integer f
 If no retention policy is specified, the system defaults to retaining all full and incremental backups, the same as the `KeepAll` value in older versions.
 
 After each successfull full backup, all existing backups are scanned to count full and incremental backups.
-Service then removes older full backups and their associated incrementals as needed to retain only
+ABS then removes older full backups and their associated incremental backups as needed to retain only
 the last `full` backups and incremental backups for the most recent `incemental` backups.
 
 ## New API functions (v2 → v3):
