@@ -276,6 +276,7 @@ GET {{baseUrl}}/v1/config/clusters
     <summary>Response:</summary>
 
 <!-- ClustersResponse -->
+
 ```json
 [
   {
@@ -309,6 +310,7 @@ GET {{baseUrl}}/v1/config/routines
     <summary>Response:</summary>
 
 <!-- RoutinesResponse -->
+
 ```json
 {
   "routine1": {
@@ -356,6 +358,7 @@ GET {{baseUrl}}/v1/config/storage
     <summary>Response:</summary>
 
 <!-- StorageResponse -->
+
 ```json
 {
   "aws-s3": {
@@ -409,6 +412,7 @@ GET {{baseUrl}}/v1/backups/full
     <summary>Response:</summary>
 
 <!-- FullBackupsResponse -->
+
 ```json
 {
   "routine1": [
@@ -479,6 +483,7 @@ POST {{baseUrl}}/v1/restore/full
     <summary>Request body:</summary>
 
 <!-- RestoreFullRequest -->
+
 ```json
 {
   "destination": {
@@ -535,6 +540,7 @@ POST {{baseUrl}}/v1/restore/timestamp
     <summary>Response:</summary>
 
 <!-- RestoreTimestampRequest -->
+
 ```json
 {
   "destination": {
@@ -592,28 +598,29 @@ storage types.
 ### **Example**
 
 <!-- Storage -->
+
 ```yaml
 aws-s3:
-    s3-storage:
-        bucket: as-backup-bucket
-        path: backups
-        s3-region: eu-central-1
+  s3-storage:
+    bucket: as-backup-bucket
+    path: backups
+    s3-region: eu-central-1
 azure-blob-storage:
-    azure-storage:
-        endpoint: http://127.0.0.1:6000/devstoreaccount1
-        container-name: testcontainer
-        path: backups
-        account-name: devstoreaccount1
-        account-key: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
+  azure-storage:
+    endpoint: http://127.0.0.1:6000/devstoreaccount1
+    container-name: testcontainer
+    path: backups
+    account-name: devstoreaccount1
+    account-key: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
 gcp-gcs:
-    gcp-storage:
-        key-file-path: key-file.json
-        bucket-name: gcp-backup-bucket
-        path: backups
-        endpoint: http://127.0.0.1:9020
+  gcp-storage:
+    key-file-path: key-file.json
+    bucket-name: gcp-backup-bucket
+    path: backups
+    endpoint: http://127.0.0.1:9020
 local:
-    local-storage:
-        path: backups
+  local-storage:
+    path: backups
 
 ```
 
@@ -722,3 +729,29 @@ Validation allows only one of these three fields to be present.
     type: object
 ```
 
+### Cancel Restore Job
+
+New endpoint:  
+[`POST {{baseUrl}}/v1/restore/cancel/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancel)
+
+Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
+
+### Cancel Backup Job
+
+New endpoint:  
+[`POST {{baseUrl}}/v1/backups/cancel/:<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancel)
+
+Cancel all currently running backups (both full and incremental) for the specified routine. Partially created backups will be deleted.
+
+
+### Disable Routine
+
+New endpoints:
+
+- [`POST {{baseUrl}}/v1/routines/:<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Routine/disable)
+- [`POST {{baseUrl}}/v1/routines/:<routineName>/enable/`](https://aerospike.github.io/aerospike-backup-service/#/Routine/enable)
+
+Set the disabled flag for the given routine to `true` or `false` (default is `false`).
+
+- Disabled routines will not schedule new jobs.
+- Running jobs will be canceled, similar to the `Cancel Backup Job` endpoint.
