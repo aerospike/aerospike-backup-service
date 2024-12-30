@@ -37,7 +37,7 @@ func (b *BackendHolderMock) GetAllReaders() map[string]BackupListReader {
 	return nil
 }
 
-func (b *BackendHolderMock) Init(_ *model.Config) {
+func (b *BackendHolderMock) Init(_ map[string]*model.BackupRoutine) {
 }
 
 func makeTestRestoreService(wg *sync.WaitGroup) *dataRestorer {
