@@ -88,7 +88,7 @@ func startService(configFile string, remote bool) error {
 		backupHandlers,
 	)
 
-	err = configApplier.ApplyNewRoutines(ctx, config.BackupRoutines)
+	err = configApplier.ApplyNewRoutines(ctx, config.GetBackupConfig().BackupRoutines)
 	if err != nil {
 		return fmt.Errorf("failed to apply new config: %w", err)
 	}

@@ -219,7 +219,7 @@ func (m *MockNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ 
 	return nil
 }
 
-func (m *MockNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ *model.Config) error {
+func (m *MockNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ map[string]*model.BackupRoutine) error {
 	return nil
 }
 

@@ -76,7 +76,7 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 	if err != nil {
 		return nil, fmt.Errorf("invalid cluster: %w", err)
 	}
-	if _, ok := config.BackupRoutines[r.Routine]; !ok {
+	if _, ok := config.GetBackupConfig().BackupRoutines[r.Routine]; !ok {
 		return nil, notFoundValidationError("routine", r.Routine)
 	}
 

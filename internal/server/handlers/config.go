@@ -125,7 +125,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.config.CopyFrom(config)
-	err = s.configApplier.ApplyNewRoutines(r.Context(), s.config.BackupRoutines)
+	err = s.configApplier.ApplyNewRoutines(r.Context(), s.config.GetBackupConfig().BackupRoutines)
 
 	if err != nil {
 		hLogger.Error("failed to apply config",
@@ -149,7 +149,7 @@ func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Confi
 		return fmt.Errorf("failed to write configuration: %w", err)
 	}
 
-	err = s.configApplier.ApplyNewRoutines(ctx, s.config.BackupRoutines)
+	err = s.configApplier.ApplyNewRoutines(ctx, s.config.GetBackupConfig().BackupRoutines)
 	if err != nil {
 		return fmt.Errorf("failed to apply new configuration: %w", err)
 	}
