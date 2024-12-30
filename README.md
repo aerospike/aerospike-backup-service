@@ -672,7 +672,7 @@ If no retention policy is specified, the system defaults to retaining all full a
 
 After each successfull full backup, all existing backups are scanned to count full and incremental backups.
 ABS then removes older full backups and their associated incremental backups as needed to retain only
-the last `full` backups and incremental backups for the most recent `incemental` backups.
+the last `full` backups and incremental backups for the most recent `incremental` backups.
 
 ## New API functions (v2 → v3):
 
