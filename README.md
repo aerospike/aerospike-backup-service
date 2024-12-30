@@ -662,7 +662,7 @@ was changed to simplify and streamline the process.
 ### Backup Retention Policy
 
 This release introduces a new, configurable **RetentionPolicy** for managing backup storage more effectively.
-The feature allows users to specify retention rules for both full and incremental backups, replacing the previous rigid options (`KeepAll`, `RemoveAll`, `RemoveIncremental`).
+The feature allows users to specify retention rules for both full and incremental backups, replacing the previous options `KeepAll`, `RemoveAll`, and `RemoveIncremental`.
 Retention policy is (optional) part of Backup Policy. It consists of 2 integer fields.
 
 * `full`: The total number of full backups to retain. If absent, all full backups are kept. Minimum is 1, it means that each new full backup will delete the previous one.
