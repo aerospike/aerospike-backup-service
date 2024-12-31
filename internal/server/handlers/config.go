@@ -71,16 +71,6 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oldConfig := dto.NewConfigFromModel(s.config)
-	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
-		hLogger.Error("static configuration has changed",
-			slog.Any("error", err),
-		)
-		err := fmt.Errorf("static configuration has changed: %w", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	newConfigModel, err := newConfig.ToModel(s.nsValidator)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
