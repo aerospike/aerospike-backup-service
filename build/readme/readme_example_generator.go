@@ -184,7 +184,7 @@ func main() {
 		}
 
 		var buffer bytes.Buffer
-		buffer.WriteString(fmt.Sprintf("<!-- %s -->\n```%s\n", name, format))
+		buffer.WriteString(fmt.Sprintf("<!-- %s -->\n\n```%s\n", name, format))
 		buffer.Write(formattedExample)
 		buffer.WriteString("\n```")
 		return buffer.Bytes()
