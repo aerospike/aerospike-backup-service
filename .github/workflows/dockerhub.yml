@@ -1,9 +1,9 @@
 name: Promote Images to DockerHub
 on:
   workflow_dispatch:
-#  release:
-#    types:
-#      - published
+  release:
+    types:
+      - published
 
 jobs:
   build-images:
@@ -30,7 +30,7 @@ jobs:
         env:
           ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
         run: |
-          echo "docker buildx imagetools create \
+          docker buildx imagetools create \
           --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:$(echo ${{ steps.get-latest-tag.outputs.tag }} | cut -c 2-)" \
           --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:latest" \
-          "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/${{ steps.variables_step.outputs.repo_name }}:$(echo ${{ steps.get-latest-tag.outputs.tag }} | cut -c 2-)""
+          "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/${{ steps.variables_step.outputs.repo_name }}:$(echo ${{ steps.get-latest-tag.outputs.tag }} | cut -c 2-)"
