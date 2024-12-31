@@ -11,8 +11,6 @@ jobs:
     steps:
       - name: Checkout Automation Code
         uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
@@ -33,6 +31,6 @@ jobs:
           ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
         run: |
           docker buildx imagetools create \
-          --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:${{ steps.get-latest-tag.outputs.tag }}" \
+          --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:$(echo ${{ steps.get-latest-tag.outputs.tag }} | cut -c 2-)" \
           --tag "docker.io/aerospike/${{ steps.variables_step.outputs.repo_name }}:latest" \
-          "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/${{ steps.variables_step.outputs.repo_name }}:${{ steps.get-latest-tag.outputs.tag }}"
+          "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/${{ steps.variables_step.outputs.repo_name }}:$(echo ${{ steps.get-latest-tag.outputs.tag }} | cut -c 2-)"
