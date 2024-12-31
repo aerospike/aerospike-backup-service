@@ -2,7 +2,7 @@ name: Create a Release and Push Release assets
 on:
   push:
     tags:
-      - 'v2*'
+      - 'v*'
 
   workflow_dispatch:
 jobs:

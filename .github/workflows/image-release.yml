@@ -2,7 +2,7 @@ name: Build Release Docker Images
 on:
   push:
     tags:
-      - 'v2*'
+      - 'v*'
 
   workflow_dispatch:
 jobs:
