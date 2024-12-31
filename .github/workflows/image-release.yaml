@@ -1,10 +1,10 @@
 name: Build Release Docker Images
 on:
-#  push:
-#    tags:
-#      - 'v*'
+  push:
+    tags:
+      - 'v*'
+
   workflow_dispatch:
-    
 jobs:
   build-images:
     runs-on: ubuntu-latest
@@ -16,8 +16,6 @@ jobs:
           echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
           echo "TAG=$(cat VERSION | cut -c 2-)" >> $GITHUB_ENV
           echo "ISO8601=$(LC_TIME=en_US.UTF-8 date "+%Y-%m-%dT%H:%M:%S%z")" >> $GITHUB_ENV
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Setup Jfrog
