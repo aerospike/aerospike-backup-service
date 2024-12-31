@@ -666,7 +666,7 @@ The feature allows users to specify retention rules for both full and incrementa
 Retention policy is an optional part of a backup policy. It consists of two integer fields:
 
 * `full`: The total number of full backups to retain. If not specified, all full backups are kept. The minimum is 1, meaning each new full backup deletes the previous one.
-* `incremental`: The number of full backups to retain their incremental backups. Cannot exceed `full`. Minimum is 0, it means that all old incremental backups will be deleted after each full. 
+* `incremental`: The number of most recent full backups that also retain incremental backups made between them. Cannot exceed the value of `full`. If omitted, all incremental backups are kept. A value of `0` means that all previous existing incremental backups will be deleted after each full backup is made.
 
 If no retention policy is specified, the system defaults to retaining all full and incremental backups, the same as the `KeepAll` value in older versions.
 
