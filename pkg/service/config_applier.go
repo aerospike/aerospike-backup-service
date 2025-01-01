@@ -18,7 +18,7 @@ type ConfigApplier interface {
 }
 
 type DefaultConfigApplier struct {
-	mu            sync.RWMutex
+	mu            sync.Mutex
 	scheduler     quartz.Scheduler
 	backends      BackendsHolder
 	clientManager aerospike.ClientManager
