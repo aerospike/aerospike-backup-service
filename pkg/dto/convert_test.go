@@ -155,8 +155,8 @@ var originalConfig = &Config{
 }
 
 func TestConfigModelConversionIsLossless(t *testing.T) {
-	configJson, _ := json.MarshalIndent(originalConfig, "", "    ")
-	t.Logf("\nOriginal config:\n%s\n", string(configJson))
+	configJSON, _ := json.MarshalIndent(originalConfig, "", "    ")
+	t.Logf("\nOriginal config:\n%s\n", string(configJSON))
 
 	// Convert the Config to a model.Config
 	nsValidator := &aerospike.NoopNamespaceValidator{}
@@ -171,8 +171,8 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 }
 
 func TestConfigValidation(t *testing.T) {
-	configJson, _ := json.Marshal(originalConfig)
+	configJSON, _ := json.Marshal(originalConfig)
 	require.NoError(t, originalConfig.validate())
-	configJsonAfter, _ := json.Marshal(originalConfig)
-	require.Equal(t, string(configJson), string(configJsonAfter), "validation should not change the config")
+	configJSONAfter, _ := json.Marshal(originalConfig)
+	require.Equal(t, string(configJSON), string(configJSONAfter), "validation should not change the config")
 }
