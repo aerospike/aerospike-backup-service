@@ -76,8 +76,9 @@ func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		config.CopyFrom(newConfigModel)
+		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
 		return nil
 	})
 
@@ -112,6 +113,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// validate static fields.
 	newConfig := dto.NewConfigFromModel(s.config)
 	oldConfig := dto.NewConfigFromModel(config)
 	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
@@ -123,7 +125,10 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.applyConfig(r.Context(), config)
+	backupConfig := config.BackupConfigCopy()
+	s.config.SetBackupConfig(backupConfig)
+	err = s.configApplier.ApplyNewRoutines(r.Context(), backupConfig.BackupRoutines)
+
 	if err != nil {
 		hLogger.Error("failed to apply config",
 			slog.Any("error", err),
@@ -136,9 +141,6 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
-	s.Lock()
-	defer s.Unlock()
-
 	err := updateFunc(s.config)
 	if err != nil {
 		return fmt.Errorf("cannot update configuration: %w", err)
@@ -149,19 +151,10 @@ func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Confi
 		return fmt.Errorf("failed to write configuration: %w", err)
 	}
 
-	err = s.configApplier.ApplyNewConfig(ctx)
+	err = s.configApplier.ApplyNewRoutines(ctx, s.config.Routines())
 	if err != nil {
 		return fmt.Errorf("failed to apply new configuration: %w", err)
 	}
 
 	return nil
-}
-
-func (s *Service) applyConfig(ctx context.Context, c *model.Config) error {
-	s.Lock()
-	defer s.Unlock()
-
-	s.config.CopyFrom(c)
-
-	return s.configApplier.ApplyNewConfig(ctx)
 }

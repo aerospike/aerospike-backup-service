@@ -57,11 +57,13 @@ func NewRestoreRequest(
 	policy *RestorePolicy,
 	sourceStorage Storage,
 	secretAgent *SecretAgent,
+	backupDataPath string,
 ) *RestoreRequest {
 	return &RestoreRequest{
 		DestinationCluster: destinationCluster,
 		Policy:             policy,
 		SourceStorage:      sourceStorage,
 		SecretAgent:        secretAgent,
+		BackupDataPath:     backupDataPath,
 	}
 }

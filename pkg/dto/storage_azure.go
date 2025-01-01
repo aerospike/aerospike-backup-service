@@ -84,7 +84,7 @@ func getAzureAuth(a *AzureStorage) model.AzureAuth {
 	return nil
 }
 
-func newAzureStorageFromModel(s *model.AzureStorage, config *model.Config) *AzureStorage {
+func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig) *AzureStorage {
 	azureStorage := &AzureStorage{
 		Endpoint:          s.Endpoint,
 		ContainerName:     s.ContainerName,

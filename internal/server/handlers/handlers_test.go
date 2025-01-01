@@ -183,7 +183,7 @@ func (mock backendsHolderMock) Get(routineName string) (*service.BackupBackend, 
 	return &service.BackupBackend{}, true
 }
 
-func (mock backendsHolderMock) Init(_ *model.Config) {
+func (mock backendsHolderMock) Init(_ map[string]*model.BackupRoutine) {
 }
 
 func (mock backendsHolderMock) GetAllReaders() map[string]service.BackupListReader {
@@ -209,7 +209,7 @@ func (mock configurationManagerMock) Write(_ context.Context, config *model.Conf
 
 type MockConfigApplier struct{}
 
-func (a *MockConfigApplier) ApplyNewConfig(context.Context) error {
+func (a *MockConfigApplier) ApplyNewRoutines(_ context.Context, _ map[string]*model.BackupRoutine) error {
 	return nil
 }
 
@@ -219,7 +219,7 @@ func (m *MockNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ 
 	return nil
 }
 
-func (m *MockNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ *model.Config) error {
+func (m *MockNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ map[string]*model.BackupRoutine) error {
 	return nil
 }
 

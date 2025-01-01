@@ -10,7 +10,7 @@ import (
 // We need it because same backends are used in API handlers and backup jobs.
 type BackendsHolder interface {
 	// Init creates new backends from config.
-	Init(config *model.Config)
+	Init(routines map[string]*model.BackupRoutine)
 	// GetReader returns BackupBackend for routine as BackupListReader.
 	GetReader(routineName string) (BackupListReader, bool)
 	// Get returns BackupBackend for routine.
@@ -24,11 +24,10 @@ type BackendHolderImpl struct {
 	data map[string]*BackupBackend
 }
 
-func (b *BackendHolderImpl) Init(config *model.Config) {
+func (b *BackendHolderImpl) Init(routines map[string]*model.BackupRoutine) {
 	b.Lock()
 	defer b.Unlock()
 
-	routines := config.BackupRoutines
 	b.data = make(map[string]*BackupBackend, len(routines))
 	for routineName, routine := range routines {
 		b.data[routineName] = newBackend(routineName, routine.Storage)

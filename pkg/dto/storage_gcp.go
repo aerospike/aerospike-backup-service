@@ -50,7 +50,7 @@ func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
 	}, nil
 }
 
-func newGcpStorageFromModel(s *model.GcpStorage, config *model.Config) *GcpStorage {
+func newGcpStorageFromModel(s *model.GcpStorage, config *model.BackupConfig) *GcpStorage {
 	return &GcpStorage{
 		KeyFile:           s.KeyFile,
 		BucketName:        s.BucketName,
