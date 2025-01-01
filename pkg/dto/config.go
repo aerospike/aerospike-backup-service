@@ -33,29 +33,30 @@ func NewConfigFromModel(m *model.Config) *Config {
 
 func (c *Config) fromModel(m *model.Config) {
 	c.ServiceConfig.fromModel(&m.ServiceConfig)
+	backupConfig := m.BackupConfigCopy()
 
 	c.AerospikeClusters = make(map[string]*AerospikeCluster)
-	for name, a := range m.AerospikeClusters {
-		c.AerospikeClusters[name] = NewClusterFromModel(a, m)
+	for name, a := range backupConfig.AerospikeClusters {
+		c.AerospikeClusters[name] = NewClusterFromModel(a, backupConfig)
 	}
 
 	c.Storage = make(map[string]*Storage)
-	for name, s := range m.Storage {
-		c.Storage[name] = NewStorageFromModel(s, m)
+	for name, s := range backupConfig.Storage {
+		c.Storage[name] = NewStorageFromModel(s, backupConfig)
 	}
 
 	c.BackupPolicies = make(map[string]*BackupPolicy)
-	for name, p := range m.BackupPolicies {
+	for name, p := range backupConfig.BackupPolicies {
 		c.BackupPolicies[name] = NewBackupPolicyFromModel(p)
 	}
 
 	c.BackupRoutines = make(map[string]*BackupRoutine)
-	for name, r := range m.BackupRoutines {
+	for name, r := range backupConfig.BackupRoutines {
 		c.BackupRoutines[name] = NewRoutineFromModel(r, m)
 	}
 
 	c.SecretAgents = make(map[string]*SecretAgent)
-	for name, s := range m.SecretAgents {
+	for name, s := range backupConfig.SecretAgents {
 		c.SecretAgents[name] = newSecretAgentFromModel(s)
 	}
 }
@@ -172,9 +173,10 @@ func (c *Config) ToModel(nsValidator aerospike.NamespaceValidator) (*model.Confi
 		}
 	}
 
+	backupConfig := modelConfig.BackupConfigCopy()
 	// routines must be added after storage, secret agents and policies.
 	for k, v := range c.BackupRoutines {
-		toModel, err := v.ToModel(modelConfig, nsValidator)
+		toModel, err := v.ToModel(backupConfig, nsValidator)
 		if err != nil {
 			return nil, fmt.Errorf("invalid backup routine %q: %w", k, err)
 		}

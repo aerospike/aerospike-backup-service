@@ -37,22 +37,10 @@ func (b *BackendHolderMock) GetAllReaders() map[string]BackupListReader {
 	return nil
 }
 
-func (b *BackendHolderMock) Init(_ *model.Config) {
+func (b *BackendHolderMock) Init(_ map[string]*model.BackupRoutine) {
 }
 
 func makeTestRestoreService(wg *sync.WaitGroup) *dataRestorer {
-	storage := &model.LocalStorage{}
-	config := model.NewConfig()
-	_ = config.AddStorage("s", storage)
-	config.BackupRoutines = map[string]*model.BackupRoutine{
-		"routine": {
-			Storage: storage,
-		},
-		"routine_fail_restore": {
-			Storage: storage,
-		},
-	}
-
 	return &dataRestorer{
 		configRetriever: configRetriever{
 			backends: &BackendHolderMock{},
@@ -60,7 +48,6 @@ func makeTestRestoreService(wg *sync.WaitGroup) *dataRestorer {
 		restoreJobs:    NewRestoreJobsHolder(),
 		restoreService: NewRestoreMock(wg),
 		backends:       &BackendHolderMock{},
-		config:         config,
 		clientManager:  &MockClientManager{},
 	}
 }

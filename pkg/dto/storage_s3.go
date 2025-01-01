@@ -83,7 +83,7 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 	}, nil
 }
 
-func newS3StorageFromModel(s *model.S3Storage, config *model.Config) *S3Storage {
+func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3Storage {
 	result := &S3Storage{
 		Bucket:             s.Bucket,
 		Path:               s.Path,

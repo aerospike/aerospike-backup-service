@@ -27,19 +27,16 @@ func TestDisabledRoutine(t *testing.T) {
 	mockScheduler := new(MockScheduler)
 	mockScheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
 
-	config := &model.Config{
-		BackupRoutines: map[string]*model.BackupRoutine{
-			"routine1": {Disabled: true},
-			"routine2": {Disabled: false, IntervalCron: "@daily"},
-		},
-	}
+	config := model.NewConfig()
+	_ = config.AddRoutine("routine1", &model.BackupRoutine{Disabled: true})
+	_ = config.AddRoutine("routine2", &model.BackupRoutine{IntervalCron: "@daily"})
 
 	handlers := BackupHandlerHolder{
 		"routine1": &BackupRoutineHandler{},
 		"routine2": &BackupRoutineHandler{lastRun: model.NewLastBackupRun(util.Ptr(time.Now()), nil)},
 	}
 
-	err := scheduleRoutines(mockScheduler, config.BackupRoutines, handlers)
+	err := scheduleRoutines(mockScheduler, config.Routines(), handlers)
 
 	require.NoError(t, err)
 	mockScheduler.AssertNumberOfCalls(t, "ScheduleJob", 1)

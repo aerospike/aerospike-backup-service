@@ -8,6 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
+// configRetriever is used to read Aerospike configuration from backup.
 type configRetriever struct {
 	backends BackendsHolder
 }

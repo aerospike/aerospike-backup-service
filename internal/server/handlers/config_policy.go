@@ -81,7 +81,7 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadPolicies"))
 
-	policies := dto.ConvertModelMapToDTO(s.config.BackupPolicies, dto.NewBackupPolicyFromModel)
+	policies := dto.ConvertModelMapToDTO(s.config.BackupConfigCopy().BackupPolicies, dto.NewBackupPolicyFromModel)
 	jsonResponse, err := dto.Serialize(policies, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal backup policies",
@@ -121,7 +121,7 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	policy, ok := s.config.BackupPolicies[policyName]
+	policy, ok := s.config.BackupConfigCopy().BackupPolicies[policyName]
 	if !ok {
 		hLogger.Error("policy not found")
 		http.Error(w, fmt.Sprintf("policy %s could not be found", policyName), http.StatusNotFound)
