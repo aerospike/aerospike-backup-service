@@ -29,6 +29,9 @@ var defaultConfig = struct {
 		Level:        util.Ptr("DEBUG"),
 		Format:       util.Ptr("PLAIN"),
 		StdoutWriter: util.Ptr(true),
+		FileWriter: &FileLoggerConfig{
+			MaxSize: 0,
+		},
 	},
 	backupPolicy: BackupPolicy{
 		RetryPolicy: &models.RetryPolicy{

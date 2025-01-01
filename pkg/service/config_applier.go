@@ -18,6 +18,7 @@ type ConfigApplier interface {
 }
 
 type DefaultConfigApplier struct {
+	mu            sync.Mutex
 	scheduler     quartz.Scheduler
 	backends      BackendsHolder
 	clientManager aerospike.ClientManager
@@ -39,6 +40,9 @@ func NewDefaultConfigApplier(
 }
 
 func (a *DefaultConfigApplier) ApplyNewRoutines(ctx context.Context, routines map[string]*model.BackupRoutine) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	err := a.clearPeriodicSchedulerJobs()
 	if err != nil {
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
@@ -71,7 +75,7 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 	for _, key := range keys {
 		err = a.scheduler.DeleteJob(key)
 		if err != nil {
-			return fmt.Errorf("cannot delete job: %w", err)
+			return fmt.Errorf("cannot delete job %q: %w", key, err)
 		}
 	}
 	return nil

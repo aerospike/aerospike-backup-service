@@ -36,7 +36,7 @@ func logWriter(config *model.LoggerConfig) io.Writer {
 	if config.FileWriter != nil {
 		fileWriter := &lumberjack.Logger{
 			Filename:   config.FileWriter.Filename,
-			MaxSize:    config.FileWriter.MaxSize,
+			MaxSize:    config.FileWriter.GetMaxSizeOrDefault(),
 			MaxBackups: config.FileWriter.MaxBackups,
 			MaxAge:     config.FileWriter.MaxAge,
 			Compress:   config.FileWriter.Compress,
