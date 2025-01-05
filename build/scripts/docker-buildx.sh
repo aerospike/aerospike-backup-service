@@ -55,11 +55,6 @@ else
 fi
 
 docker login aerospike.jfrog.io -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
-docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-docker buildx rm builder || true
-
-docker buildx create --name builder --driver docker-container --use
-docker buildx inspect --bootstrap
 
 PLATFORMS="$PLATFORMS" \
 TAG="$TAG" \
@@ -70,9 +65,8 @@ GIT_COMMIT_SHA="$(git rev-parse HEAD)" \
 VERSION="$(cat "$WORKSPACE/VERSION")" \
 ISO8601="$(LC_TIME=en_US.UTF-8 date "+%Y-%m-%dT%H:%M:%S%z")" \
 CONTEXT="$WORKSPACE" \
-docker buildx bake default \
+docker buildx bake \
+--allow=fs.read="$WORKSPACE" \
+default \
 --progress plain \
 --file "$WORKSPACE/build/docker-build/docker-bake.hcl"
-
-docker context use default
-docker buildx rm builder
