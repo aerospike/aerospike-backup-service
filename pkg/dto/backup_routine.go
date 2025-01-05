@@ -84,7 +84,7 @@ func (r *BackupRoutine) Validate() error {
 }
 
 func (r *BackupRoutine) ToModel(
-	config *model.Config,
+	config *model.BackupConfig,
 	nsValidator aerospike.NamespaceValidator,
 ) (*model.BackupRoutine, error) {
 	policy, found := config.BackupPolicies[r.BackupPolicy]
@@ -158,11 +158,11 @@ func NewRoutineFromModel(m *model.BackupRoutine, config *model.Config) *BackupRo
 	}
 
 	b := &BackupRoutine{}
-	b.fromModel(m, config)
+	b.fromModel(m, config.BackupConfigCopy())
 	return b
 }
 
-func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.Config) {
+func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupConfig) {
 	r.BackupPolicy = findKeyByValue(config.BackupPolicies, m.BackupPolicy)
 	r.SourceCluster = findKeyByValue(config.AerospikeClusters, m.SourceCluster)
 	r.Storage = findStorageKey(config.Storage, m.Storage)

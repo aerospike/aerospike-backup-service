@@ -33,7 +33,6 @@ func NewErrJobNotFound(id model.RestoreJobID) *ErrJobNotFound {
 // Stores job information locally within a map.
 type dataRestorer struct {
 	configRetriever
-	config         *model.Config
 	restoreJobs    *RestoreJobsHolder
 	restoreService Restore
 	backends       BackendsHolder
@@ -45,7 +44,6 @@ var _ RestoreManager = (*dataRestorer)(nil)
 
 // NewRestoreManager returns a new dataRestorer instance.
 func NewRestoreManager(backends BackendsHolder,
-	config *model.Config,
 	restoreService Restore,
 	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,
@@ -58,7 +56,6 @@ func NewRestoreManager(backends BackendsHolder,
 		restoreJobs:    restoreJobs,
 		restoreService: restoreService,
 		backends:       backends,
-		config:         config,
 		clientManager:  clientManager,
 		nsValidator:    nsValidator,
 	}
@@ -205,7 +202,7 @@ func (r *dataRestorer) restoreNamespace(
 			continue
 		}
 
-		handler, err := r.restoreFromPath(ctx, client, request, b.Key)
+		handler, err := r.restoreFromPath(ctx, client, request, b.Key, fullBackup.Storage)
 		if err != nil {
 			return err
 		}
@@ -231,25 +228,21 @@ func (r *dataRestorer) restoreFromPath(
 	client *backup.Client,
 	request *model.RestoreTimestampRequest,
 	backupPath string,
+	storage model.Storage,
 ) (RestoreHandler, error) {
-	restoreRequest := r.toRestoreRequest(request)
-	restoreRequest.BackupDataPath = backupPath
+	restoreRequest := model.NewRestoreRequest(
+		request.DestinationCluster,
+		request.Policy,
+		storage,
+		request.SecretAgent,
+		backupPath,
+	)
 	handler, err := r.restoreService.Run(ctx, client, restoreRequest)
 	if err != nil {
 		return nil, fmt.Errorf("could not start restore from backup at %s: %w", backupPath, err)
 	}
 
 	return handler, nil
-}
-
-func (r *dataRestorer) toRestoreRequest(request *model.RestoreTimestampRequest) *model.RestoreRequest {
-	routine := r.config.BackupRoutines[request.RoutineName]
-	return model.NewRestoreRequest(
-		request.DestinationCluster,
-		request.Policy,
-		routine.Storage,
-		request.SecretAgent,
-	)
 }
 
 // JobStatus returns the status of the job with the given id.

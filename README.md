@@ -276,6 +276,7 @@ GET {{baseUrl}}/v1/config/clusters
     <summary>Response:</summary>
 
 <!-- ClustersResponse -->
+
 ```json
 [
   {
@@ -309,6 +310,7 @@ GET {{baseUrl}}/v1/config/routines
     <summary>Response:</summary>
 
 <!-- RoutinesResponse -->
+
 ```json
 {
   "routine1": {
@@ -356,6 +358,7 @@ GET {{baseUrl}}/v1/config/storage
     <summary>Response:</summary>
 
 <!-- StorageResponse -->
+
 ```json
 {
   "aws-s3": {
@@ -409,6 +412,7 @@ GET {{baseUrl}}/v1/backups/full
     <summary>Response:</summary>
 
 <!-- FullBackupsResponse -->
+
 ```json
 {
   "routine1": [
@@ -479,6 +483,7 @@ POST {{baseUrl}}/v1/restore/full
     <summary>Request body:</summary>
 
 <!-- RestoreFullRequest -->
+
 ```json
 {
   "destination": {
@@ -535,6 +540,7 @@ POST {{baseUrl}}/v1/restore/timestamp
     <summary>Response:</summary>
 
 <!-- RestoreTimestampRequest -->
+
 ```json
 {
   "destination": {
@@ -592,6 +598,7 @@ storage types.
 ### **Example**
 
 <!-- Storage -->
+
 ```yaml
 aws-s3:
     s3-storage:
@@ -651,6 +658,21 @@ was changed to simplify and streamline the process.
 - **v3:** The `path` in the `Storage` object now only refers to the **root path** of the storage.
   The specific backup data location is now specified using a new required field: **`backup-data-path`**.
   This change allows you to reuse the same storage for different restore requests.
+
+### Backup Retention Policy
+
+This release introduces a new, configurable **RetentionPolicy** for managing backup storage more effectively.
+The feature allows users to specify retention rules for both full and incremental backups, replacing the previous options `KeepAll`, `RemoveAll`, and `RemoveIncremental`.
+Retention policy is an optional part of a backup policy. It consists of two integer fields:
+
+* `full`: The total number of full backups to retain. If not specified, all full backups are kept. The minimum is 1, meaning each new full backup deletes the previous one.
+* `incremental`: The number of most recent full backups that also retain incremental backups made between them. Cannot exceed the value of `full`. If omitted, all incremental backups are kept. A value of `0` means that all previous existing incremental backups will be deleted after each full backup is made.
+
+If no retention policy is specified, the system defaults to retaining all full and incremental backups, the same as the `KeepAll` value in older versions.
+
+After each successfull full backup, all existing backups are scanned to count full and incremental backups.
+ABS then removes older full backups and their associated incremental backups as needed to retain only
+the last `full` backups and incremental backups for the most recent `incremental` backups.
 
 ## New API functions (v2 → v3):
 
@@ -722,3 +744,29 @@ Validation allows only one of these three fields to be present.
     type: object
 ```
 
+### Cancel Restore Job
+
+New endpoint:  
+[`POST {{baseUrl}}/v1/restore/cancel/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancel)
+
+Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
+
+### Cancel Backup Job
+
+New endpoint:  
+[`POST {{baseUrl}}/v1/backups/cancel/:<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancel)
+
+Cancel all currently running backups (both full and incremental) for the specified routine. Partially created backups will be deleted.
+
+
+### Disable Routine
+
+New endpoints:
+
+- [`POST {{baseUrl}}/v1/routines/:<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Routine/disable)
+- [`POST {{baseUrl}}/v1/routines/:<routineName>/enable/`](https://aerospike.github.io/aerospike-backup-service/#/Routine/enable)
+
+Set the disabled flag for the given routine to `true` or `false` (default is `false`).
+
+- Disabled routines will not schedule new jobs.
+- Running jobs will be canceled, similar to the `Cancel Backup Job` endpoint.

@@ -97,28 +97,27 @@ type BackupHandlerHolder map[string]backupRunner
 
 // newBackupRoutineHandler returns a new BackupRoutineHandler instance.
 func newBackupRoutineHandler(
-	config *model.Config,
 	clientManager aerospike.ClientManager,
 	backupService Backup,
 	routineName string,
+	routine *model.BackupRoutine,
 	backupBackend *BackupBackend,
 	lastRun *model.LastBackupRun,
 ) *BackupRoutineHandler {
-	backupRoutine := config.BackupRoutines[routineName]
-	backupPolicy := backupRoutine.BackupPolicy
-	backupStorage := backupRoutine.Storage
+	backupPolicy := routine.BackupPolicy
+	backupStorage := routine.Storage
 	logger := slog.Default().With(slog.String("routine", routineName))
 
 	return &BackupRoutineHandler{
 		backupService:    backupService,
 		metadataWriter:   backupBackend,
-		backupRoutine:    backupRoutine,
+		backupRoutine:    routine,
 		backupFullPolicy: backupPolicy,
 		backupIncrPolicy: backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
 		routineName:      routineName,
-		namespaces:       backupRoutine.Namespaces,
+		namespaces:       routine.Namespaces,
 		storage:          backupStorage,
-		secretAgent:      backupRoutine.SecretAgent,
+		secretAgent:      routine.SecretAgent,
 		lastRun:          lastRun,
 		retry: newRetryExecutor(
 			backupPolicy.GetRetryPolicyOrDefault(),

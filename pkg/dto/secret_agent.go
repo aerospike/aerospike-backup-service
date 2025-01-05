@@ -66,7 +66,7 @@ func (s *SecretAgent) ToModel() *model.SecretAgent {
 	}
 }
 
-func ResolveSecretAgentFromModel(s *model.SecretAgent, config *model.Config) SecretAgentConfig {
+func ResolveSecretAgentFromModel(s *model.SecretAgent, config *model.BackupConfig) SecretAgentConfig {
 	secretAgentName := findKeyByValue(config.SecretAgents, s)
 	if secretAgentName != "" {
 		return SecretAgentConfig{

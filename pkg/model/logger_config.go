@@ -60,3 +60,11 @@ type FileLoggerConfig struct {
 	// using gzip. The default is not to perform compression.
 	Compress bool
 }
+
+func (f *FileLoggerConfig) GetMaxSizeOrDefault() int {
+	if f.MaxSize != 0 {
+		return f.MaxSize
+	}
+
+	return defaultConfig.logger.FileWriter.MaxSize
+}

@@ -35,7 +35,18 @@ type BackupMetadata struct {
 	UDFCount uint64 `yaml:"udf-count" json:"udf-count" format:"int64" example:"2"`
 }
 
-func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.Config) {
+// NewBackupDetailsFromModel creates a new BackupDetails from a model.BackupDetails
+func NewBackupDetailsFromModel(m *model.BackupDetails, config *model.BackupConfig) *BackupDetails {
+	if m == nil {
+		return nil
+	}
+
+	var d BackupDetails
+	d.fromModel(m, config)
+	return &d
+}
+
+func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupConfig) {
 	d.Key = m.Key
 	d.Created = m.Created
 	d.From = m.From
@@ -48,19 +59,8 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.Config) 
 	d.Storage = NewStorageFromModel(m.Storage, config)
 }
 
-// NewBackupDetailsFromModel creates a new BackupDetails from a model.BackupDetails
-func NewBackupDetailsFromModel(m *model.BackupDetails, config *model.Config) *BackupDetails {
-	if m == nil {
-		return nil
-	}
-
-	var d BackupDetails
-	d.fromModel(m, config)
-	return &d
-}
-
 func ConvertBackupDetailsMap(
-	modelMap map[string][]model.BackupDetails, config *model.Config,
+	modelMap map[string][]model.BackupDetails, config *model.BackupConfig,
 ) map[string][]BackupDetails {
 	result := make(map[string][]BackupDetails, len(modelMap))
 	for key, modelSlice := range modelMap {

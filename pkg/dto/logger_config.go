@@ -123,9 +123,6 @@ func (f *FileLoggerConfig) Validate() error {
 	if f.MaxSize < 0 {
 		return fmt.Errorf("negative logger MaxSize: %d", f.MaxSize)
 	}
-	if f.MaxSize == 0 {
-		f.MaxSize = 100 // set default in Mb
-	}
 	if f.MaxAge < 0 {
 		return fmt.Errorf("negative logger MaxAge: %d", f.MaxAge)
 	}

@@ -14,13 +14,12 @@ import (
 
 // ConfigApplier is responsible for applying new configuration to the service.
 type ConfigApplier interface {
-	ApplyNewConfig(context.Context) error
+	ApplyNewRoutines(ctx context.Context, routines map[string]*model.BackupRoutine) error
 }
 
 type DefaultConfigApplier struct {
-	sync.Mutex
+	mu            sync.Mutex
 	scheduler     quartz.Scheduler
-	config        *model.Config
 	backends      BackendsHolder
 	clientManager aerospike.ClientManager
 	handlerHolder BackupHandlerHolder
@@ -28,38 +27,36 @@ type DefaultConfigApplier struct {
 
 func NewDefaultConfigApplier(
 	scheduler quartz.Scheduler,
-	config *model.Config,
 	backends BackendsHolder,
 	manager aerospike.ClientManager,
 	handlerHolder BackupHandlerHolder,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
 		scheduler:     scheduler,
-		config:        config,
 		backends:      backends,
 		clientManager: manager,
 		handlerHolder: handlerHolder,
 	}
 }
 
-func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
-	a.Lock()
-	defer a.Unlock()
+func (a *DefaultConfigApplier) ApplyNewRoutines(ctx context.Context, routines map[string]*model.BackupRoutine) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 
 	err := a.clearPeriodicSchedulerJobs()
 	if err != nil {
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
-	a.backends.Init(a.config)
+	a.backends.Init(routines)
 
 	// Refill handlers
-	newHandlers := makeHandlers(ctx, a.clientManager, a.config, a.backends, a.handlerHolder)
+	newHandlers := makeHandlers(ctx, a.clientManager, routines, a.backends, a.handlerHolder)
 	clear(a.handlerHolder)
 	for k, v := range newHandlers {
 		(a.handlerHolder)[k] = v
 	}
 
-	err = scheduleRoutines(a.scheduler, a.config.BackupRoutines, a.handlerHolder)
+	err = scheduleRoutines(a.scheduler, routines, a.handlerHolder)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
@@ -78,7 +75,7 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 	for _, key := range keys {
 		err = a.scheduler.DeleteJob(key)
 		if err != nil {
-			return fmt.Errorf("cannot delete job: %w", err)
+			return fmt.Errorf("cannot delete job %q: %w", key, err)
 		}
 	}
 	return nil
@@ -88,7 +85,7 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 func makeHandlers(
 	ctx context.Context,
 	clientManager aerospike.ClientManager,
-	config *model.Config,
+	routines map[string]*model.BackupRoutine,
 	backends BackendsHolder,
 	oldHandlers BackupHandlerHolder,
 ) BackupHandlerHolder {
@@ -96,11 +93,11 @@ func makeHandlers(
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	for routineName := range config.BackupRoutines {
+	for routineName, routine := range routines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			handler := makeHandler(ctx, clientManager, config, backends, oldHandlers, routineName)
+			handler := makeHandler(ctx, clientManager, backends, oldHandlers, routineName, routine)
 			mu.Lock()
 			handlers[routineName] = handler
 			mu.Unlock()
@@ -114,10 +111,10 @@ func makeHandlers(
 func makeHandler(
 	ctx context.Context,
 	clientManager aerospike.ClientManager,
-	config *model.Config,
 	backends BackendsHolder,
 	oldHandlers BackupHandlerHolder,
 	routineName string,
+	routine *model.BackupRoutine,
 ) *BackupRoutineHandler {
 	backupService := NewBackupGo()
 	backend, _ := backends.Get(routineName)
@@ -130,5 +127,5 @@ func makeHandler(
 		lastRun = backend.findLastRun(ctx) // this scan can take some time.
 	}
 
-	return newBackupRoutineHandler(config, clientManager, backupService, routineName, backend, lastRun)
+	return newBackupRoutineHandler(clientManager, backupService, routineName, routine, backend, lastRun)
 }

@@ -55,7 +55,7 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	toModel, err := newRoutine.ToModel(s.config, s.nsValidator)
+	toModel, err := newRoutine.ToModel(s.config.BackupConfigCopy(), s.nsValidator)
 	if err != nil {
 		hLogger.Error("failed to create routine",
 			slog.String("name", name),
@@ -91,7 +91,7 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadRoutines"))
 
-	toDTO := dto.ConvertModelMapToDTO(s.config.BackupRoutines, func(m *model.BackupRoutine) *dto.BackupRoutine {
+	toDTO := dto.ConvertModelMapToDTO(s.config.Routines(), func(m *model.BackupRoutine) *dto.BackupRoutine {
 		return dto.NewRoutineFromModel(m, s.config)
 	})
 
@@ -124,8 +124,6 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} dto.BackupRoutine
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified cluster could not be found"
-//
-//nolint:dupl
 func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readRoutine"))
 
@@ -135,7 +133,7 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	routine, ok := s.config.BackupRoutines[routineName]
+	routine, ok := s.config.Routines()[routineName]
 	if !ok {
 		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)
 		return
@@ -190,7 +188,7 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	toModel, err := updatedRoutine.ToModel(s.config, s.nsValidator)
+	toModel, err := updatedRoutine.ToModel(s.config.BackupConfigCopy(), s.nsValidator)
 	if err != nil {
 		hLogger.Error("failed to create routine",
 			slog.String("name", name),

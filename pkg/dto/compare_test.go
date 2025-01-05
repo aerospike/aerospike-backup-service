@@ -359,6 +359,15 @@ func TestLoggerConfig_Compare(t *testing.T) {
 				"Filename changed: app.log -> new.log",
 			},
 		},
+		{
+			name: "empty configs",
+			current: &LoggerConfig{
+				FileWriter: &FileLoggerConfig{},
+			},
+			other: &LoggerConfig{
+				FileWriter: &FileLoggerConfig{},
+			},
+		},
 	}
 
 	for _, tt := range tests {

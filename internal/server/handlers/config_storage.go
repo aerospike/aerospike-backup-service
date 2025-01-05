@@ -82,7 +82,8 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ReadAllStorage"))
 
-	toDTO := dto.ConvertStorageMapToDTO(s.config.Storage, s.config)
+	backupConfig := s.config.BackupConfigCopy()
+	toDTO := dto.ConvertStorageMapToDTO(backupConfig.Storage, backupConfig)
 	jsonResponse, err := dto.Serialize(toDTO, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal storage",
@@ -113,8 +114,6 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified storage could not be found"
 // @Failure     500 {string} string
-//
-//nolint:dupl
 func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readStorage"))
 
@@ -124,13 +123,14 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	storage, ok := s.config.Storage[storageName]
+	backupConfig := s.config.BackupConfigCopy()
+	storage, ok := backupConfig.Storage[storageName]
 	if !ok {
 		http.Error(w, fmt.Sprintf("Storage %s could not be found", storageName), http.StatusNotFound)
 		return
 	}
 
-	jsonResponse, err := dto.Serialize(dto.NewStorageFromModel(storage, s.config), dto.JSON)
+	jsonResponse, err := dto.Serialize(dto.NewStorageFromModel(storage, backupConfig), dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal storage",
 			slog.Any("error", err),

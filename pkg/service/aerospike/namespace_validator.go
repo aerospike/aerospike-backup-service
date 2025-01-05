@@ -20,7 +20,7 @@ type NamespaceValidator interface {
 	MissingNamespaces(cluster *model.AerospikeCluster, namespaces []string) []string
 	// ValidateRoutines verifies that all namespaces referenced in backup routines
 	// exist in their respective clusters.
-	ValidateRoutines(cluster *model.AerospikeCluster, config *model.Config) error
+	ValidateRoutines(cluster *model.AerospikeCluster, routines map[string]*model.BackupRoutine) error
 }
 
 type defaultNamespaceValidator struct {
@@ -56,10 +56,11 @@ func (nv *defaultNamespaceValidator) MissingNamespaces(
 	return util.MissingElements(namespaces, namespacesInCluster)
 }
 
-func (nv *defaultNamespaceValidator) ValidateRoutines(cluster *model.AerospikeCluster, config *model.Config) error {
+func (nv *defaultNamespaceValidator) ValidateRoutines(
+	cluster *model.AerospikeCluster, routines map[string]*model.BackupRoutine,
+) error {
 	var err error
-	routines := filterRoutinesByCluster(config.BackupRoutines, cluster)
-	for routineName, routine := range routines {
+	for routineName, routine := range filterRoutinesByCluster(routines, cluster) {
 		missingNamespaces := nv.MissingNamespaces(cluster, routine.Namespaces)
 		if len(missingNamespaces) > 0 {
 			err = errors.Join(err, fmt.Errorf("cluster is missing namespaces %v that are used in routine %v",
@@ -118,6 +119,6 @@ func (n *NoopNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ 
 }
 
 // ValidateRoutines returns nil, indicating no error in validation.
-func (n *NoopNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ *model.Config) error {
+func (n *NoopNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ map[string]*model.BackupRoutine) error {
 	return nil
 }

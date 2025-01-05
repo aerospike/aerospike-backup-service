@@ -73,7 +73,7 @@ func startService(configFile string, remote bool) error {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	appLogger := setDefaultLoggers(ctx, config)
+	appLogger := setDefaultLoggers(ctx, config.ServiceConfig.GetLoggerOrDefault())
 	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 
 	// schedule all configured backups
@@ -83,13 +83,12 @@ func startService(configFile string, remote bool) error {
 
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,
-		config,
 		backends,
 		clientManager,
 		backupHandlers,
 	)
 
-	err = configApplier.ApplyNewConfig(ctx)
+	err = configApplier.ApplyNewRoutines(ctx, config.Routines())
 	if err != nil {
 		return fmt.Errorf("failed to apply new config: %w", err)
 	}
@@ -98,7 +97,7 @@ func startService(configFile string, remote bool) error {
 	service.NewMetricsCollector(backupHandlers, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
-		backends, config, service.NewRestore(), clientManager, restoreJobs, nsValidator)
+		backends, service.NewRestore(), clientManager, restoreJobs, nsValidator)
 
 	httpService := handlers.NewService(
 		config,
@@ -121,9 +120,9 @@ func startService(configFile string, remote bool) error {
 	return err
 }
 
-func setDefaultLoggers(ctx context.Context, config *model.Config) *slog.Logger {
+func setDefaultLoggers(ctx context.Context, loggerConfig *model.LoggerConfig) *slog.Logger {
 	appLogger := slog.New(
-		util.LogHandler(config.ServiceConfig.GetLoggerOrDefault()),
+		util.LogHandler(loggerConfig),
 	)
 	slog.SetDefault(appLogger)
 	logger.SetDefault(util.NewQuartzLogger(ctx))

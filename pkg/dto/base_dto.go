@@ -84,7 +84,7 @@ func ConvertModelMapToDTO[M any, D any](modelMap map[string]*M, dtoConstructor f
 }
 
 // ConvertStorageMapToDTO converts a map of models to a map of DTOs
-func ConvertStorageMapToDTO(modelMap map[string]model.Storage, config *model.Config) map[string]*Storage {
+func ConvertStorageMapToDTO(modelMap map[string]model.Storage, config *model.BackupConfig) map[string]*Storage {
 	result := make(map[string]*Storage, len(modelMap))
 	for key, s := range modelMap {
 		result[key] = NewStorageFromModel(s, config)

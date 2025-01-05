@@ -63,7 +63,7 @@ func NewClusterFromReader(r io.Reader, format SerializationFormat) (*AerospikeCl
 	return a, nil
 }
 
-func NewClusterFromModel(m *model.AerospikeCluster, config *model.Config) *AerospikeCluster {
+func NewClusterFromModel(m *model.AerospikeCluster, config *model.BackupConfig) *AerospikeCluster {
 	if m == nil {
 		return nil
 	}
@@ -73,7 +73,7 @@ func NewClusterFromModel(m *model.AerospikeCluster, config *model.Config) *Aeros
 	return a
 }
 
-func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster, config *model.Config) {
+func (a *AerospikeCluster) fromModel(m *model.AerospikeCluster, config *model.BackupConfig) {
 	a.ClusterLabel = m.ClusterLabel
 	a.SeedNodes = make([]SeedNode, len(m.SeedNodes))
 	for i, v := range m.SeedNodes {
@@ -181,7 +181,7 @@ type Credentials struct {
 	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI"`
 }
 
-func (c *Credentials) fromModel(m *model.Credentials, config *model.Config) {
+func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
 	c.User = m.User
 	c.Password = m.Password
 	c.PasswordPath = m.PasswordPath

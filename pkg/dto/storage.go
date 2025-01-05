@@ -75,7 +75,7 @@ func (s *Storage) ToModel(c *model.Config) (model.Storage, error) {
 }
 
 // NewStorageFromModel creates a new Storage DTO from the model.
-func NewStorageFromModel(m model.Storage, config *model.Config) *Storage {
+func NewStorageFromModel(m model.Storage, config *model.BackupConfig) *Storage {
 	switch s := m.(type) {
 	case *model.LocalStorage:
 		return &Storage{
