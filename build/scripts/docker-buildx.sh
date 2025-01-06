@@ -1,6 +1,7 @@
 #!/bin/bash -e
 WORKSPACE="$(git rev-parse --show-toplevel)"
 CHANNEL="dev"
+REGISTRY="docker.io"
 TAG_LATEST=false
 TAG=""
 PLATFORMS="linux/amd64,linux/arm64"
@@ -26,6 +27,11 @@ while [[ $# -gt 0 ]]; do
     ;;
   --platforms)
     PLATFORMS="$2"
+    shift
+    shift
+    ;;
+  --registry)
+    REGISTRY="$2"
     shift
     shift
     ;;

@@ -40,6 +40,10 @@ variable PLATFORMS {
   default = "linux/amd64,linux/arm64"
 }
 
+variable REGISTRY {
+  default = "docker.io"
+}
+
 function tags {
   params = [service]
   result = LATEST == true ? [
@@ -61,6 +65,10 @@ target aerospike-backup-service {
     "org.opencontainers.image.licenses"      = "Apache-2.0"
     "org.opencontainers.image.revision"      = "${GIT_COMMIT_SHA}"
     "org.opencontainers.image.created"       = "${ISO8601}"
+  }
+
+  args = {
+    REGISTRY = "${REGISTRY}"
   }
 
   context    = "${CONTEXT}"

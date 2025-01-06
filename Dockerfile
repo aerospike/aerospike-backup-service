@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.12.0
 ARG GO_VERSION=1.23.4
-FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
-FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS builder
+ARG REGISTRY="docker.io"
+FROM --platform=$BUILDPLATFORM ${REGISTRY}/tonistiigi/xx AS xx
+FROM --platform=$BUILDPLATFORM ${REGISTRY}/golang:${GO_VERSION} AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
