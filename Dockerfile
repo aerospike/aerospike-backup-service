@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1.12.0
 ARG GO_VERSION=1.23.4
-FROM --platform=$BUILDPLATFORM tonistiigi/xx AS xx
-FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS builder
+ARG REGISTRY="docker.io"
+ARG RH_REGISTRY="registry.access.redhat.com"
+
+FROM --platform=$BUILDPLATFORM ${REGISTRY}/tonistiigi/xx AS xx
+FROM --platform=$BUILDPLATFORM ${REGISTRY}/golang:${GO_VERSION} AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -17,7 +20,7 @@ RUN <<-EOF
     xx-verify /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH}
 EOF
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+FROM ${RH_REGISTRY}/ubi9/ubi-minimal:latest
 ARG TARGETOS
 ARG TARGETARCH
 COPY --from=builder /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH} /usr/bin/aerospike-backup-service
