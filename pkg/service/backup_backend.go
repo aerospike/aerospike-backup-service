@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -21,6 +22,7 @@ import (
 // BackupBackend handles the backup management logic, employing a StorageAccessor
 // implementation for I/O operations.
 type BackupBackend struct {
+	mu          sync.RWMutex
 	storage     model.Storage
 	routineName string
 }
@@ -52,6 +54,9 @@ func lastBackupTime(b []model.BackupDetails) *time.Time {
 }
 
 func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	dataYaml, err := yaml.Marshal(metadata)
 	if err != nil {
 		return err
@@ -76,6 +81,9 @@ func (b *BackupBackend) IncrementalBackupList(ctx context.Context, timeBounds mo
 func (b *BackupBackend) readMetadataList(
 	ctx context.Context, timebounds model.TimeBounds, backupType jobType,
 ) ([]model.BackupDetails, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
 	backupRoot := getBackupRootPath(b.routineName, backupType)
 	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timebounds.FromTime)
 	if err != nil {
@@ -163,6 +171,9 @@ func (b *BackupBackend) FindIncrementalBackupsForNamespace(
 }
 
 func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
 	configBackups, err := storage.ReadFiles(context.Background(), b.storage, path, configExt, nil)
 	if err != nil {
 		return nil, err
@@ -202,4 +213,11 @@ func (b *BackupBackend) packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func (b *BackupBackend) deleteFolder(ctx context.Context, path string) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return storage.DeleteFolder(ctx, b.storage, path)
 }

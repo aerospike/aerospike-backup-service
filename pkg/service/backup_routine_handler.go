@@ -9,7 +9,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
@@ -71,6 +70,8 @@ type CancelableBackupHandler interface {
 type backupMetadataManager interface {
 	// writeBackupMetadata writes backup metadata to storage after successful backup.
 	writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
+	// DeleteFolder deletes a folder with backup data.
+	deleteFolder(ctx context.Context, path string) error
 }
 
 // ClusterConfigWriter handles writing cluster configuration to storage.
@@ -278,7 +279,7 @@ func (h *BackupRoutineHandler) writeBackupMetadata(
 }
 
 func (h *BackupRoutineHandler) deleteFolder(ctx context.Context, path string) {
-	err := storage.DeleteFolder(ctx, h.storage, path)
+	err := h.metadataWriter.deleteFolder(ctx, path)
 	if err != nil {
 		h.logger.Error("Could not delete folder", slog.Any("err", err))
 	}

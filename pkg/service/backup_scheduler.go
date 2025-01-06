@@ -31,26 +31,14 @@ type Scheduler interface {
 var jobStore = &backupJobs{jobs: make(map[string]*quartz.JobDetail)}
 
 type backupJobs struct {
-	sync.Mutex
+	sync.RWMutex
 	jobs map[string]*quartz.JobDetail
-}
-
-func (b *backupJobs) put(key string, value *quartz.JobDetail) {
-	b.Lock()
-	defer b.Unlock()
-	b.jobs[key] = value
-}
-
-func (b *backupJobs) clear() {
-	b.Lock()
-	defer b.Unlock()
-	clear(b.jobs)
 }
 
 // NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
 func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
-	jobStore.Lock()
-	defer jobStore.Unlock()
+	jobStore.RLock()
+	defer jobStore.RUnlock()
 
 	key := jobKey(routineName, jobTypeFull).String()
 	job := jobStore.jobs[key]
@@ -79,7 +67,9 @@ func NewScheduler(ctx context.Context) quartz.Scheduler {
 func scheduleRoutines(
 	scheduler Scheduler, routines map[string]*model.BackupRoutine, handlers BackupHandlerHolder,
 ) error {
-	jobStore.clear()
+	jobStore.Lock()
+	defer jobStore.Unlock()
+	clear(jobStore.jobs)
 
 	var errs error
 	for routineName, routine := range routines {
@@ -107,7 +97,8 @@ func scheduleFullBackup(
 	scheduler Scheduler, handler backupRunner, interval string, routineName string,
 ) error {
 	job := createJobDetail(handler, routineName, jobTypeFull)
-	jobStore.put(job.JobKey().String(), job)
+	key := job.JobKey().String()
+	jobStore.jobs[key] = job
 	return schedule(scheduler, interval, job)
 }
 

@@ -71,6 +71,11 @@ type mockMetadataWriter struct {
 	mock.Mock
 }
 
+func (m *mockMetadataWriter) deleteFolder(ctx context.Context, path string) error {
+	args := m.Called(ctx, path)
+	return args.Error(0)
+}
+
 func (m *mockMetadataWriter) writeBackupMetadata(
 	ctx context.Context, path string, metadata model.BackupMetadata,
 ) error {
@@ -207,6 +212,7 @@ func TestRunFullBackupInternal_WaitError(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	).Return(backupHandler, nil)
+	metadataWriter.On("deleteFolder", mock.Anything, mock.Anything).Return(nil)
 
 	handler.runFullBackup(context.Background(), time.Now())
 
@@ -333,6 +339,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	).Return(nil)
+	metadataWriter.On("deleteFolder", mock.Anything, mock.Anything).Return(nil)
 
 	handler.runIncrementalBackup(context.Background(), now)
 
@@ -388,6 +395,7 @@ func TestRunFullBackup_PartialFailure(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	).Return(nil).Times(1) // Only for ns1
+	metadataWriter.On("deleteFolder", mock.Anything, mock.Anything).Return(nil)
 	retentionManager.On("deleteOldBackups", mock.Anything).Return(nil)
 
 	// Run full backup and expect an error for one of the namespaces
