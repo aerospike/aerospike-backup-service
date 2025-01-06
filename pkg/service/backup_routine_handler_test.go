@@ -212,6 +212,7 @@ func TestRunFullBackupInternal_WaitError(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	).Return(backupHandler, nil)
+	metadataWriter.On("deleteFolder", mock.Anything, mock.Anything).Return(nil)
 
 	handler.runFullBackup(context.Background(), time.Now())
 
@@ -338,6 +339,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	).Return(nil)
+	metadataWriter.On("deleteFolder", mock.Anything, mock.Anything).Return(nil)
 
 	handler.runIncrementalBackup(context.Background(), now)
 
@@ -393,6 +395,7 @@ func TestRunFullBackup_PartialFailure(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 	).Return(nil).Times(1) // Only for ns1
+	metadataWriter.On("deleteFolder", mock.Anything, mock.Anything).Return(nil)
 	retentionManager.On("deleteOldBackups", mock.Anything).Return(nil)
 
 	// Run full backup and expect an error for one of the namespaces
