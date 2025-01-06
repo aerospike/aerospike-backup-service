@@ -2,6 +2,7 @@
 WORKSPACE="$(git rev-parse --show-toplevel)"
 CHANNEL="dev"
 REGISTRY="docker.io"
+RH_REGISTRY="registry.access.redhat.com"
 TAG_LATEST=false
 TAG=""
 PLATFORMS="linux/amd64,linux/arm64"
@@ -35,6 +36,11 @@ while [[ $# -gt 0 ]]; do
     shift
     shift
     ;;
+  --rh-registry)
+    RH_REGISTRY="$2"
+    shift
+    shift
+    ;;
   -* | --*)
     echo "Unknown option $1"
     exit 1
@@ -65,6 +71,8 @@ docker login aerospike.jfrog.io -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 PLATFORMS="$PLATFORMS" \
 TAG="$TAG" \
 HUB="$HUB" \
+REGISTRY="$REGISTRY" \
+RH_REGISTRY="$RH_REGISTRY" \
 LATEST="$TAG_LATEST" \
 GIT_BRANCH="$(git rev-parse --abbrev-ref HEAD)" \
 GIT_COMMIT_SHA="$(git rev-parse HEAD)" \

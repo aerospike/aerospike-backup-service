@@ -27,6 +27,7 @@ NFPM ?= $(shell which nfpm)
 OS ?= $($(GO) env GOOS)
 ARCH ?= $($(GO) env GOARCH)
 REGISTRY ?= "docker.io"
+RH_REGISTRY ?= "registry.access.redhat.com"
 GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) $(GO) build \
 -ldflags="-X main.commit=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
 GOTEST = $(GO) test
@@ -84,11 +85,11 @@ checksums:
 
 .PHONY: docker-build
 docker-build:
-	 docker build --tag aerospike/aerospike-backup-service:$(TAG) --build-arg REGISTRY=$(REGISTRY) --file $(WORKSPACE)/Dockerfile .
+	 docker build --tag aerospike/aerospike-backup-service:$(TAG) --build-arg REGISTRY=$(REGISTRY) --build-arg RH_REGISTRY=$(RH_REGISTRY) --file $(WORKSPACE)/Dockerfile .
 
 .PHONY: docker-buildx
 docker-buildx:
-	cd ./build/scripts && ./docker-buildx.sh --tag $(TAG) --registry $(REGISTRY)
+	cd ./build/scripts && ./docker-buildx.sh --tag $(TAG) --registry $(REGISTRY) --rh-registry $(RH_REGISTRY)
 
 .PHONY: test
 test:

@@ -44,6 +44,10 @@ variable REGISTRY {
   default = "docker.io"
 }
 
+variable RH_REGISTRY {
+  default = "registry.access.redhat.com"
+}
+
 function tags {
   params = [service]
   result = LATEST == true ? [
@@ -69,6 +73,7 @@ target aerospike-backup-service {
 
   args = {
     REGISTRY = "${REGISTRY}"
+    RH_REGISTRY = "${RH_REGISTRY}"
   }
 
   context    = "${CONTEXT}"
