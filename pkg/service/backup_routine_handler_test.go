@@ -71,6 +71,11 @@ type mockMetadataWriter struct {
 	mock.Mock
 }
 
+func (m *mockMetadataWriter) deleteFolder(ctx context.Context, path string) error {
+	args := m.Called(ctx, path)
+	return args.Error(0)
+}
+
 func (m *mockMetadataWriter) writeBackupMetadata(
 	ctx context.Context, path string, metadata model.BackupMetadata,
 ) error {
