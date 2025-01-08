@@ -20,7 +20,7 @@ type jobInfo struct {
 }
 
 type RestoreJobsHolder struct {
-	sync.Mutex
+	sync.RWMutex
 	jobs map[model.RestoreJobID]*jobInfo
 }
 
@@ -83,8 +83,8 @@ func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
 }
 
 func (h *RestoreJobsHolder) getStatus(id model.RestoreJobID) (*model.RestoreJobStatus, error) {
-	h.Lock()
-	defer h.Unlock()
+	h.RLock()
+	defer h.RUnlock()
 	if job, exists := h.jobs[id]; exists {
 		return RestoreJobStatus(job), nil
 	}
@@ -92,8 +92,8 @@ func (h *RestoreJobsHolder) getStatus(id model.RestoreJobID) (*model.RestoreJobS
 }
 
 func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*jobInfo, error) {
-	h.Lock()
-	defer h.Unlock()
+	h.RLock()
+	defer h.RUnlock()
 	if job, exists := h.jobs[id]; exists {
 		return job, nil
 	}

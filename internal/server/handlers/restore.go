@@ -191,13 +191,14 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "RestoreStatusHandler"))
-
 	jobID, err := extractJobID(r)
 	if err != nil {
 		hLogger.Error("failed to extract job id", slog.Any("error", err))
 		http.Error(w, "failed to extract job id", http.StatusBadRequest)
 		return
 	}
+
+	hLogger.Info("Restore status request", slog.Any("jobID", jobID))
 	w.Header().Set("Content-Type", "application/json")
 	status, err := s.restoreManager.JobStatus(jobID)
 	if err != nil {
