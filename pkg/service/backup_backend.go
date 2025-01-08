@@ -94,7 +94,9 @@ func (b *BackupBackend) readMetadataList(
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	slog.Info("readMetadataList after lock", slog.Any("id", id))
+	slog.Info("readMetadataList after lock",
+		slog.String("routineName", b.routineName),
+		slog.Any("id", id))
 
 	backupRoot := getBackupRootPath(b.routineName, backupType)
 	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timebounds.FromTime)
@@ -105,7 +107,10 @@ func (b *BackupBackend) readMetadataList(
 		return nil, fmt.Errorf("read metadata files error: %w", err)
 	}
 
-	slog.Info("readMetadataList read files", slog.Any("id", id), slog.Any("files", len(files)))
+	slog.Info("readMetadataList read files",
+		slog.String("routineName", b.routineName),
+		slog.Any("id", id),
+		slog.Any("files", len(files)))
 
 	var backups []model.BackupDetails
 	for _, buf := range files {
