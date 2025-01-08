@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
@@ -83,39 +81,17 @@ func (b *BackupBackend) IncrementalBackupList(ctx context.Context, timeBounds mo
 func (b *BackupBackend) readMetadataList(
 	ctx context.Context, timebounds model.TimeBounds, backupType jobType,
 ) ([]model.BackupDetails, error) {
-	id := rand.Int()
-	slog.Info("readMetadataList",
-		slog.String("routineName", b.routineName),
-		slog.Any("timeBounds", timebounds),
-		slog.Any("jobType", backupType),
-		slog.Any("id", id),
-	)
-
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-
-	slog.Info("readMetadataList after lock",
-		slog.String("routineName", b.routineName),
-		slog.Any("id", id))
 
 	backupRoot := getBackupRootPath(b.routineName, backupType)
 	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timebounds.FromTime)
 	if err != nil {
-		slog.Info("readMetadataList error",
-			slog.String("routineName", b.routineName),
-			slog.Any("error", err),
-			slog.Any("id", id))
-
 		if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "is empty") {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("read metadata files error: %w", err)
 	}
-
-	slog.Info("readMetadataList read files",
-		slog.String("routineName", b.routineName),
-		slog.Any("id", id),
-		slog.Any("files", len(files)))
 
 	var backups []model.BackupDetails
 	for _, buf := range files {
@@ -132,7 +108,6 @@ func (b *BackupBackend) readMetadataList(
 		}
 	}
 
-	slog.Info("readMetadataList return", slog.Any("id", id), slog.Any("backups", len(backups)))
 	return backups, nil
 }
 

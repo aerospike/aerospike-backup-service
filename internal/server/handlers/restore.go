@@ -229,6 +229,7 @@ func (s *Service) RestoreStatusHandler(w http.ResponseWriter, r *http.Request) {
 			slog.Any("error", err),
 		)
 	}
+	hLogger.Info("restore status", slog.String("status", string(jsonResponse)))
 }
 
 func extractJobID(r *http.Request) (model.RestoreJobID, error) {
