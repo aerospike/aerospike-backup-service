@@ -35,7 +35,7 @@ func (a *S3StorageAccessor) createReader(
 	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, startScanFrom string,
 ) (backup.StreamingReader, error) {
 	s3s := storage.(*model.S3Storage)
-	client, err := getS3Client(ctx, s3s)
+	client, err := a.getS3ClientWithCache(ctx, s3s)
 	if err != nil {
 		return nil, err
 	}

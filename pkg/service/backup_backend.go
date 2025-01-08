@@ -101,6 +101,11 @@ func (b *BackupBackend) readMetadataList(
 	backupRoot := getBackupRootPath(b.routineName, backupType)
 	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timebounds.FromTime)
 	if err != nil {
+		slog.Info("readMetadataList error",
+			slog.String("routineName", b.routineName),
+			slog.Any("error", err),
+			slog.Any("id", id))
+
 		if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "is empty") {
 			return nil, nil
 		}
