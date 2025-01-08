@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -85,6 +86,7 @@ func init() {
 }
 
 type MetricsCollector struct {
+	sync.Mutex
 	backupHandler BackupHandlerHolder
 	jobsHolder    *RestoreJobsHolder
 }
@@ -113,6 +115,9 @@ func (mc *MetricsCollector) Start(ctx context.Context, duration time.Duration) {
 }
 
 func (mc *MetricsCollector) collectMetrics() {
+	mc.Lock()
+	defer mc.Unlock()
+
 	mc.collectBackupMetrics()
 	mc.collectRestoreMetrics()
 }
@@ -138,8 +143,8 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 func (mc *MetricsCollector) collectRestoreMetrics() {
 	restoreProgress.Reset()
 
-	mc.jobsHolder.Lock()
-	defer mc.jobsHolder.Unlock()
+	mc.jobsHolder.RLock()
+	defer mc.jobsHolder.RUnlock()
 
 	for _, job := range mc.jobsHolder.jobs {
 		restore := RestoreJobStatus(job).CurrentRestore // CurrentRestore exists only for running jobs
