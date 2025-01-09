@@ -32,7 +32,6 @@ var jobStore = util.NewSafeMap[string, *quartz.JobDetail]()
 
 // NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
 func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
-
 	key := jobKey(routineName, jobTypeFull).String()
 	job, found := jobStore.Load(key)
 	if !found {

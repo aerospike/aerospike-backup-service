@@ -80,7 +80,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 		}
 		defer r.clientManager.Close(client)
 
-		if err := r.validateDestinationNamespace(request, jobID); err != nil {
+		if err := r.validateDestinationNamespace(request); err != nil {
 			r.restoreJobs.finishJob(jobID, err)
 			return
 		}
@@ -106,7 +106,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 }
 
 // validateDestinationNamespace checks if destination cluster contains namespace from restore request (if it is set).
-func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest, jobID model.RestoreJobID) error {
+func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest) error {
 	if request.Policy.Namespace != nil {
 		missingNamespaces := r.nsValidator.MissingNamespaces(
 			request.DestinationCluster, []string{*request.Policy.Namespace.Destination})

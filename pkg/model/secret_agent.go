@@ -59,7 +59,7 @@ func (s *SecretAgent) Read(path string) (string, error) {
 	// Initialize cache only once.
 	s.once.Do(func() {
 		agentConfig := s.ToSecretAgentConfig()
-		readFromSecretAgentfunc := func(key string) (string, error) {
+		readFromSecretAgentfunc := func(_ context.Context, key string) (string, error) {
 			secret, err := backup.ParseSecret(agentConfig, key)
 			if err != nil {
 				return "", fmt.Errorf("failed to read secret %q from %s: %w", key, s.Address, err)
