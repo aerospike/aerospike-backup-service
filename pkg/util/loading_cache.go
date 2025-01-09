@@ -7,7 +7,7 @@ import (
 )
 
 // LoadFunc is the LoadingCache value loader.
-type LoadFunc[K comparable, T any] func(K) (T, error)
+type LoadFunc[K comparable, T any] func(context.Context, K) (T, error)
 
 // LoadingCache maps keys to values where values are automatically
 // loaded by the cache.
@@ -34,6 +34,12 @@ func NewLoadingCache[K comparable, T any](ctx context.Context,
 // Get retrieves or loads the value for the specified key and stores
 // it in the cache.
 func (c *LoadingCache[K, T]) Get(key K) (T, error) {
+	return c.GetWithContext(c.ctx, key)
+}
+
+// GetWithContext retrieves or loads the value for the specified key and stores
+// it in the cache.
+func (c *LoadingCache[K, T]) GetWithContext(ctx context.Context, key K) (T, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -42,7 +48,7 @@ func (c *LoadingCache[K, T]) Get(key K) (T, error) {
 		return val, nil
 	}
 
-	loadedValue, err := c.loadFunc(key)
+	loadedValue, err := c.loadFunc(ctx, key)
 	if err != nil {
 		return loadedValue, err
 	}

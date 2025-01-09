@@ -94,7 +94,11 @@ type backupRunner interface {
 var _ backupRunner = (*BackupRoutineHandler)(nil)
 
 // BackupHandlerHolder stores backupRunners by routine name
-type BackupHandlerHolder map[string]backupRunner
+type BackupHandlerHolder = *util.SafeMap[string, backupRunner]
+
+func NewBackupHandlerHolder() BackupHandlerHolder {
+	return util.NewSafeMap[string, backupRunner]()
+}
 
 // newBackupRoutineHandler returns a new BackupRoutineHandler instance.
 func newBackupRoutineHandler(
@@ -163,6 +167,8 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		clear(h.fullBackupHandlers)
 	}()
 
+	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
+
 	for _, namespace := range namespaces {
 		h.fullBackupHandlers[namespace] = h.startNamespaceBackup(ctx, namespace, now, client)
 	}
@@ -174,12 +180,15 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 
 	h.lastRun.SetFullBackupTime(&now)
 
-	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
-
-	err = h.retentionManager.deleteOldBackups(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to clean up old backups: %w", err)
-	}
+	go func() {
+		// Clean up old backups asynchronously.
+		// At this moment backup is already completed, but backupJob.isRunning flag is still set,
+		// potentially blocking subsequent backup executions.
+		err = h.retentionManager.deleteOldBackups(ctx)
+		if err != nil {
+			h.logger.Error("failed to clean up old backups", slog.Any("error", err))
+		}
+	}()
 
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -18,6 +19,7 @@ type RetentionManager interface {
 }
 
 type RetentionManagerImpl struct {
+	mu          sync.Mutex
 	backend     BackupListReader
 	storage     model.Storage
 	routineName string
@@ -39,6 +41,11 @@ func NewBackupRetentionManager(
 }
 
 func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context) error {
+	if !e.mu.TryLock() { // If delete operation already in progress, skip this iteration.
+		return nil
+	}
+	defer e.mu.Unlock()
+
 	if e.policy == nil || (e.policy.FullBackups == nil && e.policy.IncrBackups == nil) {
 		return nil // Retention policy is not enabled, do nothing.
 	}

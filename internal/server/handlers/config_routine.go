@@ -263,7 +263,7 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	_, ok := s.handlerHolder[routineName]
+	_, ok := s.handlerHolder.Load(routineName)
 	if !ok {
 		hLogger.Error("unknown routine name", slog.String("name", routineName))
 		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)
@@ -303,7 +303,7 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	handler, found := s.handlerHolder[routineName]
+	handler, found := s.handlerHolder.Load(routineName)
 	if !found {
 		hLogger.Error("unknown routine name", slog.String("name", routineName))
 		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)

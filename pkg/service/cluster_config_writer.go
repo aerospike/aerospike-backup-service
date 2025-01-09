@@ -51,5 +51,6 @@ func (w *DefaultClusterConfigWriter) Write(
 			w.logger.Error("Failed to write cluster configuration backup",
 				slog.Any("err", err))
 		}
+		w.logger.Debug("Wrote cluster configuration backup", slog.String("path", confFilePath))
 	}
 }

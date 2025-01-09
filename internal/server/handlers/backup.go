@@ -148,12 +148,11 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
+	hLogger = hLogger.With(slog.String("routine", routine))
 	reader, found := s.backupBackends.GetReader(routine)
 	if !found {
-		hLogger.Error("routine name not found",
-			slog.String("routine", routine),
-		)
-		http.Error(w, "routine name not found: "+routine, http.StatusBadRequest)
+		hLogger.Error("routine not found")
+		http.Error(w, "routine not found: "+routine, http.StatusBadRequest)
 		return
 	}
 
@@ -161,7 +160,6 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	backups, err := backupListFunction(r.Context(), timeBounds.ToModel())
 	if err != nil {
 		hLogger.Error("failed to retrieve backup list",
-			slog.String("routine", routine),
 			slog.Bool("isFullBackup", isFullBackup),
 			slog.Any("timeBounds", timeBounds),
 			slog.Any("error", err),
@@ -303,7 +301,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler, found := s.handlerHolder[routineName]
+	handler, found := s.handlerHolder.Load(routineName)
 	if !found {
 		hLogger.Error("unknown routine name",
 			slog.String("name", routineName),
@@ -352,7 +350,7 @@ func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler, found := s.handlerHolder[routineName]
+	handler, found := s.handlerHolder.Load(routineName)
 	if !found {
 		hLogger.Error("unknown routine name",
 			slog.String("name", routineName),

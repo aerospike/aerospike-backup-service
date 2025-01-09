@@ -31,10 +31,11 @@ func TestDisabledRoutine(t *testing.T) {
 	_ = config.AddRoutine("routine1", &model.BackupRoutine{Disabled: true})
 	_ = config.AddRoutine("routine2", &model.BackupRoutine{IntervalCron: "@daily"})
 
-	handlers := BackupHandlerHolder{
+	handlers := NewBackupHandlerHolder()
+	handlers.ReplaceContent(map[string]backupRunner{
 		"routine1": &BackupRoutineHandler{},
 		"routine2": &BackupRoutineHandler{lastRun: model.NewLastBackupRun(util.Ptr(time.Now()), nil)},
-	}
+	})
 
 	err := scheduleRoutines(mockScheduler, config.Routines(), handlers)
 
@@ -65,11 +66,12 @@ func (m *MockBackupRunner) CurrentStat() *model.CurrentBackups {
 }
 
 func TestScheduleRoutines(t *testing.T) {
-	holder := BackupHandlerHolder{
+	handlers := NewBackupHandlerHolder()
+	handlers.ReplaceContent(map[string]backupRunner{
 		"routine":          &MockBackupRunner{},
 		"disabled-routine": &MockBackupRunner{},
 		"full-only":        &MockBackupRunner{},
-	}
+	})
 	tests := []struct {
 		name              string
 		routines          map[string]*model.BackupRoutine
@@ -116,11 +118,11 @@ func TestScheduleRoutines(t *testing.T) {
 			scheduler := new(MockScheduler)
 			scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
 
-			err := scheduleRoutines(scheduler, tt.routines, holder)
+			err := scheduleRoutines(scheduler, tt.routines, handlers)
 
 			require.NoError(t, err)
 			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)
-			require.Equal(t, len(jobStore.jobs), tt.expectedJobsAdded)
+			require.Equal(t, jobStore.Size(), tt.expectedJobsAdded)
 		})
 	}
 }

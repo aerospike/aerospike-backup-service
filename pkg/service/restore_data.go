@@ -80,7 +80,8 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 		}
 		defer r.clientManager.Close(client)
 
-		if r.validateDestinationNamespace(request, jobID) {
+		if err := r.validateDestinationNamespace(request); err != nil {
+			r.restoreJobs.finishJob(jobID, err)
 			return
 		}
 
@@ -91,7 +92,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 		}
 		r.restoreJobs.addTotalRecords(jobID, totalRecords)
 		ctx, cancel := context.WithCancel(ctx)
-		r.restoreJobs.addJob(jobID, &RestoreHandlerWithCancel{
+		r.restoreJobs.addHandler(jobID, &RestoreHandlerWithCancel{
 			RestoreHandler: handler,
 			cancel:         cancel,
 		})
@@ -105,7 +106,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 }
 
 // validateDestinationNamespace checks if destination cluster contains namespace from restore request (if it is set).
-func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest, jobID model.RestoreJobID) bool {
+func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest) error {
 	if request.Policy.Namespace != nil {
 		missingNamespaces := r.nsValidator.MissingNamespaces(
 			request.DestinationCluster, []string{*request.Policy.Namespace.Destination})
@@ -115,12 +116,11 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 			slog.Error("Failed to restore by path",
 				slog.Any("cluster label", request.DestinationCluster.ClusterLabel),
 				slog.Any("err", err))
-			r.restoreJobs.finishJob(jobID, err)
-			return true
+			return err
 		}
 	}
 
-	return false
+	return nil
 }
 
 func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
@@ -209,7 +209,7 @@ func (r *dataRestorer) restoreNamespace(
 
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 		ctx, cancel := context.WithCancel(ctx)
-		r.restoreJobs.addJob(jobID, &RestoreHandlerWithCancel{
+		r.restoreJobs.addHandler(jobID, &RestoreHandlerWithCancel{
 			RestoreHandler: handler,
 			cancel:         cancel,
 		})

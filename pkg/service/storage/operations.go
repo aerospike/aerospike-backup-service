@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"path/filepath"
 	"strconv"
@@ -56,7 +57,7 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 
 	reader, err := CreateReader(ctx, storage, path, false, newNameValidator(filterStr), startScanFrom)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}
 
 	readersCh := make(chan io.ReadCloser, 1)
@@ -94,12 +95,12 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 func WriteFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {
 	writer, err := CreateWriter(ctx, storage, fileName, true, false, false)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create writer: %w", err)
 	}
 
 	w, err := writer.NewWriter(ctx, "")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create file: %w", err)
 	}
 	defer w.Close()
 

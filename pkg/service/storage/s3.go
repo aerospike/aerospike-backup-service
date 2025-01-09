@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/aws/s3"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -14,7 +15,15 @@ import (
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-type S3StorageAccessor struct{}
+type S3StorageAccessor struct {
+	clientMap *util.LoadingCache[*model.S3Storage, *awsS3.Client]
+}
+
+func NewS3StorageAccessor() *S3StorageAccessor {
+	return &S3StorageAccessor{
+		clientMap: util.NewLoadingCache[*model.S3Storage, *awsS3.Client](context.Background(), getS3Client),
+	}
+}
 
 func (a *S3StorageAccessor) supports(storage model.Storage) bool {
 	_, ok := storage.(*model.S3Storage)
@@ -25,7 +34,7 @@ func (a *S3StorageAccessor) createReader(
 	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, startScanFrom string,
 ) (backup.StreamingReader, error) {
 	s3s := storage.(*model.S3Storage)
-	client, err := getS3Client(ctx, s3s)
+	client, err := a.clientMap.GetWithContext(ctx, s3s)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +56,7 @@ func (a *S3StorageAccessor) createWriter(
 	ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool,
 ) (backup.Writer, error) {
 	s3s := storage.(*model.S3Storage)
-	client, err := getS3Client(ctx, s3s)
+	client, err := a.clientMap.GetWithContext(ctx, s3s)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +77,7 @@ func (a *S3StorageAccessor) createWriter(
 }
 
 func init() {
-	registerAccessor(&S3StorageAccessor{})
+	registerAccessor(NewS3StorageAccessor())
 }
 
 func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error) {

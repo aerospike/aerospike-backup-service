@@ -79,7 +79,7 @@ func startService(configFile string, remote bool) error {
 	// schedule all configured backups
 	backends := service.NewBackupBackends()
 	scheduler := service.NewScheduler(ctx)
-	backupHandlers := make(service.BackupHandlerHolder)
+	backupHandlers := service.NewBackupHandlerHolder()
 
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,

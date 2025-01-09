@@ -106,8 +106,8 @@ func makeWritePolicy(restoreRequest *model.RestoreRequest) *a.WritePolicy {
 	writePolicy.RecordExistsAction = recordExistsAction(
 		restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
 
-	writePolicy.SocketTimeout = restoreRequest.Policy.GetSocketTimeoutOrDefault()
-	writePolicy.TotalTimeout = restoreRequest.Policy.GetTotalTimeoutOrDefault()
+	writePolicy.SocketTimeout = util.ValueOrZero(restoreRequest.Policy.SocketTimeout)
+	writePolicy.TotalTimeout = util.ValueOrZero(restoreRequest.Policy.TotalTimeout)
 	writePolicy.MaxRetries = int(restoreRequest.Policy.GetRetryPolicyOrDefault().MaxRetries)
 
 	return writePolicy

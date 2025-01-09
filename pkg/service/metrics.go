@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -85,15 +87,16 @@ func init() {
 }
 
 type MetricsCollector struct {
-	backupHandler BackupHandlerHolder
-	jobsHolder    *RestoreJobsHolder
+	mu       sync.Mutex
+	backups  BackupHandlerHolder
+	restores *RestoreJobsHolder
 }
 
 // NewMetricsCollector creates a new MetricsCollector
 func NewMetricsCollector(bh BackupHandlerHolder, jh *RestoreJobsHolder) *MetricsCollector {
 	return &MetricsCollector{
-		backupHandler: bh,
-		jobsHolder:    jh,
+		backups:  bh,
+		restores: jh,
 	}
 }
 
@@ -113,6 +116,9 @@ func (mc *MetricsCollector) Start(ctx context.Context, duration time.Duration) {
 }
 
 func (mc *MetricsCollector) collectMetrics() {
+	mc.mu.Lock()
+	defer mc.mu.Unlock()
+
 	mc.collectBackupMetrics()
 	mc.collectRestoreMetrics()
 }
@@ -120,7 +126,7 @@ func (mc *MetricsCollector) collectMetrics() {
 func (mc *MetricsCollector) collectBackupMetrics() {
 	backupProgress.Reset()
 
-	for routineName, handler := range mc.backupHandler {
+	mc.backups.Iterate(func(routineName string, handler backupRunner) {
 		currentStat := handler.CurrentStat()
 
 		// Update Full backup metric if running
@@ -132,19 +138,16 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 		if currentStat.Incremental != nil {
 			backupProgress.WithLabelValues(routineName, "Incremental").Set(float64(currentStat.Incremental.PercentageDone))
 		}
-	}
+	})
 }
 
 func (mc *MetricsCollector) collectRestoreMetrics() {
 	restoreProgress.Reset()
 
-	mc.jobsHolder.Lock()
-	defer mc.jobsHolder.Unlock()
-
-	for _, job := range mc.jobsHolder.jobs {
+	mc.restores.Iterate(func(_ model.RestoreJobID, job *jobInfo) {
 		restore := RestoreJobStatus(job).CurrentRestore // CurrentRestore exists only for running jobs
 		if restore != nil {
 			restoreProgress.WithLabelValues(job.label).Set(float64(restore.PercentageDone))
 		}
-	}
+	})
 }
