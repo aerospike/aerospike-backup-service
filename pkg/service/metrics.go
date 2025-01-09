@@ -87,7 +87,7 @@ func init() {
 }
 
 type MetricsCollector struct {
-	sync.Mutex
+	mu       sync.Mutex
 	backups  BackupHandlerHolder
 	restores *RestoreJobsHolder
 }
@@ -116,8 +116,8 @@ func (mc *MetricsCollector) Start(ctx context.Context, duration time.Duration) {
 }
 
 func (mc *MetricsCollector) collectMetrics() {
-	mc.Lock()
-	defer mc.Unlock()
+	mc.mu.Lock()
+	defer mc.mu.Unlock()
 
 	mc.collectBackupMetrics()
 	mc.collectRestoreMetrics()
