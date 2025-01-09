@@ -65,7 +65,11 @@ func scheduleRoutines(
 		if routine.Disabled {
 			continue
 		}
-		handler, _ := handlers.Load(routineName)
+		handler, found := handlers.Load(routineName)
+		if !found {
+			errs = errors.Join(errs, fmt.Errorf("handler not found for routine %q", routineName))
+			continue
+		}
 
 		// schedule a full backup job for the routine
 		job, err := scheduleFullBackup(scheduler, handler, routine.IntervalCron, routineName)
