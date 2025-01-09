@@ -148,17 +148,11 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	if isFullBackup {
-		hLogger.Info("reading full backups", slog.String("routine", routine))
-	} else {
-		hLogger.Info("reading incremental backups", slog.String("routine", routine))
-	}
+	hLogger = hLogger.With(slog.String("routine", routine))
 	reader, found := s.backupBackends.GetReader(routine)
 	if !found {
-		hLogger.Error("routine name not found",
-			slog.String("routine", routine),
-		)
-		http.Error(w, "routine name not found: "+routine, http.StatusBadRequest)
+		hLogger.Error("routine not found")
+		http.Error(w, "routine not found: "+routine, http.StatusBadRequest)
 		return
 	}
 
@@ -166,7 +160,6 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 	backups, err := backupListFunction(r.Context(), timeBounds.ToModel())
 	if err != nil {
 		hLogger.Error("failed to retrieve backup list",
-			slog.String("routine", routine),
 			slog.Bool("isFullBackup", isFullBackup),
 			slog.Any("timeBounds", timeBounds),
 			slog.Any("error", err),
@@ -196,7 +189,6 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 			slog.Any("error", err),
 		)
 	}
-	hLogger.Info("successfully read backup list", "response", string(response))
 }
 
 func readBackupsLogic(ctx context.Context,
