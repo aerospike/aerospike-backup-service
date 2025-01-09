@@ -74,6 +74,18 @@ func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
 	})
 }
 
+func (h *RestoreJobsHolder) getStatus(id model.RestoreJobID) (*model.RestoreJobStatus, error) {
+	var result *model.RestoreJobStatus
+	h.Apply(id, func(value *jobInfo) {
+		result = RestoreJobStatus(value)
+	})
+
+	if result != nil {
+		return result, nil
+	}
+	return nil, NewErrJobNotFound(id)
+}
+
 func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*jobInfo, error) {
 	if job, exists := h.Load(id); exists {
 		return job, nil

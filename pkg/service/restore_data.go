@@ -247,12 +247,7 @@ func (r *dataRestorer) restoreFromPath(
 
 // JobStatus returns the status of the job with the given id.
 func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
-	job, err := r.restoreJobs.getJob(jobID)
-	if err != nil {
-		return nil, err
-	}
-
-	return RestoreJobStatus(job), nil
+	return r.restoreJobs.getStatus(jobID)
 }
 
 func recordsInBackup(ctx context.Context, request *model.RestoreRequest) (uint64, error) {
