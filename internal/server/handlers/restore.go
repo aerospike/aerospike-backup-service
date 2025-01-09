@@ -280,6 +280,9 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hLogger.Info("Retrieving configuration",
+		slog.String("routine", name),
+		slog.Int64("timestamp", timestamp))
 	buf, err := s.restoreManager.RetrieveConfiguration(name, time.UnixMilli(timestamp))
 	if err != nil {
 		hLogger.Error("failed to retrieve config",
