@@ -94,7 +94,7 @@ func startService(configFile string, remote bool) error {
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()
-	service.NewMetricsCollector(backupHandlers, restoreJobs).Start(ctx, 5*time.Second)
+	service.NewMetricsCollector(backupHandlers, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
 		backends, service.NewRestore(), clientManager, restoreJobs, nsValidator)
