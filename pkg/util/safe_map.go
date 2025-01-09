@@ -17,6 +17,11 @@ func NewSafeMap[K comparable, V any]() *SafeMap[K, V] {
 
 // Load retrieves a value by key.
 func (s *SafeMap[K, V]) Load(key K) (V, bool) {
+	if s == nil {
+		var zeroValue V
+		return zeroValue, false
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	value, ok := s.m[key]
