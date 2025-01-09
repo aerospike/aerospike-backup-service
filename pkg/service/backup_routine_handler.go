@@ -167,6 +167,8 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		clear(h.fullBackupHandlers)
 	}()
 
+	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
+
 	for _, namespace := range namespaces {
 		h.fullBackupHandlers[namespace] = h.startNamespaceBackup(ctx, namespace, now, client)
 	}
@@ -177,8 +179,6 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 	}
 
 	h.lastRun.SetFullBackupTime(&now)
-
-	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
 	err = h.retentionManager.deleteOldBackups(ctx)
 	if err != nil {
