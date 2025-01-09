@@ -94,7 +94,11 @@ type backupRunner interface {
 var _ backupRunner = (*BackupRoutineHandler)(nil)
 
 // BackupHandlerHolder stores backupRunners by routine name
-type BackupHandlerHolder map[string]backupRunner
+type BackupHandlerHolder = *util.SafeMap[string, backupRunner]
+
+func NewBackupHandlerHolder() BackupHandlerHolder {
+	return util.NewSafeMap[string, backupRunner]()
+}
 
 // newBackupRoutineHandler returns a new BackupRoutineHandler instance.
 func newBackupRoutineHandler(

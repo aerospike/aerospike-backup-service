@@ -76,7 +76,7 @@ func scheduleRoutines(
 		if routine.Disabled {
 			continue
 		}
-		handler := handlers[routineName]
+		handler, _ := handlers.Load(routineName)
 
 		// schedule a full backup job for the routine
 		if err := scheduleFullBackup(scheduler, handler, routine.IntervalCron, routineName); err != nil {

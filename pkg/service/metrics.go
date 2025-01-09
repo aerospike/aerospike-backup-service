@@ -125,7 +125,7 @@ func (mc *MetricsCollector) collectMetrics() {
 func (mc *MetricsCollector) collectBackupMetrics() {
 	backupProgress.Reset()
 
-	for routineName, handler := range mc.backupHandler {
+	mc.backupHandler.Iterate(func(routineName string, handler backupRunner) {
 		currentStat := handler.CurrentStat()
 
 		// Update Full backup metric if running
@@ -137,7 +137,7 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 		if currentStat.Incremental != nil {
 			backupProgress.WithLabelValues(routineName, "Incremental").Set(float64(currentStat.Incremental.PercentageDone))
 		}
-	}
+	})
 }
 
 func (mc *MetricsCollector) collectRestoreMetrics() {

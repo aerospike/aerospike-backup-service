@@ -309,7 +309,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler, found := s.handlerHolder[routineName]
+	handler, found := s.handlerHolder.Load(routineName)
 	if !found {
 		hLogger.Error("unknown routine name",
 			slog.String("name", routineName),
@@ -358,7 +358,7 @@ func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler, found := s.handlerHolder[routineName]
+	handler, found := s.handlerHolder.Load(routineName)
 	if !found {
 		hLogger.Error("unknown routine name",
 			slog.String("name", routineName),

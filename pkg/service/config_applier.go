@@ -51,10 +51,7 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(ctx context.Context, routines ma
 
 	// Refill handlers
 	newHandlers := makeHandlers(ctx, a.clientManager, routines, a.backends, a.handlerHolder)
-	clear(a.handlerHolder)
-	for k, v := range newHandlers {
-		(a.handlerHolder)[k] = v
-	}
+	a.handlerHolder.ReplaceContent(newHandlers)
 
 	err = scheduleRoutines(a.scheduler, routines, a.handlerHolder)
 	if err != nil {
@@ -88,8 +85,8 @@ func makeHandlers(
 	routines map[string]*model.BackupRoutine,
 	backends BackendsHolder,
 	oldHandlers BackupHandlerHolder,
-) BackupHandlerHolder {
-	handlers := make(BackupHandlerHolder)
+) map[string]backupRunner {
+	handlers := make(map[string]backupRunner)
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -121,7 +118,7 @@ func makeHandler(
 
 	// try to reuse lastRun from previous handler if it exists.
 	var lastRun *model.LastBackupRun
-	if old, ok := oldHandlers[routineName]; ok {
+	if old, ok := oldHandlers.Load(routineName); ok {
 		lastRun = old.CurrentStat().LastRunTime
 	} else {
 		lastRun = backend.findLastRun(ctx) // this scan can take some time.
