@@ -180,10 +180,15 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 
 	h.lastRun.SetFullBackupTime(&now)
 
-	err = h.retentionManager.deleteOldBackups(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to clean up old backups: %w", err)
-	}
+	go func() {
+		// Cleanup old backups asynchronously.
+		// At this moment backup is already completed, but backupJob.isRunning flag is still set,
+		// we don't want to block other backup execution.
+		err = h.retentionManager.deleteOldBackups(ctx)
+		if err != nil {
+			h.logger.Error("failed to clean up old backups", slog.Any("error", err))
+		}
+	}()
 
 	return nil
 }
