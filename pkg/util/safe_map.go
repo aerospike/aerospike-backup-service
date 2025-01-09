@@ -35,13 +35,7 @@ func (s *SafeMap[K, V]) Store(key K, value V) {
 	s.m[key] = value
 }
 
-// Delete removes a key from the map.
-func (s *SafeMap[K, V]) Delete(key K) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.m, key)
-}
-
+// Apply applies a function to a specific key if it exists.
 func (s *SafeMap[K, V]) Apply(key K, callback func(value V)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -60,12 +54,14 @@ func (s *SafeMap[K, V]) Iterate(callback func(key K, value V)) {
 	}
 }
 
+// ReplaceContent replaces the content of the map with a new one.
 func (s *SafeMap[K, V]) ReplaceContent(newMap map[K]V) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.m = newMap
 }
 
+// Size returns the number of elements in the map.
 func (s *SafeMap[K, V]) Size() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
