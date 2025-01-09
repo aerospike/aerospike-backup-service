@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
@@ -179,7 +178,6 @@ func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	slog.Info("Reading cluster configuration", "routine", b.routineName, "path", path, "count", len(configBackups))
 	if len(configBackups) == 0 {
 		return nil, fmt.Errorf("no configuration backups found for %s", path)
 	}
