@@ -51,7 +51,7 @@ var defaultConfig = struct {
 			MaxRetries:  5,
 			Multiplier:  2,
 		},
-		MaxAsyncBatches: util.Ptr(640),
+		MaxAsyncBatches: util.Ptr(128),
 		BatchSize:       util.Ptr(128),
 		SocketTimeout:   util.Ptr(10 * time.Second),
 		TotalTimeout:    util.Ptr(time.Duration(0)),
