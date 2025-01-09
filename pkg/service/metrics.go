@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -87,15 +88,15 @@ func init() {
 
 type MetricsCollector struct {
 	sync.Mutex
-	backupHandler BackupHandlerHolder
-	jobsHolder    *RestoreJobsHolder
+	backups  BackupHandlerHolder
+	restores *RestoreJobsHolder
 }
 
 // NewMetricsCollector creates a new MetricsCollector
 func NewMetricsCollector(bh BackupHandlerHolder, jh *RestoreJobsHolder) *MetricsCollector {
 	return &MetricsCollector{
-		backupHandler: bh,
-		jobsHolder:    jh,
+		backups:  bh,
+		restores: jh,
 	}
 }
 
@@ -125,7 +126,7 @@ func (mc *MetricsCollector) collectMetrics() {
 func (mc *MetricsCollector) collectBackupMetrics() {
 	backupProgress.Reset()
 
-	mc.backupHandler.Iterate(func(routineName string, handler backupRunner) {
+	mc.backups.Iterate(func(routineName string, handler backupRunner) {
 		currentStat := handler.CurrentStat()
 
 		// Update Full backup metric if running
@@ -143,13 +144,10 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 func (mc *MetricsCollector) collectRestoreMetrics() {
 	restoreProgress.Reset()
 
-	mc.jobsHolder.RLock()
-	defer mc.jobsHolder.RUnlock()
-
-	for _, job := range mc.jobsHolder.jobs {
+	mc.restores.Iterate(func(_ model.RestoreJobID, job *jobInfo) {
 		restore := RestoreJobStatus(job).CurrentRestore // CurrentRestore exists only for running jobs
 		if restore != nil {
 			restoreProgress.WithLabelValues(job.label).Set(float64(restore.PercentageDone))
 		}
-	}
+	})
 }

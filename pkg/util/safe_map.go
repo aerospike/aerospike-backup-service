@@ -23,6 +23,29 @@ func (s *SafeMap[K, V]) Load(key K) (V, bool) {
 	return value, ok
 }
 
+// Store inserts or updates a key-value pair.
+func (s *SafeMap[K, V]) Store(key K, value V) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.m[key] = value
+}
+
+// Delete removes a key from the map.
+func (s *SafeMap[K, V]) Delete(key K) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.m, key)
+}
+
+func (s *SafeMap[K, V]) Apply(key K, callback func(value V)) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if v, exists := s.m[key]; exists {
+		callback(v)
+	}
+}
+
 // Iterate iterates over all key-value pairs in the map.
 func (s *SafeMap[K, V]) Iterate(callback func(key K, value V)) {
 	s.mu.RLock()
@@ -36,4 +59,10 @@ func (s *SafeMap[K, V]) ReplaceContent(newMap map[K]V) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.m = newMap
+}
+
+func (s *SafeMap[K, V]) Size() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.m)
 }

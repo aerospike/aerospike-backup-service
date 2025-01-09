@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -28,21 +28,14 @@ type Scheduler interface {
 	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error
 }
 
-var jobStore = &backupJobs{jobs: make(map[string]*quartz.JobDetail)}
-
-type backupJobs struct {
-	sync.RWMutex
-	jobs map[string]*quartz.JobDetail
-}
+var jobStore = util.NewSafeMap[string, *quartz.JobDetail]()
 
 // NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
 func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
-	jobStore.RLock()
-	defer jobStore.RUnlock()
 
 	key := jobKey(routineName, jobTypeFull).String()
-	job := jobStore.jobs[key]
-	if job == nil {
+	job, found := jobStore.Load(key)
+	if !found {
 		return nil
 	}
 
@@ -67,10 +60,7 @@ func NewScheduler(ctx context.Context) quartz.Scheduler {
 func scheduleRoutines(
 	scheduler Scheduler, routines map[string]*model.BackupRoutine, handlers BackupHandlerHolder,
 ) error {
-	jobStore.Lock()
-	defer jobStore.Unlock()
-	clear(jobStore.jobs)
-
+	newJobs := map[string]*quartz.JobDetail{}
 	var errs error
 	for routineName, routine := range routines {
 		if routine.Disabled {
@@ -79,10 +69,12 @@ func scheduleRoutines(
 		handler, _ := handlers.Load(routineName)
 
 		// schedule a full backup job for the routine
-		if err := scheduleFullBackup(scheduler, handler, routine.IntervalCron, routineName); err != nil {
+		job, err := scheduleFullBackup(scheduler, handler, routine.IntervalCron, routineName)
+		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule full backup: %w", err))
 			continue
 		}
+		newJobs[job.JobKey().String()] = job
 
 		// schedule an incremental backup job for the routine
 		if err := scheduleIncrementalBackup(scheduler, handler, routine.IncrIntervalCron, routineName); err != nil {
@@ -90,16 +82,15 @@ func scheduleRoutines(
 		}
 	}
 
+	jobStore.ReplaceContent(newJobs)
 	return errs
 }
 
 func scheduleFullBackup(
 	scheduler Scheduler, handler backupRunner, interval string, routineName string,
-) error {
+) (*quartz.JobDetail, error) {
 	job := createJobDetail(handler, routineName, jobTypeFull)
-	key := job.JobKey().String()
-	jobStore.jobs[key] = job
-	return schedule(scheduler, interval, job)
+	return job, schedule(scheduler, interval, job)
 }
 
 func scheduleIncrementalBackup(

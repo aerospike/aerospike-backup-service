@@ -120,7 +120,7 @@ func TestScheduleRoutines(t *testing.T) {
 
 			require.NoError(t, err)
 			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)
-			require.Equal(t, len(jobStore.jobs), tt.expectedJobsAdded)
+			require.Equal(t, jobStore.Size(), tt.expectedJobsAdded)
 		})
 	}
 }
