@@ -32,6 +32,7 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 
 	m := &mocks.MockAerospikeClient{}
 	m.On("Close").Return()
+	m.On("Cluster").Return(&as.Cluster{})
 	return m, nil
 }
 
@@ -165,6 +166,7 @@ func Test_Close_NotExisting(t *testing.T) {
 	)
 	aeroClient := &mocks.MockAerospikeClient{}
 	aeroClient.On("Close").Return()
+	aeroClient.On("Cluster").Return(&as.Cluster{})
 	client, _ := backup.NewClient(aeroClient)
 	clientManager.Close(client)
 
