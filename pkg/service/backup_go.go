@@ -76,8 +76,12 @@ func makeBackupConfig(
 	config.ModAfter = timebounds.FromTime
 
 	config.ScanPolicy = a.NewScanPolicy()
-	config.ScanPolicy.TotalTimeout = backupPolicy.GetTotalTimeoutOrDefault()
-	config.ScanPolicy.SocketTimeout = backupPolicy.GetSocketTimeoutOrDefault()
+	if backupPolicy.TotalTimeout != nil {
+		config.ScanPolicy.TotalTimeout = *backupPolicy.TotalTimeout
+	}
+	if backupPolicy.SocketTimeout != nil {
+		config.ScanPolicy.SocketTimeout = *backupPolicy.SocketTimeout
+	}
 
 	if backupPolicy.CompressionPolicy != nil {
 		config.CompressionPolicy = &backup.CompressionPolicy{
