@@ -75,6 +75,7 @@ func startService(configFile string, remote bool) error {
 
 	appLogger := setDefaultLoggers(ctx, config.ServiceConfig.GetLoggerOrDefault())
 	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
+	clientManager.SetLogger(appLogger)
 
 	// schedule all configured backups
 	backends := service.NewBackupBackends()

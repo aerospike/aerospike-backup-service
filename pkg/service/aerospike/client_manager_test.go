@@ -173,10 +173,12 @@ func Test_Close_NotExisting(t *testing.T) {
 	aeroClient.AssertExpectations(t)
 }
 
-func assertClientExists(t *testing.T, clientManager *ClientManagerImpl, cl *model.AerospikeCluster, shouldExist bool) {
+func assertClientExists(t *testing.T, clientManager *ClientManagerImpl,
+	cl *model.AerospikeCluster, shouldExist bool) {
 	t.Helper()
 	clientManager.mu.Lock()
 	defer clientManager.mu.Unlock()
-	_, exists := clientManager.clients[cl]
+
+	_, exists := clientManager.clients[cl.Hash()]
 	assert.Equal(t, shouldExist, exists)
 }

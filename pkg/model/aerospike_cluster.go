@@ -2,8 +2,10 @@ package model
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -16,6 +18,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v7"
 )
+
+const nilString = "<nil>"
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 // @Description AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -71,6 +75,41 @@ func (c *AerospikeCluster) GetPassword() *string {
 	}
 
 	return password
+}
+
+// Hash returns a unique string identifier for the AerospikeCluster.
+func (c *AerospikeCluster) Hash() string {
+	hasher := sha256.New()
+
+	if c.ClusterLabel != nil {
+		hasher.Write([]byte(*c.ClusterLabel))
+	}
+
+	for _, node := range c.SeedNodes {
+		hasher.Write([]byte(node.String()))
+	}
+
+	if c.ConnTimeout != nil {
+		hasher.Write([]byte(c.ConnTimeout.String()))
+	}
+
+	if c.UseServicesAlternate != nil {
+		hasher.Write([]byte(fmt.Sprintf("%v", *c.UseServicesAlternate)))
+	}
+
+	if c.Credentials != nil {
+		hasher.Write([]byte(c.Credentials.String()))
+	}
+
+	if c.TLS != nil {
+		hasher.Write([]byte(c.TLS.String()))
+	}
+
+	if c.MaxParallelScans != nil {
+		hasher.Write([]byte(fmt.Sprintf("%d", *c.MaxParallelScans)))
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 func (c *Credentials) loadPassword() *string {
@@ -289,6 +328,15 @@ type TLS struct {
 	Certfile *string
 }
 
+// String returns a string representation of the TLS.
+func (tls *TLS) String() string {
+	if tls == nil {
+		return nilString
+	}
+	return fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v", tls.CAFile, tls.CAPath, tls.Name, tls.Protocols,
+		tls.CipherSuite, tls.Keyfile, tls.KeyfilePassword, tls.Certfile)
+}
+
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
@@ -305,6 +353,15 @@ type Credentials struct {
 	SecretAgent *SecretAgent
 }
 
+// String returns a string representation of the Credentials.
+func (c *Credentials) String() string {
+	if c == nil {
+		return nilString
+	}
+	return fmt.Sprintf("%v:%v:%v:%v:%v", c.User, c.Password, c.PasswordPath,
+		c.AuthMode, c.SecretAgent)
+}
+
 // SeedNode represents details of a node in the Aerospike cluster.
 // @Description SeedNode represents details of a node in the Aerospike cluster.
 type SeedNode struct {
@@ -314,4 +371,9 @@ type SeedNode struct {
 	Port int32
 	// TLS certificate name used for secure connections (if enabled).
 	TLSName string
+}
+
+// String returns a string representation of the SeedNode.
+func (s SeedNode) String() string {
+	return fmt.Sprintf("%s:%s:%d", s.HostName, s.TLSName, s.Port)
 }

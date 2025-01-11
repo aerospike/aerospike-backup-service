@@ -60,10 +60,13 @@ func (f *DefaultClientFactory) IsClusterHealthy(client backup.AerospikeClient) b
 // ClientManagerImpl implements [ClientManager].
 // Is responsible for creating and closing backup clients.
 type ClientManagerImpl struct {
-	mu            sync.Mutex
-	clients       map[*model.AerospikeCluster]*clientInfo
+	mu sync.Mutex
+
+	clients       map[string]*clientInfo
 	clientFactory ClientFactory
 	closeDelay    time.Duration
+
+	logger *slog.Logger
 }
 
 type clientInfo struct {
@@ -75,10 +78,16 @@ type clientInfo struct {
 // NewClientManager creates a new ClientManagerImpl.
 func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Duration) *ClientManagerImpl {
 	return &ClientManagerImpl{
-		clients:       make(map[*model.AerospikeCluster]*clientInfo),
+		clients:       make(map[string]*clientInfo),
 		clientFactory: aerospikeClientFactory,
 		closeDelay:    closeDelay,
 	}
+}
+
+// SetLogger sets the logger for the ClientManagerImpl.
+// Needs to be set after instantiation due to the initialization order in main.
+func (cm *ClientManagerImpl) SetLogger(logger *slog.Logger) {
+	cm.logger = logger
 }
 
 // GetClient returns a backup client by aerospike cluster name (new or cached).
@@ -86,7 +95,12 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	client, err := cm.getExistingClient(cluster)
+	if cluster == nil {
+		return nil, errors.New("cluster is nil")
+	}
+
+	clusterKey := cluster.Hash()
+	client, err := cm.getExistingClient(clusterKey)
 	if err != nil {
 		return nil, err
 	}
@@ -99,13 +113,16 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 		return nil, fmt.Errorf("cannot create backup client: %w", err)
 	}
 
-	return cm.storeClient(cluster, client), nil
+	if cm.logger != nil {
+		cm.logger.Debug("Created new backup client", slog.String("key", clusterKey))
+	}
+	return cm.storeClient(clusterKey, client), nil
 }
 
 // getExistingClient tries to get an existing client from the cache.
 // Returns nil if client doesn't exist, error if client is not connected.
-func (cm *ClientManagerImpl) getExistingClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
-	if info, exists := cm.clients[cluster]; exists {
+func (cm *ClientManagerImpl) getExistingClient(clusterKey string) (*backup.Client, error) {
+	if info, exists := cm.clients[clusterKey]; exists {
 		if !cm.clientFactory.IsClusterHealthy(info.client.AerospikeClient()) {
 			return nil, errors.New("aerospike cluster connection lost")
 		}
@@ -118,16 +135,16 @@ func (cm *ClientManagerImpl) getExistingClient(cluster *model.AerospikeCluster) 
 }
 
 // storeClient attempts to store the client in the cache.
-func (cm *ClientManagerImpl) storeClient(cluster *model.AerospikeCluster, client *backup.Client) *backup.Client {
+func (cm *ClientManagerImpl) storeClient(clusterKey string, client *backup.Client) *backup.Client {
 	// If another client was created concurrently,
 	// closes the provided client and returns the existing one.
-	if info, exists := cm.clients[cluster]; exists {
+	if info, exists := cm.clients[clusterKey]; exists {
 		client.AerospikeClient().Close()
 		cm.incrementRef(info)
 		return info.client
 	}
 
-	cm.clients[cluster] = &clientInfo{
+	cm.clients[clusterKey] = &clientInfo{
 		client: client,
 		count:  1,
 	}
@@ -183,26 +200,26 @@ func (cm *ClientManagerImpl) incrementRef(info *clientInfo) {
 }
 
 // decrementRef decreases the reference count and schedules closing if count reaches zero.
-func (cm *ClientManagerImpl) decrementRef(info *clientInfo, cluster *model.AerospikeCluster) {
+func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey string) {
 	info.count--
 	if info.count == 0 {
-		info.closeTimer = cm.scheduleClosing(cluster)
+		info.closeTimer = cm.scheduleClosing(clusterKey)
 	}
 }
 
 // scheduleClosing schedules client closing after the configured delay.
 // Returns a timer that can be used to cancel the scheduled closing if needed.
-func (cm *ClientManagerImpl) scheduleClosing(cluster *model.AerospikeCluster) *time.Timer {
+func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 	return time.AfterFunc(cm.closeDelay, func() {
 		cm.mu.Lock()
 		defer cm.mu.Unlock()
 
 		// Check if the client still exists and count is still 0
-		if info, exists := cm.clients[cluster]; exists && info.count == 0 {
+		if info, exists := cm.clients[clusterKey]; exists && info.count == 0 {
 			client := info.client.AerospikeClient()
 			slog.Info("Aerospike client closed", slog.Any("hosts", client.Cluster().GetSeeds()))
 			client.Close()
-			delete(cm.clients, cluster)
+			delete(cm.clients, clusterKey)
 		}
 	})
 }
