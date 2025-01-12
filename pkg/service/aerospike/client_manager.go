@@ -139,10 +139,21 @@ func (cm *ClientManagerImpl) storeClient(clusterKey string, client *backup.Clien
 	// If another client was created concurrently,
 	// closes the provided client and returns the existing one.
 	if info, exists := cm.clients[clusterKey]; exists {
+		cm.logger.Info("Duplicate aerospike client created",
+			slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()),
+			slog.Int("len", len(cm.clients)),
+			slog.Any("id", clusterKey),
+		)
 		client.AerospikeClient().Close()
 		cm.incrementRef(info)
 		return info.client
 	}
+
+	cm.logger.Info("New aerospike client created",
+		slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()),
+		slog.Int("len", len(cm.clients)),
+		slog.Any("id", clusterKey),
+	)
 
 	cm.clients[clusterKey] = &clientInfo{
 		client: client,
@@ -168,8 +179,6 @@ func (cm *ClientManagerImpl) createClient(cluster *model.AerospikeCluster) (*bac
 	if cluster.ClusterLabel != nil {
 		options = append(options, backup.WithID(*cluster.ClusterLabel))
 	}
-
-	slog.Info("New aerospike client created", slog.Any("hosts", cluster.ASClientHosts()))
 	return backup.NewClient(aeroClient, options...)
 }
 
@@ -217,7 +226,11 @@ func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 		// Check if the client still exists and count is still 0
 		if info, exists := cm.clients[clusterKey]; exists && info.count == 0 {
 			client := info.client.AerospikeClient()
-			slog.Info("Aerospike client closed", slog.Any("hosts", client.Cluster().GetSeeds()))
+			cm.logger.Info("Aerospike client closed",
+				slog.Any("hosts", client.Cluster().GetSeeds()),
+				slog.Int("len", len(cm.clients)),
+				slog.Any("id", clusterKey),
+			)
 			client.Close()
 			delete(cm.clients, clusterKey)
 		}
