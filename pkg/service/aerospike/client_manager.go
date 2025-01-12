@@ -113,10 +113,18 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 		return nil, fmt.Errorf("cannot create backup client: %w", err)
 	}
 
-	if cm.logger != nil {
-		cm.logger.Debug("Created new backup client", slog.String("key", clusterKey))
+	cm.clients[clusterKey] = &clientInfo{
+		client: client,
+		count:  1,
 	}
-	return cm.storeClient(clusterKey, client), nil
+
+	if cm.logger != nil {
+		cm.logger.Debug("Created new backup client",
+			slog.Int("len", len(cm.clients)),
+			slog.String("key", clusterKey))
+	}
+
+	return client, nil
 }
 
 // getExistingClient tries to get an existing client from the cache.
@@ -132,35 +140,6 @@ func (cm *ClientManagerImpl) getExistingClient(clusterKey string) (*backup.Clien
 	}
 
 	return nil, nil
-}
-
-// storeClient attempts to store the client in the cache.
-func (cm *ClientManagerImpl) storeClient(clusterKey string, client *backup.Client) *backup.Client {
-	// If another client was created concurrently,
-	// closes the provided client and returns the existing one.
-	if info, exists := cm.clients[clusterKey]; exists {
-		cm.logger.Info("Duplicate aerospike client created",
-			slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()),
-			slog.Int("len", len(cm.clients)),
-			slog.Any("id", clusterKey),
-		)
-		client.AerospikeClient().Close()
-		cm.incrementRef(info)
-		return info.client
-	}
-
-	cm.logger.Info("New aerospike client created",
-		slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()),
-		slog.Int("len", len(cm.clients)),
-		slog.Any("id", clusterKey),
-	)
-
-	cm.clients[clusterKey] = &clientInfo{
-		client: client,
-		count:  1,
-	}
-
-	return client
 }
 
 // createClient creates a new backup client given the aerospike cluster configuration.
@@ -226,11 +205,13 @@ func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 		// Check if the client still exists and count is still 0
 		if info, exists := cm.clients[clusterKey]; exists && info.count == 0 {
 			client := info.client.AerospikeClient()
-			cm.logger.Info("Aerospike client closed",
-				slog.Any("hosts", client.Cluster().GetSeeds()),
-				slog.Int("len", len(cm.clients)),
-				slog.Any("id", clusterKey),
-			)
+			if cm.logger != nil {
+				cm.logger.Info("Aerospike client closed",
+					slog.Any("hosts", client.Cluster().GetSeeds()),
+					slog.Int("len", len(cm.clients)),
+					slog.Any("id", clusterKey),
+				)
+			}
 			client.Close()
 			delete(cm.clients, clusterKey)
 		}
