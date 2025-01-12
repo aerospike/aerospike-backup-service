@@ -2,6 +2,7 @@ package aerospike
 
 import (
 	"errors"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -164,6 +165,7 @@ func Test_Close_NotExisting(t *testing.T) {
 		&MockClientFactory{},
 		10*time.Second,
 	)
+	clientManager.SetLogger(slog.Default())
 	aeroClient := &mocks.MockAerospikeClient{}
 	aeroClient.On("Close").Return()
 	aeroClient.On("Cluster").Return(&as.Cluster{})
