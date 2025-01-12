@@ -79,6 +79,11 @@ func (s *SecretAgent) String() string {
 	if s == nil {
 		return nilString
 	}
-	return fmt.Sprintf("%v:%v:%v:%v:%v:%v", s.ConnectionType, s.Address, s.Port,
-		s.Timeout, s.TLSCAString, s.IsBase64)
+	return fmt.Sprintf("%v:%v:%v:%v:%v:%v",
+		s.ConnectionType,
+		s.Address,
+		util.ValueOrZero(s.Port),
+		util.ValueOrZero(s.Timeout),
+		util.ValueOrZero(s.TLSCAString),
+		util.ValueOrZero(s.IsBase64))
 }

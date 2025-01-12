@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -83,30 +84,40 @@ func (c *AerospikeCluster) Hash() string {
 
 	if c.ClusterLabel != nil {
 		hasher.Write([]byte(*c.ClusterLabel))
+		hasher.Write([]byte(":"))
 	}
 
-	for _, node := range c.SeedNodes {
+	nodes := make([]SeedNode, len(c.SeedNodes))
+	copy(nodes, c.SeedNodes)
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].String() < nodes[j].String()
+	})
+	for _, node := range nodes {
 		hasher.Write([]byte(node.String()))
+		hasher.Write([]byte(":"))
 	}
 
 	if c.ConnTimeout != nil {
 		hasher.Write([]byte(c.ConnTimeout.String()))
+		hasher.Write([]byte(":"))
 	}
 
 	if c.UseServicesAlternate != nil {
-		hasher.Write([]byte(fmt.Sprintf("%v", *c.UseServicesAlternate)))
+		hasher.Write([]byte(fmt.Sprintf("%v:", *c.UseServicesAlternate)))
 	}
 
 	if c.Credentials != nil {
 		hasher.Write([]byte(c.Credentials.String()))
+		hasher.Write([]byte(":"))
 	}
 
 	if c.TLS != nil {
 		hasher.Write([]byte(c.TLS.String()))
+		hasher.Write([]byte(":"))
 	}
 
 	if c.MaxParallelScans != nil {
-		hasher.Write([]byte(fmt.Sprintf("%d", *c.MaxParallelScans)))
+		hasher.Write([]byte(fmt.Sprintf("%d:", *c.MaxParallelScans)))
 	}
 
 	return hex.EncodeToString(hasher.Sum(nil))
@@ -333,8 +344,17 @@ func (tls *TLS) String() string {
 	if tls == nil {
 		return nilString
 	}
-	return fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v", tls.CAFile, tls.CAPath, tls.Name, tls.Protocols,
-		tls.CipherSuite, tls.Keyfile, tls.KeyfilePassword, tls.Certfile)
+	return fmt.Sprintf(
+		"%v:%v:%v:%v:%v:%v:%v:%v",
+		util.ValueOrZero(tls.CAFile),
+		util.ValueOrZero(tls.CAPath),
+		util.ValueOrZero(tls.Name),
+		util.ValueOrZero(tls.Protocols),
+		util.ValueOrZero(tls.CipherSuite),
+		util.ValueOrZero(tls.Keyfile),
+		util.ValueOrZero(tls.KeyfilePassword),
+		util.ValueOrZero(tls.Certfile),
+	)
 }
 
 // Credentials represents authentication details to the Aerospike cluster.
@@ -358,8 +378,12 @@ func (c *Credentials) String() string {
 	if c == nil {
 		return nilString
 	}
-	return fmt.Sprintf("%v:%v:%v:%v:%v", c.User, c.Password, c.PasswordPath,
-		c.AuthMode, c.SecretAgent)
+	return fmt.Sprintf("%v:%v:%v:%v:%v",
+		util.ValueOrZero(c.User),
+		util.ValueOrZero(c.Password),
+		util.ValueOrZero(c.PasswordPath),
+		util.ValueOrZero(c.AuthMode),
+		c.SecretAgent.String())
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.
