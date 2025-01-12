@@ -119,7 +119,7 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 	}
 
 	if cm.logger != nil {
-		cm.logger.Debug("Created new backup client",
+		cm.logger.Info("Created new backup client",
 			slog.Int("len", len(cm.clients)),
 			slog.String("key", clusterKey))
 	}
