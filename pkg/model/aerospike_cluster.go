@@ -194,10 +194,10 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	if c.TLS != nil {
 		policy.TlsConfig = initTLS(c.TLS, c.ClusterLabel)
 	}
-	if c.MaxParallelScans != nil && *c.MaxParallelScans > 0 {
-		policy.ConnectionQueueSize = 256
-	}
+
+	policy.ConnectionQueueSize = 256
 	policy.LimitConnectionsToQueueSize = false
+
 	return policy
 }
 
