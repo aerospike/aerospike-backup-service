@@ -2,6 +2,7 @@ package aerospike
 
 import (
 	"errors"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -32,6 +33,7 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 
 	m := &mocks.MockAerospikeClient{}
 	m.On("Close").Return()
+	m.On("Cluster").Return(&as.Cluster{})
 	return m, nil
 }
 
@@ -163,18 +165,22 @@ func Test_Close_NotExisting(t *testing.T) {
 		&MockClientFactory{},
 		10*time.Second,
 	)
+	clientManager.SetLogger(slog.Default())
 	aeroClient := &mocks.MockAerospikeClient{}
 	aeroClient.On("Close").Return()
+	aeroClient.On("Cluster").Return(&as.Cluster{})
 	client, _ := backup.NewClient(aeroClient)
 	clientManager.Close(client)
 
 	aeroClient.AssertExpectations(t)
 }
 
-func assertClientExists(t *testing.T, clientManager *ClientManagerImpl, cl *model.AerospikeCluster, shouldExist bool) {
+func assertClientExists(t *testing.T, clientManager *ClientManagerImpl,
+	cl *model.AerospikeCluster, shouldExist bool) {
 	t.Helper()
 	clientManager.mu.Lock()
 	defer clientManager.mu.Unlock()
-	_, exists := clientManager.clients[cl]
+
+	_, exists := clientManager.clients[cl.Hash()]
 	assert.Equal(t, shouldExist, exists)
 }

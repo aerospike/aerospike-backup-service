@@ -97,27 +97,6 @@ func (p *BackupPolicy) GetFileLimitOrDefault() int {
 	return *defaultConfig.backupPolicy.FileLimit
 }
 
-func (p *BackupPolicy) GetTotalTimeoutOrDefault() time.Duration {
-	if p.TotalTimeout != nil {
-		return *p.TotalTimeout
-	}
-
-	return *defaultConfig.backupPolicy.TotalTimeout
-}
-
-func (p *BackupPolicy) GetSocketTimeoutOrDefault() time.Duration {
-	if p.SocketTimeout == nil {
-		return *defaultConfig.backupPolicy.SocketTimeout
-	}
-
-	// If this value is 0, its set to total-timeout.
-	if *p.SocketTimeout == 0 {
-		return p.GetTotalTimeoutOrDefault()
-	}
-
-	return *p.SocketTimeout
-}
-
 type RetentionPolicy struct {
 	FullBackups *int // Number of full backups to store
 	IncrBackups *int // Number of full backups to store incremental backups for

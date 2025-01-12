@@ -2,13 +2,16 @@ package model
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -16,6 +19,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v7"
 )
+
+const nilString = "<nil>"
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 // @Description AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -71,6 +76,51 @@ func (c *AerospikeCluster) GetPassword() *string {
 	}
 
 	return password
+}
+
+// Hash returns a unique string identifier for the AerospikeCluster.
+func (c *AerospikeCluster) Hash() string {
+	hasher := sha256.New()
+
+	if c.ClusterLabel != nil {
+		hasher.Write([]byte(*c.ClusterLabel))
+		hasher.Write([]byte(":"))
+	}
+
+	nodes := make([]SeedNode, len(c.SeedNodes))
+	copy(nodes, c.SeedNodes)
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].String() < nodes[j].String()
+	})
+	for _, node := range nodes {
+		hasher.Write([]byte(node.String()))
+		hasher.Write([]byte(":"))
+	}
+
+	if c.ConnTimeout != nil {
+		hasher.Write([]byte(c.ConnTimeout.String()))
+		hasher.Write([]byte(":"))
+	}
+
+	if c.UseServicesAlternate != nil {
+		hasher.Write([]byte(fmt.Sprintf("%v:", *c.UseServicesAlternate)))
+	}
+
+	if c.Credentials != nil {
+		hasher.Write([]byte(c.Credentials.String()))
+		hasher.Write([]byte(":"))
+	}
+
+	if c.TLS != nil {
+		hasher.Write([]byte(c.TLS.String()))
+		hasher.Write([]byte(":"))
+	}
+
+	if c.MaxParallelScans != nil {
+		hasher.Write([]byte(fmt.Sprintf("%d:", *c.MaxParallelScans)))
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 func (c *Credentials) loadPassword() *string {
@@ -144,10 +194,10 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	if c.TLS != nil {
 		policy.TlsConfig = initTLS(c.TLS, c.ClusterLabel)
 	}
-	if c.MaxParallelScans != nil && *c.MaxParallelScans > 0 {
-		policy.ConnectionQueueSize = max(256, *c.MaxParallelScans*2)
-	}
+
+	policy.ConnectionQueueSize = 256
 	policy.LimitConnectionsToQueueSize = false
+
 	return policy
 }
 
@@ -289,6 +339,24 @@ type TLS struct {
 	Certfile *string
 }
 
+// String returns a string representation of the TLS.
+func (tls *TLS) String() string {
+	if tls == nil {
+		return nilString
+	}
+	return fmt.Sprintf(
+		"%v:%v:%v:%v:%v:%v:%v:%v",
+		util.ValueOrZero(tls.CAFile),
+		util.ValueOrZero(tls.CAPath),
+		util.ValueOrZero(tls.Name),
+		util.ValueOrZero(tls.Protocols),
+		util.ValueOrZero(tls.CipherSuite),
+		util.ValueOrZero(tls.Keyfile),
+		util.ValueOrZero(tls.KeyfilePassword),
+		util.ValueOrZero(tls.Certfile),
+	)
+}
+
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
@@ -305,6 +373,19 @@ type Credentials struct {
 	SecretAgent *SecretAgent
 }
 
+// String returns a string representation of the Credentials.
+func (c *Credentials) String() string {
+	if c == nil {
+		return nilString
+	}
+	return fmt.Sprintf("%v:%v:%v:%v:%v",
+		util.ValueOrZero(c.User),
+		util.ValueOrZero(c.Password),
+		util.ValueOrZero(c.PasswordPath),
+		util.ValueOrZero(c.AuthMode),
+		c.SecretAgent.String())
+}
+
 // SeedNode represents details of a node in the Aerospike cluster.
 // @Description SeedNode represents details of a node in the Aerospike cluster.
 type SeedNode struct {
@@ -314,4 +395,9 @@ type SeedNode struct {
 	Port int32
 	// TLS certificate name used for secure connections (if enabled).
 	TLSName string
+}
+
+// String returns a string representation of the SeedNode.
+func (s SeedNode) String() string {
+	return fmt.Sprintf("%s:%s:%d", s.HostName, s.TLSName, s.Port)
 }

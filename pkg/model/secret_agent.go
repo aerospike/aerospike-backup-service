@@ -73,3 +73,17 @@ func (s *SecretAgent) Read(path string) (string, error) {
 
 	return s.cache.Get(path)
 }
+
+// String returns a string representation of the SecretAgent.
+func (s *SecretAgent) String() string {
+	if s == nil {
+		return nilString
+	}
+	return fmt.Sprintf("%v:%v:%v:%v:%v:%v",
+		s.ConnectionType,
+		s.Address,
+		util.ValueOrZero(s.Port),
+		util.ValueOrZero(s.Timeout),
+		util.ValueOrZero(s.TLSCAString),
+		util.ValueOrZero(s.IsBase64))
+}
