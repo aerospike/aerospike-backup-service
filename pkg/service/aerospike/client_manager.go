@@ -173,7 +173,10 @@ func (cm *ClientManagerImpl) Close(client *backup.Client) {
 		}
 	}
 
-	slog.Info("Aerospike client not found and closed", slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()))
+	if cm.logger != nil {
+		cm.logger.Info("Aerospike client not found and closed",
+			slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()))
+	}
 	// Close client even if it was not found
 	client.AerospikeClient().Close()
 }
