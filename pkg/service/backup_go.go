@@ -82,6 +82,7 @@ func makeBackupConfig(
 	if backupPolicy.SocketTimeout != nil {
 		config.ScanPolicy.SocketTimeout = *backupPolicy.SocketTimeout
 	}
+	config.ScanPolicy.MaxRetries = 100
 
 	if backupPolicy.CompressionPolicy != nil {
 		config.CompressionPolicy = &backup.CompressionPolicy{
