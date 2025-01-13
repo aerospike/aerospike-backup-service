@@ -99,8 +99,8 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 
 	clusterKey := cluster.Hash()
 
+	// Try getting an existing client under the global lock.
 	client, err := cm.getExistingClient(clusterKey)
-
 	if err != nil {
 		return nil, err
 	}
@@ -108,14 +108,14 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 		return client, nil
 	}
 
+	// Client not found. Create one.
 	// Get or create mutex for this client.
 	mutex := cm.mutexForCluster(clusterKey)
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	// check again since another goroutine might have created the client while we were waiting on lock.
+	// Check again since another goroutine might have created the client while we were waiting on lock.
 	client, err = cm.getExistingClient(clusterKey)
-
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +128,7 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 		return nil, fmt.Errorf("cannot create backup client: %w", err)
 	}
 
+	// Store the newly created client (under the global lock).
 	cm.storeClient(clusterKey, client)
 
 	if cm.logger != nil {
