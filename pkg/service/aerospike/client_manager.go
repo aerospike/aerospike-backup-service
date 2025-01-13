@@ -60,7 +60,7 @@ func (f *DefaultClientFactory) IsClusterHealthy(client backup.AerospikeClient) b
 // ClientManagerImpl implements [ClientManager].
 // Is responsible for creating and closing backup clients.
 type ClientManagerImpl struct {
-	mu sync.Mutex
+	mu sync.RWMutex
 
 	clients       map[string]*clientInfo
 	clientFactory ClientFactory
@@ -92,15 +92,30 @@ func (cm *ClientManagerImpl) SetLogger(logger *slog.Logger) {
 
 // GetClient returns a backup client by aerospike cluster name (new or cached).
 func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
 	if cluster == nil {
 		return nil, errors.New("cluster is nil")
 	}
 
 	clusterKey := cluster.Hash()
+
+	// First try with read lock.
+	cm.mu.RLock()
 	client, err := cm.getExistingClient(clusterKey)
+	cm.mu.RUnlock()
+
+	if err != nil {
+		return nil, err
+	}
+	if client != nil {
+		return client, nil
+	}
+
+	// Create new client with write lock.
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	// check again since another goroutine might have created the client while we were waiting on lock.
+	client, err = cm.getExistingClient(clusterKey)
 	if err != nil {
 		return nil, err
 	}
