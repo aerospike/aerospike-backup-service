@@ -239,8 +239,9 @@ func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey string) {
 // Returns a timer that can be used to cancel the scheduled closing if needed.
 func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 	return time.AfterFunc(cm.closeDelay, func() {
-		cm.mu.Lock()
 		var client backup.AerospikeClient
+
+		cm.mu.Lock()
 		// Check if the client still exists and count is still 0
 		if info, exists := cm.clients[clusterKey]; exists && info.count == 0 {
 			client = info.client.AerospikeClient()
