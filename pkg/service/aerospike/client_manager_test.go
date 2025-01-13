@@ -3,6 +3,7 @@ package aerospike
 import (
 	"errors"
 	"log/slog"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 type MockClientFactory struct {
 	ShouldFail            bool
 	IsClusterDisconnected bool
+	WithDelay             bool
 }
 
 var cluster = &model.AerospikeCluster{
@@ -29,6 +31,10 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 ) (backup.AerospikeClient, error) {
 	if f.ShouldFail {
 		return nil, errors.New("failed to connect to aerospike")
+	}
+
+	if f.WithDelay {
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	m := &mocks.MockAerospikeClient{}
@@ -57,6 +63,36 @@ func Test_GetClient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, client2)
 	assert.Equal(t, client, client2)
+}
+
+func Test_GetClientParallel(t *testing.T) {
+	clientManager := NewClientManager(
+		&MockClientFactory{
+			WithDelay: true,
+		},
+		10*time.Second,
+	)
+
+	var client, client2 *backup.Client
+	var err, err2 error
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		client, err = clientManager.GetClient(cluster)
+		wg.Done()
+	}()
+	go func() {
+		client2, err2 = clientManager.GetClient(cluster)
+		wg.Done()
+	}()
+	wg.Wait()
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	require.NoError(t, err2)
+	require.NotNil(t, client2)
+
+	require.Equal(t, client, client2)
 }
 
 func Test_GetClient_UnhealthyConnection(t *testing.T) {
