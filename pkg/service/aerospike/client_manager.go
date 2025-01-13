@@ -60,13 +60,14 @@ func (f *DefaultClientFactory) IsClusterHealthy(client backup.AerospikeClient) b
 // ClientManagerImpl implements [ClientManager].
 // Is responsible for creating and closing backup clients.
 type ClientManagerImpl struct {
-	mu sync.RWMutex
+	mu sync.Mutex
 
 	clients       map[string]*clientInfo
 	clientFactory ClientFactory
 	closeDelay    time.Duration
 
 	logger *slog.Logger
+	locks  sync.Map
 }
 
 type clientInfo struct {
@@ -98,10 +99,7 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 
 	clusterKey := cluster.Hash()
 
-	// First try with read lock.
-	cm.mu.RLock()
 	client, err := cm.getExistingClient(clusterKey)
-	cm.mu.RUnlock()
 
 	if err != nil {
 		return nil, err
@@ -110,12 +108,14 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 		return client, nil
 	}
 
-	// Create new client with write lock.
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
+	// Get or create mutex for this client.
+	mutex := cm.mutexForCluster(clusterKey)
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	// check again since another goroutine might have created the client while we were waiting on lock.
 	client, err = cm.getExistingClient(clusterKey)
+
 	if err != nil {
 		return nil, err
 	}
@@ -128,10 +128,7 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 		return nil, fmt.Errorf("cannot create backup client: %w", err)
 	}
 
-	cm.clients[clusterKey] = &clientInfo{
-		client: client,
-		count:  1,
-	}
+	cm.storeClient(clusterKey, client)
 
 	if cm.logger != nil {
 		cm.logger.Info("Created new backup client",
@@ -142,9 +139,27 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 	return client, nil
 }
 
+func (cm *ClientManagerImpl) mutexForCluster(clusterKey string) *sync.Mutex {
+	stored, _ := cm.locks.LoadOrStore(clusterKey, &sync.Mutex{})
+	return stored.(*sync.Mutex)
+}
+
+func (cm *ClientManagerImpl) storeClient(clusterKey string, client *backup.Client) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	cm.clients[clusterKey] = &clientInfo{
+		client: client,
+		count:  1,
+	}
+}
+
 // getExistingClient tries to get an existing client from the cache.
 // Returns nil if client doesn't exist, error if client is not connected.
 func (cm *ClientManagerImpl) getExistingClient(clusterKey string) (*backup.Client, error) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
 	if info, exists := cm.clients[clusterKey]; exists {
 		if !cm.clientFactory.IsClusterHealthy(info.client.AerospikeClient()) {
 			return nil, errors.New("aerospike cluster connection lost")
