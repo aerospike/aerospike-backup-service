@@ -110,7 +110,7 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 	defer m.Unlock()
 
 	if exists {
-		return cm.checkHealthAndReturn(info)
+		return cm.checkHealthAndIncrement(info)
 	}
 
 	// Check again since another goroutine might have created the client while we were waiting on lock.
@@ -119,7 +119,7 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 	cm.mu.Unlock()
 
 	if exists {
-		return cm.checkHealthAndReturn(info)
+		return cm.checkHealthAndIncrement(info)
 	}
 
 	client, err := cm.createClient(cluster)
@@ -133,7 +133,7 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 	return client, nil
 }
 
-func (cm *ClientManagerImpl) checkHealthAndReturn(info *clientInfo) (*backup.Client, error) {
+func (cm *ClientManagerImpl) checkHealthAndIncrement(info *clientInfo) (*backup.Client, error) {
 	if !cm.clientFactory.IsClusterHealthy(info.client.AerospikeClient()) {
 		return nil, errors.New("aerospike cluster connection lost")
 	}
