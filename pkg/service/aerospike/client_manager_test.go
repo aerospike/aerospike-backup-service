@@ -172,11 +172,14 @@ func Test_Close(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 	assertClientExists(t, clientManager, cluster, true)
+	require.False(t, isEmpty(&clientManager.locks))
 
 	clientManager.Close(client)
 	time.Sleep(150 * time.Millisecond) // Wait for timer to fire
 
 	assertClientExists(t, clientManager, cluster, false)
+	require.True(t, isEmpty(&clientManager.locks))
+	require.Empty(t, clientManager.clients)
 }
 
 func Test_Close_Multiple(t *testing.T) {
@@ -247,4 +250,13 @@ func assertClientExists(t *testing.T, clientManager *ClientManagerImpl,
 
 	_, exists := clientManager.clients[cl.Hash()]
 	assert.Equal(t, shouldExist, exists)
+}
+
+func isEmpty(m *sync.Map) bool {
+	empty := true
+	m.Range(func(_, _ any) bool {
+		empty = false
+		return false
+	})
+	return empty
 }
