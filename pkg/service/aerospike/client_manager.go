@@ -131,12 +131,6 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 	// Store the newly created client (under the global lock).
 	cm.storeClient(clusterKey, client)
 
-	if cm.logger != nil {
-		cm.logger.Info("Created new backup client",
-			slog.Int("len", len(cm.clients)),
-			slog.String("key", clusterKey))
-	}
-
 	return client, nil
 }
 
@@ -152,6 +146,12 @@ func (cm *ClientManagerImpl) storeClient(clusterKey string, client *backup.Clien
 	cm.clients[clusterKey] = &clientInfo{
 		client: client,
 		count:  1,
+	}
+
+	if cm.logger != nil {
+		cm.logger.Info("Created new backup client",
+			slog.Int("len", len(cm.clients)),
+			slog.String("key", clusterKey))
 	}
 }
 
@@ -234,11 +234,16 @@ func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey string) {
 func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 	return time.AfterFunc(cm.closeDelay, func() {
 		cm.mu.Lock()
-		defer cm.mu.Unlock()
-
+		var client backup.AerospikeClient
 		// Check if the client still exists and count is still 0
 		if info, exists := cm.clients[clusterKey]; exists && info.count == 0 {
-			client := info.client.AerospikeClient()
+			client = info.client.AerospikeClient()
+			delete(cm.clients, clusterKey)
+		}
+		cm.mu.Unlock()
+
+		if client != nil {
+			client.Close()
 			if cm.logger != nil {
 				cm.logger.Info("Aerospike client closed",
 					slog.Any("hosts", client.Cluster().GetSeeds()),
@@ -246,8 +251,6 @@ func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 					slog.Any("id", clusterKey),
 				)
 			}
-			client.Close()
-			delete(cm.clients, clusterKey)
 		}
 	})
 }
