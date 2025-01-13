@@ -67,6 +67,7 @@ type ClientManagerImpl struct {
 	closeDelay    time.Duration
 
 	logger *slog.Logger
+	locks  sync.Map
 }
 
 type clientInfo struct {
@@ -92,26 +93,63 @@ func (cm *ClientManagerImpl) SetLogger(logger *slog.Logger) {
 
 // GetClient returns a backup client by aerospike cluster name (new or cached).
 func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
 	if cluster == nil {
 		return nil, errors.New("cluster is nil")
 	}
 
 	clusterKey := cluster.Hash()
-	client, err := cm.getExistingClient(clusterKey)
-	if err != nil {
-		return nil, err
-	}
-	if client != nil {
-		return client, nil
+
+	// Try getting an existing client under the global lock.
+	cm.mu.Lock()
+	info, exists := cm.clients[clusterKey]
+	cm.mu.Unlock()
+
+	// Get or create mutex for this client.
+	m := cm.mutexForCluster(clusterKey)
+	m.Lock()
+	defer m.Unlock()
+
+	if exists {
+		return cm.checkHealthAndIncrement(info)
 	}
 
-	client, err = cm.createClient(cluster)
+	// Check again since another goroutine might have created the client while we were waiting on lock.
+	cm.mu.Lock()
+	info, exists = cm.clients[clusterKey]
+	cm.mu.Unlock()
+
+	if exists {
+		return cm.checkHealthAndIncrement(info)
+	}
+
+	client, err := cm.createClient(cluster)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create backup client: %w", err)
 	}
+
+	// Store the newly created client (under the global lock).
+	cm.storeClient(clusterKey, client)
+
+	return client, nil
+}
+
+func (cm *ClientManagerImpl) checkHealthAndIncrement(info *clientInfo) (*backup.Client, error) {
+	if !cm.clientFactory.IsClusterHealthy(info.client.AerospikeClient()) {
+		return nil, errors.New("aerospike cluster connection lost")
+	}
+
+	cm.incrementRef(info)
+	return info.client, nil
+}
+
+func (cm *ClientManagerImpl) mutexForCluster(clusterKey string) *sync.Mutex {
+	stored, _ := cm.locks.LoadOrStore(clusterKey, &sync.Mutex{})
+	return stored.(*sync.Mutex)
+}
+
+func (cm *ClientManagerImpl) storeClient(clusterKey string, client *backup.Client) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
 
 	cm.clients[clusterKey] = &clientInfo{
 		client: client,
@@ -123,23 +161,6 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 			slog.Int("len", len(cm.clients)),
 			slog.String("key", clusterKey))
 	}
-
-	return client, nil
-}
-
-// getExistingClient tries to get an existing client from the cache.
-// Returns nil if client doesn't exist, error if client is not connected.
-func (cm *ClientManagerImpl) getExistingClient(clusterKey string) (*backup.Client, error) {
-	if info, exists := cm.clients[clusterKey]; exists {
-		if !cm.clientFactory.IsClusterHealthy(info.client.AerospikeClient()) {
-			return nil, errors.New("aerospike cluster connection lost")
-		}
-
-		cm.incrementRef(info)
-		return info.client, nil
-	}
-
-	return nil, nil
 }
 
 // createClient creates a new backup client given the aerospike cluster configuration.
@@ -202,12 +223,19 @@ func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey string) {
 // Returns a timer that can be used to cancel the scheduled closing if needed.
 func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 	return time.AfterFunc(cm.closeDelay, func() {
-		cm.mu.Lock()
-		defer cm.mu.Unlock()
+		var client backup.AerospikeClient
 
+		cm.mu.Lock()
 		// Check if the client still exists and count is still 0
 		if info, exists := cm.clients[clusterKey]; exists && info.count == 0 {
-			client := info.client.AerospikeClient()
+			client = info.client.AerospikeClient()
+			delete(cm.clients, clusterKey)
+			cm.locks.Delete(clusterKey)
+		}
+		cm.mu.Unlock()
+
+		if client != nil {
+			client.Close()
 			if cm.logger != nil {
 				cm.logger.Info("Aerospike client closed",
 					slog.Any("hosts", client.Cluster().GetSeeds()),
@@ -215,8 +243,6 @@ func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 					slog.Any("id", clusterKey),
 				)
 			}
-			client.Close()
-			delete(cm.clients, clusterKey)
 		}
 	})
 }

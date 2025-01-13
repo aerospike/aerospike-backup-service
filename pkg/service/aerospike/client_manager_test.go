@@ -3,6 +3,8 @@ package aerospike
 import (
 	"errors"
 	"log/slog"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -19,10 +21,16 @@ import (
 type MockClientFactory struct {
 	ShouldFail            bool
 	IsClusterDisconnected bool
+	WithDelay             bool
+	called                atomic.Int32
 }
 
 var cluster = &model.AerospikeCluster{
 	ClusterLabel: ptr.String("test"),
+}
+
+var cluster2 = &model.AerospikeCluster{
+	ClusterLabel: ptr.String("test2"),
 }
 
 func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...*as.Host,
@@ -30,6 +38,11 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 	if f.ShouldFail {
 		return nil, errors.New("failed to connect to aerospike")
 	}
+
+	if f.WithDelay {
+		time.Sleep(100 * time.Millisecond)
+	}
+	f.called.Add(1)
 
 	m := &mocks.MockAerospikeClient{}
 	m.On("Close").Return()
@@ -42,8 +55,9 @@ func (f *MockClientFactory) IsClusterHealthy(_ backup.AerospikeClient) bool {
 }
 
 func Test_GetClient(t *testing.T) {
+	clientFactory := &MockClientFactory{}
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		clientFactory,
 		10*time.Second,
 	)
 
@@ -57,6 +71,56 @@ func Test_GetClient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, client2)
 	assert.Equal(t, client, client2)
+
+	assert.Equal(t, clientFactory.called.Load(), int32(1))
+}
+
+func Test_GetClientParallel(t *testing.T) {
+	clientFactory := &MockClientFactory{
+		WithDelay: true,
+	}
+	clientManager := NewClientManager(
+		clientFactory,
+		10*time.Second,
+	)
+
+	var client, client2 *backup.Client
+	var err, err2 error
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		client, err = clientManager.GetClient(cluster)
+		wg.Done()
+	}()
+	go func() {
+		client2, err2 = clientManager.GetClient(cluster)
+		wg.Done()
+	}()
+	wg.Wait()
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	require.NoError(t, err2)
+	require.NotNil(t, client2)
+
+	require.Equal(t, client, client2)
+	require.Equal(t, clientFactory.called.Load(), int32(1))
+}
+
+func Test_GetTwoClients(t *testing.T) {
+	clientFactory := &MockClientFactory{}
+	clientManager := NewClientManager(
+		clientFactory,
+		10*time.Second,
+	)
+
+	client, err := clientManager.GetClient(cluster)
+	require.NoError(t, err)
+	client2, err := clientManager.GetClient(cluster2)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, client, client2)
+	assert.Equal(t, clientFactory.called.Load(), int32(2))
 }
 
 func Test_GetClient_UnhealthyConnection(t *testing.T) {
@@ -108,11 +172,14 @@ func Test_Close(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 	assertClientExists(t, clientManager, cluster, true)
+	require.False(t, isEmpty(&clientManager.locks))
 
 	clientManager.Close(client)
 	time.Sleep(150 * time.Millisecond) // Wait for timer to fire
 
 	assertClientExists(t, clientManager, cluster, false)
+	require.True(t, isEmpty(&clientManager.locks))
+	require.Empty(t, clientManager.clients)
 }
 
 func Test_Close_Multiple(t *testing.T) {
@@ -183,4 +250,13 @@ func assertClientExists(t *testing.T, clientManager *ClientManagerImpl,
 
 	_, exists := clientManager.clients[cl.Hash()]
 	assert.Equal(t, shouldExist, exists)
+}
+
+func isEmpty(m *sync.Map) bool {
+	empty := true
+	m.Range(func(_, _ any) bool {
+		empty = false
+		return false
+	})
+	return empty
 }
