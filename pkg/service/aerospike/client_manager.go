@@ -159,9 +159,15 @@ func (cm *ClientManagerImpl) storeClient(clusterKey string, client *backup.Clien
 // Returns nil if client doesn't exist, error if client is not connected.
 func (cm *ClientManagerImpl) getExistingClient(clusterKey string) (*backup.Client, error) {
 	cm.mu.Lock()
-	defer cm.mu.Unlock()
+	info, exists := cm.clients[clusterKey]
+	cm.mu.Unlock()
 
-	if info, exists := cm.clients[clusterKey]; exists {
+	if exists {
+		// IsClusterHealthy is a network call so we need to acquire the mutex here
+		m := cm.mutexForCluster(clusterKey)
+		m.Lock()
+		defer m.Unlock()
+
 		if !cm.clientFactory.IsClusterHealthy(info.client.AerospikeClient()) {
 			return nil, errors.New("aerospike cluster connection lost")
 		}
