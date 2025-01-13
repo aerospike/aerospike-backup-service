@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,10 +22,15 @@ type MockClientFactory struct {
 	ShouldFail            bool
 	IsClusterDisconnected bool
 	WithDelay             bool
+	called                atomic.Int32
 }
 
 var cluster = &model.AerospikeCluster{
 	ClusterLabel: ptr.String("test"),
+}
+
+var cluster2 = &model.AerospikeCluster{
+	ClusterLabel: ptr.String("test2"),
 }
 
 func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...*as.Host,
@@ -36,6 +42,7 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 	if f.WithDelay {
 		time.Sleep(100 * time.Millisecond)
 	}
+	f.called.Add(1)
 
 	m := &mocks.MockAerospikeClient{}
 	m.On("Close").Return()
@@ -48,8 +55,9 @@ func (f *MockClientFactory) IsClusterHealthy(_ backup.AerospikeClient) bool {
 }
 
 func Test_GetClient(t *testing.T) {
+	clientFactory := &MockClientFactory{}
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		clientFactory,
 		10*time.Second,
 	)
 
@@ -63,13 +71,16 @@ func Test_GetClient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, client2)
 	assert.Equal(t, client, client2)
+
+	assert.Equal(t, clientFactory.called.Load(), int32(1))
 }
 
 func Test_GetClientParallel(t *testing.T) {
+	clientFactory := &MockClientFactory{
+		WithDelay: true,
+	}
 	clientManager := NewClientManager(
-		&MockClientFactory{
-			WithDelay: true,
-		},
+		clientFactory,
 		10*time.Second,
 	)
 
@@ -93,6 +104,23 @@ func Test_GetClientParallel(t *testing.T) {
 	require.NotNil(t, client2)
 
 	require.Equal(t, client, client2)
+	require.Equal(t, clientFactory.called.Load(), int32(1))
+}
+
+func Test_GetTwoClients(t *testing.T) {
+	clientFactory := &MockClientFactory{}
+	clientManager := NewClientManager(
+		clientFactory,
+		10*time.Second,
+	)
+
+	client, err := clientManager.GetClient(cluster)
+	require.NoError(t, err)
+	client2, err := clientManager.GetClient(cluster2)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, client, client2)
+	assert.Equal(t, clientFactory.called.Load(), int32(2))
 }
 
 func Test_GetClient_UnhealthyConnection(t *testing.T) {
