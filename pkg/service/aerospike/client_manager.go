@@ -246,6 +246,7 @@ func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 		if info, exists := cm.clients[clusterKey]; exists && info.count == 0 {
 			client = info.client.AerospikeClient()
 			delete(cm.clients, clusterKey)
+			cm.locks.Delete(clusterKey)
 		}
 		cm.mu.Unlock()
 
