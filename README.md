@@ -712,58 +712,60 @@ password in the Aerospike Secret Agent (starts with `secrets:`).
 Fields `password` and `password-path` are mutually exclusive.
 
 ```yaml
-     dto.Credentials:
-       description: Credentials represents authentication details to the Aerospike cluster.
-       properties:
-         auth-mode:
-           description: "The authentication mode string (INTERNAL, EXTERNAL, PKI)."
-           enum:
-             - INTERNAL
-             - EXTERNAL
-             - PKI
-           type: string
-         password:
-           description: |-
-             The password for the cluster authentication.
-             It can be either plain text or path into the secret agent.
-           example: testPswd
-           type: string
-         password-path:
-           description: The file path with the password string.
-           example: /path/to/pass.txt
-           type: string
-         secret-agent:
-           allOf:
-             - $ref: '#/components/schemas/dto.SecretAgent'
-           description: |-
-             Secret Agent configuration (optional).
-             Mutually exclusive with secret-agent-name.
-           type: object
-         secret-agent-name:
-           description: |-
-             Secret Agent configuration (optional). Link to one of preconfigured agents.
-             Mutually exclusive with secret-agent.
-           type: string
-         user:
-           description: The username for the cluster authentication.
-           example: testUser
-           type: string
-       type: object
+dto.Credentials:
+  description: Credentials represents authentication details to the Aerospike cluster.
+  properties:
+    auth-mode:
+      description: "The authentication mode string (INTERNAL, EXTERNAL, PKI)."
+      enum:
+        - INTERNAL
+        - EXTERNAL
+        - PKI
+      type: string
+    password:
+      description: |-
+        The password for the cluster authentication.
+        It can be either plain text or path into the secret agent.
+      example: testPswd
+      type: string
+    password-path:
+      description: The file path with the password string.
+      example: /path/to/pass.txt
+      type: string
+    secret-agent:
+      allOf:
+        - $ref: '#/components/schemas/dto.SecretAgent'
+      description: |-
+        Secret Agent configuration (optional).
+        Mutually exclusive with secret-agent-name.
+      type: object
+    secret-agent-name:
+      description: |-
+        Secret Agent configuration (optional). Link to one of preconfigured agents.
+        Mutually exclusive with secret-agent.
+      type: string
+    user:
+      description: The username for the cluster authentication.
+      example: testUser
+      type: string
+  type: object
 ```
 
 ### Cancel Restore Job
 
-New endpoint:  
+New endpoint:
+
 - [
-`POST {{baseUrl}}/v1/restore/cancel/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
+  `POST {{baseUrl}}/v1/restore/cancel/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
 
 Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
 
 ### Cancel Backup Job
 
-New endpoint:  
+New endpoint:
+
 - [
-`POST {{baseUrl}}/v1/backups/cancel/:<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancelCurrentBackup)
+  `POST {{baseUrl}}/v1/backups/cancel/:<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancelCurrentBackup)
 
 Cancel all currently running backups (both full and incremental) for the specified routine. Partially created backups
 will be deleted.
