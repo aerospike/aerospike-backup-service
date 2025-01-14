@@ -762,7 +762,7 @@ Cancel the restore job identified by `<jobId>`. Data that has already been resto
 ### Cancel Backup Job
 
 New endpoint:  
-[
+- [
 `POST {{baseUrl}}/v1/backups/cancel/:<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancelCurrentBackup)
 
 Cancel all currently running backups (both full and incremental) for the specified routine. Partially created backups
