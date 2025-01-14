@@ -754,7 +754,7 @@ Fields `password` and `password-path` are mutually exclusive.
 ### Cancel Restore Job
 
 New endpoint:  
-[
+- [
 `POST {{baseUrl}}/v1/restore/cancel/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
 
 Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
