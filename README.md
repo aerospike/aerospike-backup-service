@@ -601,26 +601,26 @@ storage types.
 
 ```yaml
 aws-s3:
-    s3-storage:
-        bucket: as-backup-bucket
-        path: backups
-        s3-region: eu-central-1
+  s3-storage:
+    bucket: as-backup-bucket
+    path: backups
+    s3-region: eu-central-1
 azure-blob-storage:
-    azure-storage:
-        endpoint: http://127.0.0.1:6000/devstoreaccount1
-        container-name: testcontainer
-        path: backups
-        account-name: devstoreaccount1
-        account-key: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
+  azure-storage:
+    endpoint: http://127.0.0.1:6000/devstoreaccount1
+    container-name: testcontainer
+    path: backups
+    account-name: devstoreaccount1
+    account-key: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==
 gcp-gcs:
-    gcp-storage:
-        key-file-path: key-file.json
-        bucket-name: gcp-backup-bucket
-        path: backups
-        endpoint: http://127.0.0.1:9020
+  gcp-storage:
+    key-file-path: key-file.json
+    bucket-name: gcp-backup-bucket
+    path: backups
+    endpoint: http://127.0.0.1:9020
 local:
-    local-storage:
-        path: backups
+  local-storage:
+    path: backups
 
 ```
 
@@ -662,13 +662,18 @@ was changed to simplify and streamline the process.
 ### Backup Retention Policy
 
 This release introduces a new, configurable **RetentionPolicy** for managing backup storage more effectively.
-The feature allows users to specify retention rules for both full and incremental backups, replacing the previous options `KeepAll`, `RemoveAll`, and `RemoveIncremental`.
+The feature allows users to specify retention rules for both full and incremental backups, replacing the previous
+options `KeepAll`, `RemoveAll`, and `RemoveIncremental`.
 Retention policy is an optional part of a backup policy. It consists of two integer fields:
 
-* `full`: The total number of full backups to retain. If not specified, all full backups are kept. The minimum is 1, meaning each new full backup deletes the previous one.
-* `incremental`: The number of most recent full backups that also retain incremental backups made between them. Cannot exceed the value of `full`. If omitted, all incremental backups are kept. A value of `0` means that all previous existing incremental backups will be deleted after each full backup is made.
+* `full`: The total number of full backups to retain. If not specified, all full backups are kept. The minimum is 1,
+  meaning each new full backup deletes the previous one.
+* `incremental`: The number of most recent full backups that also retain incremental backups made between them. Cannot
+  exceed the value of `full`. If omitted, all incremental backups are kept. A value of `0` means that all previous
+  existing incremental backups will be deleted after each full backup is made.
 
-If no retention policy is specified, the system defaults to retaining all full and incremental backups, the same as the `KeepAll` value in older versions.
+If no retention policy is specified, the system defaults to retaining all full and incremental backups, the same as the
+`KeepAll` value in older versions.
 
 After each successfull full backup, all existing backups are scanned to count full and incremental backups.
 ABS then removes older full backups and their associated incremental backups as needed to retain only
@@ -701,70 +706,76 @@ It specifies the amount of extra time-to-live (TTL) to add to records that have 
 The credential object has a new optional `secret-agent` property that points to a secret agent, one of those listed in
 the `secret-agents` configuration parameter.
 Secret agent is responsible for storing secrets like passwords and TLS certificates.
-In addition to `password` and `password-path`, there is a new field `password-key-secret`, which specifies the secret
-keyword in Aerospike Secret Agent containing the password.
-Validation allows only one of these three fields to be present.
+`password` field can contain either password itself (not recommended), or a path pointing to the
+password in the Aerospike Secret Agent (starts with `secrets:`).
+
+Fields `password` and `password-path` are mutually exclusive.
 
 ```yaml
-  dto.Credentials:
-    description: Credentials represents authentication details to the Aerospike cluster.
-    properties:
-      auth-mode:
-        description: >-
-          The authentication mode string (INTERNAL, EXTERNAL, PKI).
-        enum:
-          - INTERNAL
-          - EXTERNAL
-          - PKI
-        type: string
-      password:
-        description: The password for the cluster authentication.
-        example: testPswd
-        type: string
-      password-key-secret:
-        description: |-
-          The secret keyword in Aerospike Secret Agent containing password.
-          Only applicable when SecretAgent is specified.
-        type: string
-      password-path:
-        description: >-
-          The file path with the password string, will take precedence over
-          the password field.
-        example: /path/to/pass.txt
-        type: string
-      secret-agent:
-        allOf:
-          - $ref: '#/components/schemas/dto.SecretAgent'
-        description: Secret Agent configuration (optional).
-        type: object
-      user:
-        description: The username for the cluster authentication.
-        example: testUser
-        type: string
-    type: object
+     dto.Credentials:
+       description: Credentials represents authentication details to the Aerospike cluster.
+       properties:
+         auth-mode:
+           description: "The authentication mode string (INTERNAL, EXTERNAL, PKI)."
+           enum:
+             - INTERNAL
+             - EXTERNAL
+             - PKI
+           type: string
+         password:
+           description: |-
+             The password for the cluster authentication.
+             It can be either plain text or path into the secret agent.
+           example: testPswd
+           type: string
+         password-path:
+           description: The file path with the password string.
+           example: /path/to/pass.txt
+           type: string
+         secret-agent:
+           allOf:
+             - $ref: '#/components/schemas/dto.SecretAgent'
+           description: |-
+             Secret Agent configuration (optional).
+             Mutually exclusive with secret-agent-name.
+           type: object
+         secret-agent-name:
+           description: |-
+             Secret Agent configuration (optional). Link to one of preconfigured agents.
+             Mutually exclusive with secret-agent.
+           type: string
+         user:
+           description: The username for the cluster authentication.
+           example: testUser
+           type: string
+       type: object
 ```
 
 ### Cancel Restore Job
 
 New endpoint:  
-[`POST {{baseUrl}}/v1/restore/cancel/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancel)
+[
+`POST {{baseUrl}}/v1/restore/cancel/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
 
 Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
 
 ### Cancel Backup Job
 
 New endpoint:  
-[`POST {{baseUrl}}/v1/backups/cancel/:<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancel)
+[
+`POST {{baseUrl}}/v1/backups/cancel/:<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancelCurrentBackup)
 
-Cancel all currently running backups (both full and incremental) for the specified routine. Partially created backups will be deleted.
-
+Cancel all currently running backups (both full and incremental) for the specified routine. Partially created backups
+will be deleted.
 
 ### Disable Routine
 
 New endpoints:
 
-- [`POST {{baseUrl}}/v1/routines/:<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Routine/disable)
-- [`POST {{baseUrl}}/v1/routines/:<routineName>/enable/`](https://aerospike.github.io/aerospike-backup-service/#/Routine/enable)
+- [
+  `POST {{baseUrl}}/v1/routines/:<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/disableRoutine)
+- [
+  `POST {{baseUrl}}/v1/routines/:<routineName>/enable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/enableRoutine)
 
 Set the disabled flag for the given routine to `true` or `false` (default is `false`).
 
