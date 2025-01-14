@@ -706,10 +706,9 @@ It specifies the amount of extra time-to-live (TTL) to add to records that have 
 The credential object has a new optional `secret-agent` property that points to a secret agent, one of those listed in
 the `secret-agents` configuration parameter.
 Secret agent is responsible for storing secrets like passwords and TLS certificates.
-`password` field can contain either password itself (not recommended), or a path pointing to the
-password in the Aerospike Secret Agent (starts with `secrets:`).
+`The password` field can contain either the password itself (recommended only for testing), or a path pointing to the password in the Aerospike Secret Agent (starts with `secrets:`).
 
-Fields `password` and `password-path` are mutually exclusive.
+The fields `password` and `password-path` are mutually exclusive.
 
 ```yaml
 dto.Credentials:
