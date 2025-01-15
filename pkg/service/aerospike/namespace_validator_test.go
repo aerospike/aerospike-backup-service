@@ -14,6 +14,8 @@ func Test(t *testing.T) {
 	cluster := model.NewLocalAerospikeCluster()
 	client, aerr := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
 	assert.NoError(t, aerr)
+	defer client.Close()
+
 	namespaces, err := getAllNamespacesOfCluster(client)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, namespaces)
