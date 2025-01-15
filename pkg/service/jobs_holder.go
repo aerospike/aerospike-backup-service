@@ -15,7 +15,8 @@ type jobInfo struct {
 	status       model.JobStatus
 	err          error
 	totalRecords uint64
-	startTime    time.Time
+	started      time.Time
+	finished     *time.Time
 	label        string
 }
 
@@ -35,9 +36,9 @@ func (h *RestoreJobsHolder) newJob(label string) model.RestoreJobID {
 	// #nosec G404
 	id := model.RestoreJobID(rand.Int63())
 	h.Store(id, &jobInfo{
-		status:    model.JobStatusRunning,
-		startTime: time.Now(),
-		label:     label,
+		status:  model.JobStatusRunning,
+		started: time.Now(),
+		label:   label,
 	},
 	)
 

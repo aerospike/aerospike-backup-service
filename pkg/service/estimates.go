@@ -41,7 +41,9 @@ func currentBackupStatus(handlers map[string]CancelableBackupHandler) *model.Run
 //   - status model.JobStatusFailed -> error.
 func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 	status := &model.RestoreJobStatus{
-		Status: job.status,
+		Status:   job.status,
+		Started:  job.started,
+		Finished: job.finished,
 	}
 
 	for _, handler := range job.handlers {
@@ -58,7 +60,7 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 	}
 
 	if job.status == model.JobStatusRunning {
-		status.CurrentRestore = NewRunningJob(job.startTime, status.ReadRecords, job.totalRecords)
+		status.CurrentRestore = NewRunningJob(job.started, status.ReadRecords, job.totalRecords)
 	}
 
 	if job.err != nil {
