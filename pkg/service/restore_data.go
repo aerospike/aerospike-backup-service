@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -197,6 +199,17 @@ func (r *dataRestorer) restoreNamespace(
 
 	// Now restore all backups in order
 	allBackups := append([]model.BackupDetails{fullBackup}, incrementalBackups...)
+	dbEmpty, err := aerospike.IsNamespaceEmpty(client.AerospikeClient(), fullBackup.Namespace, request.Policy.SetList)
+	if err != nil {
+		return fmt.Errorf("could not determine if namespace %s is empty: %w", fullBackup.Namespace, err)
+	}
+
+	if dbEmpty {
+		slices.Reverse(allBackups)
+		request.Policy.Unique = util.Ptr(true)
+		request.Policy.Replace = nil
+	}
+
 	for _, b := range allBackups {
 		if b.FileCount == 0 { // skip empty namespaces
 			continue
