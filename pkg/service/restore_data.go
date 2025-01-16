@@ -205,7 +205,11 @@ func (r *dataRestorer) restoreNamespace(
 	}
 
 	if dbEmpty {
+		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
+		// This way we reduce generation noise and unnecessary load.
 		slices.Reverse(allBackups)
+
+		// old values are not important, because they qualifies how to handle existing data in db.
 		request.Policy.Unique = util.Ptr(true)
 		request.Policy.Replace = nil
 	}
