@@ -12,6 +12,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/backup-go"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/stretchr/testify/require"
 )
@@ -213,6 +214,10 @@ func (a *MockConfigApplier) ApplyNewRoutines(_ context.Context, _ map[string]*mo
 }
 
 type MockNamespaceValidator struct{}
+
+func (m *MockNamespaceValidator) IsEmpty(_ backup.AerospikeClient, _ string, _ []string) (bool, error) {
+	return false, nil
+}
 
 func (m *MockNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ []string) []string {
 	return nil

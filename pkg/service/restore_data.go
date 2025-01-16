@@ -199,7 +199,7 @@ func (r *dataRestorer) restoreNamespace(
 
 	// Now restore all backups in order
 	allBackups := append([]model.BackupDetails{fullBackup}, incrementalBackups...)
-	dbEmpty, err := aerospike.IsNamespaceEmpty(client.AerospikeClient(), fullBackup.Namespace, request.Policy.SetList)
+	dbEmpty, err := r.nsValidator.IsEmpty(client.AerospikeClient(), fullBackup.Namespace, request.Policy.SetList)
 	if err != nil {
 		return fmt.Errorf("could not determine if namespace %s is empty: %w", fullBackup.Namespace, err)
 	}

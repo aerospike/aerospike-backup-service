@@ -17,6 +17,8 @@ func TestIsNamespaceEmpty(t *testing.T) {
 	require.NoError(t, aerr)
 	defer client.Close()
 
+	nsValidator := &defaultNamespaceValidator{}
+
 	namespace := "source-ns1"
 	testSet := "test-set"
 
@@ -85,8 +87,7 @@ func TestIsNamespaceEmpty(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-
-			got, err := IsNamespaceEmpty(client, namespace, tt.sets)
+			got, err := nsValidator.IsEmpty(client, namespace, tt.sets)
 
 			if tt.wantError {
 				assert.Error(t, err)

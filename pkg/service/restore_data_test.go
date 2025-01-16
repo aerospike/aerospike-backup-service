@@ -49,6 +49,7 @@ func makeTestRestoreService(wg *sync.WaitGroup) *dataRestorer {
 		restoreService: NewRestoreMock(wg),
 		backends:       &BackendHolderMock{},
 		clientManager:  &MockClientManager{},
+		nsValidator:    &nsValidatorMock{},
 	}
 }
 
@@ -146,6 +147,22 @@ func (*BackendFailMock) FullBackupList(_ context.Context, _ model.TimeBounds) ([
 
 func (*BackendFailMock) IncrementalBackupList(_ context.Context, _ model.TimeBounds) ([]model.BackupDetails, error) {
 	return nil, errors.New("mock error")
+}
+
+type nsValidatorMock struct {
+	isEmpty bool
+}
+
+func (n nsValidatorMock) MissingNamespaces(*model.AerospikeCluster, []string) []string {
+	return nil
+}
+
+func (n nsValidatorMock) ValidateRoutines(*model.AerospikeCluster, map[string]*model.BackupRoutine) error {
+	return nil
+}
+
+func (n nsValidatorMock) IsEmpty(backup.AerospikeClient, string, []string) (bool, error) {
+	return n.isEmpty, nil
 }
 
 func TestRestoreOK(t *testing.T) {
