@@ -2002,7 +2002,7 @@ components:
         read-records: 10
         error: error
         current-job:
-          finish-time: finish-time
+          finish-time: 2006-01-02T15:04:05Z07:00
           estimated-end-time: 2006-01-02T15:04:05Z07:00
           start-time: 2006-01-02T15:04:05Z07:00
           percentage-done: 50
@@ -2301,7 +2301,7 @@ components:
     dto.RunningJob:
       description: RunningJob tracks progress of currently running job.
       example:
-        finish-time: finish-time
+        finish-time: 2006-01-02T15:04:05Z07:00
         estimated-end-time: 2006-01-02T15:04:05Z07:00
         start-time: 2006-01-02T15:04:05Z07:00
         percentage-done: 50
@@ -2321,6 +2321,7 @@ components:
           type: string
         finish-time:
           description: "FinishTime: the time when the operation finished"
+          example: 2006-01-02T15:04:05Z07:00
           type: string
         percentage-done:
           description: "PercentageDone: the progress of the backup operation as a\

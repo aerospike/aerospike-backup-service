@@ -23,16 +23,16 @@ func (nv *defaultNamespaceValidator) IsEmpty(
 	}
 
 	if len(sets) == 0 {
-		return isEntireNamespaceEmpty(node, namespace)
+		return isEntireNamespaceEmpty(client.GetDefaultInfoPolicy(), node, namespace)
 	}
 
-	return areSetsEmpty(node, namespace, sets)
+	return areSetsEmpty(client.GetDefaultInfoPolicy(), node, namespace, sets)
 }
 
 // isEntireNamespaceEmpty checks if the entire namespace has any records.
-func isEntireNamespaceEmpty(node *as.Node, namespace string) (bool, error) {
+func isEntireNamespaceEmpty(policy *as.InfoPolicy, node *as.Node, namespace string) (bool, error) {
 	statsKey := "namespace/" + namespace
-	stats, err := getNodeStats(node, statsKey)
+	stats, err := getNodeStats(policy, node, statsKey)
 	if err != nil {
 		return false, err
 	}
@@ -46,9 +46,9 @@ func isEntireNamespaceEmpty(node *as.Node, namespace string) (bool, error) {
 }
 
 // areSetsEmpty checks if all specified sets in the namespace are empty.
-func areSetsEmpty(node *as.Node, namespace string, sets []string) (bool, error) {
+func areSetsEmpty(policy *as.InfoPolicy, node *as.Node, namespace string, sets []string) (bool, error) {
 	for _, set := range sets {
-		isEmpty, err := isSetEmpty(node, namespace, set)
+		isEmpty, err := isSetEmpty(policy, node, namespace, set)
 		if err != nil {
 			return false, err
 		}
@@ -60,9 +60,9 @@ func areSetsEmpty(node *as.Node, namespace string, sets []string) (bool, error) 
 }
 
 // isSetEmpty checks if a specific set is empty.
-func isSetEmpty(node *as.Node, namespace, set string) (bool, error) {
+func isSetEmpty(policy *as.InfoPolicy, node *as.Node, namespace, set string) (bool, error) {
 	statsKey := fmt.Sprintf("sets/%s/%s", namespace, set)
-	stats, err := getNodeStats(node, statsKey)
+	stats, err := getNodeStats(policy, node, statsKey)
 	if err != nil {
 		return false, err
 	}
@@ -81,8 +81,8 @@ func isSetEmpty(node *as.Node, namespace, set string) (bool, error) {
 }
 
 // getNodeStats retrieves statistics from a node for a given key.
-func getNodeStats(node *as.Node, statsKey string) (string, error) {
-	infoRes, err := node.RequestInfo(&as.InfoPolicy{}, statsKey)
+func getNodeStats(policy *as.InfoPolicy, node *as.Node, statsKey string) (string, error) {
+	infoRes, err := node.RequestInfo(policy, statsKey)
 	if err != nil {
 		return "", fmt.Errorf("failed to get stats for %s: %w", statsKey, err)
 	}

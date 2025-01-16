@@ -2662,7 +2662,8 @@ const docTemplate = `{
                 },
                 "finish-time": {
                     "description": "FinishTime: the time when the operation finished",
-                    "type": "string"
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "percentage-done": {
                     "description": "PercentageDone: the progress of the backup operation as a percentage.",
