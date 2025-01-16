@@ -47,7 +47,7 @@ type RunningJob struct {
 	// StartTime: the time when the operation started.
 	StartTime time.Time `json:"start-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
 	// FinishTime: the time when the operation finished
-	FinishTime *time.Time `yaml:"finish-time,omitempty" json:"finish-time,omitempty"`
+	FinishTime *time.Time `json:"finish-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
 	// PercentageDone: the progress of the backup operation as a percentage.
 	PercentageDone uint `json:"percentage-done,omitempty" example:"50"`
 	// EstimatedEndTime: the estimated time when the backup operation will be completed.
