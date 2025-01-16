@@ -29,7 +29,7 @@ func (nv *defaultNamespaceValidator) IsEmpty(
 	return areSetsEmpty(node, namespace, sets)
 }
 
-// isEntireNamespaceEmpty checks if the entire namespace has any records
+// isEntireNamespaceEmpty checks if the entire namespace has any records.
 func isEntireNamespaceEmpty(node *as.Node, namespace string) (bool, error) {
 	statsKey := "namespace/" + namespace
 	stats, err := getNodeStats(node, statsKey)
@@ -45,21 +45,21 @@ func isEntireNamespaceEmpty(node *as.Node, namespace string) (bool, error) {
 	return objectCount == 0, nil
 }
 
-// areSetsEmpty checks if all specified sets in the namespace are empty
+// areSetsEmpty checks if all specified sets in the namespace are empty.
 func areSetsEmpty(node *as.Node, namespace string, sets []string) (bool, error) {
 	for _, set := range sets {
 		isEmpty, err := isSetEmpty(node, namespace, set)
 		if err != nil {
 			return false, err
 		}
-		if !isEmpty {
+		if !isEmpty { // return false if any of sets is not empty.
 			return false, nil
 		}
 	}
 	return true, nil
 }
 
-// isSetEmpty checks if a specific set is empty
+// isSetEmpty checks if a specific set is empty.
 func isSetEmpty(node *as.Node, namespace, set string) (bool, error) {
 	statsKey := fmt.Sprintf("sets/%s/%s", namespace, set)
 	stats, err := getNodeStats(node, statsKey)
@@ -80,7 +80,7 @@ func isSetEmpty(node *as.Node, namespace, set string) (bool, error) {
 	return objectCount == 0, nil
 }
 
-// getNodeStats retrieves statistics from a node for a given key
+// getNodeStats retrieves statistics from a node for a given key.
 func getNodeStats(node *as.Node, statsKey string) (string, error) {
 	infoRes, err := node.RequestInfo(&as.InfoPolicy{}, statsKey)
 	if err != nil {
@@ -90,7 +90,9 @@ func getNodeStats(node *as.Node, statsKey string) (string, error) {
 	return infoRes[statsKey], nil
 }
 
-// parseObjectCount parses the object count from stats string, trying multiple possible key names
+// parseObjectCount parses the object count from stats string.
+// when fetch namespaces, aerospike return a string separated by `;`
+// for list of sets, delimiter is `:`
 func parseObjectCount(stats, delimiter, key string) (int64, error) {
 	statsPairs := strings.Split(stats, delimiter)
 	for _, pair := range statsPairs {
@@ -103,5 +105,6 @@ func parseObjectCount(stats, delimiter, key string) (int64, error) {
 			return strconv.ParseInt(kv[1], 10, 64)
 		}
 	}
+
 	return 0, fmt.Errorf("object count not found in stats")
 }
