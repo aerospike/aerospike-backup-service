@@ -4,6 +4,15 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
+type JobStatus string
+
+const (
+	JobStatusRunning   JobStatus = "Running"
+	JobStatusDone      JobStatus = "Done"
+	JobStatusFailed    JobStatus = "Failed"
+	JobStatusCancelled JobStatus = "Cancelled"
+)
+
 // RestoreJobStatus represents a restore job status.
 // @Description RestoreJobStatus represents a restore job status.
 type RestoreJobStatus struct {
@@ -19,7 +28,7 @@ type RestoreJobStatus struct {
 	UDFCount        uint64 `yaml:"udf-count,omitempty" json:"udf-count,omitempty" format:"int64" example:"1"`
 
 	CurrentRestore *RunningJob `yaml:"current-restore,omitempty" json:"current-job,omitempty"`
-	Status         string      `yaml:"status,omitempty" json:"status,omitempty"`
+	Status         JobStatus   `yaml:"status,omitempty" json:"status,omitempty"`
 	Error          string      `yaml:"error,omitempty" json:"error,omitempty"`
 }
 
@@ -44,7 +53,7 @@ func (r *RestoreJobStatus) fromModel(m *model.RestoreJobStatus) {
 	r.FresherRecords = m.FresherRecords
 	r.IndexCount = m.IndexCount
 	r.UDFCount = m.UDFCount
-	r.Status = string(m.Status)
+	r.Status = JobStatus(m.Status)
 	r.Error = m.Error
 	r.CurrentRestore = NewRunningJobFromModel(m.CurrentRestore)
 }
