@@ -2401,11 +2401,6 @@
         },
         "type" : "object"
       },
-      "dto.JobStatus" : {
-        "enum" : [ "Running", "Done", "Failed", "Cancelled" ],
-        "type" : "string",
-        "x-enum-varnames" : [ "JobStatusRunning", "JobStatusDone", "JobStatusFailed", "JobStatusCancelled" ]
-      },
       "dto.LocalStorage" : {
         "properties" : {
           "path" : {
@@ -2520,7 +2515,7 @@
             "type" : "integer"
           },
           "status" : {
-            "$ref" : "#/components/schemas/dto.JobStatus"
+            "type" : "string"
           },
           "total-bytes" : {
             "example" : 2000,
@@ -2776,13 +2771,17 @@
             "example" : "2006-01-02T15:04:05Z07:00",
             "type" : "string"
           },
+          "finish-time" : {
+            "description" : "FinishTime: the time when the operation finished",
+            "type" : "string"
+          },
           "percentage-done" : {
             "description" : "PercentageDone: the progress of the backup operation as a percentage.",
             "example" : 50,
             "type" : "integer"
           },
           "start-time" : {
-            "description" : "StartTime: the time when the backup operation started.",
+            "description" : "StartTime: the time when the operation started.",
             "example" : "2006-01-02T15:04:05Z07:00",
             "type" : "string"
           },

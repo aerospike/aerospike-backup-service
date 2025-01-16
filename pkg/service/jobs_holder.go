@@ -62,6 +62,7 @@ func (h *RestoreJobsHolder) addTotalRecords(id model.RestoreJobID, t uint64) {
 
 func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
 	h.Apply(id, func(job *jobInfo) {
+		job.finished = util.Ptr(time.Now())
 		if err == nil {
 			job.status = model.JobStatusDone
 			return

@@ -2233,21 +2233,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.JobStatus": {
-            "type": "string",
-            "enum": [
-                "Running",
-                "Done",
-                "Failed",
-                "Cancelled"
-            ],
-            "x-enum-varnames": [
-                "JobStatusRunning",
-                "JobStatusDone",
-                "JobStatusFailed",
-                "JobStatusCancelled"
-            ]
-        },
         "dto.LocalStorage": {
             "type": "object",
             "required": [
@@ -2378,7 +2363,7 @@ const docTemplate = `{
                     "example": 4
                 },
                 "status": {
-                    "$ref": "#/definitions/dto.JobStatus"
+                    "type": "string"
                 },
                 "total-bytes": {
                     "type": "integer",
@@ -2660,13 +2645,17 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z07:00"
                 },
+                "finish-time": {
+                    "description": "FinishTime: the time when the operation finished",
+                    "type": "string"
+                },
                 "percentage-done": {
                     "description": "PercentageDone: the progress of the backup operation as a percentage.",
                     "type": "integer",
                     "example": 50
                 },
                 "start-time": {
-                    "description": "StartTime: the time when the backup operation started.",
+                    "description": "StartTime: the time when the operation started.",
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z07:00"
                 },
