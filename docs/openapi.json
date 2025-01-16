@@ -2401,6 +2401,11 @@
         },
         "type" : "object"
       },
+      "dto.JobStatus" : {
+        "enum" : [ "Running", "Done", "Failed", "Cancelled" ],
+        "type" : "string",
+        "x-enum-varnames" : [ "JobStatusRunning", "JobStatusDone", "JobStatusFailed", "JobStatusCancelled" ]
+      },
       "dto.LocalStorage" : {
         "properties" : {
           "path" : {
@@ -2515,7 +2520,7 @@
             "type" : "integer"
           },
           "status" : {
-            "type" : "string"
+            "$ref" : "#/components/schemas/dto.JobStatus"
           },
           "total-bytes" : {
             "example" : 2000,

@@ -2233,6 +2233,21 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.JobStatus": {
+            "type": "string",
+            "enum": [
+                "Running",
+                "Done",
+                "Failed",
+                "Cancelled"
+            ],
+            "x-enum-varnames": [
+                "JobStatusRunning",
+                "JobStatusDone",
+                "JobStatusFailed",
+                "JobStatusCancelled"
+            ]
+        },
         "dto.LocalStorage": {
             "type": "object",
             "required": [
@@ -2363,7 +2378,7 @@ const docTemplate = `{
                     "example": 4
                 },
                 "status": {
-                    "type": "string"
+                    "$ref": "#/definitions/dto.JobStatus"
                 },
                 "total-bytes": {
                     "type": "integer",
