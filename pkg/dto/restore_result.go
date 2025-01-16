@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"time"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -23,8 +21,6 @@ type RestoreJobStatus struct {
 	CurrentRestore *RunningJob `yaml:"current-restore,omitempty" json:"current-job,omitempty"`
 	Status         string      `yaml:"status,omitempty" json:"status,omitempty"`
 	Error          string      `yaml:"error,omitempty" json:"error,omitempty"`
-	Started        time.Time   `yaml:"started" json:"started"`
-	Finished       *time.Time  `yaml:"finished,omitempty" json:"finished,omitempty"`
 }
 
 func NewResultFromModel(m *model.RestoreJobStatus) *RestoreJobStatus {
@@ -51,6 +47,4 @@ func (r *RestoreJobStatus) fromModel(m *model.RestoreJobStatus) {
 	r.Status = string(m.Status)
 	r.Error = m.Error
 	r.CurrentRestore = NewRunningJobFromModel(m.CurrentRestore)
-	r.Started = m.Started
-	r.Finished = m.Finished
 }

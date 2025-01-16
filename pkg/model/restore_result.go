@@ -1,7 +1,5 @@
 package model
 
-import "time"
-
 type JobStatus string
 
 const (
@@ -28,6 +26,4 @@ type RestoreJobStatus struct {
 	CurrentRestore *RunningJob
 	Status         JobStatus
 	Error          string
-	Started        time.Time
-	Finished       *time.Time
 }
