@@ -31,7 +31,7 @@ func currentBackupStatus(handlers map[string]CancelableBackupHandler) *model.Run
 		return nil
 	}
 
-	return NewRunningJob(startTime, done, total)
+	return NewRunningJob(startTime, nil, done, total)
 }
 
 // RestoreJobStatus returns the status of a restore job.
@@ -57,9 +57,9 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 		status.TotalBytes += stats.GetTotalBytesRead()
 	}
 
-	if job.status == model.JobStatusRunning {
-		status.CurrentRestore = NewRunningJob(job.startTime, status.ReadRecords, job.totalRecords)
-	}
+	done := status.InsertedRecords + status.SkippedRecords +
+		status.ExistedRecords + status.ExpiredRecords + status.FresherRecords
+	status.CurrentRestore = NewRunningJob(job.started, job.finished, done, job.totalRecords)
 
 	if job.err != nil {
 		status.Error = job.err.Error()
@@ -69,7 +69,7 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 }
 
 // NewRunningJob created new RunningJob with calculated estimated time and percentage.
-func NewRunningJob(startTime time.Time, done, total uint64) *model.RunningJob {
+func NewRunningJob(startTime time.Time, finishTime *time.Time, done, total uint64) *model.RunningJob {
 	if total == 0 {
 		return nil
 	}
@@ -77,6 +77,7 @@ func NewRunningJob(startTime time.Time, done, total uint64) *model.RunningJob {
 	percentage := float64(done) / float64(total)
 	return &model.RunningJob{
 		StartTime:        startTime,
+		FinishTime:       finishTime,
 		DoneRecords:      done,
 		TotalRecords:     total,
 		EstimatedEndTime: calculateEstimatedEndTime(startTime, percentage),

@@ -21,11 +21,14 @@ type RunningJob struct {
 	TotalRecords uint64
 	// DoneRecords: the number of records that have been successfully done.
 	DoneRecords uint64
-	// StartTime: the time when the backup operation started.
+	// StartTime: the time when the operation started.
 	StartTime time.Time
-	// PercentageDone: the progress of the backup operation as a percentage.
+	// FinishTime: the time when the operation finished.
+	// nil value indicates that operation is still running.
+	FinishTime *time.Time
+	// PercentageDone: the progress of the operation as a percentage.
 	PercentageDone uint
-	// EstimatedEndTime: the estimated time when the backup operation will be completed.
+	// EstimatedEndTime: the estimated time when the operation will be completed.
 	// A nil value indicates that the estimation is not available yet.
 	EstimatedEndTime *time.Time
 }
