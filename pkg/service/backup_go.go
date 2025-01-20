@@ -11,31 +11,32 @@ import (
 	"github.com/aerospike/backup-go"
 )
 
-// BackupGo implements the [Backup] interface.
-type BackupGo struct {
+// BackupExecutor implements the [Backup] interface.
+type BackupExecutor struct {
+	backupRoutine *model.BackupRoutine
 }
 
-// NewBackupGo returns a new BackupGo instance.
-func NewBackupGo() *BackupGo {
-	return &BackupGo{}
+func NewBackupExecutor(
+	backupRoutine *model.BackupRoutine,
+) *BackupExecutor {
+	return &BackupExecutor{
+		backupRoutine: backupRoutine,
+	}
 }
 
 // BackupRun creates a [backup.Client] and initiates the backup operation.
 // A backup handler is returned to monitor the job status.
-func (b *BackupGo) BackupRun(
+func (b *BackupExecutor) BackupRun(
 	ctx context.Context,
-	backupRoutine *model.BackupRoutine,
-	backupPolicy *model.BackupPolicy,
 	client *backup.Client,
-	s model.Storage,
-	secretAgent *model.SecretAgent,
+	policy *model.BackupPolicy,
 	timebounds model.TimeBounds,
 	namespace string,
 	path string,
 ) (BackupHandler, error) {
-	config := makeBackupConfig(namespace, backupRoutine, backupPolicy, timebounds, secretAgent)
+	config := makeBackupConfig(namespace, b.backupRoutine, policy, timebounds, b.backupRoutine.SecretAgent)
 
-	writerFactory, err := storage.CreateWriter(ctx, s, path, false, false, false)
+	writerFactory, err := storage.CreateWriter(ctx, b.backupRoutine.Storage, path, false, false, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer, %w", err)
 	}

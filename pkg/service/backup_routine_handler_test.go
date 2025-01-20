@@ -22,16 +22,13 @@ type mockBackupService struct {
 
 func (m *mockBackupService) BackupRun(
 	ctx context.Context,
-	backupRoutine *model.BackupRoutine,
-	backupPolicy *model.BackupPolicy,
 	client *backup.Client,
-	storage model.Storage,
-	secretAgent *model.SecretAgent,
+	backupPolicy *model.BackupPolicy,
 	timebounds model.TimeBounds,
 	namespace string,
 	path string,
 ) (BackupHandler, error) {
-	args := m.Called(ctx, backupRoutine, backupPolicy, client, storage, secretAgent, timebounds, namespace, path)
+	args := m.Called(ctx, client, backupPolicy, timebounds, namespace, path)
 	return args.Get(0).(BackupHandler), args.Error(1)
 }
 
@@ -146,17 +143,11 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		"ns1",
 		mock.Anything,
 	).Return(backupHandler, nil).Once()
 
 	backupService.On("BackupRun",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -202,9 +193,6 @@ func TestRunFullBackupInternal_WaitError(t *testing.T) {
 	backupHandler.On("Wait", mock.Anything).Return(expectedErr)
 
 	backupService.On("BackupRun",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -320,17 +308,11 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		"ns1",
 		mock.Anything,
 	).Return(backupHandler, nil)
 
 	backupService.On("BackupRun",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -376,17 +358,11 @@ func TestRunFullBackup_PartialFailure(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		"ns1",
 		mock.Anything,
 	).Return(successHandler, nil).Once()
 
 	backupService.On("BackupRun",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,

@@ -41,11 +41,8 @@ type BackupRoutineHandler struct {
 type Backup interface {
 	BackupRun(
 		ctx context.Context,
-		backupRoutine *model.BackupRoutine,
-		backupPolicy *model.BackupPolicy,
 		client *backup.Client,
-		storage model.Storage,
-		secretAgent *model.SecretAgent,
+		backupPolicy *model.BackupPolicy,
 		timebounds model.TimeBounds,
 		namespace string,
 		path string,
@@ -226,9 +223,7 @@ func (h *BackupRoutineHandler) startNamespaceBackup(
 		ctx,
 		h.retry,
 		func(ctx context.Context) (BackupHandler, error) { // start backup.
-			return h.backupService.BackupRun(
-				ctx, h.backupRoutine, h.backupFullPolicy, client, h.storage, h.secretAgent, timebounds, namespace, backupFolder,
-			)
+			return h.backupService.BackupRun(ctx, client, h.backupFullPolicy, timebounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) { // on fail.
 			h.deleteFolder(ctx, backupFolder)
@@ -365,9 +360,7 @@ func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
 		ctx,
 		&simpleExecutor{},
 		func(ctx context.Context) (BackupHandler, error) { // start backup.
-			return h.backupService.BackupRun(ctx,
-				h.backupRoutine, h.backupIncrPolicy, client, h.storage, h.secretAgent,
-				timebounds, namespace, backupFolder)
+			return h.backupService.BackupRun(ctx, client, h.backupIncrPolicy, timebounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) { // on fail.
 			h.deleteFolder(ctx, backupFolder)
