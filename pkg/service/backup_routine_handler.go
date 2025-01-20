@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -158,21 +157,28 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
-	for _, namespace := range namespaces {
-		h.fullBackupHandlers[namespace] = h.startNamespaceBackup(ctx, namespace, now, client)
-	}
+	backupOp := NewBackupNamespacesOperation(
+		namespaces,
+		h.routineName,
+		h.backupService,
+		h.backupFullPolicy,
+		client,
+		h.retry,
+		h.metadataWriter,
+		h.createTimebounds(true, now),
+		h.logger,
+		now,
+		false,
+	)
 
-	err = h.waitForFullBackups(ctx)
-	if err != nil {
+	if err := backupOp.Run(ctx); err != nil {
 		return err
 	}
 
+	h.fullBackupHandlers = backupOp.GetHandlers()
 	h.lastRun.SetFullBackupTime(&now)
 
 	go func() {
-		// Clean up old backups asynchronously.
-		// At this moment backup is already completed, but backupJob.isRunning flag is still set,
-		// potentially blocking subsequent backup executions.
 		err = h.retentionManager.deleteOldBackups(ctx)
 		if err != nil {
 			h.logger.Error("failed to clean up old backups", slog.Any("error", err))
@@ -205,29 +211,6 @@ func (h *BackupRoutineHandler) prepareCluster(retry executor) (*backup.Client, [
 	return client, namespaces, err
 }
 
-func (h *BackupRoutineHandler) startNamespaceBackup(
-	ctx context.Context, namespace string, now time.Time, client *backup.Client,
-) CancelableBackupHandler {
-	backupFolder := getFullPath(h.routineName, namespace, now)
-	timebounds := h.createTimebounds(true, now)
-
-	return startBackup(
-		ctx,
-		h.retry,
-		func(ctx context.Context) (BackupHandler, error) { // start backup.
-			return h.backupService.BackupRun(ctx, client, h.backupFullPolicy, timebounds, namespace, backupFolder)
-		},
-		func(ctx context.Context) { // on fail.
-			h.deleteFolder(ctx, backupFolder)
-		},
-		func(ctx context.Context, stats *models.BackupStats) error { // on success.
-			// for full backup metadata file is written every time, even for empty backup.
-			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
-			return h.writeBackupMetadata(ctx, metadata, backupFolder)
-		},
-	)
-}
-
 func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) model.TimeBounds {
 	var (
 		fromTime *time.Time
@@ -244,42 +227,6 @@ func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) 
 	}
 
 	return model.TimeBounds{FromTime: fromTime, ToTime: toTime}
-}
-
-func (h *BackupRoutineHandler) waitForFullBackups(ctx context.Context) error {
-	var aggregatedErr error
-	for ns, handler := range h.fullBackupHandlers {
-		if err := handler.Wait(ctx); err != nil {
-			aggregatedErr = errors.Join(aggregatedErr, fmt.Errorf("namespace %s: %w", ns, err))
-		}
-	}
-
-	return aggregatedErr
-}
-
-func (h *BackupRoutineHandler) writeBackupMetadata(
-	ctx context.Context, metadata model.BackupMetadata, backupFolder string,
-) error {
-	if err := h.metadataWriter.writeBackupMetadata(ctx, backupFolder, metadata); err != nil {
-		h.logger.Error("Could not Write backup metadata",
-			slog.String("folder", backupFolder),
-			slog.Any("err", err))
-		return fmt.Errorf("could not write backup metadata to %q: %w", backupFolder, err)
-	}
-
-	h.logger.Info("Write backup metadata",
-		slog.Any("folder", backupFolder),
-		slog.Any("metadata", metadata))
-
-	return nil
-}
-
-func (h *BackupRoutineHandler) deleteFolder(ctx context.Context, path string) {
-	err := h.metadataWriter.deleteFolder(ctx, path)
-	if err != nil {
-		h.logger.Error("Could not delete folder", slog.Any("err", err))
-	}
-	h.logger.Debug("Deleted folder", slog.String("path", path))
 }
 
 func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now time.Time) {
@@ -329,55 +276,27 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 		clear(h.incrBackupHandlers)
 	}()
 
-	for _, namespace := range namespaces {
-		h.incrBackupHandlers[namespace] = h.startIncrementalNamespaceBackup(ctx, namespace, now, client)
-	}
+	backupOp := NewBackupNamespacesOperation(
+		namespaces,
+		h.routineName,
+		h.backupService,
+		h.backupIncrPolicy,
+		client,
+		&simpleExecutor{},
+		h.metadataWriter,
+		h.createTimebounds(false, now),
+		h.logger,
+		now,
+		true,
+	)
 
-	err = h.waitForIncrementalBackups(ctx)
-	if err != nil {
+	if err := backupOp.Run(ctx); err != nil {
 		return err
 	}
 
+	h.incrBackupHandlers = backupOp.GetHandlers()
 	h.lastRun.SetIncrementalBackupTime(&now)
 	return nil
-}
-
-func (h *BackupRoutineHandler) startIncrementalNamespaceBackup(
-	ctx context.Context, namespace string, now time.Time, client *backup.Client,
-) CancelableBackupHandler {
-	backupFolder := getIncrementalPath(h.routineName, namespace, now)
-	timebounds := h.createTimebounds(false, now)
-
-	return startBackup(
-		ctx,
-		&simpleExecutor{},
-		func(ctx context.Context) (BackupHandler, error) { // start backup.
-			return h.backupService.BackupRun(ctx, client, h.backupIncrPolicy, timebounds, namespace, backupFolder)
-		},
-		func(ctx context.Context) { // on fail.
-			h.deleteFolder(ctx, backupFolder)
-		},
-		func(ctx context.Context, stats *models.BackupStats) error { // on success.
-			if stats.IsEmpty() { // do not write metadata for empty backup.
-				return nil
-			}
-
-			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
-			return h.writeBackupMetadata(ctx, metadata, backupFolder)
-		},
-	)
-}
-
-func (h *BackupRoutineHandler) waitForIncrementalBackups(ctx context.Context) error {
-	var aggregatedErr error
-	for ns, handler := range h.incrBackupHandlers {
-		err := handler.Wait(ctx)
-		if err != nil {
-			aggregatedErr = errors.Join(aggregatedErr, fmt.Errorf("namespace %s: %w", ns, err))
-		}
-	}
-
-	return aggregatedErr
 }
 
 func (h *BackupRoutineHandler) CurrentStat() *model.CurrentBackups {
