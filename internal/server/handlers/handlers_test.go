@@ -131,6 +131,10 @@ func (mock restoreManagerMock) CancelRestore(jobID model.RestoreJobID) error {
 
 type backupListReaderMock struct{}
 
+func (mock backupListReaderMock) FindLastRun(_ context.Context) *model.LastBackupRun {
+	return nil
+}
+
 func (mock backupListReaderMock) FullBackupList(_ context.Context, timebounds model.TimeBounds,
 ) ([]model.BackupDetails, error) {
 	if timebounds == (model.TimeBounds{}) {
@@ -168,14 +172,14 @@ func (mock backupListReaderMock) FindIncrementalBackupsForNamespace(
 
 type backendsHolderMock struct{}
 
-func (mock backendsHolderMock) GetReader(routineName string) (service.BackupListReader, bool) {
+func (mock backendsHolderMock) GetReader(routineName string) (service.BackupMetadataReader, bool) {
 	if routineName != testRoutineName {
 		return nil, false
 	}
 	return backupListReaderMock{}, true
 }
 
-func (mock backendsHolderMock) Get(routineName string) (*service.BackupBackend, bool) {
+func (mock backendsHolderMock) Get(routineName string) (service.BackupMetadataReaderWriter, bool) {
 	if routineName != testRoutineName {
 		return nil, false
 	}
@@ -186,7 +190,7 @@ func (mock backendsHolderMock) Get(routineName string) (*service.BackupBackend, 
 func (mock backendsHolderMock) Init(_ map[string]*model.BackupRoutine) {
 }
 
-func (mock backendsHolderMock) GetAllReaders() map[string]service.BackupListReader {
+func (mock backendsHolderMock) GetAllReaders() map[string]service.BackupMetadataReader {
 	return nil
 }
 

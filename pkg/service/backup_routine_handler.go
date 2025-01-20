@@ -17,7 +17,7 @@ import (
 // BackupRoutineHandler implements backup logic for single routine.
 type BackupRoutineHandler struct {
 	backupService       Backup
-	metadataWriter      backupMetadataManager
+	metadataWriter      BackupMetadataWriter
 	backupFullPolicy    *model.BackupPolicy
 	backupIncrPolicy    *model.BackupPolicy
 	backupRoutine       *model.BackupRoutine
@@ -63,14 +63,6 @@ type CancelableBackupHandler interface {
 	Cancel()
 }
 
-// backupMetadataManager handles backup metadata.
-type backupMetadataManager interface {
-	// writeBackupMetadata writes backup metadata to storage after successful backup.
-	writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
-	// DeleteFolder deletes a folder with backup data.
-	deleteFolder(ctx context.Context, path string) error
-}
-
 // ClusterConfigWriter handles writing cluster configuration to storage.
 type ClusterConfigWriter interface {
 	Write(ctx context.Context, client backup.AerospikeClient, timestamp time.Time)
@@ -103,7 +95,7 @@ func newBackupRoutineHandler(
 	backupService Backup,
 	routineName string,
 	routine *model.BackupRoutine,
-	backupBackend *BackupBackend,
+	backupBackend BackupMetadataReaderWriter,
 	lastRun *model.LastBackupRun,
 ) *BackupRoutineHandler {
 	backupPolicy := routine.BackupPolicy

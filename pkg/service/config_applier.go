@@ -121,7 +121,7 @@ func makeHandler(
 	if old, ok := oldHandlers.Load(routineName); ok {
 		lastRun = old.CurrentStat().LastRunTime
 	} else {
-		lastRun = backend.findLastRun(ctx) // this scan can take some time.
+		lastRun = backend.FindLastRun(ctx) // this scan can take some time.
 	}
 
 	return newBackupRoutineHandler(clientManager, backupService, routineName, routine, backend, lastRun)

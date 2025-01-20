@@ -142,7 +142,7 @@ func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
 
 func (r *dataRestorer) restoreByTimeSync(
 	ctx context.Context,
-	backend BackupListReader,
+	backend BackupMetadataReader,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
 	fullBackups []model.BackupDetails,
@@ -179,7 +179,7 @@ func (r *dataRestorer) restoreByTimeSync(
 func (r *dataRestorer) restoreNamespace(
 	ctx context.Context,
 	client *backup.Client,
-	backend BackupListReader,
+	backend BackupMetadataReader,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
 	fullBackup model.BackupDetails,

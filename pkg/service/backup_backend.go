@@ -27,7 +27,7 @@ type BackupBackend struct {
 	routineName string
 }
 
-var _ BackupListReader = (*BackupBackend)(nil)
+var _ BackupMetadataReader = (*BackupBackend)(nil)
 
 func newBackend(routineName string, storage model.Storage) *BackupBackend {
 	return &BackupBackend{
@@ -36,7 +36,7 @@ func newBackend(routineName string, storage model.Storage) *BackupBackend {
 	}
 }
 
-func (b *BackupBackend) findLastRun(ctx context.Context) *model.LastBackupRun {
+func (b *BackupBackend) FindLastRun(ctx context.Context) *model.LastBackupRun {
 	fullBackupList, _ := b.FullBackupList(ctx, model.TimeBounds{})
 	lastFullBackup := lastBackupTime(fullBackupList)
 	incrementalBackupList, _ := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})

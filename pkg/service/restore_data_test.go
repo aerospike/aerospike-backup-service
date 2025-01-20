@@ -17,7 +17,7 @@ var validBackupPath = "testout/backup/data"
 
 type BackendHolderMock struct{}
 
-func (b *BackendHolderMock) GetReader(name string) (BackupListReader, bool) {
+func (b *BackendHolderMock) GetReader(name string) (BackupMetadataReader, bool) {
 	switch name {
 	case "routine":
 		return &BackendMock{}, true
@@ -29,11 +29,11 @@ func (b *BackendHolderMock) GetReader(name string) (BackupListReader, bool) {
 	return nil, false
 }
 
-func (b *BackendHolderMock) Get(_ string) (*BackupBackend, bool) {
+func (b *BackendHolderMock) Get(_ string) (BackupMetadataReaderWriter, bool) {
 	return nil, false
 }
 
-func (b *BackendHolderMock) GetAllReaders() map[string]BackupListReader {
+func (b *BackendHolderMock) GetAllReaders() map[string]BackupMetadataReader {
 	return nil
 }
 
@@ -53,6 +53,10 @@ func makeTestRestoreService(wg *sync.WaitGroup) *dataRestorer {
 }
 
 type BackendMock struct {
+}
+
+func (m *BackendMock) FindLastRun(_ context.Context) *model.LastBackupRun {
+	return nil
 }
 
 func (m *BackendMock) FindIncrementalBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,
@@ -129,6 +133,10 @@ func (*BackendFailMock) FindLastFullBackup(_ time.Time) ([]model.BackupDetails, 
 }
 
 type BackendFailMock struct {
+}
+
+func (m *BackendFailMock) FindLastRun(_ context.Context) *model.LastBackupRun {
+	return nil
 }
 
 func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,

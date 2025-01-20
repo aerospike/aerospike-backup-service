@@ -7,8 +7,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// BackupListReader allows to read list of existing backups.
-type BackupListReader interface {
+// BackupMetadataReader allows to read list of existing backups.
+type BackupMetadataReader interface {
 	// FullBackupList returns a list of available full backups.
 	// The parameters are timestamp filters by creation time (epoch millis),
 	// where from is inclusive and to is exclusive.
@@ -30,4 +30,20 @@ type BackupListReader interface {
 	FindIncrementalBackupsForNamespace(
 		ctx context.Context, bounds model.TimeBounds, namespace string,
 	) ([]model.BackupDetails, error)
+
+	// FindLastRun return timestamps of last full and incremental backups.
+	FindLastRun(ctx context.Context) *model.LastBackupRun
+}
+
+// BackupMetadataWriter handles backup metadata.
+type BackupMetadataWriter interface {
+	// writeBackupMetadata writes backup metadata to storage after successful backup.
+	writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
+	// DeleteFolder deletes a folder with backup data.
+	deleteFolder(ctx context.Context, path string) error
+}
+
+type BackupMetadataReaderWriter interface {
+	BackupMetadataReader
+	BackupMetadataWriter
 }
