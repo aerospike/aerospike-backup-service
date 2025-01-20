@@ -15,7 +15,6 @@ import (
 )
 
 var errBackendNotFound = errors.New("backend not found")
-var errBackupNotFound = errors.New("backup not found")
 
 type ErrJobNotFound struct {
 	JobID model.RestoreJobID

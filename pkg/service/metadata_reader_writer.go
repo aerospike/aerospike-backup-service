@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -47,3 +48,5 @@ type BackupMetadataReaderWriter interface {
 	BackupMetadataReader
 	BackupMetadataWriter
 }
+
+var errBackupNotFound = errors.New("backup not found")

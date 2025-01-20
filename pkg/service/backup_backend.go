@@ -27,7 +27,7 @@ type BackupBackend struct {
 	routineName string
 }
 
-var _ BackupMetadataReader = (*BackupBackend)(nil)
+var _ BackupMetadataReaderWriter = (*BackupBackend)(nil)
 
 func newBackend(routineName string, storage model.Storage) *BackupBackend {
 	return &BackupBackend{
