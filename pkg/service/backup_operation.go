@@ -82,6 +82,7 @@ func (op *BackupNamespaceRunner) deleteFolder(ctx context.Context, path string) 
 	err := op.metadataWriter.deleteFolder(ctx, path)
 	if err != nil {
 		op.logger.Error("Could not delete folder", slog.Any("err", err))
+		return
 	}
 	op.logger.Debug("Deleted folder", slog.String("path", path))
 }

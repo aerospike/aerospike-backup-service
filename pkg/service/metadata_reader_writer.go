@@ -36,7 +36,7 @@ type BackupMetadataReader interface {
 	FindLastRun(ctx context.Context) *model.LastBackupRun
 }
 
-// BackupMetadataWriter handles backup metadata.
+// BackupMetadataWriter provides methods for writing backup metadata and deleting backups.
 type BackupMetadataWriter interface {
 	// writeBackupMetadata writes backup metadata to storage after successful backup.
 	writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error
@@ -44,6 +44,7 @@ type BackupMetadataWriter interface {
 	deleteFolder(ctx context.Context, path string) error
 }
 
+// BackupMetadataReaderWriter combines both reading and writing capabilities for backup metadata management.
 type BackupMetadataReaderWriter interface {
 	BackupMetadataReader
 	BackupMetadataWriter

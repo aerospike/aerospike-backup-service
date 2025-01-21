@@ -83,6 +83,8 @@ func (op *BackupNamespacesOperation) Cancel() {
 	}
 }
 
+// GetStats return aggregated public statistics for all inner handlers.
+// return nil if no handlers are currently running.
 func (op *BackupNamespacesOperation) GetStats() *models.BackupStats {
 	activeHandlers := 0
 
