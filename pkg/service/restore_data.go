@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 )
 
@@ -196,6 +198,21 @@ func (r *dataRestorer) restoreNamespace(
 
 	// Now restore all backups in order
 	allBackups := append([]model.BackupDetails{fullBackup}, incrementalBackups...)
+	dbEmpty, err := r.nsValidator.IsEmpty(client.AerospikeClient(), fullBackup.Namespace, request.Policy.SetList)
+	if err != nil {
+		return fmt.Errorf("could not determine if namespace %s is empty: %w", fullBackup.Namespace, err)
+	}
+
+	if dbEmpty {
+		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
+		// This way we reduce generation noise and unnecessary load.
+		slices.Reverse(allBackups)
+
+		// old values are not important, because they qualifies how to handle existing data in db.
+		request.Policy.Unique = util.Ptr(true)
+		request.Policy.Replace = nil
+	}
+
 	for _, b := range allBackups {
 		if b.FileCount == 0 { // skip empty namespaces
 			continue
