@@ -103,8 +103,8 @@ func setupTestHandler(
 	metadataWriter *mockMetadataWriter,
 	configWriter *mockClusterConfigWriter,
 	retentionManager *mockRetentionManager,
-) *BackupRoutineHandler {
-	return &BackupRoutineHandler{
+) *BackupRoutineOrchestrator {
+	return &BackupRoutineOrchestrator{
 		namespaces:          []string{"ns1", "ns2"},
 		backupService:       backupService,
 		clientManager:       clientManager,

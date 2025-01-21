@@ -112,7 +112,7 @@ func makeHandler(
 	oldHandlers BackupHandlerHolder,
 	routineName string,
 	routine *model.BackupRoutine,
-) *BackupRoutineHandler {
+) *BackupRoutineOrchestrator {
 	backupService := NewBackupExecutor(routine)
 	backend, _ := backends.Get(routineName)
 

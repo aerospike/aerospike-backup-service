@@ -5,10 +5,24 @@ import (
 	"fmt"
 	"log/slog"
 	"sync/atomic"
+	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
 )
+
+// backupRunner defines an interface for running and managing backups for single routine.
+type backupRunner interface {
+	// runFullBackup starts a full backup operation.
+	runFullBackup(ctx context.Context, now time.Time)
+	// runIncrementalBackup starts an incremental backup operation.
+	runIncrementalBackup(ctx context.Context, now time.Time)
+	// Cancel stops all running backup jobs.
+	Cancel()
+	// CurrentStat returns the current status of backup operations.
+	CurrentStat() *model.CurrentBackups
+}
 
 // backupJob implements the quartz.Job interface.
 type backupJob struct {

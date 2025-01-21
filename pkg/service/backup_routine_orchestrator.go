@@ -13,8 +13,9 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// BackupRoutineHandler implements backup logic for single routine.
-type BackupRoutineHandler struct {
+// BackupRoutineOrchestrator orchestrates the execution of a single backup routine (both full and incremental).
+// It manages all necessary preparations, executes the backup process, handles post-processing, and updates metrics.
+type BackupRoutineOrchestrator struct {
 	backupService       Backup
 	backupFullPolicy    *model.BackupPolicy
 	backupRoutine       *model.BackupRoutine
@@ -33,6 +34,8 @@ type BackupRoutineHandler struct {
 	incrStarter *BackupRoutineStarter
 }
 
+var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
+
 // Backup represents a backup service.
 type Backup interface {
 	BackupRun(
@@ -45,7 +48,8 @@ type Backup interface {
 	) (BackupHandler, error)
 }
 
-// BackupHandler represents a backup handler returned by the backup client.
+// BackupHandler represents a backup handler for tracking and controlling backup operations.
+// It is returned by the backup client library.
 type BackupHandler interface {
 	// GetStats returns the statistics of the backup job.
 	GetStats() *models.BackupStats
@@ -53,6 +57,7 @@ type BackupHandler interface {
 	Wait(context.Context) error
 }
 
+// CancelableBackupHandler extends BackupHandler with support for canceling the backup.
 type CancelableBackupHandler interface {
 	BackupHandler
 	// Cancel cancels the backup operation.
@@ -64,20 +69,6 @@ type ClusterConfigWriter interface {
 	Write(ctx context.Context, client backup.AerospikeClient, timestamp time.Time)
 }
 
-// backupRunner runs backup operations.
-type backupRunner interface {
-	// runFullBackup starts full backup.
-	runFullBackup(context.Context, time.Time)
-	// runIncrementalBackup starts incremental backup.
-	runIncrementalBackup(context.Context, time.Time)
-	// Cancel cancels all running backup jobs.
-	Cancel()
-	// CurrentStat returns current status of backup routines.
-	CurrentStat() *model.CurrentBackups
-}
-
-var _ backupRunner = (*BackupRoutineHandler)(nil)
-
 // BackupHandlerHolder stores backupRunners by routine name
 type BackupHandlerHolder = *util.SafeMap[string, backupRunner]
 
@@ -85,7 +76,7 @@ func NewBackupHandlerHolder() BackupHandlerHolder {
 	return util.NewSafeMap[string, backupRunner]()
 }
 
-// newBackupRoutineHandler returns a new BackupRoutineHandler instance.
+// newBackupRoutineHandler returns a new BackupRoutineOrchestrator instance.
 func newBackupRoutineHandler(
 	clientManager aerospike.ClientManager,
 	backupService Backup,
@@ -93,14 +84,14 @@ func newBackupRoutineHandler(
 	routine *model.BackupRoutine,
 	backupBackend BackupMetadataReaderWriter,
 	lastRun *model.LastBackupRun,
-) *BackupRoutineHandler {
+) *BackupRoutineOrchestrator {
 	backupPolicy := routine.BackupPolicy
 	backupStorage := routine.Storage
 	logger := slog.Default().With(slog.String("routine", routineName))
 	retry := newRetryExecutor(
 		backupPolicy.GetRetryPolicyOrDefault(),
 		logger)
-	return &BackupRoutineHandler{
+	return &BackupRoutineOrchestrator{
 		fullStarter: NewBackupRoutineStarter(
 			routineName,
 			backupService,
@@ -138,7 +129,7 @@ func newBackupRoutineHandler(
 	}
 }
 
-func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time) {
+func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.Time) {
 	duration, err := util.MeasureDuration(func() error {
 		return h.runFullBackupInternal(ctx, now)
 	})
@@ -153,7 +144,7 @@ func (h *BackupRoutineHandler) runFullBackup(ctx context.Context, now time.Time)
 	}
 }
 
-func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now time.Time) error {
+func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
 	client, namespaces, err := h.prepareCluster(h.retry)
 	if err != nil {
 		return err
@@ -183,7 +174,7 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 	return nil
 }
 
-func (h *BackupRoutineHandler) prepareCluster(retry executor) (*backup.Client, []string, error) {
+func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Client, []string, error) {
 	var (
 		client     *backup.Client
 		namespaces []string
@@ -206,7 +197,7 @@ func (h *BackupRoutineHandler) prepareCluster(retry executor) (*backup.Client, [
 	return client, namespaces, err
 }
 
-func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) model.TimeBounds {
+func (h *BackupRoutineOrchestrator) createTimebounds(fullBackup bool, now time.Time) model.TimeBounds {
 	var (
 		fromTime *time.Time
 		toTime   *time.Time
@@ -224,7 +215,7 @@ func (h *BackupRoutineHandler) createTimebounds(fullBackup bool, now time.Time) 
 	return model.TimeBounds{FromTime: fromTime, ToTime: toTime}
 }
 
-func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now time.Time) {
+func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, now time.Time) {
 	if h.skipIncrementalBackup() {
 		incrBackupSkippedCounter.Inc()
 		return
@@ -243,7 +234,7 @@ func (h *BackupRoutineHandler) runIncrementalBackup(ctx context.Context, now tim
 	}
 }
 
-func (h *BackupRoutineHandler) skipIncrementalBackup() bool {
+func (h *BackupRoutineOrchestrator) skipIncrementalBackup() bool {
 	if h.lastRun.NoFullBackup() {
 		h.logger.Debug("Skip incremental backup until initial full backup is done")
 		return true
@@ -260,7 +251,7 @@ func (h *BackupRoutineHandler) skipIncrementalBackup() bool {
 	return false
 }
 
-func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context, now time.Time) error {
+func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Context, now time.Time) error {
 	client, namespaces, err := h.prepareCluster(&simpleExecutor{})
 	if err != nil {
 		return err
@@ -280,7 +271,7 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 	return nil
 }
 
-func (h *BackupRoutineHandler) CurrentStat() *model.CurrentBackups {
+func (h *BackupRoutineOrchestrator) CurrentStat() *model.CurrentBackups {
 	return &model.CurrentBackups{
 		Full:        currentBackupStatus(h.fullBackupHandler),
 		Incremental: currentBackupStatus(h.incrBackupHandler),
@@ -288,7 +279,7 @@ func (h *BackupRoutineHandler) CurrentStat() *model.CurrentBackups {
 	}
 }
 
-func (h *BackupRoutineHandler) Cancel() {
+func (h *BackupRoutineOrchestrator) Cancel() {
 	h.logger.Info("Canceling backup")
 	if h.fullBackupHandler != nil {
 		h.fullBackupHandler.Cancel()
