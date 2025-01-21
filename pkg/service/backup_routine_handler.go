@@ -171,11 +171,10 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 		false,
 	)
 
-	if err := backupOp.Run(ctx); err != nil {
-		return err
+	h.fullBackupHandlers = backupOp.Run(ctx)
+	if err = backupOp.waitForBackups(ctx); err != nil {
+		return fmt.Errorf("backup failed: %w", err)
 	}
-
-	h.fullBackupHandlers = backupOp.GetHandlers()
 	h.lastRun.SetFullBackupTime(&now)
 
 	go func() {
@@ -290,11 +289,11 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 		true,
 	)
 
-	if err := backupOp.Run(ctx); err != nil {
+	h.incrBackupHandlers = backupOp.Run(ctx)
+	if err := backupOp.waitForBackups(ctx); err != nil {
 		return err
 	}
 
-	h.incrBackupHandlers = backupOp.GetHandlers()
 	h.lastRun.SetIncrementalBackupTime(&now)
 	return nil
 }

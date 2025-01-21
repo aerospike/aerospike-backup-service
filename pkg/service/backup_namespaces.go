@@ -63,7 +63,7 @@ func NewBackupNamespacesOperation(
 
 // Run executes backup operations for all namespaces. It creates and runs individual
 // BackupOperation instances for each namespace and waits for their completion.
-func (op *BackupNamespacesOperation) Run(ctx context.Context) error {
+func (op *BackupNamespacesOperation) Run(ctx context.Context) map[string]CancelableBackupHandler {
 	for _, namespace := range op.namespaces {
 		backupOp := NewBackupOperation(
 			namespace,
@@ -83,7 +83,7 @@ func (op *BackupNamespacesOperation) Run(ctx context.Context) error {
 		op.handlers[namespace] = handler
 	}
 
-	return op.waitForBackups(ctx)
+	return op.handlers
 }
 
 // waitForBackups waits for all backup operations to complete and collects any errors
@@ -103,9 +103,4 @@ func (op *BackupNamespacesOperation) Cancel() {
 	for _, handler := range op.handlers {
 		handler.Cancel()
 	}
-}
-
-// GetHandlers returns the map of namespace to backup handlers.
-func (op *BackupNamespacesOperation) GetHandlers() map[string]CancelableBackupHandler {
-	return op.handlers
 }
