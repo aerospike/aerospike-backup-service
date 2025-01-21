@@ -37,7 +37,7 @@ func (s *Starter) Start(
 	now time.Time,
 ) *BackupNamespacesOperation {
 	op := &BackupNamespacesOperation{
-		handlers: make(map[string]CancelableBackupHandler),
+		handlers: make(map[string]CancelableBackupHandler, len(namespaces)),
 	}
 
 	for _, namespace := range namespaces {
