@@ -112,18 +112,16 @@ func setupTestHandler(
 		backupRoutine: &model.BackupRoutine{
 			SourceCluster: &model.AerospikeCluster{},
 		},
-		backupFullPolicy:   &model.BackupPolicy{},
-		fullBackupHandlers: make(map[string]CancelableBackupHandler),
-		incrBackupHandlers: make(map[string]CancelableBackupHandler),
-		lastRun:            &model.LastBackupRun{},
-		logger:             slog.Default(),
-		retry:              &simpleExecutor{},
-		retentionManager:   retentionManager,
+		backupFullPolicy: &model.BackupPolicy{},
+		lastRun:          &model.LastBackupRun{},
+		logger:           slog.Default(),
+		retry:            &simpleExecutor{},
+		retentionManager: retentionManager,
 		fullStarter: NewStarter(
 			"routine",
 			backupService,
 			&model.BackupPolicy{},
-			retry,
+			&simpleExecutor{},
 			metadataWriter,
 			false,
 			slog.Default(),
@@ -132,7 +130,7 @@ func setupTestHandler(
 			"routine",
 			backupService,
 			&model.BackupPolicy{},
-			retry,
+			&simpleExecutor{},
 			metadataWriter,
 			true,
 			slog.Default(),
@@ -256,7 +254,7 @@ func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
 
-	handler.fullBackupHandlers["ns1"] = &mockBackupHandler{}
+	handler.fullBackupHandlers = &mockBackupHandler{}
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
@@ -274,7 +272,7 @@ func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
 
-	handler.incrBackupHandlers["test"] = &mockBackupHandler{}
+	handler.incrBackupHandlers = &mockBackupHandler{}
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
