@@ -76,6 +76,28 @@ func (op *BackupNamespacesOperation) Cancel() {
 }
 
 func (op *BackupNamespacesOperation) GetStats() *models.BackupStats {
-	// TODO implement me
-	panic("implement me")
+	activeHandlers := 0
+
+	res := &models.BackupStats{}
+	for _, handler := range op.handlers {
+		if handler.GetStats() == nil {
+			continue
+		}
+
+		activeHandlers++
+		res.TotalRecords += handler.GetStats().TotalRecords
+		res.ReadRecords.Add(handler.GetStats().GetReadRecords())
+		res.BytesWritten.Add(handler.GetStats().BytesWritten.Load())
+
+		// These are the backups of multiple namespaces in the same routine.
+		// Therefore, picking any of those is valid, since they started at
+		// the same time.
+		res.StartTime = handler.GetStats().StartTime
+	}
+
+	if activeHandlers == 0 {
+		return nil
+	}
+
+	return res
 }

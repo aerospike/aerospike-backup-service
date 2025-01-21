@@ -6,32 +6,17 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-func currentBackupStatus(handlers map[string]CancelableBackupHandler) *model.RunningJob {
-	activeHandlers := 0
-
-	var (
-		total, done uint64
-		startTime   time.Time
-	)
-	for _, handler := range handlers {
-		if handler.GetStats() == nil {
-			continue
-		}
-
-		activeHandlers++
-		done += handler.GetStats().GetReadRecords()
-		total += handler.GetStats().TotalRecords
-		// These are the backups of multiple namespaces in the same routine.
-		// Therefore, picking any of those is valid, since they started at
-		// the same time.
-		startTime = handler.GetStats().StartTime
-	}
-
-	if activeHandlers == 0 { // no running jobs
+func currentBackupStatus(handlers CancelableBackupHandler) *model.RunningJob {
+	if handlers == nil {
 		return nil
 	}
 
-	return NewRunningJob(startTime, nil, done, total)
+	stats := handlers.GetStats()
+	if stats == nil { // no running jobs
+		return nil
+	}
+
+	return NewRunningJob(stats.StartTime, nil, stats.ReadRecords.Load(), stats.TotalRecords)
 }
 
 // RestoreJobStatus returns the status of a restore job.

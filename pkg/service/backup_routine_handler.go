@@ -27,8 +27,8 @@ type BackupRoutineHandler struct {
 	retentionManager    RetentionManager
 
 	// backup handlers by namespace
-	fullBackupHandlers map[string]CancelableBackupHandler
-	incrBackupHandlers map[string]CancelableBackupHandler
+	fullBackupHandlers CancelableBackupHandler
+	incrBackupHandlers CancelableBackupHandler
 
 	fullStarter *Starter
 	incrStarter *Starter
@@ -121,14 +121,12 @@ func newBackupRoutineHandler(
 			logger,
 		),
 
-		backupService:      backupService,
-		backupRoutine:      routine,
-		backupFullPolicy:   backupPolicy,
-		namespaces:         routine.Namespaces,
-		lastRun:            lastRun,
-		fullBackupHandlers: make(map[string]CancelableBackupHandler),
-		incrBackupHandlers: make(map[string]CancelableBackupHandler),
-		clientManager:      clientManager,
+		backupService:    backupService,
+		backupRoutine:    routine,
+		backupFullPolicy: backupPolicy,
+		namespaces:       routine.Namespaces,
+		lastRun:          lastRun,
+		clientManager:    clientManager,
 		clusterConfigWriter: NewClusterConfigWriter(
 			backupStorage,
 			routineName,
@@ -164,15 +162,14 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 
 	defer func() {
 		h.clientManager.Close(client)
-		clear(h.fullBackupHandlers)
+		h.fullBackupHandlers = nil
 	}()
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
-	operation := h.fullStarter.Start(ctx, client, namespaces, h.createTimebounds(true, now), now)
+	h.fullBackupHandlers = h.fullStarter.Start(ctx, client, namespaces, h.createTimebounds(true, now), now)
 
-	h.fullBackupHandlers = operation.handlers // TODO
-	if err = operation.Wait(ctx); err != nil {
+	if err = h.fullBackupHandlers.Wait(ctx); err != nil {
 		return fmt.Errorf("backup failed: %w", err)
 	}
 	h.lastRun.SetFullBackupTime(&now)
@@ -252,11 +249,11 @@ func (h *BackupRoutineHandler) skipIncrementalBackup() bool {
 		h.logger.Debug("Skip incremental backup until initial full backup is done")
 		return true
 	}
-	if len(h.fullBackupHandlers) > 0 {
+	if h.fullBackupHandlers != nil {
 		h.logger.Debug("Full backup is currently in progress, skipping incremental backup")
 		return true
 	}
-	if len(h.incrBackupHandlers) > 0 {
+	if h.incrBackupHandlers != nil {
 		h.logger.Debug("Incremental backup is currently in progress, skipping incremental backup")
 		return true
 	}
@@ -272,13 +269,11 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 
 	defer func() {
 		h.clientManager.Close(client)
-		clear(h.incrBackupHandlers)
+		h.incrBackupHandlers = nil
 	}()
 
-	backupOp := h.incrStarter.Start(ctx, client, namespaces, h.createTimebounds(false, now), now)
-
-	h.incrBackupHandlers = backupOp.handlers
-	if err := backupOp.Wait(ctx); err != nil {
+	h.incrBackupHandlers = h.incrStarter.Start(ctx, client, namespaces, h.createTimebounds(false, now), now)
+	if err := h.incrBackupHandlers.Wait(ctx); err != nil {
 		return err
 	}
 
@@ -296,10 +291,10 @@ func (h *BackupRoutineHandler) CurrentStat() *model.CurrentBackups {
 
 func (h *BackupRoutineHandler) Cancel() {
 	h.logger.Info("Canceling backup")
-	for _, handler := range h.fullBackupHandlers {
-		handler.Cancel()
+	if h.fullBackupHandlers != nil {
+		h.fullBackupHandlers.Cancel()
 	}
-	for _, handler := range h.incrBackupHandlers {
-		handler.Cancel()
+	if h.incrBackupHandlers != nil {
+		h.incrBackupHandlers.Cancel()
 	}
 }
