@@ -254,7 +254,7 @@ func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
 
-	handler.fullBackupHandlers = &mockBackupHandler{}
+	handler.fullBackupHandler = &mockBackupHandler{}
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
@@ -272,7 +272,7 @@ func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
 
-	handler.incrBackupHandlers = &mockBackupHandler{}
+	handler.incrBackupHandler = &mockBackupHandler{}
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
