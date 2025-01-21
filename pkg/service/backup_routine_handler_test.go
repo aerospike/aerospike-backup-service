@@ -108,7 +108,6 @@ func setupTestHandler(
 		namespaces:          []string{"ns1", "ns2"},
 		backupService:       backupService,
 		clientManager:       clientManager,
-		metadataWriter:      metadataWriter,
 		clusterConfigWriter: configWriter,
 		backupRoutine: &model.BackupRoutine{
 			SourceCluster: &model.AerospikeCluster{},
@@ -117,10 +116,27 @@ func setupTestHandler(
 		fullBackupHandlers: make(map[string]CancelableBackupHandler),
 		incrBackupHandlers: make(map[string]CancelableBackupHandler),
 		lastRun:            &model.LastBackupRun{},
-		storage:            &model.LocalStorage{Path: "/tmp"},
 		logger:             slog.Default(),
 		retry:              &simpleExecutor{},
 		retentionManager:   retentionManager,
+		fullStarter: NewStarter(
+			"routine",
+			backupService,
+			&model.BackupPolicy{},
+			retry,
+			metadataWriter,
+			false,
+			slog.Default(),
+		),
+		incrStarter: NewStarter(
+			"routine",
+			backupService,
+			&model.BackupPolicy{},
+			retry,
+			metadataWriter,
+			true,
+			slog.Default(),
+		),
 	}
 }
 

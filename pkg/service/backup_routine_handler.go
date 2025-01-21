@@ -16,14 +16,9 @@ import (
 // BackupRoutineHandler implements backup logic for single routine.
 type BackupRoutineHandler struct {
 	backupService       Backup
-	metadataWriter      BackupMetadataWriter
 	backupFullPolicy    *model.BackupPolicy
-	backupIncrPolicy    *model.BackupPolicy
 	backupRoutine       *model.BackupRoutine
-	routineName         string
 	namespaces          []string
-	storage             model.Storage
-	secretAgent         *model.SecretAgent
 	lastRun             *model.LastBackupRun
 	retry               executor
 	clientManager       aerospike.ClientManager
@@ -34,6 +29,9 @@ type BackupRoutineHandler struct {
 	// backup handlers by namespace
 	fullBackupHandlers map[string]CancelableBackupHandler
 	incrBackupHandlers map[string]CancelableBackupHandler
+
+	fullStarter *Starter
+	incrStarter *Starter
 }
 
 // Backup represents a backup service.
@@ -100,21 +98,34 @@ func newBackupRoutineHandler(
 	backupPolicy := routine.BackupPolicy
 	backupStorage := routine.Storage
 	logger := slog.Default().With(slog.String("routine", routineName))
-
+	retry := newRetryExecutor(
+		backupPolicy.GetRetryPolicyOrDefault(),
+		logger)
 	return &BackupRoutineHandler{
-		backupService:    backupService,
-		metadataWriter:   backupBackend,
-		backupRoutine:    routine,
-		backupFullPolicy: backupPolicy,
-		backupIncrPolicy: backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
-		routineName:      routineName,
-		namespaces:       routine.Namespaces,
-		storage:          backupStorage,
-		secretAgent:      routine.SecretAgent,
-		lastRun:          lastRun,
-		retry: newRetryExecutor(
-			backupPolicy.GetRetryPolicyOrDefault(),
-			logger),
+		fullStarter: NewStarter(
+			routineName,
+			backupService,
+			backupPolicy,
+			retry,
+			backupBackend,
+			false,
+			logger,
+		),
+		incrStarter: NewStarter(
+			routineName,
+			backupService,
+			backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata,
+			retry,
+			backupBackend,
+			true,
+			logger,
+		),
+
+		backupService:      backupService,
+		backupRoutine:      routine,
+		backupFullPolicy:   backupPolicy,
+		namespaces:         routine.Namespaces,
+		lastRun:            lastRun,
 		fullBackupHandlers: make(map[string]CancelableBackupHandler),
 		incrBackupHandlers: make(map[string]CancelableBackupHandler),
 		clientManager:      clientManager,
@@ -124,6 +135,7 @@ func newBackupRoutineHandler(
 			backupPolicy,
 			logger),
 		logger: logger,
+		retry:  retry,
 		retentionManager: NewBackupRetentionManager(
 			backupBackend, backupStorage, routineName, backupPolicy.RetentionPolicy),
 	}
@@ -157,22 +169,10 @@ func (h *BackupRoutineHandler) runFullBackupInternal(ctx context.Context, now ti
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
-	backupOp := NewBackupNamespacesOperation(
-		namespaces,
-		h.routineName,
-		h.backupService,
-		h.backupFullPolicy,
-		client,
-		h.retry,
-		h.metadataWriter,
-		h.createTimebounds(true, now),
-		h.logger,
-		now,
-		false,
-	)
+	operation := h.fullStarter.Start(ctx, client, namespaces, h.createTimebounds(true, now), now)
 
-	h.fullBackupHandlers = backupOp.Run(ctx)
-	if err = backupOp.waitForBackups(ctx); err != nil {
+	h.fullBackupHandlers = operation.handlers // TODO
+	if err = operation.Wait(ctx); err != nil {
 		return fmt.Errorf("backup failed: %w", err)
 	}
 	h.lastRun.SetFullBackupTime(&now)
@@ -275,22 +275,10 @@ func (h *BackupRoutineHandler) runIncrementalBackupInternal(ctx context.Context,
 		clear(h.incrBackupHandlers)
 	}()
 
-	backupOp := NewBackupNamespacesOperation(
-		namespaces,
-		h.routineName,
-		h.backupService,
-		h.backupIncrPolicy,
-		client,
-		&simpleExecutor{},
-		h.metadataWriter,
-		h.createTimebounds(false, now),
-		h.logger,
-		now,
-		true,
-	)
+	backupOp := h.incrStarter.Start(ctx, client, namespaces, h.createTimebounds(false, now), now)
 
-	h.incrBackupHandlers = backupOp.Run(ctx)
-	if err := backupOp.waitForBackups(ctx); err != nil {
+	h.incrBackupHandlers = backupOp.handlers
+	if err := backupOp.Wait(ctx); err != nil {
 		return err
 	}
 

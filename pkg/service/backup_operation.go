@@ -12,63 +12,57 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// BackupOperation represents a backup operation for a single namespace. It encapsulates
+// BackupStarter represents a backup operation for a single namespace. It encapsulates
 // all the logic needed to perform a backup of one namespace, including running the backup,
 // managing metadata, and handling cleanup.
-type BackupOperation struct {
-	namespace      string
+type BackupStarter struct {
 	routineName    string
 	backupService  Backup
 	backupPolicy   *model.BackupPolicy
-	client         *backup.Client
 	retry          executor
 	metadataWriter BackupMetadataWriter
-	timebounds     model.TimeBounds
 	logger         *slog.Logger
-	now            time.Time
 	isIncremental  bool
 }
 
-// NewBackupOperation creates a new BackupOperation instance with all necessary dependencies
+// NewBackupStarter creates a new BackupStarter instance with all necessary dependencies
 // for performing a single namespace backup.
-func NewBackupOperation(
-	namespace string,
+func NewBackupStarter(
 	routineName string,
 	backupService Backup,
 	backupPolicy *model.BackupPolicy,
-	client *backup.Client,
 	retry executor,
 	metadataWriter BackupMetadataWriter,
-	timebounds model.TimeBounds,
-	logger *slog.Logger,
-	now time.Time,
 	isIncremental bool,
-) *BackupOperation {
-	return &BackupOperation{
-		namespace:      namespace,
+	logger *slog.Logger,
+) *BackupStarter {
+	return &BackupStarter{
 		routineName:    routineName,
 		backupService:  backupService,
 		backupPolicy:   backupPolicy,
-		client:         client,
 		retry:          retry,
 		metadataWriter: metadataWriter,
-		timebounds:     timebounds,
 		logger:         logger,
-		now:            now,
 		isIncremental:  isIncremental,
 	}
 }
 
 // Run executes the backup operation for the namespace. It handles the entire backup process
 // including folder management, metadata writing, and error handling.
-func (op *BackupOperation) Run(ctx context.Context) CancelableBackupHandler {
-	backupFolder := op.getBackupPath()
+func (op *BackupStarter) Run(
+	ctx context.Context,
+	client *backup.Client,
+	namespace string,
+	now time.Time,
+	timebounds model.TimeBounds,
+) CancelableBackupHandler {
+	backupFolder := op.getBackupPath(now, op.isIncremental, namespace)
 
 	return startBackup(
 		ctx,
 		op.retry,
 		func(ctx context.Context) (BackupHandler, error) {
-			return op.backupService.BackupRun(ctx, op.client, op.backupPolicy, op.timebounds, op.namespace, backupFolder)
+			return op.backupService.BackupRun(ctx, client, op.backupPolicy, timebounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) {
 			op.deleteFolder(ctx, backupFolder)
@@ -78,20 +72,20 @@ func (op *BackupOperation) Run(ctx context.Context) CancelableBackupHandler {
 			if op.isIncremental && stats.IsEmpty() {
 				return nil
 			}
-			metadata := model.NewMetadataFromStats(stats, op.namespace, util.ValueOrZero(op.timebounds.FromTime), op.now)
+			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
 			return op.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
 	)
 }
 
-func (op *BackupOperation) getBackupPath() string {
-	if op.isIncremental {
-		return getIncrementalPath(op.routineName, op.namespace, op.now)
+func (op *BackupStarter) getBackupPath(now time.Time, isIncremental bool, namespace string) string {
+	if isIncremental {
+		return getIncrementalPath(op.routineName, namespace, now)
 	}
-	return getFullPath(op.routineName, op.namespace, op.now)
+	return getFullPath(op.routineName, namespace, now)
 }
 
-func (op *BackupOperation) deleteFolder(ctx context.Context, path string) {
+func (op *BackupStarter) deleteFolder(ctx context.Context, path string) {
 	err := op.metadataWriter.deleteFolder(ctx, path)
 	if err != nil {
 		op.logger.Error("Could not delete folder", slog.Any("err", err))
@@ -99,7 +93,7 @@ func (op *BackupOperation) deleteFolder(ctx context.Context, path string) {
 	op.logger.Debug("Deleted folder", slog.String("path", path))
 }
 
-func (op *BackupOperation) writeBackupMetadata(
+func (op *BackupStarter) writeBackupMetadata(
 	ctx context.Context, metadata model.BackupMetadata, backupFolder string,
 ) error {
 	if err := op.metadataWriter.writeBackupMetadata(ctx, backupFolder, metadata); err != nil {
