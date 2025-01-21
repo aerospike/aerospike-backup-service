@@ -83,13 +83,13 @@ func (b *BackupBackend) IncrementalBackupList(ctx context.Context, timeBounds mo
 }
 
 func (b *BackupBackend) readMetadataList(
-	ctx context.Context, timebounds model.TimeBounds, backupType jobType,
+	ctx context.Context, timeBounds model.TimeBounds, backupType jobType,
 ) ([]model.BackupDetails, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	backupRoot := getBackupRootPath(b.routineName, backupType)
-	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timebounds.FromTime)
+	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timeBounds.FromTime)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "is empty") {
 			return nil, nil
@@ -103,7 +103,7 @@ func (b *BackupBackend) readMetadataList(
 		if err != nil {
 			return nil, fmt.Errorf("error decoding backup metadata YAML: %w", err)
 		}
-		if timebounds.Contains(metadata.Created) {
+		if timeBounds.Contains(metadata.Created) {
 			backups = append(backups, model.BackupDetails{
 				BackupMetadata: *metadata,
 				Key:            getKey(b.routineName, backupType, metadata),

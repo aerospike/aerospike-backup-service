@@ -41,7 +41,7 @@ func (s *BackupRoutineStarter) Start(
 	ctx context.Context,
 	client *backup.Client,
 	namespaces []string,
-	timebounds model.TimeBounds,
+	timeBounds model.TimeBounds,
 	now time.Time,
 ) *BackupNamespacesOperation {
 	op := &BackupNamespacesOperation{
@@ -49,7 +49,7 @@ func (s *BackupRoutineStarter) Start(
 	}
 
 	for _, namespace := range namespaces {
-		op.handlers[namespace] = s.starter.Run(ctx, client, namespace, now, timebounds)
+		op.handlers[namespace] = s.starter.Run(ctx, client, namespace, now, timeBounds)
 	}
 
 	return op

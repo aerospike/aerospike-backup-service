@@ -54,7 +54,7 @@ func (op *BackupNamespaceRunner) Run(
 	client *backup.Client,
 	namespace string,
 	now time.Time,
-	timebounds model.TimeBounds,
+	timeBounds model.TimeBounds,
 ) CancelableBackupHandler {
 	backupFolder := getBackupPath(op.routineName, op.backupType, namespace, now)
 
@@ -62,7 +62,7 @@ func (op *BackupNamespaceRunner) Run(
 		ctx,
 		op.retry,
 		func(ctx context.Context) (BackupHandler, error) {
-			return op.backupService.BackupRun(ctx, client, op.backupPolicy, timebounds, namespace, backupFolder)
+			return op.backupService.BackupRun(ctx, client, op.backupPolicy, timeBounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) {
 			op.deleteFolder(ctx, backupFolder)
@@ -72,7 +72,7 @@ func (op *BackupNamespaceRunner) Run(
 			if op.backupType == jobTypeIncremental && stats.IsEmpty() {
 				return nil
 			}
-			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
+			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timeBounds.FromTime), now)
 			return op.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
 	)

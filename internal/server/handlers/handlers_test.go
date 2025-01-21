@@ -135,16 +135,16 @@ func (mock backupListReaderMock) FindLastRun(_ context.Context) *model.LastBacku
 	return nil
 }
 
-func (mock backupListReaderMock) FullBackupList(_ context.Context, timebounds model.TimeBounds,
+func (mock backupListReaderMock) FullBackupList(_ context.Context, timeBounds model.TimeBounds,
 ) ([]model.BackupDetails, error) {
-	if timebounds == (model.TimeBounds{}) {
+	if timeBounds == (model.TimeBounds{}) {
 		return nil, errTest
 	}
 	return []model.BackupDetails{testBackupDetails()}, nil
 }
-func (mock backupListReaderMock) IncrementalBackupList(_ context.Context, timebounds model.TimeBounds,
+func (mock backupListReaderMock) IncrementalBackupList(_ context.Context, timeBounds model.TimeBounds,
 ) ([]model.BackupDetails, error) {
-	if timebounds == (model.TimeBounds{}) {
+	if timeBounds == (model.TimeBounds{}) {
 		return nil, errTest
 	}
 	return []model.BackupDetails{testBackupDetails()}, nil

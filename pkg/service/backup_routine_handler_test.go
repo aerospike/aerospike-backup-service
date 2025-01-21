@@ -24,11 +24,11 @@ func (m *mockBackupService) BackupRun(
 	ctx context.Context,
 	client *backup.Client,
 	backupPolicy *model.BackupPolicy,
-	timebounds model.TimeBounds,
+	timeBounds model.TimeBounds,
 	namespace string,
 	path string,
 ) (BackupHandler, error) {
-	args := m.Called(ctx, client, backupPolicy, timebounds, namespace, path)
+	args := m.Called(ctx, client, backupPolicy, timeBounds, namespace, path)
 	return args.Get(0).(BackupHandler), args.Error(1)
 }
 

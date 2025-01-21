@@ -30,11 +30,11 @@ func (b *BackupExecutor) BackupRun(
 	ctx context.Context,
 	client *backup.Client,
 	policy *model.BackupPolicy,
-	timebounds model.TimeBounds,
+	timeBounds model.TimeBounds,
 	namespace string,
 	path string,
 ) (BackupHandler, error) {
-	config := makeBackupConfig(namespace, b.backupRoutine, policy, timebounds, b.backupRoutine.SecretAgent)
+	config := makeBackupConfig(namespace, b.backupRoutine, policy, timeBounds, b.backupRoutine.SecretAgent)
 
 	writerFactory, err := storage.CreateWriter(ctx, b.backupRoutine.Storage, path, false, false, false)
 	if err != nil {
@@ -53,7 +53,7 @@ func makeBackupConfig(
 	namespace string,
 	backupRoutine *model.BackupRoutine,
 	backupPolicy *model.BackupPolicy,
-	timebounds model.TimeBounds,
+	timeBounds model.TimeBounds,
 	secretAgent *model.SecretAgent,
 ) *backup.BackupConfig {
 	config := backup.NewDefaultBackupConfig()
@@ -73,8 +73,8 @@ func makeBackupConfig(
 	config.RecordsPerSecond = util.ValueOrZero(backupPolicy.RecordsPerSecond)
 	config.Bandwidth = util.ValueOrZero(backupPolicy.Bandwidth) * 1_048_576 // lib expects file size in bytes.
 
-	config.ModBefore = timebounds.ToTime
-	config.ModAfter = timebounds.FromTime
+	config.ModBefore = timeBounds.ToTime
+	config.ModAfter = timeBounds.FromTime
 
 	config.ScanPolicy = a.NewScanPolicy()
 	if backupPolicy.TotalTimeout != nil {

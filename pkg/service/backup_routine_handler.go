@@ -39,7 +39,7 @@ type Backup interface {
 		ctx context.Context,
 		client *backup.Client,
 		backupPolicy *model.BackupPolicy,
-		timebounds model.TimeBounds,
+		timeBounds model.TimeBounds,
 		namespace string,
 		path string,
 	) (BackupHandler, error)
