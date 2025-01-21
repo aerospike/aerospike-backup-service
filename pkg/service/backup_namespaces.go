@@ -1,5 +1,3 @@
-// backup_namespaces_operation.go
-
 package service
 
 import (
