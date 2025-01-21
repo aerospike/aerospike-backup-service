@@ -200,7 +200,7 @@ func TestHighRetentionLimits(t *testing.T) {
 	backend := newBackend(routineName, s)
 
 	for _, t := range []int64{10, 20, 30} {
-		path := getBackupPath(routineName, jobTypeIncremental, namespace, time.UnixMilli(t))
+		path := getBackupPath(routineName, jobTypeFull, namespace, time.UnixMilli(t))
 		metadata := model.BackupMetadata{Created: time.UnixMilli(t), Namespace: namespace}
 		_ = backend.writeBackupMetadata(context.Background(), path, metadata)
 	}
