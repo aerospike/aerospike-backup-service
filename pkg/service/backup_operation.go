@@ -12,51 +12,51 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// BackupStarter represents a backup operation for a single namespace. It encapsulates
+// BackupNamespaceRunner starts a backup operation for a single namespace. It encapsulates
 // all the logic needed to perform a backup of one namespace, including running the backup,
 // managing metadata, and handling cleanup.
-type BackupStarter struct {
+type BackupNamespaceRunner struct {
 	routineName    string
 	backupService  Backup
 	backupPolicy   *model.BackupPolicy
 	retry          executor
 	metadataWriter BackupMetadataWriter
 	logger         *slog.Logger
-	isIncremental  bool
+	backupType     jobType
 }
 
-// NewBackupStarter creates a new BackupStarter instance with all necessary dependencies
+// NewBackupNamespaceRunner creates a new BackupNamespaceRunner instance with all necessary dependencies
 // for performing a single namespace backup.
-func NewBackupStarter(
+func NewBackupNamespaceRunner(
 	routineName string,
 	backupService Backup,
 	backupPolicy *model.BackupPolicy,
 	retry executor,
 	metadataWriter BackupMetadataWriter,
-	isIncremental bool,
+	backupType jobType,
 	logger *slog.Logger,
-) *BackupStarter {
-	return &BackupStarter{
+) *BackupNamespaceRunner {
+	return &BackupNamespaceRunner{
 		routineName:    routineName,
 		backupService:  backupService,
 		backupPolicy:   backupPolicy,
 		retry:          retry,
 		metadataWriter: metadataWriter,
 		logger:         logger,
-		isIncremental:  isIncremental,
+		backupType:     backupType,
 	}
 }
 
 // Run executes the backup operation for the namespace. It handles the entire backup process
 // including folder management, metadata writing, and error handling.
-func (op *BackupStarter) Run(
+func (op *BackupNamespaceRunner) Run(
 	ctx context.Context,
 	client *backup.Client,
 	namespace string,
 	now time.Time,
 	timebounds model.TimeBounds,
 ) CancelableBackupHandler {
-	backupFolder := op.getBackupPath(now, op.isIncremental, namespace)
+	backupFolder := getBackupPath(op.routineName, op.backupType, namespace, now)
 
 	return startBackup(
 		ctx,
@@ -69,7 +69,7 @@ func (op *BackupStarter) Run(
 		},
 		func(ctx context.Context, stats *models.BackupStats) error {
 			// For incremental backups, skip metadata for empty backups
-			if op.isIncremental && stats.IsEmpty() {
+			if op.backupType == jobTypeIncremental && stats.IsEmpty() {
 				return nil
 			}
 			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timebounds.FromTime), now)
@@ -78,14 +78,7 @@ func (op *BackupStarter) Run(
 	)
 }
 
-func (op *BackupStarter) getBackupPath(now time.Time, isIncremental bool, namespace string) string {
-	if isIncremental {
-		return getIncrementalPath(op.routineName, namespace, now)
-	}
-	return getFullPath(op.routineName, namespace, now)
-}
-
-func (op *BackupStarter) deleteFolder(ctx context.Context, path string) {
+func (op *BackupNamespaceRunner) deleteFolder(ctx context.Context, path string) {
 	err := op.metadataWriter.deleteFolder(ctx, path)
 	if err != nil {
 		op.logger.Error("Could not delete folder", slog.Any("err", err))
@@ -93,7 +86,7 @@ func (op *BackupStarter) deleteFolder(ctx context.Context, path string) {
 	op.logger.Debug("Deleted folder", slog.String("path", path))
 }
 
-func (op *BackupStarter) writeBackupMetadata(
+func (op *BackupNamespaceRunner) writeBackupMetadata(
 	ctx context.Context, metadata model.BackupMetadata, backupFolder string,
 ) error {
 	if err := op.metadataWriter.writeBackupMetadata(ctx, backupFolder, metadata); err != nil {

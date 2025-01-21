@@ -18,13 +18,13 @@ func TestMultipleBackups(t *testing.T) {
 	backend := newBackend(routineName, s)
 
 	for _, t := range []int64{10, 20, 30, 40, 50} {
-		path := getFullPath(routineName, namespace, time.UnixMilli(t))
+		path := getBackupPath(routineName, jobTypeFull, namespace, time.UnixMilli(t))
 		metadata := model.BackupMetadata{Created: time.UnixMilli(t), Namespace: namespace}
 		_ = backend.writeBackupMetadata(context.Background(), path, metadata)
 	}
 
 	for _, t := range []int64{22, 26, 32, 36, 42, 46, 52, 56} {
-		path := getIncrementalPath(routineName, namespace, time.UnixMilli(t))
+		path := getBackupPath(routineName, jobTypeIncremental, namespace, time.UnixMilli(t))
 		metadata := model.BackupMetadata{Created: time.UnixMilli(t), Namespace: namespace}
 		_ = backend.writeBackupMetadata(context.Background(), path, metadata)
 	}
@@ -58,13 +58,13 @@ func TestZeroRetentionLimit(t *testing.T) {
 	backend := newBackend(routineName, s)
 
 	for _, t := range []int64{10, 20, 30} {
-		path := getFullPath(routineName, namespace, time.UnixMilli(t))
+		path := getBackupPath(routineName, jobTypeFull, namespace, time.UnixMilli(t))
 		metadata := model.BackupMetadata{Created: time.UnixMilli(t), Namespace: namespace}
 		_ = backend.writeBackupMetadata(context.Background(), path, metadata)
 	}
 
 	for _, t := range []int64{22, 26, 32, 36, 42, 46, 52, 56} {
-		path := getIncrementalPath(routineName, namespace, time.UnixMilli(t))
+		path := getBackupPath(routineName, jobTypeIncremental, namespace, time.UnixMilli(t))
 		metadata := model.BackupMetadata{Created: time.UnixMilli(t), Namespace: namespace}
 		_ = backend.writeBackupMetadata(context.Background(), path, metadata)
 	}
@@ -128,13 +128,13 @@ func TestExactRetentionLimit(t *testing.T) {
 	backend := newBackend(routineName, s)
 
 	for _, t := range []int64{10, 20, 30} {
-		path := getFullPath(routineName, namespace, time.UnixMilli(t))
+		path := getBackupPath(routineName, jobTypeFull, namespace, time.UnixMilli(t))
 		metadata := model.BackupMetadata{Created: time.UnixMilli(t), Namespace: namespace}
 		_ = backend.writeBackupMetadata(context.Background(), path, metadata)
 	}
 
 	for _, t := range []int64{32, 36} {
-		path := getIncrementalPath(routineName, namespace, time.UnixMilli(t))
+		path := getBackupPath(routineName, jobTypeIncremental, namespace, time.UnixMilli(t))
 		metadata := model.BackupMetadata{Created: time.UnixMilli(t), Namespace: namespace}
 		_ = backend.writeBackupMetadata(context.Background(), path, metadata)
 	}
@@ -170,7 +170,7 @@ func TestNilRetentionPolicy(t *testing.T) {
 	backend := newBackend(routineName, s)
 
 	for _, t := range []int64{10, 20, 30} {
-		path := getFullPath(routineName, namespace, time.UnixMilli(t))
+		path := getBackupPath(routineName, jobTypeFull, namespace, time.UnixMilli(t))
 		metadata := model.BackupMetadata{Created: time.UnixMilli(t), Namespace: namespace}
 		_ = backend.writeBackupMetadata(context.Background(), path, metadata)
 	}
@@ -200,7 +200,7 @@ func TestHighRetentionLimits(t *testing.T) {
 	backend := newBackend(routineName, s)
 
 	for _, t := range []int64{10, 20, 30} {
-		path := getFullPath(routineName, namespace, time.UnixMilli(t))
+		path := getBackupPath(routineName, jobTypeIncremental, namespace, time.UnixMilli(t))
 		metadata := model.BackupMetadata{Created: time.UnixMilli(t), Namespace: namespace}
 		_ = backend.writeBackupMetadata(context.Background(), path, metadata)
 	}

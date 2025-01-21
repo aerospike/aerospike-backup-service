@@ -29,8 +29,8 @@ type BackupRoutineHandler struct {
 	fullBackupHandler CancelableBackupHandler
 	incrBackupHandler CancelableBackupHandler
 
-	fullStarter *Starter
-	incrStarter *Starter
+	fullStarter *BackupRoutineStarter
+	incrStarter *BackupRoutineStarter
 }
 
 // Backup represents a backup service.
@@ -101,22 +101,22 @@ func newBackupRoutineHandler(
 		backupPolicy.GetRetryPolicyOrDefault(),
 		logger)
 	return &BackupRoutineHandler{
-		fullStarter: NewStarter(
+		fullStarter: NewBackupRoutineStarter(
 			routineName,
 			backupService,
 			backupPolicy,
 			retry,
 			backupBackend,
-			false,
+			jobTypeFull,
 			logger,
 		),
-		incrStarter: NewStarter(
+		incrStarter: NewBackupRoutineStarter(
 			routineName,
 			backupService,
 			backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata,
 			retry,
 			backupBackend,
-			true,
+			jobTypeIncremental,
 			logger,
 		),
 

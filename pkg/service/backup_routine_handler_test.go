@@ -117,22 +117,22 @@ func setupTestHandler(
 		logger:           slog.Default(),
 		retry:            &simpleExecutor{},
 		retentionManager: retentionManager,
-		fullStarter: NewStarter(
+		fullStarter: NewBackupRoutineStarter(
 			"routine",
 			backupService,
 			&model.BackupPolicy{},
 			&simpleExecutor{},
 			metadataWriter,
-			false,
+			jobTypeFull,
 			slog.Default(),
 		),
-		incrStarter: NewStarter(
+		incrStarter: NewBackupRoutineStarter(
 			"routine",
 			backupService,
 			&model.BackupPolicy{},
 			&simpleExecutor{},
 			metadataWriter,
-			true,
+			jobTypeIncremental,
 			slog.Default(),
 		),
 	}

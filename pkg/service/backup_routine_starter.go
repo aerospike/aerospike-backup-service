@@ -12,24 +12,32 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-type Starter struct {
-	starter *BackupStarter
+// BackupRoutineStarter starts a backup operation for set of namespaces for given routine.
+// It encapsulates all backup operations for the whole routine.
+type BackupRoutineStarter struct {
+	starter *BackupNamespaceRunner
 }
 
-func NewStarter(routineName string,
+// NewBackupRoutineStarter creates a new instance of BackupRoutineStarter.
+// All parameters passed to this function are immutable and will not be changed
+// during the lifecycle of the backup routine.
+func NewBackupRoutineStarter(
+	routineName string,
 	backupService Backup,
 	backupPolicy *model.BackupPolicy,
 	retry executor,
 	metadataWriter BackupMetadataWriter,
-	isIncremental bool,
+	jobType jobType,
 	logger *slog.Logger,
-) *Starter {
-	return &Starter{
-		starter: NewBackupStarter(routineName, backupService, backupPolicy, retry, metadataWriter, isIncremental, logger),
+) *BackupRoutineStarter {
+	return &BackupRoutineStarter{
+		starter: NewBackupNamespaceRunner(routineName, backupService, backupPolicy, retry, metadataWriter, jobType, logger),
 	}
 }
 
-func (s *Starter) Start(
+// Start initiates a new backup process for the specified namespaces.
+// The parameters passed to this method are specific to each execution.
+func (s *BackupRoutineStarter) Start(
 	ctx context.Context,
 	client *backup.Client,
 	namespaces []string,
@@ -49,7 +57,7 @@ func (s *Starter) Start(
 
 // BackupNamespacesOperation orchestrates backup operations across multiple namespaces.
 // It creates and manages individual BackupOperation instances for each namespace and
-// coordinates their execution.
+// waits for their execution.
 type BackupNamespacesOperation struct {
 	handlers map[string]CancelableBackupHandler
 }
