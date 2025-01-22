@@ -147,7 +147,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
-	timeBounds := h.createTimebounds(true, now)
+	timeBounds := h.createTimeBounds(true, now)
 	h.fullBackupHandler = startNamespacesBackup(ctx,
 		h.runner, client, namespaces, timeBounds, now, h.backupFullPolicy, jobTypeFull)
 
@@ -189,7 +189,7 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 	return client, namespaces, err
 }
 
-func (h *BackupRoutineOrchestrator) createTimebounds(fullBackup bool, now time.Time) model.TimeBounds {
+func (h *BackupRoutineOrchestrator) createTimeBounds(fullBackup bool, now time.Time) model.TimeBounds {
 	var (
 		fromTime *time.Time
 		toTime   *time.Time
@@ -254,7 +254,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 		h.incrBackupHandler = nil
 	}()
 
-	timeBounds := h.createTimebounds(false, now)
+	timeBounds := h.createTimeBounds(false, now)
 	h.incrBackupHandler = startNamespacesBackup(ctx,
 		h.runner, client, namespaces, timeBounds, now, h.backupIncrPolicy, jobTypeIncremental)
 	if err := h.incrBackupHandler.Wait(ctx); err != nil {
