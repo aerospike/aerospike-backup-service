@@ -76,8 +76,8 @@ func NewBackupHandlerHolder() BackupHandlerHolder {
 	return util.NewSafeMap[string, backupRunner]()
 }
 
-// newBackupRoutineHandler returns a new BackupRoutineOrchestrator instance.
-func newBackupRoutineHandler(
+// newBackupRoutineOrchestrator returns a new BackupRoutineOrchestrator instance.
+func newBackupRoutineOrchestrator(
 	clientManager aerospike.ClientManager,
 	backupService Backup,
 	routineName string,

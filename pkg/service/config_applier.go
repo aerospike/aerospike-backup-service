@@ -124,5 +124,5 @@ func makeHandler(
 		lastRun = backend.FindLastRun(ctx) // this scan can take some time.
 	}
 
-	return newBackupRoutineHandler(clientManager, backupExecutor, routineName, routine, backend, lastRun)
+	return newBackupRoutineOrchestrator(clientManager, backupExecutor, routineName, routine, backend, lastRun)
 }
