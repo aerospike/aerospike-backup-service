@@ -13,12 +13,12 @@ type BackupMetadataReader interface {
 	// FullBackupList returns a list of available full backups.
 	// The parameters are timestamp filters by creation time (epoch millis),
 	// where from is inclusive and to is exclusive.
-	FullBackupList(ctx context.Context, timebounds model.TimeBounds) ([]model.BackupDetails, error)
+	FullBackupList(ctx context.Context, timeBounds model.TimeBounds) ([]model.BackupDetails, error)
 
 	// IncrementalBackupList returns a list of available incremental backups.
 	// The parameters are timestamp filters by creation time (epoch millis),
 	// where from is inclusive and to is exclusive.
-	IncrementalBackupList(ctx context.Context, timebounds model.TimeBounds) ([]model.BackupDetails, error)
+	IncrementalBackupList(ctx context.Context, timeBounds model.TimeBounds) ([]model.BackupDetails, error)
 
 	// ReadClusterConfiguration return backed up cluster configuration as a compressed zip.
 	ReadClusterConfiguration(path string) ([]byte, error)
