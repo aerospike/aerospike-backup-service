@@ -18,6 +18,7 @@ import (
 type BackupRoutineOrchestrator struct {
 	backupService       Backup
 	backupFullPolicy    *model.BackupPolicy
+	backupIncrPolicy    *model.BackupPolicy
 	backupRoutine       *model.BackupRoutine
 	namespaces          []string
 	lastRun             *model.LastBackupRun
@@ -27,16 +28,15 @@ type BackupRoutineOrchestrator struct {
 	clusterConfigWriter ClusterConfigWriter
 	retentionManager    RetentionManager
 
+	namespaceBackupRunner *BackupNamespaceRunner
+
 	fullBackupHandler CancelableBackupHandler
 	incrBackupHandler CancelableBackupHandler
-
-	fullStarter *BackupRoutineStarter
-	incrStarter *BackupRoutineStarter
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
 
-// Backup represents a backup service.
+// Backup is a facade for backup library.
 type Backup interface {
 	BackupRun(
 		ctx context.Context,
@@ -92,28 +92,18 @@ func newBackupRoutineHandler(
 		backupPolicy.GetRetryPolicyOrDefault(),
 		logger)
 	return &BackupRoutineOrchestrator{
-		fullStarter: NewBackupRoutineStarter(
+		namespaceBackupRunner: NewBackupNamespaceRunner(
 			routineName,
 			backupService,
-			backupPolicy,
 			retry,
 			backupBackend,
-			jobTypeFull,
-			logger,
-		),
-		incrStarter: NewBackupRoutineStarter(
-			routineName,
-			backupService,
-			backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata,
-			retry,
-			backupBackend,
-			jobTypeIncremental,
 			logger,
 		),
 
 		backupService:    backupService,
 		backupRoutine:    routine,
 		backupFullPolicy: backupPolicy,
+		backupIncrPolicy: backupPolicy.CopySMDDisabled(),
 		namespaces:       routine.Namespaces,
 		lastRun:          lastRun,
 		clientManager:    clientManager,
@@ -157,7 +147,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
-	h.fullBackupHandler = h.fullStarter.Start(ctx, client, namespaces, h.createTimebounds(true, now), now)
+	h.fullBackupHandler = startNamespacesBackup(ctx, h.namespaceBackupRunner, client, namespaces, h.createTimebounds(true, now), now, h.backupFullPolicy, jobTypeFull)
 
 	if err = h.fullBackupHandler.Wait(ctx); err != nil {
 		return fmt.Errorf("backup failed: %w", err)
@@ -262,7 +252,15 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 		h.incrBackupHandler = nil
 	}()
 
-	h.incrBackupHandler = h.incrStarter.Start(ctx, client, namespaces, h.createTimebounds(false, now), now)
+	h.incrBackupHandler = startNamespacesBackup(ctx,
+		h.namespaceBackupRunner,
+		client,
+		namespaces,
+		h.createTimebounds(false, now),
+		now,
+		h.backupFullPolicy.CopySMDDisabled(),
+		jobTypeIncremental,
+	)
 	if err := h.incrBackupHandler.Wait(ctx); err != nil {
 		return err
 	}

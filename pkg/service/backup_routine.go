@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -12,52 +11,34 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// BackupRoutineStarter starts a backup operation for set of namespaces for given routine.
-// It encapsulates all backup operations for the whole routine.
-type BackupRoutineStarter struct {
-	starter *BackupNamespaceRunner
-}
-
-// NewBackupRoutineStarter creates a new instance of BackupRoutineStarter.
-// All parameters passed to this function are immutable and will not be changed
-// during the lifecycle of the backup routine.
-func NewBackupRoutineStarter(
-	routineName string,
-	backupService Backup,
-	backupPolicy *model.BackupPolicy,
-	retry executor,
-	metadataWriter BackupMetadataWriter,
-	jobType jobType,
-	logger *slog.Logger,
-) *BackupRoutineStarter {
-	return &BackupRoutineStarter{
-		starter: NewBackupNamespaceRunner(routineName, backupService, backupPolicy, retry, metadataWriter, jobType, logger),
-	}
-}
-
-// Start initiates a new backup process for the specified namespaces.
-// The parameters passed to this method are specific to each execution.
-func (s *BackupRoutineStarter) Start(
+// startNamespacesBackup initiates a new backup process for the routine (multiple namespaces).
+// Each namespace is backed up independently using the provided BackupNamespaceRunner.
+// Returns a BackupNamespacesOperation that tracks the progress and status of the backup processes.
+func startNamespacesBackup(
 	ctx context.Context,
+	runner *BackupNamespaceRunner,
 	client *backup.Client,
 	namespaces []string,
 	timeBounds model.TimeBounds,
 	now time.Time,
+	backupPolicy *model.BackupPolicy,
+	jobType jobType,
 ) *BackupNamespacesOperation {
 	op := &BackupNamespacesOperation{
 		handlers: make(map[string]CancelableBackupHandler, len(namespaces)),
 	}
 
 	for _, namespace := range namespaces {
-		op.handlers[namespace] = s.starter.Run(ctx, client, namespace, now, timeBounds)
+		op.handlers[namespace] = runner.Run(ctx, client, backupPolicy, jobType, namespace, now, timeBounds)
 	}
 
 	return op
 }
 
-// BackupNamespacesOperation orchestrates backup operations across multiple namespaces.
-// It creates and manages individual BackupOperation instances for each namespace and
+// BackupNamespacesOperation aggregates backup operations across multiple namespaces.
+// It creates individual backup process instances for each namespace and
 // waits for their execution.
+// Implements CancelableBackupHandler, so it can be treated as a unified handler externally.
 type BackupNamespacesOperation struct {
 	handlers map[string]CancelableBackupHandler
 }

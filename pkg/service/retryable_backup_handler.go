@@ -19,13 +19,13 @@ type retryableBackupHandler struct {
 
 var _ BackupHandler = (*retryableBackupHandler)(nil)
 
-func startBackup(
+func newRetryableBackupHandler(
 	ctx context.Context,
 	retry executor,
 	start func(ctx context.Context) (BackupHandler, error),
 	onFail func(ctx context.Context),
 	onSuccess func(ctx context.Context, stats *models.BackupStats) error,
-) CancelableBackupHandler {
+) *retryableBackupHandler {
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	h := &retryableBackupHandler{
 		errCh:  make(chan error, 1),

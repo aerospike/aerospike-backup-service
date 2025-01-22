@@ -15,35 +15,29 @@ import (
 // BackupNamespaceRunner starts a backup operation for a single namespace. It encapsulates
 // all the logic needed to perform a backup of one namespace, including running the backup,
 // managing metadata, and handling cleanup.
+// Every routine has it's own BackupNamespaceRunner.
 type BackupNamespaceRunner struct {
 	routineName    string
-	backupService  Backup
-	backupPolicy   *model.BackupPolicy
+	backupExecutor Backup
 	retry          executor
 	metadataWriter BackupMetadataWriter
 	logger         *slog.Logger
-	backupType     jobType
 }
 
-// NewBackupNamespaceRunner creates a new BackupNamespaceRunner instance with all necessary dependencies
-// for performing a single namespace backup.
+// NewBackupNamespaceRunner creates a new BackupNamespaceRunner instance.
 func NewBackupNamespaceRunner(
 	routineName string,
 	backupService Backup,
-	backupPolicy *model.BackupPolicy,
 	retry executor,
 	metadataWriter BackupMetadataWriter,
-	backupType jobType,
 	logger *slog.Logger,
 ) *BackupNamespaceRunner {
 	return &BackupNamespaceRunner{
 		routineName:    routineName,
-		backupService:  backupService,
-		backupPolicy:   backupPolicy,
+		backupExecutor: backupService,
 		retry:          retry,
 		metadataWriter: metadataWriter,
 		logger:         logger,
-		backupType:     backupType,
 	}
 }
 
@@ -52,24 +46,26 @@ func NewBackupNamespaceRunner(
 func (op *BackupNamespaceRunner) Run(
 	ctx context.Context,
 	client *backup.Client,
+	backupPolicy *model.BackupPolicy,
+	backupType jobType,
 	namespace string,
 	now time.Time,
 	timeBounds model.TimeBounds,
 ) CancelableBackupHandler {
-	backupFolder := getBackupPath(op.routineName, op.backupType, namespace, now)
+	backupFolder := getBackupPath(op.routineName, backupType, namespace, now)
 
-	return startBackup(
+	return newRetryableBackupHandler(
 		ctx,
 		op.retry,
 		func(ctx context.Context) (BackupHandler, error) {
-			return op.backupService.BackupRun(ctx, client, op.backupPolicy, timeBounds, namespace, backupFolder)
+			return op.backupExecutor.BackupRun(ctx, client, backupPolicy, timeBounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) {
 			op.deleteFolder(ctx, backupFolder)
 		},
 		func(ctx context.Context, stats *models.BackupStats) error {
 			// For incremental backups, skip metadata for empty backups
-			if op.backupType == jobTypeIncremental && stats.IsEmpty() {
+			if backupType == jobTypeIncremental && stats.IsEmpty() {
 				return nil
 			}
 			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timeBounds.FromTime), now)

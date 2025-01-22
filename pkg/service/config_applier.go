@@ -113,7 +113,7 @@ func makeHandler(
 	routineName string,
 	routine *model.BackupRoutine,
 ) *BackupRoutineOrchestrator {
-	backupService := NewBackupExecutor(routine)
+	backupExecutor := NewBackupExecutor(routine)
 	backend, _ := backends.Get(routineName)
 
 	// try to reuse lastRun from previous handler if it exists.
@@ -124,5 +124,5 @@ func makeHandler(
 		lastRun = backend.FindLastRun(ctx) // this scan can take some time.
 	}
 
-	return newBackupRoutineHandler(clientManager, backupService, routineName, routine, backend, lastRun)
+	return newBackupRoutineHandler(clientManager, backupExecutor, routineName, routine, backend, lastRun)
 }
