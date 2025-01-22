@@ -15,7 +15,7 @@ import (
 // BackupNamespaceRunner starts a backup operation for a single namespace. It encapsulates
 // all the logic needed to perform a backup of one namespace, including running the backup,
 // managing metadata, and handling cleanup.
-// Every routine has it's own BackupNamespaceRunner.
+// Every routine has its own BackupNamespaceRunner.
 type BackupNamespaceRunner struct {
 	routineName    string
 	backupExecutor Backup
