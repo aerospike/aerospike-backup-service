@@ -210,7 +210,7 @@ func readBackupsLogic(ctx context.Context,
 }
 
 func backupsReadFunction(
-	backend service.BackupListReader, fullBackup bool,
+	backend service.BackupMetadataReader, fullBackup bool,
 ) func(context.Context, model.TimeBounds) ([]model.BackupDetails, error) {
 	if fullBackup {
 		return backend.FullBackupList

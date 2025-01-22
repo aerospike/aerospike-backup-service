@@ -20,14 +20,14 @@ type RetentionManager interface {
 
 type RetentionManagerImpl struct {
 	mu          sync.Mutex
-	backend     BackupListReader
+	backend     BackupMetadataReader
 	storage     model.Storage
 	routineName string
 	policy      *model.RetentionPolicy
 }
 
 func NewBackupRetentionManager(
-	backend BackupListReader,
+	backend BackupMetadataReader,
 	storage model.Storage,
 	routineName string,
 	policy *model.RetentionPolicy,

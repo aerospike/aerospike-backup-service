@@ -22,7 +22,7 @@ func TestFullBackupReadFiles(t *testing.T) {
 	}
 
 	for _, t := range []int64{10, 20, 30} {
-		path := getFullPath(name, "source-ns1", time.UnixMilli(t))
+		path := getBackupPath(name, jobTypeFull, "source-ns1", time.UnixMilli(t))
 		_ = os.MkdirAll(path, 0744)
 		_ = backend.writeBackupMetadata(context.Background(), path, model.BackupMetadata{Created: time.UnixMilli(t)})
 	}

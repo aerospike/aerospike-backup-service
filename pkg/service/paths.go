@@ -30,11 +30,11 @@ func getTimestampPath(routineName string, timestamp time.Time, backupType jobTyp
 	return filepath.Join(getBackupRootPath(routineName, backupType), formatTimestamp(timestamp))
 }
 
-func getFullPath(routineName string, namespace string, timestamp time.Time) string {
-	return filepath.Join(routineName, fullBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
-}
+func getBackupPath(routineName string, backupType jobType, namespace string, timestamp time.Time) string {
+	if backupType == jobTypeFull {
+		return filepath.Join(routineName, fullBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
+	}
 
-func getIncrementalPath(routineName string, namespace string, timestamp time.Time) string {
 	return filepath.Join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
 }
 

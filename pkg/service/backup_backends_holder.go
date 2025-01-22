@@ -11,12 +11,12 @@ import (
 type BackendsHolder interface {
 	// Init creates new backends from config.
 	Init(routines map[string]*model.BackupRoutine)
-	// GetReader returns BackupBackend for routine as BackupListReader.
-	GetReader(routineName string) (BackupListReader, bool)
+	// GetReader returns BackupBackend for routine as BackupMetadataReader.
+	GetReader(routineName string) (BackupMetadataReader, bool)
 	// Get returns BackupBackend for routine.
-	Get(routineName string) (*BackupBackend, bool)
-	// GetAllReaders returns all backends as a map routineName -> BackupListReader.
-	GetAllReaders() map[string]BackupListReader
+	Get(routineName string) (BackupMetadataReaderWriter, bool)
+	// GetAllReaders returns all backends as a map routineName -> BackupMetadataReader.
+	GetAllReaders() map[string]BackupMetadataReader
 }
 
 type BackendHolderImpl struct {
@@ -36,18 +36,18 @@ func (b *BackendHolderImpl) Init(routines map[string]*model.BackupRoutine) {
 
 var _ BackendsHolder = (*BackendHolderImpl)(nil)
 
-func (b *BackendHolderImpl) GetReader(name string) (BackupListReader, bool) {
+func (b *BackendHolderImpl) GetReader(name string) (BackupMetadataReader, bool) {
 	b.RLock()
 	defer b.RUnlock()
 	backend, found := b.data[name]
 	return backend, found
 }
 
-func (b *BackendHolderImpl) GetAllReaders() map[string]BackupListReader {
+func (b *BackendHolderImpl) GetAllReaders() map[string]BackupMetadataReader {
 	b.RLock()
 	defer b.RUnlock()
 
-	readers := make(map[string]BackupListReader, len(b.data))
+	readers := make(map[string]BackupMetadataReader, len(b.data))
 	for name, backend := range b.data {
 		readers[name] = backend
 	}
@@ -55,7 +55,7 @@ func (b *BackendHolderImpl) GetAllReaders() map[string]BackupListReader {
 	return readers
 }
 
-func (b *BackendHolderImpl) Get(name string) (*BackupBackend, bool) {
+func (b *BackendHolderImpl) Get(name string) (BackupMetadataReaderWriter, bool) {
 	b.RLock()
 	defer b.RUnlock()
 	backend, found := b.data[name]

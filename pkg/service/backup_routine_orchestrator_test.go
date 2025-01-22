@@ -22,16 +22,13 @@ type mockBackupService struct {
 
 func (m *mockBackupService) BackupRun(
 	ctx context.Context,
-	backupRoutine *model.BackupRoutine,
-	backupPolicy *model.BackupPolicy,
 	client *backup.Client,
-	storage model.Storage,
-	secretAgent *model.SecretAgent,
-	timebounds model.TimeBounds,
+	backupPolicy *model.BackupPolicy,
+	timeBounds model.TimeBounds,
 	namespace string,
 	path string,
 ) (BackupHandler, error) {
-	args := m.Called(ctx, backupRoutine, backupPolicy, client, storage, secretAgent, timebounds, namespace, path)
+	args := m.Called(ctx, client, backupPolicy, timeBounds, namespace, path)
 	return args.Get(0).(BackupHandler), args.Error(1)
 }
 
@@ -106,24 +103,27 @@ func setupTestHandler(
 	metadataWriter *mockMetadataWriter,
 	configWriter *mockClusterConfigWriter,
 	retentionManager *mockRetentionManager,
-) *BackupRoutineHandler {
-	return &BackupRoutineHandler{
+) *BackupRoutineOrchestrator {
+	return &BackupRoutineOrchestrator{
 		namespaces:          []string{"ns1", "ns2"},
 		backupService:       backupService,
 		clientManager:       clientManager,
-		metadataWriter:      metadataWriter,
 		clusterConfigWriter: configWriter,
 		backupRoutine: &model.BackupRoutine{
 			SourceCluster: &model.AerospikeCluster{},
 		},
-		backupFullPolicy:   &model.BackupPolicy{},
-		fullBackupHandlers: make(map[string]CancelableBackupHandler),
-		incrBackupHandlers: make(map[string]CancelableBackupHandler),
-		lastRun:            &model.LastBackupRun{},
-		storage:            &model.LocalStorage{Path: "/tmp"},
-		logger:             slog.Default(),
-		retry:              &simpleExecutor{},
-		retentionManager:   retentionManager,
+		backupFullPolicy: &model.BackupPolicy{},
+		lastRun:          &model.LastBackupRun{},
+		logger:           slog.Default(),
+		retry:            &simpleExecutor{},
+		retentionManager: retentionManager,
+		runner: NewBackupNamespaceRunner(
+			"routine",
+			backupService,
+			&simpleExecutor{},
+			metadataWriter,
+			slog.Default(),
+		),
 	}
 }
 
@@ -146,17 +146,11 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		"ns1",
 		mock.Anything,
 	).Return(backupHandler, nil).Once()
 
 	backupService.On("BackupRun",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -208,9 +202,6 @@ func TestRunFullBackupInternal_WaitError(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 	).Return(backupHandler, nil)
 	metadataWriter.On("deleteFolder", mock.Anything, mock.Anything).Return(nil)
 	configWriter.On("Write",
@@ -252,7 +243,7 @@ func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
 
-	handler.fullBackupHandlers["ns1"] = &mockBackupHandler{}
+	handler.fullBackupHandler = &mockBackupHandler{}
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
@@ -270,7 +261,7 @@ func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
 
-	handler.incrBackupHandlers["test"] = &mockBackupHandler{}
+	handler.incrBackupHandler = &mockBackupHandler{}
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
@@ -320,17 +311,11 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		"ns1",
 		mock.Anything,
 	).Return(backupHandler, nil)
 
 	backupService.On("BackupRun",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -376,17 +361,11 @@ func TestRunFullBackup_PartialFailure(t *testing.T) {
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		"ns1",
 		mock.Anything,
 	).Return(successHandler, nil).Once()
 
 	backupService.On("BackupRun",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
