@@ -28,7 +28,7 @@ type BackupRoutineOrchestrator struct {
 	clusterConfigWriter ClusterConfigWriter
 	retentionManager    RetentionManager
 
-	namespaceBackupRunner *BackupNamespaceRunner
+	runner *BackupNamespaceRunner
 
 	fullBackupHandler CancelableBackupHandler
 	incrBackupHandler CancelableBackupHandler
@@ -92,7 +92,7 @@ func newBackupRoutineHandler(
 		backupPolicy.GetRetryPolicyOrDefault(),
 		logger)
 	return &BackupRoutineOrchestrator{
-		namespaceBackupRunner: NewBackupNamespaceRunner(
+		runner: NewBackupNamespaceRunner(
 			routineName,
 			backupService,
 			retry,
@@ -149,7 +149,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 
 	timeBounds := h.createTimebounds(true, now)
 	h.fullBackupHandler = startNamespacesBackup(ctx,
-		h.namespaceBackupRunner, client, namespaces, timeBounds, now, h.backupFullPolicy, jobTypeFull)
+		h.runner, client, namespaces, timeBounds, now, h.backupFullPolicy, jobTypeFull)
 
 	if err = h.fullBackupHandler.Wait(ctx); err != nil {
 		return fmt.Errorf("backup failed: %w", err)
@@ -256,7 +256,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 
 	timeBounds := h.createTimebounds(false, now)
 	h.incrBackupHandler = startNamespacesBackup(ctx,
-		h.namespaceBackupRunner, client, namespaces, timeBounds, now, h.backupIncrPolicy, jobTypeIncremental)
+		h.runner, client, namespaces, timeBounds, now, h.backupIncrPolicy, jobTypeIncremental)
 	if err := h.incrBackupHandler.Wait(ctx); err != nil {
 		return err
 	}
