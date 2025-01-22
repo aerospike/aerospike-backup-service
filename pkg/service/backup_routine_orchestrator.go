@@ -103,7 +103,7 @@ func newBackupRoutineHandler(
 		backupService:    backupService,
 		backupRoutine:    routine,
 		backupFullPolicy: backupPolicy,
-		backupIncrPolicy: backupPolicy.CopySMDDisabled(),
+		backupIncrPolicy: backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
 		namespaces:       routine.Namespaces,
 		lastRun:          lastRun,
 		clientManager:    clientManager,
@@ -147,7 +147,9 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
-	h.fullBackupHandler = startNamespacesBackup(ctx, h.namespaceBackupRunner, client, namespaces, h.createTimebounds(true, now), now, h.backupFullPolicy, jobTypeFull)
+	timeBounds := h.createTimebounds(true, now)
+	h.fullBackupHandler = startNamespacesBackup(ctx,
+		h.namespaceBackupRunner, client, namespaces, timeBounds, now, h.backupFullPolicy, jobTypeFull)
 
 	if err = h.fullBackupHandler.Wait(ctx); err != nil {
 		return fmt.Errorf("backup failed: %w", err)
@@ -252,15 +254,9 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 		h.incrBackupHandler = nil
 	}()
 
+	timeBounds := h.createTimebounds(false, now)
 	h.incrBackupHandler = startNamespacesBackup(ctx,
-		h.namespaceBackupRunner,
-		client,
-		namespaces,
-		h.createTimebounds(false, now),
-		now,
-		h.backupFullPolicy.CopySMDDisabled(),
-		jobTypeIncremental,
-	)
+		h.namespaceBackupRunner, client, namespaces, timeBounds, now, h.backupIncrPolicy, jobTypeIncremental)
 	if err := h.incrBackupHandler.Wait(ctx); err != nil {
 		return err
 	}
