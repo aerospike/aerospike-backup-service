@@ -113,7 +113,6 @@ func setupTestHandler(
 			SourceCluster: &model.AerospikeCluster{},
 		},
 		backupFullPolicy: &model.BackupPolicy{},
-		lastRun:          &model.LastBackupRun{},
 		logger:           slog.Default(),
 		retry:            &simpleExecutor{},
 		retentionManager: retentionManager,

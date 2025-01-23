@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -34,7 +33,7 @@ func TestDisabledRoutine(t *testing.T) {
 	handlers := NewBackupHandlerHolder()
 	handlers.ReplaceContent(map[string]backupRunner{
 		"routine1": &BackupRoutineOrchestrator{},
-		"routine2": &BackupRoutineOrchestrator{lastRun: model.NewLastBackupRun(util.Ptr(time.Now()), nil)},
+		"routine2": &BackupRoutineOrchestrator{},
 	})
 
 	err := scheduleRoutines(mockScheduler, config.Routines(), handlers)

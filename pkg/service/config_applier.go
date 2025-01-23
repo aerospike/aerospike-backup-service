@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -14,7 +13,7 @@ import (
 
 // ConfigApplier is responsible for applying new configuration to the service.
 type ConfigApplier interface {
-	ApplyNewRoutines(ctx context.Context, routines map[string]*model.BackupRoutine) error
+	ApplyNewRoutines(routines map[string]*model.BackupRoutine) error
 }
 
 type DefaultConfigApplier struct {
@@ -23,6 +22,7 @@ type DefaultConfigApplier struct {
 	backends      BackendsHolder
 	clientManager aerospike.ClientManager
 	handlerHolder BackupHandlerHolder
+	registry      RunningBackupsRegistry
 }
 
 func NewDefaultConfigApplier(
@@ -30,16 +30,18 @@ func NewDefaultConfigApplier(
 	backends BackendsHolder,
 	manager aerospike.ClientManager,
 	handlerHolder BackupHandlerHolder,
+	registry RunningBackupsRegistry,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
 		scheduler:     scheduler,
 		backends:      backends,
 		clientManager: manager,
 		handlerHolder: handlerHolder,
+		registry:      registry,
 	}
 }
 
-func (a *DefaultConfigApplier) ApplyNewRoutines(ctx context.Context, routines map[string]*model.BackupRoutine) error {
+func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.BackupRoutine) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -50,7 +52,7 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(ctx context.Context, routines ma
 	a.backends.Init(routines)
 
 	// Refill handlers
-	newHandlers := makeHandlers(ctx, a.clientManager, routines, a.backends, a.handlerHolder)
+	newHandlers := makeHandlers(a.clientManager, routines, a.backends, a.registry)
 	a.handlerHolder.ReplaceContent(newHandlers)
 
 	err = scheduleRoutines(a.scheduler, routines, a.handlerHolder)
@@ -80,49 +82,18 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 
 // makeHandlers creates and returns a map of backup handlers per the configured routines.
 func makeHandlers(
-	ctx context.Context,
 	clientManager aerospike.ClientManager,
 	routines map[string]*model.BackupRoutine,
 	backends BackendsHolder,
-	oldHandlers BackupHandlerHolder,
+	registry RunningBackupsRegistry,
 ) map[string]backupRunner {
 	handlers := make(map[string]backupRunner)
 
-	var wg sync.WaitGroup
-	var mu sync.Mutex
 	for routineName, routine := range routines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			handler := makeHandler(ctx, clientManager, backends, oldHandlers, routineName, routine)
-			mu.Lock()
-			handlers[routineName] = handler
-			mu.Unlock()
-		}()
+		backupExecutor := NewBackupExecutor(routine)
+		backend, _ := backends.Get(routineName)
+		handlers[routineName] = newBackupRoutineOrchestrator(clientManager, backupExecutor, routineName, routine, backend, registry)
 	}
 
-	wg.Wait()
 	return handlers
-}
-
-func makeHandler(
-	ctx context.Context,
-	clientManager aerospike.ClientManager,
-	backends BackendsHolder,
-	oldHandlers BackupHandlerHolder,
-	routineName string,
-	routine *model.BackupRoutine,
-) *BackupRoutineOrchestrator {
-	backupExecutor := NewBackupExecutor(routine)
-	backend, _ := backends.Get(routineName)
-
-	// try to reuse lastRun from previous handler if it exists.
-	var lastRun *model.LastBackupRun
-	if old, ok := oldHandlers.Load(routineName); ok {
-		lastRun = old.CurrentStat().LastRunTime
-	} else {
-		lastRun = backend.FindLastRun(ctx) // this scan can take some time.
-	}
-
-	return newBackupRoutineOrchestrator(clientManager, backupExecutor, routineName, routine, backend, lastRun)
 }

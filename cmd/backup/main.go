@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -82,20 +83,22 @@ func startService(configFile string, remote bool) error {
 	scheduler := service.NewScheduler(ctx)
 	backupHandlers := service.NewBackupHandlerHolder()
 
+	registry := service.NewRunningBackupsRegistry()
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,
 		backends,
 		clientManager,
 		backupHandlers,
+		registry,
 	)
 
-	err = configApplier.ApplyNewRoutines(ctx, config.Routines())
+	err = configApplier.ApplyNewRoutines(config.Routines())
 	if err != nil {
 		return fmt.Errorf("failed to apply new config: %w", err)
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()
-	service.NewMetricsCollector(backupHandlers, restoreJobs).Start(ctx, 1*time.Second)
+	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
 		backends, service.NewRestore(), clientManager, restoreJobs, nsValidator)
@@ -107,10 +110,15 @@ func startService(configFile string, remote bool) error {
 		restoreMgr,
 		backends,
 		backupHandlers,
+		registry,
 		configurationManager,
 		appLogger,
 		nsValidator,
 	)
+
+	syncBackupHistoryFromStorage(ctx, backends, registry)
+
+	scheduler.Start(ctx)
 
 	// run HTTP server
 	err = runHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService)
@@ -119,6 +127,30 @@ func startService(configFile string, remote bool) error {
 	scheduler.Stop()
 
 	return err
+}
+
+// syncBackupHistoryFromStorage updates the backup registry with the most recent backup timestamps
+// found in the storage backends. It scans all backup routines in parallel to minimize latency.
+func syncBackupHistoryFromStorage(ctx context.Context, backends *service.BackendHolderImpl, registry service.RunningBackupsRegistry) {
+	var wg sync.WaitGroup
+
+	// Launch a goroutine for each backup routine, because routineReader.FindLastRun(ctx) is network call and can be long.
+	for routine, reader := range backends.GetAllReaders() {
+		wg.Add(1)
+		go func(routineName string, routineReader service.BackupMetadataReader) {
+			defer wg.Done()
+
+			lastRun := routineReader.FindLastRun(ctx)
+			if lastRun.FullBackupTime() != nil {
+				registry.FinishFull(routineName, *lastRun.FullBackupTime())
+			}
+			if lastRun.IncrementalBackupTime() != nil {
+				registry.FinishFull(routineName, *lastRun.IncrementalBackupTime())
+			}
+		}(routine, reader)
+	}
+
+	wg.Wait()
 }
 
 func setDefaultLoggers(ctx context.Context, loggerConfig *model.LoggerConfig) *slog.Logger {

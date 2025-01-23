@@ -301,7 +301,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler, found := s.handlerHolder.Load(routineName)
+	_, found := s.handlerHolder.Load(routineName)
 	if !found {
 		hLogger.Error("unknown routine name",
 			slog.String("name", routineName),
@@ -310,7 +310,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentBackups := dto.NewCurrentBackupsFromModel(handler.CurrentStat())
+	currentBackups := dto.NewCurrentBackupsFromModel(s.registry.CurrentStat(routineName))
 	response, err := dto.Serialize(currentBackups, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal statistics",
@@ -350,7 +350,7 @@ func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler, found := s.handlerHolder.Load(routineName)
+	_, found := s.handlerHolder.Load(routineName)
 	if !found {
 		hLogger.Error("unknown routine name",
 			slog.String("name", routineName),
@@ -359,7 +359,7 @@ func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler.Cancel()
+	s.registry.Cancel(routineName)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)

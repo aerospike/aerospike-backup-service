@@ -50,8 +50,6 @@ func NewScheduler(ctx context.Context) quartz.Scheduler {
 		RetryInterval:     100 * time.Millisecond,
 	}, nil, nil)
 
-	scheduler.Start(ctx)
-
 	return scheduler
 }
 
