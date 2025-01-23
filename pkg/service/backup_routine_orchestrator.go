@@ -26,12 +26,9 @@ type BackupRoutineOrchestrator struct {
 	logger              *slog.Logger
 	clusterConfigWriter ClusterConfigWriter
 	retentionManager    RetentionManager
-
-	runner *BackupNamespaceRunner
-
-	routineName string
-
-	registry RunningBackupsRegistry
+	runner              *BackupNamespaceRunner
+	routineName         string
+	registry            RunningBackupsRegistry
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
@@ -136,6 +133,11 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 }
 
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
+	if h.skipFullBackup() {
+		backupSkippedCounter.Inc()
+		return nil
+	}
+
 	client, namespaces, err := h.prepareCluster(h.retry)
 	if err != nil {
 		return err
@@ -159,6 +161,18 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	go h.deleteOldBackups(ctx)
 
 	return nil
+}
+
+func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
+	currentStat := h.registry.CurrentStat(h.routineName)
+	if currentStat.Full != nil {
+		// This can happen in rare scenario, when user re-applied config
+		// while backup is running and started same routine backup.
+		h.logger.Debug("Full backup is currently in progress, skipping another full backup")
+		return true
+	}
+
+	return false
 }
 
 func (h *BackupRoutineOrchestrator) deleteOldBackups(ctx context.Context) {
