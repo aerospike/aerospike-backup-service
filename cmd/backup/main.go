@@ -71,7 +71,7 @@ func startService(configFile string, remote bool) error {
 		return err
 	}
 
-	// start the scheduler only after all the initialisation is done
+	// start the scheduler only after all the initialization is done
 	scheduler.Start(ctx)
 
 	// run HTTP server
