@@ -137,7 +137,6 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 		if currentStat.Incremental != nil {
 			backupProgress.WithLabelValues(routineName, "Incremental").Set(float64(currentStat.Incremental.PercentageDone))
 		}
-
 	}
 }
 

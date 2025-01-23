@@ -1,7 +1,9 @@
 package service
 
 import (
+	"context"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -34,6 +36,32 @@ func NewRunningBackupsRegistry() RunningBackupsRegistry {
 		handlers:       util.NewSafeMap[key, CancelableBackupHandler](),
 		lastSuccessful: util.NewSafeMap[string, *model.LastBackupRun](),
 	}
+}
+
+// SyncBackupHistoryFromStorage updates the backup registry with the most recent backup timestamps
+// found in the storage backends. It scans all backup routines in parallel.
+func SyncBackupHistoryFromStorage(
+	ctx context.Context, registry RunningBackupsRegistry, backends BackendsHolder,
+) {
+	var wg sync.WaitGroup
+
+	// Launch a goroutine for each backup routine, because routineReader.FindLastRun(ctx) is network call and can be long.
+	for routine, reader := range backends.GetAllReaders() {
+		wg.Add(1)
+		go func(routineName string, routineReader BackupMetadataReader) {
+			defer wg.Done()
+
+			lastRun := routineReader.FindLastRun(ctx)
+			if lastRun.FullBackupTime() != nil {
+				registry.FinishFull(routineName, *lastRun.FullBackupTime())
+			}
+			if lastRun.IncrementalBackupTime() != nil {
+				registry.FinishFull(routineName, *lastRun.IncrementalBackupTime())
+			}
+		}(routine, reader)
+	}
+
+	wg.Wait()
 }
 
 func (r *RunningBackupsRegistryImpl) add(routineName string, job jobType, handler CancelableBackupHandler) {

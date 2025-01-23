@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/logger"
+	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
 
@@ -66,12 +66,32 @@ func run() int {
 
 func startService(configFile string, remote bool) error {
 	ctx := systemCtx()
+	config, scheduler, httpService, err := initComponents(ctx, configFile, remote)
+	if err != nil {
+		return err
+	}
+
+	// start the scheduler only after all the initialisation is done
+	scheduler.Start(ctx)
+
+	// run HTTP server
+	err = runHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService)
+
+	// stop the scheduler
+	scheduler.Stop()
+
+	return err
+}
+
+func initComponents(ctx context.Context, configFile string, remote bool) (
+	*model.Config, quartz.Scheduler, *handlers.Service, error,
+) {
 	clientManager := aerospike.NewClientManager(&aerospike.DefaultClientFactory{}, 10*time.Second)
 	nsValidator := aerospike.NewNamespaceValidator(clientManager)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	appLogger := setDefaultLoggers(ctx, config.ServiceConfig.GetLoggerOrDefault())
@@ -79,11 +99,12 @@ func startService(configFile string, remote bool) error {
 	clientManager.SetLogger(appLogger)
 
 	// schedule all configured backups
-	backends := service.NewBackupBackends()
-	scheduler := service.NewScheduler(ctx)
-	backupHandlers := service.NewBackupHandlerHolder()
+	scheduler := service.NewScheduler()
 
+	backends := service.NewBackupBackends()
+	backupHandlers := service.NewBackupHandlerHolder()
 	registry := service.NewRunningBackupsRegistry()
+	service.SyncBackupHistoryFromStorage(ctx, registry, backends)
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,
 		backends,
@@ -94,7 +115,7 @@ func startService(configFile string, remote bool) error {
 
 	err = configApplier.ApplyNewRoutines(config.Routines())
 	if err != nil {
-		return fmt.Errorf("failed to apply new config: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()
@@ -116,41 +137,7 @@ func startService(configFile string, remote bool) error {
 		nsValidator,
 	)
 
-	syncBackupHistoryFromStorage(ctx, backends, registry)
-
-	scheduler.Start(ctx)
-
-	// run HTTP server
-	err = runHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService)
-
-	// stop the scheduler
-	scheduler.Stop()
-
-	return err
-}
-
-// syncBackupHistoryFromStorage updates the backup registry with the most recent backup timestamps
-// found in the storage backends. It scans all backup routines in parallel to minimize latency.
-func syncBackupHistoryFromStorage(ctx context.Context, backends *service.BackendHolderImpl, registry service.RunningBackupsRegistry) {
-	var wg sync.WaitGroup
-
-	// Launch a goroutine for each backup routine, because routineReader.FindLastRun(ctx) is network call and can be long.
-	for routine, reader := range backends.GetAllReaders() {
-		wg.Add(1)
-		go func(routineName string, routineReader service.BackupMetadataReader) {
-			defer wg.Done()
-
-			lastRun := routineReader.FindLastRun(ctx)
-			if lastRun.FullBackupTime() != nil {
-				registry.FinishFull(routineName, *lastRun.FullBackupTime())
-			}
-			if lastRun.IncrementalBackupTime() != nil {
-				registry.FinishFull(routineName, *lastRun.IncrementalBackupTime())
-			}
-		}(routine, reader)
-	}
-
-	wg.Wait()
+	return config, scheduler, httpService, nil
 }
 
 func setDefaultLoggers(ctx context.Context, loggerConfig *model.LoggerConfig) *slog.Logger {

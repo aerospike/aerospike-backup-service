@@ -92,7 +92,8 @@ func makeHandlers(
 	for routineName, routine := range routines {
 		backupExecutor := NewBackupExecutor(routine)
 		backend, _ := backends.Get(routineName)
-		handlers[routineName] = newBackupRoutineOrchestrator(clientManager, backupExecutor, routineName, routine, backend, registry)
+		handlers[routineName] =
+			newBackupRoutineOrchestrator(clientManager, backupExecutor, routineName, routine, backend, registry)
 	}
 
 	return handlers
