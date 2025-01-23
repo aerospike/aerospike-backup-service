@@ -148,7 +148,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	backupHandler := startNamespacesBackup(ctx,
 		h.runner, client, namespaces, timeBounds, now, h.backupFullPolicy, jobTypeFull)
 
-	h.registry.add(h.routineName, jobTypeFull, backupHandler)
+	h.registry.register(h.routineName, jobTypeFull, backupHandler)
 
 	if err = backupHandler.Wait(ctx); err != nil {
 		h.registry.finishWithError(h.routineName, jobTypeFull)
@@ -228,16 +228,16 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 }
 
 func (h *BackupRoutineOrchestrator) skipIncrementalBackup() bool {
-	lastRunTime := h.registry.CurrentStat(h.routineName).LastRunTime
-	if lastRunTime.NoFullBackup() {
+	currentStat := h.registry.CurrentStat(h.routineName)
+	if currentStat.LastRunTime.NoFullBackup() {
 		h.logger.Debug("Skip incremental backup until initial full backup is done")
 		return true
 	}
-	if h.registry.contains(h.routineName, jobTypeFull) {
+	if currentStat.Full != nil {
 		h.logger.Debug("Full backup is currently in progress, skipping incremental backup")
 		return true
 	}
-	if h.registry.contains(h.routineName, jobTypeIncremental) {
+	if currentStat.Incremental != nil {
 		h.logger.Debug("Incremental backup is currently in progress, skipping incremental backup")
 		return true
 	}
@@ -256,7 +256,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 	timeBounds := h.createTimeBounds(jobTypeIncremental, now)
 	backupHandler := startNamespacesBackup(ctx,
 		h.runner, client, namespaces, timeBounds, now, h.backupIncrPolicy, jobTypeIncremental)
-	h.registry.add(h.routineName, jobTypeIncremental, backupHandler)
+	h.registry.register(h.routineName, jobTypeIncremental, backupHandler)
 
 	if err := backupHandler.Wait(ctx); err != nil {
 		h.registry.finishWithError(h.routineName, jobTypeIncremental)
