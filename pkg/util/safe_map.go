@@ -67,3 +67,14 @@ func (s *SafeMap[K, V]) Size() int {
 	defer s.mu.RUnlock()
 	return len(s.m)
 }
+
+// Remove deletes the value for a key and returns whether the key was present.
+func (s *SafeMap[K, V]) Remove(key K) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, exists := s.m[key]
+	if exists {
+		delete(s.m, key)
+	}
+	return exists
+}
