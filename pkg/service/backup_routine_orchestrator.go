@@ -153,7 +153,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	h.registry.register(h.routineName, jobTypeFull, backupHandler)
 
 	if err = backupHandler.Wait(ctx); err != nil {
-		h.registry.finishWithError(h.routineName, jobTypeFull)
+		h.registry.remove(h.routineName, jobTypeFull)
 		return fmt.Errorf("backup failed: %w", err)
 	}
 	h.registry.FinishFull(h.routineName, now)
@@ -273,7 +273,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 	h.registry.register(h.routineName, jobTypeIncremental, backupHandler)
 
 	if err := backupHandler.Wait(ctx); err != nil {
-		h.registry.finishWithError(h.routineName, jobTypeIncremental)
+		h.registry.remove(h.routineName, jobTypeIncremental)
 		return err
 	}
 

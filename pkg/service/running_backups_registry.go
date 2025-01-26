@@ -15,7 +15,7 @@ type RunningBackupsRegistry interface {
 	// register add a new backup handler for a specific routine and job type.
 	register(string, jobType, CancelableBackupHandler)
 	// finishWithError remove backup from the registry.
-	finishWithError(routineName string, job jobType)
+	remove(routineName string, job jobType)
 	// FinishFull remove backup from registry and update last success timestamp.
 	FinishFull(routineName string, time time.Time)
 	// FinishIncremental remove incremental backup from registry and update last success timestamp.
@@ -31,6 +31,13 @@ type RunningBackupsRegistry interface {
 type registryKey struct {
 	routineName string
 	job         jobType
+}
+
+func makeRegistryKey(routineName string, job jobType) registryKey {
+	return registryKey{
+		routineName: routineName,
+		job:         job,
+	}
 }
 
 // RunningBackupsRegistryImpl implements the RunningBackupsRegistry interface.
@@ -77,8 +84,7 @@ func SyncBackupHistoryFromStorage(
 
 // register adds a new backup handler to the registry.
 func (r *RunningBackupsRegistryImpl) register(routineName string, job jobType, handler CancelableBackupHandler) {
-	k := registryKey{routineName: routineName, job: job}
-	r.handlers.Store(k, handler)
+	r.handlers.Store(makeRegistryKey(routineName, job), handler)
 }
 
 // FinishFull remove backup from registry and update last success timestamp.
@@ -106,21 +112,19 @@ func (r *RunningBackupsRegistryImpl) finish(routineName string, job jobType, tim
 		model.NewLastBackupRun(&timestamp, nil), // it was first backup, always full.
 	)
 
-	k := registryKey{routineName: routineName, job: job}
-	r.handlers.Remove(k)
+	r.remove(routineName, job)
 }
 
 // finishWithError remove backup from the registry.
-func (r *RunningBackupsRegistryImpl) finishWithError(routineName string, job jobType) {
-	k := registryKey{routineName: routineName, job: job}
-	r.handlers.Remove(k)
+func (r *RunningBackupsRegistryImpl) remove(routineName string, job jobType) {
+	r.handlers.Remove(makeRegistryKey(routineName, job))
 }
 
 // CurrentStat get the current backup statistics for a routine.
 // If there is no backup running, only LastRunTime field will be set.
 func (r *RunningBackupsRegistryImpl) CurrentStat(routineName string) *model.CurrentBackups {
-	fullBackupHandler, _ := r.handlers.Load(registryKey{routineName: routineName, job: jobTypeFull})
-	incrBackupHandler, _ := r.handlers.Load(registryKey{routineName: routineName, job: jobTypeIncremental})
+	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
+	incrBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeIncremental))
 
 	lastRun, found := r.lastSuccessful.Load(routineName)
 	if !found {
@@ -154,7 +158,7 @@ func (r *RunningBackupsRegistryImpl) GetAllCurrentStats() map[string]*model.Curr
 // Cancel all ongoing backups for a specific routine.
 func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
 	for _, job := range []jobType{jobTypeFull, jobTypeIncremental} {
-		key := registryKey{routineName: routineName, job: job}
+		key := makeRegistryKey(routineName, job)
 		if handler, found := r.handlers.Load(key); found {
 			handler.Cancel()
 		}
