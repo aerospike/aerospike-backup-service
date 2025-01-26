@@ -270,7 +270,7 @@ func TestRunIncrementalBackup_ClientError(t *testing.T) {
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	now := time.Now()
-	handler.registry.FinishFull("routine", now.Add(-1*time.Second))
+	handler.registry.unregister("routine", jobTypeFull, now.Add(-1*time.Second))
 
 	expectedErr := errors.New("client error")
 	clientManager.On("GetClient", mock.Anything).Return(nil, expectedErr)
@@ -290,7 +290,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	now := time.Now()
-	handler.registry.FinishFull("routine", now.Add(-1*time.Second))
+	handler.registry.unregister("routine", jobTypeFull, now.Add(-1*time.Second))
 
 	backupHandler := new(mockBackupHandler)
 	stats := &models.BackupStats{}

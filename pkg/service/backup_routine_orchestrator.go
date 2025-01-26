@@ -156,7 +156,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 		h.registry.remove(h.routineName, jobTypeFull)
 		return fmt.Errorf("backup failed: %w", err)
 	}
-	h.registry.FinishFull(h.routineName, now)
+	h.registry.unregister(h.routineName, jobTypeFull, now)
 
 	go h.deleteOldBackups(ctx)
 
@@ -277,6 +277,6 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 		return err
 	}
 
-	h.registry.FinishIncremental(h.routineName, now)
+	h.registry.unregister(h.routineName, jobTypeIncremental, now)
 	return nil
 }

@@ -57,7 +57,7 @@ func TestFinishFull(t *testing.T) {
 	registry.register(routineName, jobTypeFull, handler)
 
 	now := time.Now()
-	registry.FinishFull(routineName, now)
+	registry.unregister(routineName, jobTypeFull, now)
 
 	stat := registry.CurrentStat(routineName)
 	assert.Nil(t, stat.Full)
@@ -74,8 +74,8 @@ func TestFinishIncremental(t *testing.T) {
 	registry.register(routineName, jobTypeIncremental, handler)
 
 	now := time.Now()
-	registry.FinishFull(routineName, now.Add(-1*time.Second))
-	registry.FinishIncremental(routineName, now)
+	registry.unregister(routineName, jobTypeFull, now.Add(-1*time.Second))
+	registry.unregister(routineName, jobTypeIncremental, now)
 
 	stat := registry.CurrentStat(routineName)
 	assert.Nil(t, stat.Full)

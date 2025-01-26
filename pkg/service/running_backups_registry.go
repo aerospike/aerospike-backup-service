@@ -14,12 +14,12 @@ import (
 type RunningBackupsRegistry interface {
 	// register add a new backup handler for a specific routine and job type.
 	register(string, jobType, CancelableBackupHandler)
-	// finishWithError remove backup from the registry.
+	// remove backup from the registry.
+	// Should be called for failed backups.
 	remove(routineName string, job jobType)
-	// FinishFull remove backup from registry and update last success timestamp.
-	FinishFull(routineName string, time time.Time)
-	// FinishIncremental remove incremental backup from registry and update last success timestamp.
-	FinishIncremental(routineName string, time time.Time)
+	// unregister remove backup from registry and update last success timestamp.
+	// Should be called after successful backup.
+	unregister(routineName string, job jobType, time time.Time)
 	// CurrentStat get the current backup statistics for a routine.
 	CurrentStat(string) *model.CurrentBackups
 	// GetAllCurrentStats all current backups statistics.
@@ -71,10 +71,10 @@ func SyncBackupHistoryFromStorage(
 
 			lastRun := routineReader.FindLastRun(ctx)
 			if lastRun.FullBackupTime() != nil {
-				registry.FinishFull(routineName, *lastRun.FullBackupTime())
+				registry.unregister(routineName, jobTypeFull, *lastRun.FullBackupTime())
 			}
 			if lastRun.IncrementalBackupTime() != nil {
-				registry.FinishIncremental(routineName, *lastRun.IncrementalBackupTime())
+				registry.unregister(routineName, jobTypeIncremental, *lastRun.IncrementalBackupTime())
 			}
 		}(routine, reader)
 	}
@@ -87,17 +87,8 @@ func (r *RunningBackupsRegistryImpl) register(routineName string, job jobType, h
 	r.handlers.Store(makeRegistryKey(routineName, job), handler)
 }
 
-// FinishFull remove backup from registry and update last success timestamp.
-func (r *RunningBackupsRegistryImpl) FinishFull(routineName string, timestamp time.Time) {
-	r.finish(routineName, jobTypeFull, timestamp)
-}
-
-// FinishIncremental remove incremental backup from registry and update last success timestamp.
-func (r *RunningBackupsRegistryImpl) FinishIncremental(routineName string, timestamp time.Time) {
-	r.finish(routineName, jobTypeIncremental, timestamp)
-}
-
-func (r *RunningBackupsRegistryImpl) finish(routineName string, job jobType, timestamp time.Time) {
+// unregister remove backup from registry and update last success timestamp.
+func (r *RunningBackupsRegistryImpl) unregister(routineName string, job jobType, timestamp time.Time) {
 	updateLastTimestamp := func(lastBackupRun *model.LastBackupRun) {
 		if job == jobTypeFull {
 			lastBackupRun.SetFullBackupTime(&timestamp)
