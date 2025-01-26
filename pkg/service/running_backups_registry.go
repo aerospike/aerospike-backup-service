@@ -39,7 +39,7 @@ type RunningBackupsRegistryImpl struct {
 	lastSuccessful *util.SafeMap[string, *model.LastBackupRun]
 }
 
-var _ = (*RunningBackupsRegistryImpl)(nil)
+var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
 func NewRunningBackupsRegistry() *RunningBackupsRegistryImpl {
