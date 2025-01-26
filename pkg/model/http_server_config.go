@@ -3,7 +3,6 @@ package model
 import "time"
 
 // HTTPServerConfig represents the service's HTTP server configuration.
-// @Description HTTPServerConfig represents the service's HTTP server configuration.
 type HTTPServerConfig struct {
 	// The address to listen on.
 	Address *string
@@ -63,7 +62,6 @@ func (s *HTTPServerConfig) GetContextPathOrDefault() string {
 }
 
 // RateLimiterConfig represents the service's HTTP server rate limiter configuration.
-// @Description RateLimiterConfig is the HTTP server rate limiter configuration.
 type RateLimiterConfig struct {
 	// Rate limiter tokens per second threshold.
 	Tps *int

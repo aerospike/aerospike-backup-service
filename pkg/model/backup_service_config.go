@@ -1,7 +1,6 @@
 package model
 
 // BackupServiceConfig represents the backup service configuration properties.
-// @Description BackupServiceConfig represents the backup service configuration properties.
 type BackupServiceConfig struct {
 	// HTTPServer is the backup service HTTP server configuration.
 	HTTPServer *HTTPServerConfig

@@ -9,7 +9,6 @@ import (
 )
 
 // BackupDetails contains information about a backup.
-// @Description BackupDetails contains information about a backup.
 type BackupDetails struct {
 	BackupMetadata
 	// The path to the backup files.

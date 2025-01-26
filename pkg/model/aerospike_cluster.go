@@ -23,7 +23,6 @@ import (
 const nilString = "<nil>"
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
-// @Description AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 type AerospikeCluster struct {
 	pwd atomic.Pointer[string]
 	// The cluster name.

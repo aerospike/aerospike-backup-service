@@ -9,7 +9,6 @@ import (
 type RestoreJobID int64
 
 // RestoreRequest represents a restore operation request.
-// @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
 	DestinationCluster *AerospikeCluster
 	Policy             *RestorePolicy
@@ -19,7 +18,6 @@ type RestoreRequest struct {
 }
 
 // RestoreTimestampRequest represents a restore by timestamp operation request.
-// @Description RestoreTimestampRequest represents a restore by timestamp operation request.
 type RestoreTimestampRequest struct {
 	// The details of the Aerospike destination cluster.
 	DestinationCluster *AerospikeCluster
