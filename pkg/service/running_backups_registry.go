@@ -79,12 +79,13 @@ func (r *RunningBackupsRegistryImpl) startBackupHistorySync(ctx context.Context,
 	}
 }
 
-// register adds a new backup handler to the registry.
+// register adds a new backup handler for a specific routine and job type.
 func (r *RunningBackupsRegistryImpl) register(routineName string, job jobType, handler CancelableBackupHandler) {
 	r.handlers.Store(makeRegistryKey(routineName, job), handler)
 }
 
-// unregister remove backup from registry and update last success timestamp.
+// unregister removes a backup from the registry and updates the last success timestamp.
+// Should be called after successful backup completion.
 func (r *RunningBackupsRegistryImpl) unregister(routineName string, job jobType, timestamp time.Time) {
 	r.setLastTime(routineName, job, timestamp)
 	r.remove(routineName, job)
@@ -106,13 +107,13 @@ func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType
 	)
 }
 
-// finishWithError remove backup from the registry.
+// remove deletes a backup from the registry.
+// Should be called for failed backups.
 func (r *RunningBackupsRegistryImpl) remove(routineName string, job jobType) {
 	r.handlers.Remove(makeRegistryKey(routineName, job))
 }
 
-// CurrentStat get the current backup statistics for a routine.
-// If there is no backup running, only LastRunTime field will be set.
+// GetRoutineState returns the current backup statistics for a routine.
 func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.RoutineState {
 	r.ready.Wait()
 
@@ -130,8 +131,7 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 	}
 }
 
-// GetAllCurrentStats all current backups statistics.
-// Return only routines that are currently backing up.
+// GetRunningState returns statistics for all current backups.
 func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]*model.RoutineState {
 	r.ready.Wait()
 
@@ -150,7 +150,7 @@ func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]*model.Routine
 	return stats
 }
 
-// Cancel all ongoing backups for a specific routine.
+// Cancel stops all ongoing backups for a specific routine.
 func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
 	for _, job := range []jobType{jobTypeFull, jobTypeIncremental} {
 		key := makeRegistryKey(routineName, job)
