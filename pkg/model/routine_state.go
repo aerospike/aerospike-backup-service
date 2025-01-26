@@ -15,7 +15,6 @@ type RoutineState struct {
 }
 
 // RunningJob tracks progress of currently running job.
-// @Description RunningJob tracks progress of currently running job.
 type RunningJob struct {
 	// TotalRecords: the total number of records to be processed.
 	TotalRecords uint64
