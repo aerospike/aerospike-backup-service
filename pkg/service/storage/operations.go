@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -69,7 +70,7 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 	for {
 		select {
 		case err := <-errorsCh:
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return files, nil
 			}
 			return nil, err
