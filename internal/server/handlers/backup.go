@@ -287,7 +287,7 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Produce  json
 // @Param    name path string true "Backup routine name"
 // @Router   /v1/backups/currentBackup/{name} [get]
-// @Success  200 {object} dto.CurrentBackups "Current backup statistics"
+// @Success  200 {object} dto.RoutineState "Current backup statistics"
 // @Failure  404 {string} string
 // @Failure  400 {string} string
 // @Failure  500 {string} string
@@ -310,7 +310,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentBackups := dto.NewCurrentBackupsFromModel(s.registry.GetRoutineState(routineName))
+	currentBackups := dto.NewRoutineStateFromModel(s.registry.GetRoutineState(routineName))
 	response, err := dto.Serialize(currentBackups, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal statistics",

@@ -6,8 +6,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// CurrentBackups represent the current state of backups (full and incremental)
-type CurrentBackups struct {
+// RoutineState represent the current state of backups (full and incremental)
+type RoutineState struct {
 	// Full represents the state of a full backup. Nil if no full backup is running.
 	Full *RunningJob `json:"full,omitempty"`
 	// Incremental represents the state of an incremental backup. Nil if no incremental backup is running.
@@ -20,17 +20,17 @@ type CurrentBackups struct {
 	LastIncremental *time.Time `json:"last-incremental,omitempty"`
 }
 
-func NewCurrentBackupsFromModel(m *model.RoutineState) *CurrentBackups {
+func NewRoutineStateFromModel(m *model.RoutineState) *RoutineState {
 	if m == nil {
 		return nil
 	}
 
-	c := &CurrentBackups{}
+	c := &RoutineState{}
 	c.fromModel(m)
 	return c
 }
 
-func (c *CurrentBackups) fromModel(m *model.RoutineState) {
+func (c *RoutineState) fromModel(m *model.RoutineState) {
 	c.Full = NewRunningJobFromModel(m.Full)
 	c.Incremental = NewRunningJobFromModel(m.Incremental)
 	c.LastFull = m.LastRunTime.FullBackupTime()
