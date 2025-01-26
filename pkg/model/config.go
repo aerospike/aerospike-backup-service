@@ -79,6 +79,7 @@ func (c *Config) AddStorage(name string, s Storage) error {
 		return fmt.Errorf("add storage %q: %w", name, ErrAlreadyExists)
 	}
 	c.backupConfig.Storage[name] = s
+
 	return nil
 }
 
@@ -94,6 +95,7 @@ func (c *Config) DeleteStorage(name string) error {
 		return fmt.Errorf("delete storage %q: %w: it is used in routine %q", name, ErrInUse, routine)
 	}
 	delete(c.backupConfig.Storage, name)
+
 	return nil
 }
 
@@ -246,6 +248,7 @@ func (c *Config) DeleteCluster(name string) error {
 		return fmt.Errorf("delete Aerospike cluster %q: %w: it is used in routine %q", name, ErrInUse, routine)
 	}
 	delete(c.backupConfig.AerospikeClusters, name)
+
 	return nil
 }
 

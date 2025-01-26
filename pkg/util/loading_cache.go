@@ -28,6 +28,7 @@ func NewLoadingCache[K comparable, T any](ctx context.Context,
 	}
 
 	go cache.startCleanup()
+
 	return cache
 }
 
@@ -54,6 +55,7 @@ func (c *LoadingCache[K, T]) GetWithContext(ctx context.Context, key K) (T, erro
 	}
 
 	c.data[key] = loadedValue
+
 	return loadedValue, nil
 }
 

@@ -38,6 +38,7 @@ func (a *GcpStorageAccessor) createReader(
 	} else {
 		opts = append(opts, gcp.WithDir(fullPath))
 	}
+
 	return gcp.NewReader(ctx, client, gcps.BucketName, opts...)
 }
 
@@ -62,6 +63,7 @@ func (a *GcpStorageAccessor) createWriter(
 	if withNested {
 		opts = append(opts, gcp.WithNestedDir())
 	}
+
 	return gcp.NewWriter(ctx, client, gcps.BucketName, opts...)
 }
 

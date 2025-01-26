@@ -81,6 +81,7 @@ func scheduleRoutines(
 	}
 
 	jobStore.ReplaceContent(newJobs)
+
 	return errs
 }
 

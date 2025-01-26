@@ -98,6 +98,7 @@ func (p *BackupPolicy) Validate() error {
 	if err := p.CompressionPolicy.Validate(); err != nil {
 		return err
 	}
+
 	return nil
 }
 

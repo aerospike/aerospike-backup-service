@@ -80,6 +80,7 @@ func (r *BackupRoutine) Validate() error {
 			return emptyFieldValidationError("secret-agent")
 		}
 	}
+
 	return nil
 }
 

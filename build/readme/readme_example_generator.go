@@ -187,6 +187,7 @@ func main() {
 		buffer.WriteString(fmt.Sprintf("<!-- %s -->\n\n```%s\n", name, format))
 		buffer.Write(formattedExample)
 		buffer.WriteString("\n```")
+
 		return buffer.Bytes()
 	})
 	err = os.WriteFile("README.md", updatedReadme, 0600)

@@ -139,6 +139,7 @@ func (c *Credentials) loadPassword() *string {
 	}
 
 	slog.Warn("No valid authentication method configured")
+
 	return nil
 }
 
@@ -157,6 +158,7 @@ func (c *Credentials) loadPasswordFromFile() *string {
 
 	slog.Debug("Successfully read password", "path", *c.PasswordPath)
 	password := string(data)
+
 	return &password
 }
 
@@ -201,7 +203,7 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	return policy
 }
 
-//nolint:funlen,staticcheck
+//nolint:funlen,staticcheck,nestif
 func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 	clusterName := "NA"
 	if clusterLabel != nil {

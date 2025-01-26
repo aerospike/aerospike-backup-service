@@ -30,6 +30,7 @@ func (a *LocalStorageAccessor) createReader(
 	} else {
 		opts = append(opts, local.WithDir(fullPath))
 	}
+
 	return local.NewReader(opts...)
 }
 
@@ -50,6 +51,7 @@ func (a *LocalStorageAccessor) createWriter(
 	if withNested {
 		opts = append(opts, local.WithNestedDir())
 	}
+
 	return local.NewWriter(ctx, opts...)
 }
 

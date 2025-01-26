@@ -1,10 +1,5 @@
 run:
   timeout: 2m
-linters-settings:
-  gosec:
-    excludes:
-      - G115
-
 linters:
   disable-all: true
   enable:
@@ -27,12 +22,14 @@ linters:
     - govet
     - ineffassign
     - misspell
-    - prealloc
     - promlinter
     - nolintlint
     - nakedret
     - prealloc # pre-allocate slices with define size if the slice size is known in advance
     - predeclared
+    - reassign
+    - nestif
+    - nlreturn
     - revive
     - sloglint
     - staticcheck
@@ -45,6 +42,13 @@ linters:
     - unused
     - whitespace
     - lll
+
+linters-settings:
+  gosec:
+    excludes:
+      - G115
+  nlreturn:
+    block-size: 20
 
 issues:
   exclude-rules:
