@@ -126,7 +126,7 @@ func (mc *MetricsCollector) collectMetrics() {
 func (mc *MetricsCollector) collectBackupMetrics() {
 	backupProgress.Reset()
 
-	for routineName, currentStat := range mc.backups.GetAllCurrentStats() {
+	for routineName, currentStat := range mc.backups.GetRunningState() {
 		// Update Full backup metric if running
 		if currentStat.Full != nil {
 			backupProgress.WithLabelValues(routineName, "Full").Set(float64(currentStat.Full.PercentageDone))

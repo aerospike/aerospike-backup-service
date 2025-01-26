@@ -20,7 +20,7 @@ type CurrentBackups struct {
 	LastIncremental *time.Time `json:"last-incremental,omitempty"`
 }
 
-func NewCurrentBackupsFromModel(m *model.CurrentBackups) *CurrentBackups {
+func NewCurrentBackupsFromModel(m *model.RoutineState) *CurrentBackups {
 	if m == nil {
 		return nil
 	}
@@ -30,7 +30,7 @@ func NewCurrentBackupsFromModel(m *model.CurrentBackups) *CurrentBackups {
 	return c
 }
 
-func (c *CurrentBackups) fromModel(m *model.CurrentBackups) {
+func (c *CurrentBackups) fromModel(m *model.RoutineState) {
 	c.Full = NewRunningJobFromModel(m.Full)
 	c.Incremental = NewRunningJobFromModel(m.Incremental)
 	c.LastFull = m.LastRunTime.FullBackupTime()

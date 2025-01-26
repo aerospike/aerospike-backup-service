@@ -43,7 +43,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 	// Register a full backup handler
 	registry.register(routineName, jobTypeFull, handler)
 
-	stat := registry.CurrentStat(routineName)
+	stat := registry.GetRoutineState(routineName)
 	assert.Equal(t, stat.Full.TotalRecords, uint64(100))
 	assert.Nil(t, stat.Incremental)
 }
@@ -59,7 +59,7 @@ func TestFinishFull(t *testing.T) {
 	now := time.Now()
 	registry.unregister(routineName, jobTypeFull, now)
 
-	stat := registry.CurrentStat(routineName)
+	stat := registry.GetRoutineState(routineName)
 	assert.Nil(t, stat.Full)
 	assert.Nil(t, stat.Incremental)
 	assert.Equal(t, now, *stat.LastRunTime.FullBackupTime())
@@ -77,7 +77,7 @@ func TestFinishIncremental(t *testing.T) {
 	registry.unregister(routineName, jobTypeFull, now.Add(-1*time.Second))
 	registry.unregister(routineName, jobTypeIncremental, now)
 
-	stat := registry.CurrentStat(routineName)
+	stat := registry.GetRoutineState(routineName)
 	assert.Nil(t, stat.Full)
 	assert.Nil(t, stat.Incremental)
 	assert.Equal(t, now, *stat.LastRunTime.IncrementalBackupTime())
@@ -99,7 +99,7 @@ func TestGetAllCurrentStats(t *testing.T) {
 	registry.register(routine2, jobTypeIncremental, handler)
 
 	// Get all current stats
-	stats := registry.GetAllCurrentStats()
+	stats := registry.GetRunningState()
 	assert.Len(t, stats, 2)
 
 	// Check stats for routine1

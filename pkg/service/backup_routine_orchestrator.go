@@ -164,7 +164,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 }
 
 func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
-	currentStat := h.registry.CurrentStat(h.routineName)
+	currentStat := h.registry.GetRoutineState(h.routineName)
 	if currentStat.Full != nil {
 		// This can happen in rare scenario, when user re-applied config
 		// while backup is running and started same routine backup.
@@ -212,7 +212,7 @@ func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.T
 	)
 
 	if jobType == jobTypeIncremental {
-		fromTime = h.registry.CurrentStat(h.routineName).LastRunTime.LatestRun()
+		fromTime = h.registry.GetRoutineState(h.routineName).LastRunTime.LatestRun()
 	}
 
 	if h.backupFullPolicy.IsSealedOrDefault() {
@@ -242,7 +242,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 }
 
 func (h *BackupRoutineOrchestrator) skipIncrementalBackup() bool {
-	currentStat := h.registry.CurrentStat(h.routineName)
+	currentStat := h.registry.GetRoutineState(h.routineName)
 	if currentStat.LastRunTime.NoFullBackup() {
 		h.logger.Debug("Skip incremental backup until initial full backup is done")
 		return true

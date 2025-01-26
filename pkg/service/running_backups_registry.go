@@ -12,22 +12,22 @@ import (
 
 // RunningBackupsRegistry defines the interface for managing running backups and their statuses.
 type RunningBackupsRegistry interface {
-	// register add a new backup handler for a specific routine and job type.
-	register(string, jobType, CancelableBackupHandler)
-	// remove backup from the registry.
+	// register adds a new backup handler for a specific routine and job type.
+	register(routineName string, jt jobType, handler CancelableBackupHandler)
+	// remove deletes a backup from the registry.
 	// Should be called for failed backups.
-	remove(routineName string, job jobType)
-	// unregister remove backup from registry and update last success timestamp.
-	// Should be called after successful backup.
-	unregister(routineName string, job jobType, time time.Time)
-	// CurrentStat get the current backup statistics for a routine.
-	CurrentStat(string) *model.CurrentBackups
-	// GetAllCurrentStats all current backups statistics.
-	GetAllCurrentStats() map[string]*model.CurrentBackups
-	// Cancel all ongoing backups for a specific routine.
-	Cancel(string)
-}
+	remove(routineName string, jt jobType)
+	// unregister removes a backup from the registry and updates the last success timestamp.
+	// Should be called after successful backup completion.
+	unregister(routineName string, jt jobType, timestamp time.Time)
 
+	// GetRoutineState returns the current backup statistics for a routine.
+	GetRoutineState(routineName string) *model.RoutineState
+	// GetRunningState returns statistics for all current backups.
+	GetRunningState() map[string]*model.RoutineState
+	// Cancel stops all ongoing backups for a specific routine.
+	Cancel(routineName string)
+}
 type registryKey struct {
 	routineName string
 	job         jobType
@@ -113,7 +113,7 @@ func (r *RunningBackupsRegistryImpl) remove(routineName string, job jobType) {
 
 // CurrentStat get the current backup statistics for a routine.
 // If there is no backup running, only LastRunTime field will be set.
-func (r *RunningBackupsRegistryImpl) CurrentStat(routineName string) *model.CurrentBackups {
+func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.RoutineState {
 	r.ready.Wait()
 
 	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
@@ -123,7 +123,7 @@ func (r *RunningBackupsRegistryImpl) CurrentStat(routineName string) *model.Curr
 	if !found {
 		lastRun = &model.LastBackupRun{}
 	}
-	return &model.CurrentBackups{
+	return &model.RoutineState{
 		Full:        currentBackupStatus(fullBackupHandler),
 		Incremental: currentBackupStatus(incrBackupHandler),
 		LastRunTime: lastRun,
@@ -132,7 +132,7 @@ func (r *RunningBackupsRegistryImpl) CurrentStat(routineName string) *model.Curr
 
 // GetAllCurrentStats all current backups statistics.
 // Return only routines that are currently backing up.
-func (r *RunningBackupsRegistryImpl) GetAllCurrentStats() map[string]*model.CurrentBackups {
+func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]*model.RoutineState {
 	r.ready.Wait()
 
 	var routines []string
@@ -142,9 +142,9 @@ func (r *RunningBackupsRegistryImpl) GetAllCurrentStats() map[string]*model.Curr
 		}
 	})
 
-	stats := make(map[string]*model.CurrentBackups, len(routines))
+	stats := make(map[string]*model.RoutineState, len(routines))
 	for _, routineName := range routines {
-		stats[routineName] = r.CurrentStat(routineName)
+		stats[routineName] = r.GetRoutineState(routineName)
 	}
 
 	return stats

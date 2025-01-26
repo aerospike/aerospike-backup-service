@@ -59,9 +59,9 @@ func (m *MockBackupRunner) Cancel() {
 	m.Called()
 }
 
-func (m *MockBackupRunner) CurrentStat() *model.CurrentBackups {
+func (m *MockBackupRunner) CurrentStat() *model.RoutineState {
 	args := m.Called()
-	return args.Get(0).(*model.CurrentBackups)
+	return args.Get(0).(*model.RoutineState)
 }
 
 func TestScheduleRoutines(t *testing.T) {
