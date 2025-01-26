@@ -49,6 +49,7 @@ func (a *S3StorageAccessor) createReader(
 	} else {
 		opts = append(opts, s3.WithDir(fullPath))
 	}
+
 	return s3.NewReader(ctx, client, s3s.Bucket, opts...)
 }
 
@@ -73,6 +74,7 @@ func (a *S3StorageAccessor) createWriter(
 	if withNested {
 		opts = append(opts, s3.WithNestedDir())
 	}
+
 	return s3.NewWriter(ctx, client, s3s.Bucket, opts...)
 }
 
@@ -124,6 +126,7 @@ func withCredentialsProvider(a *model.S3Authentication) (config.LoadOptionsFunc,
 	if err != nil {
 		return nil, err
 	}
+
 	return config.WithCredentialsProvider(credentials.StaticCredentialsProvider{
 		Value: aws.Credentials{
 			AccessKeyID: keyID, SecretAccessKey: accessKey,

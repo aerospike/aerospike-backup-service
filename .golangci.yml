@@ -48,7 +48,7 @@ linters-settings:
     excludes:
       - G115
   nlreturn:
-    block-size: 20
+    block-size: 15
 
 issues:
   exclude-rules:

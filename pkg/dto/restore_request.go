@@ -51,6 +51,7 @@ func (r *RestoreRequest) Validate() error {
 	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
+
 	return nil
 }
 

@@ -43,6 +43,7 @@ func ValidateRestoreRequest(request *dto.RestoreRequest, conf *dto.Config) error
 	}
 
 	_, err = request.ToModel(model)
+
 	return err
 }
 
@@ -65,5 +66,6 @@ func ValidateRestoreTimestampRequest(request *dto.RestoreTimestampRequest, conf 
 	}
 
 	_, err = request.ToModel(model)
+
 	return err
 }

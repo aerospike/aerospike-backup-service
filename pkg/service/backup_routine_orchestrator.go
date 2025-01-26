@@ -278,5 +278,6 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 	}
 
 	h.registry.unregister(h.routineName, jobTypeIncremental, now)
+
 	return nil
 }

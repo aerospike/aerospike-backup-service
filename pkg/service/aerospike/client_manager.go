@@ -54,6 +54,7 @@ func (f *DefaultClientFactory) IsClusterHealthy(client backup.AerospikeClient) b
 	}
 
 	info, err := node.RequestInfo(client.GetDefaultInfoPolicy(), "status")
+
 	return err == nil && info["status"] == "ok"
 }
 

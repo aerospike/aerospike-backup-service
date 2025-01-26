@@ -148,6 +148,7 @@ func latestBackupBeforeTime(allBackups []model.BackupDetails, upperBound *time.T
 			result = append(result, *current)
 		}
 	}
+
 	return result
 }
 
