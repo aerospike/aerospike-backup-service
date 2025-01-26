@@ -151,6 +151,7 @@ func (c *Config) DeletePolicy(name string) error {
 		return fmt.Errorf("delete backup policy %q: %w: it is used in routine %q", name, ErrInUse, routine)
 	}
 	delete(c.backupConfig.BackupPolicies, name)
+
 	return nil
 }
 

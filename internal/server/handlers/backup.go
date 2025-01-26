@@ -206,6 +206,7 @@ func readBackupsLogic(ctx context.Context,
 		}
 		result[routine] = list
 	}
+
 	return result, nil
 }
 

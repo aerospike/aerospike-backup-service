@@ -48,7 +48,7 @@ linters-settings:
     excludes:
       - G115
   nlreturn:
-    block-size: 12
+    block-size: 10
 
 issues:
   exclude-rules:
@@ -59,6 +59,7 @@ issues:
         - prealloc
         - funlen
         - goconst
+        - nlreturn
 
   exclude-dirs:
     - examples

@@ -44,6 +44,7 @@ func logWriter(config *model.LoggerConfig) io.Writer {
 		if config.GetStdoutWriterOrDefault() {
 			return io.MultiWriter(fileWriter, os.Stdout)
 		}
+
 		return fileWriter
 	} else if config.GetStdoutWriterOrDefault() {
 		return os.Stdout

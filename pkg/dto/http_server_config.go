@@ -35,6 +35,7 @@ func (s *HTTPServerConfig) Validate() error {
 	if s.Timeout != nil && *s.Timeout < 0 {
 		return fmt.Errorf("timeout cannot be negative: %d", *s.Timeout)
 	}
+
 	return nil
 }
 
