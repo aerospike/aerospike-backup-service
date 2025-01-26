@@ -255,7 +255,7 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 			return nil
 		}
 
-		// Check and Decrypt the the Key Block using passphrase
+		// Check and Decrypt the Key Block using passphrase
 		if t.KeyfilePassword != nil && x509.IsEncryptedPEMBlock(keyBlock) {
 			decryptedDERBytes, err := x509.DecryptPEMBlock(keyBlock, []byte(*t.KeyfilePassword))
 			if err != nil {

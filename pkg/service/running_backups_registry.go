@@ -44,7 +44,11 @@ func makeRegistryKey(routineName string, job jobType) registryKey {
 type RunningBackupsRegistryImpl struct {
 	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
 	lastSuccessful *util.SafeMap[string, *model.LastBackupRun]
-	ready          sync.WaitGroup
+
+	// ready synchronizes access to backup state data
+	// It ensures all last backup timestamps are loaded from storage backends
+	// before allowing access through GetRoutineState/GetRunningState.
+	ready sync.WaitGroup
 }
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
@@ -115,7 +119,7 @@ func (r *RunningBackupsRegistryImpl) remove(routineName string, job jobType) {
 
 // GetRoutineState returns the current backup statistics for a routine.
 func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.RoutineState {
-	r.ready.Wait()
+	r.ready.Wait() // ensure backups are synced.
 
 	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
 	incrBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeIncremental))
@@ -133,7 +137,7 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 
 // GetRunningState returns statistics for all current backups.
 func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]*model.RoutineState {
-	r.ready.Wait()
+	r.ready.Wait() // ensure backups are synced.
 
 	var routines []string
 	r.handlers.Iterate(func(key registryKey, _ CancelableBackupHandler) {
