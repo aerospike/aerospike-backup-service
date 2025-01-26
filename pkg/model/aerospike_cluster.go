@@ -320,7 +320,6 @@ func (c *AerospikeCluster) ASClientHosts() []*as.Host {
 }
 
 // TLS represents the Aerospike cluster TLS configuration options.
-// @Description TLS represents the Aerospike cluster TLS configuration options.
 type TLS struct {
 	// Path to a trusted CA certificate file.
 	CAFile *string
@@ -359,7 +358,6 @@ func (tls *TLS) String() string {
 }
 
 // Credentials represents authentication details to the Aerospike cluster.
-// @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
 	// The username for the cluster authentication.
 	User *string
@@ -388,7 +386,6 @@ func (c *Credentials) String() string {
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.
-// @Description SeedNode represents details of a node in the Aerospike cluster.
 type SeedNode struct {
 	// The host name of the node.
 	HostName string
