@@ -45,8 +45,9 @@ func (s *SafeMap[K, V]) Apply(key K, callback func(value V)) {
 	}
 }
 
-// ApplyOrCreate applies a function to a specific key if it exists.
-// Puts new key if it is absent
+// ApplyOrCreate executes the callback function with the value associated with
+// the given key if the key exists in the map. If the key does not exist, the
+// defaultValue is assigned to the key.
 func (s *SafeMap[K, V]) ApplyOrCreate(key K, callback func(value V), defaultValue V) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
