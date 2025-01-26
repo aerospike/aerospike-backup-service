@@ -27,6 +27,7 @@ type RunningBackupsRegistry interface {
 	// Cancel all ongoing backups for a specific routine.
 	Cancel(string)
 }
+
 type registryKey struct {
 	routineName string
 	job         jobType
