@@ -17,7 +17,7 @@ type storageManager struct {
 	nsValidator aerospike.NamespaceValidator
 }
 
-// newStorageManager returns new instance of storageManager
+// newStorageManager returns new instance of storageManager.
 func newStorageManager(configStorage model.Storage, nsValidator aerospike.NamespaceValidator) Manager {
 	return &storageManager{
 		storage:     configStorage,

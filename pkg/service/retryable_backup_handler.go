@@ -9,7 +9,7 @@ import (
 )
 
 // retryableBackupHandler is a wrapper around BackupHandler that adds
-// retry logic and cancellation support
+// retry logic and cancellation support.
 type retryableBackupHandler struct {
 	sync.RWMutex
 	handler BackupHandler

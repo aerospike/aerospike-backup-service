@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// Mock implementations
+// Mock implementations.
 type mockBackupService struct {
 	mock.Mock
 }

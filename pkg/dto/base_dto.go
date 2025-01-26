@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// SerializationFormat represents the format for serialization/deserialization
+// SerializationFormat represents the format for serialization/deserialization.
 type SerializationFormat int
 
 const (
@@ -22,7 +22,7 @@ type Validator interface {
 	Validate() error
 }
 
-// Serialize handles serialization
+// Serialize handles serialization.
 func Serialize(v any, format SerializationFormat) ([]byte, error) {
 	var (
 		data []byte
@@ -45,7 +45,7 @@ func Serialize(v any, format SerializationFormat) ([]byte, error) {
 	return data, nil
 }
 
-// Deserialize handles deserialization
+// Deserialize handles deserialization.
 func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 	var err error
 
@@ -65,7 +65,7 @@ func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 	return nil
 }
 
-// ConvertModelsToDTO converts an array of models to an array of DTOs
+// ConvertModelsToDTO converts an array of models to an array of DTOs.
 func ConvertModelsToDTO[M any, D any](models []M, dtoConstructor func(*M) D) []D {
 	result := make([]D, len(models))
 	for i := range models {
@@ -74,7 +74,7 @@ func ConvertModelsToDTO[M any, D any](models []M, dtoConstructor func(*M) D) []D
 	return result
 }
 
-// ConvertModelMapToDTO converts a map of models to a map of DTOs
+// ConvertModelMapToDTO converts a map of models to a map of DTOs.
 func ConvertModelMapToDTO[M any, D any](modelMap map[string]*M, dtoConstructor func(*M) *D) map[string]*D {
 	result := make(map[string]*D, len(modelMap))
 	for key, m := range modelMap {
@@ -83,7 +83,7 @@ func ConvertModelMapToDTO[M any, D any](modelMap map[string]*M, dtoConstructor f
 	return result
 }
 
-// ConvertStorageMapToDTO converts a map of models to a map of DTOs
+// ConvertStorageMapToDTO converts a map of models to a map of DTOs.
 func ConvertStorageMapToDTO(modelMap map[string]model.Storage, config *model.BackupConfig) map[string]*Storage {
 	result := make(map[string]*Storage, len(modelMap))
 	for key, s := range modelMap {

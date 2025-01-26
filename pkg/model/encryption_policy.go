@@ -1,6 +1,6 @@
 package model
 
-// Encryption modes
+// Encryption modes.
 const (
 	EncryptNone   = "NONE"
 	EncryptAES128 = "AES128"

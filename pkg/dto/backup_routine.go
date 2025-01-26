@@ -138,7 +138,7 @@ func (r *BackupRoutine) ToModel(
 	}, nil
 }
 
-// NewRoutineFromReader creates a new BackupRoutine object from a given reader
+// NewRoutineFromReader creates a new BackupRoutine object from a given reader.
 func NewRoutineFromReader(r io.Reader, format SerializationFormat) (*BackupRoutine, error) {
 	b := &BackupRoutine{}
 	if err := Deserialize(b, r, format); err != nil {

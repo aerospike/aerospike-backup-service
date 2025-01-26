@@ -10,49 +10,49 @@ import (
 )
 
 var (
-	// a counter metric for backup run number
+	// a counter metric for backup run number.
 	backupCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_runs_total",
 			Help: "Successful backup runs counter",
 		})
-	// a counter metric for incremental backup run number
+	// a counter metric for incremental backup run number.
 	incrBackupCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_incremental_runs_total",
 			Help: "Successful incremental backup runs counter.",
 		})
-	// a counter metric for backup skip number
+	// a counter metric for backup skip number.
 	backupSkippedCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_skip_total",
 			Help: "Backup skip counter.",
 		})
-	// a counter metric for incremental backup skip number
+	// a counter metric for incremental backup skip number.
 	incrBackupSkippedCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_incremental_skip_total",
 			Help: "Incremental backup skip counter.",
 		})
-	// a counter metric for backup failure number
+	// a counter metric for backup failure number.
 	backupFailureCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_failure_total",
 			Help: "Backup failure counter.",
 		})
-	// a counter metric for incremental backup failure number
+	// a counter metric for incremental backup failure number.
 	incrBackupFailureCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_incremental_failure_total",
 			Help: "Incremental backup failure counter.",
 		})
-	// a gauge metric for full backup duration
+	// a gauge metric for full backup duration.
 	backupDurationGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_duration_millis",
 			Help: "Full backup duration in milliseconds.",
 		})
-	// a gauge metric for incremental backup duration
+	// a gauge metric for incremental backup duration.
 	incrBackupDurationGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_incremental_duration_millis",
@@ -92,7 +92,7 @@ type MetricsCollector struct {
 	restores *RestoreJobsHolder
 }
 
-// NewMetricsCollector creates a new MetricsCollector
+// NewMetricsCollector creates a new MetricsCollector.
 func NewMetricsCollector(bh RunningBackupsRegistry, jh *RestoreJobsHolder) *MetricsCollector {
 	return &MetricsCollector{
 		backups:  bh,

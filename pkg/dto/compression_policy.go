@@ -6,7 +6,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// Compression modes
+// Compression modes.
 const (
 	CompressNone = "NONE"
 	CompressZSTD = "ZSTD"

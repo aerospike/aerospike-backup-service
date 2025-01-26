@@ -38,7 +38,7 @@ type BackupMetadata struct {
 	UDFCount uint64 `yaml:"udf-count" json:"udf-count"`
 }
 
-// NewMetadataFromBytes creates a new Metadata object from a byte slice
+// NewMetadataFromBytes creates a new Metadata object from a byte slice.
 func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("empty metadata file")
