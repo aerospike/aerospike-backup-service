@@ -17,6 +17,7 @@ type Service struct {
 	restoreManager       service.RestoreManager
 	backupBackends       service.BackendsHolder
 	handlerHolder        service.BackupHandlerHolder
+	registry             service.RunningBackupsRegistry
 	configurationManager configuration.Manager
 	logger               *slog.Logger
 	nsValidator          aerospike.NamespaceValidator
@@ -29,6 +30,7 @@ func NewService(
 	restoreManager service.RestoreManager,
 	backupBackends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
+	registry service.RunningBackupsRegistry,
 	configurationManager configuration.Manager,
 	logger *slog.Logger,
 	nsValidator aerospike.NamespaceValidator,
@@ -40,6 +42,7 @@ func NewService(
 		restoreManager:       restoreManager,
 		backupBackends:       backupBackends,
 		handlerHolder:        handlerHolder,
+		registry:             registry,
 		configurationManager: configurationManager,
 		logger:               logger,
 		nsValidator:          nsValidator,

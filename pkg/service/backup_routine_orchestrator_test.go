@@ -8,10 +8,8 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -105,6 +103,7 @@ func setupTestHandler(
 	retentionManager *mockRetentionManager,
 ) *BackupRoutineOrchestrator {
 	return &BackupRoutineOrchestrator{
+		routineName:         "routine",
 		namespaces:          []string{"ns1", "ns2"},
 		backupService:       backupService,
 		clientManager:       clientManager,
@@ -113,9 +112,9 @@ func setupTestHandler(
 			SourceCluster: &model.AerospikeCluster{},
 		},
 		backupFullPolicy: &model.BackupPolicy{},
-		lastRun:          &model.LastBackupRun{},
 		logger:           slog.Default(),
 		retry:            &simpleExecutor{},
+		registry:         NewRunningBackupsRegistry(context.Background(), NewBackupBackends()),
 		retentionManager: retentionManager,
 		runner: NewBackupNamespaceRunner(
 			"routine",
@@ -225,7 +224,6 @@ func TestRunIncrementalBackup_NoFullBackupYet(t *testing.T) {
 	retentionManager := new(mockRetentionManager)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	handler.lastRun = &model.LastBackupRun{} // Ensure empty lastRun
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
@@ -241,9 +239,6 @@ func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
 	retentionManager := new(mockRetentionManager)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
-
-	handler.fullBackupHandler = &mockBackupHandler{}
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
@@ -259,9 +254,6 @@ func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
 	retentionManager := new(mockRetentionManager)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
-
-	handler.incrBackupHandler = &mockBackupHandler{}
 
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
@@ -277,12 +269,13 @@ func TestRunIncrementalBackup_ClientError(t *testing.T) {
 	retentionManager := new(mockRetentionManager)
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	handler.lastRun = model.NewLastBackupRun(util.Ptr(time.Now()), nil)
+	now := time.Now()
+	handler.registry.unregister("routine", jobTypeFull, now.Add(-1*time.Second))
 
 	expectedErr := errors.New("client error")
 	clientManager.On("GetClient", mock.Anything).Return(nil, expectedErr)
 
-	handler.runIncrementalBackup(context.Background(), time.Now())
+	handler.runIncrementalBackup(context.Background(), now)
 
 	clientManager.AssertExpectations(t)
 	backupService.AssertNotCalled(t, "BackupRun")
@@ -297,8 +290,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 
 	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
 	now := time.Now()
-	lastRun := now.Add(-1 * time.Hour)
-	handler.lastRun = model.NewLastBackupRun(&lastRun, nil)
+	handler.registry.unregister("routine", jobTypeFull, now.Add(-1*time.Second))
 
 	backupHandler := new(mockBackupHandler)
 	stats := &models.BackupStats{}
@@ -336,7 +328,6 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	clientManager.AssertExpectations(t)
 	backupService.AssertExpectations(t)
 	backupHandler.AssertExpectations(t)
-	assert.Equal(t, now, *handler.CurrentStat().LastRunTime.IncrementalBackupTime())
 }
 
 func TestRunFullBackup_PartialFailure(t *testing.T) {

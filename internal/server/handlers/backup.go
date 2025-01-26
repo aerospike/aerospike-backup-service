@@ -287,7 +287,7 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Produce  json
 // @Param    name path string true "Backup routine name"
 // @Router   /v1/backups/currentBackup/{name} [get]
-// @Success  200 {object} dto.CurrentBackups "Current backup statistics"
+// @Success  200 {object} dto.RoutineState "Current backup statistics"
 // @Failure  404 {string} string
 // @Failure  400 {string} string
 // @Failure  500 {string} string
@@ -301,7 +301,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler, found := s.handlerHolder.Load(routineName)
+	_, found := s.handlerHolder.Load(routineName)
 	if !found {
 		hLogger.Error("unknown routine name",
 			slog.String("name", routineName),
@@ -310,7 +310,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentBackups := dto.NewCurrentBackupsFromModel(handler.CurrentStat())
+	currentBackups := dto.NewRoutineStateFromModel(s.registry.GetRoutineState(routineName))
 	response, err := dto.Serialize(currentBackups, dto.JSON)
 	if err != nil {
 		hLogger.Error("failed to marshal statistics",
@@ -350,7 +350,7 @@ func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler, found := s.handlerHolder.Load(routineName)
+	_, found := s.handlerHolder.Load(routineName)
 	if !found {
 		hLogger.Error("unknown routine name",
 			slog.String("name", routineName),
@@ -359,7 +359,7 @@ func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	handler.Cancel()
+	s.registry.Cancel(routineName)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)

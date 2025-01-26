@@ -19,6 +19,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/logger"
+	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
 
@@ -65,12 +66,32 @@ func run() int {
 
 func startService(configFile string, remote bool) error {
 	ctx := systemCtx()
+	config, scheduler, httpService, err := initComponents(ctx, configFile, remote)
+	if err != nil {
+		return err
+	}
+
+	// start the scheduler only after all the initialization is done
+	scheduler.Start(ctx)
+
+	// run HTTP server
+	err = runHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService)
+
+	// stop the scheduler
+	scheduler.Stop()
+
+	return err
+}
+
+func initComponents(ctx context.Context, configFile string, remote bool) (
+	*model.Config, quartz.Scheduler, *handlers.Service, error,
+) {
 	clientManager := aerospike.NewClientManager(&aerospike.DefaultClientFactory{}, 10*time.Second)
 	nsValidator := aerospike.NewNamespaceValidator(clientManager)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	appLogger := setDefaultLoggers(ctx, config.ServiceConfig.GetLoggerOrDefault())
@@ -78,24 +99,27 @@ func startService(configFile string, remote bool) error {
 	clientManager.SetLogger(appLogger)
 
 	// schedule all configured backups
+	scheduler := service.NewScheduler()
+
 	backends := service.NewBackupBackends()
-	scheduler := service.NewScheduler(ctx)
 	backupHandlers := service.NewBackupHandlerHolder()
+	registry := service.NewRunningBackupsRegistry(ctx, backends)
 
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,
 		backends,
 		clientManager,
 		backupHandlers,
+		registry,
 	)
 
-	err = configApplier.ApplyNewRoutines(ctx, config.Routines())
+	err = configApplier.ApplyNewRoutines(config.Routines())
 	if err != nil {
-		return fmt.Errorf("failed to apply new config: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()
-	service.NewMetricsCollector(backupHandlers, restoreJobs).Start(ctx, 1*time.Second)
+	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
 		backends, service.NewRestore(), clientManager, restoreJobs, nsValidator)
@@ -107,18 +131,13 @@ func startService(configFile string, remote bool) error {
 		restoreMgr,
 		backends,
 		backupHandlers,
+		registry,
 		configurationManager,
 		appLogger,
 		nsValidator,
 	)
 
-	// run HTTP server
-	err = runHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService)
-
-	// stop the scheduler
-	scheduler.Stop()
-
-	return err
+	return config, scheduler, httpService, nil
 }
 
 func setDefaultLoggers(ctx context.Context, loggerConfig *model.LoggerConfig) *slog.Logger {

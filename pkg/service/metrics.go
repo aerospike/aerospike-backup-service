@@ -88,12 +88,12 @@ func init() {
 
 type MetricsCollector struct {
 	mu       sync.Mutex
-	backups  BackupHandlerHolder
+	backups  RunningBackupsRegistry
 	restores *RestoreJobsHolder
 }
 
 // NewMetricsCollector creates a new MetricsCollector
-func NewMetricsCollector(bh BackupHandlerHolder, jh *RestoreJobsHolder) *MetricsCollector {
+func NewMetricsCollector(bh RunningBackupsRegistry, jh *RestoreJobsHolder) *MetricsCollector {
 	return &MetricsCollector{
 		backups:  bh,
 		restores: jh,
@@ -126,9 +126,7 @@ func (mc *MetricsCollector) collectMetrics() {
 func (mc *MetricsCollector) collectBackupMetrics() {
 	backupProgress.Reset()
 
-	mc.backups.Iterate(func(routineName string, handler backupRunner) {
-		currentStat := handler.CurrentStat()
-
+	for routineName, currentStat := range mc.backups.GetRunningState() {
 		// Update Full backup metric if running
 		if currentStat.Full != nil {
 			backupProgress.WithLabelValues(routineName, "Full").Set(float64(currentStat.Full.PercentageDone))
@@ -138,7 +136,7 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 		if currentStat.Incremental != nil {
 			backupProgress.WithLabelValues(routineName, "Incremental").Set(float64(currentStat.Incremental.PercentageDone))
 		}
-	})
+	}
 }
 
 func (mc *MetricsCollector) collectRestoreMetrics() {

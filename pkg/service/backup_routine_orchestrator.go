@@ -21,17 +21,14 @@ type BackupRoutineOrchestrator struct {
 	backupIncrPolicy    *model.BackupPolicy
 	backupRoutine       *model.BackupRoutine
 	namespaces          []string
-	lastRun             *model.LastBackupRun
 	retry               executor
 	clientManager       aerospike.ClientManager
 	logger              *slog.Logger
 	clusterConfigWriter ClusterConfigWriter
 	retentionManager    RetentionManager
-
-	runner *BackupNamespaceRunner
-
-	fullBackupHandler CancelableBackupHandler
-	incrBackupHandler CancelableBackupHandler
+	runner              *BackupNamespaceRunner
+	routineName         string
+	registry            RunningBackupsRegistry
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
@@ -83,7 +80,7 @@ func newBackupRoutineOrchestrator(
 	routineName string,
 	routine *model.BackupRoutine,
 	backupBackend BackupMetadataReaderWriter,
-	lastRun *model.LastBackupRun,
+	registry RunningBackupsRegistry,
 ) *BackupRoutineOrchestrator {
 	backupPolicy := routine.BackupPolicy
 	backupStorage := routine.Storage
@@ -102,18 +99,19 @@ func newBackupRoutineOrchestrator(
 
 		backupService:    backupService,
 		backupRoutine:    routine,
+		routineName:      routineName,
 		backupFullPolicy: backupPolicy,
 		backupIncrPolicy: backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
 		namespaces:       routine.Namespaces,
-		lastRun:          lastRun,
 		clientManager:    clientManager,
 		clusterConfigWriter: NewClusterConfigWriter(
 			backupStorage,
 			routineName,
 			backupPolicy,
 			logger),
-		logger: logger,
-		retry:  retry,
+		logger:   logger,
+		retry:    retry,
+		registry: registry,
 		retentionManager: NewBackupRetentionManager(
 			backupBackend, backupStorage, routineName, backupPolicy.RetentionPolicy),
 	}
@@ -135,35 +133,53 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 }
 
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
+	if h.skipFullBackup() {
+		backupSkippedCounter.Inc()
+		return nil
+	}
+
 	client, namespaces, err := h.prepareCluster(h.retry)
 	if err != nil {
 		return err
 	}
-
-	defer func() {
-		h.clientManager.Close(client)
-		h.fullBackupHandler = nil
-	}()
+	defer h.clientManager.Close(client)
 
 	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
 
-	timeBounds := h.createTimeBounds(true, now)
-	h.fullBackupHandler = startNamespacesBackup(ctx,
+	timeBounds := h.createTimeBounds(jobTypeFull, now)
+	backupHandler := startNamespacesBackup(ctx,
 		h.runner, client, namespaces, timeBounds, now, h.backupFullPolicy, jobTypeFull)
 
-	if err = h.fullBackupHandler.Wait(ctx); err != nil {
+	h.registry.register(h.routineName, jobTypeFull, backupHandler)
+
+	if err = backupHandler.Wait(ctx); err != nil {
+		h.registry.remove(h.routineName, jobTypeFull)
 		return fmt.Errorf("backup failed: %w", err)
 	}
-	h.lastRun.SetFullBackupTime(&now)
+	h.registry.unregister(h.routineName, jobTypeFull, now)
 
-	go func() {
-		err = h.retentionManager.deleteOldBackups(ctx)
-		if err != nil {
-			h.logger.Error("failed to clean up old backups", slog.Any("error", err))
-		}
-	}()
+	go h.deleteOldBackups(ctx)
 
 	return nil
+}
+
+func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
+	currentStat := h.registry.GetRoutineState(h.routineName)
+	if currentStat.Full != nil {
+		// This can happen in rare scenario, when user re-applied config
+		// while backup is running and started same routine backup.
+		h.logger.Debug("Full backup is currently in progress, skipping another full backup")
+		return true
+	}
+
+	return false
+}
+
+func (h *BackupRoutineOrchestrator) deleteOldBackups(ctx context.Context) {
+	err := h.retentionManager.deleteOldBackups(ctx)
+	if err != nil {
+		h.logger.Error("failed to clean up old backups", slog.Any("error", err))
+	}
 }
 
 func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Client, []string, error) {
@@ -189,15 +205,14 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 	return client, namespaces, err
 }
 
-func (h *BackupRoutineOrchestrator) createTimeBounds(fullBackup bool, now time.Time) model.TimeBounds {
+func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.Time) model.TimeBounds {
 	var (
 		fromTime *time.Time
 		toTime   *time.Time
 	)
 
-	if !fullBackup {
-		lastRun := h.lastRun.LatestRun()
-		fromTime = lastRun
+	if jobType == jobTypeIncremental {
+		fromTime = h.registry.GetRoutineState(h.routineName).LastRunTime.LatestRun()
 	}
 
 	if h.backupFullPolicy.IsSealedOrDefault() {
@@ -227,15 +242,16 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 }
 
 func (h *BackupRoutineOrchestrator) skipIncrementalBackup() bool {
-	if h.lastRun.NoFullBackup() {
+	currentStat := h.registry.GetRoutineState(h.routineName)
+	if currentStat.LastRunTime.NoFullBackup() {
 		h.logger.Debug("Skip incremental backup until initial full backup is done")
 		return true
 	}
-	if h.fullBackupHandler != nil {
+	if currentStat.Full != nil {
 		h.logger.Debug("Full backup is currently in progress, skipping incremental backup")
 		return true
 	}
-	if h.incrBackupHandler != nil {
+	if currentStat.Incremental != nil {
 		h.logger.Debug("Incremental backup is currently in progress, skipping incremental backup")
 		return true
 	}
@@ -249,36 +265,18 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 		return err
 	}
 
-	defer func() {
-		h.clientManager.Close(client)
-		h.incrBackupHandler = nil
-	}()
+	defer h.clientManager.Close(client)
 
-	timeBounds := h.createTimeBounds(false, now)
-	h.incrBackupHandler = startNamespacesBackup(ctx,
+	timeBounds := h.createTimeBounds(jobTypeIncremental, now)
+	backupHandler := startNamespacesBackup(ctx,
 		h.runner, client, namespaces, timeBounds, now, h.backupIncrPolicy, jobTypeIncremental)
-	if err := h.incrBackupHandler.Wait(ctx); err != nil {
+	h.registry.register(h.routineName, jobTypeIncremental, backupHandler)
+
+	if err := backupHandler.Wait(ctx); err != nil {
+		h.registry.remove(h.routineName, jobTypeIncremental)
 		return err
 	}
 
-	h.lastRun.SetIncrementalBackupTime(&now)
+	h.registry.unregister(h.routineName, jobTypeIncremental, now)
 	return nil
-}
-
-func (h *BackupRoutineOrchestrator) CurrentStat() *model.CurrentBackups {
-	return &model.CurrentBackups{
-		Full:        currentBackupStatus(h.fullBackupHandler),
-		Incremental: currentBackupStatus(h.incrBackupHandler),
-		LastRunTime: h.lastRun,
-	}
-}
-
-func (h *BackupRoutineOrchestrator) Cancel() {
-	h.logger.Info("Canceling backup")
-	if h.fullBackupHandler != nil {
-		h.fullBackupHandler.Cancel()
-	}
-	if h.incrBackupHandler != nil {
-		h.incrBackupHandler.Cancel()
-	}
 }

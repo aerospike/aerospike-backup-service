@@ -45,6 +45,20 @@ func (s *SafeMap[K, V]) Apply(key K, callback func(value V)) {
 	}
 }
 
+// ApplyOrCreate executes the callback function with the value associated with
+// the given key if the key exists in the map. If the key does not exist, the
+// defaultValue is assigned to the key.
+func (s *SafeMap[K, V]) ApplyOrCreate(key K, callback func(value V), defaultValue V) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if v, exists := s.m[key]; exists {
+		callback(v)
+	} else {
+		s.m[key] = defaultValue
+	}
+}
+
 // Iterate iterates over all key-value pairs in the map.
 func (s *SafeMap[K, V]) Iterate(callback func(key K, value V)) {
 	s.mu.RLock()
@@ -66,4 +80,15 @@ func (s *SafeMap[K, V]) Size() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return len(s.m)
+}
+
+// Remove deletes the value for a key and returns whether the key was present.
+func (s *SafeMap[K, V]) Remove(key K) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	_, exists := s.m[key]
+	if exists {
+		delete(s.m, key)
+	}
+	return exists
 }

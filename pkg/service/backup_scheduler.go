@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"time"
@@ -43,16 +42,12 @@ func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
 	return quartz.NewJobDetail(job.Job(), jobKey)
 }
 
-// NewScheduler creates a new running quartz.Scheduler
-func NewScheduler(ctx context.Context) quartz.Scheduler {
-	scheduler := quartz.NewStdSchedulerWithOptions(quartz.StdSchedulerOptions{
+// NewScheduler creates a new quartz.Scheduler
+func NewScheduler() quartz.Scheduler {
+	return quartz.NewStdSchedulerWithOptions(quartz.StdSchedulerOptions{
 		OutdatedThreshold: 1 * time.Second,
 		RetryInterval:     100 * time.Millisecond,
 	}, nil, nil)
-
-	scheduler.Start(ctx)
-
-	return scheduler
 }
 
 // scheduleRoutines schedules the given handlers using the scheduler.

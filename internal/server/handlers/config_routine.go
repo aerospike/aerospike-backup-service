@@ -303,18 +303,19 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
 		return
 	}
-	handler, found := s.handlerHolder.Load(routineName)
+	_, found := s.handlerHolder.Load(routineName)
 	if !found {
 		hLogger.Error("unknown routine name", slog.String("name", routineName))
 		http.Error(w, fmt.Sprintf("Routine %s could not be found", routineName), http.StatusNotFound)
 		return
 	}
 
-	handler.Cancel() // cancel any running job for this routine before disabling it.
-
 	err := s.changeConfig(r.Context(), func(config *model.Config) error {
 		return config.ToggleRoutineDisabled(routineName, true)
 	})
+
+	s.registry.Cancel(routineName) // cancel any running job for this routine before disabling it.
+
 	if err != nil {
 		hLogger.Error("failed to disable routine",
 			slog.String("name", routineName),

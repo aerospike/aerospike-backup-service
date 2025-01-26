@@ -213,7 +213,7 @@ func (mock configurationManagerMock) Write(_ context.Context, config *model.Conf
 
 type MockConfigApplier struct{}
 
-func (a *MockConfigApplier) ApplyNewRoutines(_ context.Context, _ map[string]*model.BackupRoutine) error {
+func (a *MockConfigApplier) ApplyNewRoutines(_ map[string]*model.BackupRoutine) error {
 	return nil
 }
 
@@ -241,6 +241,7 @@ func newServiceMock(t *testing.T) *Service {
 		quartz.NewStdScheduler(),
 		restoreManagerMock{},
 		backendsHolderMock{},
+		nil,
 		nil,
 		configurationManagerMock{},
 		slog.New(slog.NewJSONHandler(io.Discard, nil)),

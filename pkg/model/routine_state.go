@@ -4,8 +4,8 @@ import (
 	"time"
 )
 
-// CurrentBackups represent the current state of backups (full and incremental)
-type CurrentBackups struct {
+// RoutineState represent the current state of backups (full and incremental)
+type RoutineState struct {
 	// Full represents the state of a full backup. Nil if no full backup is running.
 	Full *RunningJob
 	// Incremental represents the state of an incremental backup. Nil if no incremental backup is running.
@@ -15,7 +15,6 @@ type CurrentBackups struct {
 }
 
 // RunningJob tracks progress of currently running job.
-// @Description RunningJob tracks progress of currently running job.
 type RunningJob struct {
 	// TotalRecords: the total number of records to be processed.
 	TotalRecords uint64
