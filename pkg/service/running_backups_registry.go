@@ -44,42 +44,39 @@ func makeRegistryKey(routineName string, job jobType) registryKey {
 type RunningBackupsRegistryImpl struct {
 	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
 	lastSuccessful *util.SafeMap[string, *model.LastBackupRun]
+	ready          sync.WaitGroup
 }
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
-func NewRunningBackupsRegistry() *RunningBackupsRegistryImpl {
-	return &RunningBackupsRegistryImpl{
+func NewRunningBackupsRegistry(ctx context.Context, backends BackendsHolder) *RunningBackupsRegistryImpl {
+	registry := &RunningBackupsRegistryImpl{
 		handlers:       util.NewSafeMap[registryKey, CancelableBackupHandler](),
 		lastSuccessful: util.NewSafeMap[string, *model.LastBackupRun](),
 	}
+
+	registry.startBackupHistorySync(ctx, backends)
+	return registry
 }
 
-// SyncBackupHistoryFromStorage updates the backup registry with the most recent backup timestamps
+// startBackupHistorySync updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
-func SyncBackupHistoryFromStorage(
-	ctx context.Context, registry RunningBackupsRegistry, backends BackendsHolder,
-) {
-	var wg sync.WaitGroup
-
-	// Launch a goroutine for each backup routine, because routineReader.FindLastRun(ctx) is network call and can be long.
+func (r *RunningBackupsRegistryImpl) startBackupHistorySync(ctx context.Context, backends BackendsHolder) {
 	for routine, reader := range backends.GetAllReaders() {
-		wg.Add(1)
+		r.ready.Add(1)
 		go func(routineName string, routineReader BackupMetadataReader) {
-			defer wg.Done()
+			defer r.ready.Done()
 
 			lastRun := routineReader.FindLastRun(ctx)
 			if lastRun.FullBackupTime() != nil {
-				registry.unregister(routineName, jobTypeFull, *lastRun.FullBackupTime())
+				r.setLastTime(routineName, jobTypeFull, *lastRun.FullBackupTime())
 			}
 			if lastRun.IncrementalBackupTime() != nil {
-				registry.unregister(routineName, jobTypeIncremental, *lastRun.IncrementalBackupTime())
+				r.setLastTime(routineName, jobTypeIncremental, *lastRun.IncrementalBackupTime())
 			}
 		}(routine, reader)
 	}
-
-	wg.Wait()
 }
 
 // register adds a new backup handler to the registry.
@@ -89,6 +86,11 @@ func (r *RunningBackupsRegistryImpl) register(routineName string, job jobType, h
 
 // unregister remove backup from registry and update last success timestamp.
 func (r *RunningBackupsRegistryImpl) unregister(routineName string, job jobType, timestamp time.Time) {
+	r.setLastTime(routineName, job, timestamp)
+	r.remove(routineName, job)
+}
+
+func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType, timestamp time.Time) {
 	updateLastTimestamp := func(lastBackupRun *model.LastBackupRun) {
 		if job == jobTypeFull {
 			lastBackupRun.SetFullBackupTime(&timestamp)
@@ -102,8 +104,6 @@ func (r *RunningBackupsRegistryImpl) unregister(routineName string, job jobType,
 		updateLastTimestamp,
 		model.NewLastBackupRun(&timestamp, nil), // it was first backup, always full.
 	)
-
-	r.remove(routineName, job)
 }
 
 // finishWithError remove backup from the registry.
@@ -114,6 +114,8 @@ func (r *RunningBackupsRegistryImpl) remove(routineName string, job jobType) {
 // CurrentStat get the current backup statistics for a routine.
 // If there is no backup running, only LastRunTime field will be set.
 func (r *RunningBackupsRegistryImpl) CurrentStat(routineName string) *model.CurrentBackups {
+	r.ready.Wait()
+
 	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
 	incrBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeIncremental))
 
@@ -131,6 +133,8 @@ func (r *RunningBackupsRegistryImpl) CurrentStat(routineName string) *model.Curr
 // GetAllCurrentStats all current backups statistics.
 // Return only routines that are currently backing up.
 func (r *RunningBackupsRegistryImpl) GetAllCurrentStats() map[string]*model.CurrentBackups {
+	r.ready.Wait()
+
 	var routines []string
 	r.handlers.Iterate(func(key registryKey, _ CancelableBackupHandler) {
 		if !slices.Contains(routines, key.routineName) { // same routine can be stored twice: as full and incr.
