@@ -154,7 +154,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Current backup statistics",
                         "schema": {
-                            "$ref": "#/definitions/dto.CurrentBackups"
+                            "$ref": "#/definitions/dto.RoutineState"
                         }
                     },
                     "400": {
@@ -2067,35 +2067,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.CurrentBackups": {
-            "type": "object",
-            "properties": {
-                "full": {
-                    "description": "Full represents the state of a full backup. Nil if no full backup is running.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.RunningJob"
-                        }
-                    ]
-                },
-                "incremental": {
-                    "description": "Incremental represents the state of an incremental backup. Nil if no incremental backup is running.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.RunningJob"
-                        }
-                    ]
-                },
-                "last-full": {
-                    "description": "LastFull: the timestamp of the last successful full backup.\nA nil value indicates that there has never been a full backup.",
-                    "type": "string"
-                },
-                "last-incremental": {
-                    "description": "LastIncremental: the timestamp of the last successful incremental backup.\nA nil value indicates that there has never been an incremental backup.",
-                    "type": "string"
-                }
-            }
-        },
         "dto.EncryptionPolicy": {
             "description": "EncryptionPolicy contains backup encryption information.",
             "type": "object",
@@ -2643,6 +2614,35 @@ const docTemplate = `{
                 "multiplier": {
                     "description": "Multiplier is used to increase the delay between subsequent retry attempts.\nThe actual delay is calculated as: BaseTimeout * (Multiplier ^ attemptNumber)",
                     "type": "number"
+                }
+            }
+        },
+        "dto.RoutineState": {
+            "type": "object",
+            "properties": {
+                "full": {
+                    "description": "Full represents the state of a full backup. Nil if no full backup is running.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RunningJob"
+                        }
+                    ]
+                },
+                "incremental": {
+                    "description": "Incremental represents the state of an incremental backup. Nil if no incremental backup is running.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RunningJob"
+                        }
+                    ]
+                },
+                "last-full": {
+                    "description": "LastFull: the timestamp of the last successful full backup.\nA nil value indicates that there has never been a full backup.",
+                    "type": "string"
+                },
+                "last-incremental": {
+                    "description": "LastIncremental: the timestamp of the last successful incremental backup.\nA nil value indicates that there has never been an incremental backup.",
+                    "type": "string"
                 }
             }
         },

@@ -111,7 +111,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dto.CurrentBackups'
+                $ref: '#/components/schemas/dto.RoutineState'
           description: Current backup statistics
         "400":
           content:
@@ -1778,36 +1778,6 @@ components:
           example: testUser
           type: string
       type: object
-    dto.CurrentBackups:
-      example:
-        incremental: "{}"
-        last-incremental: last-incremental
-        full: "{}"
-        last-full: last-full
-      properties:
-        full:
-          allOf:
-          - $ref: '#/components/schemas/dto.RunningJob'
-          description: Full represents the state of a full backup. Nil if no full
-            backup is running.
-          type: object
-        incremental:
-          allOf:
-          - $ref: '#/components/schemas/dto.RunningJob'
-          description: Incremental represents the state of an incremental backup.
-            Nil if no incremental backup is running.
-          type: object
-        last-full:
-          description: |-
-            LastFull: the timestamp of the last successful full backup.
-            A nil value indicates that there has never been a full backup.
-          type: string
-        last-incremental:
-          description: |-
-            LastIncremental: the timestamp of the last successful incremental backup.
-            A nil value indicates that there has never been an incremental backup.
-          type: string
-      type: object
     dto.EncryptionPolicy:
       description: EncryptionPolicy contains backup encryption information.
       properties:
@@ -2297,6 +2267,36 @@ components:
             Multiplier is used to increase the delay between subsequent retry attempts.
             The actual delay is calculated as: BaseTimeout * (Multiplier ^ attemptNumber)
           type: number
+      type: object
+    dto.RoutineState:
+      example:
+        incremental: "{}"
+        last-incremental: last-incremental
+        full: "{}"
+        last-full: last-full
+      properties:
+        full:
+          allOf:
+          - $ref: '#/components/schemas/dto.RunningJob'
+          description: Full represents the state of a full backup. Nil if no full
+            backup is running.
+          type: object
+        incremental:
+          allOf:
+          - $ref: '#/components/schemas/dto.RunningJob'
+          description: Incremental represents the state of an incremental backup.
+            Nil if no incremental backup is running.
+          type: object
+        last-full:
+          description: |-
+            LastFull: the timestamp of the last successful full backup.
+            A nil value indicates that there has never been a full backup.
+          type: string
+        last-incremental:
+          description: |-
+            LastIncremental: the timestamp of the last successful incremental backup.
+            A nil value indicates that there has never been an incremental backup.
+          type: string
       type: object
     dto.RunningJob:
       description: RunningJob tracks progress of currently running job.
