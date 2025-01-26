@@ -2737,6 +2737,7 @@
         "type" : "object"
       },
       "dto.RoutineState" : {
+        "description" : "RoutineState represent the current state of backups (full and incremental)",
         "properties" : {
           "full" : {
             "allOf" : [ {

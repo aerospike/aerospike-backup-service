@@ -2618,6 +2618,7 @@ const docTemplate = `{
             }
         },
         "dto.RoutineState": {
+            "description": "RoutineState represent the current state of backups (full and incremental)",
             "type": "object",
             "properties": {
                 "full": {

@@ -2269,6 +2269,7 @@ components:
           type: number
       type: object
     dto.RoutineState:
+      description: RoutineState represent the current state of backups (full and incremental)
       example:
         incremental: "{}"
         last-incremental: last-incremental
