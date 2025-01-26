@@ -5,7 +5,6 @@ linters:
   enable:
     - gci
     - bodyclose
-    - unused
     - dogsled
     - dupl
     - errcheck
@@ -22,14 +21,14 @@ linters:
     - govet
     - ineffassign
     - misspell
-    - promlinter
     - nolintlint
     - nakedret
-    - prealloc # pre-allocate slices with define size if the slice size is known in advance
-    - predeclared
-    - reassign
     - nestif
     - nlreturn
+    - prealloc # pre-allocate slices with define size if the slice size is known in advance
+    - predeclared
+    - promlinter
+    - reassign
     - revive
     - sloglint
     - staticcheck
