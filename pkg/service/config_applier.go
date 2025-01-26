@@ -77,6 +77,7 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 			return fmt.Errorf("cannot delete job %q: %w", key, err)
 		}
 	}
+
 	return nil
 }
 

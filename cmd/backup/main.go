@@ -177,6 +177,7 @@ func runHTTPServer(ctx context.Context, serverConfig *model.HTTPServerConfig, h 
 	}
 
 	slog.Info("HTTP server shutdown gracefully")
+
 	return nil
 }
 

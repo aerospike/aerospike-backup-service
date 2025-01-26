@@ -105,6 +105,7 @@ func WriteFile(ctx context.Context, storage model.Storage, fileName string, cont
 	defer w.Close()
 
 	_, err = w.Write(content)
+
 	return err
 }
 

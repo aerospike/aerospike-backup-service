@@ -180,6 +180,7 @@ func (cm *ClientManagerImpl) createClient(cluster *model.AerospikeCluster) (*bac
 	if cluster.ClusterLabel != nil {
 		options = append(options, backup.WithID(*cluster.ClusterLabel))
 	}
+
 	return backup.NewClient(aeroClient, options...)
 }
 

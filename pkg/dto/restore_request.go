@@ -69,6 +69,7 @@ func (r *RestoreTimestampRequest) Validate() error {
 	if r.Routine == "" {
 		return emptyFieldValidationError(r.Routine)
 	}
+
 	return nil
 }
 

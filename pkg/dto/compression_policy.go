@@ -35,6 +35,7 @@ func (p *CompressionPolicy) Validate() error {
 	if p.Level < -1 {
 		return fmt.Errorf("invalid compression level: %d", p.Level)
 	}
+
 	return nil
 }
 

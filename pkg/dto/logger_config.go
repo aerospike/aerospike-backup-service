@@ -42,6 +42,7 @@ func (l *LoggerConfig) Validate() error {
 	if err := l.FileWriter.Validate(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
