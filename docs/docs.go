@@ -2698,12 +2698,12 @@ const docTemplate = `{
                     "description": "The S3 bucket name.",
                     "type": "string"
                 },
-                "max_async_connections": {
+                "max-async-connections": {
                     "description": "The maximum number of simultaneous requests from S3.",
                     "type": "integer",
                     "example": 16
                 },
-                "min_part_size": {
+                "min-part-size": {
                     "description": "The minimum size in bytes of individual S3 UploadParts.",
                     "type": "integer",
                     "default": 5242880,

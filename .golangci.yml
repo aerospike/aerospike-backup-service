@@ -35,6 +35,7 @@ linters:
     - sloglint
     - staticcheck
     - stylecheck
+    - tagliatelle
     - thelper
     - tparallel
     - typecheck
@@ -52,6 +53,11 @@ linters-settings:
     block-size: 10
   godot:
     exclude: [ "@(Success|Failure|Router).*" ]
+  tagliatelle:
+    case:
+      rules:
+        json: kebab
+        yaml: kebab
 
 issues:
   exclude-rules:

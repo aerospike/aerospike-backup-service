@@ -2810,12 +2810,12 @@
             "description" : "The S3 bucket name.",
             "type" : "string"
           },
-          "max_async_connections" : {
+          "max-async-connections" : {
             "description" : "The maximum number of simultaneous requests from S3.",
             "example" : 16,
             "type" : "integer"
           },
-          "min_part_size" : {
+          "min-part-size" : {
             "description" : "The minimum size in bytes of individual S3 UploadParts.",
             "example" : 10,
             "type" : "integer"
