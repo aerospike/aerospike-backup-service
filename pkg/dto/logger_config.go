@@ -42,6 +42,7 @@ func (l *LoggerConfig) Validate() error {
 	if err := l.FileWriter.Validate(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -129,6 +130,7 @@ func (f *FileLoggerConfig) Validate() error {
 	if f.MaxBackups < 0 {
 		return fmt.Errorf("negative logger MaxBackups: %d", f.MaxBackups)
 	}
+
 	return nil
 }
 

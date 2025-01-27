@@ -7,7 +7,6 @@ import (
 )
 
 // RestorePolicy represents a policy for the restore operation.
-// @Description RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
 	// The number of concurrent record readers from backup files. Default: 20
 	Parallel *int

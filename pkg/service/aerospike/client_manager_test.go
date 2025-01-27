@@ -47,6 +47,7 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 	m := &mocks.MockAerospikeClient{}
 	m.On("Close").Return()
 	m.On("Cluster").Return(&as.Cluster{})
+
 	return m, nil
 }
 

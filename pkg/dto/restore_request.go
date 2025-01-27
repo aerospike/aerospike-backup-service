@@ -51,6 +51,7 @@ func (r *RestoreRequest) Validate() error {
 	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -68,6 +69,7 @@ func (r *RestoreTimestampRequest) Validate() error {
 	if r.Routine == "" {
 		return emptyFieldValidationError(r.Routine)
 	}
+
 	return nil
 }
 

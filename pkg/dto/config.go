@@ -61,7 +61,7 @@ func (c *Config) fromModel(m *model.Config) {
 	}
 }
 
-// NewConfigFromReader creates a new Config object from a given reader
+// NewConfigFromReader creates a new Config object from a given reader.
 func NewConfigFromReader(r io.Reader, format SerializationFormat) (*Config, error) {
 	c := &Config{}
 	if err := Deserialize(c, r, format); err != nil {

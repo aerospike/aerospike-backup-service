@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
 // TimeBounds represents a period of time between two timestamps.
@@ -60,6 +61,5 @@ func parseTimestamp(value string) (*time.Time, error) {
 		return nil, fmt.Errorf("timestamp should be positive or zero, got %d", intValue)
 	}
 
-	result := time.UnixMilli(intValue)
-	return &result, nil
+	return util.Ptr(time.UnixMilli(intValue)), nil
 }

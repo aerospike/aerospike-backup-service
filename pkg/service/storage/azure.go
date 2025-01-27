@@ -38,6 +38,7 @@ func (a *AzureStorageAccessor) createReader(
 	} else {
 		opts = append(opts, azure.WithDir(fullPath))
 	}
+
 	return azure.NewReader(ctx, client, azures.ContainerName, opts...)
 }
 
@@ -62,6 +63,7 @@ func (a *AzureStorageAccessor) createWriter(
 	if withNested {
 		opts = append(opts, azure.WithNestedDir())
 	}
+
 	return azure.NewWriter(ctx, client, azures.ContainerName, opts...)
 }
 

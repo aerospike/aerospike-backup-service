@@ -70,6 +70,7 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 			SecretAgent:     agent,
 		}
 	}
+
 	return &model.S3Storage{
 		Path:               s.Path,
 		Bucket:             s.Bucket,
@@ -99,5 +100,6 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 		result.AccessKeyID = &s.Auth.KeyIDSecret
 		result.SecretAccessKey = &s.Auth.AccessKeySecret
 	}
+
 	return result
 }

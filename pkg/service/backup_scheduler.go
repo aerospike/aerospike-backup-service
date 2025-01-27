@@ -42,7 +42,7 @@ func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
 	return quartz.NewJobDetail(job.Job(), jobKey)
 }
 
-// NewScheduler creates a new quartz.Scheduler
+// NewScheduler creates a new quartz.Scheduler.
 func NewScheduler() quartz.Scheduler {
 	return quartz.NewStdSchedulerWithOptions(quartz.StdSchedulerOptions{
 		OutdatedThreshold: 1 * time.Second,
@@ -81,6 +81,7 @@ func scheduleRoutines(
 	}
 
 	jobStore.ReplaceContent(newJobs)
+
 	return errs
 }
 

@@ -117,6 +117,7 @@ func (p *RestorePolicy) Validate() error {
 	if p.ExtraTTL != nil && *p.ExtraTTL <= 0 {
 		return fmt.Errorf("extraTTL %d invalid, should be positive number", *p.ExtraTTL)
 	}
+
 	return nil
 }
 

@@ -54,6 +54,7 @@ func (f *DefaultClientFactory) IsClusterHealthy(client backup.AerospikeClient) b
 	}
 
 	info, err := node.RequestInfo(client.GetDefaultInfoPolicy(), "status")
+
 	return err == nil && info["status"] == "ok"
 }
 
@@ -179,6 +180,7 @@ func (cm *ClientManagerImpl) createClient(cluster *model.AerospikeCluster) (*bac
 	if cluster.ClusterLabel != nil {
 		options = append(options, backup.WithID(*cluster.ClusterLabel))
 	}
+
 	return backup.NewClient(aeroClient, options...)
 }
 

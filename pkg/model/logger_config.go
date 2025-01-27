@@ -1,9 +1,6 @@
 package model
 
 // LoggerConfig represents the backup service logger configuration.
-// @Description LoggerConfig represents the backup service logger configuration.
-//
-
 type LoggerConfig struct {
 	// Level is the logger level.
 	Level *string
@@ -43,7 +40,6 @@ func (l *LoggerConfig) GetStdoutWriterOrDefault() bool {
 }
 
 // FileLoggerConfig represents the configuration for the file logger writer.
-// @Description FileLoggerConfig represents the configuration for the file logger writer.
 type FileLoggerConfig struct {
 	// Filename is the file to write logs to.
 	Filename string

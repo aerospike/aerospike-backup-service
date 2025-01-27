@@ -23,7 +23,6 @@ import (
 const nilString = "<nil>"
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
-// @Description AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 type AerospikeCluster struct {
 	pwd atomic.Pointer[string]
 	// The cluster name.
@@ -139,6 +138,7 @@ func (c *Credentials) loadPassword() *string {
 	}
 
 	slog.Warn("No valid authentication method configured")
+
 	return nil
 }
 
@@ -157,6 +157,7 @@ func (c *Credentials) loadPasswordFromFile() *string {
 
 	slog.Debug("Successfully read password", "path", *c.PasswordPath)
 	password := string(data)
+
 	return &password
 }
 
@@ -201,7 +202,7 @@ func (c *AerospikeCluster) ASClientPolicy() *as.ClientPolicy {
 	return policy
 }
 
-//nolint:funlen,staticcheck
+//nolint:funlen,staticcheck,nestif
 func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 	clusterName := "NA"
 	if clusterLabel != nil {
@@ -277,7 +278,7 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 
 		cert, err := tls.X509KeyPair(certPEM, keyPEM)
 		if err != nil {
-			errorLog(fmt.Errorf("failed to add client certificate and key to the pool: %s", err))
+			errorLog(fmt.Errorf("failed to add client certificate and key to the pool: %w", err))
 		}
 
 		clientPool = append(clientPool, cert)
@@ -298,7 +299,7 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 func readFromFile(filePath string) ([]byte, error) {
 	dataBytes, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read from file %s: %v", filePath, err)
+		return nil, fmt.Errorf("failed to read from file %s: %w", filePath, err)
 	}
 	data := bytes.TrimSuffix(dataBytes, []byte("\n"))
 
@@ -319,7 +320,6 @@ func (c *AerospikeCluster) ASClientHosts() []*as.Host {
 }
 
 // TLS represents the Aerospike cluster TLS configuration options.
-// @Description TLS represents the Aerospike cluster TLS configuration options.
 type TLS struct {
 	// Path to a trusted CA certificate file.
 	CAFile *string
@@ -358,7 +358,6 @@ func (tls *TLS) String() string {
 }
 
 // Credentials represents authentication details to the Aerospike cluster.
-// @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
 	// The username for the cluster authentication.
 	User *string
@@ -387,7 +386,6 @@ func (c *Credentials) String() string {
 }
 
 // SeedNode represents details of a node in the Aerospike cluster.
-// @Description SeedNode represents details of a node in the Aerospike cluster.
 type SeedNode struct {
 	// The host name of the node.
 	HostName string

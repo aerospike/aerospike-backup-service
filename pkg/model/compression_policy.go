@@ -1,7 +1,6 @@
 package model
 
 // CompressionPolicy contains backup compression information.
-// @Description CompressionPolicy contains backup compression information.
 type CompressionPolicy struct {
 	// The compression mode to be used (default is NONE).
 	Mode string

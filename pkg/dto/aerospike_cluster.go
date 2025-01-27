@@ -49,7 +49,7 @@ func (a *AerospikeCluster) Validate() error {
 	return nil
 }
 
-// NewClusterFromReader creates a new Storage object from a given reader
+// NewClusterFromReader creates a new Storage object from a given reader.
 func NewClusterFromReader(r io.Reader, format SerializationFormat) (*AerospikeCluster, error) {
 	a := &AerospikeCluster{}
 	if err := Deserialize(a, r, format); err != nil {
@@ -190,7 +190,7 @@ func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig
 	c.SecretAgentConfig = ResolveSecretAgentFromModel(m.SecretAgent, config)
 }
 
-// Validate validates the credentials configuration
+// Validate validates the credentials configuration.
 func (c *Credentials) Validate() error {
 	if c == nil {
 		return nil

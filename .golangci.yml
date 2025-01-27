@@ -5,15 +5,16 @@ linters:
   enable:
     - gci
     - bodyclose
-    - unused
     - dogsled
     - dupl
     - errcheck
+    - errorlint
     - funlen
     - gci
     - goconst
     - gocritic
     - gocyclo
+    - godot
     - gofmt
     - goimports
     - gocyclo
@@ -22,12 +23,14 @@ linters:
     - govet
     - ineffassign
     - misspell
-    - prealloc
-    - promlinter
     - nolintlint
     - nakedret
+    - nestif
+    - nlreturn
     - prealloc # pre-allocate slices with define size if the slice size is known in advance
     - predeclared
+    - promlinter
+    - reassign
     - revive
     - sloglint
     - staticcheck
@@ -46,6 +49,10 @@ linters-settings:
   gosec:
     excludes:
       - G115
+  nlreturn:
+    block-size: 10
+  godot:
+    exclude: [ "@(Success|Failure|Router).*" ]
   tagliatelle:
     case:
       rules:
@@ -61,6 +68,7 @@ issues:
         - prealloc
         - funlen
         - goconst
+        - nlreturn
 
   exclude-dirs:
     - examples

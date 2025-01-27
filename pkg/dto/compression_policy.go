@@ -6,7 +6,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// Compression modes
+// Compression modes.
 const (
 	CompressNone = "NONE"
 	CompressZSTD = "ZSTD"
@@ -35,6 +35,7 @@ func (p *CompressionPolicy) Validate() error {
 	if p.Level < -1 {
 		return fmt.Errorf("invalid compression level: %d", p.Level)
 	}
+
 	return nil
 }
 

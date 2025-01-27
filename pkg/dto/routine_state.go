@@ -7,7 +7,7 @@ import (
 )
 
 // RoutineState represent the current state of backups (full and incremental)
-// @Description RoutineState represent the current state of backups (full and incremental)
+// @Description RoutineState represent the current state of backups (full and incremental).
 type RoutineState struct {
 	// Full represents the state of a full backup. Nil if no full backup is running.
 	Full *RunningJob `json:"full,omitempty"`

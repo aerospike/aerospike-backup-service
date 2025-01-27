@@ -10,7 +10,6 @@ const (
 )
 
 // RestoreJobStatus represents a restore job status.
-// @Description RestoreJobStatus represents a restore job status.
 type RestoreJobStatus struct {
 	ReadRecords     uint64
 	TotalBytes      uint64

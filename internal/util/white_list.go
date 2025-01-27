@@ -32,6 +32,7 @@ func NewIPWhiteList(ipList []string) *IPWhiteList {
 			networks = append(networks, &network)
 		}
 	}
+
 	return &IPWhiteList{
 		addresses: addresses,
 		networks:  networks,
