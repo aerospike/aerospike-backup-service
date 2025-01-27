@@ -278,7 +278,7 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 
 		cert, err := tls.X509KeyPair(certPEM, keyPEM)
 		if err != nil {
-			errorLog(fmt.Errorf("failed to add client certificate and key to the pool: %s", err))
+			errorLog(fmt.Errorf("failed to add client certificate and key to the pool: %w", err))
 		}
 
 		clientPool = append(clientPool, cert)
@@ -299,7 +299,7 @@ func initTLS(t *TLS, clusterLabel *string) *tls.Config {
 func readFromFile(filePath string) ([]byte, error) {
 	dataBytes, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read from file %s: %v", filePath, err)
+		return nil, fmt.Errorf("failed to read from file %s: %w", filePath, err)
 	}
 	data := bytes.TrimSuffix(dataBytes, []byte("\n"))
 
