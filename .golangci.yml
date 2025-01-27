@@ -1,10 +1,5 @@
 run:
   timeout: 2m
-linters-settings:
-  gosec:
-    excludes:
-      - G115
-
 linters:
   disable-all: true
   enable:
@@ -37,6 +32,7 @@ linters:
     - sloglint
     - staticcheck
     - stylecheck
+    - tagliatelle
     - thelper
     - tparallel
     - typecheck
@@ -45,6 +41,16 @@ linters:
     - unused
     - whitespace
     - lll
+
+linters-settings:
+  gosec:
+    excludes:
+      - G115
+  tagliatelle:
+    case:
+      rules:
+        json: kebab
+        yaml: kebab
 
 issues:
   exclude-rules:
