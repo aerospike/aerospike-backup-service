@@ -42,7 +42,7 @@ func TestDisabledRoutine(t *testing.T) {
 	mockScheduler.AssertNumberOfCalls(t, "ScheduleJob", 1)
 }
 
-// MockBackupRunner is a mock implementation of backupRunner interface
+// MockBackupRunner is a mock implementation of backupRunner interface.
 type MockBackupRunner struct {
 	mock.Mock
 }

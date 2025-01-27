@@ -7,7 +7,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// Encryption modes
+// Encryption modes.
 const (
 	EncryptNone   = "NONE"
 	EncryptAES128 = "AES128"

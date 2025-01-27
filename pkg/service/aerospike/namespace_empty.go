@@ -92,7 +92,7 @@ func getNodeStats(policy *as.InfoPolicy, node *as.Node, statsKey string) (string
 
 // parseObjectCount parses the object count from stats string.
 // when fetch namespaces, aerospike return a string separated by `;`
-// for list of sets, delimiter is `:`
+// for list of sets, delimiter is `:`.
 func parseObjectCount(stats, delimiter, key string) (int64, error) {
 	statsPairs := strings.Split(stats, delimiter)
 	for _, pair := range statsPairs {

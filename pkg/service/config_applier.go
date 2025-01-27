@@ -63,7 +63,7 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.Backu
 	return nil
 }
 
-// we don't want to delete ad-hoc jobs
+// we don't want to delete ad-hoc jobs.
 func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 	keys, err := a.scheduler.GetJobKeys(matcher.JobGroupEquals(string(quartzGroupScheduled)))
 	if err != nil {

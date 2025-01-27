@@ -66,7 +66,7 @@ type ClusterConfigWriter interface {
 	Write(ctx context.Context, client backup.AerospikeClient, timestamp time.Time)
 }
 
-// BackupHandlerHolder stores backupRunners by routine name
+// BackupHandlerHolder stores backupRunners by routine name.
 type BackupHandlerHolder = *util.SafeMap[string, backupRunner]
 
 func NewBackupHandlerHolder() BackupHandlerHolder {

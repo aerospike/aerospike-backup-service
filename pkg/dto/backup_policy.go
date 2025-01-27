@@ -49,7 +49,7 @@ type BackupPolicy struct {
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
 }
 
-// NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader
+// NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.
 func NewBackupPolicyFromReader(r io.Reader, format SerializationFormat) (*BackupPolicy, error) {
 	b := &BackupPolicy{}
 	if err := Deserialize(b, r, format); err != nil {

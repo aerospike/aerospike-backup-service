@@ -13,6 +13,7 @@ linters:
     - goconst
     - gocritic
     - gocyclo
+    - godot
     - gofmt
     - goimports
     - gocyclo
@@ -48,6 +49,8 @@ linters-settings:
       - G115
   nlreturn:
     block-size: 10
+  godot:
+    exclude: [ "@(Success|Failure|Router).*" ]
 
 issues:
   exclude-rules:

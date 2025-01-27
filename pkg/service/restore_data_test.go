@@ -296,7 +296,7 @@ func Test_restoreTimestampFail(t *testing.T) {
 	require.Error(t, err)
 }
 
-// MockClientManager is a mock implementation of ClientManager for testing
+// MockClientManager is a mock implementation of ClientManager for testing.
 type MockClientManager struct {
 }
 
