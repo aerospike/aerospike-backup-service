@@ -2,6 +2,7 @@ package dto
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -57,7 +58,7 @@ func parseTimestamp(value string) (*time.Time, error) {
 	}
 
 	if intValue < 0 {
-		return nil, errValidationNonPositive("timestamp", intValue)
+		return nil, fmt.Errorf("timestamp should be positive or zero, got %d", intValue)
 	}
 
 	return util.Ptr(time.UnixMilli(intValue)), nil
