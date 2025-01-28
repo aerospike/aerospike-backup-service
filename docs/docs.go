@@ -1682,7 +1682,7 @@ const docTemplate = `{
                     "example": "backups"
                 },
                 "secret-agent": {
-                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.SecretAgent"
@@ -1690,7 +1690,7 @@ const docTemplate = `{
                     ]
                 },
                 "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
                     "type": "string"
                 },
                 "tenant-id": {
@@ -2049,7 +2049,7 @@ const docTemplate = `{
                     "example": "/path/to/pass.txt"
                 },
                 "secret-agent": {
-                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.SecretAgent"
@@ -2057,7 +2057,7 @@ const docTemplate = `{
                     ]
                 },
                 "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
                     "type": "string"
                 },
                 "user": {
@@ -2155,7 +2155,7 @@ const docTemplate = `{
                     "example": "backups"
                 },
                 "secret-agent": {
-                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.SecretAgent"
@@ -2163,7 +2163,7 @@ const docTemplate = `{
                     ]
                 },
                 "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
                     "type": "string"
                 }
             }
@@ -2524,7 +2524,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "destination": {
-                    "description": "The details of the Aerospike destination cluster.\nMutually exclusive with destination-name.",
+                    "description": "The details of the Aerospike destination cluster.\nMutually exclusive with 'destination-name'.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.AerospikeCluster"
@@ -2532,14 +2532,19 @@ const docTemplate = `{
                     ]
                 },
                 "destination-name": {
-                    "description": "Link to one of preconfigured clusters.\nMutually exclusive with destination.",
+                    "description": "Link to one of preconfigured clusters.\nMutually exclusive with 'destination'.",
                     "type": "string"
                 },
                 "policy": {
-                    "$ref": "#/definitions/dto.RestorePolicy"
+                    "description": "Restore policy to use in the operation.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RestorePolicy"
+                        }
+                    ]
                 },
                 "secret-agent": {
-                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.SecretAgent"
@@ -2547,11 +2552,11 @@ const docTemplate = `{
                     ]
                 },
                 "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
                     "type": "string"
                 },
                 "source": {
-                    "description": "The details of the storage configuration.\nMutually exclusive with source-name.",
+                    "description": "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.Storage"
@@ -2559,7 +2564,7 @@ const docTemplate = `{
                     ]
                 },
                 "source-name": {
-                    "description": "Link to one of preconfigured storages.\nMutually exclusive with source.",
+                    "description": "Link to one of preconfigured storages.\nMutually exclusive with 'source'.",
                     "type": "string"
                 }
             }
@@ -2568,19 +2573,22 @@ const docTemplate = `{
             "description": "RestoreTimestampRequest represents a restore by timestamp operation request.",
             "type": "object",
             "required": [
-                "destination",
                 "policy",
                 "routine",
                 "time"
             ],
             "properties": {
                 "destination": {
-                    "description": "The details of the Aerospike destination cluster.",
+                    "description": "The details of the Aerospike destination cluster.\nMutually exclusive with 'destination-name'.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.AerospikeCluster"
                         }
                     ]
+                },
+                "destination-name": {
+                    "description": "Link to one of preconfigured clusters.\nMutually exclusive with 'destination'.",
+                    "type": "string"
                 },
                 "policy": {
                     "description": "Restore policy to use in the operation.",
@@ -2596,12 +2604,28 @@ const docTemplate = `{
                     "example": "daily"
                 },
                 "secret-agent": {
-                    "description": "Secret Agent configuration (optional).",
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.SecretAgent"
                         }
                     ]
+                },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+                    "type": "string"
+                },
+                "source": {
+                    "description": "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.Storage"
+                        }
+                    ]
+                },
+                "source-name": {
+                    "description": "Link to one of preconfigured storages.\nMutually exclusive with 'source'.",
+                    "type": "string"
                 },
                 "time": {
                     "description": "Required epoch time for recovery. The closest backup before the timestamp will be applied.",
@@ -2764,7 +2788,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "secret-agent": {
-                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.SecretAgent"
@@ -2772,7 +2796,7 @@ const docTemplate = `{
                     ]
                 },
                 "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
                     "type": "string"
                 }
             }

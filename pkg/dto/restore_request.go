@@ -124,10 +124,10 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 // DestinationClusterConfig aggregates the destination cluster configuration.
 type DestinationClusterConfig struct {
 	// The details of the Aerospike destination cluster.
-	// Mutually exclusive with destination-name.
+	// Mutually exclusive with 'destination-name'.
 	Cluster *AerospikeCluster `json:"destination,omitempty"`
 	// Link to one of preconfigured clusters.
-	// Mutually exclusive with destination.
+	// Mutually exclusive with 'destination'.
 	Name *string `json:"destination-name,omitempty"`
 }
 
@@ -163,10 +163,10 @@ func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.Aerospi
 // StorageConfig aggregates the storage configuration.
 type StorageConfig struct {
 	// The details of the storage configuration.
-	// Mutually exclusive with source-name.
+	// Mutually exclusive with 'source-name'.
 	Storage *Storage `json:"source,omitempty"`
 	// Link to one of preconfigured storages.
-	// Mutually exclusive with source.
+	// Mutually exclusive with 'source'.
 	Name *string `json:"source-name,omitempty"`
 }
 

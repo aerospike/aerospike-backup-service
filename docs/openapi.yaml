@@ -1335,12 +1335,12 @@ components:
           - $ref: '#/components/schemas/dto.SecretAgent'
           description: |-
             Secret Agent configuration (optional).
-            Mutually exclusive with secret-agent-name.
+            Mutually exclusive with 'secret-agent-name'.
           type: object
         secret-agent-name:
           description: |-
             Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with secret-agent.
+            Mutually exclusive with 'secret-agent'.
           type: string
         tenant-id:
           description: TenantID is the Azure Active Directory tenant ID for AAD authentication.
@@ -1766,12 +1766,12 @@ components:
           - $ref: '#/components/schemas/dto.SecretAgent'
           description: |-
             Secret Agent configuration (optional).
-            Mutually exclusive with secret-agent-name.
+            Mutually exclusive with 'secret-agent-name'.
           type: object
         secret-agent-name:
           description: |-
             Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with secret-agent.
+            Mutually exclusive with 'secret-agent'.
           type: string
         user:
           description: The username for the cluster authentication.
@@ -1861,12 +1861,12 @@ components:
           - $ref: '#/components/schemas/dto.SecretAgent'
           description: |-
             Secret Agent configuration (optional).
-            Mutually exclusive with secret-agent-name.
+            Mutually exclusive with 'secret-agent-name'.
           type: object
         secret-agent-name:
           description: |-
             Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with secret-agent.
+            Mutually exclusive with 'secret-agent'.
           type: string
       required:
       - bucket-name
@@ -2187,38 +2187,41 @@ components:
           - $ref: '#/components/schemas/dto.AerospikeCluster'
           description: |-
             The details of the Aerospike destination cluster.
-            Mutually exclusive with destination-name.
+            Mutually exclusive with 'destination-name'.
           type: object
         destination-name:
           description: |-
             Link to one of preconfigured clusters.
-            Mutually exclusive with destination.
+            Mutually exclusive with 'destination'.
           type: string
         policy:
-          $ref: '#/components/schemas/dto.RestorePolicy'
+          allOf:
+          - $ref: '#/components/schemas/dto.RestorePolicy'
+          description: Restore policy to use in the operation.
+          type: object
         secret-agent:
           allOf:
           - $ref: '#/components/schemas/dto.SecretAgent'
           description: |-
             Secret Agent configuration (optional).
-            Mutually exclusive with secret-agent-name.
+            Mutually exclusive with 'secret-agent-name'.
           type: object
         secret-agent-name:
           description: |-
             Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with secret-agent.
+            Mutually exclusive with 'secret-agent'.
           type: string
         source:
           allOf:
           - $ref: '#/components/schemas/dto.Storage'
           description: |-
             The details of the storage configuration.
-            Mutually exclusive with source-name.
+            Mutually exclusive with 'source-name'.
           type: object
         source-name:
           description: |-
             Link to one of preconfigured storages.
-            Mutually exclusive with source.
+            Mutually exclusive with 'source'.
           type: string
       required:
       - backup-data-path
@@ -2231,8 +2234,15 @@ components:
         destination:
           allOf:
           - $ref: '#/components/schemas/dto.AerospikeCluster'
-          description: The details of the Aerospike destination cluster.
+          description: |-
+            The details of the Aerospike destination cluster.
+            Mutually exclusive with 'destination-name'.
           type: object
+        destination-name:
+          description: |-
+            Link to one of preconfigured clusters.
+            Mutually exclusive with 'destination'.
+          type: string
         policy:
           allOf:
           - $ref: '#/components/schemas/dto.RestorePolicy'
@@ -2245,8 +2255,27 @@ components:
         secret-agent:
           allOf:
           - $ref: '#/components/schemas/dto.SecretAgent'
-          description: Secret Agent configuration (optional).
+          description: |-
+            Secret Agent configuration (optional).
+            Mutually exclusive with 'secret-agent-name'.
           type: object
+        secret-agent-name:
+          description: |-
+            Secret Agent configuration (optional). Link to one of preconfigured agents.
+            Mutually exclusive with 'secret-agent'.
+          type: string
+        source:
+          allOf:
+          - $ref: '#/components/schemas/dto.Storage'
+          description: |-
+            The details of the storage configuration.
+            Mutually exclusive with 'source-name'.
+          type: object
+        source-name:
+          description: |-
+            Link to one of preconfigured storages.
+            Mutually exclusive with 'source'.
+          type: string
         time:
           description: Required epoch time for recovery. The closest backup before
             the timestamp will be applied.
@@ -2254,7 +2283,6 @@ components:
           format: int64
           type: integer
       required:
-      - destination
       - policy
       - routine
       - time
@@ -2417,12 +2445,12 @@ components:
           - $ref: '#/components/schemas/dto.SecretAgent'
           description: |-
             Secret Agent configuration (optional).
-            Mutually exclusive with secret-agent-name.
+            Mutually exclusive with 'secret-agent-name'.
           type: object
         secret-agent-name:
           description: |-
             Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with secret-agent.
+            Mutually exclusive with 'secret-agent'.
           type: string
       required:
       - bucket

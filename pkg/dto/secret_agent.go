@@ -11,10 +11,10 @@ import (
 // It is intended to be embedded into DTOs that require Secret Agent configuration.
 type SecretAgentConfig struct {
 	// Secret Agent configuration (optional).
-	// Mutually exclusive with secret-agent-name.
+	// Mutually exclusive with 'secret-agent-name'.
 	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 	// Secret Agent configuration (optional). Link to one of preconfigured agents.
-	// Mutually exclusive with secret-agent.
+	// Mutually exclusive with 'secret-agent'.
 	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
 }
 
