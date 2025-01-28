@@ -30,5 +30,5 @@ func errValidationNotFound(field, value string) error {
 }
 
 func errValidationNonPositive[T ~int | ~int8 | ~int16 | ~int32 | ~int64](field string, value T) error {
-	return fmt.Errorf("%w: %q %d invalid, should be positive", errNonPositive, field, value)
+	return fmt.Errorf("%w: %q %d invalid, should be positive number", errNonPositive, field, value)
 }
