@@ -116,15 +116,19 @@ var jsonExamples = map[string]any{
 		}},
 	},
 	"RestoreFullRequest": dto.RestoreRequest{
-		DestinationCluster: &cluster,
+		DestinationClusterConfig: dto.DestinationClusterConfig{
+			Cluster: &cluster,
+		},
 		Policy: &dto.RestorePolicy{
 			NoGeneration: util.Ptr(true),
 		},
-		SourceStorage: &dto.Storage{
-			S3Storage: &dto.S3Storage{
-				Bucket:   "as-backup-bucket",
-				Path:     "backups",
-				S3Region: "eu-central-1",
+		StorageConfig: dto.StorageConfig{
+			Storage: &dto.Storage{
+				S3Storage: &dto.S3Storage{
+					Bucket:   "as-backup-bucket",
+					Path:     "backups",
+					S3Region: "eu-central-1",
+				},
 			},
 		},
 		BackupDataPath: "routine1/backup/1704110400000/source-ns1",

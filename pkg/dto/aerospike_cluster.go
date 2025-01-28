@@ -203,7 +203,7 @@ func (c *Credentials) Validate() error {
 	}
 
 	if c.Password != nil && c.PasswordPath != nil {
-		return fmt.Errorf("password and password-path are mutually exclusive")
+		return errValidationMutuallyExclusive("password", "password-path")
 	}
 
 	if c.AuthMode != nil &&

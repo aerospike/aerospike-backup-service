@@ -119,7 +119,7 @@ func (f *FileLoggerConfig) Validate() error {
 		return nil
 	}
 	if f.Filename == "" {
-		return emptyFieldValidationError("logger file")
+		return errValidationEmptyField("logger file")
 	}
 	if f.MaxSize < 0 {
 		return fmt.Errorf("negative logger MaxSize: %d", f.MaxSize)

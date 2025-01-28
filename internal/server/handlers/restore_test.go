@@ -21,15 +21,19 @@ func testConfigRestorePolicy() *dto.RestorePolicy {
 }
 
 func testRestoreRequest() dto.RestoreRequest {
-	cluster := testConfigCluster()
+	cluster := dto.DestinationClusterConfig{
+		Cluster: testConfigCluster(),
+	}
 	policy := testConfigRestorePolicy()
-	storage := testConfigStorage()
+	storage := dto.StorageConfig{
+		Storage: testConfigStorage(),
+	}
 	return dto.RestoreRequest{
-		DestinationCluster: cluster,
-		Policy:             policy,
-		SourceStorage:      storage,
-		SecretAgent:        nil,
-		BackupDataPath:     testDir,
+		DestinationClusterConfig: cluster,
+		Policy:                   policy,
+		StorageConfig:            storage,
+		SecretAgentConfig:        nil,
+		BackupDataPath:           testDir,
 	}
 }
 

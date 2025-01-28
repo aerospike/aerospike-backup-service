@@ -42,8 +42,7 @@ func TestMutuallyExclusive(t *testing.T) {
 	}
 
 	err := config.validate()
-	assert.Error(t, err)
-	assert.EqualError(t, err, "secret-agent-name and secret-agent are mutually exclusive")
+	assert.ErrorIs(t, err, errMutuallyExclusive)
 }
 
 func TestInvalidSecretAgent(t *testing.T) {

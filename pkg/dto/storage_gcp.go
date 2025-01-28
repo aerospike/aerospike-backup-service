@@ -29,7 +29,7 @@ func (s *GcpStorage) Validate() error {
 		return errors.New("GCP bucket name is not specified")
 	}
 	if s.KeyFile != "" && s.Key != "" {
-		return errors.New("key-file-path and key-json are mutually exclusive")
+		return errValidationMutuallyExclusive("key-file-path", "key-json")
 	}
 	return nil
 }

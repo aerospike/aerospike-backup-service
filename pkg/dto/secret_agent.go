@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -21,7 +20,7 @@ type SecretAgentConfig struct {
 
 func (c SecretAgentConfig) validate() error {
 	if c.SecretAgent != nil && c.SecretAgentName != nil {
-		return errors.New("secret-agent-name and secret-agent are mutually exclusive")
+		return errValidationMutuallyExclusive("secret-agent-name", "secret-agent")
 	}
 	if err := c.SecretAgent.validate(); err != nil {
 		return fmt.Errorf("secret-agent validation error: %w", err)
@@ -31,6 +30,10 @@ func (c SecretAgentConfig) validate() error {
 }
 
 func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, error) {
+	if c == nil { // secret agent is optional
+		return nil, nil
+	}
+
 	if c.SecretAgent != nil {
 		return c.SecretAgent.ToModel(), nil
 	}
@@ -114,7 +117,7 @@ func (s *SecretAgent) fromModel(m *model.SecretAgent) {
 	s.IsBase64 = m.IsBase64
 }
 
-// validate validates the SecretAgentConfig.
+// validate validates the SecretAgent.
 func (s *SecretAgent) validate() error {
 	if s == nil {
 		return nil

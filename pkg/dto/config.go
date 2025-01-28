@@ -75,7 +75,7 @@ func NewConfigFromReader(r io.Reader, format SerializationFormat) (*Config, erro
 func (c *Config) validate() error {
 	for name, routine := range c.BackupRoutines {
 		if name == "" {
-			return emptyFieldValidationError("routine name")
+			return errValidationEmptyField("routine name")
 		}
 		if err := routine.Validate(); err != nil {
 			return fmt.Errorf("backup routine '%s' validation error: %w", name, err)
@@ -84,7 +84,7 @@ func (c *Config) validate() error {
 
 	for name, storage := range c.Storage {
 		if name == "" {
-			return emptyFieldValidationError("storage name")
+			return errValidationEmptyField("storage name")
 		}
 		if err := storage.Validate(); err != nil {
 			return fmt.Errorf("storage '%s' validation error: %w", name, err)
@@ -93,7 +93,7 @@ func (c *Config) validate() error {
 
 	for name, cluster := range c.AerospikeClusters {
 		if name == "" {
-			return emptyFieldValidationError("cluster name")
+			return errValidationEmptyField("cluster name")
 		}
 		if err := cluster.Validate(); err != nil {
 			return fmt.Errorf("cluster '%s' validation error: %w", name, err)
@@ -102,7 +102,7 @@ func (c *Config) validate() error {
 
 	for name, policy := range c.BackupPolicies {
 		if name == "" {
-			return emptyFieldValidationError("policy name")
+			return errValidationEmptyField("policy name")
 		}
 		if err := policy.Validate(); err != nil {
 			return fmt.Errorf("policy '%s' validation error: %w", name, err)
@@ -111,7 +111,7 @@ func (c *Config) validate() error {
 
 	for name, agent := range c.SecretAgents {
 		if name == "" {
-			return emptyFieldValidationError("secret agent name")
+			return errValidationEmptyField("secret agent name")
 		}
 		if err := agent.validate(); err != nil {
 			return fmt.Errorf("secret agent '%s' validation error: %w", name, err)
@@ -187,12 +187,4 @@ func (c *Config) ToModel(nsValidator aerospike.NamespaceValidator) (*model.Confi
 	}
 
 	return modelConfig, nil
-}
-
-func emptyFieldValidationError(field string) error {
-	return fmt.Errorf("empty %s is not allowed", field)
-}
-
-func notFoundValidationError(field string, value string) error {
-	return fmt.Errorf("%s '%s' not found", field, value)
 }
