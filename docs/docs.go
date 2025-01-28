@@ -2515,8 +2515,7 @@ const docTemplate = `{
             "description": "RestoreRequest represents a restore operation request.",
             "type": "object",
             "required": [
-                "backup-data-path",
-                "policy"
+                "backup-data-path"
             ],
             "properties": {
                 "backup-data-path": {
@@ -2573,7 +2572,6 @@ const docTemplate = `{
             "description": "RestoreTimestampRequest represents a restore by timestamp operation request.",
             "type": "object",
             "required": [
-                "policy",
                 "routine",
                 "time"
             ],

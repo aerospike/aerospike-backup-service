@@ -2225,7 +2225,6 @@ components:
           type: string
       required:
       - backup-data-path
-      - policy
       type: object
     dto.RestoreTimestampRequest:
       description: RestoreTimestampRequest represents a restore by timestamp operation
@@ -2283,7 +2282,6 @@ components:
           format: int64
           type: integer
       required:
-      - policy
       - routine
       - time
       type: object

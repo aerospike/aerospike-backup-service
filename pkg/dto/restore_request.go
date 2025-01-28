@@ -11,11 +11,11 @@ import (
 // RestoreRequest represents a restore operation request from custom storage
 // @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
-	DestinationClusterConfig `yaml:",inline"`
-	*SecretAgentConfig       `yaml:",inline"`
-	StorageConfig            `yaml:",inline"`
+	DestinationClusterConfig
+	*SecretAgentConfig
+	StorageConfig
 	// Restore policy to use in the operation.
-	Policy *RestorePolicy `json:"policy,omitempty" validate:"required"`
+	Policy *RestorePolicy `json:"policy"`
 	// Path to the data from storage root.
 	BackupDataPath string `json:"backup-data-path" validate:"required"`
 }
@@ -23,11 +23,11 @@ type RestoreRequest struct {
 // RestoreTimestampRequest represents a restore by timestamp operation request.
 // @Description RestoreTimestampRequest represents a restore by timestamp operation request.
 type RestoreTimestampRequest struct {
-	DestinationClusterConfig `yaml:",inline"`
-	*SecretAgentConfig       `yaml:",inline"`
-	StorageConfig            `yaml:",inline"`
+	DestinationClusterConfig
+	*SecretAgentConfig
+	StorageConfig
 	// Restore policy to use in the operation.
-	Policy *RestorePolicy `json:"policy,omitempty" validate:"required"`
+	Policy *RestorePolicy `json:"policy"`
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
 	Time int64 `json:"time,omitempty" format:"int64" example:"1739538000000" validate:"required"`
 	// The backup routine name.
@@ -67,7 +67,7 @@ func (r *RestoreTimestampRequest) Validate() error {
 		return errors.New("restore point in time should be positive")
 	}
 	if r.Routine == "" {
-		return errValidationEmptyField(r.Routine)
+		return errValidationEmptyField("routine")
 	}
 
 	return nil

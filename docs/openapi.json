@@ -2691,7 +2691,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "backup-data-path", "policy" ],
+        "required" : [ "backup-data-path" ],
         "type" : "object"
       },
       "dto.RestoreTimestampRequest" : {
@@ -2749,7 +2749,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "policy", "routine", "time" ],
+        "required" : [ "routine", "time" ],
         "type" : "object"
       },
       "dto.RetentionPolicy" : {

@@ -73,7 +73,7 @@ type RestorePolicy struct {
 // Validate validates the restore policy.
 func (p *RestorePolicy) Validate() error {
 	if p == nil {
-		return fmt.Errorf("restore policy is not specified")
+		return nil
 	}
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
@@ -123,7 +123,7 @@ func (p *RestorePolicy) Validate() error {
 
 func (p *RestorePolicy) ToModel() *model.RestorePolicy {
 	if p == nil {
-		return nil
+		return &model.RestorePolicy{}
 	}
 
 	return &model.RestorePolicy{
