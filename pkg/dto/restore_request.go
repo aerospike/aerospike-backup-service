@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -29,15 +28,15 @@ type RestoreTimestampRequest struct {
 	// Restore policy to use in the operation.
 	Policy *RestorePolicy `json:"policy"`
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
-	Time int64 `json:"time,omitempty" format:"int64" example:"1739538000000" validate:"required"`
+	Time int64 `json:"time" format:"int64" example:"1739538000000" validate:"required"`
 	// The backup routine name.
-	Routine string `json:"routine,omitempty" example:"daily" validate:"required"`
+	Routine string `json:"routine" example:"daily" validate:"required"`
 }
 
 // Validate validates the restore operation request.
 func (r *RestoreRequest) Validate() error {
 	if len(r.BackupDataPath) == 0 {
-		return errors.New("path is not specified")
+		return errValidationEmptyField("backup-data-path")
 	}
 	if err := r.DestinationClusterConfig.Validate(); err != nil {
 		return err
@@ -64,7 +63,7 @@ func (r *RestoreTimestampRequest) Validate() error {
 		return err
 	}
 	if r.Time <= 0 {
-		return errors.New("restore point in time should be positive")
+		return errValidationNonPositive("time", r.Time)
 	}
 	if r.Routine == "" {
 		return errValidationEmptyField("routine")
@@ -133,7 +132,7 @@ type DestinationClusterConfig struct {
 
 func (c *DestinationClusterConfig) Validate() error {
 	if c.Cluster == nil && c.Name == nil {
-		return errValidationRequiredField("destination", "destination-name")
+		return errValidationRequiredEither("destination", "destination-name")
 	}
 	if c.Cluster != nil && c.Name != nil {
 		return errValidationMutuallyExclusive("destination", "destination-name")
@@ -172,7 +171,7 @@ type StorageConfig struct {
 
 func (c *StorageConfig) Validate() error {
 	if c.Storage == nil && c.Name == nil {
-		return errValidationRequiredField("source", "source-name")
+		return errValidationRequiredEither("source", "source-name")
 	}
 	if c.Storage != nil && c.Name != nil {
 		return errValidationMutuallyExclusive("source", "source-name")

@@ -29,7 +29,7 @@ func (r *RetryPolicy) Validate() error {
 	}
 
 	if r.BaseTimeout <= 0 {
-		return fmt.Errorf("base-timeout %d invalid, should be positive number", r.BaseTimeout)
+		return errValidationNonPositive("base-timeout", r.BaseTimeout)
 	}
 
 	if r.Multiplier < 1 {

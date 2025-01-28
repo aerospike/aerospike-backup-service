@@ -69,7 +69,7 @@ func (p *BackupPolicy) Validate() error {
 		return errors.New("backup policy is not specified")
 	}
 	if p.Parallel != nil && *p.Parallel <= 0 {
-		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
+		return errValidationNonPositive("parallel", *p.Parallel)
 	}
 	if p.SocketTimeout != nil && *p.SocketTimeout < 0 {
 		return fmt.Errorf("socketTimeout %d invalid, should not be negative number", *p.SocketTimeout)
@@ -81,10 +81,10 @@ func (p *BackupPolicy) Validate() error {
 		return fmt.Errorf("retryPolicy validation failed: %w", err)
 	}
 	if p.Bandwidth != nil && *p.Bandwidth <= 0 {
-		return fmt.Errorf("bandwidth %d invalid, should be positive number", *p.Bandwidth)
+		return errValidationNonPositive("bandwidth", *p.Bandwidth)
 	}
 	if p.RecordsPerSecond != nil && *p.RecordsPerSecond <= 0 {
-		return fmt.Errorf("recordsPerSecond %d invalid, should be positive number", *p.RecordsPerSecond)
+		return errValidationNonPositive("records-per-second", *p.RecordsPerSecond)
 	}
 	if p.FileLimit != nil && *p.FileLimit < 0 {
 		return fmt.Errorf("fileLimit %d invalid, should not be negative number", *p.FileLimit)
