@@ -14,7 +14,8 @@ type RestoreRequest struct {
 	DestinationClusterConfig `yaml:",inline"`
 	*SecretAgentConfig       `yaml:",inline"`
 	StorageConfig            `yaml:",inline"`
-	Policy                   *RestorePolicy `json:"policy,omitempty" validate:"required"`
+	// Restore policy to use in the operation.
+	Policy *RestorePolicy `json:"policy,omitempty" validate:"required"`
 	// Path to the data from storage root.
 	BackupDataPath string `json:"backup-data-path" validate:"required"`
 }
@@ -22,12 +23,11 @@ type RestoreRequest struct {
 // RestoreTimestampRequest represents a restore by timestamp operation request.
 // @Description RestoreTimestampRequest represents a restore by timestamp operation request.
 type RestoreTimestampRequest struct {
-	// The details of the Aerospike destination cluster.
-	DestinationCluster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
+	DestinationClusterConfig `yaml:",inline"`
+	*SecretAgentConfig       `yaml:",inline"`
+	StorageConfig            `yaml:",inline"`
 	// Restore policy to use in the operation.
 	Policy *RestorePolicy `json:"policy,omitempty" validate:"required"`
-	// Secret Agent configuration (optional).
-	SecretAgent *SecretAgent `json:"secret-agent,omitempty"`
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
 	Time int64 `json:"time,omitempty" format:"int64" example:"1739538000000" validate:"required"`
 	// The backup routine name.
@@ -57,7 +57,7 @@ func (r *RestoreRequest) Validate() error {
 
 // Validate validates the restore operation request.
 func (r *RestoreTimestampRequest) Validate() error {
-	if err := r.DestinationCluster.Validate(); err != nil {
+	if err := r.DestinationClusterConfig.Validate(); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
@@ -74,7 +74,7 @@ func (r *RestoreTimestampRequest) Validate() error {
 }
 
 func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
-	cluster, err := r.DestinationCluster.ToModel(config)
+	cluster, err := r.DestinationClusterConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid cluster: %w", err)
 	}
@@ -82,10 +82,15 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 		return nil, errValidationNotFound("routine", r.Routine)
 	}
 
+	secretAgent, err := r.SecretAgentConfig.ToModel(config)
+	if err != nil {
+		return nil, fmt.Errorf("invalid secret agent: %w", err)
+	}
+
 	return &model.RestoreTimestampRequest{
 		DestinationCluster: cluster,
 		Policy:             r.Policy.ToModel(),
-		SecretAgent:        r.SecretAgent.ToModel(),
+		SecretAgent:        secretAgent,
 		Time:               time.UnixMilli(r.Time),
 		RoutineName:        r.Routine,
 	}, nil

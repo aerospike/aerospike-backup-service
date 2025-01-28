@@ -38,14 +38,16 @@ func testRestoreRequest() dto.RestoreRequest {
 }
 
 func testRestoreTimestampRequest() dto.RestoreTimestampRequest {
-	cluster := testConfigCluster()
+	cluster := dto.DestinationClusterConfig{
+		Cluster: testConfigCluster(),
+	}
 	policy := testConfigRestorePolicy()
 	return dto.RestoreTimestampRequest{
-		DestinationCluster: cluster,
-		Policy:             policy,
-		SecretAgent:        nil,
-		Time:               time.Now().Unix(),
-		Routine:            testRoutine,
+		DestinationClusterConfig: cluster,
+		Policy:                   policy,
+		SecretAgentConfig:        nil,
+		Time:                     time.Now().Unix(),
+		Routine:                  testRoutine,
 	}
 }
 

@@ -134,7 +134,9 @@ var jsonExamples = map[string]any{
 		BackupDataPath: "routine1/backup/1704110400000/source-ns1",
 	},
 	"RestoreTimestampRequest": dto.RestoreTimestampRequest{
-		DestinationCluster: &cluster,
+		DestinationClusterConfig: dto.DestinationClusterConfig{
+			Cluster: &cluster,
+		},
 		Policy: &dto.RestorePolicy{
 			NoGeneration: util.Ptr(true),
 		},
