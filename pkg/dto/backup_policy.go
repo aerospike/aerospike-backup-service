@@ -72,10 +72,10 @@ func (p *BackupPolicy) Validate() error {
 		return errValidationNonPositive("parallel", *p.Parallel)
 	}
 	if p.SocketTimeout != nil && *p.SocketTimeout < 0 {
-		return fmt.Errorf("socketTimeout %d invalid, should not be negative number", *p.SocketTimeout)
+		return errValidationNegative("socket-timeout", *p.SocketTimeout)
 	}
 	if p.TotalTimeout != nil && *p.TotalTimeout < 0 {
-		return fmt.Errorf("totalTimeout %d invalid, should not be negative number", *p.TotalTimeout)
+		return errValidationNegative("total-timeout", *p.TotalTimeout)
 	}
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retryPolicy validation failed: %w", err)
@@ -87,7 +87,7 @@ func (p *BackupPolicy) Validate() error {
 		return errValidationNonPositive("records-per-second", *p.RecordsPerSecond)
 	}
 	if p.FileLimit != nil && *p.FileLimit < 0 {
-		return fmt.Errorf("fileLimit %d invalid, should not be negative number", *p.FileLimit)
+		return errValidationNegative("file-limit", *p.FileLimit)
 	}
 	if err := p.RetentionPolicy.Validate(); err != nil {
 		return fmt.Errorf("invalid retention policy: %w", err)
@@ -196,7 +196,7 @@ func (rp *RetentionPolicy) Validate() error {
 
 	if rp.IncrBackups != nil {
 		if *rp.IncrBackups < 0 {
-			return fmt.Errorf("incremental backups retention %d is invalid, cannot be negative", *rp.IncrBackups)
+			return errValidationNegative("incremental", *rp.IncrBackups)
 		}
 		if rp.FullBackups != nil && *rp.IncrBackups > *rp.FullBackups {
 			return fmt.Errorf("incremental backups retention %d cannot exceed full backups retention %d",

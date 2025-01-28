@@ -122,13 +122,13 @@ func (f *FileLoggerConfig) Validate() error {
 		return errValidationEmptyField("logger file")
 	}
 	if f.MaxSize < 0 {
-		return fmt.Errorf("negative logger MaxSize: %d", f.MaxSize)
+		return errValidationNegative("maxsize", f.MaxSize)
 	}
 	if f.MaxAge < 0 {
-		return fmt.Errorf("negative logger MaxAge: %d", f.MaxAge)
+		return errValidationNegative("maxage", f.MaxAge)
 	}
 	if f.MaxBackups < 0 {
-		return fmt.Errorf("negative logger MaxBackups: %d", f.MaxBackups)
+		return errValidationNegative("maxbackups", f.MaxBackups)
 	}
 
 	return nil

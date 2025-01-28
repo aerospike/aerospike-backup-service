@@ -67,9 +67,9 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
 	}
-	for _, rack := range r.PreferRacks {
+	for i, rack := range r.PreferRacks {
 		if rack < 0 {
-			return fmt.Errorf("rack id %d invalid, should be positive number", rack)
+			return errValidationNegative(fmt.Sprintf("prefer-racks[%d]", i), rack)
 		}
 		if rack > maxRack {
 			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)

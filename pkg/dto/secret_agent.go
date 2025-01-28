@@ -59,7 +59,7 @@ type SecretAgent struct {
 	// Connection type: tcp, unix.
 	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp"`
 	// Address of the Secret Agent.
-	Address string `yaml:"address,omitempty" json:"address,omitempty" example:"localhost"`
+	Address string `yaml:"address" json:"address" example:"localhost" validate:"required"`
 	// Port the Secret Agent is running on.
 	Port *int `yaml:"port,omitempty" json:"port,omitempty" example:"8080"`
 	// Timeout in milliseconds.
@@ -124,11 +124,11 @@ func (s *SecretAgent) validate() error {
 	}
 
 	if s.Address == "" {
-		return fmt.Errorf("address is required")
+		return errValidationEmptyField("address")
 	}
 
-	if s.Timeout != nil && *s.Timeout <= 0 {
-		return fmt.Errorf("invalid timeout: %d", *s.Timeout)
+	if s.Timeout != nil && *s.Timeout < 0 {
+		return errValidationNegative("timeout", *s.Timeout)
 	}
 
 	if s.ConnectionType != saClient.ConnectionTypeTCP && s.ConnectionType != saClient.ConnectionTypeUDS {

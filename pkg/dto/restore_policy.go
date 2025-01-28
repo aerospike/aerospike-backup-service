@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -97,12 +96,12 @@ func (p *RestorePolicy) Validate() error {
 		return errValidationNonPositive("tps", *p.Tps)
 	}
 	if p.Replace != nil && *p.Replace && p.Unique != nil && *p.Unique {
-		return errors.New("replace and unique options are contradictory")
+		return errValidationMutuallyExclusive("replace", "unique")
 	}
 
 	if p.Namespace != nil { // namespace is optional.
 		if err := p.Namespace.Validate(); err != nil {
-			return err
+			return fmt.Errorf("restore namespace invalid: %w", err)
 		}
 	}
 	if err := p.EncryptionPolicy.Validate(); err != nil {

@@ -37,7 +37,7 @@ func (r *RetryPolicy) Validate() error {
 	}
 
 	if r.MaxRetries < 0 {
-		return fmt.Errorf("max-retries %d invalid, should be non-negative number", r.MaxRetries)
+		return errValidationNegative("max-retries", r.MaxRetries)
 	}
 
 	return nil
