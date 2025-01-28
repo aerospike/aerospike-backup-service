@@ -51,7 +51,7 @@ type BackupRoutine struct {
 // Validate validates the backup routine configuration.
 func (r *BackupRoutine) Validate() error {
 	if r.BackupPolicy == "" {
-		return errValidationEmptyField("backup policy")
+		return errValidationEmptyField("backup-policy")
 	}
 	if r.SourceCluster == "" {
 		return errValidationEmptyField("source-cluster")

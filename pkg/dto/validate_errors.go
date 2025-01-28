@@ -19,7 +19,7 @@ func errValidationMutuallyExclusive(field1, field2 string) error {
 }
 
 func errValidationEmptyField(field string) error {
-	return fmt.Errorf("%w: %q cannot be empty", errEmpty, field)
+	return fmt.Errorf("%w: %q required", errEmpty, field)
 }
 
 func errValidationNotFound(field, value string) error {
