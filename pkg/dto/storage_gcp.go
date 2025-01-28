@@ -35,7 +35,7 @@ func (s *GcpStorage) Validate() error {
 }
 
 func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
-	agent, err := config.ResolveSecretAgent(s.SecretAgentName, s.SecretAgent.ToModel())
+	agent, err := s.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, err
 	}

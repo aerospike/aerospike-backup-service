@@ -11,10 +11,10 @@ import (
 // RestoreRequest represents a restore operation request from custom storage
 // @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
-	DestinationCluster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
-	Policy             *RestorePolicy    `json:"policy,omitempty" validate:"required"`
-	SourceStorage      *Storage          `json:"source,omitempty" validate:"required"`
-	SecretAgent        *SecretAgent      `json:"secret-agent,omitempty"`
+	DestinationClusterConfig `yaml:",inline"`
+	SecretAgentConfig        `yaml:",inline"`
+	StorageConfig            `yaml:",inline"`
+	Policy                   *RestorePolicy `json:"policy,omitempty" validate:"required"`
 	// Path to the data from storage root.
 	BackupDataPath string `json:"backup-data-path" validate:"required"`
 }
@@ -39,13 +39,13 @@ func (r *RestoreRequest) Validate() error {
 	if len(r.BackupDataPath) == 0 {
 		return errors.New("path is not specified")
 	}
-	if err := r.DestinationCluster.Validate(); err != nil {
+	if err := r.DestinationClusterConfig.Validate(); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
-	if err := r.SourceStorage.Validate(); err != nil {
+	if err := r.StorageConfig.Validate(); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
@@ -92,12 +92,12 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 }
 
 func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, error) {
-	cluster, err := r.DestinationCluster.ToModel(config)
+	cluster, err := r.DestinationClusterConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid cluster: %w", err)
 	}
 
-	storage, err := r.SourceStorage.ToModel(config)
+	storage, err := r.StorageConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage: %w", err)
 	}
@@ -109,4 +109,80 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 		SecretAgent:        r.SecretAgent.ToModel(),
 		BackupDataPath:     r.BackupDataPath,
 	}, nil
+}
+
+// DestinationClusterConfig aggregates the destination cluster configuration.
+type DestinationClusterConfig struct {
+	// The details of the Aerospike destination cluster.
+	// Mutually exclusive with destination-name.
+	Cluster *AerospikeCluster `json:"destination,omitempty"`
+	// Link to one of preconfigured clusters.
+	// Mutually exclusive with destination.
+	Name *string `json:"destination-name,omitempty"`
+}
+
+func (c *DestinationClusterConfig) Validate() error {
+	if c.Cluster == nil && c.Name == nil {
+		return errors.New("must specify either `destination` or `destination-name`")
+	}
+	if c.Cluster != nil && c.Name != nil {
+		return errors.New("`destination` and `destination-name` are mutually exclusive")
+	}
+	if c.Cluster != nil {
+		if err := c.Cluster.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.AerospikeCluster, error) {
+	if c.Cluster != nil {
+		return c.Cluster.ToModel(config)
+	}
+
+	configCluster, exists := config.BackupConfigCopy().AerospikeClusters[*c.Name]
+	if !exists {
+		return nil, notFoundValidationError("cluster", *c.Name)
+	}
+
+	return configCluster, nil
+}
+
+// StorageConfig aggregates the storage configuration.
+type StorageConfig struct {
+	// The details of the storage configuration.
+	// Mutually exclusive with source-name.
+	Storage *Storage `json:"source,omitempty"`
+	// Link to one of preconfigured storages.
+	// Mutually exclusive with source.
+	Name *string `json:"source-name,omitempty"`
+}
+
+func (c *StorageConfig) Validate() error {
+	if c.Storage == nil && c.Name == nil {
+		return errors.New("must specify either `source` or `source-name`")
+	}
+	if c.Storage != nil && c.Name != nil {
+		return errors.New("`source` and `source-name` are mutually exclusive")
+	}
+	if c.Storage != nil {
+		if err := c.Storage.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *StorageConfig) ToModel(config *model.Config) (model.Storage, error) {
+	if c.Storage != nil {
+		return c.Storage.ToModel(config)
+	}
+
+	configStorage, exists := config.BackupConfigCopy().Storage[*c.Name]
+	if !exists {
+		return nil, notFoundValidationError("storage", *c.Name)
+	}
+	return configStorage, nil
 }

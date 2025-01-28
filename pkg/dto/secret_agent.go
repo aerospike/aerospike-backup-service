@@ -30,6 +30,22 @@ func (c SecretAgentConfig) validate() error {
 	return nil
 }
 
+func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, error) {
+	if c.SecretAgent != nil {
+		return c.SecretAgent.ToModel(), nil
+	}
+
+	if c.SecretAgentName != nil {
+		agent, exists := config.BackupConfigCopy().SecretAgents[*c.SecretAgentName]
+		if !exists {
+			return nil, fmt.Errorf("unknown secret agent %q", *c.SecretAgentName)
+		}
+		return agent, nil
+	}
+
+	return nil, nil
+}
+
 // SecretAgent represents the configuration of an Aerospike Secret Agent
 // for a backup/restore operation.
 // Aerospike Secret Agent acts as a proxy layer between Aerospike server and one or more

@@ -2516,9 +2516,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "backup-data-path",
-                "destination",
-                "policy",
-                "source"
+                "policy"
             ],
             "properties": {
                 "backup-data-path": {
@@ -2526,16 +2524,43 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "destination": {
-                    "$ref": "#/definitions/dto.AerospikeCluster"
+                    "description": "The details of the Aerospike destination cluster.\nMutually exclusive with destination-name.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.AerospikeCluster"
+                        }
+                    ]
+                },
+                "destination-name": {
+                    "description": "Link to one of preconfigured clusters.\nMutually exclusive with destination.",
+                    "type": "string"
                 },
                 "policy": {
                     "$ref": "#/definitions/dto.RestorePolicy"
                 },
                 "secret-agent": {
-                    "$ref": "#/definitions/dto.SecretAgent"
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    ]
+                },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+                    "type": "string"
                 },
                 "source": {
-                    "$ref": "#/definitions/dto.Storage"
+                    "description": "The details of the storage configuration.\nMutually exclusive with source-name.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.Storage"
+                        }
+                    ]
+                },
+                "source-name": {
+                    "description": "Link to one of preconfigured storages.\nMutually exclusive with source.",
+                    "type": "string"
                 }
             }
         },
@@ -2618,7 +2643,7 @@ const docTemplate = `{
             }
         },
         "dto.RoutineState": {
-            "description": "RoutineState represent the current state of backups (full and incremental)",
+            "description": "RoutineState represent the current state of backups (full and incremental).",
             "type": "object",
             "properties": {
                 "full": {

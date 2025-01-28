@@ -221,7 +221,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 		return nil, nil
 	}
 
-	agent, err := config.ResolveSecretAgent(c.SecretAgentName, c.SecretAgent.ToModel())
+	agent, err := c.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, err
 	}

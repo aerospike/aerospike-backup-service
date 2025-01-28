@@ -2183,18 +2183,46 @@ components:
           description: Path to the data from storage root.
           type: string
         destination:
-          $ref: '#/components/schemas/dto.AerospikeCluster'
+          allOf:
+          - $ref: '#/components/schemas/dto.AerospikeCluster'
+          description: |-
+            The details of the Aerospike destination cluster.
+            Mutually exclusive with destination-name.
+          type: object
+        destination-name:
+          description: |-
+            Link to one of preconfigured clusters.
+            Mutually exclusive with destination.
+          type: string
         policy:
           $ref: '#/components/schemas/dto.RestorePolicy'
         secret-agent:
-          $ref: '#/components/schemas/dto.SecretAgent'
+          allOf:
+          - $ref: '#/components/schemas/dto.SecretAgent'
+          description: |-
+            Secret Agent configuration (optional).
+            Mutually exclusive with secret-agent-name.
+          type: object
+        secret-agent-name:
+          description: |-
+            Secret Agent configuration (optional). Link to one of preconfigured agents.
+            Mutually exclusive with secret-agent.
+          type: string
         source:
-          $ref: '#/components/schemas/dto.Storage'
+          allOf:
+          - $ref: '#/components/schemas/dto.Storage'
+          description: |-
+            The details of the storage configuration.
+            Mutually exclusive with source-name.
+          type: object
+        source-name:
+          description: |-
+            Link to one of preconfigured storages.
+            Mutually exclusive with source.
+          type: string
       required:
       - backup-data-path
-      - destination
       - policy
-      - source
       type: object
     dto.RestoreTimestampRequest:
       description: RestoreTimestampRequest represents a restore by timestamp operation
@@ -2269,7 +2297,7 @@ components:
           type: number
       type: object
     dto.RoutineState:
-      description: RoutineState represent the current state of backups (full and incremental)
+      description: RoutineState represent the current state of backups (full and incremental).
       example:
         incremental: "{}"
         last-incremental: last-incremental

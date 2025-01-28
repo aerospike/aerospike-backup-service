@@ -299,22 +299,6 @@ func (c *Config) SetBackupConfig(other *BackupConfig) {
 	c.backupConfig = *other
 }
 
-func (c *Config) ResolveSecretAgent(name *string, defaultAgent *SecretAgent) (*SecretAgent, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	if name != nil {
-		agent, ok := c.backupConfig.SecretAgents[*name]
-		if !ok {
-			return nil, fmt.Errorf("unknown secret agent %q", *name)
-		}
-
-		return agent, nil
-	}
-
-	return defaultAgent, nil
-}
-
 // ToggleRoutineDisabled sets the Disabled field of the BackupRoutine based on the provided state.
 func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
 	c.mu.Lock()

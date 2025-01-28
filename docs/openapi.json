@@ -2651,19 +2651,43 @@
             "type" : "string"
           },
           "destination" : {
-            "$ref" : "#/components/schemas/dto.AerospikeCluster"
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.AerospikeCluster"
+            } ],
+            "description" : "The details of the Aerospike destination cluster.\nMutually exclusive with destination-name.",
+            "type" : "object"
+          },
+          "destination-name" : {
+            "description" : "Link to one of preconfigured clusters.\nMutually exclusive with destination.",
+            "type" : "string"
           },
           "policy" : {
             "$ref" : "#/components/schemas/dto.RestorePolicy"
           },
           "secret-agent" : {
-            "$ref" : "#/components/schemas/dto.SecretAgent"
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.SecretAgent"
+            } ],
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+            "type" : "object"
+          },
+          "secret-agent-name" : {
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+            "type" : "string"
           },
           "source" : {
-            "$ref" : "#/components/schemas/dto.Storage"
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.Storage"
+            } ],
+            "description" : "The details of the storage configuration.\nMutually exclusive with source-name.",
+            "type" : "object"
+          },
+          "source-name" : {
+            "description" : "Link to one of preconfigured storages.\nMutually exclusive with source.",
+            "type" : "string"
           }
         },
-        "required" : [ "backup-data-path", "destination", "policy", "source" ],
+        "required" : [ "backup-data-path", "policy" ],
         "type" : "object"
       },
       "dto.RestoreTimestampRequest" : {
@@ -2737,7 +2761,7 @@
         "type" : "object"
       },
       "dto.RoutineState" : {
-        "description" : "RoutineState represent the current state of backups (full and incremental)",
+        "description" : "RoutineState represent the current state of backups (full and incremental).",
         "properties" : {
           "full" : {
             "allOf" : [ {
