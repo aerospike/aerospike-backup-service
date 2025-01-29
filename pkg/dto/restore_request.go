@@ -121,6 +121,7 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 }
 
 // DestinationClusterConfig aggregates the destination cluster configuration.
+// It is intended to be embedded into DTOs that require Cluster configuration.
 type DestinationClusterConfig struct {
 	// The details of the Aerospike destination cluster.
 	// Mutually exclusive with 'destination-name'.
@@ -160,6 +161,7 @@ func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.Aerospi
 }
 
 // StorageConfig aggregates the storage configuration.
+// It is intended to be embedded into DTOs that require Storage configuration.
 type StorageConfig struct {
 	// The details of the storage configuration.
 	// Mutually exclusive with 'source-name'.
