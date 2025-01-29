@@ -124,17 +124,17 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 type DestinationClusterConfig struct {
 	// The details of the Aerospike destination cluster.
 	// Mutually exclusive with 'destination-name'.
-	Cluster *AerospikeCluster `json:"destination,omitempty"`
+	Cluster *AerospikeCluster `json:"destination"`
 	// Link to one of preconfigured clusters.
 	// Mutually exclusive with 'destination'.
-	Name *string `json:"destination-name,omitempty"`
+	Name string `json:"destination-name"`
 }
 
 func (c *DestinationClusterConfig) Validate() error {
-	if c.Cluster == nil && c.Name == nil {
+	if c.Cluster == nil && c.Name == "" {
 		return errValidationRequiredEither("destination", "destination-name")
 	}
-	if c.Cluster != nil && c.Name != nil {
+	if c.Cluster != nil && c.Name != "" {
 		return errValidationMutuallyExclusive("destination", "destination-name")
 	}
 	if c.Cluster != nil {
@@ -151,9 +151,9 @@ func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.Aerospi
 		return c.Cluster.ToModel(config)
 	}
 
-	configCluster, exists := config.BackupConfigCopy().AerospikeClusters[*c.Name]
+	configCluster, exists := config.BackupConfigCopy().AerospikeClusters[c.Name]
 	if !exists {
-		return nil, errValidationNotFound("cluster", *c.Name)
+		return nil, errValidationNotFound("cluster", c.Name)
 	}
 
 	return configCluster, nil
@@ -163,17 +163,17 @@ func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.Aerospi
 type StorageConfig struct {
 	// The details of the storage configuration.
 	// Mutually exclusive with 'source-name'.
-	Storage *Storage `json:"source,omitempty"`
+	Storage *Storage `json:"source"`
 	// Link to one of preconfigured storages.
 	// Mutually exclusive with 'source'.
-	Name *string `json:"source-name,omitempty"`
+	Name string `json:"source-name"`
 }
 
 func (c *StorageConfig) Validate() error {
-	if c.Storage == nil && c.Name == nil {
+	if c.Storage == nil && c.Name == "" {
 		return errValidationRequiredEither("source", "source-name")
 	}
-	if c.Storage != nil && c.Name != nil {
+	if c.Storage != nil && c.Name != "" {
 		return errValidationMutuallyExclusive("source", "source-name")
 	}
 	if c.Storage != nil {
@@ -190,9 +190,9 @@ func (c *StorageConfig) ToModel(config *model.Config) (model.Storage, error) {
 		return c.Storage.ToModel(config)
 	}
 
-	configStorage, exists := config.BackupConfigCopy().Storage[*c.Name]
+	configStorage, exists := config.BackupConfigCopy().Storage[c.Name]
 	if !exists {
-		return nil, errValidationNotFound("storage", *c.Name)
+		return nil, errValidationNotFound("storage", c.Name)
 	}
 	return configStorage, nil
 }

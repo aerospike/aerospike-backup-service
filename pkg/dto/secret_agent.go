@@ -15,11 +15,11 @@ type SecretAgentConfig struct {
 	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 	// Secret Agent configuration (optional). Link to one of preconfigured agents.
 	// Mutually exclusive with 'secret-agent'.
-	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
+	SecretAgentName string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
 }
 
 func (c SecretAgentConfig) validate() error {
-	if c.SecretAgent != nil && c.SecretAgentName != nil {
+	if c.SecretAgent != nil && c.SecretAgentName != "" {
 		return errValidationMutuallyExclusive("secret-agent-name", "secret-agent")
 	}
 	if err := c.SecretAgent.validate(); err != nil {
@@ -38,10 +38,10 @@ func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, e
 		return c.SecretAgent.ToModel(), nil
 	}
 
-	if c.SecretAgentName != nil {
-		agent, exists := config.BackupConfigCopy().SecretAgents[*c.SecretAgentName]
+	if c.SecretAgentName != "" {
+		agent, exists := config.BackupConfigCopy().SecretAgents[c.SecretAgentName]
 		if !exists {
-			return nil, fmt.Errorf("unknown secret agent %q", *c.SecretAgentName)
+			return nil, fmt.Errorf("unknown secret agent %q", c.SecretAgentName)
 		}
 		return agent, nil
 	}
@@ -89,7 +89,7 @@ func ResolveSecretAgentFromModel(s *model.SecretAgent, config *model.BackupConfi
 	secretAgentName := findKeyByValue(config.SecretAgents, s)
 	if secretAgentName != "" {
 		return SecretAgentConfig{
-			SecretAgentName: &secretAgentName,
+			SecretAgentName: secretAgentName,
 		}
 	}
 

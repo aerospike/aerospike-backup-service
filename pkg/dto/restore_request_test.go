@@ -24,14 +24,14 @@ func TestDestinationClusterConfig_Validate(t *testing.T) {
 			name: "both fields set",
 			config: DestinationClusterConfig{
 				Cluster: &AerospikeCluster{},
-				Name:    util.Ptr("test-cluster"),
+				Name:    "test-cluster",
 			},
 			err: errMutuallyExclusive,
 		},
 		{
 			name: "only name set",
 			config: DestinationClusterConfig{
-				Name: util.Ptr("test-cluster"),
+				Name: "test-cluster",
 			},
 		},
 		{
@@ -72,14 +72,14 @@ func TestStorageConfig_Validate(t *testing.T) {
 			name: "both fields set",
 			storageConfig: StorageConfig{
 				Storage: &Storage{},
-				Name:    util.Ptr("test-storage"),
+				Name:    "test-storage",
 			},
 			err: errMutuallyExclusive,
 		},
 		{
 			name: "only name set",
 			storageConfig: StorageConfig{
-				Name: util.Ptr("test-storage"),
+				Name: "test-storage",
 			},
 		},
 		{
@@ -121,7 +121,7 @@ func TestDestinationClusterConfig_ToModel(t *testing.T) {
 		{
 			name: "convert from name",
 			dstCluster: DestinationClusterConfig{
-				Name: util.Ptr("test-cluster"),
+				Name: "test-cluster",
 			},
 			want: cluster,
 		},
@@ -139,7 +139,7 @@ func TestDestinationClusterConfig_ToModel(t *testing.T) {
 		{
 			name: "non-existent cluster name",
 			dstCluster: DestinationClusterConfig{
-				Name: util.Ptr("non-existent"),
+				Name: "non-existent",
 			},
 			err: errNotFound,
 		},
@@ -227,10 +227,10 @@ func TestRestoreRequest_Validate(t *testing.T) {
 			request: RestoreRequest{
 				BackupDataPath: "test/path",
 				DestinationClusterConfig: DestinationClusterConfig{
-					Name: util.Ptr("test-cluster"),
+					Name: "test-cluster",
 				},
 				StorageConfig: StorageConfig{
-					Name: util.Ptr("test-storage"),
+					Name: "test-storage",
 				},
 				Policy: validPolicy,
 			},
@@ -341,10 +341,10 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 			name: "convert from names",
 			request: RestoreRequest{
 				DestinationClusterConfig: DestinationClusterConfig{
-					Name: &clusterName,
+					Name: clusterName,
 				},
 				StorageConfig: StorageConfig{
-					Name: &storageName,
+					Name: storageName,
 				},
 				BackupDataPath: "test/path",
 				Policy:         &RestorePolicy{},
@@ -382,10 +382,10 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 			name: "non-existent cluster",
 			request: RestoreRequest{
 				DestinationClusterConfig: DestinationClusterConfig{
-					Name: util.Ptr("non-existent"),
+					Name: "non-existent",
 				},
 				StorageConfig: StorageConfig{
-					Name: &storageName,
+					Name: storageName,
 				},
 				BackupDataPath: "test/path",
 			},
@@ -395,10 +395,10 @@ func TestRestoreRequest_ToModel(t *testing.T) {
 			name: "non-existent storage",
 			request: RestoreRequest{
 				DestinationClusterConfig: DestinationClusterConfig{
-					Name: &clusterName,
+					Name: clusterName,
 				},
 				StorageConfig: StorageConfig{
-					Name: util.Ptr("non-existent"),
+					Name: "non-existent",
 				},
 				BackupDataPath: "test/path",
 			},
@@ -440,7 +440,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 			name: "valid conversion",
 			request: RestoreTimestampRequest{
 				DestinationClusterConfig: DestinationClusterConfig{
-					Name: util.Ptr("test-cluster"),
+					Name: "test-cluster",
 				},
 				Time:    1739538000000,
 				Routine: "daily",
@@ -457,7 +457,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 			name: "non-existent cluster",
 			request: RestoreTimestampRequest{
 				DestinationClusterConfig: DestinationClusterConfig{
-					Name: util.Ptr("non-existent"),
+					Name: "non-existent",
 				},
 				Time:    1739538000000,
 				Routine: "daily",
@@ -468,7 +468,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 			name: "non-existent routine",
 			request: RestoreTimestampRequest{
 				DestinationClusterConfig: DestinationClusterConfig{
-					Name: util.Ptr("test-cluster"),
+					Name: "test-cluster",
 				},
 				Time:    1739538000000,
 				Routine: "non-existent",

@@ -26,7 +26,7 @@ func TestValidSecretAgentName(t *testing.T) {
 	agentName := "predefined-agent"
 
 	config := SecretAgentConfig{
-		SecretAgentName: &agentName,
+		SecretAgentName: agentName,
 	}
 
 	err := config.validate()
@@ -37,7 +37,7 @@ func TestMutuallyExclusive(t *testing.T) {
 	agentName := "predefined-agent"
 	config := SecretAgentConfig{
 		SecretAgent:     &SecretAgent{},
-		SecretAgentName: &agentName,
+		SecretAgentName: agentName,
 	}
 
 	err := config.validate()
