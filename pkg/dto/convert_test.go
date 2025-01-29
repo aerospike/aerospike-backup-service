@@ -12,7 +12,7 @@ import (
 )
 
 var secretAgentConfig = SecretAgentConfig{
-	SecretAgentName: util.Ptr("agent1"),
+	SecretAgentName: "agent1",
 }
 
 var originalConfig = &Config{

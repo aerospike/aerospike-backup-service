@@ -2,7 +2,6 @@ package dto
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -34,12 +33,12 @@ func (t *TimeBounds) ToModel() model.TimeBounds {
 // NewTimeBoundsFromString creates a TimeBounds from the string representation of
 // time boundaries (string is given as epoch time millis).
 func NewTimeBoundsFromString(from, to string) (TimeBounds, error) {
-	fromTime, err := parseTimestamp(from)
+	fromTime, err := parseTimestamp(from, "from")
 	if err != nil {
 		return TimeBounds{}, err
 	}
 
-	toTime, err := parseTimestamp(to)
+	toTime, err := parseTimestamp(to, "to")
 	if err != nil {
 		return TimeBounds{}, err
 	}
@@ -47,7 +46,7 @@ func NewTimeBoundsFromString(from, to string) (TimeBounds, error) {
 	return NewTimeBounds(fromTime, toTime)
 }
 
-func parseTimestamp(value string) (*time.Time, error) {
+func parseTimestamp(value, field string) (*time.Time, error) {
 	if len(value) == 0 {
 		return nil, nil
 	}
@@ -58,7 +57,7 @@ func parseTimestamp(value string) (*time.Time, error) {
 	}
 
 	if intValue < 0 {
-		return nil, fmt.Errorf("timestamp should be positive or zero, got %d", intValue)
+		return nil, errValidationNegative(field, intValue)
 	}
 
 	return util.Ptr(time.UnixMilli(intValue)), nil

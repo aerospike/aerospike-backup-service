@@ -33,7 +33,7 @@ func (s *HTTPServerConfig) Validate() error {
 		return fmt.Errorf("context-path must start with a slash: %s", *s.ContextPath)
 	}
 	if s.Timeout != nil && *s.Timeout < 0 {
-		return fmt.Errorf("timeout cannot be negative: %d", *s.Timeout)
+		return errValidationNegative("timeout", *s.Timeout)
 	}
 
 	return nil

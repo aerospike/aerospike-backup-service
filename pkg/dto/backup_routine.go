@@ -51,13 +51,13 @@ type BackupRoutine struct {
 // Validate validates the backup routine configuration.
 func (r *BackupRoutine) Validate() error {
 	if r.BackupPolicy == "" {
-		return emptyFieldValidationError("backup policy")
+		return errValidationEmptyField("backup-policy")
 	}
 	if r.SourceCluster == "" {
-		return emptyFieldValidationError("source-cluster")
+		return errValidationEmptyField("source-cluster")
 	}
 	if r.Storage == "" {
-		return emptyFieldValidationError("storage")
+		return errValidationEmptyField("storage")
 	}
 	if err := quartz.ValidateCronExpression(r.IntervalCron); err != nil {
 		return fmt.Errorf("backup interval string '%s' invalid: %w", r.IntervalCron, err)
@@ -67,9 +67,9 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
 	}
-	for _, rack := range r.PreferRacks {
+	for i, rack := range r.PreferRacks {
 		if rack < 0 {
-			return fmt.Errorf("rack id %d invalid, should be positive number", rack)
+			return errValidationNegative(fmt.Sprintf("prefer-racks[%d]", i), rack)
 		}
 		if rack > maxRack {
 			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)
@@ -77,7 +77,7 @@ func (r *BackupRoutine) Validate() error {
 	}
 	if r.SecretAgent != nil {
 		if *r.SecretAgent == "" {
-			return emptyFieldValidationError("secret-agent")
+			return errValidationEmptyField("secret-agent")
 		}
 	}
 
@@ -90,12 +90,12 @@ func (r *BackupRoutine) ToModel(
 ) (*model.BackupRoutine, error) {
 	policy, found := config.BackupPolicies[r.BackupPolicy]
 	if !found {
-		return nil, notFoundValidationError("backup policy", r.BackupPolicy)
+		return nil, errValidationNotFound("backup policy", r.BackupPolicy)
 	}
 
 	cluster, found := config.AerospikeClusters[r.SourceCluster]
 	if !found {
-		return nil, notFoundValidationError("Aerospike cluster", r.SourceCluster)
+		return nil, errValidationNotFound("Aerospike cluster", r.SourceCluster)
 	}
 
 	if cluster.MaxParallelScans != nil {
@@ -106,14 +106,14 @@ func (r *BackupRoutine) ToModel(
 
 	storage, found := config.Storage[r.Storage]
 	if !found {
-		return nil, notFoundValidationError("storage", r.Storage)
+		return nil, errValidationNotFound("storage", r.Storage)
 	}
 
 	var secretAgent *model.SecretAgent
 	if r.SecretAgent != nil {
 		secretAgent, found = config.SecretAgents[*r.SecretAgent]
 		if !found {
-			return nil, notFoundValidationError("secret agent", *r.SecretAgent)
+			return nil, errValidationNotFound("secret agent", *r.SecretAgent)
 		}
 	}
 

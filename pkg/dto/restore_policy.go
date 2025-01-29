@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -73,36 +72,36 @@ type RestorePolicy struct {
 // Validate validates the restore policy.
 func (p *RestorePolicy) Validate() error {
 	if p == nil {
-		return fmt.Errorf("restore policy is not specified")
+		return nil
 	}
 	if p.Parallel != nil && *p.Parallel <= 0 {
-		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
+		return errValidationNonPositive("parallel", *p.Parallel)
 	}
 	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
-		return fmt.Errorf("total timeout %d invalid, should be positive number", *p.TotalTimeout)
+		return errValidationNonPositive("total-timeout", *p.TotalTimeout)
 	}
 	if p.SocketTimeout != nil && *p.SocketTimeout <= 0 {
-		return fmt.Errorf("socket timeout %d invalid, should be positive number", *p.SocketTimeout)
+		return errValidationNonPositive("socket-timeout", *p.SocketTimeout)
 	}
 	if p.MaxAsyncBatches != nil && *p.MaxAsyncBatches <= 0 {
-		return fmt.Errorf("maxAsyncBatches %d invalid, should be positive number", *p.MaxAsyncBatches)
+		return errValidationNonPositive("max-async-batches", *p.MaxAsyncBatches)
 	}
 	if p.BatchSize != nil && *p.BatchSize <= 0 {
-		return fmt.Errorf("batchSize %d invalid, should be positive number", *p.BatchSize)
+		return errValidationNonPositive("batch-size", *p.BatchSize)
 	}
 	if p.Bandwidth != nil && *p.Bandwidth <= 0 {
-		return fmt.Errorf("bandwidth %d invalid, should be positive number", *p.Bandwidth)
+		return errValidationNonPositive("bandwidth", *p.Bandwidth)
 	}
 	if p.Tps != nil && *p.Tps <= 0 {
-		return fmt.Errorf("tps %d invalid, should be positive number", *p.Tps)
+		return errValidationNonPositive("tps", *p.Tps)
 	}
 	if p.Replace != nil && *p.Replace && p.Unique != nil && *p.Unique {
-		return errors.New("replace and unique options are contradictory")
+		return errValidationMutuallyExclusive("replace", "unique")
 	}
 
 	if p.Namespace != nil { // namespace is optional.
 		if err := p.Namespace.Validate(); err != nil {
-			return err
+			return fmt.Errorf("restore namespace invalid: %w", err)
 		}
 	}
 	if err := p.EncryptionPolicy.Validate(); err != nil {
@@ -115,7 +114,7 @@ func (p *RestorePolicy) Validate() error {
 		return fmt.Errorf("retry policy invalid: %w", err)
 	}
 	if p.ExtraTTL != nil && *p.ExtraTTL <= 0 {
-		return fmt.Errorf("extraTTL %d invalid, should be positive number", *p.ExtraTTL)
+		return errValidationNonPositive("extra-ttl", *p.ExtraTTL)
 	}
 
 	return nil
@@ -123,7 +122,7 @@ func (p *RestorePolicy) Validate() error {
 
 func (p *RestorePolicy) ToModel() *model.RestorePolicy {
 	if p == nil {
-		return nil
+		return &model.RestorePolicy{}
 	}
 
 	return &model.RestorePolicy{

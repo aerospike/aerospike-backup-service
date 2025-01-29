@@ -203,7 +203,7 @@ func (c *Credentials) Validate() error {
 	}
 
 	if c.Password != nil && c.PasswordPath != nil {
-		return fmt.Errorf("password and password-path are mutually exclusive")
+		return errValidationMutuallyExclusive("password", "password-path")
 	}
 
 	if c.AuthMode != nil &&
@@ -221,7 +221,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 		return nil, nil
 	}
 
-	agent, err := config.ResolveSecretAgent(c.SecretAgentName, c.SecretAgent.ToModel())
+	agent, err := c.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, err
 	}

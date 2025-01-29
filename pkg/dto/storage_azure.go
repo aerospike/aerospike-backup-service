@@ -51,8 +51,8 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 	return nil
 }
 
-func (a *AzureStorage) toModel(c *model.Config) (model.Storage, error) {
-	agent, err := c.ResolveSecretAgent(a.SecretAgentName, a.SecretAgent.ToModel())
+func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
+	agent, err := a.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, err
 	}

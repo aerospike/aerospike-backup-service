@@ -81,7 +81,7 @@ func TestRetentionPolicy_Validate(t *testing.T) {
 		{
 			name:        "invalid incremental backups: negative value",
 			policy:      &RetentionPolicy{FullBackups: util.Ptr(3), IncrBackups: util.Ptr(-1)},
-			expectedErr: "incremental backups retention -1 is invalid, cannot be negative",
+			expectedErr: "negative value validation error: \"incremental\" -1 invalid, should not be negative number",
 		},
 		{
 			name:        "invalid incremental backups: exceeds full backups",

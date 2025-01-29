@@ -93,22 +93,3 @@ func (p *RestorePolicy) GetBatchSizeOrDefault() int {
 	}
 	return *defaultConfig.restorePolicy.MaxAsyncBatches
 }
-
-func (p *RestorePolicy) GetTotalTimeoutOrDefault() time.Duration {
-	if p.TotalTimeout != nil {
-		return *p.TotalTimeout
-	}
-	return *defaultConfig.restorePolicy.TotalTimeout
-}
-
-func (p *RestorePolicy) GetSocketTimeoutOrDefault() time.Duration {
-	if p.SocketTimeout == nil {
-		return *defaultConfig.restorePolicy.SocketTimeout
-	}
-	// If this value is 0, its set to total-timeout.
-	if *p.SocketTimeout == 0 {
-		return p.GetTotalTimeoutOrDefault()
-	}
-
-	return *p.SocketTimeout
-}

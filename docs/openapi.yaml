@@ -1335,12 +1335,12 @@ components:
           - $ref: '#/components/schemas/dto.SecretAgent'
           description: |-
             Secret Agent configuration (optional).
-            Mutually exclusive with secret-agent-name.
+            Mutually exclusive with 'secret-agent-name'.
           type: object
         secret-agent-name:
           description: |-
             Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with secret-agent.
+            Mutually exclusive with 'secret-agent'.
           type: string
         tenant-id:
           description: TenantID is the Azure Active Directory tenant ID for AAD authentication.
@@ -1766,12 +1766,12 @@ components:
           - $ref: '#/components/schemas/dto.SecretAgent'
           description: |-
             Secret Agent configuration (optional).
-            Mutually exclusive with secret-agent-name.
+            Mutually exclusive with 'secret-agent-name'.
           type: object
         secret-agent-name:
           description: |-
             Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with secret-agent.
+            Mutually exclusive with 'secret-agent'.
           type: string
         user:
           description: The username for the cluster authentication.
@@ -1861,12 +1861,12 @@ components:
           - $ref: '#/components/schemas/dto.SecretAgent'
           description: |-
             Secret Agent configuration (optional).
-            Mutually exclusive with secret-agent-name.
+            Mutually exclusive with 'secret-agent-name'.
           type: object
         secret-agent-name:
           description: |-
             Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with secret-agent.
+            Mutually exclusive with 'secret-agent'.
           type: string
       required:
       - bucket-name
@@ -2183,18 +2183,48 @@ components:
           description: Path to the data from storage root.
           type: string
         destination:
-          $ref: '#/components/schemas/dto.AerospikeCluster'
+          allOf:
+          - $ref: '#/components/schemas/dto.AerospikeCluster'
+          description: |-
+            The details of the Aerospike destination cluster.
+            Mutually exclusive with 'destination-name'.
+          type: object
+        destination-name:
+          description: |-
+            Link to one of preconfigured clusters.
+            Mutually exclusive with 'destination'.
+          type: string
         policy:
-          $ref: '#/components/schemas/dto.RestorePolicy'
+          allOf:
+          - $ref: '#/components/schemas/dto.RestorePolicy'
+          description: Restore policy to use in the operation.
+          type: object
         secret-agent:
-          $ref: '#/components/schemas/dto.SecretAgent'
+          allOf:
+          - $ref: '#/components/schemas/dto.SecretAgent'
+          description: |-
+            Secret Agent configuration (optional).
+            Mutually exclusive with 'secret-agent-name'.
+          type: object
+        secret-agent-name:
+          description: |-
+            Secret Agent configuration (optional). Link to one of preconfigured agents.
+            Mutually exclusive with 'secret-agent'.
+          type: string
         source:
-          $ref: '#/components/schemas/dto.Storage'
+          allOf:
+          - $ref: '#/components/schemas/dto.Storage'
+          description: |-
+            The details of the storage configuration.
+            Mutually exclusive with 'source-name'.
+          type: object
+        source-name:
+          description: |-
+            Link to one of preconfigured storages.
+            Mutually exclusive with 'source'.
+          type: string
       required:
       - backup-data-path
-      - destination
-      - policy
-      - source
       type: object
     dto.RestoreTimestampRequest:
       description: RestoreTimestampRequest represents a restore by timestamp operation
@@ -2203,8 +2233,15 @@ components:
         destination:
           allOf:
           - $ref: '#/components/schemas/dto.AerospikeCluster'
-          description: The details of the Aerospike destination cluster.
+          description: |-
+            The details of the Aerospike destination cluster.
+            Mutually exclusive with 'destination-name'.
           type: object
+        destination-name:
+          description: |-
+            Link to one of preconfigured clusters.
+            Mutually exclusive with 'destination'.
+          type: string
         policy:
           allOf:
           - $ref: '#/components/schemas/dto.RestorePolicy'
@@ -2217,8 +2254,27 @@ components:
         secret-agent:
           allOf:
           - $ref: '#/components/schemas/dto.SecretAgent'
-          description: Secret Agent configuration (optional).
+          description: |-
+            Secret Agent configuration (optional).
+            Mutually exclusive with 'secret-agent-name'.
           type: object
+        secret-agent-name:
+          description: |-
+            Secret Agent configuration (optional). Link to one of preconfigured agents.
+            Mutually exclusive with 'secret-agent'.
+          type: string
+        source:
+          allOf:
+          - $ref: '#/components/schemas/dto.Storage'
+          description: |-
+            The details of the storage configuration.
+            Mutually exclusive with 'source-name'.
+          type: object
+        source-name:
+          description: |-
+            Link to one of preconfigured storages.
+            Mutually exclusive with 'source'.
+          type: string
         time:
           description: Required epoch time for recovery. The closest backup before
             the timestamp will be applied.
@@ -2226,8 +2282,6 @@ components:
           format: int64
           type: integer
       required:
-      - destination
-      - policy
       - routine
       - time
       type: object
@@ -2269,7 +2323,7 @@ components:
           type: number
       type: object
     dto.RoutineState:
-      description: RoutineState represent the current state of backups (full and incremental)
+      description: RoutineState represent the current state of backups (full and incremental).
       example:
         incremental: "{}"
         last-incremental: last-incremental
@@ -2389,12 +2443,12 @@ components:
           - $ref: '#/components/schemas/dto.SecretAgent'
           description: |-
             Secret Agent configuration (optional).
-            Mutually exclusive with secret-agent-name.
+            Mutually exclusive with 'secret-agent-name'.
           type: object
         secret-agent-name:
           description: |-
             Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with secret-agent.
+            Mutually exclusive with 'secret-agent'.
           type: string
       required:
       - bucket

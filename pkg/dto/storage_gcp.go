@@ -29,13 +29,13 @@ func (s *GcpStorage) Validate() error {
 		return errors.New("GCP bucket name is not specified")
 	}
 	if s.KeyFile != "" && s.Key != "" {
-		return errors.New("key-file-path and key-json are mutually exclusive")
+		return errValidationMutuallyExclusive("key-file-path", "key-json")
 	}
 	return nil
 }
 
 func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
-	agent, err := config.ResolveSecretAgent(s.SecretAgentName, s.SecretAgent.ToModel())
+	agent, err := s.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, err
 	}

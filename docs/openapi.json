@@ -1898,11 +1898,11 @@
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.SecretAgent"
             } ],
-            "description" : "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
             "type" : "object"
           },
           "secret-agent-name" : {
-            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
             "type" : "string"
           },
           "tenant-id" : {
@@ -2235,11 +2235,11 @@
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.SecretAgent"
             } ],
-            "description" : "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
             "type" : "object"
           },
           "secret-agent-name" : {
-            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
             "type" : "string"
           },
           "user" : {
@@ -2330,11 +2330,11 @@
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.SecretAgent"
             } ],
-            "description" : "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
             "type" : "object"
           },
           "secret-agent-name" : {
-            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
             "type" : "string"
           }
         },
@@ -2651,19 +2651,47 @@
             "type" : "string"
           },
           "destination" : {
-            "$ref" : "#/components/schemas/dto.AerospikeCluster"
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.AerospikeCluster"
+            } ],
+            "description" : "The details of the Aerospike destination cluster.\nMutually exclusive with 'destination-name'.",
+            "type" : "object"
+          },
+          "destination-name" : {
+            "description" : "Link to one of preconfigured clusters.\nMutually exclusive with 'destination'.",
+            "type" : "string"
           },
           "policy" : {
-            "$ref" : "#/components/schemas/dto.RestorePolicy"
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.RestorePolicy"
+            } ],
+            "description" : "Restore policy to use in the operation.",
+            "type" : "object"
           },
           "secret-agent" : {
-            "$ref" : "#/components/schemas/dto.SecretAgent"
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.SecretAgent"
+            } ],
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
+            "type" : "object"
+          },
+          "secret-agent-name" : {
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+            "type" : "string"
           },
           "source" : {
-            "$ref" : "#/components/schemas/dto.Storage"
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.Storage"
+            } ],
+            "description" : "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
+            "type" : "object"
+          },
+          "source-name" : {
+            "description" : "Link to one of preconfigured storages.\nMutually exclusive with 'source'.",
+            "type" : "string"
           }
         },
-        "required" : [ "backup-data-path", "destination", "policy", "source" ],
+        "required" : [ "backup-data-path" ],
         "type" : "object"
       },
       "dto.RestoreTimestampRequest" : {
@@ -2673,8 +2701,12 @@
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.AerospikeCluster"
             } ],
-            "description" : "The details of the Aerospike destination cluster.",
+            "description" : "The details of the Aerospike destination cluster.\nMutually exclusive with 'destination-name'.",
             "type" : "object"
+          },
+          "destination-name" : {
+            "description" : "Link to one of preconfigured clusters.\nMutually exclusive with 'destination'.",
+            "type" : "string"
           },
           "policy" : {
             "allOf" : [ {
@@ -2692,8 +2724,23 @@
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.SecretAgent"
             } ],
-            "description" : "Secret Agent configuration (optional).",
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
             "type" : "object"
+          },
+          "secret-agent-name" : {
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+            "type" : "string"
+          },
+          "source" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.Storage"
+            } ],
+            "description" : "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
+            "type" : "object"
+          },
+          "source-name" : {
+            "description" : "Link to one of preconfigured storages.\nMutually exclusive with 'source'.",
+            "type" : "string"
           },
           "time" : {
             "description" : "Required epoch time for recovery. The closest backup before the timestamp will be applied.",
@@ -2702,7 +2749,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "destination", "policy", "routine", "time" ],
+        "required" : [ "routine", "time" ],
         "type" : "object"
       },
       "dto.RetentionPolicy" : {
@@ -2737,7 +2784,7 @@
         "type" : "object"
       },
       "dto.RoutineState" : {
-        "description" : "RoutineState represent the current state of backups (full and incremental)",
+        "description" : "RoutineState represent the current state of backups (full and incremental).",
         "properties" : {
           "full" : {
             "allOf" : [ {
@@ -2853,11 +2900,11 @@
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.SecretAgent"
             } ],
-            "description" : "Secret Agent configuration (optional).\nMutually exclusive with secret-agent-name.",
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
             "type" : "object"
           },
           "secret-agent-name" : {
-            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with secret-agent.",
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
             "type" : "string"
           }
         },

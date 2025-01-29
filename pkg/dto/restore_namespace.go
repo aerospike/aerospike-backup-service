@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"fmt"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -21,11 +19,11 @@ type RestoreNamespace struct {
 // Validate validates the restore namespace.
 func (n *RestoreNamespace) Validate() error {
 	if n.Source == nil {
-		return fmt.Errorf("source namespace is not specified")
+		return errValidationEmptyField("source")
 	}
 
 	if n.Destination == nil {
-		return fmt.Errorf("destination namespace is not specified")
+		return errValidationEmptyField("destination")
 	}
 
 	return nil

@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -12,22 +11,42 @@ import (
 // It is intended to be embedded into DTOs that require Secret Agent configuration.
 type SecretAgentConfig struct {
 	// Secret Agent configuration (optional).
-	// Mutually exclusive with secret-agent-name.
+	// Mutually exclusive with 'secret-agent-name'.
 	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 	// Secret Agent configuration (optional). Link to one of preconfigured agents.
-	// Mutually exclusive with secret-agent.
-	SecretAgentName *string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
+	// Mutually exclusive with 'secret-agent'.
+	SecretAgentName string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
 }
 
 func (c SecretAgentConfig) validate() error {
-	if c.SecretAgent != nil && c.SecretAgentName != nil {
-		return errors.New("secret-agent-name and secret-agent are mutually exclusive")
+	if c.SecretAgent != nil && c.SecretAgentName != "" {
+		return errValidationMutuallyExclusive("secret-agent-name", "secret-agent")
 	}
 	if err := c.SecretAgent.validate(); err != nil {
 		return fmt.Errorf("secret-agent validation error: %w", err)
 	}
 
 	return nil
+}
+
+func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, error) {
+	if c == nil { // secret agent is optional
+		return nil, nil
+	}
+
+	if c.SecretAgent != nil {
+		return c.SecretAgent.ToModel(), nil
+	}
+
+	if c.SecretAgentName != "" {
+		agent, exists := config.BackupConfigCopy().SecretAgents[c.SecretAgentName]
+		if !exists {
+			return nil, fmt.Errorf("unknown secret agent %q", c.SecretAgentName)
+		}
+		return agent, nil
+	}
+
+	return nil, nil
 }
 
 // SecretAgent represents the configuration of an Aerospike Secret Agent
@@ -40,7 +59,7 @@ type SecretAgent struct {
 	// Connection type: tcp, unix.
 	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp"`
 	// Address of the Secret Agent.
-	Address string `yaml:"address,omitempty" json:"address,omitempty" example:"localhost"`
+	Address string `yaml:"address" json:"address" example:"localhost" validate:"required"`
 	// Port the Secret Agent is running on.
 	Port *int `yaml:"port,omitempty" json:"port,omitempty" example:"8080"`
 	// Timeout in milliseconds.
@@ -70,7 +89,7 @@ func ResolveSecretAgentFromModel(s *model.SecretAgent, config *model.BackupConfi
 	secretAgentName := findKeyByValue(config.SecretAgents, s)
 	if secretAgentName != "" {
 		return SecretAgentConfig{
-			SecretAgentName: &secretAgentName,
+			SecretAgentName: secretAgentName,
 		}
 	}
 
@@ -98,18 +117,18 @@ func (s *SecretAgent) fromModel(m *model.SecretAgent) {
 	s.IsBase64 = m.IsBase64
 }
 
-// validate validates the SecretAgentConfig.
+// validate validates the SecretAgent.
 func (s *SecretAgent) validate() error {
 	if s == nil {
 		return nil
 	}
 
 	if s.Address == "" {
-		return fmt.Errorf("address is required")
+		return errValidationEmptyField("address")
 	}
 
-	if s.Timeout != nil && *s.Timeout <= 0 {
-		return fmt.Errorf("invalid timeout: %d", *s.Timeout)
+	if s.Timeout != nil && *s.Timeout < 0 {
+		return errValidationNegative("timeout", *s.Timeout)
 	}
 
 	if s.ConnectionType != saClient.ConnectionTypeTCP && s.ConnectionType != saClient.ConnectionTypeUDS {

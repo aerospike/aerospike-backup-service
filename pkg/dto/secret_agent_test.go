@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,7 +26,7 @@ func TestValidSecretAgentName(t *testing.T) {
 	agentName := "predefined-agent"
 
 	config := SecretAgentConfig{
-		SecretAgentName: &agentName,
+		SecretAgentName: agentName,
 	}
 
 	err := config.validate()
@@ -38,12 +37,11 @@ func TestMutuallyExclusive(t *testing.T) {
 	agentName := "predefined-agent"
 	config := SecretAgentConfig{
 		SecretAgent:     &SecretAgent{},
-		SecretAgentName: &agentName,
+		SecretAgentName: agentName,
 	}
 
 	err := config.validate()
-	assert.Error(t, err)
-	assert.EqualError(t, err, "secret-agent-name and secret-agent are mutually exclusive")
+	assert.ErrorIs(t, err, errMutuallyExclusive)
 }
 
 func TestInvalidSecretAgent(t *testing.T) {
@@ -86,7 +84,7 @@ func TestMissingAddress(t *testing.T) {
 
 	err := agent.validate()
 	assert.Error(t, err)
-	assert.EqualError(t, err, "address is required")
+	assert.EqualError(t, err, errValidationEmptyField("address").Error())
 }
 
 func TestInvalidTimeout(t *testing.T) {
@@ -99,7 +97,7 @@ func TestInvalidTimeout(t *testing.T) {
 
 	err := agent.validate()
 	assert.Error(t, err)
-	assert.EqualError(t, err, fmt.Sprintf("invalid timeout: %d", timeout))
+	assert.EqualError(t, err, errValidationNegative("timeout", -100).Error())
 }
 
 func TestSecretAgent_Nil(t *testing.T) {

@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -40,10 +39,10 @@ type S3Storage struct {
 // Validate checks if the S3Storage is valid.
 func (s *S3Storage) Validate() error {
 	if s.Bucket == "" {
-		return errors.New("S3 bucket is not specified")
+		return errValidationEmptyField("bucket")
 	}
 	if s.S3Region == "" {
-		return errors.New("S3 region is not specified")
+		return errValidationEmptyField("s3-region")
 	}
 
 	if s.AccessKeyID != nil && s.SecretAccessKey == nil {
@@ -59,7 +58,7 @@ func (s *S3Storage) Validate() error {
 func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 	var auth *model.S3Authentication
 	if s.AccessKeyID != nil {
-		agent, err := config.ResolveSecretAgent(s.SecretAgentName, s.SecretAgent.ToModel())
+		agent, err := s.SecretAgentConfig.ToModel(config)
 		if err != nil {
 			return nil, err
 		}

@@ -83,7 +83,7 @@ func TestInvalidClusterReference(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
-	expectedError := notFoundValidationError("routine1", "nonExistentCluster")
+	expectedError := errValidationNotFound("routine1", "nonExistentCluster")
 	if errors.Is(err, expectedError) {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
@@ -98,7 +98,7 @@ func TestInvalidBackupPolicyReference(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
-	expectedError := notFoundValidationError("routine1", "nonExistentPolicy")
+	expectedError := errValidationNotFound("routine1", "nonExistentPolicy")
 	if errors.Is(err, expectedError) {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
@@ -113,7 +113,7 @@ func TestInvalidStorageReference(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
-	expectedError := notFoundValidationError("routine1", "nonExistentStorage")
+	expectedError := errValidationNotFound("routine1", "nonExistentStorage")
 	if errors.Is(err, expectedError) {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}

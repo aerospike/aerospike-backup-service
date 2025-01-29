@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -11,10 +10,11 @@ import (
 // RestoreRequest represents a restore operation request from custom storage
 // @Description RestoreRequest represents a restore operation request.
 type RestoreRequest struct {
-	DestinationCluster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
-	Policy             *RestorePolicy    `json:"policy,omitempty" validate:"required"`
-	SourceStorage      *Storage          `json:"source,omitempty" validate:"required"`
-	SecretAgent        *SecretAgent      `json:"secret-agent,omitempty"`
+	DestinationClusterConfig
+	*SecretAgentConfig
+	StorageConfig
+	// Restore policy to use in the operation.
+	Policy *RestorePolicy `json:"policy"`
 	// Path to the data from storage root.
 	BackupDataPath string `json:"backup-data-path" validate:"required"`
 }
@@ -22,30 +22,29 @@ type RestoreRequest struct {
 // RestoreTimestampRequest represents a restore by timestamp operation request.
 // @Description RestoreTimestampRequest represents a restore by timestamp operation request.
 type RestoreTimestampRequest struct {
-	// The details of the Aerospike destination cluster.
-	DestinationCluster *AerospikeCluster `json:"destination,omitempty" validate:"required"`
+	DestinationClusterConfig
+	*SecretAgentConfig
+	StorageConfig
 	// Restore policy to use in the operation.
-	Policy *RestorePolicy `json:"policy,omitempty" validate:"required"`
-	// Secret Agent configuration (optional).
-	SecretAgent *SecretAgent `json:"secret-agent,omitempty"`
+	Policy *RestorePolicy `json:"policy"`
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
-	Time int64 `json:"time,omitempty" format:"int64" example:"1739538000000" validate:"required"`
+	Time int64 `json:"time" format:"int64" example:"1739538000000" validate:"required"`
 	// The backup routine name.
-	Routine string `json:"routine,omitempty" example:"daily" validate:"required"`
+	Routine string `json:"routine" example:"daily" validate:"required"`
 }
 
 // Validate validates the restore operation request.
 func (r *RestoreRequest) Validate() error {
 	if len(r.BackupDataPath) == 0 {
-		return errors.New("path is not specified")
+		return errValidationEmptyField("backup-data-path")
 	}
-	if err := r.DestinationCluster.Validate(); err != nil {
+	if err := r.DestinationClusterConfig.Validate(); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
-	if err := r.SourceStorage.Validate(); err != nil {
+	if err := r.StorageConfig.Validate(); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
@@ -57,56 +56,145 @@ func (r *RestoreRequest) Validate() error {
 
 // Validate validates the restore operation request.
 func (r *RestoreTimestampRequest) Validate() error {
-	if err := r.DestinationCluster.Validate(); err != nil {
+	if err := r.DestinationClusterConfig.Validate(); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
 	if r.Time <= 0 {
-		return errors.New("restore point in time should be positive")
+		return errValidationNonPositive("time", r.Time)
 	}
 	if r.Routine == "" {
-		return emptyFieldValidationError(r.Routine)
+		return errValidationEmptyField("routine")
 	}
 
 	return nil
 }
 
 func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
-	cluster, err := r.DestinationCluster.ToModel(config)
+	cluster, err := r.DestinationClusterConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid cluster: %w", err)
 	}
 	if _, ok := config.Routines()[r.Routine]; !ok {
-		return nil, notFoundValidationError("routine", r.Routine)
+		return nil, errValidationNotFound("routine", r.Routine)
+	}
+
+	secretAgent, err := r.SecretAgentConfig.ToModel(config)
+	if err != nil {
+		return nil, fmt.Errorf("invalid secret agent: %w", err)
 	}
 
 	return &model.RestoreTimestampRequest{
 		DestinationCluster: cluster,
 		Policy:             r.Policy.ToModel(),
-		SecretAgent:        r.SecretAgent.ToModel(),
+		SecretAgent:        secretAgent,
 		Time:               time.UnixMilli(r.Time),
 		RoutineName:        r.Routine,
 	}, nil
 }
 
 func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, error) {
-	cluster, err := r.DestinationCluster.ToModel(config)
+	cluster, err := r.DestinationClusterConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid cluster: %w", err)
 	}
 
-	storage, err := r.SourceStorage.ToModel(config)
+	storage, err := r.StorageConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage: %w", err)
+	}
+
+	secretAgent, err := r.SecretAgentConfig.ToModel(config)
+	if err != nil {
+		return nil, fmt.Errorf("invalid secret-agent: %w", err)
 	}
 
 	return &model.RestoreRequest{
 		DestinationCluster: cluster,
 		Policy:             r.Policy.ToModel(),
 		SourceStorage:      storage,
-		SecretAgent:        r.SecretAgent.ToModel(),
+		SecretAgent:        secretAgent,
 		BackupDataPath:     r.BackupDataPath,
 	}, nil
+}
+
+// DestinationClusterConfig aggregates the destination cluster configuration.
+// It is intended to be embedded into DTOs that require Cluster configuration.
+type DestinationClusterConfig struct {
+	// The details of the Aerospike destination cluster.
+	// Mutually exclusive with 'destination-name'.
+	Cluster *AerospikeCluster `json:"destination"`
+	// Link to one of preconfigured clusters.
+	// Mutually exclusive with 'destination'.
+	Name string `json:"destination-name"`
+}
+
+func (c *DestinationClusterConfig) Validate() error {
+	if c.Cluster == nil && c.Name == "" {
+		return errValidationRequiredEither("destination", "destination-name")
+	}
+	if c.Cluster != nil && c.Name != "" {
+		return errValidationMutuallyExclusive("destination", "destination-name")
+	}
+	if c.Cluster != nil {
+		if err := c.Cluster.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.AerospikeCluster, error) {
+	if c.Cluster != nil {
+		return c.Cluster.ToModel(config)
+	}
+
+	configCluster, exists := config.BackupConfigCopy().AerospikeClusters[c.Name]
+	if !exists {
+		return nil, errValidationNotFound("cluster", c.Name)
+	}
+
+	return configCluster, nil
+}
+
+// StorageConfig aggregates the storage configuration.
+// It is intended to be embedded into DTOs that require Storage configuration.
+type StorageConfig struct {
+	// The details of the storage configuration.
+	// Mutually exclusive with 'source-name'.
+	Storage *Storage `json:"source"`
+	// Link to one of preconfigured storages.
+	// Mutually exclusive with 'source'.
+	Name string `json:"source-name"`
+}
+
+func (c *StorageConfig) Validate() error {
+	if c.Storage == nil && c.Name == "" {
+		return errValidationRequiredEither("source", "source-name")
+	}
+	if c.Storage != nil && c.Name != "" {
+		return errValidationMutuallyExclusive("source", "source-name")
+	}
+	if c.Storage != nil {
+		if err := c.Storage.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *StorageConfig) ToModel(config *model.Config) (model.Storage, error) {
+	if c.Storage != nil {
+		return c.Storage.ToModel(config)
+	}
+
+	configStorage, exists := config.BackupConfigCopy().Storage[c.Name]
+	if !exists {
+		return nil, errValidationNotFound("storage", c.Name)
+	}
+	return configStorage, nil
 }
