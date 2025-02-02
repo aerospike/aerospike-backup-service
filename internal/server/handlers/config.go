@@ -11,26 +11,19 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/validation"
 )
 
-func (s *Service) ConfigActionHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.readConfig(w)
-	case http.MethodPut:
-		s.updateConfig(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
+func (s *Service) ConfigActionHandler(_ http.ResponseWriter, _ *http.Request) {
+
 }
 
-// readConfig
+// ReadConfig
 // @Summary     Returns the configuration for the service.
-// @ID	        readConfig
+// @ID	        ReadConfig
 // @Tags        Configuration
 // @Router      /v1/config [get]
 // @Produce     json
 // @Success     200 {object} dto.Config
 // @Failure     500 {string} string
-func (s *Service) readConfig(w http.ResponseWriter) {
+func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readConfig"))
 
 	configuration, err := dto.Serialize(dto.NewConfigFromModel(s.config), dto.JSON)
@@ -50,16 +43,16 @@ func (s *Service) readConfig(w http.ResponseWriter) {
 	}
 }
 
-// updateConfig
+// UpdateConfig
 // @Summary     Updates the configuration for the service.
-// @ID 	        updateConfig
+// @ID 	        UpdateConfig
 // @Tags        Configuration
 // @Router      /v1/config [put]
 // @Accept      json
 // @Param       config body dto.Config true "Configuration details"
 // @Success     200
 // @Failure     400 {string} string
-func (s *Service) updateConfig(w http.ResponseWriter, r *http.Request) {
+func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateConfig"))
 
 	newConfig, err := dto.NewConfigFromReader(r.Body, dto.JSON)

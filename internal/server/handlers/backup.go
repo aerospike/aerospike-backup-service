@@ -10,7 +10,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/gorilla/mux"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -141,7 +140,7 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	routine := mux.Vars(r)["name"]
+	routine := r.PathValue("name")
 	if routine == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, "routine name required", http.StatusBadRequest)
@@ -233,7 +232,7 @@ func backupsReadFunction(
 func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "ScheduleFullBackup"))
 
-	routineName := mux.Vars(r)["name"]
+	routineName := r.PathValue("name")
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, "routine name required", http.StatusBadRequest)
@@ -295,7 +294,7 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "GetCurrentBackupInfo"))
 
-	routineName := mux.Vars(r)["name"]
+	routineName := r.PathValue("name")
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, "routine name required", http.StatusBadRequest)
@@ -344,7 +343,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "CancelCurrentBackup"))
 
-	routineName := mux.Vars(r)["name"]
+	routineName := r.PathValue("name")
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, "routine name required", http.StatusBadRequest)

@@ -4,106 +4,89 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
-	"github.com/gorilla/mux"
 )
 
-//nolint:funlen // We should describe all api path in one place.
-func NewRouter(apiPath, sysPath string, h *handlers.Service, middlewares ...mux.MiddlewareFunc) *mux.Router {
-	r := mux.NewRouter()
+func NewServeMux(apiPath, sysPath string, h *handlers.Service) *http.ServeMux {
+	mux := http.NewServeMux()
 
-	// System sub router.
-	sysRouter := r.PathPrefix(sysPath).Subrouter()
-	// API sub router.
-	apiRouter := r.PathPrefix(apiPath).Subrouter()
+	registerSystemRoutes(mux, sysPath)
+	registerConfigRoutes(mux, apiPath, h)
+	registerClusterRoutes(mux, apiPath, h)
+	registerStorageRoutes(mux, apiPath, h)
+	registerPolicyRoutes(mux, apiPath, h)
+	registerRoutineRoutes(mux, apiPath, h)
+	registerBackupRoutes(mux, apiPath, h)
+	registerRestoreRoutes(mux, apiPath, h)
 
-	// Apply middlewares.
-	applyMiddleware(sysRouter, middlewares...)
-	applyMiddleware(apiRouter, middlewares...)
-
-	// root route
-	sysRouter.HandleFunc("/", handlers.RootActionHandler).Methods(http.MethodGet)
-
-	// health route
-	sysRouter.HandleFunc("/health", handlers.HealthActionHandler).Methods(http.MethodGet)
-
-	// readiness route
-	sysRouter.HandleFunc("/ready", handlers.ReadyActionHandler).Methods(http.MethodGet)
-
-	// version route
-	sysRouter.HandleFunc("/version", handlers.VersionActionHandler).Methods(http.MethodGet)
-
-	// Prometheus endpoint
-	sysRouter.Handle("/metrics", handlers.MetricsActionHandler()).Methods(http.MethodGet)
-
-	// OpenAPI specification endpoint
-	sysRouter.PathPrefix("/api-docs/").Handler(handlers.APIDocsActionHandler()).Methods(http.MethodGet)
-
-	// whole config route
-	apiRouter.HandleFunc("/config", h.ConfigActionHandler).Methods(http.MethodGet, http.MethodPut)
-	// apply config after update
-	apiRouter.HandleFunc("/config/apply", h.ApplyConfig).Methods(http.MethodPost)
-
-	// cluster config routes
-	apiRouter.HandleFunc("/config/clusters/{name}", h.ConfigClusterActionHandler).
-		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
-	apiRouter.HandleFunc("/config/clusters", h.ReadAerospikeClusters).Methods(http.MethodGet)
-
-	// storage config routes
-	apiRouter.HandleFunc("/config/storage/{name}", h.ConfigStorageActionHandler).
-		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
-	apiRouter.HandleFunc("/config/storage", h.ReadAllStorage).Methods(http.MethodGet)
-
-	// policy config routes
-	apiRouter.HandleFunc("/config/policies/{name}", h.ConfigPolicyActionHandler).
-		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
-	apiRouter.HandleFunc("/config/policies", h.ReadPolicies).Methods(http.MethodGet)
-
-	// routine config routes
-	apiRouter.HandleFunc("/config/routines/{name}", h.ConfigRoutineActionHandler).
-		Methods(http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete)
-	apiRouter.HandleFunc("/config/routines", h.ReadRoutines).Methods(http.MethodGet)
-	apiRouter.HandleFunc("/config/routines/{name}/disable", h.DisableRoutine).Methods(http.MethodPut)
-	apiRouter.HandleFunc("/config/routines/{name}/enable", h.EnableRoutine).Methods(http.MethodPut)
-
-	// Restore job endpoints
-	// Restore from full backup (by folder)
-	apiRouter.HandleFunc("/restore/full", h.RestoreFullHandler).Methods(http.MethodPost)
-
-	// Restore from incremental backup (by file)
-	apiRouter.HandleFunc("/restore/incremental", h.RestoreIncrementalHandler).Methods(http.MethodPost)
-
-	// Restore to specific point in time (by timestamp and routine)
-	apiRouter.HandleFunc("/restore/timestamp", h.RestoreByTimeHandler).Methods(http.MethodPost)
-
-	// Restore job status endpoint
-	apiRouter.HandleFunc("/restore/status/{jobId}", h.RestoreStatusHandler).Methods(http.MethodGet)
-
-	// Cancel restore job
-	apiRouter.HandleFunc("/restore/cancel/{jobId}", h.CancelRestoreHandler).Methods(http.MethodPost)
-
-	// Return backed up Aerospike configuration
-	apiRouter.HandleFunc("/retrieve/configuration/{name}/{timestamp}", h.RetrieveConfig).Methods(http.MethodGet)
-
-	// Read available backups
-	apiRouter.HandleFunc("/backups/full/{name}", h.GetFullBackupsForRoutine).Methods(http.MethodGet)
-	apiRouter.HandleFunc("/backups/full", h.GetAllFullBackups).Methods(http.MethodGet)
-	apiRouter.HandleFunc("/backups/incremental/{name}", h.GetIncrementalBackupsForRoutine).Methods(http.MethodGet)
-	apiRouter.HandleFunc("/backups/incremental", h.GetAllIncrementalBackups).Methods(http.MethodGet)
-
-	// Schedules a full backup operation
-	apiRouter.HandleFunc("/backups/schedule/{name}", h.ScheduleFullBackup).Methods(http.MethodPost)
-
-	// Get information on currently running backups
-	apiRouter.HandleFunc("/backups/currentBackup/{name}", h.GetCurrentBackupInfo).Methods(http.MethodGet)
-
-	// Cancel running backup
-	apiRouter.HandleFunc("/backups/cancel/{name}", h.CancelCurrentBackup).Methods(http.MethodPost)
-
-	return r
+	return mux
 }
 
-func applyMiddleware(router *mux.Router, middlewares ...mux.MiddlewareFunc) {
-	for _, m := range middlewares {
-		router.Use(m)
-	}
+func registerSystemRoutes(mux *http.ServeMux, sysPath string) {
+	mux.HandleFunc("GET "+sysPath, handlers.RootActionHandler)
+	mux.HandleFunc("GET "+sysPath+"health", handlers.HealthActionHandler)
+	mux.HandleFunc("GET "+sysPath+"ready", handlers.ReadyActionHandler)
+	mux.HandleFunc("GET "+sysPath+"version", handlers.VersionActionHandler)
+	mux.Handle("GET "+sysPath+"metrics", handlers.MetricsActionHandler())
+	mux.Handle("GET "+sysPath+"api-docs/...", handlers.APIDocsActionHandler())
+}
+
+func registerConfigRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/config", h.ReadConfig)
+	mux.HandleFunc("PUT "+apiPath+"/config", h.UpdateConfig)
+	mux.HandleFunc("POST "+apiPath+"/config/apply", h.ApplyConfig)
+}
+
+func registerClusterRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/config/clusters", h.ReadAerospikeClusters)
+	mux.HandleFunc("POST "+apiPath+"/config/clusters/{name}", h.AddAerospikeCluster)
+	mux.HandleFunc("GET "+apiPath+"/config/clusters/{name}", h.ReadAerospikeCluster)
+	mux.HandleFunc("PUT "+apiPath+"/config/clusters/{name}", h.UpdateAerospikeCluster)
+	mux.HandleFunc("DELETE "+apiPath+"/config/clusters/{name}", h.DeleteAerospikeCluster)
+}
+
+func registerStorageRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/config/storage", h.ReadAllStorage)
+	mux.HandleFunc("POST "+apiPath+"/config/storage/{name}", h.AddStorage)
+	mux.HandleFunc("GET "+apiPath+"/config/storage/{name}", h.ReadStorage)
+	mux.HandleFunc("PUT "+apiPath+"/config/storage/{name}", h.UpdateStorage)
+	mux.HandleFunc("DELETE "+apiPath+"/config/storage/{name}", h.DeleteStorage)
+}
+
+func registerPolicyRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/config/policies", h.ReadPolicies)
+	mux.HandleFunc("POST "+apiPath+"/config/policies/{name}", h.AddPolicy)
+	mux.HandleFunc("GET "+apiPath+"/config/policies/{name}", h.ReadPolicy)
+	mux.HandleFunc("PUT "+apiPath+"/config/policies/{name}", h.UpdatePolicy)
+	mux.HandleFunc("DELETE "+apiPath+"/config/policies/{name}", h.DeletePolicy)
+}
+
+func registerRoutineRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/config/routines", h.ReadRoutines)
+	mux.HandleFunc("POST "+apiPath+"/config/routines/{name}", h.AddRoutine)
+	mux.HandleFunc("GET "+apiPath+"/config/routines/{name}", h.ReadRoutine)
+	mux.HandleFunc("PUT "+apiPath+"/config/routines/{name}", h.UpdateRoutine)
+	mux.HandleFunc("DELETE "+apiPath+"/config/routines/{name}", h.DeleteRoutine)
+	mux.HandleFunc("PUT "+apiPath+"/config/routines/{name}/disable", h.DisableRoutine)
+	mux.HandleFunc("PUT "+apiPath+"/config/routines/{name}/enable", h.EnableRoutine)
+}
+
+func registerBackupRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/backups/full", h.GetAllFullBackups)
+	mux.HandleFunc("GET "+apiPath+"/backups/full/{name}", h.GetFullBackupsForRoutine)
+	mux.HandleFunc("GET "+apiPath+"/backups/incremental", h.GetAllIncrementalBackups)
+	mux.HandleFunc("GET "+apiPath+"/backups/incremental/{name}", h.GetIncrementalBackupsForRoutine)
+	mux.HandleFunc("POST "+apiPath+"/backups/schedule/{name}", h.ScheduleFullBackup)
+	mux.HandleFunc("GET "+apiPath+"/backups/currentBackup/{name}", h.GetCurrentBackupInfo)
+	mux.HandleFunc("POST "+apiPath+"/backups/cancel/{name}", h.CancelCurrentBackup)
+}
+
+func registerRestoreRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
+	mux.HandleFunc("POST "+apiPath+"/restore/full", h.RestoreFullHandler)
+	mux.HandleFunc("POST "+apiPath+"/restore/incremental", h.RestoreIncrementalHandler)
+	mux.HandleFunc("POST "+apiPath+"/restore/timestamp", h.RestoreByTimeHandler)
+	mux.HandleFunc("GET "+apiPath+"/restore/status/{jobId}", h.RestoreStatusHandler)
+	mux.HandleFunc("POST "+apiPath+"/restore/cancel/{jobId}", h.CancelRestoreHandler)
+
+	// Return backed up Aerospike configuration
+	mux.HandleFunc("GET "+apiPath+"/retrieve/configuration/{name}/{timestamp}", h.RetrieveConfig)
 }

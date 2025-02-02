@@ -7,7 +7,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/gorilla/mux"
 )
 
 const policyNameNotSpecifiedMsg = "Policy name is not specified"
@@ -15,19 +14,19 @@ const policyNameNotSpecifiedMsg = "Policy name is not specified"
 func (s *Service) ConfigPolicyActionHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		s.addPolicy(w, r)
+		s.AddPolicy(w, r)
 	case http.MethodGet:
-		s.readPolicy(w, r)
+		s.ReadPolicy(w, r)
 	case http.MethodPut:
-		s.updatePolicy(w, r)
+		s.UpdatePolicy(w, r)
 	case http.MethodDelete:
-		s.deletePolicy(w, r)
+		s.DeletePolicy(w, r)
 	}
 }
 
-// addPolicy
+// AddPolicy
 // @Summary     Adds a policy to the config.
-// @ID          addPolicy
+// @ID          AddPolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [post]
 // @Accept      json
@@ -37,7 +36,7 @@ func (s *Service) ConfigPolicyActionHandler(w http.ResponseWriter, r *http.Reque
 // @Failure     400 {string} string
 //
 //nolint:dupl
-func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
+func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addPolicy"))
 
 	newPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
@@ -49,7 +48,7 @@ func (s *Service) addPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := mux.Vars(r)["name"]
+	name := r.PathValue("name")
 	if name == "" {
 		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -101,9 +100,9 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// readPolicy reads a specific backup policy from the configuration given its name.
+// ReadPolicy reads a specific backup policy from the configuration given its name.
 // @Summary     Reads a backup policy from the configuration given its name.
-// @ID	        readPolicy
+// @ID	        ReadPolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [get]
 // @Param       name path string true "Backup policy name"
@@ -112,10 +111,10 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified policy could not be found"
 // @Failure     500 {string} string "The specified policy could not be found"
-func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
+func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readPolicy"))
 
-	policyName := mux.Vars(r)["name"]
+	policyName := r.PathValue("name")
 	if policyName == "" {
 		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -146,9 +145,9 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// updatePolicy updates an existing policy in the configuration.
+// UpdatePolicy updates an existing policy in the configuration.
 // @Summary     Updates an existing policy in the configuration.
-// @ID 	        updatePolicy
+// @ID 	        UpdatePolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [put]
 // @Accept      json
@@ -158,7 +157,7 @@ func (s *Service) readPolicy(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 //
 //nolint:dupl
-func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
+func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updatePolicy"))
 
 	updatedPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
@@ -170,7 +169,7 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := mux.Vars(r)["name"]
+	name := r.PathValue("name")
 	if name == "" {
 		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -192,18 +191,18 @@ func (s *Service) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// deletePolicy
+// DeletePolicy
 // @Summary     Deletes a policy from the configuration by name.
-// @ID          deletePolicy
+// @ID          DeletePolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [delete]
 // @Param       name path string true "Backup policy name"
 // @Success     204
 // @Failure     400 {string} string
-func (s *Service) deletePolicy(w http.ResponseWriter, r *http.Request) {
+func (s *Service) DeletePolicy(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deletePolicy"))
 
-	policyName := mux.Vars(r)["name"]
+	policyName := r.PathValue("name")
 	if policyName == "" {
 		hLogger.Error("policy name required")
 		http.Error(w, policyNameNotSpecifiedMsg, http.StatusBadRequest)

@@ -7,7 +7,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/gorilla/mux"
 )
 
 const routineNameNotSpecifiedMsg = "Routine name is not specified"
@@ -15,19 +14,19 @@ const routineNameNotSpecifiedMsg = "Routine name is not specified"
 func (s *Service) ConfigRoutineActionHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		s.addRoutine(w, r)
+		s.AddRoutine(w, r)
 	case http.MethodGet:
-		s.readRoutine(w, r)
+		s.ReadRoutine(w, r)
 	case http.MethodPut:
-		s.updateRoutine(w, r)
+		s.UpdateRoutine(w, r)
 	case http.MethodDelete:
-		s.deleteRoutine(w, r)
+		s.DeleteRoutine(w, r)
 	}
 }
 
-// addRoutine
+// AddRoutine
 // @Summary     Adds a backup routine to the config.
-// @ID          addRoutine
+// @ID          AddRoutine
 // @Tags        Configuration
 // @Router      /v1/config/routines/{name} [post]
 // @Accept      json
@@ -37,7 +36,7 @@ func (s *Service) ConfigRoutineActionHandler(w http.ResponseWriter, r *http.Requ
 // @Failure     400 {string} string
 //
 //nolint:dupl
-func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
+func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addRoutine"))
 
 	newRoutine, err := dto.NewRoutineFromReader(r.Body, dto.JSON)
@@ -49,7 +48,7 @@ func (s *Service) addRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := mux.Vars(r)["name"]
+	name := r.PathValue("name")
 	if name == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -114,9 +113,9 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// readRoutine reads a specific routine from the configuration given its name.
+// ReadRoutine reads a specific routine from the configuration given its name.
 // @Summary     Reads a specific routine from the configuration given its name.
-// @ID	        readRoutine
+// @ID	        ReadRoutine
 // @Tags        Configuration
 // @Router      /v1/config/routines/{name} [get]
 // @Param       name path string true "Backup routine name"
@@ -124,10 +123,10 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Success  	200 {object} dto.BackupRoutine
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified cluster could not be found"
-func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
+func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readRoutine"))
 
-	routineName := mux.Vars(r)["name"]
+	routineName := r.PathValue("name")
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -157,9 +156,9 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// updateRoutine updates an existing backup routine in the configuration.
+// UpdateRoutine updates an existing backup routine in the configuration.
 // @Summary      Updates an existing routine in the configuration.
-// @ID 	         updateRoutine
+// @ID 	         UpdateRoutine
 // @Tags         Configuration
 // @Router       /v1/config/routines/{name} [put]
 // @Accept       json
@@ -169,7 +168,7 @@ func (s *Service) readRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure      400 {string} string
 //
 //nolint:dupl
-func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
+func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateRoutine"))
 
 	updatedRoutine, err := dto.NewRoutineFromReader(r.Body, dto.JSON)
@@ -181,7 +180,7 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := mux.Vars(r)["name"]
+	name := r.PathValue("name")
 	if name == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -213,18 +212,18 @@ func (s *Service) updateRoutine(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// deleteRoutine
+// DeleteRoutine
 // @Summary     Deletes a backup routine from the configuration by name.
-// @ID          deleteRoutine
+// @ID          DeleteRoutine
 // @Tags        Configuration
 // @Router      /v1/config/routines/{name} [delete]
 // @Param       name path string true "Backup routine name"
 // @Success     204
 // @Failure     400 {string} string
-func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
+func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deleteRoutine"))
 
-	routineName := mux.Vars(r)["name"]
+	routineName := r.PathValue("name")
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -257,7 +256,7 @@ func (s *Service) deleteRoutine(w http.ResponseWriter, r *http.Request) {
 func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "enableRoutine"))
 
-	routineName := mux.Vars(r)["name"]
+	routineName := r.PathValue("name")
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -297,7 +296,7 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "disableRoutine"))
 
-	routineName := mux.Vars(r)["name"]
+	routineName := r.PathValue("name")
 	if routineName == "" {
 		hLogger.Error("routine name required")
 		http.Error(w, routineNameNotSpecifiedMsg, http.StatusBadRequest)

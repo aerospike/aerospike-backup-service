@@ -66,7 +66,7 @@ func run() int {
 
 func startService(configFile string, remote bool) error {
 	ctx := systemCtx()
-	config, scheduler, httpService, err := initComponents(ctx, configFile, remote)
+	config, scheduler, httpService, appLogger, err := initComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func startService(configFile string, remote bool) error {
 	scheduler.Start(ctx)
 
 	// run HTTP server
-	err = runHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService)
+	err = runHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService, appLogger)
 
 	// stop the scheduler
 	scheduler.Stop()
@@ -84,14 +84,14 @@ func startService(configFile string, remote bool) error {
 }
 
 func initComponents(ctx context.Context, configFile string, remote bool) (
-	*model.Config, quartz.Scheduler, *handlers.Service, error,
+	*model.Config, quartz.Scheduler, *handlers.Service, *slog.Logger, error,
 ) {
 	clientManager := aerospike.NewClientManager(&aerospike.DefaultClientFactory{}, 10*time.Second)
 	nsValidator := aerospike.NewNamespaceValidator(clientManager)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	appLogger := setDefaultLoggers(ctx, config.ServiceConfig.GetLoggerOrDefault())
@@ -115,7 +115,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 
 	err = configApplier.ApplyNewRoutines(config.Routines())
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()
@@ -137,7 +137,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		nsValidator,
 	)
 
-	return config, scheduler, httpService, nil
+	return config, scheduler, httpService, appLogger, nil
 }
 
 func setDefaultLoggers(ctx context.Context, loggerConfig *model.LoggerConfig) *slog.Logger {
@@ -162,8 +162,10 @@ func systemCtx() context.Context {
 	return ctx
 }
 
-func runHTTPServer(ctx context.Context, serverConfig *model.HTTPServerConfig, h *handlers.Service) error {
-	httpServer := server.NewHTTPServer(serverConfig, h)
+func runHTTPServer(
+	ctx context.Context, serverConfig *model.HTTPServerConfig, h *handlers.Service, logger *slog.Logger,
+) error {
+	httpServer := server.NewHTTPServer(serverConfig, h, logger)
 	go func() {
 		httpServer.Start()
 	}()

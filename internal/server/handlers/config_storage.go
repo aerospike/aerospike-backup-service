@@ -7,7 +7,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/gorilla/mux"
 )
 
 const storageNameNotSpecifiedMsg = "Storage name is not specified"
@@ -15,19 +14,19 @@ const storageNameNotSpecifiedMsg = "Storage name is not specified"
 func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		s.addStorage(w, r)
+		s.AddStorage(w, r)
 	case http.MethodGet:
-		s.readStorage(w, r)
+		s.ReadStorage(w, r)
 	case http.MethodPut:
-		s.updateStorage(w, r)
+		s.UpdateStorage(w, r)
 	case http.MethodDelete:
-		s.deleteStorage(w, r)
+		s.DeleteStorage(w, r)
 	}
 }
 
-// addStorage
+// AddStorage
 // @Summary     Adds a storage to the config.
-// @ID	        addStorage
+// @ID	        AddStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [post]
 // @Accept      json
@@ -35,7 +34,7 @@ func (s *Service) ConfigStorageActionHandler(w http.ResponseWriter, r *http.Requ
 // @Param       storage body dto.Storage true "Backup storage details"
 // @Success     201
 // @Failure     400 {string} string
-func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
+func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "addStorage"))
 
 	newStorage, err := dto.NewStorageFromReader(r.Body, dto.JSON)
@@ -44,7 +43,7 @@ func (s *Service) addStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	name := mux.Vars(r)["name"]
+	name := r.PathValue("name")
 	if name == "" {
 		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -103,9 +102,9 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// readStorage  reads a specific storage from the configuration given its name.
+// ReadStorage  reads a specific storage from the configuration given its name.
 // @Summary     Reads a specific storage from the configuration given its name.
-// @ID	        readStorage
+// @ID	        ReadStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [get]
 // @Param       name path string true "Backup storage name"
@@ -114,10 +113,10 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified storage could not be found"
 // @Failure     500 {string} string
-func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
+func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "readStorage"))
 
-	storageName := mux.Vars(r)["name"]
+	storageName := r.PathValue("name")
 	if storageName == "" {
 		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -149,9 +148,9 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// updateStorage updates an existing storage in the configuration.
+// UpdateStorage updates an existing storage in the configuration.
 // @Summary     Updates an existing storage in the configuration.
-// @ID	        updateStorage
+// @ID	        UpdateStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [put]
 // @Accept      json
@@ -159,7 +158,7 @@ func (s *Service) readStorage(w http.ResponseWriter, r *http.Request) {
 // @Param       storage body dto.Storage true "Backup storage details"
 // @Success     200
 // @Failure     400 {string} string
-func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
+func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "updateStorage"))
 
 	updatedStorage, err := dto.NewStorageFromReader(r.Body, dto.JSON)
@@ -169,7 +168,7 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	storageName := mux.Vars(r)["name"]
+	storageName := r.PathValue("name")
 	if storageName == "" {
 		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)
@@ -195,18 +194,18 @@ func (s *Service) updateStorage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-// deleteStorage
+// DeleteStorage
 // @Summary     Deletes a storage from the configuration by name.
-// @ID	        deleteStorage
+// @ID	        DeleteStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [delete]
 // @Param       name path string true "Backup storage name"
 // @Success     204
 // @Failure     400 {string} string
-func (s *Service) deleteStorage(w http.ResponseWriter, r *http.Request) {
+func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 	hLogger := s.logger.With(slog.String("handler", "deleteStorage"))
 
-	storageName := mux.Vars(r)["name"]
+	storageName := r.PathValue("name")
 	if storageName == "" {
 		hLogger.Error("storage name required")
 		http.Error(w, storageNameNotSpecifiedMsg, http.StatusBadRequest)

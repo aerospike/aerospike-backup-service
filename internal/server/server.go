@@ -24,7 +24,7 @@ type HTTPServer struct {
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(serverConfig *model.HTTPServerConfig, h *handlers.Service) *HTTPServer {
+func NewHTTPServer(serverConfig *model.HTTPServerConfig, h *handlers.Service, logger *slog.Logger) *HTTPServer {
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
 	rateLimiterConfig := serverConfig.GetRateOrDefault()
@@ -32,21 +32,30 @@ func NewHTTPServer(serverConfig *model.HTTPServerConfig, h *handlers.Service) *H
 		rate.Limit(rateLimiterConfig.GetTpsOrDefault()),
 		rateLimiterConfig.GetSizeOrDefault(),
 	)
-
 	whitelist := util.NewIPWhiteList(rateLimiterConfig.GetWhiteListOrDefault())
-	mw := middleware.RateLimiter(rateLimiter, whitelist)
 
-	router := NewRouter(
+	// Create router
+	mux := NewServeMux(
 		fmt.Sprintf("/%s", restAPIVersion),
 		"/",
 		h,
-		mw)
+	)
+
+	// Configure logging middleware
+	loggerOpts := &middleware.LoggerOptions{
+		SkipPaths: []string{"/health", "/ready", "/metrics"},
+	}
+
+	// Apply middleware chain
+	handler := middleware.WithRequestLogging(logger, loggerOpts)(
+		middleware.RateLimiter(rateLimiter, whitelist)(mux),
+	)
 
 	return &HTTPServer{
 		server: &http.Server{
 			Addr:              addr,
 			ReadHeaderTimeout: serverConfig.GetTimeoutOrDefault(),
-			Handler:           router,
+			Handler:           handler,
 		},
 	}
 }
