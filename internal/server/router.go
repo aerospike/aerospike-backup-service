@@ -27,7 +27,7 @@ func registerSystemRoutes(mux *http.ServeMux, sysPath string) {
 	mux.HandleFunc("GET "+sysPath+"ready", handlers.ReadyActionHandler)
 	mux.HandleFunc("GET "+sysPath+"version", handlers.VersionActionHandler)
 	mux.Handle("GET "+sysPath+"metrics", handlers.MetricsActionHandler())
-	mux.Handle("GET "+sysPath+"api-docs/...", handlers.APIDocsActionHandler())
+	mux.Handle("GET "+sysPath+"api-docs/", handlers.APIDocsActionHandler()) // Note the trailing slash
 }
 
 func registerConfigRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
