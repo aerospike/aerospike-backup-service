@@ -230,14 +230,13 @@ func backupsReadFunction(
 // @Failure  404 {string} string
 // @Failure  500 {string} string
 func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
-	hLogger := s.logger.With(slog.String("handler", "ScheduleFullBackup"))
-
 	routineName := r.PathValue("name")
 	if routineName == "" {
-		hLogger.Error("routine name required")
 		http.Error(w, "routine name required", http.StatusBadRequest)
 		return
 	}
+
+	hLogger := s.logger.With(slog.String("handler", "ScheduleFullBackup"))
 	delayParameter := r.URL.Query().Get("delay")
 	var delayMillis int
 	if delayParameter != "" {

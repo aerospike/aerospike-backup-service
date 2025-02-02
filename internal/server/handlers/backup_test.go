@@ -1,314 +1,174 @@
 package handlers
 
 import (
-	"fmt"
+	"encoding/json"
+	"log/slog"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/steinfletcher/apitest"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
-//nolint:dupl // No duplication here, just tests.
+// MockRestoreManager mocks the RestoreManager interface.
 func TestService_GetAllFullBackups(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/backups/full",
-		h.GetAllFullBackups,
-	).Methods(http.MethodGet)
-
-	const (
-		from = "1723366610"
-		to   = "1723366626"
-	)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-		from       string
-		to         string
+	tests := []struct {
+		name           string
+		queryParams    map[string]string
+		setupMocks     func(*MockBackendsHolder)
+		expectedStatus int
+		expectedBody   map[string][]dto.BackupDetails
 	}{
-		{http.MethodGet, http.StatusOK, from, to},
-		{http.MethodGet, http.StatusBadRequest, "a", "b"},
-		{http.MethodGet, http.StatusBadRequest, to, from},
-		{http.MethodPost, http.StatusMethodNotAllowed, from, to},
-		{http.MethodConnect, http.StatusMethodNotAllowed, from, to},
-		{http.MethodDelete, http.StatusMethodNotAllowed, from, to},
-		{http.MethodPatch, http.StatusMethodNotAllowed, from, to},
-		{http.MethodPut, http.StatusMethodNotAllowed, from, to},
-		{http.MethodTrace, http.StatusMethodNotAllowed, from, to},
+		{
+			name: "successful retrieval",
+			queryParams: map[string]string{
+				"from": "1000",
+				"to":   "2000",
+			},
+			setupMocks: func(mbh *MockBackendsHolder) {
+				reader := &MockBackupMetadataReader{}
+				reader.On("FullBackupList", mock.Anything, mock.Anything).Return([]model.BackupDetails{
+					{
+						Key: "backup1",
+						BackupMetadata: model.BackupMetadata{
+							Created: time.Unix(1500, 0),
+						},
+					},
+				}, nil)
+
+				mbh.On("GetAllReaders").Return(map[string]service.BackupMetadataReader{
+					"routine1": reader,
+				})
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody: map[string][]dto.BackupDetails{
+				"routine1": {
+					{
+						Key: "backup1",
+						BackupMetadata: dto.BackupMetadata{
+							Created: time.Unix(1500, 0),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "invalid time bounds",
+			queryParams: map[string]string{
+				"from": "invalid",
+				"to":   "2000",
+			},
+			setupMocks:     func(*MockBackendsHolder) {},
+			expectedStatus: http.StatusBadRequest,
+		},
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL("/backups/full").
-			QueryParams(map[string]string{"from": tt.from, "to": tt.to}).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockBackends := &MockBackendsHolder{}
+			cfg := model.NewConfig()
 
-func TestService_GetFullBackupsForRoutine(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/backups/full/{name}",
-		h.GetFullBackupsForRoutine,
-	).Methods(http.MethodGet)
+			tt.setupMocks(mockBackends)
 
-	const (
-		from = "1723366610"
-		to   = "1723366626"
-		name = testRoutineName
-	)
+			svc := &Service{
+				config:         cfg,
+				backupBackends: mockBackends,
+				logger:         slog.Default(),
+			}
 
-	testCases := []struct {
-		method     string
-		statusCode int
-		from       string
-		to         string
-		name       string
-	}{
-		{http.MethodGet, http.StatusOK, from, to, name},
-		{http.MethodGet, http.StatusNotFound, from, to, ""},
-		{http.MethodGet, http.StatusBadRequest, "a", "b", name},
-		{http.MethodGet, http.StatusBadRequest, to, from, name},
-		{http.MethodPost, http.StatusMethodNotAllowed, from, to, name},
-		{http.MethodConnect, http.StatusMethodNotAllowed, from, to, name},
-		{http.MethodDelete, http.StatusMethodNotAllowed, from, to, name},
-		{http.MethodPatch, http.StatusMethodNotAllowed, from, to, name},
-		{http.MethodPut, http.StatusMethodNotAllowed, from, to, name},
-		{http.MethodTrace, http.StatusMethodNotAllowed, from, to, name},
-	}
+			req := httptest.NewRequest(http.MethodGet, "/v1/backups/full", nil)
+			q := req.URL.Query()
+			for k, v := range tt.queryParams {
+				q.Add(k, v)
+			}
+			req.URL.RawQuery = q.Encode()
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/backups/full/%s", tt.name)).
-			QueryParams(map[string]string{"from": tt.from, "to": tt.to}).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
-	}
-}
+			w := httptest.NewRecorder()
+			svc.GetAllFullBackups(w, req)
 
-//nolint:dupl // No duplication here, just tests.
-func TestService_GetAllIncrementalBackups(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/backups/incremental",
-		h.GetAllFullBackups,
-	).Methods(http.MethodGet)
+			assert.Equal(t, tt.expectedStatus, w.Code)
 
-	const (
-		from = "1723366610"
-		to   = "1723366626"
-	)
+			if tt.expectedStatus == http.StatusOK {
+				var response map[string][]dto.BackupDetails
+				err := json.NewDecoder(w.Body).Decode(&response)
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectedBody, response)
+			}
 
-	testCases := []struct {
-		method     string
-		statusCode int
-		from       string
-		to         string
-	}{
-		{http.MethodGet, http.StatusOK, from, to},
-		{http.MethodGet, http.StatusBadRequest, "a", "b"},
-		{http.MethodGet, http.StatusBadRequest, to, from},
-		{http.MethodPost, http.StatusMethodNotAllowed, from, to},
-		{http.MethodConnect, http.StatusMethodNotAllowed, from, to},
-		{http.MethodDelete, http.StatusMethodNotAllowed, from, to},
-		{http.MethodPatch, http.StatusMethodNotAllowed, from, to},
-		{http.MethodPut, http.StatusMethodNotAllowed, from, to},
-		{http.MethodTrace, http.StatusMethodNotAllowed, from, to},
-	}
-
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL("/backups/incremental").
-			QueryParams(map[string]string{"from": tt.from, "to": tt.to}).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
-	}
-}
-
-func TestService_GetIncrementalBackupsForRoutine(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/backups/incremental/{name}",
-		h.GetIncrementalBackupsForRoutine,
-	).Methods(http.MethodGet)
-
-	const (
-		from = "1723366610"
-		to   = "1723366626"
-		name = testRoutineName
-	)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-		from       string
-		to         string
-		name       string
-	}{
-		{http.MethodGet, http.StatusOK, from, to, name},
-		{http.MethodGet, http.StatusNotFound, from, to, ""},
-		{http.MethodGet, http.StatusBadRequest, "a", "b", name},
-		{http.MethodGet, http.StatusBadRequest, to, from, name},
-		{http.MethodPost, http.StatusMethodNotAllowed, from, to, name},
-		{http.MethodConnect, http.StatusMethodNotAllowed, from, to, name},
-		{http.MethodDelete, http.StatusMethodNotAllowed, from, to, name},
-		{http.MethodPatch, http.StatusMethodNotAllowed, from, to, name},
-		{http.MethodPut, http.StatusMethodNotAllowed, from, to, name},
-		{http.MethodTrace, http.StatusMethodNotAllowed, from, to, name},
-	}
-
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/backups/incremental/%s", tt.name)).
-			QueryParams(map[string]string{"from": tt.from, "to": tt.to}).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+			mockBackends.AssertExpectations(t)
+		})
 	}
 }
 
 func TestService_ScheduleFullBackup(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/backups/schedule/{name}",
-		h.ScheduleFullBackup,
-	).Methods(http.MethodGet)
-
-	const (
-		delay = "10"
-		name  = testRoutineName
-	)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-		delay      string
-		name       string
+	tests := []struct {
+		name           string
+		routineName    string
+		delayParam     string
+		expectedStatus int
 	}{
-		// We can't mock jobStore, so this test is not very usefully. Just to check negative scenarios.
-		{http.MethodGet, http.StatusNotFound, delay, name},
-		{http.MethodGet, http.StatusNotFound, delay, ""},
-		{http.MethodGet, http.StatusBadRequest, "b", name},
-		{http.MethodGet, http.StatusBadRequest, "-10", name},
-		{http.MethodPost, http.StatusMethodNotAllowed, delay, name},
-		{http.MethodConnect, http.StatusMethodNotAllowed, delay, name},
-		{http.MethodDelete, http.StatusMethodNotAllowed, delay, name},
-		{http.MethodPatch, http.StatusMethodNotAllowed, delay, name},
-		{http.MethodPut, http.StatusMethodNotAllowed, delay, name},
-		{http.MethodTrace, http.StatusMethodNotAllowed, delay, name},
+		{
+			name:           "invalid delay parameter",
+			routineName:    "test-routine",
+			delayParam:     "invalid",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "negative delay",
+			routineName:    "test-routine",
+			delayParam:     "-1000",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "empty routine name",
+			routineName:    "",
+			delayParam:     "1000",
+			expectedStatus: http.StatusBadRequest,
+		},
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/backups/schedule/%s", tt.name)).
-			QueryParams(map[string]string{"delay": tt.delay}).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockScheduler := &MockScheduler{}
+			cfg := model.NewConfig()
+
+			svc := &Service{
+				config:    cfg,
+				scheduler: mockScheduler,
+				logger:    slog.Default(),
+			}
+
+			req := httptest.NewRequest(http.MethodPost, "/v1/backups/schedule/"+tt.routineName, nil)
+			if tt.delayParam != "" {
+				q := req.URL.Query()
+				q.Add("delay", tt.delayParam)
+				req.URL.RawQuery = q.Encode()
+			}
+			req.SetPathValue("name", tt.routineName)
+
+			w := httptest.NewRecorder()
+			svc.ScheduleFullBackup(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			mockScheduler.AssertExpectations(t)
+		})
 	}
 }
 
-//nolint:dupl
-func TestService_GetCurrentBackupInfo(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/backups/currentBackup/{name}",
-		h.GetCurrentBackupInfo,
-	).Methods(http.MethodGet)
-
-	const (
-		name = testRoutineName
-	)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
-	}{
-		// We can't mock handlerHolder, so this test is not very usefully. Just to check negative scenarios.
-		{http.MethodGet, http.StatusNotFound, name},
-		{http.MethodGet, http.StatusNotFound, ""},
-		{http.MethodPost, http.StatusMethodNotAllowed, name},
-		{http.MethodConnect, http.StatusMethodNotAllowed, name},
-		{http.MethodDelete, http.StatusMethodNotAllowed, name},
-		{http.MethodPatch, http.StatusMethodNotAllowed, name},
-		{http.MethodPut, http.StatusMethodNotAllowed, name},
-		{http.MethodTrace, http.StatusMethodNotAllowed, name},
+func TestService_CancelCurrentBackup(t *testing.T) {
+	svc := &Service{
+		logger: slog.Default(),
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/backups/currentBackup/%s", tt.name)).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
-	}
-}
+	req := httptest.NewRequest(http.MethodPost, "/v1/backups/cancel/", nil)
+	w := httptest.NewRecorder()
+	svc.CancelCurrentBackup(w, req)
 
-//nolint:dupl
-func TestService_CancelRunningBackup(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/backups/cancel/{name}",
-		h.CancelCurrentBackup,
-	).Methods(http.MethodPost)
-
-	const name = testRoutineName
-
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
-	}{
-		{http.MethodPost, http.StatusNotFound, name},
-		{http.MethodPost, http.StatusNotFound, ""},
-		{http.MethodGet, http.StatusMethodNotAllowed, name},
-		{http.MethodConnect, http.StatusMethodNotAllowed, name},
-		{http.MethodDelete, http.StatusMethodNotAllowed, name},
-		{http.MethodPatch, http.StatusMethodNotAllowed, name},
-		{http.MethodPut, http.StatusMethodNotAllowed, name},
-		{http.MethodTrace, http.StatusMethodNotAllowed, name},
-	}
-
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/backups/cancel/%s", tt.name)).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
-	}
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }

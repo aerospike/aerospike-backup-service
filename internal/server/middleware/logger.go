@@ -1,6 +1,9 @@
 package middleware
 
 import (
+	"bytes"
+	"context"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -19,38 +22,72 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 				}
 			}
 
+			body := readRequestBody(r, logger)
+			rw := newCapturingResponseWriter(w)
 			start := time.Now()
-			rw := newResponseWriter(w)
 
-			// Process request
 			next.ServeHTTP(rw, r)
 
-			// Log request details
-			logger.Info("http request",
-				"method", r.Method,
-				"path", r.URL.Path,
-				"status", rw.status,
-				"duration", time.Since(start).Milliseconds(),
-				"ip", r.RemoteAddr,
-			)
+			attrs := []slog.Attr{
+				slog.String("method", r.Method),
+				slog.String("path", r.URL.Path),
+				slog.Int("status", rw.status),
+				slog.Int64("duration", time.Since(start).Milliseconds()),
+				slog.String("ip", r.RemoteAddr),
+			}
+
+			if len(body) > 0 {
+				attrs = append(attrs, slog.String("request_body", string(body)))
+			}
+
+			// Log based on response status
+			if rw.status < 400 {
+				logger.LogAttrs(context.TODO(), slog.LevelInfo, "http request", attrs...)
+				return
+			}
+			if rw.errorMsg != "" {
+				attrs = append(attrs, slog.String("error", rw.errorMsg))
+			}
+			logger.LogAttrs(context.TODO(), slog.LevelError, "http request failed", attrs...)
 		})
 	}
 }
 
-// responseWriter captures the status code.
-type responseWriter struct {
-	http.ResponseWriter
-	status int
+// readRequestBody reads the request body and resets is, so it can be used by subsequent handlers.
+func readRequestBody(r *http.Request, logger *slog.Logger) []byte {
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		logger.Error("failed to read request body", "error", err)
+	}
+	r.Body.Close()
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	return bodyBytes
 }
 
-func newResponseWriter(w http.ResponseWriter) *responseWriter {
-	return &responseWriter{
+// capturingResponseWriter captures the status code and error message.
+type capturingResponseWriter struct {
+	http.ResponseWriter
+	status   int
+	errorMsg string
+}
+
+func newCapturingResponseWriter(w http.ResponseWriter) *capturingResponseWriter {
+	return &capturingResponseWriter{
 		ResponseWriter: w,
 	}
 }
 
 // WriteHeader captures the status code and calls the underlying ResponseWriter.
-func (rw *responseWriter) WriteHeader(statusCode int) {
+func (rw *capturingResponseWriter) WriteHeader(statusCode int) {
 	rw.status = statusCode
 	rw.ResponseWriter.WriteHeader(statusCode)
+}
+
+// Write captures error messages from http.Error calls.
+func (rw *capturingResponseWriter) Write(b []byte) (int, error) {
+	if rw.status >= 400 { // Response body contains an error message
+		rw.errorMsg = string(b)
+	}
+
+	return rw.ResponseWriter.Write(b)
 }
