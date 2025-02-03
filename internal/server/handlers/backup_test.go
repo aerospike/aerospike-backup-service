@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -79,7 +78,6 @@ func TestService_GetAllFullBackups(t *testing.T) {
 			svc := &Service{
 				config:         cfg,
 				backupBackends: mockBackends,
-				logger:         slog.Default(),
 			}
 
 			req := httptest.NewRequest(http.MethodGet, "/v1/backups/full", nil)
@@ -141,7 +139,6 @@ func TestService_ScheduleFullBackup(t *testing.T) {
 			svc := &Service{
 				config:    cfg,
 				scheduler: mockScheduler,
-				logger:    slog.Default(),
 			}
 
 			req := httptest.NewRequest(http.MethodPost, "/v1/backups/schedule/"+tt.routineName, nil)
@@ -162,9 +159,7 @@ func TestService_ScheduleFullBackup(t *testing.T) {
 }
 
 func TestService_CancelCurrentBackup(t *testing.T) {
-	svc := &Service{
-		logger: slog.Default(),
-	}
+	svc := &Service{}
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/backups/cancel/", nil)
 	w := httptest.NewRecorder()

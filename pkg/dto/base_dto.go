@@ -22,29 +22,6 @@ type Validator interface {
 	Validate() error
 }
 
-// Serialize handles serialization.
-func Serialize(v any, format SerializationFormat) ([]byte, error) {
-	var (
-		data []byte
-		err  error
-	)
-
-	switch format {
-	case JSON:
-		data, err = json.MarshalIndent(v, "", "    ") // pretty print
-	case YAML:
-		data, err = yaml.Marshal(v)
-	default:
-		return nil, fmt.Errorf("unsupported format: %v", format)
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal: %w", err)
-	}
-
-	return data, nil
-}
-
 // Deserialize handles deserialization.
 func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 	var err error

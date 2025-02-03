@@ -133,7 +133,6 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		backupHandlers,
 		registry,
 		configurationManager,
-		appLogger,
 		nsValidator,
 	)
 

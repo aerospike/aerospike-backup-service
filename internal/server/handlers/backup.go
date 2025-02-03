@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"context"
-	"log/slog"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -76,118 +76,60 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 }
 
 func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
-	hLogger := s.logger.With(slog.String("handler", "readAllBackups"))
-
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
 	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
 	if err != nil {
-		hLogger.Error("failed parse time limits",
-			slog.String("from", from),
-			slog.String("to", to),
-			slog.Any("error", err),
-		)
-		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusBadRequest)
+		httpError(w, errInvalidQueryParam(err, "time bounds"))
 		return
 	}
 	backups, err := readBackupsLogic(r.Context(), s.backupBackends, timeBounds.ToModel(), isFullBackup)
 	if err != nil {
-		hLogger.Error("failed to retrieve backup list",
-			slog.Any("timeBounds", timeBounds),
-			slog.Bool("isFullBackup", isFullBackup),
-			slog.Any("error", err),
-		)
-		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
+		httpError(w, err)
 		return
 	}
 
-	response, err := dto.Serialize(dto.ConvertBackupDetailsMap(backups, s.config.BackupConfigCopy()), dto.JSON)
-	if err != nil {
-		hLogger.Error("failed to marshal backup list",
-			slog.Any("error", err),
-		)
-		http.Error(w, "failed to parse backup list", http.StatusInternalServerError)
-		return
-	}
+	response := dto.ConvertBackupDetailsMap(backups, s.config.BackupConfigCopy())
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(response)
-	if err != nil {
-		hLogger.Error("failed to write response",
-			slog.String("response", string(response)),
-			slog.Any("error", err),
-		)
-	}
+	httpOK(w, response)
 }
 
-//nolint:funlen // Function is long because of logging.
 func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
-	hLogger := s.logger.With(slog.String("handler", "readBackupsForRoutine"))
-
 	from := r.URL.Query().Get("from")
 	to := r.URL.Query().Get("to")
 
 	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
 	if err != nil {
-		hLogger.Error("failed parse time limits",
-			slog.String("from", from),
-			slog.String("to", to),
-			slog.Any("error", err),
-		)
-		http.Error(w, "failed parse time limits: "+err.Error(), http.StatusBadRequest)
+		httpError(w, errInvalidQueryParam(err, "time bounds"))
 		return
 	}
 
 	routine := r.PathValue("name")
 	if routine == "" {
-		hLogger.Error("routine name required")
-		http.Error(w, "routine name required", http.StatusBadRequest)
+		httpError(w, errMissingRoutineName)
 		return
 	}
 
-	hLogger = hLogger.With(slog.String("routine", routine))
 	reader, found := s.backupBackends.GetReader(routine)
 	if !found {
-		hLogger.Error("routine not found")
-		http.Error(w, "routine not found: "+routine, http.StatusBadRequest)
+		httpError(w, errRoutineNotFound(routine))
 		return
 	}
 
 	backupListFunction := backupsReadFunction(reader, isFullBackup)
 	backups, err := backupListFunction(r.Context(), timeBounds.ToModel())
 	if err != nil {
-		hLogger.Error("failed to retrieve backup list",
-			slog.Bool("isFullBackup", isFullBackup),
-			slog.Any("timeBounds", timeBounds),
-			slog.Any("error", err),
-		)
-		http.Error(w, "failed to retrieve backup list: "+err.Error(), http.StatusInternalServerError)
+		httpError(w, err)
 		return
 	}
+
 	backupConfig := s.config.BackupConfigCopy()
 	backupDetails := dto.ConvertModelsToDTO(backups, func(m *model.BackupDetails) *dto.BackupDetails {
 		return dto.NewBackupDetailsFromModel(m, backupConfig)
 	})
-	response, err := dto.Serialize(backupDetails, dto.JSON)
-	if err != nil {
-		hLogger.Error("failed to marshal backup list",
-			slog.Any("error", err),
-		)
-		http.Error(w, "failed to marshal backup list", http.StatusInternalServerError)
-		return
-	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(response)
-	if err != nil {
-		hLogger.Error("failed to write response",
-			slog.String("response", string(response)),
-			slog.Any("error", err),
-		)
-	}
+	httpOK(w, backupDetails)
 }
 
 func readBackupsLogic(ctx context.Context,
@@ -236,47 +178,39 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hLogger := s.logger.With(slog.String("handler", "ScheduleFullBackup"))
-	delayParameter := r.URL.Query().Get("delay")
-	var delayMillis int
-	if delayParameter != "" {
-		var err error
-		delayMillis, err = strconv.Atoi(delayParameter)
-		if err != nil {
-			hLogger.Error("failed to parse delay parameter",
-				slog.String("delayParameter", delayParameter),
-				slog.Any("error", err),
-			)
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
-	if delayMillis < 0 {
-		hLogger.Error("nonpositive delay query parameter",
-			slog.Int("delayMillis", delayMillis),
-		)
-		http.Error(w, "nonpositive delay query parameter", http.StatusBadRequest)
+	delayMillis, err := parseDelay(r.URL.Query().Get("delay"))
+	if err != nil {
+		httpError(w, err)
 		return
 	}
+
 	fullBackupJobDetail := service.NewAdHocFullBackupJobForRoutine(routineName)
 	if fullBackupJobDetail == nil {
-		hLogger.Error("unknown routine name",
-			slog.String("name", routineName),
-		)
-		http.Error(w, "unknown routine name "+routineName, http.StatusNotFound)
+		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
+
 	trigger := quartz.NewRunOnceTrigger(time.Duration(delayMillis) * time.Millisecond)
 	// schedule using the quartz scheduler
 	if err := s.scheduler.ScheduleJob(fullBackupJobDetail, trigger); err != nil {
-		hLogger.Error("failed to schedule job",
-			slog.Any("trigger", trigger),
-			slog.Any("error", err),
-		)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpError(w, errors.New("failed to schedule job"))
 		return
 	}
+
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func parseDelay(delayParameter string) (int, error) {
+	if delayParameter == "" {
+		return 0, nil
+	}
+
+	delayMillis, err := strconv.Atoi(delayParameter)
+	if err != nil || delayMillis < 0 {
+		return 0, errInvalidQueryParam(errors.New("should be a positive integer"), "delay")
+	}
+
+	return delayMillis, nil
 }
 
 // GetCurrentBackupInfo
@@ -291,43 +225,20 @@ func (s *Service) ScheduleFullBackup(w http.ResponseWriter, r *http.Request) {
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
-	hLogger := s.logger.With(slog.String("handler", "GetCurrentBackupInfo"))
-
 	routineName := r.PathValue("name")
 	if routineName == "" {
-		hLogger.Error("routine name required")
-		http.Error(w, "routine name required", http.StatusBadRequest)
+		httpError(w, errMissingRoutineName)
 		return
 	}
 
 	_, found := s.handlerHolder.Load(routineName)
 	if !found {
-		hLogger.Error("unknown routine name",
-			slog.String("name", routineName),
-		)
-		http.Error(w, "unknown routine name "+routineName, http.StatusNotFound)
+		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
 
 	currentBackups := dto.NewRoutineStateFromModel(s.registry.GetRoutineState(routineName))
-	response, err := dto.Serialize(currentBackups, dto.JSON)
-	if err != nil {
-		hLogger.Error("failed to marshal statistics",
-			slog.Any("error", err),
-		)
-		http.Error(w, "failed to marshal statistics", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(response)
-	if err != nil {
-		hLogger.Error("failed to write response",
-			slog.String("response", string(response)),
-			slog.Any("error", err),
-		)
-	}
+	httpOK(w, currentBackups)
 }
 
 // CancelCurrentBackup
@@ -340,26 +251,19 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 // @Failure  404 {string} string
 // @Failure  500 {string} string
 func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
-	hLogger := s.logger.With(slog.String("handler", "CancelCurrentBackup"))
-
 	routineName := r.PathValue("name")
 	if routineName == "" {
-		hLogger.Error("routine name required")
-		http.Error(w, "routine name required", http.StatusBadRequest)
+		httpError(w, errMissingRoutineName)
 		return
 	}
 
 	_, found := s.handlerHolder.Load(routineName)
 	if !found {
-		hLogger.Error("unknown routine name",
-			slog.String("name", routineName),
-		)
-		http.Error(w, "unknown routine name "+routineName, http.StatusNotFound)
+		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
 
 	s.registry.Cancel(routineName)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 }

@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"log/slog"
-
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -19,7 +17,6 @@ type Service struct {
 	handlerHolder        service.BackupHandlerHolder
 	registry             service.RunningBackupsRegistry
 	configurationManager configuration.Manager
-	logger               *slog.Logger
 	nsValidator          aerospike.NamespaceValidator
 }
 
@@ -32,7 +29,6 @@ func NewService(
 	handlerHolder service.BackupHandlerHolder,
 	registry service.RunningBackupsRegistry,
 	configurationManager configuration.Manager,
-	logger *slog.Logger,
 	nsValidator aerospike.NamespaceValidator,
 ) *Service {
 	return &Service{
@@ -44,7 +40,6 @@ func NewService(
 		handlerHolder:        handlerHolder,
 		registry:             registry,
 		configurationManager: configurationManager,
-		logger:               logger,
 		nsValidator:          nsValidator,
 	}
 }
