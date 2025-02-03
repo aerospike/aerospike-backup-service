@@ -49,7 +49,7 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 			if rw.errorMsg != "" {
 				attrs = append(attrs, slog.String("error", rw.errorMsg))
 			}
-			logger.LogAttrs(context.TODO(), slog.LevelError, "http request failed", attrs...)
+			logger.LogAttrs(r.Context(), slog.LevelError, "http request failed", attrs...)
 		})
 	}
 }
