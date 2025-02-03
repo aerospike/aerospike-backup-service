@@ -49,8 +49,10 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 			}
 
 			// Log based on response status
-			msg := "request success"
-			logLevel := slog.LevelInfo
+			var (
+				msg      string
+				logLevel slog.Level
+			)
 			switch {
 			case rw.status >= 500:
 				msg = "request error"
@@ -58,6 +60,9 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 			case rw.status >= 400:
 				msg = "request failed"
 				logLevel = slog.LevelWarn
+			default:
+				msg = "request success"
+				logLevel = slog.LevelInfo
 			}
 
 			if rw.errorMsg != "" {
