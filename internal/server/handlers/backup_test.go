@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockRestoreManager mocks the RestoreManager interface.
 func TestService_GetAllFullBackups(t *testing.T) {
 	tests := []struct {
 		name           string
