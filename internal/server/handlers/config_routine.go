@@ -9,7 +9,7 @@ import (
 
 // AddRoutine
 // @Summary     Adds a backup routine to the config.
-// @ID          AddRoutine
+// @ID          addRoutine
 // @Tags        Configuration
 // @Router      /v1/config/routines/{name} [post]
 // @Accept      json
@@ -50,7 +50,7 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 
 // ReadRoutines reads all backup routines from the configuration.
 // @Summary     Reads all routines from the configuration.
-// @ID	        ReadRoutines
+// @ID	        readRoutines
 // @Tags        Configuration
 // @Router      /v1/config/routines [get]
 // @Produce     json
@@ -66,7 +66,7 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 
 // ReadRoutine reads a specific routine from the configuration given its name.
 // @Summary     Reads a specific routine from the configuration given its name.
-// @ID	        ReadRoutine
+// @ID	        readRoutine
 // @Tags        Configuration
 // @Router      /v1/config/routines/{name} [get]
 // @Param       name path string true "Backup routine name"
@@ -91,7 +91,7 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 
 // UpdateRoutine updates an existing backup routine in the configuration.
 // @Summary      Updates an existing routine in the configuration.
-// @ID 	         UpdateRoutine
+// @ID 	         updateRoutine
 // @Tags         Configuration
 // @Router       /v1/config/routines/{name} [put]
 // @Accept       json
@@ -134,7 +134,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 
 // DeleteRoutine
 // @Summary     Deletes a backup routine from the configuration by name.
-// @ID          DeleteRoutine
+// @ID          deleteRoutine
 // @Tags        Configuration
 // @Router      /v1/config/routines/{name} [delete]
 // @Param       name path string true "Backup routine name"

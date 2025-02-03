@@ -178,7 +178,7 @@ paths:
       - Backup
   /v1/backups/full/{name}:
     get:
-      operationId: GetFullBackupsForRoutine
+      operationId: getFullBackupsForRoutine
       parameters:
       - description: Backup routine name
         in: path
@@ -266,7 +266,7 @@ paths:
       - Backup
   /v1/backups/incremental/{name}:
     get:
-      operationId: GetIncrementalBackupsForRoutine
+      operationId: getIncrementalBackupsForRoutine
       parameters:
       - description: Backup routine name
         in: path
@@ -312,7 +312,7 @@ paths:
       - Backup
   /v1/backups/schedule/{name}:
     post:
-      operationId: ScheduleFullBackup
+      operationId: scheduleFullBackup
       parameters:
       - description: Backup routine name
         in: path
@@ -558,7 +558,7 @@ paths:
       x-codegen-request-body-name: cluster
   /v1/config/policies:
     get:
-      operationId: ReadPolicies
+      operationId: readPolicies
       responses:
         "200":
           content:
@@ -699,7 +699,7 @@ paths:
       x-codegen-request-body-name: policy
   /v1/config/routines:
     get:
-      operationId: ReadRoutines
+      operationId: readRoutines
       responses:
         "200":
           content:
@@ -886,7 +886,7 @@ paths:
       - Configuration
   /v1/config/storage:
     get:
-      operationId: ReadAllStorage
+      operationId: readAllStorage
       responses:
         "200":
           content:
@@ -1037,7 +1037,7 @@ paths:
           format: int64
           type: integer
       responses:
-        "200":
+        "202":
           content:
             '*/*':
               schema:
@@ -2490,6 +2490,8 @@ components:
           description: The path to a trusted CA certificate file in PEM format.
           example: /path/to/ca.pem
           type: string
+      required:
+      - address
       type: object
     dto.SeedNode:
       description: SeedNode represents details of a node in the Aerospike cluster.

@@ -30,7 +30,7 @@ func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 
 // GetFullBackupsForRoutine
 // @Summary  Get available full backups for routine.
-// @ID 	     GetFullBackupsForRoutine
+// @ID 	     getFullBackupsForRoutine
 // @Tags     Backup
 // @Produce  json
 // @Param    name path string true "Backup routine name"
@@ -61,7 +61,7 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 
 // GetIncrementalBackupsForRoutine
 // @Summary  Get incremental backups for routine.
-// @ID       GetIncrementalBackupsForRoutine
+// @ID       getIncrementalBackupsForRoutine
 // @Tags     Backup
 // @Produce  json
 // @Param    name path string true "Backup routine name"
@@ -162,7 +162,7 @@ func backupsReadFunction(
 
 // ScheduleFullBackup
 // @Summary  Schedule a full backup once per routine name.
-// @ID       ScheduleFullBackup
+// @ID       scheduleFullBackup
 // @Tags     Backup
 // @Param    name path string true "Backup routine name"
 // @Param    delay query int false "Delay interval in milliseconds"

@@ -10,7 +10,7 @@ import (
 
 // AddStorage
 // @Summary     Adds a storage to the config.
-// @ID	        AddStorage
+// @ID	        addStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [post]
 // @Accept      json
@@ -50,7 +50,7 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 
 // ReadAllStorage reads all storage from the configuration.
 // @Summary     Reads all storage from the configuration.
-// @ID 	        ReadAllStorage
+// @ID 	        readAllStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage [get]
 // @Produce     json
@@ -63,7 +63,7 @@ func (s *Service) ReadAllStorage(w http.ResponseWriter, _ *http.Request) {
 
 // ReadStorage  reads a specific storage from the configuration given its name.
 // @Summary     Reads a specific storage from the configuration given its name.
-// @ID	        ReadStorage
+// @ID	        readStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [get]
 // @Param       name path string true "Backup storage name"
@@ -90,7 +90,7 @@ func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 
 // UpdateStorage updates an existing storage in the configuration.
 // @Summary     Updates an existing storage in the configuration.
-// @ID	        UpdateStorage
+// @ID	        updateStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [put]
 // @Accept      json
@@ -129,7 +129,7 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 
 // DeleteStorage
 // @Summary     Deletes a storage from the configuration by name.
-// @ID	        DeleteStorage
+// @ID	        deleteStorage
 // @Tags        Configuration
 // @Router      /v1/config/storage/{name} [delete]
 // @Param       name path string true "Backup storage name"

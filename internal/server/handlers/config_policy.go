@@ -9,7 +9,7 @@ import (
 
 // AddPolicy
 // @Summary     Adds a policy to the config.
-// @ID          AddPolicy
+// @ID          addPolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [post]
 // @Accept      json
@@ -42,7 +42,7 @@ func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 
 // ReadPolicies reads all backup policies from the configuration.
 // @Summary     Reads all policies from the configuration.
-// @ID	        ReadPolicies
+// @ID	        readPolicies
 // @Tags        Configuration
 // @Router      /v1/config/policies [get]
 // @Produce     json
@@ -55,7 +55,7 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 
 // ReadPolicy reads a specific backup policy from the configuration given its name.
 // @Summary     Reads a backup policy from the configuration given its name.
-// @ID	        ReadPolicy
+// @ID	        readPolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [get]
 // @Param       name path string true "Backup policy name"
@@ -81,7 +81,7 @@ func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 
 // UpdatePolicy updates an existing policy in the configuration.
 // @Summary     Updates an existing policy in the configuration.
-// @ID 	        UpdatePolicy
+// @ID 	        updatePolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [put]
 // @Accept      json
@@ -115,7 +115,7 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 
 // DeletePolicy
 // @Summary     Deletes a policy from the configuration by name.
-// @ID          DeletePolicy
+// @ID          deletePolicy
 // @Tags        Configuration
 // @Router      /v1/config/policies/{name} [delete]
 // @Param       name path string true "Backup policy name"

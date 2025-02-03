@@ -16,7 +16,7 @@ func (s *Service) ConfigActionHandler(_ http.ResponseWriter, _ *http.Request) {
 
 // ReadConfig
 // @Summary     Returns the configuration for the service.
-// @ID	        ReadConfig
+// @ID	        readConfig
 // @Tags        Configuration
 // @Router      /v1/config [get]
 // @Produce     json
@@ -28,7 +28,7 @@ func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 
 // UpdateConfig
 // @Summary     Updates the configuration for the service.
-// @ID 	        UpdateConfig
+// @ID 	        updateConfig
 // @Tags        Configuration
 // @Router      /v1/config [put]
 // @Accept      json
