@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -34,9 +33,6 @@ func TestService_GetAllFullBackups(t *testing.T) {
 				reader.On("FullBackupList", mock.Anything, mock.Anything).Return([]model.BackupDetails{
 					{
 						Key: "backup1",
-						BackupMetadata: model.BackupMetadata{
-							Created: time.Unix(1500, 0),
-						},
 					},
 				}, nil)
 
@@ -49,9 +45,6 @@ func TestService_GetAllFullBackups(t *testing.T) {
 				"routine1": {
 					{
 						Key: "backup1",
-						BackupMetadata: dto.BackupMetadata{
-							Created: time.Unix(1500, 0),
-						},
 					},
 				},
 			},
