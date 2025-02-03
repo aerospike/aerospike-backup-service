@@ -6,6 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/backup-go"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/stretchr/testify/mock"
 )
@@ -158,4 +159,37 @@ func (m *MockRestoreManager) RetrieveConfiguration(routine string, toTime time.T
 func (m *MockRestoreManager) CancelRestore(jobID model.RestoreJobID) error {
 	args := m.Called(jobID)
 	return args.Error(0)
+}
+
+type configurationManagerMock struct{}
+
+func (mock configurationManagerMock) Read(_ context.Context) (*model.Config, error) {
+	return nil, nil
+}
+
+func (mock configurationManagerMock) Write(_ context.Context, config *model.Config) error {
+	if config == nil {
+		return nil
+	}
+	return nil
+}
+
+type MockConfigApplier struct{}
+
+func (a *MockConfigApplier) ApplyNewRoutines(_ map[string]*model.BackupRoutine) error {
+	return nil
+}
+
+type MockNamespaceValidator struct{}
+
+func (m *MockNamespaceValidator) IsEmpty(_ backup.AerospikeClient, _ string, _ []string) (bool, error) {
+	return false, nil
+}
+
+func (m *MockNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ []string) []string {
+	return nil
+}
+
+func (m *MockNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ map[string]*model.BackupRoutine) error {
+	return nil
 }

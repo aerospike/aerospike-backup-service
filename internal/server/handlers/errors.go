@@ -43,7 +43,6 @@ var errMissingRoutineName = newErrorWithCode(errors.New("routine name required")
 var errMissingClusterName = newErrorWithCode(errors.New("cluster name required"), http.StatusBadRequest)
 var errMissingPolicyName = newErrorWithCode(errors.New("policy name required"), http.StatusBadRequest)
 var errMissingStorageName = newErrorWithCode(errors.New("storage name required"), http.StatusBadRequest)
-var errMissingTimestamp = newErrorWithCode(errors.New("timestamp required"), http.StatusBadRequest)
 
 func errRoutineNotFound(name string) error {
 	return errNotFound("routine", name)
@@ -68,7 +67,7 @@ func httpOK(w http.ResponseWriter, data any) {
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		slog.Error("Error encoding JSON response: %v\n", err)
+		slog.Error("Error encoding JSON response", slog.Any("error", err))
 	}
 }
 
@@ -76,7 +75,10 @@ func httpOK(w http.ResponseWriter, data any) {
 func httpAcceptedWithJobID(w http.ResponseWriter, jobID model.RestoreJobID) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	_, _ = fmt.Fprintf(w, "%d", jobID)
+	_, err := fmt.Fprintf(w, "%d", jobID)
+	if err != nil {
+		slog.Error("Error encoding job id response", slog.Any("error", err))
+	}
 }
 
 // httpAccepted responds with an empty 202 Accepted.
@@ -100,7 +102,7 @@ func httpContent(w http.ResponseWriter, buf []byte, filename string) {
 	w.WriteHeader(http.StatusOK)
 
 	if _, err := w.Write(buf); err != nil {
-		fmt.Printf("Error writing response: %v\n", err)
+		slog.Error("Error encoding writing response", slog.Any("error", err))
 		http.Error(w, "Failed to send file", http.StatusInternalServerError)
 	}
 }

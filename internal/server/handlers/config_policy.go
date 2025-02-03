@@ -17,8 +17,6 @@ import (
 // @Param       policy body dto.BackupPolicy true "Backup policy details"
 // @Success     201
 // @Failure     400 {string} string
-//
-//nolint:dupl
 func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 	newPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
 	if err != nil {
@@ -91,8 +89,6 @@ func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 // @Param       policy body dto.BackupPolicy true "Backup policy details"
 // @Success     200
 // @Failure     400 {string} string
-//
-//nolint:dupl
 func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	updatedPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
 	if err != nil {
