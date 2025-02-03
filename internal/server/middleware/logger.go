@@ -2,13 +2,14 @@ package middleware
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 )
+
+const maxSize = 10_000 // Maximum size of request body to log in bytes.
 
 // RequestLogger returns a middleware that logs request details using provided logger.
 func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
@@ -23,7 +24,13 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 				}
 			}
 
-			body := readRequestBody(r, logger)
+			body, err := readRequestBody(r)
+			if err != nil {
+				logger.Error("failed to read request body", "error", err)
+				http.Error(w, "Failed to read request body: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+
 			rw := newCapturingResponseWriter(w)
 			start := time.Now()
 
@@ -42,27 +49,37 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 			}
 
 			// Log based on response status
-			if rw.status < 400 {
-				logger.LogAttrs(r.Context(), slog.LevelInfo, "http request", attrs...)
-				return
+			msg := "request success"
+			logLevel := slog.LevelInfo
+			switch {
+			case rw.status >= 500:
+				msg = "request error"
+				logLevel = slog.LevelError
+			case rw.status >= 400:
+				msg = "request failed"
+				logLevel = slog.LevelWarn
 			}
+
 			if rw.errorMsg != "" {
 				attrs = append(attrs, slog.String("error", rw.errorMsg))
 			}
-			logger.LogAttrs(r.Context(), slog.LevelError, "http request failed", attrs...)
+
+			logger.LogAttrs(r.Context(), logLevel, msg, attrs...)
 		})
 	}
 }
 
 // readRequestBody reads the request body and resets is, so it can be used by subsequent handlers.
-func readRequestBody(r *http.Request, logger *slog.Logger) []byte {
-	bodyBytes, err := io.ReadAll(r.Body)
+func readRequestBody(r *http.Request) ([]byte, error) {
+	limitedReader := io.LimitReader(r.Body, maxSize)
+	bodyBytes, err := io.ReadAll(limitedReader)
 	if err != nil {
-		logger.Error("failed to read request body", "error", err)
+		return nil, err
 	}
+
 	r.Body.Close()
 	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-	return bodyBytes
+	return bodyBytes, nil
 }
 
 // capturingResponseWriter captures the status code and error message.

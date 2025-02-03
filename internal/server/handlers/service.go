@@ -8,6 +8,7 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
+// Service holds all dependencies required to access business logic from endpoints.
 type Service struct {
 	config               *model.Config
 	configApplier        service.ConfigApplier
