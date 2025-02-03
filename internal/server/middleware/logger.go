@@ -43,7 +43,7 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 
 			// Log based on response status
 			if rw.status < 400 {
-				logger.LogAttrs(context.TODO(), slog.LevelInfo, "http request", attrs...)
+				logger.LogAttrs(r.Context(), slog.LevelInfo, "http request", attrs...)
 				return
 			}
 			if rw.errorMsg != "" {
