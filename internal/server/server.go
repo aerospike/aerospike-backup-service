@@ -22,19 +22,19 @@ type HTTPServer struct {
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(serverConfig *model.HTTPServerConfig, h *handlers.Service, logger *slog.Logger) *HTTPServer {
+func NewHTTPServer(serverConfig *model.HTTPServerConfig, service *handlers.Service, logger *slog.Logger) *HTTPServer {
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
 	// Create router
 	mux := NewServeMux(
 		fmt.Sprintf("/%s", restAPIVersion),
 		"/",
-		h,
+		service,
 	)
 
 	handler := middleware.Wrap(mux,
 		middleware.RateLimiter(serverConfig.GetRateOrDefault()),
-		middleware.RequestLogger(logger, []string{"/health", "/ready", "/metrics"}),
+		middleware.RequestLogger(logger, []string{"health", "ready", "metrics"}),
 	)
 
 	return &HTTPServer{

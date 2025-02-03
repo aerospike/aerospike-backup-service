@@ -15,8 +15,9 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Skip logging for specified paths
+			trimmedPath := strings.TrimLeft(r.URL.Path, "/")
 			for _, path := range skipPaths {
-				if strings.HasPrefix(r.URL.Path, path) {
+				if strings.HasPrefix(trimmedPath, path) {
 					next.ServeHTTP(w, r)
 					return
 				}

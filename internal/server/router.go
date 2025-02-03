@@ -6,17 +6,17 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 )
 
-func NewServeMux(apiPath, sysPath string, h *handlers.Service) *http.ServeMux {
+func NewServeMux(apiPath, sysPath string, service *handlers.Service) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	registerSystemRoutes(mux, sysPath)
-	registerConfigRoutes(mux, apiPath, h)
-	registerClusterRoutes(mux, apiPath, h)
-	registerStorageRoutes(mux, apiPath, h)
-	registerPolicyRoutes(mux, apiPath, h)
-	registerRoutineRoutes(mux, apiPath, h)
-	registerBackupRoutes(mux, apiPath, h)
-	registerRestoreRoutes(mux, apiPath, h)
+	registerConfigRoutes(mux, apiPath, service)
+	registerClusterRoutes(mux, apiPath, service)
+	registerStorageRoutes(mux, apiPath, service)
+	registerPolicyRoutes(mux, apiPath, service)
+	registerRoutineRoutes(mux, apiPath, service)
+	registerBackupRoutes(mux, apiPath, service)
+	registerRestoreRoutes(mux, apiPath, service)
 
 	return mux
 }
@@ -30,63 +30,63 @@ func registerSystemRoutes(mux *http.ServeMux, sysPath string) {
 	mux.Handle("GET "+sysPath+"api-docs/", handlers.APIDocsActionHandler()) // Note the trailing slash
 }
 
-func registerConfigRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
-	mux.HandleFunc("GET "+apiPath+"/config", h.ReadConfig)
-	mux.HandleFunc("PUT "+apiPath+"/config", h.UpdateConfig)
-	mux.HandleFunc("POST "+apiPath+"/config/apply", h.ApplyConfig)
+func registerConfigRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/config", service.ReadConfig)
+	mux.HandleFunc("PUT "+apiPath+"/config", service.UpdateConfig)
+	mux.HandleFunc("POST "+apiPath+"/config/apply", service.ApplyConfig)
 }
 
-func registerClusterRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
-	mux.HandleFunc("GET "+apiPath+"/config/clusters", h.ReadAerospikeClusters)
-	mux.HandleFunc("POST "+apiPath+"/config/clusters/{name}", h.AddAerospikeCluster)
-	mux.HandleFunc("GET "+apiPath+"/config/clusters/{name}", h.ReadAerospikeCluster)
-	mux.HandleFunc("PUT "+apiPath+"/config/clusters/{name}", h.UpdateAerospikeCluster)
-	mux.HandleFunc("DELETE "+apiPath+"/config/clusters/{name}", h.DeleteAerospikeCluster)
+func registerClusterRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/config/clusters", service.ReadAerospikeClusters)
+	mux.HandleFunc("POST "+apiPath+"/config/clusters/{name}", service.AddAerospikeCluster)
+	mux.HandleFunc("GET "+apiPath+"/config/clusters/{name}", service.ReadAerospikeCluster)
+	mux.HandleFunc("PUT "+apiPath+"/config/clusters/{name}", service.UpdateAerospikeCluster)
+	mux.HandleFunc("DELETE "+apiPath+"/config/clusters/{name}", service.DeleteAerospikeCluster)
 }
 
-func registerStorageRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
-	mux.HandleFunc("GET "+apiPath+"/config/storage", h.ReadAllStorage)
-	mux.HandleFunc("POST "+apiPath+"/config/storage/{name}", h.AddStorage)
-	mux.HandleFunc("GET "+apiPath+"/config/storage/{name}", h.ReadStorage)
-	mux.HandleFunc("PUT "+apiPath+"/config/storage/{name}", h.UpdateStorage)
-	mux.HandleFunc("DELETE "+apiPath+"/config/storage/{name}", h.DeleteStorage)
+func registerStorageRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/config/storage", service.ReadAllStorage)
+	mux.HandleFunc("POST "+apiPath+"/config/storage/{name}", service.AddStorage)
+	mux.HandleFunc("GET "+apiPath+"/config/storage/{name}", service.ReadStorage)
+	mux.HandleFunc("PUT "+apiPath+"/config/storage/{name}", service.UpdateStorage)
+	mux.HandleFunc("DELETE "+apiPath+"/config/storage/{name}", service.DeleteStorage)
 }
 
-func registerPolicyRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
-	mux.HandleFunc("GET "+apiPath+"/config/policies", h.ReadPolicies)
-	mux.HandleFunc("POST "+apiPath+"/config/policies/{name}", h.AddPolicy)
-	mux.HandleFunc("GET "+apiPath+"/config/policies/{name}", h.ReadPolicy)
-	mux.HandleFunc("PUT "+apiPath+"/config/policies/{name}", h.UpdatePolicy)
-	mux.HandleFunc("DELETE "+apiPath+"/config/policies/{name}", h.DeletePolicy)
+func registerPolicyRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/config/policies", service.ReadPolicies)
+	mux.HandleFunc("POST "+apiPath+"/config/policies/{name}", service.AddPolicy)
+	mux.HandleFunc("GET "+apiPath+"/config/policies/{name}", service.ReadPolicy)
+	mux.HandleFunc("PUT "+apiPath+"/config/policies/{name}", service.UpdatePolicy)
+	mux.HandleFunc("DELETE "+apiPath+"/config/policies/{name}", service.DeletePolicy)
 }
 
-func registerRoutineRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
-	mux.HandleFunc("GET "+apiPath+"/config/routines", h.ReadRoutines)
-	mux.HandleFunc("POST "+apiPath+"/config/routines/{name}", h.AddRoutine)
-	mux.HandleFunc("GET "+apiPath+"/config/routines/{name}", h.ReadRoutine)
-	mux.HandleFunc("PUT "+apiPath+"/config/routines/{name}", h.UpdateRoutine)
-	mux.HandleFunc("DELETE "+apiPath+"/config/routines/{name}", h.DeleteRoutine)
-	mux.HandleFunc("PUT "+apiPath+"/config/routines/{name}/disable", h.DisableRoutine)
-	mux.HandleFunc("PUT "+apiPath+"/config/routines/{name}/enable", h.EnableRoutine)
+func registerRoutineRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/config/routines", service.ReadRoutines)
+	mux.HandleFunc("POST "+apiPath+"/config/routines/{name}", service.AddRoutine)
+	mux.HandleFunc("GET "+apiPath+"/config/routines/{name}", service.ReadRoutine)
+	mux.HandleFunc("PUT "+apiPath+"/config/routines/{name}", service.UpdateRoutine)
+	mux.HandleFunc("DELETE "+apiPath+"/config/routines/{name}", service.DeleteRoutine)
+	mux.HandleFunc("PUT "+apiPath+"/config/routines/{name}/disable", service.DisableRoutine)
+	mux.HandleFunc("PUT "+apiPath+"/config/routines/{name}/enable", service.EnableRoutine)
 }
 
-func registerBackupRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
-	mux.HandleFunc("GET "+apiPath+"/backups/full", h.GetAllFullBackups)
-	mux.HandleFunc("GET "+apiPath+"/backups/full/{name}", h.GetFullBackupsForRoutine)
-	mux.HandleFunc("GET "+apiPath+"/backups/incremental", h.GetAllIncrementalBackups)
-	mux.HandleFunc("GET "+apiPath+"/backups/incremental/{name}", h.GetIncrementalBackupsForRoutine)
-	mux.HandleFunc("POST "+apiPath+"/backups/schedule/{name}", h.ScheduleFullBackup)
-	mux.HandleFunc("GET "+apiPath+"/backups/currentBackup/{name}", h.GetCurrentBackupInfo)
-	mux.HandleFunc("POST "+apiPath+"/backups/cancel/{name}", h.CancelCurrentBackup)
+func registerBackupRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {
+	mux.HandleFunc("GET "+apiPath+"/backups/full", service.GetAllFullBackups)
+	mux.HandleFunc("GET "+apiPath+"/backups/full/{name}", service.GetFullBackupsForRoutine)
+	mux.HandleFunc("GET "+apiPath+"/backups/incremental", service.GetAllIncrementalBackups)
+	mux.HandleFunc("GET "+apiPath+"/backups/incremental/{name}", service.GetIncrementalBackupsForRoutine)
+	mux.HandleFunc("POST "+apiPath+"/backups/schedule/{name}", service.ScheduleFullBackup)
+	mux.HandleFunc("GET "+apiPath+"/backups/currentBackup/{name}", service.GetCurrentBackupInfo)
+	mux.HandleFunc("POST "+apiPath+"/backups/cancel/{name}", service.CancelCurrentBackup)
 }
 
-func registerRestoreRoutes(mux *http.ServeMux, apiPath string, h *handlers.Service) {
-	mux.HandleFunc("POST "+apiPath+"/restore/full", h.RestoreFullHandler)
-	mux.HandleFunc("POST "+apiPath+"/restore/incremental", h.RestoreIncrementalHandler)
-	mux.HandleFunc("POST "+apiPath+"/restore/timestamp", h.RestoreByTimeHandler)
-	mux.HandleFunc("GET "+apiPath+"/restore/status/{jobId}", h.RestoreStatusHandler)
-	mux.HandleFunc("POST "+apiPath+"/restore/cancel/{jobId}", h.CancelRestoreHandler)
+func registerRestoreRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {
+	mux.HandleFunc("POST "+apiPath+"/restore/full", service.RestoreFullHandler)
+	mux.HandleFunc("POST "+apiPath+"/restore/incremental", service.RestoreIncrementalHandler)
+	mux.HandleFunc("POST "+apiPath+"/restore/timestamp", service.RestoreByTimeHandler)
+	mux.HandleFunc("GET "+apiPath+"/restore/status/{jobId}", service.RestoreStatusHandler)
+	mux.HandleFunc("POST "+apiPath+"/restore/cancel/{jobId}", service.CancelRestoreHandler)
 
 	// Return backed up Aerospike configuration
-	mux.HandleFunc("GET "+apiPath+"/retrieve/configuration/{name}/{timestamp}", h.RetrieveConfig)
+	mux.HandleFunc("GET "+apiPath+"/retrieve/configuration/{name}/{timestamp}", service.RetrieveConfig)
 }

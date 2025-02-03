@@ -162,9 +162,9 @@ func systemCtx() context.Context {
 }
 
 func runHTTPServer(
-	ctx context.Context, serverConfig *model.HTTPServerConfig, h *handlers.Service, logger *slog.Logger,
+	ctx context.Context, serverConfig *model.HTTPServerConfig, service *handlers.Service, logger *slog.Logger,
 ) error {
-	httpServer := server.NewHTTPServer(serverConfig, h, logger)
+	httpServer := server.NewHTTPServer(serverConfig, service, logger)
 	go func() {
 		httpServer.Start()
 	}()
