@@ -19,17 +19,18 @@ import (
 // @Success     201
 // @Failure     400 {string} string
 func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" {
+		httpError(w, errMissingStorageName)
+		return
+	}
+
 	newStorage, err := dto.NewStorageFromReader(r.Body, dto.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
 	r.Body.Close()
-	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		storage, err := newStorage.ToModel(config)
@@ -98,18 +99,18 @@ func (s *Service) ReadStorage(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
+	storageName := r.PathValue("name")
+	if storageName == "" {
+		httpError(w, errMissingStorageName)
+		return
+	}
+
 	updatedStorage, err := dto.NewStorageFromReader(r.Body, dto.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
 	defer r.Body.Close()
-
-	storageName := r.PathValue("name")
-	if storageName == "" {
-		httpError(w, errMissingStorageName)
-		return
-	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		storage, err := updatedStorage.ToModel(config)

@@ -20,18 +20,18 @@ import (
 // @Failure     400 {string} string
 // @Failure     500 {string} string
 func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" {
+		httpError(w, errMissingClusterName)
+		return
+	}
+
 	newCluster, err := dto.NewClusterFromReader(r.Body, dto.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
 	r.Body.Close()
-
-	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingClusterName)
-		return
-	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		cluster, err := newCluster.ToModel(config)
@@ -106,17 +106,18 @@ func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+	clusterName := r.PathValue("name")
+	if clusterName == "" {
+		httpError(w, errMissingClusterName)
+		return
+	}
+
 	updatedCluster, err := dto.NewClusterFromReader(r.Body, dto.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
 	r.Body.Close()
-	clusterName := r.PathValue("name")
-	if clusterName == "" {
-		httpError(w, errMissingClusterName)
-		return
-	}
 	cluster, err := updatedCluster.ToModel(s.config)
 	if err != nil {
 		httpError(w, errBadRequest(err))

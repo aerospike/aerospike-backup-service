@@ -2,222 +2,261 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/gorilla/mux"
-	"github.com/steinfletcher/apitest"
-	"github.com/stretchr/testify/require"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/stretchr/testify/assert"
 )
 
-const (
-	testPolicy       = "testPolicy"
-	unusedTestPolicy = "unusedTestPolicy"
-)
-
-func testConfigBackupPolicy() *dto.BackupPolicy {
-	testInt := 10
-	return &dto.BackupPolicy{
-		Parallel:      &testInt,
-		SocketTimeout: &testInt,
-		TotalTimeout:  &testInt,
-		RetryPolicy: &dto.RetryPolicy{
-			BaseTimeout: 1,
-			Multiplier:  1,
-			MaxRetries:  3,
+func TestAddPolicy(t *testing.T) {
+	tests := []struct {
+		name           string
+		policyName     string
+		requestBody    string
+		expectedStatus int
+		expectedError  string
+	}{
+		{
+			name:           "successful add",
+			policyName:     "test-policy",
+			requestBody:    marshalToString(dto.BackupPolicy{Parallel: util.Ptr(8)}),
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:           "missing policy name",
+			policyName:     "",
+			requestBody:    "{}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingPolicyName.Error(),
+		},
+		{
+			name:           "invalid json",
+			policyName:     "test-policy",
+			requestBody:    "{noField : 1}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "invalid JSON payload",
 		},
 	}
-}
 
-func TestService_ConfigPolicyActionHandlerPost(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/policies/{name}",
-		h.ConfigPolicyActionHandler,
-	).Methods(http.MethodPost)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
 
-	const newTestPolicy = "newTestPolicy"
+			req := httptest.NewRequest(http.MethodPost, "/v1/config/policies/"+tt.policyName, strings.NewReader(tt.requestBody))
+			req.SetPathValue("name", tt.policyName)
+			w := httptest.NewRecorder()
 
-	body := testConfigBackupPolicy()
-	bodyBytes, err := json.Marshal(body)
-	require.NoError(t, err)
+			svc.AddPolicy(w, req)
 
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
-		body       string
-	}{
-		{http.MethodPost, http.StatusCreated, newTestPolicy, string(bodyBytes)},
-		{http.MethodPost, http.StatusBadRequest, testPolicy, ""},
-		{http.MethodPost, http.StatusNotFound, "", string(bodyBytes)},
-		{http.MethodGet, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
-		{http.MethodConnect, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
-		{http.MethodDelete, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
-		{http.MethodPatch, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
-		{http.MethodPut, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
-		{http.MethodTrace, http.StatusMethodNotAllowed, newTestPolicy, string(bodyBytes)},
-	}
-
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/policies/%s", tt.name)).
-			Body(tt.body).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
-func TestService_ConfigPolicyActionHandlerGet(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/policies/{name}",
-		h.ConfigPolicyActionHandler,
-	).Methods(http.MethodGet)
+func TestReadPolicies(t *testing.T) {
+	svc := setupTestService()
+	svc.config = model.NewConfig()
+	_ = svc.config.AddPolicy("policy1", &model.BackupPolicy{})
+	_ = svc.config.AddPolicy("policy2", &model.BackupPolicy{})
 
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
+	req := httptest.NewRequest(http.MethodGet, "/v1/config/policies", nil)
+	w := httptest.NewRecorder()
+
+	svc.ReadPolicies(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]dto.BackupPolicy
+	err := json.NewDecoder(w.Body).Decode(&response)
+	assert.NoError(t, err)
+	assert.Len(t, response, 2)
+	assert.Contains(t, response, "policy1")
+	assert.Contains(t, response, "policy2")
+}
+
+//nolint:dupl
+func TestReadPolicy(t *testing.T) {
+	tests := []struct {
+		name           string
+		policyName     string
+		policy         *model.BackupPolicy
+		expectedStatus int
+		expectedError  string
 	}{
-		{http.MethodGet, http.StatusOK, testPolicy},
-		{http.MethodGet, http.StatusNotFound, ""},
-		{http.MethodPost, http.StatusMethodNotAllowed, testPolicy},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testPolicy},
-		{http.MethodDelete, http.StatusMethodNotAllowed, testPolicy},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testPolicy},
-		{http.MethodPut, http.StatusMethodNotAllowed, testPolicy},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testPolicy},
+		{
+			name:           "existing policy",
+			policyName:     "test-policy",
+			policy:         &model.BackupPolicy{},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "missing policy name",
+			policyName:     "",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingPolicyName.Error(),
+		},
+		{
+			name:           "non-existent policy",
+			policyName:     "non-existent",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  errNotFound("policy", "non-existent").Error(),
+		},
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/policies/%s", tt.name)).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
+			if tt.policy != nil {
+				_ = svc.config.AddPolicy(tt.policyName, tt.policy)
+			}
+
+			req := httptest.NewRequest(http.MethodGet, "/v1/config/policies/"+tt.policyName, nil)
+			req.SetPathValue("name", tt.policyName)
+			w := httptest.NewRecorder()
+
+			svc.ReadPolicy(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }
 
-func TestService_ConfigPolicyActionHandlerPut(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/policies/{name}",
-		h.ConfigPolicyActionHandler,
-	).Methods(http.MethodPut)
-
-	body := testConfigBackupPolicy()
-	bodyBytes, err := json.Marshal(body)
-	require.NoError(t, err)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
-		body       string
+func TestUpdatePolicy(t *testing.T) {
+	tests := []struct {
+		name           string
+		policyName     string
+		requestBody    string
+		expectedStatus int
+		expectedError  string
 	}{
-		{http.MethodPut, http.StatusOK, testPolicy, string(bodyBytes)},
-		{http.MethodPut, http.StatusBadRequest, testPolicy, ""},
-		{http.MethodPut, http.StatusNotFound, "", string(bodyBytes)},
-		{http.MethodGet, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
-		{http.MethodDelete, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
-		{http.MethodPost, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testPolicy, string(bodyBytes)},
+		{
+			name:           "successful update",
+			policyName:     "test-policy",
+			requestBody:    "{}",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "missing policy name",
+			policyName:     "",
+			requestBody:    "{}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingPolicyName.Error(),
+		},
+		{
+			name:           "invalid json",
+			policyName:     "test-policy",
+			requestBody:    "{nil}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "invalid JSON payload",
+		},
+		{
+			name:           "unknown policy name",
+			policyName:     "unknown-policy",
+			requestBody:    "{}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "invalid request",
+		},
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/policies/%s", tt.name)).
-			Body(tt.body).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
+			_ = svc.config.AddPolicy("test-policy", &model.BackupPolicy{})
+
+			req := httptest.NewRequest(http.MethodPut, "/v1/config/policies/"+tt.policyName, strings.NewReader(tt.requestBody))
+			req.SetPathValue("name", tt.policyName)
+			w := httptest.NewRecorder()
+
+			svc.UpdatePolicy(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }
 
-func TestService_ConfigPolicyActionHandlerDelete(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/policies/{name}",
-		h.ConfigPolicyActionHandler,
-	).Methods(http.MethodDelete)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
+//nolint:dupl
+func TestDeletePolicy(t *testing.T) {
+	tests := []struct {
+		name           string
+		policyName     string
+		expectedStatus int
+		expectedError  string
 	}{
-		{http.MethodDelete, http.StatusNoContent, unusedTestPolicy},
-		{http.MethodDelete, http.StatusBadRequest, testPolicy},
-		{http.MethodDelete, http.StatusNotFound, ""},
-		{http.MethodPost, http.StatusMethodNotAllowed, testPolicy},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testPolicy},
-		{http.MethodGet, http.StatusMethodNotAllowed, testPolicy},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testPolicy},
-		{http.MethodPut, http.StatusMethodNotAllowed, testPolicy},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testPolicy},
+		{
+			name:           "successful delete",
+			policyName:     "test-policy",
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "missing policy name",
+			policyName:     "",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingPolicyName.Error(),
+		},
+		{
+			name:           "unknown policy name",
+			policyName:     "unknown-policy",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "invalid request",
+		},
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/policies/%s", tt.name)).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
+			_ = svc.config.AddPolicy("test-policy", &model.BackupPolicy{})
+
+			req := httptest.NewRequest(http.MethodDelete, "/v1/config/policies/"+tt.policyName, nil)
+			req.SetPathValue("name", tt.policyName)
+
+			w := httptest.NewRecorder()
+
+			svc.DeletePolicy(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }
 
-func TestService_ReadPolicies(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/policies",
-		h.ReadPolicies,
-	).Methods(http.MethodGet)
+// Helper function to setup test service with mocked dependencies.
+func setupTestService() *Service {
+	mockScheduler := &MockScheduler{}
+	mockBackendsHolder := &MockBackendsHolder{}
+	mockRestoreManager := &MockRestoreManager{}
+	mockConfigApplier := &MockConfigApplier{}
+	mockHandlerHolder := service.NewBackupHandlerHolder()
+	mockNsValidator := &aerospike.NoopNamespaceValidator{}
+	mockConfigurationManager := &configurationManagerMock{}
+	mockRegistry := &mockRunningBackupsRegistry{}
 
-	testCases := []struct {
-		method     string
-		statusCode int
-	}{
-		{http.MethodGet, http.StatusOK},
-		{http.MethodPost, http.StatusMethodNotAllowed},
-		{http.MethodConnect, http.StatusMethodNotAllowed},
-		{http.MethodDelete, http.StatusMethodNotAllowed},
-		{http.MethodPatch, http.StatusMethodNotAllowed},
-		{http.MethodPut, http.StatusMethodNotAllowed},
-		{http.MethodTrace, http.StatusMethodNotAllowed},
-	}
-
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL("/config/policies").
-			Expect(t).
-			Status(tt.statusCode).
-			End()
-	}
+	return NewService(
+		model.NewConfig(),
+		mockConfigApplier,
+		mockScheduler,
+		mockRestoreManager,
+		mockBackendsHolder,
+		mockHandlerHolder,
+		mockRegistry,
+		mockConfigurationManager,
+		mockNsValidator,
+	)
 }

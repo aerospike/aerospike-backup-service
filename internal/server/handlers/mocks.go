@@ -180,16 +180,42 @@ func (a *MockConfigApplier) ApplyNewRoutines(_ map[string]*model.BackupRoutine) 
 	return nil
 }
 
-type MockNamespaceValidator struct{}
+type mockNamespaceValidator struct {
+	validateError error
+}
 
-func (m *MockNamespaceValidator) IsEmpty(_ backup.AerospikeClient, _ string, _ []string) (bool, error) {
+func (m *mockNamespaceValidator) IsEmpty(_ backup.AerospikeClient, _ string, _ []string) (bool, error) {
 	return false, nil
 }
 
-func (m *MockNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ []string) []string {
+func (m *mockNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ []string) []string {
 	return nil
 }
 
-func (m *MockNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ map[string]*model.BackupRoutine) error {
+func (m *mockNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ map[string]*model.BackupRoutine) error {
+	return m.validateError
+}
+
+type mockRunningBackupsRegistry struct {
+	mock.Mock
+}
+
+func (m *mockRunningBackupsRegistry) GetRoutineState(routineName string) *model.RoutineState {
+	args := m.Called(routineName)
+	if state, ok := args.Get(0).(*model.RoutineState); ok {
+		return state
+	}
 	return nil
+}
+
+func (m *mockRunningBackupsRegistry) GetRunningState() map[string]*model.RoutineState {
+	args := m.Called()
+	if state, ok := args.Get(0).(map[string]*model.RoutineState); ok {
+		return state
+	}
+	return nil
+}
+
+func (m *mockRunningBackupsRegistry) Cancel(routineName string) {
+	m.Called(routineName)
 }

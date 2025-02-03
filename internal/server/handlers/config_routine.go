@@ -20,17 +20,17 @@ import (
 //
 //nolint:dupl
 func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" {
+		httpError(w, errMissingRoutineName)
+		return
+	}
 	newRoutine, err := dto.NewRoutineFromReader(r.Body, dto.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
 	r.Body.Close()
-	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 	toModel, err := newRoutine.ToModel(s.config.BackupConfigCopy(), s.nsValidator)
 	if err != nil {
 		httpError(w, errBadRequest(err))
@@ -102,17 +102,18 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 //
 //nolint:dupl
 func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if name == "" {
+		httpError(w, errMissingRoutineName)
+		return
+	}
+
 	updatedRoutine, err := dto.NewRoutineFromReader(r.Body, dto.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
 	r.Body.Close()
-	name := r.PathValue("name")
-	if name == "" {
-		httpError(w, errMissingRoutineName)
-		return
-	}
 
 	toModel, err := updatedRoutine.ToModel(s.config.BackupConfigCopy(), s.nsValidator)
 	if err != nil {
