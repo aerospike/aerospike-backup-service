@@ -4,231 +4,251 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/aws/smithy-go/ptr"
-	"github.com/gorilla/mux"
-	"github.com/steinfletcher/apitest"
-	"github.com/stretchr/testify/require"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/stretchr/testify/assert"
 )
 
-const testCluster = "testCluster"
+var cluster = dto.AerospikeCluster{SeedNodes: []dto.SeedNode{{HostName: "localhost", Port: 3000}}}
 
-func testSeedNode() dto.SeedNode {
-	return dto.SeedNode{
-		HostName: "host",
-		Port:     3000,
-		TLSName:  "tls",
-	}
-}
-
-func testConfigCluster() *dto.AerospikeCluster {
-	label := "label"
-	timeout := 10
-	useAlternate := false
-	queueSize := 1
-	return &dto.AerospikeCluster{
-		ClusterLabel:         &label,
-		SeedNodes:            []dto.SeedNode{testSeedNode()},
-		ConnTimeout:          &timeout,
-		UseServicesAlternate: &useAlternate,
-		Credentials: &dto.Credentials{
-			User:     ptr.String("user"),
-			Password: ptr.String("password"),
+func TestAddAerospikeCluster(t *testing.T) {
+	tests := []struct {
+		name           string
+		clusterName    string
+		requestBody    string
+		expectedStatus int
+		expectedError  string
+	}{
+		{
+			name:           "successful add",
+			clusterName:    "test-cluster",
+			requestBody:    marshalToString(cluster),
+			expectedStatus: http.StatusCreated,
 		},
-		TLS:              &dto.TLS{},
-		MaxParallelScans: &queueSize,
+		{
+			name:           "missing cluster name",
+			clusterName:    "",
+			requestBody:    "{}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingClusterName.Error(),
+		},
+		{
+			name:           "invalid json",
+			clusterName:    "test-cluster",
+			requestBody:    "{noField : 1}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "invalid JSON payload",
+		},
+		{
+			name:           "invalid cluster config",
+			clusterName:    "test-cluster",
+			requestBody:    marshalToString(dto.AerospikeCluster{}),
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "invalid JSON payload",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
+
+			req := httptest.NewRequest(http.MethodPost, "/v1/config/clusters/"+tt.clusterName, strings.NewReader(tt.requestBody))
+			req.SetPathValue("name", tt.clusterName)
+			w := httptest.NewRecorder()
+
+			svc.AddAerospikeCluster(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }
 
-func TestService_ConfigClusterActionHandlerPost(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/clusters/{name}",
-		h.ConfigClusterActionHandler,
-	).Methods(http.MethodPost)
+func TestReadAerospikeClusters(t *testing.T) {
+	svc := setupTestService()
+	svc.config = model.NewConfig()
 
-	const newCluster = "newCluster"
+	_ = svc.config.AddCluster("cluster1", &model.AerospikeCluster{})
+	_ = svc.config.AddCluster("cluster2", &model.AerospikeCluster{})
 
-	body := testConfigCluster()
-	bodyBytes, err := json.Marshal(&body)
-	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodGet, "/v1/config/clusters", nil)
+	w := httptest.NewRecorder()
 
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
-		body       string
+	svc.ReadAerospikeClusters(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]dto.AerospikeCluster
+	err := json.NewDecoder(w.Body).Decode(&response)
+	assert.NoError(t, err)
+	assert.Len(t, response, 2)
+	assert.Contains(t, response, "cluster1")
+	assert.Contains(t, response, "cluster2")
+}
+
+//nolint:dupl
+func TestReadAerospikeCluster(t *testing.T) {
+	tests := []struct {
+		name           string
+		clusterName    string
+		cluster        *model.AerospikeCluster
+		expectedStatus int
+		expectedError  string
 	}{
-		{http.MethodPost, http.StatusCreated, newCluster, string(bodyBytes)},
-		{http.MethodPost, http.StatusBadRequest, testCluster, ""},
-		{http.MethodPost, http.StatusNotFound, "", string(bodyBytes)},
-		{http.MethodGet, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
-		{http.MethodConnect, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
-		{http.MethodDelete, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
-		{http.MethodPatch, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
-		{http.MethodPut, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
-		{http.MethodTrace, http.StatusMethodNotAllowed, newCluster, string(bodyBytes)},
+		{
+			name:           "existing cluster",
+			clusterName:    "test-cluster",
+			cluster:        &model.AerospikeCluster{},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "missing cluster name",
+			clusterName:    "",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingClusterName.Error(),
+		},
+		{
+			name:           "non-existent cluster",
+			clusterName:    "non-existent",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  errNotFound("cluster", "non-existent").Error(),
+		},
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/clusters/%s", tt.name)).
-			Body(tt.body).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
+			if tt.cluster != nil {
+				_ = svc.config.AddCluster(tt.clusterName, tt.cluster)
+			}
+
+			req := httptest.NewRequest(http.MethodGet, "/v1/config/clusters/"+tt.clusterName, nil)
+			req.SetPathValue("name", tt.clusterName)
+			w := httptest.NewRecorder()
+
+			svc.ReadAerospikeCluster(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
-func TestService_ConfigClusterActionHandlerGet(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/clusters/{name}",
-		h.ConfigClusterActionHandler,
-	).Methods(http.MethodGet)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
+func TestUpdateAerospikeCluster(t *testing.T) {
+	tests := []struct {
+		name               string
+		clusterName        string
+		requestBody        string
+		mockValidatorError error
+		expectedStatus     int
+		expectedError      string
 	}{
-		{http.MethodGet, http.StatusOK, testCluster},
-		{http.MethodGet, http.StatusNotFound, ""},
-		{http.MethodPost, http.StatusMethodNotAllowed, testCluster},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testCluster},
-		{http.MethodDelete, http.StatusMethodNotAllowed, testCluster},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testCluster},
-		{http.MethodPut, http.StatusMethodNotAllowed, testCluster},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testCluster},
+		{
+			name:               "successful update",
+			clusterName:        "test-cluster",
+			requestBody:        marshalToString(cluster),
+			mockValidatorError: nil,
+			expectedStatus:     http.StatusOK,
+		},
+		{
+			name:           "missing cluster name",
+			clusterName:    "",
+			requestBody:    "{}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingClusterName.Error(),
+		},
+		{
+			name:           "invalid json",
+			clusterName:    "test-cluster",
+			requestBody:    "{nil}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "invalid JSON payload",
+		},
+		{
+			name:               "namespace validation failure",
+			clusterName:        "test-cluster",
+			requestBody:        marshalToString(cluster),
+			mockValidatorError: fmt.Errorf("invalid namespace"),
+			expectedStatus:     http.StatusBadRequest,
+			expectedError:      "invalid namespace",
+		},
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/clusters/%s", tt.name)).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
+			if tt.mockValidatorError != nil {
+				svc.nsValidator = &mockNamespaceValidator{
+					validateError: tt.mockValidatorError,
+				}
+			}
+			initialCluster := &model.AerospikeCluster{}
+			_ = svc.config.AddCluster("test-cluster", initialCluster)
+
+			req := httptest.NewRequest(http.MethodPut, "/v1/config/clusters/"+tt.clusterName, strings.NewReader(tt.requestBody))
+			req.SetPathValue("name", tt.clusterName)
+			w := httptest.NewRecorder()
+
+			svc.UpdateAerospikeCluster(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }
 
-func TestService_ConfigClusterActionHandlerPut(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/clusters/{name}",
-		h.ConfigClusterActionHandler,
-	).Methods(http.MethodPut)
-
-	body := testConfigCluster()
-	bodyBytes, err := json.Marshal(&body)
-	require.NoError(t, err)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
-		body       string
+//nolint:dupl
+func TestDeleteAerospikeCluster(t *testing.T) {
+	tests := []struct {
+		name           string
+		clusterName    string
+		expectedStatus int
+		expectedError  string
 	}{
-		{http.MethodPut, http.StatusOK, testCluster, string(bodyBytes)},
-		{http.MethodPut, http.StatusBadRequest, testCluster, ""},
-		{http.MethodPut, http.StatusNotFound, "", string(bodyBytes)},
-		{http.MethodGet, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
-		{http.MethodDelete, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
-		{http.MethodPost, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testCluster, string(bodyBytes)},
+		{
+			name:           "successful delete",
+			clusterName:    "test-cluster",
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "missing cluster name",
+			clusterName:    "",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingClusterName.Error(),
+		},
+		{
+			name:           "unknown cluster name",
+			clusterName:    "unknown-cluster",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "invalid request",
+		},
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/clusters/%s", tt.name)).
-			Body(tt.body).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
+			_ = svc.config.AddCluster("test-cluster", &model.AerospikeCluster{})
 
-//nolint:dupl // No duplication here, just tests.
-func TestService_ConfigClusterActionHandlerDelete(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/clusters/{name}",
-		h.ConfigClusterActionHandler,
-	).Methods(http.MethodDelete)
+			req := httptest.NewRequest(http.MethodDelete, "/v1/config/clusters/"+tt.clusterName, nil)
+			req.SetPathValue("name", tt.clusterName)
+			w := httptest.NewRecorder()
 
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
-	}{
-		{http.MethodDelete, http.StatusBadRequest, testCluster},
-		{http.MethodDelete, http.StatusNotFound, ""},
-		{http.MethodPost, http.StatusMethodNotAllowed, testCluster},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testCluster},
-		{http.MethodGet, http.StatusMethodNotAllowed, testCluster},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testCluster},
-		{http.MethodPut, http.StatusMethodNotAllowed, testCluster},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testCluster},
-	}
+			svc.DeleteAerospikeCluster(w, req)
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/clusters/%s", tt.name)).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
-	}
-}
-
-func TestService_ReadAerospikeClusters(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/clusters",
-		h.ReadAerospikeClusters,
-	).Methods(http.MethodGet)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-	}{
-		{http.MethodGet, http.StatusOK},
-		{http.MethodPost, http.StatusMethodNotAllowed},
-		{http.MethodConnect, http.StatusMethodNotAllowed},
-		{http.MethodDelete, http.StatusMethodNotAllowed},
-		{http.MethodPatch, http.StatusMethodNotAllowed},
-		{http.MethodPut, http.StatusMethodNotAllowed},
-		{http.MethodTrace, http.StatusMethodNotAllowed},
-	}
-
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL("/config/clusters").
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }

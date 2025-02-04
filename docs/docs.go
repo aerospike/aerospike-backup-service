@@ -241,7 +241,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get available full backups for routine.",
-                "operationId": "GetFullBackupsForRoutine",
+                "operationId": "getFullBackupsForRoutine",
                 "parameters": [
                     {
                         "type": "string",
@@ -353,7 +353,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Get incremental backups for routine.",
-                "operationId": "GetIncrementalBackupsForRoutine",
+                "operationId": "getIncrementalBackupsForRoutine",
                 "parameters": [
                     {
                         "type": "string",
@@ -408,7 +408,7 @@ const docTemplate = `{
                     "Backup"
                 ],
                 "summary": "Schedule a full backup once per routine name.",
-                "operationId": "ScheduleFullBackup",
+                "operationId": "scheduleFullBackup",
                 "parameters": [
                     {
                         "type": "string",
@@ -726,7 +726,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all policies from the configuration.",
-                "operationId": "ReadPolicies",
+                "operationId": "readPolicies",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -907,7 +907,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all routines from the configuration.",
-                "operationId": "ReadRoutines",
+                "operationId": "readRoutines",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1146,7 +1146,7 @@ const docTemplate = `{
                     "Configuration"
                 ],
                 "summary": "Reads all storage from the configuration.",
-                "operationId": "ReadAllStorage",
+                "operationId": "readAllStorage",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1336,7 +1336,7 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "202": {
                         "description": "Restore job canceled successfully",
                         "schema": {
                             "type": "string"
@@ -2802,6 +2802,9 @@ const docTemplate = `{
         "dto.SecretAgent": {
             "description": "SecretAgent represents the configuration of an Aerospike Secret Agent.",
             "type": "object",
+            "required": [
+                "address"
+            ],
             "properties": {
                 "address": {
                     "description": "Address of the Secret Agent.",

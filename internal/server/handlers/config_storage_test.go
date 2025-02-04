@@ -2,217 +2,232 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
-	"github.com/gorilla/mux"
-	"github.com/steinfletcher/apitest"
-	"github.com/stretchr/testify/require"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/stretchr/testify/assert"
 )
 
-const testStorage = "testStorage"
-const unusedTestStorage = "unusedTestStorage"
-
-func testConfigStorage() *dto.Storage {
-	path := testDir
-	return &dto.Storage{
-		LocalStorage: &dto.LocalStorage{
-			Path: path,
+func TestAddStorage(t *testing.T) {
+	tests := []struct {
+		name           string
+		storageName    string
+		requestBody    string
+		expectedStatus int
+		expectedError  string
+	}{
+		{
+			name:           "successful add",
+			storageName:    "test-storage",
+			requestBody:    marshalToString(dto.Storage{LocalStorage: &dto.LocalStorage{Path: "/"}}),
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:           "missing storage name",
+			storageName:    "",
+			requestBody:    "{}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingStorageName.Error(),
+		},
+		{
+			name:           "invalid json",
+			storageName:    "test-storage",
+			requestBody:    "{noField : 1}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "invalid JSON payload",
 		},
 	}
-}
 
-//nolint:dupl // No duplication here, just tests.
-func TestService_ConfigStorageActionHandlerPost(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/storage/{name}",
-		h.ConfigStorageActionHandler,
-	).Methods(http.MethodPost)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
 
-	const newStorageName = "newStorageName"
+			req := httptest.NewRequest(http.MethodPost, "/v1/config/storage/"+tt.storageName, strings.NewReader(tt.requestBody))
+			req.SetPathValue("name", tt.storageName)
+			w := httptest.NewRecorder()
 
-	body := testConfigStorage()
-	bodyBytes, err := json.Marshal(body)
-	require.NoError(t, err)
+			svc.AddStorage(w, req)
 
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
-		body       string
-	}{
-		{http.MethodPost, http.StatusCreated, newStorageName, string(bodyBytes)},
-		{http.MethodPost, http.StatusBadRequest, testStorage, string(bodyBytes)},
-		{http.MethodPost, http.StatusBadRequest, newStorageName, ""},
-		{http.MethodPost, http.StatusNotFound, "", string(bodyBytes)},
-		{http.MethodGet, http.StatusMethodNotAllowed, newStorageName, string(bodyBytes)},
-		{http.MethodConnect, http.StatusMethodNotAllowed, newStorageName, string(bodyBytes)},
-		{http.MethodDelete, http.StatusMethodNotAllowed, newStorageName, string(bodyBytes)},
-		{http.MethodPatch, http.StatusMethodNotAllowed, newStorageName, string(bodyBytes)},
-		{http.MethodPut, http.StatusMethodNotAllowed, newStorageName, string(bodyBytes)},
-		{http.MethodTrace, http.StatusMethodNotAllowed, newStorageName, string(bodyBytes)},
-	}
-
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/storage/%s", tt.name)).
-			Body(tt.body).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }
 
-//nolint:dupl // No duplication here, just tests.
-func TestService_ConfigStorageActionHandlerGet(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/storage/{name}",
-		h.ConfigStorageActionHandler,
-	).Methods(http.MethodGet)
+func TestReadAllStorage(t *testing.T) {
+	svc := setupTestService()
+	svc.config = model.NewConfig()
 
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
+	_ = svc.config.AddStorage("storage1", &model.LocalStorage{})
+	_ = svc.config.AddStorage("storage2", &model.LocalStorage{})
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/config/storage", nil)
+	w := httptest.NewRecorder()
+
+	svc.ReadAllStorage(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]dto.Storage
+	err := json.NewDecoder(w.Body).Decode(&response)
+	assert.NoError(t, err)
+	assert.Len(t, response, 2)
+	assert.Contains(t, response, "storage1")
+	assert.Contains(t, response, "storage2")
+}
+
+func TestReadStorage(t *testing.T) {
+	tests := []struct {
+		name           string
+		storageName    string
+		storage        model.Storage
+		expectedStatus int
+		expectedError  string
 	}{
-		{http.MethodGet, http.StatusOK, testStorage},
-		{http.MethodGet, http.StatusNotFound, ""},
-		{http.MethodPost, http.StatusMethodNotAllowed, testStorage},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testStorage},
-		{http.MethodDelete, http.StatusMethodNotAllowed, testStorage},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testStorage},
-		{http.MethodPut, http.StatusMethodNotAllowed, testStorage},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testStorage},
+		{
+			name:           "existing storage",
+			storageName:    "test-storage",
+			storage:        &model.LocalStorage{},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "missing storage name",
+			storageName:    "",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingStorageName.Error(),
+		},
+		{
+			name:           "non-existent storage",
+			storageName:    "non-existent",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  errNotFound("storage", "non-existent").Error(),
+		},
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/storage/%s", tt.name)).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
+			if tt.storage != nil {
+				_ = svc.config.AddStorage(tt.storageName, tt.storage)
+			}
+
+			req := httptest.NewRequest(http.MethodGet, "/v1/config/storage/"+tt.storageName, nil)
+			req.SetPathValue("name", tt.storageName)
+			w := httptest.NewRecorder()
+
+			svc.ReadStorage(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }
 
-func TestService_ConfigStorageActionHandlerPut(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/storage/{name}",
-		h.ConfigStorageActionHandler,
-	).Methods(http.MethodPut)
-
-	body := testConfigStorage()
-	bodyBytes, err := json.Marshal(body)
-	require.NoError(t, err)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
-		body       string
+func TestUpdateStorage(t *testing.T) {
+	tests := []struct {
+		name           string
+		storageName    string
+		requestBody    string
+		expectedStatus int
+		expectedError  string
 	}{
-		{http.MethodPut, http.StatusOK, testStorage, string(bodyBytes)},
-		{http.MethodPut, http.StatusBadRequest, testStorage, ""},
-		{http.MethodPut, http.StatusNotFound, "", string(bodyBytes)},
-		{http.MethodGet, http.StatusMethodNotAllowed, testStorage, string(bodyBytes)},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testStorage, string(bodyBytes)},
-		{http.MethodDelete, http.StatusMethodNotAllowed, testStorage, string(bodyBytes)},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testStorage, string(bodyBytes)},
-		{http.MethodPost, http.StatusMethodNotAllowed, testStorage, string(bodyBytes)},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testStorage, string(bodyBytes)},
+		{
+			name:           "successful update",
+			storageName:    "test-storage",
+			requestBody:    marshalToString(dto.Storage{LocalStorage: &dto.LocalStorage{Path: "/tmp"}}),
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "missing storage name",
+			storageName:    "",
+			requestBody:    "{}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingStorageName.Error(),
+		},
+		{
+			name:           "invalid json",
+			storageName:    "test-storage",
+			requestBody:    "{nil}",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "invalid JSON payload",
+		},
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/storage/%s", tt.name)).
-			Body(tt.body).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
+			initialStorage := &model.LocalStorage{Path: "/"}
+			_ = svc.config.AddStorage("test-storage", initialStorage)
+
+			req := httptest.NewRequest(http.MethodPut, "/v1/config/storage/"+tt.storageName, strings.NewReader(tt.requestBody))
+			req.SetPathValue("name", tt.storageName)
+			w := httptest.NewRecorder()
+
+			svc.UpdateStorage(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }
 
-func TestService_ConfigStorageActionHandlerDelete(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/storage/{name}",
-		h.ConfigStorageActionHandler,
-	).Methods(http.MethodDelete)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-		name       string
+//nolint:dupl
+func TestDeleteStorage(t *testing.T) {
+	tests := []struct {
+		name           string
+		storageName    string
+		expectedStatus int
+		expectedError  string
 	}{
-		{http.MethodDelete, http.StatusNoContent, unusedTestStorage},
-		{http.MethodDelete, http.StatusBadRequest, testStorage},
-		{http.MethodDelete, http.StatusNotFound, ""},
-		{http.MethodPost, http.StatusMethodNotAllowed, testStorage},
-		{http.MethodConnect, http.StatusMethodNotAllowed, testStorage},
-		{http.MethodGet, http.StatusMethodNotAllowed, testStorage},
-		{http.MethodPatch, http.StatusMethodNotAllowed, testStorage},
-		{http.MethodPut, http.StatusMethodNotAllowed, testStorage},
-		{http.MethodTrace, http.StatusMethodNotAllowed, testStorage},
+		{
+			name:           "successful delete",
+			storageName:    "test-storage",
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "missing storage name",
+			storageName:    "",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  errMissingStorageName.Error(),
+		},
+		{
+			name:           "unknown storage name",
+			storageName:    "unknown-storage",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "invalid request",
+		},
 	}
 
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL(fmt.Sprintf("/config/storage/%s", tt.name)).
-			Expect(t).
-			Status(tt.statusCode).
-			End()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupTestService()
+			_ = svc.config.AddStorage("test-storage", &model.LocalStorage{})
+
+			req := httptest.NewRequest(http.MethodDelete, "/v1/config/storage/"+tt.storageName, nil)
+			req.SetPathValue("name", tt.storageName)
+			w := httptest.NewRecorder()
+
+			svc.DeleteStorage(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.expectedError != "" {
+				assert.Contains(t, w.Body.String(), tt.expectedError)
+			}
+		})
 	}
 }
 
-func TestService_ReadAllStorage(t *testing.T) {
-	t.Parallel()
-	h := newServiceMock(t)
-	router := mux.NewRouter()
-	router.HandleFunc(
-		"/config/storage",
-		h.ReadAllStorage,
-	).Methods(http.MethodGet)
-
-	testCases := []struct {
-		method     string
-		statusCode int
-	}{
-		{http.MethodGet, http.StatusOK},
-		{http.MethodPost, http.StatusMethodNotAllowed},
-		{http.MethodConnect, http.StatusMethodNotAllowed},
-		{http.MethodDelete, http.StatusMethodNotAllowed},
-		{http.MethodPatch, http.StatusMethodNotAllowed},
-		{http.MethodPut, http.StatusMethodNotAllowed},
-		{http.MethodTrace, http.StatusMethodNotAllowed},
-	}
-
-	for _, tt := range testCases {
-		apitest.New().
-			Handler(router).
-			Method(tt.method).
-			URL("/config/storage").
-			Expect(t).
-			Status(tt.statusCode).
-			End()
-	}
+func marshalToString(obj any) string {
+	x, _ := json.Marshal(obj)
+	return string(x)
 }

@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"log/slog"
-
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -10,6 +8,7 @@ import (
 	"github.com/reugn/go-quartz/quartz"
 )
 
+// Service holds all dependencies required to access business logic from endpoints.
 type Service struct {
 	config               *model.Config
 	configApplier        service.ConfigApplier
@@ -17,9 +16,8 @@ type Service struct {
 	restoreManager       service.RestoreManager
 	backupBackends       service.BackendsHolder
 	handlerHolder        service.BackupHandlerHolder
-	registry             service.RunningBackupsRegistry
+	registry             RunningBackupsRegistry
 	configurationManager configuration.Manager
-	logger               *slog.Logger
 	nsValidator          aerospike.NamespaceValidator
 }
 
@@ -30,9 +28,8 @@ func NewService(
 	restoreManager service.RestoreManager,
 	backupBackends service.BackendsHolder,
 	handlerHolder service.BackupHandlerHolder,
-	registry service.RunningBackupsRegistry,
+	registry RunningBackupsRegistry,
 	configurationManager configuration.Manager,
-	logger *slog.Logger,
 	nsValidator aerospike.NamespaceValidator,
 ) *Service {
 	return &Service{
@@ -44,7 +41,17 @@ func NewService(
 		handlerHolder:        handlerHolder,
 		registry:             registry,
 		configurationManager: configurationManager,
-		logger:               logger,
 		nsValidator:          nsValidator,
 	}
+}
+
+// RunningBackupsRegistry defines the interface for managing running backups and their statuses.
+// this is public version of service.RunningBackupsRegistry.
+type RunningBackupsRegistry interface {
+	// GetRoutineState returns the current backup statistics for a routine.
+	GetRoutineState(routineName string) *model.RoutineState
+	// GetRunningState returns statistics for all current backups.
+	GetRunningState() map[string]*model.RoutineState
+	// Cancel stops all ongoing backups for a specific routine.
+	Cancel(routineName string)
 }

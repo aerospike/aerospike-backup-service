@@ -9,9 +9,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/middleware"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"golang.org/x/time/rate"
 )
 
 const (
@@ -24,29 +22,26 @@ type HTTPServer struct {
 }
 
 // NewHTTPServer returns a new instance of HTTPServer.
-func NewHTTPServer(serverConfig *model.HTTPServerConfig, h *handlers.Service) *HTTPServer {
+func NewHTTPServer(serverConfig *model.HTTPServerConfig, service *handlers.Service, logger *slog.Logger) *HTTPServer {
 	addr := fmt.Sprintf("%s:%d", serverConfig.GetAddressOrDefault(), serverConfig.GetPortOrDefault())
 
-	rateLimiterConfig := serverConfig.GetRateOrDefault()
-	rateLimiter := util.NewIPRateLimiter(
-		rate.Limit(rateLimiterConfig.GetTpsOrDefault()),
-		rateLimiterConfig.GetSizeOrDefault(),
-	)
-
-	whitelist := util.NewIPWhiteList(rateLimiterConfig.GetWhiteListOrDefault())
-	mw := middleware.RateLimiter(rateLimiter, whitelist)
-
-	router := NewRouter(
+	// Create router
+	mux := NewServeMux(
 		fmt.Sprintf("/%s", restAPIVersion),
 		"/",
-		h,
-		mw)
+		service,
+	)
+
+	handler := middleware.Wrap(mux,
+		middleware.RateLimiter(serverConfig.GetRateOrDefault()),
+		middleware.RequestLogger(logger, []string{"health", "ready", "metrics"}),
+	)
 
 	return &HTTPServer{
 		server: &http.Server{
 			Addr:              addr,
 			ReadHeaderTimeout: serverConfig.GetTimeoutOrDefault(),
-			Handler:           router,
+			Handler:           handler,
 		},
 	}
 }
