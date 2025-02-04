@@ -18,7 +18,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
@@ -94,12 +93,15 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		return nil, nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	appLogger := setDefaultLoggers(ctx, config.ServiceConfig.GetLoggerOrDefault())
+	appLogger := setDefaultLogger(config.ServiceConfig.GetLoggerOrDefault())
 	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
 	clientManager.SetLogger(appLogger)
 
-	// schedule all configured backups
-	scheduler := service.NewScheduler()
+	// schedule all configured backup routines
+	scheduler, err := service.NewScheduler(ctx, appLogger)
+	if err != nil {
+		return nil, nil, nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
+	}
 
 	backends := service.NewBackupBackends()
 	backupHandlers := service.NewBackupHandlerHolder()
@@ -139,12 +141,11 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	return config, scheduler, httpService, appLogger, nil
 }
 
-func setDefaultLoggers(ctx context.Context, loggerConfig *model.LoggerConfig) *slog.Logger {
+func setDefaultLogger(loggerConfig *model.LoggerConfig) *slog.Logger {
 	appLogger := slog.New(
 		util.LogHandler(loggerConfig),
 	)
 	slog.SetDefault(appLogger)
-	logger.SetDefault(util.NewQuartzLogger(ctx))
 	return appLogger
 }
 
