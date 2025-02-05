@@ -16,7 +16,7 @@ require (
 	github.com/aws/smithy-go v1.22.1
 	github.com/go-logr/logr v1.4.2
 	github.com/prometheus/client_golang v1.20.5
-	github.com/reugn/go-quartz v0.13.0
+	github.com/reugn/go-quartz v0.14.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/http-swagger/v2 v2.0.2

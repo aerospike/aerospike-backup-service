@@ -8,8 +8,14 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/reugn/go-quartz/logger"
+	"github.com/reugn/go-quartz/quartz"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
+
+func init() {
+	quartz.Sep = "_"
+}
 
 // LogHandler returns the application log handler with the
 // configured level.
@@ -19,17 +25,30 @@ func LogHandler(config *model.LoggerConfig) slog.Handler {
 	switch strings.ToUpper(config.GetFormatOrDefault()) {
 	case "PLAIN":
 		return slog.NewTextHandler(writer, &slog.HandlerOptions{
-			Level:     logLevel(config.GetLevelOrDefault()),
-			AddSource: addSource,
+			Level:       logLevel(config.GetLevelOrDefault()),
+			AddSource:   addSource,
+			ReplaceAttr: handlerReplaceAttr,
 		})
 	case "JSON":
 		return slog.NewJSONHandler(writer, &slog.HandlerOptions{
-			Level:     logLevel(config.GetLevelOrDefault()),
-			AddSource: addSource,
+			Level:       logLevel(config.GetLevelOrDefault()),
+			AddSource:   addSource,
+			ReplaceAttr: handlerReplaceAttr,
 		})
 	default:
 		panic(fmt.Sprintf("unsupported log format: %s", *config.Format))
 	}
+}
+
+// handlerReplaceAttr customizes the TRACE level string representation in logs.
+var handlerReplaceAttr = func(_ []string, a slog.Attr) slog.Attr {
+	if a.Key == slog.LevelKey {
+		level := a.Value.Any().(slog.Level)
+		if level == slog.Level(logger.LevelTrace) {
+			a.Value = slog.StringValue("TRACE")
+		}
+	}
+	return a
 }
 
 func logWriter(config *model.LoggerConfig) io.Writer {
@@ -66,7 +85,7 @@ func (*ignoreWriter) Write(_ []byte) (n int, err error) {
 func logLevel(level string) slog.Level {
 	switch strings.ToUpper(level) {
 	case "TRACE":
-		return slog.LevelDebug
+		return slog.Level(logger.LevelTrace)
 	case "DEBUG":
 		return slog.LevelDebug
 	case "INFO":

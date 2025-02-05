@@ -1,12 +1,15 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -43,11 +46,12 @@ func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {
 }
 
 // NewScheduler creates a new quartz.Scheduler.
-func NewScheduler() quartz.Scheduler {
-	return quartz.NewStdSchedulerWithOptions(quartz.StdSchedulerOptions{
-		OutdatedThreshold: 1 * time.Second,
-		RetryInterval:     100 * time.Millisecond,
-	}, nil, nil)
+func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler, error) {
+	scheduler, err := quartz.NewStdScheduler(
+		quartz.WithOutdatedThreshold(time.Second),
+		quartz.WithLogger(logger.NewSlogLogger(ctx, appLogger)),
+	)
+	return scheduler, err
 }
 
 // scheduleRoutines schedules the given handlers using the scheduler.
