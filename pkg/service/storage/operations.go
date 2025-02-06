@@ -12,6 +12,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/models"
 )
 
 // CreateReader creates a reader for a path in the specified storage.
@@ -33,7 +34,7 @@ func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]by
 		return nil, err
 	}
 
-	readersCh := make(chan io.ReadCloser, 1)
+	readersCh := make(chan models.File, 1)
 	errorsCh := make(chan error, 1)
 	go reader.StreamFiles(ctx, readersCh, errorsCh)
 
@@ -41,8 +42,8 @@ func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]by
 	case err := <-errorsCh:
 		return nil, err
 	case r := <-readersCh:
-		defer r.Close()
-		return io.ReadAll(r)
+		defer r.Reader.Close()
+		return io.ReadAll(r.Reader)
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -61,7 +62,7 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}
 
-	readersCh := make(chan io.ReadCloser, 1)
+	readersCh := make(chan models.File, 1)
 	errorsCh := make(chan error, 1)
 
 	go reader.StreamFiles(ctx, readersCh, errorsCh)
@@ -80,8 +81,8 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 			}
 			buf := new(bytes.Buffer)
 			_, err := func() (int64, error) {
-				defer r.Close()
-				return io.Copy(buf, r)
+				defer r.Reader.Close()
+				return io.Copy(buf, r.Reader)
 			}()
 			if err != nil {
 				return nil, err

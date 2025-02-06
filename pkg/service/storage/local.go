@@ -17,7 +17,7 @@ func (a *LocalStorageAccessor) supports(storage model.Storage) bool {
 }
 
 func (a *LocalStorageAccessor) createReader(
-	_ context.Context, storage model.Storage, path string, isFile bool, filter Validator, _ string,
+	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, _ string,
 ) (backup.StreamingReader, error) {
 	ls := storage.(*model.LocalStorage)
 	fullPath := filepath.Join(ls.Path, path)
@@ -31,7 +31,7 @@ func (a *LocalStorageAccessor) createReader(
 		opts = append(opts, local.WithDir(fullPath))
 	}
 
-	return local.NewReader(opts...)
+	return local.NewReader(ctx, opts...)
 }
 
 func (a *LocalStorageAccessor) createWriter(
