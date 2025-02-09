@@ -8,7 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backup_executor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 )
@@ -16,7 +16,7 @@ import (
 // BackupRoutineOrchestrator orchestrates the execution of a single backup routine (both full and incremental).
 // It manages all necessary preparations, executes the backup process, handles post-processing, and updates metrics.
 type BackupRoutineOrchestrator struct {
-	backupService       backup_executor.BackupExecutor
+	backupService       backupexecutor.BackupExecutor
 	backupRoutine       *model.BackupRoutine
 	namespaces          []string
 	retry               executor
@@ -46,7 +46,7 @@ func NewBackupHandlerHolder() BackupHandlerHolder {
 // newBackupRoutineOrchestrator returns a new BackupRoutineOrchestrator instance.
 func newBackupRoutineOrchestrator(
 	clientManager aerospike.ClientManager,
-	backupService backup_executor.BackupExecutor,
+	backupService backupexecutor.BackupExecutor,
 	routineName string,
 	routine *model.BackupRoutine,
 	backupBackend BackupMetadataReaderWriter,

@@ -1,4 +1,4 @@
-package backup_executor
+package backupexecutor
 
 import (
 	"context"

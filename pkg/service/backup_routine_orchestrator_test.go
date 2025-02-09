@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backup_executor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/mock"
@@ -26,9 +26,9 @@ func (m *mockBackupService) Run(
 	timeBounds model.TimeBounds,
 	namespace string,
 	path string,
-) (backup_executor.BackupHandler, error) {
+) (backupexecutor.BackupHandler, error) {
 	args := m.Called(ctx, client, routine, timeBounds, namespace, path)
-	return args.Get(0).(backup_executor.BackupHandler), args.Error(1)
+	return args.Get(0).(backupexecutor.BackupHandler), args.Error(1)
 }
 
 type mockClientManager struct {

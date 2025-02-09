@@ -1,8 +1,9 @@
-package backup_executor
+package backupexecutor
 
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
@@ -38,10 +39,13 @@ func (r *DefaultBackupExecutor) Run(
 
 	switch {
 	case !xdrEnabled:
+		// Regular scan backup
 		return runScanBackup(ctx, client, routine, timeBounds, namespace, writer)
 	case isFullBackup:
+		// Full backup with XDR - combine XDR for records and scan for UDFs/indexes
 		return runCombinedBackup(ctx, client, routine, timeBounds, namespace, writer)
 	default:
+		// Incremental backup with XDR
 		return runXDRBackup(ctx, client, routine, timeBounds, namespace, writer)
 	}
 }
@@ -76,7 +80,7 @@ func runXDRBackup(
 	namespace string,
 	writer backup.Writer,
 ) (BackupHandler, error) {
-	xdrConfig := makeXDRConfig(namespace, routine)
+	xdrConfig := makeXDRConfig(namespace, routine, timeBounds)
 	// Note: XDR specific time bounds handling would go here if needed
 
 	handler, err := client.BackupXDR(ctx, xdrConfig, writer)
@@ -174,14 +178,16 @@ func makeBackupConfig(
 	return config
 }
 
-func makeXDRConfig(namespace string, routine *model.BackupRoutine) *backup.ConfigBackupXDR {
+func makeXDRConfig(
+	namespace string, routine *model.BackupRoutine, timeBounds model.TimeBounds,
+) *backup.ConfigBackupXDR {
 	policy := routine.BackupPolicy
 	return &backup.ConfigBackupXDR{
 		DC:                           policy.XDRConfig.DC,
 		LocalAddress:                 policy.XDRConfig.LocalHost,
 		LocalPort:                    policy.XDRConfig.LocalPort,
 		Namespace:                    namespace,
-		Rewind:                       "all",
+		Rewind:                       getRewind(timeBounds),
 		ParallelWrite:                policy.GetParallelOrDefault(),
 		FileLimit:                    int64(policy.GetFileLimitOrDefault()) * 1_048_576,
 		MaxConnections:               100,
@@ -193,4 +199,14 @@ func makeXDRConfig(namespace string, routine *model.BackupRoutine) *backup.Confi
 		//CompressionPolicy:            makeCompressionPolicy(policy),
 		//EncryptionPolicy:             makeEncryptionPolicy(policy),
 	}
+}
+
+// getRewind calculates the rewind value based on FromTime.
+func getRewind(bounds model.TimeBounds) string {
+	if bounds.FromTime == nil {
+		return "all"
+	}
+	seconds := int(time.Since(*bounds.FromTime).Seconds()) + 1
+
+	return fmt.Sprintf("%d", seconds)
 }

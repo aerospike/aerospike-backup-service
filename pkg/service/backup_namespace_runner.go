@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backup_executor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
@@ -19,7 +19,7 @@ import (
 // Every routine has its own BackupNamespaceRunner.
 type BackupNamespaceRunner struct {
 	routineName    string
-	backupExecutor backup_executor.BackupExecutor
+	backupExecutor backupexecutor.BackupExecutor
 	retry          executor
 	metadataWriter BackupMetadataWriter
 	logger         *slog.Logger
@@ -28,7 +28,7 @@ type BackupNamespaceRunner struct {
 // NewBackupNamespaceRunner creates a new BackupNamespaceRunner instance.
 func NewBackupNamespaceRunner(
 	routineName string,
-	backupService backup_executor.BackupExecutor,
+	backupService backupexecutor.BackupExecutor,
 	retry executor,
 	metadataWriter BackupMetadataWriter,
 	logger *slog.Logger,
@@ -44,7 +44,7 @@ func NewBackupNamespaceRunner(
 
 // CancelableBackupHandler extends BackupHandler with support for canceling the backup.
 type CancelableBackupHandler interface {
-	backup_executor.BackupHandler
+	backupexecutor.BackupHandler
 	// Cancel cancels the backup operation.
 	Cancel()
 }
@@ -65,7 +65,7 @@ func (op *BackupNamespaceRunner) Run(
 	return newRetryableBackupHandler(
 		ctx,
 		op.retry,
-		func(ctx context.Context) (backup_executor.BackupHandler, error) {
+		func(ctx context.Context) (backupexecutor.BackupHandler, error) {
 			return op.backupExecutor.Run(ctx, client, backupRoutine, timeBounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) {
