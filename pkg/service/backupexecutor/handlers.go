@@ -8,19 +8,6 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// Backup handlers.
-type SimpleBackupHandler struct {
-	handler BackupHandler
-}
-
-func (h *SimpleBackupHandler) Wait(ctx context.Context) error {
-	return h.handler.Wait(ctx)
-}
-
-func (h *SimpleBackupHandler) GetStats() *models.BackupStats {
-	return h.handler.GetStats()
-}
-
 type CombinedBackupHandler struct {
 	xdrHandler  BackupHandler
 	scanHandler BackupHandler

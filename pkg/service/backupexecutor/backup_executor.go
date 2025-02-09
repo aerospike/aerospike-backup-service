@@ -60,69 +60,15 @@ func runScanBackup(
 	writer backup.Writer,
 ) (BackupHandler, error) {
 	config := makeBackupConfig(namespace, routine, timeBounds)
-	config.ModAfter = timeBounds.FromTime
-	config.ModBefore = timeBounds.ToTime
 
 	handler, err := client.Backup(ctx, config, writer, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start scan backup: %w", err)
 	}
 
-	return &SimpleBackupHandler{handler: handler}, nil
+	return handler, nil
 }
 
-// runXDRBackup performs an XDR-based backup.
-func runXDRBackup(
-	ctx context.Context,
-	client *backup.Client,
-	routine *model.BackupRoutine,
-	timeBounds model.TimeBounds,
-	namespace string,
-	writer backup.Writer,
-) (BackupHandler, error) {
-	xdrConfig := makeXDRConfig(namespace, routine, timeBounds)
-	// Note: XDR specific time bounds handling would go here if needed
-
-	handler, err := client.BackupXDR(ctx, xdrConfig, writer)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start XDR backup: %w", err)
-	}
-
-	return &SimpleBackupHandler{handler: handler}, nil
-}
-
-// runCombinedBackup performs both XDR backup for records and scan backup for UDFs/indexes.
-func runCombinedBackup(
-	ctx context.Context,
-	client *backup.Client,
-	routine *model.BackupRoutine,
-	timeBounds model.TimeBounds,
-	namespace string,
-	writer backup.Writer,
-) (BackupHandler, error) {
-	// Start XDR backup for records
-	xdrHandler, err := runXDRBackup(ctx, client, routine, timeBounds, namespace, writer)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start XDR backup: %w", err)
-	}
-
-	// For scan backup, create a copy of routine with NoRecords set to true
-	scanRoutine := *routine
-	scanRoutine.BackupPolicy = routine.BackupPolicy.CopyWithNoRecords()
-
-	// Start scan backup for UDFs and indexes
-	scanHandler, err := runScanBackup(ctx, client, &scanRoutine, timeBounds, namespace, writer)
-	if err != nil {
-		return nil, fmt.Errorf("failed to start scan backup: %w", err)
-	}
-
-	return &CombinedBackupHandler{
-		xdrHandler:  xdrHandler,
-		scanHandler: scanHandler,
-	}, nil
-}
-
-// Helper functions.
 func makeBackupConfig(
 	namespace string,
 	backupRoutine *model.BackupRoutine,
@@ -178,6 +124,25 @@ func makeBackupConfig(
 	return config
 }
 
+// runXDRBackup performs an XDR-based backup.
+func runXDRBackup(
+	ctx context.Context,
+	client *backup.Client,
+	routine *model.BackupRoutine,
+	timeBounds model.TimeBounds,
+	namespace string,
+	writer backup.Writer,
+) (BackupHandler, error) {
+	xdrConfig := makeXDRConfig(namespace, routine, timeBounds)
+
+	handler, err := client.BackupXDR(ctx, xdrConfig, writer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start XDR backup: %w", err)
+	}
+
+	return handler, nil
+}
+
 func makeXDRConfig(
 	namespace string, routine *model.BackupRoutine, timeBounds model.TimeBounds,
 ) *backup.ConfigBackupXDR {
@@ -209,4 +174,33 @@ func getRewind(bounds model.TimeBounds) string {
 	seconds := int(time.Since(*bounds.FromTime).Seconds()) + 1
 
 	return fmt.Sprintf("%d", seconds)
+}
+
+// runCombinedBackup performs both XDR backup for records and scan backup for UDFs/indexes.
+func runCombinedBackup(
+	ctx context.Context,
+	client *backup.Client,
+	routine *model.BackupRoutine,
+	timeBounds model.TimeBounds,
+	namespace string,
+	writer backup.Writer,
+) (BackupHandler, error) {
+	xdrHandler, err := runXDRBackup(ctx, client, routine, timeBounds, namespace, writer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start XDR backup: %w", err)
+	}
+
+	// For scan backup, create a copy of routine with NoRecords set to true.
+	scanRoutine := *routine
+	scanRoutine.BackupPolicy = routine.BackupPolicy.CopyWithNoRecords()
+
+	scanHandler, err := runScanBackup(ctx, client, &scanRoutine, timeBounds, namespace, writer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start scan backup: %w", err)
+	}
+
+	return &CombinedBackupHandler{
+		xdrHandler:  xdrHandler,
+		scanHandler: scanHandler,
+	}, nil
 }
