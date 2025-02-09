@@ -43,7 +43,7 @@ type BackupPolicy struct {
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
 	Sealed *bool
-
+	// XDR configuration for MRT backups
 	XDRConfig *XDRConfig
 }
 

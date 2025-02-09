@@ -1,7 +1,6 @@
 package model
 
 type XDRConfig struct {
-	Enabled       bool
 	DC            string
 	LocalHost     string
 	LocalPort     int

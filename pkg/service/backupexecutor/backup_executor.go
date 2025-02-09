@@ -28,8 +28,7 @@ func (r *DefaultBackupExecutor) Run(
 	namespace string,
 	path string,
 ) (BackupHandler, error) {
-	xdrEnabled := routine.BackupPolicy.XDRConfig != nil &&
-		routine.BackupPolicy.XDRConfig.Enabled
+	xdrEnabled := routine.BackupPolicy.XDRConfig != nil
 	isFullBackup := timeBounds.FromTime == nil
 
 	writer, err := storage.CreateWriter(ctx, routine.Storage, path, false, false, false)
