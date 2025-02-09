@@ -1827,7 +1827,7 @@ const docTemplate = `{
                     ]
                 },
                 "sealed": {
-                    "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.",
+                    "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.\nThis parameter does not affect XDR backups (which always includes all keys).",
                     "type": "boolean"
                 },
                 "socket-timeout": {
@@ -1839,6 +1839,14 @@ const docTemplate = `{
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
                     "type": "integer",
                     "example": 2000
+                },
+                "xdr": {
+                    "description": "XDR configuration for MRT backups",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.XDRConfig"
+                        }
+                    ]
                 }
             }
         },
@@ -2944,6 +2952,48 @@ const docTemplate = `{
                     "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
                     "type": "string",
                     "example": "TLSv1.2"
+                }
+            }
+        },
+        "dto.XDRConfig": {
+            "description": "XDRConfig represents the configuration for XDR backups.",
+            "type": "object",
+            "properties": {
+                "dc": {
+                    "type": "string",
+                    "example": "us-west"
+                },
+                "local-host": {
+                    "type": "string",
+                    "example": "127.0.0.1"
+                },
+                "local-port": {
+                    "type": "integer",
+                    "example": 4000
+                },
+                "max-conns": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "polling-period": {
+                    "type": "integer",
+                    "example": 60000
+                },
+                "read-timeout": {
+                    "type": "integer",
+                    "example": 5000
+                },
+                "rewind": {
+                    "type": "string",
+                    "example": "2023-01-01T00:00:00Z"
+                },
+                "start-timeout": {
+                    "type": "integer",
+                    "example": 3000
+                },
+                "write-timeout": {
+                    "type": "integer",
+                    "example": 5000
                 }
             }
         }
