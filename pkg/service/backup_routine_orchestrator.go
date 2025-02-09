@@ -8,17 +8,15 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backup_executor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/models"
 )
 
 // BackupRoutineOrchestrator orchestrates the execution of a single backup routine (both full and incremental).
 // It manages all necessary preparations, executes the backup process, handles post-processing, and updates metrics.
 type BackupRoutineOrchestrator struct {
-	backupService       Backup
-	backupFullPolicy    *model.BackupPolicy
-	backupIncrPolicy    *model.BackupPolicy
+	backupService       backup_executor.BackupExecutor
 	backupRoutine       *model.BackupRoutine
 	namespaces          []string
 	retry               executor
@@ -32,34 +30,6 @@ type BackupRoutineOrchestrator struct {
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
-
-// Backup is a facade for backup library.
-type Backup interface {
-	BackupRun(
-		ctx context.Context,
-		client *backup.Client,
-		backupPolicy *model.BackupPolicy,
-		timeBounds model.TimeBounds,
-		namespace string,
-		path string,
-	) (BackupHandler, error)
-}
-
-// BackupHandler represents a backup handler for tracking and controlling backup operations.
-// It is returned by the backup client library.
-type BackupHandler interface {
-	// GetStats returns the statistics of the backup job.
-	GetStats() *models.BackupStats
-	// Wait waits for the backup job to complete and returns an error if the job failed.
-	Wait(context.Context) error
-}
-
-// CancelableBackupHandler extends BackupHandler with support for canceling the backup.
-type CancelableBackupHandler interface {
-	BackupHandler
-	// Cancel cancels the backup operation.
-	Cancel()
-}
 
 // ClusterConfigWriter handles writing cluster configuration to storage.
 type ClusterConfigWriter interface {
@@ -76,7 +46,7 @@ func NewBackupHandlerHolder() BackupHandlerHolder {
 // newBackupRoutineOrchestrator returns a new BackupRoutineOrchestrator instance.
 func newBackupRoutineOrchestrator(
 	clientManager aerospike.ClientManager,
-	backupService Backup,
+	backupService backup_executor.BackupExecutor,
 	routineName string,
 	routine *model.BackupRoutine,
 	backupBackend BackupMetadataReaderWriter,
@@ -97,13 +67,11 @@ func newBackupRoutineOrchestrator(
 			logger,
 		),
 
-		backupService:    backupService,
-		backupRoutine:    routine,
-		routineName:      routineName,
-		backupFullPolicy: backupPolicy,
-		backupIncrPolicy: backupPolicy.CopySMDDisabled(), // incremental backups should not contain metadata
-		namespaces:       routine.Namespaces,
-		clientManager:    clientManager,
+		backupService: backupService,
+		backupRoutine: routine,
+		routineName:   routineName,
+		namespaces:    routine.Namespaces,
+		clientManager: clientManager,
 		clusterConfigWriter: NewClusterConfigWriter(
 			backupStorage,
 			routineName,
@@ -148,7 +116,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 
 	timeBounds := h.createTimeBounds(jobTypeFull, now)
 	backupHandler := startNamespacesBackup(ctx,
-		h.runner, client, namespaces, timeBounds, now, h.backupFullPolicy, jobTypeFull)
+		h.runner, client, namespaces, timeBounds, now, h.backupRoutine, jobTypeFull)
 
 	h.registry.register(h.routineName, jobTypeFull, backupHandler)
 
@@ -215,7 +183,7 @@ func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.T
 		fromTime = h.registry.GetRoutineState(h.routineName).LastRunTime.LatestRun()
 	}
 
-	if h.backupFullPolicy.IsSealedOrDefault() {
+	if h.backupRoutine.BackupPolicy.IsSealedOrDefault() {
 		toTime = &now
 	}
 
@@ -269,7 +237,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 
 	timeBounds := h.createTimeBounds(jobTypeIncremental, now)
 	backupHandler := startNamespacesBackup(ctx,
-		h.runner, client, namespaces, timeBounds, now, h.backupIncrPolicy, jobTypeIncremental)
+		h.runner, client, namespaces, timeBounds, now, h.backupRoutine, jobTypeIncremental)
 	h.registry.register(h.routineName, jobTypeIncremental, backupHandler)
 
 	if err := backupHandler.Wait(ctx); err != nil {

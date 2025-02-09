@@ -7,6 +7,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backup_executor"
 	"github.com/reugn/go-quartz/matcher"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -91,10 +92,9 @@ func makeHandlers(
 	handlers := make(map[string]backupRunner)
 
 	for routineName, routine := range routines {
-		backupExecutor := NewBackupExecutor(routine)
 		backend, _ := backends.Get(routineName)
 		handlers[routineName] =
-			newBackupRoutineOrchestrator(clientManager, backupExecutor, routineName, routine, backend, registry)
+			newBackupRoutineOrchestrator(clientManager, backup_executor.NewDefaultBackupExecutor(), routineName, routine, backend, registry)
 	}
 
 	return handlers

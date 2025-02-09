@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backup_executor"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/mock"
@@ -18,16 +19,16 @@ type mockBackupService struct {
 	mock.Mock
 }
 
-func (m *mockBackupService) BackupRun(
+func (m *mockBackupService) Run(
 	ctx context.Context,
 	client *backup.Client,
-	backupPolicy *model.BackupPolicy,
+	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,
 	path string,
-) (BackupHandler, error) {
-	args := m.Called(ctx, client, backupPolicy, timeBounds, namespace, path)
-	return args.Get(0).(BackupHandler), args.Error(1)
+) (backup_executor.BackupHandler, error) {
+	args := m.Called(ctx, client, routine, timeBounds, namespace, path)
+	return args.Get(0).(backup_executor.BackupHandler), args.Error(1)
 }
 
 type mockClientManager struct {
@@ -111,7 +112,6 @@ func setupTestHandler(
 		backupRoutine: &model.BackupRoutine{
 			SourceCluster: &model.AerospikeCluster{},
 		},
-		backupFullPolicy: &model.BackupPolicy{},
 		logger:           slog.Default(),
 		retry:            &simpleExecutor{},
 		registry:         NewRunningBackupsRegistry(context.Background(), NewBackupBackends()),
@@ -140,7 +140,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	backupHandler.On("GetStats").Return(&models.BackupStats{})
 
 	// Expect backup run for each namespace
-	backupService.On("BackupRun",
+	backupService.On("Run",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -149,7 +149,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mock.Anything,
 	).Return(backupHandler, nil).Once()
 
-	backupService.On("BackupRun",
+	backupService.On("Run",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -194,7 +194,7 @@ func TestRunFullBackupInternal_WaitError(t *testing.T) {
 	expectedErr := errors.New("wait error")
 	backupHandler.On("Wait", mock.Anything).Return(expectedErr)
 
-	backupService.On("BackupRun",
+	backupService.On("Run",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -228,7 +228,7 @@ func TestRunIncrementalBackup_NoFullBackupYet(t *testing.T) {
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
 	clientManager.AssertNotCalled(t, "GetClient")
-	backupService.AssertNotCalled(t, "BackupRun")
+	backupService.AssertNotCalled(t, "Run")
 }
 
 func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
@@ -243,7 +243,7 @@ func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
 	clientManager.AssertNotCalled(t, "GetClient")
-	backupService.AssertNotCalled(t, "BackupRun")
+	backupService.AssertNotCalled(t, "Run")
 }
 
 func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
@@ -258,7 +258,7 @@ func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
 	handler.runIncrementalBackup(context.Background(), time.Now())
 
 	clientManager.AssertNotCalled(t, "GetClient")
-	backupService.AssertNotCalled(t, "BackupRun")
+	backupService.AssertNotCalled(t, "Run")
 }
 
 func TestRunIncrementalBackup_ClientError(t *testing.T) {
@@ -278,7 +278,7 @@ func TestRunIncrementalBackup_ClientError(t *testing.T) {
 	handler.runIncrementalBackup(context.Background(), now)
 
 	clientManager.AssertExpectations(t)
-	backupService.AssertNotCalled(t, "BackupRun")
+	backupService.AssertNotCalled(t, "Run")
 }
 
 func TestRunIncrementalBackup_Success(t *testing.T) {
@@ -298,7 +298,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	backupHandler.On("GetStats").Return(stats)
 
 	// Expect backup run for each namespace
-	backupService.On("BackupRun",
+	backupService.On("Run",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -307,7 +307,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 		mock.Anything,
 	).Return(backupHandler, nil)
 
-	backupService.On("BackupRun",
+	backupService.On("Run",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -347,7 +347,7 @@ func TestRunFullBackup_PartialFailure(t *testing.T) {
 	failHandler.On("Wait", mock.Anything).Return(errors.New("failed backup for namespace2"))
 
 	// Set up BackupRun calls for namespaces
-	backupService.On("BackupRun",
+	backupService.On("Run",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
@@ -356,7 +356,7 @@ func TestRunFullBackup_PartialFailure(t *testing.T) {
 		mock.Anything,
 	).Return(successHandler, nil).Once()
 
-	backupService.On("BackupRun",
+	backupService.On("Run",
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,

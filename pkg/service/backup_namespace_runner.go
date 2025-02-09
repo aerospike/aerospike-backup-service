@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backup_executor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
@@ -18,7 +19,7 @@ import (
 // Every routine has its own BackupNamespaceRunner.
 type BackupNamespaceRunner struct {
 	routineName    string
-	backupExecutor Backup
+	backupExecutor backup_executor.BackupExecutor
 	retry          executor
 	metadataWriter BackupMetadataWriter
 	logger         *slog.Logger
@@ -27,7 +28,7 @@ type BackupNamespaceRunner struct {
 // NewBackupNamespaceRunner creates a new BackupNamespaceRunner instance.
 func NewBackupNamespaceRunner(
 	routineName string,
-	backupService Backup,
+	backupService backup_executor.BackupExecutor,
 	retry executor,
 	metadataWriter BackupMetadataWriter,
 	logger *slog.Logger,
@@ -41,12 +42,19 @@ func NewBackupNamespaceRunner(
 	}
 }
 
+// CancelableBackupHandler extends BackupHandler with support for canceling the backup.
+type CancelableBackupHandler interface {
+	backup_executor.BackupHandler
+	// Cancel cancels the backup operation.
+	Cancel()
+}
+
 // Run executes the backup operation for the namespace. It handles the entire backup process
 // including folder management, metadata writing, and error handling.
 func (op *BackupNamespaceRunner) Run(
 	ctx context.Context,
 	client *backup.Client,
-	backupPolicy *model.BackupPolicy,
+	backupRoutine *model.BackupRoutine,
 	backupType jobType,
 	namespace string,
 	now time.Time,
@@ -57,8 +65,8 @@ func (op *BackupNamespaceRunner) Run(
 	return newRetryableBackupHandler(
 		ctx,
 		op.retry,
-		func(ctx context.Context) (BackupHandler, error) {
-			return op.backupExecutor.BackupRun(ctx, client, backupPolicy, timeBounds, namespace, backupFolder)
+		func(ctx context.Context) (backup_executor.BackupHandler, error) {
+			return op.backupExecutor.Run(ctx, client, backupRoutine, timeBounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) {
 			op.deleteFolder(ctx, backupFolder)
