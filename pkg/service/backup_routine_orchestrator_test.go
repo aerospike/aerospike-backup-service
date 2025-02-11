@@ -83,7 +83,7 @@ type mockClusterConfigWriter struct {
 	mock.Mock
 }
 
-func (m *mockClusterConfigWriter) Write(ctx context.Context, client backup.AerospikeClient, timestamp time.Time) {
+func (m *mockClusterConfigWriter) Write(ctx context.Context, client AerospikeCluster, timestamp time.Time) {
 	m.Called(ctx, client, timestamp)
 }
 

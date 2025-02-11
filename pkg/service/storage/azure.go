@@ -19,8 +19,8 @@ func (a *AzureStorageAccessor) supports(storage model.Storage) bool {
 	return ok
 }
 
-func (a *AzureStorageAccessor) createReader(
-	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, startScanFrom string,
+func (a *AzureStorageAccessor) createReader(ctx context.Context,
+	storage model.Storage, path string, isFile, sorted, skipDirCheck bool, filter Validator, startScanFrom string,
 ) (backup.StreamingReader, error) {
 	azures := storage.(*model.AzureStorage)
 	client, err := getAzureClient(azures)
@@ -37,6 +37,12 @@ func (a *AzureStorageAccessor) createReader(
 		opts = append(opts, azure.WithFile(fullPath))
 	} else {
 		opts = append(opts, azure.WithDir(fullPath))
+	}
+	if sorted {
+		opts = append(opts, azure.WithSorting())
+	}
+	if skipDirCheck {
+		opts = append(opts, azure.WithSkipDirCheck())
 	}
 
 	return azure.NewReader(ctx, client, azures.ContainerName, opts...)

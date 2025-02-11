@@ -20,7 +20,12 @@ func (a *GcpStorageAccessor) supports(storage model.Storage) bool {
 }
 
 func (a *GcpStorageAccessor) createReader(
-	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, startScanFrom string,
+	ctx context.Context,
+	storage model.Storage,
+	path string,
+	isFile, sorted, skipDirCheck bool,
+	filter Validator,
+	startScanFrom string,
 ) (backup.StreamingReader, error) {
 	gcps := storage.(*model.GcpStorage)
 	client, err := getGcpClient(ctx, gcps)
@@ -37,6 +42,12 @@ func (a *GcpStorageAccessor) createReader(
 		opts = append(opts, gcp.WithFile(fullPath))
 	} else {
 		opts = append(opts, gcp.WithDir(fullPath))
+	}
+	if skipDirCheck {
+		opts = append(opts, gcp.WithSkipDirCheck())
+	}
+	if sorted {
+		opts = append(opts, gcp.WithSorting())
 	}
 
 	return gcp.NewReader(ctx, client, gcps.BucketName, opts...)

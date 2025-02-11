@@ -17,18 +17,30 @@ func (a *LocalStorageAccessor) supports(storage model.Storage) bool {
 }
 
 func (a *LocalStorageAccessor) createReader(
-	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, _ string,
+	ctx context.Context,
+	storage model.Storage,
+	path string,
+	isFile, sorted, skipDirCheck bool,
+	filter Validator,
+	_ string,
 ) (backup.StreamingReader, error) {
 	ls := storage.(*model.LocalStorage)
 	fullPath := filepath.Join(ls.Path, path)
 	opts := []local.Opt{
 		local.WithValidator(filter),
 		local.WithNestedDir(),
+		local.WithSkipDirCheck(),
 	}
 	if isFile {
 		opts = append(opts, local.WithFile(fullPath))
 	} else {
 		opts = append(opts, local.WithDir(fullPath))
+	}
+	if skipDirCheck {
+		opts = append(opts, local.WithSkipDirCheck())
+	}
+	if sorted {
+		opts = append(opts, local.WithSorting())
 	}
 
 	return local.NewReader(ctx, opts...)

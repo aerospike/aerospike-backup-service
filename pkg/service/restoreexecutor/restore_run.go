@@ -3,7 +3,6 @@ package restoreexecutor
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/backup-go/io/encoding/asbx"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
@@ -11,6 +10,7 @@ import (
 	a "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asb"
+	"github.com/aerospike/backup-go/io/encoding/asbx"
 )
 
 // RestoreRunner implements the [Restore] interface.
@@ -39,16 +39,14 @@ func (r *RestoreRunner) Run(
 		return nil, err
 	}
 
-	return &CombinedRestoreHandler{
-		streamHandler: streamHandler,
-		xdrHandler:    xdrHandler,
-	}, nil
+	return NewCombinedRestoreHandler(streamHandler, xdrHandler), nil
 }
 
 func runScanRestore(ctx context.Context, client *backup.Client, request *model.RestoreRequest) (RestoreHandler, error) {
 	config := makeRestoreConfig(request)
 
-	reader, err := storage.CreateReader(ctx, request.SourceStorage, request.BackupDataPath, false, asb.NewValidator(), "")
+	reader, err := storage.CreateReader(ctx,
+		request.SourceStorage, request.BackupDataPath, false, false, true, asb.NewValidator(), "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}
@@ -163,6 +161,8 @@ func runXDRRestore(
 		request.SourceStorage,
 		request.BackupDataPath,
 		false,
+		true,
+		true,
 		asbx.NewValidator(),
 		"",
 	)
