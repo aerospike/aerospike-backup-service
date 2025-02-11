@@ -1,4 +1,4 @@
-package service
+package restoreexecutor
 
 import (
 	"context"
@@ -21,6 +21,14 @@ type RestoreHandler interface {
 type RestoreHandlerWithCancel struct {
 	RestoreHandler
 	cancel func()
+}
+
+// NewRestoreHandlerWithCancel creates a new RestoreHandlerWithCancel.
+func NewRestoreHandlerWithCancel(handler RestoreHandler, cancelFunc func()) *RestoreHandlerWithCancel {
+	return &RestoreHandlerWithCancel{
+		RestoreHandler: handler,
+		cancel:         cancelFunc,
+	}
 }
 
 // Cancel cancels the restore job.

@@ -1,8 +1,9 @@
-package service
+package restoreexecutor
 
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/backup-go/io/encoding/asbx"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
@@ -28,8 +29,23 @@ func (r *RestoreRunner) Run(
 	client *backup.Client,
 	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
-	var err error
+	streamHandler, err := runScanRestore(ctx, client, request)
+	if err != nil {
+		return nil, err
+	}
 
+	xdrHandler, err := runXDRRestore(ctx, client, request)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CombinedRestoreHandler{
+		streamHandler: streamHandler,
+		xdrHandler:    xdrHandler,
+	}, nil
+}
+
+func runScanRestore(ctx context.Context, client *backup.Client, request *model.RestoreRequest) (RestoreHandler, error) {
 	config := makeRestoreConfig(request)
 
 	reader, err := storage.CreateReader(ctx, request.SourceStorage, request.BackupDataPath, false, asb.NewValidator(), "")
@@ -132,4 +148,74 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	default:
 		return a.UPDATE
 	}
+}
+
+func runXDRRestore(
+	ctx context.Context,
+	client *backup.Client,
+	request *model.RestoreRequest,
+) (RestoreHandler, error) {
+	config := makeXdrRestoreConfig(request)
+	config.EncoderType = backup.EncoderTypeASBX
+
+	reader, err := storage.CreateReader(
+		ctx,
+		request.SourceStorage,
+		request.BackupDataPath,
+		false,
+		asbx.NewValidator(),
+		"",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create XDR restore reader: %w", err)
+	}
+
+	handler, err := client.Restore(ctx, config, reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start XDR restore: %w", err)
+	}
+
+	return handler, nil
+}
+
+func makeXdrRestoreConfig(restoreRequest *model.RestoreRequest,
+) *backup.ConfigRestore {
+	config := backup.NewDefaultRestoreConfig()
+
+	config.RetryPolicy = restoreRequest.Policy.GetRetryPolicyOrDefault()
+
+	config.WritePolicy = makeWritePolicy(restoreRequest)
+	config.WritePolicy.RecordExistsAction = a.UPDATE
+
+	if restoreRequest.Policy.Namespace != nil {
+		config.Namespace = &backup.RestoreNamespaceConfig{
+			Source:      restoreRequest.Policy.Namespace.Source,
+			Destination: restoreRequest.Policy.Namespace.Destination,
+		}
+	}
+
+	config.RecordsPerSecond = util.ValueOrZero(restoreRequest.Policy.Tps)
+	config.Bandwidth = util.ValueOrZero(restoreRequest.Policy.Bandwidth)
+	config.Parallel = restoreRequest.Policy.GetParallelOrDefault()
+	config.MaxAsyncBatches = restoreRequest.Policy.GetMaxAsyncBatchesOrDefault()
+	config.BatchSize = restoreRequest.Policy.GetBatchSizeOrDefault()
+
+	if restoreRequest.Policy.CompressionPolicy != nil {
+		config.CompressionPolicy = &backup.CompressionPolicy{
+			Mode:  restoreRequest.Policy.CompressionPolicy.Mode,
+			Level: int(restoreRequest.Policy.CompressionPolicy.Level),
+		}
+	}
+	if restoreRequest.Policy.EncryptionPolicy != nil {
+		config.EncryptionPolicy = &backup.EncryptionPolicy{
+			Mode:      restoreRequest.Policy.EncryptionPolicy.Mode,
+			KeyFile:   restoreRequest.Policy.EncryptionPolicy.KeyFile,
+			KeySecret: restoreRequest.Policy.EncryptionPolicy.KeySecret,
+			KeyEnv:    restoreRequest.Policy.EncryptionPolicy.KeyEnv,
+		}
+	}
+
+	config.SecretAgentConfig = restoreRequest.SecretAgent.ToSecretAgentConfig()
+
+	return config
 }
