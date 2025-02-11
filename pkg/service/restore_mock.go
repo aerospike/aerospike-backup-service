@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 )
@@ -51,7 +52,7 @@ func (m *MockRestoreHandler) Wait(ctx context.Context) error {
 
 // Run mocks the interface method.
 func (r *RestoreMock) Run(_ context.Context, _ *backup.Client,
-	_ *model.RestoreRequest) (RestoreHandler, error) {
+	_ *model.RestoreRequest) (restoreexecutor.RestoreHandler, error) {
 	slog.Info("RestoreRun mock call")
 	return &MockRestoreHandler{
 		restoreWaitWg: r.restoreWaitWg,

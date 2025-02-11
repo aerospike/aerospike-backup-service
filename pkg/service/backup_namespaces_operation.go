@@ -69,7 +69,7 @@ func (op *BackupNamespacesOperation) Cancel() {
 func (op *BackupNamespacesOperation) GetStats() *models.BackupStats {
 	activeHandlers := 0
 
-	res := &models.BackupStats{}
+	res := models.NewBackupStats()
 	for _, handler := range op.handlers {
 		if handler.GetStats() == nil {
 			continue
