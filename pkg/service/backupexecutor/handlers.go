@@ -26,11 +26,5 @@ func (h *CombinedBackupHandler) Wait(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 func (h *CombinedBackupHandler) GetStats() *models.BackupStats {
-	xdrStats := h.xdrHandler.GetStats()
-	scanStats := h.scanHandler.GetStats()
-
-	return &models.BackupStats{
-		TotalRecords: xdrStats.TotalRecords + scanStats.TotalRecords,
-		//TODO: add more stats here
-	}
+	return models.SumBackupStats(h.xdrHandler.GetStats(), h.scanHandler.GetStats())
 }

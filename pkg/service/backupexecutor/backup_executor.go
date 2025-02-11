@@ -29,8 +29,6 @@ func (r *DefaultBackupExecutor) Run(
 	path string,
 ) (BackupHandler, error) {
 	xdrEnabled := routine.BackupPolicy.XDRConfig != nil
-	isFullBackup := timeBounds.FromTime == nil
-
 	writer, err := storage.CreateWriter(ctx, routine.Storage, path, false, false, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer: %w", err)
@@ -40,13 +38,17 @@ func (r *DefaultBackupExecutor) Run(
 	case !xdrEnabled:
 		// Regular scan backup
 		return runScanBackup(ctx, client, routine, timeBounds, namespace, writer)
-	case isFullBackup:
+	case isFullBackup(timeBounds):
 		// Full backup with XDR - combine XDR for records and scan for UDFs/indexes
 		return runCombinedBackup(ctx, client, routine, timeBounds, namespace, writer)
 	default:
 		// Incremental backup with XDR
 		return runXDRBackup(ctx, client, routine, timeBounds, namespace, writer)
 	}
+}
+
+func isFullBackup(timeBounds model.TimeBounds) bool {
+	return timeBounds.FromTime == nil
 }
 
 // runScanBackup performs a regular scan-based backup.
@@ -82,8 +84,13 @@ func makeBackupConfig(
 
 	backupPolicy := backupRoutine.BackupPolicy
 	config.NoRecords = util.ValueOrZero(backupPolicy.NoRecords)
-	config.NoIndexes = util.ValueOrZero(backupPolicy.NoIndexes)
-	config.NoUDFs = util.ValueOrZero(backupPolicy.NoUdfs)
+	if isFullBackup(timeBounds) {
+		config.NoIndexes = util.ValueOrZero(backupPolicy.NoIndexes)
+		config.NoUDFs = util.ValueOrZero(backupPolicy.NoUdfs)
+	} else { // incremental backup don't include indexes or UDFs
+		config.NoIndexes = true
+		config.NoUDFs = true
+	}
 
 	config.ParallelRead = backupPolicy.GetParallelOrDefault()
 	config.ParallelWrite = backupPolicy.GetParallelOrDefault()
@@ -160,6 +167,7 @@ func makeXDRConfig(
 		StartTimeoutMilliseconds:     10_000,
 		InfoPolingPeriodMilliseconds: 1000,
 		SecretAgentConfig:            routine.SecretAgent.ToSecretAgentConfig(),
+		EncoderType:                  backup.EncoderTypeASBX,
 		//CompressionPolicy:            makeCompressionPolicy(policy),
 		//EncryptionPolicy:             makeEncryptionPolicy(policy),
 	}
