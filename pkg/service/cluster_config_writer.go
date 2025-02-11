@@ -7,7 +7,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
-	"github.com/aerospike/backup-go"
 )
 
 // DefaultClusterConfigWriter is the default implementation of ClusterConfigWriter.
@@ -35,7 +34,7 @@ func NewClusterConfigWriter(
 
 func (w *DefaultClusterConfigWriter) Write(
 	ctx context.Context,
-	client backup.AerospikeClient,
+	client AerospikeCluster,
 	timestamp time.Time,
 ) {
 	infos := scanClusterConfiguration(client, w.logger)

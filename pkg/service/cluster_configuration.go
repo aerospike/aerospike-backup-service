@@ -8,11 +8,14 @@ import (
 	v8 "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
 	"github.com/aerospike/aerospike-management-lib/info"
-	"github.com/aerospike/backup-go"
 	"github.com/go-logr/logr"
 )
 
-func scanClusterConfiguration(client backup.AerospikeClient, logger *slog.Logger) []asconfig.DotConf {
+type AerospikeCluster interface {
+	Cluster() *v8.Cluster
+}
+
+func scanClusterConfiguration(client AerospikeCluster, logger *slog.Logger) []asconfig.DotConf {
 	activeHosts := getActiveHosts(client)
 
 	var outputs = make([]asconfig.DotConf, 0, len(activeHosts))
@@ -41,9 +44,9 @@ func scanClusterConfiguration(client backup.AerospikeClient, logger *slog.Logger
 	return outputs
 }
 
-func getActiveHosts(client backup.AerospikeClient) []*v8.Host {
+func getActiveHosts(client AerospikeCluster) []*v8.Host {
 	var activeHosts []*v8.Host
-	for _, node := range client.GetNodes() {
+	for _, node := range client.Cluster().GetNodes() {
 		if node.IsActive() {
 			activeHosts = append(activeHosts, node.GetHost())
 		}
