@@ -55,7 +55,7 @@ func errNotFound(field string, name any) error {
 func httpError(w http.ResponseWriter, err error) {
 	var httpErr *errorWithCode
 	if !errors.As(err, &httpErr) {
-		httpErr = newErrorWithCode(errors.New("internal server error"), http.StatusInternalServerError)
+		httpErr = newErrorWithCode(err, http.StatusInternalServerError)
 	}
 
 	http.Error(w, httpErr.Error(), httpErr.Code)

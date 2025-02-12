@@ -18,6 +18,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
@@ -124,7 +125,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
-		backends, service.NewRestore(), clientManager, restoreJobs, nsValidator)
+		backends, restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator)
 
 	httpService := handlers.NewService(
 		config,
