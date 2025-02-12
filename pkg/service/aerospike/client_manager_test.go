@@ -51,7 +51,7 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 	return m, nil
 }
 
-func (f *MockClientFactory) IsClusterHealthy(_ backup.AerospikeClient) bool {
+func (f *MockClientFactory) IsClusterHealthy(_ Cluster) bool {
 	return !f.IsClusterDisconnected
 }
 

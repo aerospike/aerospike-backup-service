@@ -24,7 +24,7 @@ type ClientManager interface {
 // ClientFactory defines an interface for creating and checking clients.
 type ClientFactory interface {
 	NewClientWithPolicyAndHost(policy *as.ClientPolicy, hosts ...*as.Host) (backup.AerospikeClient, error)
-	IsClusterHealthy(client backup.AerospikeClient) bool
+	IsClusterHealthy(client Cluster) bool
 }
 
 type Cluster interface {
@@ -42,7 +42,7 @@ func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
 }
 
 // IsClusterHealthy checks if the cluster is connected and responding.
-func (f *DefaultClientFactory) IsClusterHealthy(client backup.AerospikeClient) bool {
+func (f *DefaultClientFactory) IsClusterHealthy(client Cluster) bool {
 	if client == nil {
 		return false
 	}
@@ -57,7 +57,7 @@ func (f *DefaultClientFactory) IsClusterHealthy(client backup.AerospikeClient) b
 		return false
 	}
 
-	info, err := node.RequestInfo(client.GetDefaultInfoPolicy(), "status")
+	info, err := node.RequestInfo(as.NewInfoPolicy(), "status")
 
 	return err == nil && info["status"] == "ok"
 }
@@ -229,18 +229,14 @@ func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey string) {
 // Returns a timer that can be used to cancel the scheduled closing if needed.
 func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 	return time.AfterFunc(cm.closeDelay, func() {
-		var client backup.AerospikeClient
-
 		cm.mu.Lock()
 		// Check if the client still exists and count is still 0
 		if info, exists := cm.clients[clusterKey]; exists && info.count == 0 {
-			client = info.client.AerospikeClient()
+			client := info.client.AerospikeClient()
 			delete(cm.clients, clusterKey)
 			cm.locks.Delete(clusterKey)
-		}
-		cm.mu.Unlock()
+			cm.mu.Unlock()
 
-		if client != nil {
 			client.Close()
 			if cm.logger != nil {
 				cm.logger.Info("Aerospike client closed",
@@ -249,6 +245,9 @@ func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 					slog.Any("id", clusterKey),
 				)
 			}
+
+			return
 		}
+		cm.mu.Unlock()
 	})
 }

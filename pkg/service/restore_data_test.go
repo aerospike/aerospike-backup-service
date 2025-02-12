@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/backup-go"
 	"github.com/stretchr/testify/require"
 )
@@ -169,7 +170,7 @@ func (n nsValidatorMock) ValidateRoutines(*model.AerospikeCluster, map[string]*m
 	return nil
 }
 
-func (n nsValidatorMock) IsEmpty(backup.AerospikeClient, string, []string) (bool, error) {
+func (n nsValidatorMock) IsEmpty(aerospike.Cluster, string, []string) (bool, error) {
 	return n.isEmpty, nil
 }
 
