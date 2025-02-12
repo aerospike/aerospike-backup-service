@@ -89,7 +89,7 @@ func filterRoutinesByCluster(
 }
 
 // getAllNamespacesOfCluster retrieves a list of all namespaces in an Aerospike cluster.
-func getAllNamespacesOfCluster(client backup.AerospikeClient) ([]string, error) {
+func getAllNamespacesOfCluster(client Cluster) ([]string, error) {
 	node, err := client.Cluster().GetRandomNode()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get node: %w", err)

@@ -2,15 +2,12 @@ package dto
 
 import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
 // XDRConfig represents the configuration for XDR backups.
 // @Description XDRConfig represents the configuration for XDR backups.
 type XDRConfig struct {
-	DC            string `yaml:"dc,omitempty" json:"dc,omitempty" example:"us-west"`
 	LocalHost     string `yaml:"local-host,omitempty" json:"local-host,omitempty" example:"127.0.0.1"`
-	LocalPort     int    `yaml:"local-port,omitempty" json:"local-port,omitempty" example:"4000"`
 	Rewind        string `yaml:"rewind,omitempty" json:"rewind,omitempty" example:"2023-01-01T00:00:00Z"`
 	MaxConns      *int   `yaml:"max-conns,omitempty" json:"max-conns,omitempty" example:"100"`
 	ReadTimeout   *int64 `yaml:"read-timeout,omitempty" json:"read-timeout,omitempty" example:"5000"`
@@ -24,16 +21,8 @@ func (x *XDRConfig) Validate() error {
 		return nil
 	}
 
-	if x.DC == "" {
-		return errValidationEmptyField("dc")
-	}
-
 	if x.LocalHost == "" {
 		return errValidationEmptyField("local-host")
-	}
-
-	if x.LocalPort <= 0 {
-		return errValidationNonPositive("local-port", x.LocalPort)
 	}
 
 	if x.MaxConns != nil && *x.MaxConns <= 0 {
@@ -65,15 +54,13 @@ func (x *XDRConfig) ToModel() *model.XDRConfig {
 	}
 
 	return &model.XDRConfig{
-		DC:            x.DC,
 		LocalHost:     x.LocalHost,
-		LocalPort:     x.LocalPort,
 		Rewind:        x.Rewind,
-		MaxConns:      util.ValueOrZero(x.MaxConns),
-		ReadTimeout:   util.ValueOrZero(x.ReadTimeout),
-		WriteTimeout:  util.ValueOrZero(x.WriteTimeout),
-		StartTimeout:  util.ValueOrZero(x.StartTimeout),
-		PollingPeriod: util.ValueOrZero(x.PollingPeriod),
+		MaxConns:      x.MaxConns,
+		ReadTimeout:   x.ReadTimeout,
+		WriteTimeout:  x.WriteTimeout,
+		StartTimeout:  x.StartTimeout,
+		PollingPeriod: x.PollingPeriod,
 	}
 }
 
@@ -83,14 +70,12 @@ func newXDRConfigFromModel(m *model.XDRConfig) *XDRConfig {
 	}
 
 	return &XDRConfig{
-		DC:            m.DC,
 		LocalHost:     m.LocalHost,
-		LocalPort:     m.LocalPort,
 		Rewind:        m.Rewind,
-		MaxConns:      &m.MaxConns,
-		ReadTimeout:   &m.ReadTimeout,
-		WriteTimeout:  &m.WriteTimeout,
-		StartTimeout:  &m.StartTimeout,
-		PollingPeriod: &m.PollingPeriod,
+		MaxConns:      m.MaxConns,
+		ReadTimeout:   m.ReadTimeout,
+		WriteTimeout:  m.WriteTimeout,
+		StartTimeout:  m.StartTimeout,
+		PollingPeriod: m.PollingPeriod,
 	}
 }

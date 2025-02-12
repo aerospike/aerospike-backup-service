@@ -27,6 +27,10 @@ type ClientFactory interface {
 	IsClusterHealthy(client backup.AerospikeClient) bool
 }
 
+type Cluster interface {
+	Cluster() *as.Cluster
+}
+
 // DefaultClientFactory is the default implementation of ClientFactory.
 type DefaultClientFactory struct{}
 

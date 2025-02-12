@@ -33,7 +33,7 @@ var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
 
 // ClusterConfigWriter handles writing cluster configuration to storage.
 type ClusterConfigWriter interface {
-	Write(ctx context.Context, client AerospikeCluster, timestamp time.Time)
+	Write(ctx context.Context, client aerospike.Cluster, timestamp time.Time)
 }
 
 // BackupHandlerHolder stores backupRunners by routine name.

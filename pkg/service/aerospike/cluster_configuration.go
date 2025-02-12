@@ -1,4 +1,4 @@
-package service
+package aerospike
 
 import (
 	"log/slog"
@@ -11,18 +11,14 @@ import (
 	"github.com/go-logr/logr"
 )
 
-type AerospikeCluster interface {
-	Cluster() *v8.Cluster
-}
-
-func scanClusterConfiguration(client AerospikeCluster, logger *slog.Logger) []asconfig.DotConf {
+func ScanClusterConfiguration(client Cluster, logger *slog.Logger) []asconfig.DotConf {
 	activeHosts := getActiveHosts(client)
 
 	var outputs = make([]asconfig.DotConf, 0, len(activeHosts))
 
-	policy := util.DowngradeClientPolicy(client.Cluster().ClientPolicy())
+	policy := DowngradeClientPolicy(client.Cluster().ClientPolicy())
 	for _, host := range activeHosts {
-		asInfo := info.NewAsInfo(logr.Logger{}, util.DowngradeHost(host), &policy)
+		asInfo := info.NewAsInfo(logr.Logger{}, DowngradeHost(host), &policy)
 
 		conf, err := asconfig.GenerateConf(logr.Discard(), asInfo, true)
 		if err != nil {
@@ -44,7 +40,7 @@ func scanClusterConfiguration(client AerospikeCluster, logger *slog.Logger) []as
 	return outputs
 }
 
-func getActiveHosts(client AerospikeCluster) []*v8.Host {
+func getActiveHosts(client Cluster) []*v8.Host {
 	var activeHosts []*v8.Host
 	for _, node := range client.Cluster().GetNodes() {
 		if node.IsActive() {

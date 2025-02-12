@@ -1,4 +1,4 @@
-package util
+package aerospike
 
 import (
 	v7 "github.com/aerospike/aerospike-client-go/v7"

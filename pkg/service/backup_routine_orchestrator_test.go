@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
@@ -83,7 +84,7 @@ type mockClusterConfigWriter struct {
 	mock.Mock
 }
 
-func (m *mockClusterConfigWriter) Write(ctx context.Context, client AerospikeCluster, timestamp time.Time) {
+func (m *mockClusterConfigWriter) Write(ctx context.Context, client aerospike.Cluster, timestamp time.Time) {
 	m.Called(ctx, client, timestamp)
 }
 

@@ -3060,17 +3060,9 @@
       "dto.XDRConfig" : {
         "description" : "XDRConfig represents the configuration for XDR backups.",
         "properties" : {
-          "dc" : {
-            "example" : "us-west",
-            "type" : "string"
-          },
           "local-host" : {
             "example" : "127.0.0.1",
             "type" : "string"
-          },
-          "local-port" : {
-            "example" : 4000,
-            "type" : "integer"
           },
           "max-conns" : {
             "example" : 100,

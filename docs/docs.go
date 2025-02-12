@@ -2959,17 +2959,9 @@ const docTemplate = `{
             "description": "XDRConfig represents the configuration for XDR backups.",
             "type": "object",
             "properties": {
-                "dc": {
-                    "type": "string",
-                    "example": "us-west"
-                },
                 "local-host": {
                     "type": "string",
                     "example": "127.0.0.1"
-                },
-                "local-port": {
-                    "type": "integer",
-                    "example": 4000
                 },
                 "max-conns": {
                     "type": "integer",
