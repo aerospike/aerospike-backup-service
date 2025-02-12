@@ -178,7 +178,7 @@ func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
 	defer b.mu.RUnlock()
 
 	configBackups, err := storage.ReadFiles(context.Background(), b.storage, path, configExt, nil)
-	if err != nil {
+	if err != nil && !errors.Is(err, storage.ErrEmptyStorage) {
 		return nil, err
 	}
 	if len(configBackups) == 0 {

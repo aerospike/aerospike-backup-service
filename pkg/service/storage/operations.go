@@ -62,7 +62,7 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 		startScanFrom = filepath.Join(path, fromTimeStr)
 	}
 
-	reader, err := CreateReader(ctx, storage, path, false, false, true, newNameValidator(filterStr), startScanFrom)
+	reader, err := CreateReader(ctx, storage, path, false, false, false, newNameValidator(filterStr), startScanFrom)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}

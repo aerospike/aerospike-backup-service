@@ -29,7 +29,6 @@ func (a *LocalStorageAccessor) createReader(
 	opts := []local.Opt{
 		local.WithValidator(filter),
 		local.WithNestedDir(),
-		local.WithSkipDirCheck(),
 	}
 	if isFile {
 		opts = append(opts, local.WithFile(fullPath))
