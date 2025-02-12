@@ -25,7 +25,7 @@ var retry = newRetryExecutor(models.RetryPolicy{
 func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	ctx := context.Background()
 	mockHandler := &mockBackupHandler{}
-	stats := &models.BackupStats{}
+	stats := models.NewBackupStats()
 	mockHandler.On("Wait", mock.Anything).Return(nil)
 	mockHandler.On("GetStats").Return(stats)
 
@@ -58,7 +58,7 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	ctx := context.Background()
 	failedHandler := &mockBackupHandler{}
 	successHandler := &mockBackupHandler{}
-	stats := &models.BackupStats{}
+	stats := models.NewBackupStats()
 
 	failedHandler.On("Wait", mock.Anything).Return(errors.New("wait failed"))
 	successHandler.On("Wait", mock.Anything).Return(nil)
