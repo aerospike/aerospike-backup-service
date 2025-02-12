@@ -23,43 +23,12 @@ type ClientManager interface {
 
 // ClientFactory defines an interface for creating and checking clients.
 type ClientFactory interface {
-	NewClientWithPolicyAndHost(policy *as.ClientPolicy, hosts ...*as.Host) (backup.AerospikeClient, error)
+	NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error)
 	IsClusterHealthy(client Cluster) bool
 }
 
 type Cluster interface {
 	Cluster() *as.Cluster
-}
-
-// DefaultClientFactory is the default implementation of ClientFactory.
-type DefaultClientFactory struct{}
-
-// NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
-func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
-	policy *as.ClientPolicy, hosts ...*as.Host,
-) (backup.AerospikeClient, error) {
-	return as.NewClientWithPolicyAndHost(policy, hosts...)
-}
-
-// IsClusterHealthy checks if the cluster is connected and responding.
-func (f *DefaultClientFactory) IsClusterHealthy(client Cluster) bool {
-	if client == nil {
-		return false
-	}
-
-	cluster := client.Cluster()
-	if !cluster.IsConnected() {
-		return false
-	}
-
-	node, err := cluster.GetRandomNode()
-	if err != nil {
-		return false
-	}
-
-	info, err := node.RequestInfo(as.NewInfoPolicy(), "status")
-
-	return err == nil && info["status"] == "ok"
 }
 
 // ClientManagerImpl implements [ClientManager].
@@ -170,8 +139,7 @@ func (cm *ClientManagerImpl) storeClient(clusterKey string, client *backup.Clien
 
 // createClient creates a new backup client given the aerospike cluster configuration.
 func (cm *ClientManagerImpl) createClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
-	aeroClient, err := cm.clientFactory.NewClientWithPolicyAndHost(cluster.ASClientPolicy(),
-		cluster.ASClientHosts()...)
+	aeroClient, err := cm.clientFactory.NewClientWithPolicyAndHost(cluster)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to aerospike cluster, %w", err)
 	}

@@ -176,8 +176,7 @@ func (n nsValidatorMock) IsEmpty(aerospike.Cluster, string, []string) (bool, err
 
 func TestRestoreOK(t *testing.T) {
 	restoreRequest := &model.RestoreRequest{
-		DestinationCluster: model.NewLocalAerospikeCluster(),
-		Policy:             &model.RestorePolicy{},
+		Policy: &model.RestorePolicy{},
 		SourceStorage: &model.LocalStorage{
 			Path: validBackupPath,
 		},
@@ -239,10 +238,9 @@ func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
 
 func Test_RestoreTimestamp(t *testing.T) {
 	request := model.RestoreTimestampRequest{
-		DestinationCluster: model.NewLocalAerospikeCluster(),
-		Policy:             &model.RestorePolicy{},
-		Time:               time.UnixMilli(100),
-		RoutineName:        "routine",
+		Policy:      &model.RestorePolicy{},
+		Time:        time.UnixMilli(100),
+		RoutineName: "routine",
 	}
 
 	jobID, err := restoreService.RestoreByTime(&request)
@@ -309,7 +307,7 @@ func (m *MockClientManager) Close(*backup.Client) {
 }
 
 func (m *MockClientManager) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
-	if len(cluster.ASClientHosts()) == 0 {
+	if len(cluster.SeedNodes) == 0 {
 		return nil, errors.New("no hosts provided")
 	}
 
@@ -320,8 +318,7 @@ func TestRestoreCancel(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	restoreService = makeTestRestoreService(wg)
 	restoreRequest := &model.RestoreRequest{
-		DestinationCluster: model.NewLocalAerospikeCluster(),
-		Policy:             &model.RestorePolicy{},
+		Policy: &model.RestorePolicy{},
 		SourceStorage: &model.LocalStorage{
 			Path: validBackupPath,
 		},

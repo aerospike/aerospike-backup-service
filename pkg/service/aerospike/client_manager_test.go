@@ -33,8 +33,7 @@ var cluster2 = &model.AerospikeCluster{
 	ClusterLabel: ptr.String("test2"),
 }
 
-func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...*as.Host,
-) (backup.AerospikeClient, error) {
+func (f *MockClientFactory) NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error) {
 	if f.ShouldFail {
 		return nil, errors.New("failed to connect to aerospike")
 	}
