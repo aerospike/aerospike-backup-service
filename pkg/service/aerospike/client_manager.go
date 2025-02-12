@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	as "github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"golang.org/x/sync/semaphore"
 )
@@ -25,6 +25,10 @@ type ClientManager interface {
 type ClientFactory interface {
 	NewClientWithPolicyAndHost(policy *as.ClientPolicy, hosts ...*as.Host) (backup.AerospikeClient, error)
 	IsClusterHealthy(client backup.AerospikeClient) bool
+}
+
+type Cluster interface {
+	Cluster() *as.Cluster
 }
 
 // DefaultClientFactory is the default implementation of ClientFactory.

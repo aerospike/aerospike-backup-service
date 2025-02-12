@@ -7,7 +7,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	a "github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asb"
 )
@@ -94,12 +94,12 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 	return config
 }
 
-func makeWritePolicy(restoreRequest *model.RestoreRequest) *a.WritePolicy {
-	writePolicy := a.NewWritePolicy(0, 0)
-	writePolicy.GenerationPolicy = a.EXPECT_GEN_GT
+func makeWritePolicy(restoreRequest *model.RestoreRequest) *as.WritePolicy {
+	writePolicy := as.NewWritePolicy(0, 0)
+	writePolicy.GenerationPolicy = as.EXPECT_GEN_GT
 	writePolicy.SendKey = true
 	if restoreRequest.Policy.NoGeneration != nil && *restoreRequest.Policy.NoGeneration {
-		writePolicy.GenerationPolicy = a.NONE
+		writePolicy.GenerationPolicy = as.NONE
 	}
 
 	// Invalid options: --unique is mutually exclusive with --replace and --no-generation.
@@ -117,19 +117,19 @@ func makeWritePolicy(restoreRequest *model.RestoreRequest) *a.WritePolicy {
 	return writePolicy
 }
 
-func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
+func recordExistsAction(replace, unique *bool) as.RecordExistsAction {
 	switch {
 	// overwrite all bins of an existing record
 	case replace != nil && *replace:
-		return a.REPLACE
+		return as.REPLACE
 
 	// only insert the record if it does not already exist in the database
 	case unique != nil && *unique:
-		return a.CREATE_ONLY
+		return as.CREATE_ONLY
 
 	// default behaviour: merge bins with existing record, or create a new
 	// record if it does not exist
 	default:
-		return a.UPDATE
+		return as.UPDATE
 	}
 }
