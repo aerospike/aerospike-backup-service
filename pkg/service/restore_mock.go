@@ -31,9 +31,9 @@ type MockRestoreHandler struct {
 }
 
 func (m *MockRestoreHandler) GetStats() *models.RestoreStats {
-	stats := models.RestoreStats{}
+	stats := models.NewRestoreStats()
 	stats.ReadRecords.Add(1)
-	return &stats
+	return stats
 }
 
 func (m *MockRestoreHandler) Wait(ctx context.Context) error {
