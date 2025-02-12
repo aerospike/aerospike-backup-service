@@ -2,6 +2,7 @@ package restoreexecutor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -43,14 +44,17 @@ func (r *RestoreRunner) Run(
 }
 
 func runScanRestore(ctx context.Context, client *backup.Client, request *model.RestoreRequest) (RestoreHandler, error) {
-	config := makeRestoreConfig(request)
-
 	reader, err := storage.CreateReader(ctx,
-		request.SourceStorage, request.BackupDataPath, false, false, true, asb.NewValidator(), "")
+		request.SourceStorage, request.BackupDataPath, false, false, false, asb.NewValidator(), "")
 	if err != nil {
+		if errors.Is(err, storage.ErrEmptyStorage) { // no need to do anything for empty backups
+			return NewNoOpRestoreHandler(), nil
+		}
+
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}
 
+	config := makeRestoreConfig(request)
 	handler, err := client.Restore(ctx, config, reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start restore, %w", err)
@@ -153,23 +157,27 @@ func runXDRRestore(
 	client *backup.Client,
 	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
-	config := makeXdrRestoreConfig(request)
-	config.EncoderType = backup.EncoderTypeASBX
-
 	reader, err := storage.CreateReader(
 		ctx,
 		request.SourceStorage,
 		request.BackupDataPath,
 		false,
 		true,
-		true,
+		false,
 		asbx.NewValidator(),
 		"",
 	)
+
 	if err != nil {
+		if errors.Is(err, storage.ErrEmptyStorage) { // no need to do anything for empty backups
+			return NewNoOpRestoreHandler(), nil
+		}
+
 		return nil, fmt.Errorf("failed to create XDR restore reader: %w", err)
 	}
 
+	config := makeXdrRestoreConfig(request)
+	config.EncoderType = backup.EncoderTypeASBX
 	handler, err := client.Restore(ctx, config, reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start XDR restore: %w", err)

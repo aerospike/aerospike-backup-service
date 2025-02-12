@@ -7,10 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -91,7 +89,7 @@ func (b *BackupBackend) readMetadataList(
 	backupRoot := getBackupRootPath(b.routineName, backupType)
 	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timeBounds.FromTime)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "is empty") {
+		if errors.Is(err, storage.ErrEmptyStorage) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("read metadata files error: %w", err)
