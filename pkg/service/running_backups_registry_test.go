@@ -34,10 +34,11 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 	registry := NewRunningBackupsRegistry(context.Background(), NewBackupBackends())
 
 	routineName := "routine1"
+	backupStats := models.NewBackupStats()
+	backupStats.TotalRecords = 100
+
 	handler := &mockCancelableBackupHandler{
-		stats: &models.BackupStats{
-			TotalRecords: 100,
-		},
+		stats: backupStats,
 	}
 
 	// Register a full backup handler
@@ -88,10 +89,11 @@ func TestGetAllCurrentStats(t *testing.T) {
 
 	routine1 := "routine1"
 	routine2 := "routine2"
+	backupStats := models.NewBackupStats()
+	backupStats.TotalRecords = 100
+
 	handler := &mockCancelableBackupHandler{
-		stats: &models.BackupStats{
-			TotalRecords: 100,
-		},
+		stats: backupStats,
 	}
 
 	// Register handlers for multiple routines
