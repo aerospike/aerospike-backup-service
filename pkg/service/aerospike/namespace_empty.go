@@ -6,14 +6,13 @@ import (
 	"strings"
 
 	as "github.com/aerospike/aerospike-client-go/v8"
-	"github.com/aerospike/backup-go"
 )
 
 // IsEmpty checks if the given namespace or specific sets within it are empty.
 // If sets slice is empty, it checks the entire namespace.
 // If sets are provided, it checks only those specific sets.
 func (nv *defaultNamespaceValidator) IsEmpty(
-	client backup.AerospikeClient,
+	client Cluster,
 	namespace string,
 	sets []string,
 ) (bool, error) {
@@ -23,10 +22,10 @@ func (nv *defaultNamespaceValidator) IsEmpty(
 	}
 
 	if len(sets) == 0 {
-		return isEntireNamespaceEmpty(client.GetDefaultInfoPolicy(), node, namespace)
+		return isEntireNamespaceEmpty(as.NewInfoPolicy(), node, namespace)
 	}
 
-	return areSetsEmpty(client.GetDefaultInfoPolicy(), node, namespace, sets)
+	return areSetsEmpty(as.NewInfoPolicy(), node, namespace, sets)
 }
 
 // isEntireNamespaceEmpty checks if the entire namespace has any records.

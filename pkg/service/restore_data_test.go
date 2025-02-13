@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/backup-go"
 	"github.com/stretchr/testify/require"
 )
@@ -169,14 +170,13 @@ func (n nsValidatorMock) ValidateRoutines(*model.AerospikeCluster, map[string]*m
 	return nil
 }
 
-func (n nsValidatorMock) IsEmpty(backup.AerospikeClient, string, []string) (bool, error) {
+func (n nsValidatorMock) IsEmpty(aerospike.Cluster, string, []string) (bool, error) {
 	return n.isEmpty, nil
 }
 
 func TestRestoreOK(t *testing.T) {
 	restoreRequest := &model.RestoreRequest{
-		DestinationCluster: model.NewLocalAerospikeCluster(),
-		Policy:             &model.RestorePolicy{},
+		Policy: &model.RestorePolicy{},
 		SourceStorage: &model.LocalStorage{
 			Path: validBackupPath,
 		},
@@ -238,10 +238,9 @@ func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
 
 func Test_RestoreTimestamp(t *testing.T) {
 	request := model.RestoreTimestampRequest{
-		DestinationCluster: model.NewLocalAerospikeCluster(),
-		Policy:             &model.RestorePolicy{},
-		Time:               time.UnixMilli(100),
-		RoutineName:        "routine",
+		Policy:      &model.RestorePolicy{},
+		Time:        time.UnixMilli(100),
+		RoutineName: "routine",
 	}
 
 	jobID, err := restoreService.RestoreByTime(&request)
@@ -308,7 +307,7 @@ func (m *MockClientManager) Close(*backup.Client) {
 }
 
 func (m *MockClientManager) CreateClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
-	if len(cluster.ASClientHosts()) == 0 {
+	if len(cluster.SeedNodes) == 0 {
 		return nil, errors.New("no hosts provided")
 	}
 
@@ -319,8 +318,7 @@ func TestRestoreCancel(t *testing.T) {
 	wg := &sync.WaitGroup{}
 	restoreService = makeTestRestoreService(wg)
 	restoreRequest := &model.RestoreRequest{
-		DestinationCluster: model.NewLocalAerospikeCluster(),
-		Policy:             &model.RestorePolicy{},
+		Policy: &model.RestorePolicy{},
 		SourceStorage: &model.LocalStorage{
 			Path: validBackupPath,
 		},

@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	"github.com/aerospike/backup-go"
 )
 
 func validConfig() *Config {
@@ -61,7 +61,7 @@ func TestValidConfigValidation(t *testing.T) {
 
 type MockNamespaceValidator struct{}
 
-func (m *MockNamespaceValidator) IsEmpty(_ backup.AerospikeClient, _ string, _ []string) (bool, error) {
+func (m *MockNamespaceValidator) IsEmpty(_ aerospike.Cluster, _ string, _ []string) (bool, error) {
 	return false, nil
 }
 

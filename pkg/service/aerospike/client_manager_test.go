@@ -33,8 +33,7 @@ var cluster2 = &model.AerospikeCluster{
 	ClusterLabel: ptr.String("test2"),
 }
 
-func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...*as.Host,
-) (backup.AerospikeClient, error) {
+func (f *MockClientFactory) NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error) {
 	if f.ShouldFail {
 		return nil, errors.New("failed to connect to aerospike")
 	}
@@ -51,7 +50,7 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(_ *as.ClientPolicy, _ ...
 	return m, nil
 }
 
-func (f *MockClientFactory) IsClusterHealthy(_ backup.AerospikeClient) bool {
+func (f *MockClientFactory) IsClusterHealthy(_ Cluster) bool {
 	return !f.IsClusterDisconnected
 }
 

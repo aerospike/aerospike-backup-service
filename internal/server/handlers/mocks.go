@@ -6,7 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/backup-go"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/stretchr/testify/mock"
 )
@@ -184,7 +184,7 @@ type mockNamespaceValidator struct {
 	validateError error
 }
 
-func (m *mockNamespaceValidator) IsEmpty(_ backup.AerospikeClient, _ string, _ []string) (bool, error) {
+func (m *mockNamespaceValidator) IsEmpty(_ aerospike.Cluster, _ string, _ []string) (bool, error) {
 	return false, nil
 }
 

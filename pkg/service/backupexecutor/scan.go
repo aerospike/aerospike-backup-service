@@ -6,7 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	a "github.com/aerospike/aerospike-client-go/v8"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 )
 
@@ -60,7 +60,7 @@ func makeBackupConfig(
 	config.ModBefore = timeBounds.ToTime
 	config.ModAfter = timeBounds.FromTime
 
-	config.ScanPolicy = a.NewScanPolicy()
+	config.ScanPolicy = as.NewScanPolicy()
 	if backupPolicy.TotalTimeout != nil {
 		config.ScanPolicy.TotalTimeout = *backupPolicy.TotalTimeout
 	}
