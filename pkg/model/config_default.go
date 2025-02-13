@@ -13,6 +13,7 @@ var defaultConfig = struct {
 	logger        LoggerConfig
 	backupPolicy  BackupPolicy
 	restorePolicy RestorePolicy
+	xdrConfig     XDRConfig
 }{
 	http: HTTPServerConfig{
 		Address: util.Ptr("0.0.0.0"),
@@ -53,5 +54,12 @@ var defaultConfig = struct {
 		BatchSize:       util.Ptr(128),
 		SocketTimeout:   util.Ptr(10 * time.Second),
 		TotalTimeout:    util.Ptr(time.Duration(0)),
+	},
+	xdrConfig: XDRConfig{
+		MaxConns:      util.Ptr(100),
+		ReadTimeout:   util.Ptr(int64(1_000)),
+		WriteTimeout:  util.Ptr(int64(1_000)),
+		StartTimeout:  util.Ptr(int64(30_000)),
+		PollingPeriod: util.Ptr(int64(1_000)),
 	},
 }

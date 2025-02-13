@@ -50,19 +50,20 @@ func makeXDRConfig(
 	port := GetFreePort()
 
 	policy := routine.BackupPolicy
+	xdrConfig := policy.XDRConfig
 	return &backup.ConfigBackupXDR{
 		DC:                           dc,
-		LocalAddress:                 policy.XDRConfig.LocalHost,
+		LocalAddress:                 xdrConfig.LocalHost,
 		LocalPort:                    port,
 		Namespace:                    namespace,
 		Rewind:                       getRewind(timeBounds),
 		ParallelWrite:                policy.GetParallelOrDefault(),
 		FileLimit:                    int64(policy.GetFileLimitOrDefault()) * 1_048_576,
-		MaxConnections:               100,
-		ReadTimeoutMilliseconds:      1000,
-		WriteTimeoutMilliseconds:     1000,
-		StartTimeoutMilliseconds:     10_000,
-		InfoPolingPeriodMilliseconds: 1000,
+		MaxConnections:               xdrConfig.GetMaxConnsOrDefault(),
+		ReadTimeoutMilliseconds:      xdrConfig.GetReadTimeoutOrDefault(),
+		WriteTimeoutMilliseconds:     xdrConfig.GetWriteTimeoutOrDefault(),
+		StartTimeoutMilliseconds:     xdrConfig.GetStartTimeoutOrDefault(),
+		InfoPolingPeriodMilliseconds: xdrConfig.GetPollingPeriodOrDefault(),
 		SecretAgentConfig:            routine.SecretAgent.ToSecretAgentConfig(),
 		EncoderType:                  backup.EncoderTypeASBX,
 		CompressionPolicy:            makeCompressionPolicy(policy),
