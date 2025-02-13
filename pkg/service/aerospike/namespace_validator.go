@@ -8,8 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	as "github.com/aerospike/aerospike-client-go/v7"
-	"github.com/aerospike/backup-go"
+	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
 const namespaceInfo = "namespaces"
@@ -24,7 +23,7 @@ type NamespaceValidator interface {
 	// IsEmpty checks if the given namespace or specific sets within it are empty.
 	// If sets slice is empty, it checks the entire namespace.
 	// If sets are provided, it checks only those specific sets.
-	IsEmpty(client backup.AerospikeClient, namespace string, setList []string) (bool, error)
+	IsEmpty(client Cluster, namespace string, setList []string) (bool, error)
 }
 
 type defaultNamespaceValidator struct {
@@ -89,7 +88,7 @@ func filterRoutinesByCluster(
 }
 
 // getAllNamespacesOfCluster retrieves a list of all namespaces in an Aerospike cluster.
-func getAllNamespacesOfCluster(client backup.AerospikeClient) ([]string, error) {
+func getAllNamespacesOfCluster(client Cluster) ([]string, error) {
 	node, err := client.Cluster().GetRandomNode()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get node: %w", err)
@@ -106,7 +105,7 @@ func getAllNamespacesOfCluster(client backup.AerospikeClient) ([]string, error) 
 
 // ResolveNamespaces returns the list of namespaces to back up.
 // If `namespaces` is empty, it fetches all namespaces from the cluster via the provided client.
-func ResolveNamespaces(namespaces []string, client backup.AerospikeClient) ([]string, error) {
+func ResolveNamespaces(namespaces []string, client Cluster) ([]string, error) {
 	if len(namespaces) == 0 {
 		return getAllNamespacesOfCluster(client)
 	}
@@ -117,7 +116,7 @@ func ResolveNamespaces(namespaces []string, client backup.AerospikeClient) ([]st
 // NoopNamespaceValidator is a noop implementation of the NamespaceValidator interface.
 type NoopNamespaceValidator struct{}
 
-func (n *NoopNamespaceValidator) IsEmpty(backup.AerospikeClient, string, []string) (bool, error) {
+func (n *NoopNamespaceValidator) IsEmpty(Cluster, string, []string) (bool, error) {
 	return false, nil
 }
 

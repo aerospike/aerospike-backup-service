@@ -5,15 +5,26 @@ package aerospike
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	as "github.com/aerospike/aerospike-client-go/v7"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+func testPolicy() *as.ClientPolicy {
+	policy := as.NewClientPolicy()
+	policy.User = "tester"
+	policy.Password = "psw"
+	return policy
+}
+
+func testHosts() []*as.Host {
+	return []*as.Host{
+		{Name: "localhost", Port: 3000},
+	}
+}
+
 func TestIsNamespaceEmpty(t *testing.T) {
-	cluster := model.NewLocalAerospikeCluster()
-	client, aerr := as.NewClientWithPolicyAndHost(cluster.ASClientPolicy(), cluster.ASClientHosts()...)
+	client, aerr := as.NewClientWithPolicyAndHost(testPolicy(), testHosts()...)
 	require.NoError(t, aerr)
 	defer client.Close()
 

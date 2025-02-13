@@ -1,24 +1,24 @@
-package service
+package aerospike
 
 import (
 	"log/slog"
 
 	_ "github.com/aerospike/aerospike-backup-service/v3/modules/schema" // it's required to load configuration schemas in init method
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	as "github.com/aerospike/aerospike-client-go/v7"
+	v8 "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
 	"github.com/aerospike/aerospike-management-lib/info"
-	"github.com/aerospike/backup-go"
 	"github.com/go-logr/logr"
 )
 
-func scanClusterConfiguration(client backup.AerospikeClient, logger *slog.Logger) []asconfig.DotConf {
+func ScanClusterConfiguration(client Cluster, logger *slog.Logger) []asconfig.DotConf {
 	activeHosts := getActiveHosts(client)
 
 	var outputs = make([]asconfig.DotConf, 0, len(activeHosts))
-	policy := client.Cluster().ClientPolicy()
+
+	policy := DowngradeClientPolicy(client.Cluster().ClientPolicy())
 	for _, host := range activeHosts {
-		asInfo := info.NewAsInfo(logr.Logger{}, host, &policy)
+		asInfo := info.NewAsInfo(logr.Logger{}, DowngradeHost(host), &policy)
 
 		conf, err := asconfig.GenerateConf(logr.Discard(), asInfo, true)
 		if err != nil {
@@ -40,9 +40,9 @@ func scanClusterConfiguration(client backup.AerospikeClient, logger *slog.Logger
 	return outputs
 }
 
-func getActiveHosts(client backup.AerospikeClient) []*as.Host {
-	var activeHosts []*as.Host
-	for _, node := range client.GetNodes() {
+func getActiveHosts(client Cluster) []*v8.Host {
+	var activeHosts []*v8.Host
+	for _, node := range client.Cluster().GetNodes() {
 		if node.IsActive() {
 			activeHosts = append(activeHosts, node.GetHost())
 		}

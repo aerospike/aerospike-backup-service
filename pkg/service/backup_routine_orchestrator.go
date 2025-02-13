@@ -63,7 +63,7 @@ type CancelableBackupHandler interface {
 
 // ClusterConfigWriter handles writing cluster configuration to storage.
 type ClusterConfigWriter interface {
-	Write(ctx context.Context, client backup.AerospikeClient, timestamp time.Time)
+	Write(ctx context.Context, client aerospike.Cluster, timestamp time.Time)
 }
 
 // BackupHandlerHolder stores backupRunners by routine name.
