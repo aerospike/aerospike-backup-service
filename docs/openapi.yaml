@@ -2597,25 +2597,55 @@ components:
     dto.XDRConfig:
       description: XDRConfig represents the configuration for XDR backups.
       properties:
+        ack-queue-size:
+          description: AckQueueSize is the size of the acknowledgment queue used by
+            the TCP server for XDR.
+          example: 100
+          type: integer
+        info-retry-policy:
+          allOf:
+          - $ref: '#/components/schemas/dto.RetryPolicy'
+          description: InfoRetryPolicy defines the retry policy for info commands.
+          type: object
         local-host:
+          description: LocalHost is the local address where the source cluster will
+            send data.
           example: 127.0.0.1
           type: string
         max-conns:
+          description: |-
+            MaxConns specifies the maximum number of allowed simultaneous connections to the server.
+            Used by the TCP server for XDR.
           example: 100
           type: integer
         polling-period:
+          description: |-
+            PollingPeriod specifies how often a backup client will send info commands to check Aerospike cluster stats.
+            Used to measure recovery state and lag.
           example: 60000
           type: integer
         read-timeout:
+          description: |-
+            ReadTimeout is the timeout in milliseconds for TCP read operations.
+            Used by the TCP server for XDR.
           example: 5000
           type: integer
-        rewind:
-          example: 2023-01-01T00:00:00Z
-          type: string
+        result-queue-size:
+          description: ResultQueueSize is the size of the results queue used by the
+            TCP server for XDR.
+          example: 1000
+          type: integer
         start-timeout:
+          description: |-
+            StartTimeout is the timeout for starting the TCP server for XDR.
+            If the TCP server does not receive any data within this timeout period, it will shut down.
+            This situation can occur if the LocalAddress and LocalPort options are misconfigured.
           example: 3000
           type: integer
         write-timeout:
+          description: |-
+            WriteTimeout is the timeout in milliseconds for TCP write operations.
+            Used by the TCP server for XDR.
           example: 5000
           type: integer
       type: object

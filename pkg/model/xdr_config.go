@@ -10,8 +10,6 @@ type XDRConfig struct {
 	// all the records for that namespace, partition by partition.
 	// Can be `all` or number of seconds.
 	Rewind string
-	// Max number of allowed simultaneous connection to server.
-	// Used by TCP server for XDR.
 	// Results queue size.
 	// Used by TCP server for XDR.
 	ResultQueueSize *int
@@ -33,7 +31,8 @@ type XDRConfig struct {
 	StartTimeout *int64
 	// How often a backup client will send info commands to check aerospike cluster stats.
 	// To measure recovery state and lag.
-	PollingPeriod   *int64
+	PollingPeriod *int64
+	// Retry policy for info commands.
 	InfoRetryPolicy *models.RetryPolicy
 }
 

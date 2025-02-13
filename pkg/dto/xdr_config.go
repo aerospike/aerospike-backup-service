@@ -6,14 +6,40 @@ import (
 
 // XDRConfig represents the configuration for XDR backups.
 // @Description XDRConfig represents the configuration for XDR backups.
+// XDRConfig represents the configuration for XDR backups.
 type XDRConfig struct {
-	LocalHost     string `yaml:"local-host,omitempty" json:"local-host,omitempty" example:"127.0.0.1"`
-	Rewind        string `yaml:"rewind,omitempty" json:"rewind,omitempty" example:"2023-01-01T00:00:00Z"`
-	MaxConns      *int   `yaml:"max-conns,omitempty" json:"max-conns,omitempty" example:"100"`
-	ReadTimeout   *int64 `yaml:"read-timeout,omitempty" json:"read-timeout,omitempty" example:"5000"`
-	WriteTimeout  *int64 `yaml:"write-timeout,omitempty" json:"write-timeout,omitempty" example:"5000"`
-	StartTimeout  *int64 `yaml:"start-timeout,omitempty" json:"start-timeout,omitempty" example:"3000"`
+	// LocalHost is the local address where the source cluster will send data.
+	LocalHost string `yaml:"local-host,omitempty" json:"local-host,omitempty" example:"127.0.0.1"`
+
+	// ResultQueueSize is the size of the results queue used by the TCP server for XDR.
+	ResultQueueSize *int `yaml:"result-queue-size,omitempty" json:"result-queue-size,omitempty" example:"1000"`
+
+	// AckQueueSize is the size of the acknowledgment queue used by the TCP server for XDR.
+	AckQueueSize *int `yaml:"ack-queue-size,omitempty" json:"ack-queue-size,omitempty" example:"100"`
+
+	// MaxConns specifies the maximum number of allowed simultaneous connections to the server.
+	// Used by the TCP server for XDR.
+	MaxConns *int `yaml:"max-conns,omitempty" json:"max-conns,omitempty" example:"100"`
+
+	// ReadTimeout is the timeout in milliseconds for TCP read operations.
+	// Used by the TCP server for XDR.
+	ReadTimeout *int64 `yaml:"read-timeout,omitempty" json:"read-timeout,omitempty" example:"5000"`
+
+	// WriteTimeout is the timeout in milliseconds for TCP write operations.
+	// Used by the TCP server for XDR.
+	WriteTimeout *int64 `yaml:"write-timeout,omitempty" json:"write-timeout,omitempty" example:"5000"`
+
+	// StartTimeout is the timeout for starting the TCP server for XDR.
+	// If the TCP server does not receive any data within this timeout period, it will shut down.
+	// This situation can occur if the LocalAddress and LocalPort options are misconfigured.
+	StartTimeout *int64 `yaml:"start-timeout,omitempty" json:"start-timeout,omitempty" example:"3000"`
+
+	// PollingPeriod specifies how often a backup client will send info commands to check Aerospike cluster stats.
+	// Used to measure recovery state and lag.
 	PollingPeriod *int64 `yaml:"polling-period,omitempty" json:"polling-period,omitempty" example:"60000"`
+
+	// InfoRetryPolicy defines the retry policy for info commands.
+	InfoRetryPolicy *RetryPolicy `yaml:"info-retry-policy,omitempty" json:"info-retry-policy,omitempty"`
 }
 
 func (x *XDRConfig) Validate() error {
@@ -23,6 +49,14 @@ func (x *XDRConfig) Validate() error {
 
 	if x.LocalHost == "" {
 		return errValidationEmptyField("local-host")
+	}
+
+	if x.ResultQueueSize != nil && *x.ResultQueueSize <= 0 {
+		return errValidationNonPositive("result-queue-size", *x.ResultQueueSize)
+	}
+
+	if x.AckQueueSize != nil && *x.AckQueueSize <= 0 {
+		return errValidationNonPositive("ack-queue-size", *x.AckQueueSize)
 	}
 
 	if x.MaxConns != nil && *x.MaxConns <= 0 {
@@ -45,6 +79,10 @@ func (x *XDRConfig) Validate() error {
 		return errValidationNegative("polling-period", *x.PollingPeriod)
 	}
 
+	if err := x.InfoRetryPolicy.Validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -54,13 +92,15 @@ func (x *XDRConfig) ToModel() *model.XDRConfig {
 	}
 
 	return &model.XDRConfig{
-		LocalHost:     x.LocalHost,
-		Rewind:        x.Rewind,
-		MaxConns:      x.MaxConns,
-		ReadTimeout:   x.ReadTimeout,
-		WriteTimeout:  x.WriteTimeout,
-		StartTimeout:  x.StartTimeout,
-		PollingPeriod: x.PollingPeriod,
+		LocalHost:       x.LocalHost,
+		ResultQueueSize: x.ResultQueueSize,
+		AckQueueSize:    x.AckQueueSize,
+		MaxConns:        x.MaxConns,
+		ReadTimeout:     x.ReadTimeout,
+		WriteTimeout:    x.WriteTimeout,
+		StartTimeout:    x.StartTimeout,
+		PollingPeriod:   x.PollingPeriod,
+		InfoRetryPolicy: x.InfoRetryPolicy.ToModel(),
 	}
 }
 
@@ -70,12 +110,14 @@ func newXDRConfigFromModel(m *model.XDRConfig) *XDRConfig {
 	}
 
 	return &XDRConfig{
-		LocalHost:     m.LocalHost,
-		Rewind:        m.Rewind,
-		MaxConns:      m.MaxConns,
-		ReadTimeout:   m.ReadTimeout,
-		WriteTimeout:  m.WriteTimeout,
-		StartTimeout:  m.StartTimeout,
-		PollingPeriod: m.PollingPeriod,
+		LocalHost:       m.LocalHost,
+		ResultQueueSize: m.ResultQueueSize,
+		AckQueueSize:    m.AckQueueSize,
+		MaxConns:        m.MaxConns,
+		ReadTimeout:     m.ReadTimeout,
+		WriteTimeout:    m.WriteTimeout,
+		StartTimeout:    m.StartTimeout,
+		PollingPeriod:   m.PollingPeriod,
+		InfoRetryPolicy: newRetryPolicyFromModel(m.InfoRetryPolicy),
 	}
 }
