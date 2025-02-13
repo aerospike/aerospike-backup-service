@@ -16,7 +16,7 @@ import (
 // BackupRoutineOrchestrator orchestrates the execution of a single backup routine (both full and incremental).
 // It manages all necessary preparations, executes the backup process, handles post-processing, and updates metrics.
 type BackupRoutineOrchestrator struct {
-	backupService       backupexecutor.BackupExecutor
+	backupService       backupexecutor.Backup
 	backupRoutine       *model.BackupRoutine
 	namespaces          []string
 	retry               executor
@@ -46,7 +46,7 @@ func NewBackupHandlerHolder() BackupHandlerHolder {
 // newBackupRoutineOrchestrator returns a new BackupRoutineOrchestrator instance.
 func newBackupRoutineOrchestrator(
 	clientManager aerospike.ClientManager,
-	backupService backupexecutor.BackupExecutor,
+	backupService backupexecutor.Backup,
 	routineName string,
 	routine *model.BackupRoutine,
 	backupBackend BackupMetadataReaderWriter,

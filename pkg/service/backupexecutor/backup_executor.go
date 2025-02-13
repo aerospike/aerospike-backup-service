@@ -9,6 +9,18 @@ import (
 	"github.com/aerospike/backup-go"
 )
 
+// Backup defines the interface for running backups.
+type Backup interface {
+	Run(
+		ctx context.Context,
+		client *backup.Client,
+		routine *model.BackupRoutine,
+		timeBounds model.TimeBounds,
+		namespace string,
+		path string,
+	) (BackupHandler, error)
+}
+
 // DefaultBackupExecutor implements the actual backup logic.
 type DefaultBackupExecutor struct{}
 

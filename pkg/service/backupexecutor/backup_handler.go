@@ -8,6 +8,12 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
+// BackupHandler interface defines the contract for backup operation results.
+type BackupHandler interface {
+	GetStats() *models.BackupStats
+	Wait(context.Context) error
+}
+
 type CombinedBackupHandler struct {
 	xdrHandler  BackupHandler
 	scanHandler BackupHandler

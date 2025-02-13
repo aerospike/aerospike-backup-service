@@ -19,7 +19,7 @@ import (
 // Every routine has its own BackupNamespaceRunner.
 type BackupNamespaceRunner struct {
 	routineName    string
-	backupExecutor backupexecutor.BackupExecutor
+	backupExecutor backupexecutor.Backup
 	retry          executor
 	metadataWriter BackupMetadataWriter
 	logger         *slog.Logger
@@ -28,7 +28,7 @@ type BackupNamespaceRunner struct {
 // NewBackupNamespaceRunner creates a new BackupNamespaceRunner instance.
 func NewBackupNamespaceRunner(
 	routineName string,
-	backupService backupexecutor.BackupExecutor,
+	backupService backupexecutor.Backup,
 	retry executor,
 	metadataWriter BackupMetadataWriter,
 	logger *slog.Logger,
