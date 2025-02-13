@@ -23,7 +23,7 @@ func (a *GcpStorageAccessor) createReader(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
-	isFile, sorted, skipDirCheck bool,
+	isFile, sorted bool,
 	filter Validator,
 	startScanFrom string,
 ) (backup.StreamingReader, error) {
@@ -42,9 +42,6 @@ func (a *GcpStorageAccessor) createReader(
 		opts = append(opts, gcp.WithFile(fullPath))
 	} else {
 		opts = append(opts, gcp.WithDir(fullPath))
-	}
-	if skipDirCheck {
-		opts = append(opts, gcp.WithSkipDirCheck())
 	}
 	if sorted {
 		opts = append(opts, gcp.WithSorting())

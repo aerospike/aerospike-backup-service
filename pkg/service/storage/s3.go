@@ -34,7 +34,7 @@ func (a *S3StorageAccessor) createReader(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
-	isFile, sorted, skipDirCheck bool,
+	isFile, sorted bool,
 	filter Validator,
 	startScanFrom string,
 ) (backup.StreamingReader, error) {
@@ -55,9 +55,6 @@ func (a *S3StorageAccessor) createReader(
 		opts = append(opts, s3.WithDir(fullPath))
 	}
 
-	if skipDirCheck {
-		opts = append(opts, s3.WithSkipDirCheck())
-	}
 	if sorted {
 		opts = append(opts, s3.WithSorting())
 	}

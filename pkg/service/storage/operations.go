@@ -20,11 +20,11 @@ func CreateReader(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
-	isFile, sorted, skipDirCheck bool,
+	isFile, sorted bool,
 	v Validator,
 	startScanFrom string,
 ) (backup.StreamingReader, error) {
-	return getAccessor(storage).createReader(ctx, storage, path, isFile, sorted, skipDirCheck, v, startScanFrom)
+	return getAccessor(storage).createReader(ctx, storage, path, isFile, sorted, v, startScanFrom)
 }
 
 // CreateWriter creates a writer for a path in the specified storage.
@@ -34,7 +34,7 @@ func CreateWriter(ctx context.Context, storage model.Storage, path string, isFil
 }
 
 func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
-	reader, err := CreateReader(ctx, storage, filepath, true, false, false, nil, "")
+	reader, err := CreateReader(ctx, storage, filepath, true, false, nil, "")
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 		startScanFrom = filepath.Join(path, fromTimeStr)
 	}
 
-	reader, err := CreateReader(ctx, storage, path, false, false, false, newNameValidator(filterStr), startScanFrom)
+	reader, err := CreateReader(ctx, storage, path, false, false, newNameValidator(filterStr), startScanFrom)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}

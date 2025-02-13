@@ -14,7 +14,7 @@ type Accessor interface {
 	createReader(ctx context.Context,
 		storage model.Storage,
 		path string,
-		isFile, sorted, skipDirCheck bool,
+		isFile, sorted bool,
 		filter Validator,
 		startScanFrom string,
 	) (backup.StreamingReader, error)

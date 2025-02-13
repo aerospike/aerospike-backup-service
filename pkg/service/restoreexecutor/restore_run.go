@@ -45,7 +45,7 @@ func (r *RestoreRunner) Run(
 
 func runScanRestore(ctx context.Context, client *backup.Client, request *model.RestoreRequest) (RestoreHandler, error) {
 	reader, err := storage.CreateReader(ctx,
-		request.SourceStorage, request.BackupDataPath, false, false, false, asb.NewValidator(), "")
+		request.SourceStorage, request.BackupDataPath, false, false, asb.NewValidator(), "")
 	if err != nil {
 		if errors.Is(err, storage.ErrEmptyStorage) { // no need to do anything for empty backups
 			return NewNoOpRestoreHandler(), nil
@@ -163,7 +163,6 @@ func runXDRRestore(
 		request.BackupDataPath,
 		false,
 		true,
-		false,
 		asbx.NewValidator(),
 		"",
 	)

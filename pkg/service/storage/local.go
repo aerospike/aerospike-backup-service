@@ -20,7 +20,7 @@ func (a *LocalStorageAccessor) createReader(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
-	isFile, sorted, skipDirCheck bool,
+	isFile, sorted bool,
 	filter Validator,
 	_ string,
 ) (backup.StreamingReader, error) {
@@ -34,9 +34,6 @@ func (a *LocalStorageAccessor) createReader(
 		opts = append(opts, local.WithFile(fullPath))
 	} else {
 		opts = append(opts, local.WithDir(fullPath))
-	}
-	if skipDirCheck {
-		opts = append(opts, local.WithSkipDirCheck())
 	}
 	if sorted {
 		opts = append(opts, local.WithSorting())
