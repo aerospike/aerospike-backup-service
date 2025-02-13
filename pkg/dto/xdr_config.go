@@ -6,7 +6,6 @@ import (
 
 // XDRConfig represents the configuration for XDR backups.
 // @Description XDRConfig represents the configuration for XDR backups.
-// XDRConfig represents the configuration for XDR backups.
 type XDRConfig struct {
 	// LocalHost is the local address where the source cluster will send data.
 	LocalHost string `yaml:"local-host,omitempty" json:"local-host,omitempty" example:"127.0.0.1"`

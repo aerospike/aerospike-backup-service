@@ -7,6 +7,7 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
+// GetDCNames returns the list of data center names from a cluster.
 func GetDCNames(client Cluster) ([]string, error) {
 	node, err := client.Cluster().GetRandomNode()
 	if err != nil {
