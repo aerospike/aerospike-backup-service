@@ -14,43 +14,51 @@ import (
 	"github.com/aerospike/backup-go/io/encoding/asbx"
 )
 
-// RestoreRunner implements the [Restore] interface.
-type RestoreRunner struct {
+// DefaultRestoreExecutor implements the [Restore] interface.
+type DefaultRestoreExecutor struct {
 }
 
-// NewRestore returns a new RestoreRunner instance.
-func NewRestore() *RestoreRunner {
-	return &RestoreRunner{}
+// NewRestore returns a new DefaultRestoreExecutor instance.
+func NewRestore() *DefaultRestoreExecutor {
+	return &DefaultRestoreExecutor{}
 }
 
 // Run initiates the restore operation.
 // A restore handler is returned to monitor the job status.
-func (r *RestoreRunner) Run(
+func (r *DefaultRestoreExecutor) Run(
 	ctx context.Context,
 	client *backup.Client,
 	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
-	streamHandler, err := runScanRestore(ctx, client, request)
-	if err != nil {
-		return nil, err
+	scanHandler, errScan := runScanRestore(ctx, client, request)
+	xdrHandler, errXdr := runXDRRestore(ctx, client, request)
+
+	// Case 1: Both succeed
+	if errScan == nil && errXdr == nil {
+		return NewCombinedRestoreHandler(scanHandler, xdrHandler), nil
 	}
 
-	xdrHandler, err := runXDRRestore(ctx, client, request)
-	if err != nil {
-		return nil, err
+	// Case 2: One returns ErrEmptyStorage, return the other
+	if errors.Is(errScan, storage.ErrEmptyStorage) && errXdr == nil {
+		return xdrHandler, nil
+	}
+	if errors.Is(errXdr, storage.ErrEmptyStorage) && errScan == nil {
+		return scanHandler, nil
 	}
 
-	return NewCombinedRestoreHandler(streamHandler, xdrHandler), nil
+	// Case 3: Both return ErrEmptyStorage
+	if errors.Is(errScan, storage.ErrEmptyStorage) && errors.Is(errXdr, storage.ErrEmptyStorage) {
+		return nil, storage.ErrEmptyStorage
+	}
+
+	// Case 4: One or both have real errors → return joined errors
+	return nil, errors.Join(errScan, errXdr)
 }
 
 func runScanRestore(ctx context.Context, client *backup.Client, request *model.RestoreRequest) (RestoreHandler, error) {
 	reader, err := storage.CreateReader(ctx,
 		request.SourceStorage, request.BackupDataPath, false, false, asb.NewValidator(), "")
 	if err != nil {
-		if errors.Is(err, storage.ErrEmptyStorage) { // no need to do anything for empty backups
-			return NewNoOpRestoreHandler(), nil
-		}
-
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}
 
@@ -168,10 +176,6 @@ func runXDRRestore(
 	)
 
 	if err != nil {
-		if errors.Is(err, storage.ErrEmptyStorage) { // no need to do anything for empty backups
-			return NewNoOpRestoreHandler(), nil
-		}
-
 		return nil, fmt.Errorf("failed to create XDR restore reader: %w", err)
 	}
 

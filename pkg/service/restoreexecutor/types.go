@@ -49,21 +49,3 @@ type Restore interface {
 		restoreRequest *model.RestoreRequest,
 	) (RestoreHandler, error)
 }
-
-// NoOpRestoreHandler is a no-op implementation of RestoreHandler interface.
-type NoOpRestoreHandler struct{}
-
-// NewNoOpRestoreHandler creates a new instance of NoOpRestoreHandler.
-func NewNoOpRestoreHandler() *NoOpRestoreHandler {
-	return &NoOpRestoreHandler{}
-}
-
-// GetStats implements RestoreHandler.GetStats.
-func (h *NoOpRestoreHandler) GetStats() *models.RestoreStats {
-	return models.NewRestoreStats()
-}
-
-// Wait implements RestoreHandler.Wait.
-func (h *NoOpRestoreHandler) Wait(_ context.Context) error {
-	return nil
-}
