@@ -193,7 +193,7 @@ func makeXdrRestoreConfig(restoreRequest *model.RestoreRequest,
 	config.RetryPolicy = restoreRequest.Policy.GetRetryPolicyOrDefault()
 
 	config.WritePolicy = makeWritePolicy(restoreRequest)
-	config.WritePolicy.RecordExistsAction = a.UPDATE
+	config.WritePolicy.RecordExistsAction = as.UPDATE
 
 	if restoreRequest.Policy.Namespace != nil {
 		config.Namespace = &backup.RestoreNamespaceConfig{
