@@ -10,6 +10,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 )
 
@@ -52,22 +53,27 @@ func makeXDRConfig(
 	policy := routine.BackupPolicy
 	xdrConfig := policy.XDRConfig
 	return &backup.ConfigBackupXDR{
+		InfoPolicy:                   as.NewInfoPolicy(),
+		EncryptionPolicy:             makeEncryptionPolicy(policy),
+		CompressionPolicy:            makeCompressionPolicy(policy),
+		SecretAgentConfig:            routine.SecretAgent.ToSecretAgentConfig(),
+		EncoderType:                  backup.EncoderTypeASBX,
+		FileLimit:                    int64(policy.GetFileLimitOrDefault()) * 1_048_576,
+		ParallelWrite:                policy.GetParallelOrDefault(),
 		DC:                           dc,
 		LocalAddress:                 xdrConfig.LocalHost,
 		LocalPort:                    port,
 		Namespace:                    namespace,
 		Rewind:                       getRewind(timeBounds),
-		ParallelWrite:                policy.GetParallelOrDefault(),
-		FileLimit:                    int64(policy.GetFileLimitOrDefault()) * 1_048_576,
-		MaxConnections:               xdrConfig.GetMaxConnsOrDefault(),
+		TLSConfig:                    nil,
 		ReadTimeoutMilliseconds:      xdrConfig.GetReadTimeoutOrDefault(),
 		WriteTimeoutMilliseconds:     xdrConfig.GetWriteTimeoutOrDefault(),
-		StartTimeoutMilliseconds:     xdrConfig.GetStartTimeoutOrDefault(),
+		ResultQueueSize:              xdrConfig.GetResultQueueSizeOrDefault(),
+		AckQueueSize:                 xdrConfig.GetAckQueueSizeOrDefault(),
+		MaxConnections:               xdrConfig.GetMaxConnsOrDefault(),
 		InfoPolingPeriodMilliseconds: xdrConfig.GetPollingPeriodOrDefault(),
-		SecretAgentConfig:            routine.SecretAgent.ToSecretAgentConfig(),
-		EncoderType:                  backup.EncoderTypeASBX,
-		CompressionPolicy:            makeCompressionPolicy(policy),
-		EncryptionPolicy:             makeEncryptionPolicy(policy),
+		StartTimeoutMilliseconds:     xdrConfig.GetStartTimeoutOrDefault(),
+		InfoRetryPolicy:              xdrConfig.GetInfoRetryPolicyOrDefault(),
 	}, nil
 }
 
