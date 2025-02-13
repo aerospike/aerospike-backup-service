@@ -65,8 +65,8 @@ func makeXDRConfig(
 		InfoPolingPeriodMilliseconds: 1000,
 		SecretAgentConfig:            routine.SecretAgent.ToSecretAgentConfig(),
 		EncoderType:                  backup.EncoderTypeASBX,
-		//CompressionPolicy:            makeCompressionPolicy(policy),
-		//EncryptionPolicy:             makeEncryptionPolicy(policy),
+		CompressionPolicy:            makeCompressionPolicy(policy),
+		EncryptionPolicy:             makeEncryptionPolicy(policy),
 	}, nil
 }
 

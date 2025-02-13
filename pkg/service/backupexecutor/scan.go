@@ -69,22 +69,32 @@ func makeBackupConfig(
 	}
 	config.ScanPolicy.MaxRetries = 100
 
-	if backupPolicy.CompressionPolicy != nil {
-		config.CompressionPolicy = &backup.CompressionPolicy{
-			Mode:  backupPolicy.CompressionPolicy.Mode,
-			Level: int(backupPolicy.CompressionPolicy.Level),
-		}
-	}
-
-	if backupPolicy.EncryptionPolicy != nil {
-		config.EncryptionPolicy = &backup.EncryptionPolicy{
-			Mode:      backupPolicy.EncryptionPolicy.Mode,
-			KeyFile:   backupPolicy.EncryptionPolicy.KeyFile,
-			KeySecret: backupPolicy.EncryptionPolicy.KeySecret,
-			KeyEnv:    backupPolicy.EncryptionPolicy.KeyEnv,
-		}
-	}
-	config.SecretAgentConfig = backupRoutine.SecretAgent.ToSecretAgentConfig()
+	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
+	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)
 
 	return config
+}
+
+func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy {
+	if policy.CompressionPolicy == nil {
+		return nil
+	}
+
+	return &backup.CompressionPolicy{
+		Mode:  policy.CompressionPolicy.Mode,
+		Level: int(policy.CompressionPolicy.Level),
+	}
+}
+
+func makeEncryptionPolicy(policy *model.BackupPolicy) *backup.EncryptionPolicy {
+	if policy.EncryptionPolicy == nil {
+		return nil
+	}
+
+	return &backup.EncryptionPolicy{
+		Mode:      policy.EncryptionPolicy.Mode,
+		KeyFile:   policy.EncryptionPolicy.KeyFile,
+		KeySecret: policy.EncryptionPolicy.KeySecret,
+		KeyEnv:    policy.EncryptionPolicy.KeyEnv,
+	}
 }
