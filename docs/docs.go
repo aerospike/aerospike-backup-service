@@ -2596,6 +2596,10 @@ const docTemplate = `{
                     "description": "Link to one of preconfigured clusters.\nMutually exclusive with 'destination'.",
                     "type": "string"
                 },
+                "disable-reordering": {
+                    "description": "Disable reverse order of incremental backups optimisation.",
+                    "type": "boolean"
+                },
                 "policy": {
                     "description": "Restore policy to use in the operation.",
                     "allOf": [

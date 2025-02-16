@@ -201,7 +201,7 @@ func (r *dataRestorer) restoreNamespace(
 		return fmt.Errorf("could not determine if namespace %s is empty: %w", fullBackup.Namespace, err)
 	}
 
-	if dbEmpty {
+	if dbEmpty && !request.DisableReordering {
 		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
 		// This way we reduce generation noise and unnecessary load.
 		slices.Reverse(allBackups)

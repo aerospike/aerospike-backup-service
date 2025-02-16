@@ -2250,6 +2250,9 @@ components:
             Link to one of preconfigured clusters.
             Mutually exclusive with 'destination'.
           type: string
+        disable-reordering:
+          description: Disable reverse order of incremental backups optimisation.
+          type: boolean
         policy:
           allOf:
           - $ref: '#/components/schemas/dto.RestorePolicy'
