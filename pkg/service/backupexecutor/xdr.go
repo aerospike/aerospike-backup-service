@@ -3,6 +3,7 @@ package backupexecutor
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"slices"
 	"sync/atomic"
@@ -104,11 +105,13 @@ func generateUniqueDCName(client backup.AerospikeClient) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get existing DC names: %w", err)
 	}
+	slog.Info("XDR: existing DC", slog.Any("dc", existingDCs))
 
 	// Try a reasonable number of times to avoid infinite loop
 	for i := 0; i < limit; i++ {
 		name := fmt.Sprintf("abs_dc%d", dcCounter.Add(1)%dcUpperBound) // each time generate a different name
 		if !slices.Contains(existingDCs, name) {
+			slog.Info("XDR: Create unique DC", slog.String("dc", name))
 			return name, nil
 		}
 	}
