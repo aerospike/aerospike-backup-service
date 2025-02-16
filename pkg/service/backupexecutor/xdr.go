@@ -48,10 +48,14 @@ func makeXDRConfig(
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate unique DC name: %w", err)
 	}
-	port := GetFreePort()
+	port, err := getFreePort()
+	if err != nil {
+		return nil, fmt.Errorf("failed to find free port: %w", err)
+	}
 
 	policy := routine.BackupPolicy
 	xdrConfig := policy.XDRConfig
+
 	return &backup.ConfigBackupXDR{
 		InfoPolicy:                   as.NewInfoPolicy(),
 		EncryptionPolicy:             makeEncryptionPolicy(policy),
@@ -77,18 +81,23 @@ func makeXDRConfig(
 	}, nil
 }
 
-func GetFreePort() int {
+// getFreePort finds a free TCP port on localhost.
+func getFreePort() (int, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 
 	if err != nil {
-		return 0
+		return 0, err
 	}
 	defer listener.Close()
 
-	return listener.Addr().(*net.TCPAddr).Port
+	return listener.Addr().(*net.TCPAddr).Port, nil
 }
 
-var dcCounter atomic.Int64
+var (
+	dcCounter    atomic.Int32
+	limit              = 1000
+	dcUpperBound int32 = 10_000
+)
 
 func generateUniqueDCName(client backup.AerospikeClient) (string, error) {
 	existingDCs, err := aerospike.GetDCNames(client)
@@ -97,17 +106,18 @@ func generateUniqueDCName(client backup.AerospikeClient) (string, error) {
 	}
 
 	// Try a reasonable number of times to avoid infinite loop
-	for i := 0; i < 1000; i++ {
-		name := fmt.Sprintf("dc%d", dcCounter.Add(1)) // each time generate a different name
+	for i := 0; i < limit; i++ {
+		name := fmt.Sprintf("abs_dc%d", dcCounter.Add(1)%dcUpperBound) // each time generate a different name
 		if !slices.Contains(existingDCs, name) {
 			return name, nil
 		}
 	}
 
-	return "", fmt.Errorf("failed to generate unique DC name after 1000 attempts")
+	return "", fmt.Errorf("failed to generate unique DC name after %d attempts", limit)
 }
 
 // getRewind calculates the rewind value based on FromTime.
+// The returned value is the string representation of seconds since bounds.FromTime rounded up.
 func getRewind(bounds model.TimeBounds) string {
 	if bounds.FromTime == nil {
 		return "all"

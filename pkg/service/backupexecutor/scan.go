@@ -76,7 +76,7 @@ func makeBackupConfig(
 }
 
 func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy {
-	if policy.CompressionPolicy == nil {
+	if policy == nil || policy.CompressionPolicy == nil {
 		return nil
 	}
 
@@ -87,7 +87,7 @@ func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy
 }
 
 func makeEncryptionPolicy(policy *model.BackupPolicy) *backup.EncryptionPolicy {
-	if policy.EncryptionPolicy == nil {
+	if policy == nil || policy.EncryptionPolicy == nil {
 		return nil
 	}
 

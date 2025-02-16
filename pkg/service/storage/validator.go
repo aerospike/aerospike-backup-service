@@ -36,4 +36,5 @@ func (n *nameValidator) Run(path string) error {
 	return fmt.Errorf("skipped by filter '%s'", n.filter)
 }
 
+// ErrEmptyStorage indicates that there are no files to restore in the source directory.
 var ErrEmptyStorage = storage.ErrEmptyStorage

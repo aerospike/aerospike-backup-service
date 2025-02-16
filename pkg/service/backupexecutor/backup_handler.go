@@ -19,6 +19,8 @@ type CombinedBackupHandler struct {
 	scanHandler BackupHandler
 }
 
+var _ BackupHandler = (*CombinedBackupHandler)(nil)
+
 func (h *CombinedBackupHandler) Wait(ctx context.Context) error {
 	var errs []error
 
