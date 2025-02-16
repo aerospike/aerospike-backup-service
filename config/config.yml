@@ -74,6 +74,11 @@ backup-policies:
     no-indexes: true
     no-records: true
     no-udfs: true
+  xdrBackup:
+    parallel: 8
+    xdr:
+      local-host: "host.docker.internal"
+
 backup-routines:
   localStorageRemoveFiles:
     interval-cron: "@yearly"
@@ -241,6 +246,14 @@ backup-routines:
     namespaces: [ "source-ns20" ]
     disabled: true
     backup-policy: keepFilesPolicy
+  xdrBackup:
+    interval-cron: "@yearly"
+    incr-interval-cron: "0 */1 * * * *" # every minute incremental backup
+    source-cluster: absDefaultCluster
+    storage: local
+    namespaces: [ "source-ns21" ]
+    backup-policy: xdrBackup
+
 
 service:
   logger:
