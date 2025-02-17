@@ -2281,6 +2281,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PortRange": {
+            "description": "PortRange is a range of ports (inclusive).",
+            "type": "object",
+            "properties": {
+                "end": {
+                    "description": "@Description End port of the range (inclusive).",
+                    "type": "integer"
+                },
+                "start": {
+                    "description": "@Description Start port of the range (inclusive).",
+                    "type": "integer"
+                }
+            }
+        },
         "dto.RateLimiterConfig": {
             "description": "RateLimiterConfig is the HTTP server rate limiter configuration.",
             "type": "object",
@@ -2990,6 +3004,14 @@ const docTemplate = `{
                     "description": "PollingPeriod specifies how often a backup client will send info commands to check Aerospike cluster stats.\nUsed to measure recovery state and lag.",
                     "type": "integer",
                     "example": 60000
+                },
+                "port-range": {
+                    "description": "PortRange limits the range of ports that the TCP server for XDR will listen on (optional).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PortRange"
+                        }
+                    ]
                 },
                 "read-timeout": {
                     "description": "ReadTimeout is the timeout in milliseconds for TCP read operations.\nUsed by the TCP server for XDR.",

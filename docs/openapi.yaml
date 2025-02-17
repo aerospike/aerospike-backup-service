@@ -1956,6 +1956,16 @@ components:
           description: Whether to enable logging to the standard output.
           type: boolean
       type: object
+    dto.PortRange:
+      description: PortRange is a range of ports (inclusive).
+      properties:
+        end:
+          description: '@Description End port of the range (inclusive).'
+          type: integer
+        start:
+          description: '@Description Start port of the range (inclusive).'
+          type: integer
+      type: object
     dto.RateLimiterConfig:
       description: RateLimiterConfig is the HTTP server rate limiter configuration.
       properties:
@@ -2627,6 +2637,12 @@ components:
             Used to measure recovery state and lag.
           example: 60000
           type: integer
+        port-range:
+          allOf:
+          - $ref: '#/components/schemas/dto.PortRange'
+          description: PortRange limits the range of ports that the TCP server for
+            XDR will listen on (optional).
+          type: object
         read-timeout:
           description: |-
             ReadTimeout is the timeout in milliseconds for TCP read operations.

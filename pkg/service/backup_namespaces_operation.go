@@ -71,19 +71,20 @@ func (op *BackupNamespacesOperation) GetStats() *models.BackupStats {
 
 	res := models.NewBackupStats()
 	for _, handler := range op.handlers {
-		if handler.GetStats() == nil {
+		backupStats := handler.GetStats()
+		if backupStats == nil {
 			continue
 		}
 
 		activeHandlers++
-		res.TotalRecords += handler.GetStats().TotalRecords
-		res.ReadRecords.Add(handler.GetStats().GetReadRecords())
-		res.BytesWritten.Add(handler.GetStats().BytesWritten.Load())
+		res.TotalRecords += backupStats.TotalRecords
+		res.ReadRecords.Add(backupStats.GetReadRecords())
+		res.BytesWritten.Add(backupStats.BytesWritten.Load())
 
 		// These are the backups of multiple namespaces in the same routine.
 		// Therefore, picking any of those is valid, since they started at
 		// the same time.
-		res.StartTime = handler.GetStats().StartTime
+		res.StartTime = backupStats.StartTime
 	}
 
 	if activeHandlers == 0 {
