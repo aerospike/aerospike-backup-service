@@ -29,6 +29,7 @@ func runXDRBackup(
 		return nil, fmt.Errorf("failed to build XDR configuration: %w", err)
 	}
 
+	slog.Info("start XDR backup", slog.Any("config", *xdrConfig))
 	handler, err := client.BackupXDR(ctx, xdrConfig, writer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start XDR backup: %w", err)
