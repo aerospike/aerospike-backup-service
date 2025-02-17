@@ -66,3 +66,25 @@ func (p *PortRange) Validate() error {
 
 	return nil
 }
+
+func (p *PortRange) ToModel() *model.PortRange {
+	if p == nil {
+		return nil
+	}
+
+	return &model.PortRange{
+		Start: model.Port(p.Start),
+		End:   model.Port(p.End),
+	}
+}
+
+func newPortRangeFromModel(m *model.PortRange) *PortRange {
+	if m == nil {
+		return nil
+	}
+
+	return &PortRange{
+		Start: Port(m.Start),
+		End:   Port(m.End),
+	}
+}

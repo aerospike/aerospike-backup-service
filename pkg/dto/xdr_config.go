@@ -101,6 +101,7 @@ func (x *XDRConfig) ToModel() *model.XDRConfig {
 
 	return &model.XDRConfig{
 		LocalHost:       x.LocalHost,
+		PortRange:       x.PortRange.ToModel(),
 		ResultQueueSize: x.ResultQueueSize,
 		AckQueueSize:    x.AckQueueSize,
 		MaxConns:        x.MaxConns,
@@ -119,6 +120,7 @@ func newXDRConfigFromModel(m *model.XDRConfig) *XDRConfig {
 
 	return &XDRConfig{
 		LocalHost:       m.LocalHost,
+		PortRange:       newPortRangeFromModel(m.PortRange),
 		ResultQueueSize: m.ResultQueueSize,
 		AckQueueSize:    m.AckQueueSize,
 		MaxConns:        m.MaxConns,

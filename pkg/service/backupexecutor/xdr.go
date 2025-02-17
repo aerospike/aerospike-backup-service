@@ -29,7 +29,6 @@ func runXDRBackup(
 		return nil, fmt.Errorf("failed to build XDR configuration: %w", err)
 	}
 
-	slog.Info("start XDR backup", slog.Any("config", *xdrConfig))
 	handler, err := client.BackupXDR(ctx, xdrConfig, writer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start XDR backup: %w", err)
@@ -50,7 +49,7 @@ func makeXDRConfig(
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate unique DC name: %w", err)
 	}
-	port, err := getFreePortInRange(5000, 6000)
+	port, err := getFreePortInRange(routine.BackupPolicy.XDRConfig.PortRange)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find free port: %w", err)
 	}
@@ -68,7 +67,7 @@ func makeXDRConfig(
 		ParallelWrite:                policy.GetParallelOrDefault(),
 		DC:                           dc,
 		LocalAddress:                 xdrConfig.LocalHost,
-		LocalPort:                    port,
+		LocalPort:                    int(port),
 		Namespace:                    namespace,
 		Rewind:                       getRewind(timeBounds),
 		TLSConfig:                    nil,
@@ -84,15 +83,39 @@ func makeXDRConfig(
 }
 
 // getFreePortInRange finds a free TCP port within the specified range and listens on all interfaces.
-func getFreePortInRange(start, end int) (int, error) {
-	for port := start; port <= end; port++ {
-		listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port)) // Bind to all interfaces
-		if err == nil {
-			listener.Close()
+func getFreePortInRange(r *model.PortRange) (model.Port, error) {
+	if r == nil {
+		return getFreePort()
+	}
+
+	for port := r.Start; port <= r.End; port++ {
+		if isPortAvailable(port) {
 			return port, nil
 		}
 	}
-	return 0, fmt.Errorf("no free ports available in range %d-%d", start, end)
+	return 0, fmt.Errorf("no free ports available in range %d-%d", r.Start, r.End)
+}
+
+// isPortAvailable checks if the port is available.
+func isPortAvailable(port model.Port) bool {
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	if err != nil {
+		return false
+	}
+	listener.Close()
+	return true
+}
+
+// getFreePort finds a free TCP port on localhost.
+func getFreePort() (model.Port, error) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+
+	if err != nil {
+		return 0, err
+	}
+	defer listener.Close()
+
+	return model.Port(listener.Addr().(*net.TCPAddr).Port), nil
 }
 
 var (

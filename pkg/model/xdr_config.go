@@ -5,6 +5,8 @@ import "github.com/aerospike/backup-go/models"
 type XDRConfig struct {
 	// Local address, where source cluster will send data.
 	LocalHost string
+	// PortRange limits the range of ports that the TCP server for XDR will listen on (optional).
+	PortRange *PortRange
 	// Rewind is used to ship all existing records of a namespace.
 	// When rewinding a namespace, XDR will scan through the index and ship
 	// all the records for that namespace, partition by partition.
