@@ -17,7 +17,7 @@ var defaultConfig = struct {
 }{
 	http: HTTPServerConfig{
 		Address: util.Ptr("0.0.0.0"),
-		Port:    util.Ptr(8080),
+		Port:    NewPort(8080),
 		Rate: &RateLimiterConfig{
 			Tps:       util.Ptr(1024),
 			Size:      util.Ptr(1024),

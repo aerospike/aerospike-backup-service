@@ -7,7 +7,7 @@ type HTTPServerConfig struct {
 	// The address to listen on.
 	Address *string
 	// The port to listen on.
-	Port *int
+	Port *Port
 	// HTTP rate limiter configuration.
 	Rate *RateLimiterConfig
 	// ContextPath customizes path for the API endpoints.
@@ -27,7 +27,7 @@ func (s *HTTPServerConfig) GetAddressOrDefault() string {
 
 // GetPortOrDefault returns the value of the Port property.
 // If the property is not set, it returns the default value.
-func (s *HTTPServerConfig) GetPortOrDefault() int {
+func (s *HTTPServerConfig) GetPortOrDefault() Port {
 	if s.Port != nil {
 		return *s.Port
 	}

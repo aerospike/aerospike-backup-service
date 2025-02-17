@@ -241,7 +241,7 @@ type SeedNode struct {
 	// The host name of the node.
 	HostName string `yaml:"host-name,omitempty" json:"host-name,omitempty" example:"localhost" validate:"required"`
 	// The port of the node.
-	Port int32 `yaml:"port,omitempty" json:"port,omitempty" example:"3000" validate:"required"`
+	Port Port `yaml:"port,omitempty" json:"port,omitempty" example:"3000" validate:"required"`
 	// TLS certificate name used for secure connections (if enabled).
 	TLSName string `yaml:"tls-name,omitempty" json:"tls-name,omitempty" example:"certName" validate:"optional"`
 }
@@ -249,24 +249,24 @@ type SeedNode struct {
 // Validate validates the SeedNode entity.
 func (node *SeedNode) Validate() error {
 	if node.HostName == "" {
-		return errors.New("empty hostname is not allowed")
+		return errValidationEmptyField("hostname")
 	}
-	if node.Port < 1 || node.Port > 65535 {
-		return errors.New("invalid port number")
+	if err := node.Port.Validate(); err != nil {
+		return err
 	}
 	return nil
 }
 
 func (node *SeedNode) fromModel(m model.SeedNode) {
 	node.HostName = m.HostName
-	node.Port = m.Port
+	node.Port = Port(m.Port)
 	node.TLSName = m.TLSName
 }
 
 func (node *SeedNode) toModel() model.SeedNode {
 	return model.SeedNode{
 		HostName: node.HostName,
-		Port:     node.Port,
+		Port:     model.Port(node.Port),
 		TLSName:  node.TLSName,
 	}
 }

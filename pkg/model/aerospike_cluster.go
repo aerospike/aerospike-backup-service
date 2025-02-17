@@ -225,7 +225,7 @@ type SeedNode struct {
 	// The host name of the node.
 	HostName string
 	// The port of the node.
-	Port int32
+	Port Port
 	// TLS certificate name used for secure connections (if enabled).
 	TLSName string
 }

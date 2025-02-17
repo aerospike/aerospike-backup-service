@@ -50,7 +50,7 @@ func makeXDRConfig(
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate unique DC name: %w", err)
 	}
-	port, err := getFreePort()
+	port, err := getFreePortInRange(5000, 6000)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find free port: %w", err)
 	}
@@ -83,16 +83,16 @@ func makeXDRConfig(
 	}, nil
 }
 
-// getFreePort finds a free TCP port on localhost.
-func getFreePort() (int, error) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-
-	if err != nil {
-		return 0, err
+// getFreePortInRange finds a free TCP port within the specified range and listens on all interfaces.
+func getFreePortInRange(start, end int) (int, error) {
+	for port := start; port <= end; port++ {
+		listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port)) // Bind to all interfaces
+		if err == nil {
+			listener.Close()
+			return port, nil
+		}
 	}
-	defer listener.Close()
-
-	return listener.Addr().(*net.TCPAddr).Port, nil
+	return 0, fmt.Errorf("no free ports available in range %d-%d", start, end)
 }
 
 var (

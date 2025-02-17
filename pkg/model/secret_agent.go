@@ -20,7 +20,7 @@ type SecretAgent struct {
 	// Address of the Secret Agent.
 	Address string
 	// Port the Secret Agent is running on.
-	Port *int
+	Port *Port
 	// Timeout in milliseconds.
 	Timeout *int
 	// The path to a trusted CA certificate file in PEM format.
@@ -38,7 +38,7 @@ func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
 	return &backup.SecretAgentConfig{
 		ConnectionType:     &s.ConnectionType,
 		Address:            &s.Address,
-		Port:               s.Port,
+		Port:               s.Port.IntValue(),
 		TimeoutMillisecond: s.Timeout,
 		CaFile:             s.TLSCAString,
 		IsBase64:           s.IsBase64,

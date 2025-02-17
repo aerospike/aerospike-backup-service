@@ -61,7 +61,7 @@ type SecretAgent struct {
 	// Address of the Secret Agent.
 	Address string `yaml:"address" json:"address" example:"localhost" validate:"required"`
 	// Port the Secret Agent is running on.
-	Port *int `yaml:"port,omitempty" json:"port,omitempty" example:"8080"`
+	Port *Port `yaml:"port,omitempty" json:"port,omitempty" example:"8080"`
 	// Timeout in milliseconds.
 	Timeout *int `yaml:"timeout,omitempty" json:"timeout,omitempty" example:"5000"`
 	// The path to a trusted CA certificate file in PEM format.
@@ -78,7 +78,7 @@ func (s *SecretAgent) ToModel() *model.SecretAgent {
 	return &model.SecretAgent{
 		ConnectionType: s.ConnectionType,
 		Address:        s.Address,
-		Port:           s.Port,
+		Port:           s.Port.ToModel(),
 		Timeout:        s.Timeout,
 		TLSCAString:    s.TLSCAString,
 		IsBase64:       s.IsBase64,
@@ -111,7 +111,7 @@ func newSecretAgentFromModel(m *model.SecretAgent) *SecretAgent {
 func (s *SecretAgent) fromModel(m *model.SecretAgent) {
 	s.ConnectionType = m.ConnectionType
 	s.Address = m.Address
-	s.Port = m.Port
+	s.Port = NewPortFromModel(m.Port)
 	s.Timeout = m.Timeout
 	s.TLSCAString = m.TLSCAString
 	s.IsBase64 = m.IsBase64
@@ -135,8 +135,8 @@ func (s *SecretAgent) validate() error {
 		return fmt.Errorf("unsupported connection type: %s", s.ConnectionType)
 	}
 
-	if s.Port != nil && (*s.Port <= 0 || *s.Port > 65535) {
-		return fmt.Errorf("'port' must be between 1 and 65535, got: %d", *s.Port)
+	if err := s.Port.Validate(); err != nil {
+		return err
 	}
 
 	return nil
