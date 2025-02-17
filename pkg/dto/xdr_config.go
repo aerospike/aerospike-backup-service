@@ -12,7 +12,7 @@ type XDRConfig struct {
 	// LocalHost is the local address where the source cluster will send data.
 	LocalHost string `yaml:"local-host,omitempty" json:"local-host,omitempty" example:"127.0.0.1"`
 
-	//PortRange limits the range of ports that the TCP server for XDR will listen on (optional)
+	// PortRange limits the range of ports that the TCP server for XDR will listen on (optional).
 	PortRange *PortRange `yaml:"port-range,omitempty" json:"port-range,omitempty"`
 
 	// ResultQueueSize is the size of the results queue used by the TCP server for XDR.

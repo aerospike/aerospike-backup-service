@@ -51,7 +51,7 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			other: BackupServiceConfig{
 				HTTPServer: &HTTPServerConfig{
 					Address: util.Ptr("0.0.0.0"),
-					Port:    util.Ptr(Port(8080)),
+					Port:    util.Ptr(Port(9090)),
 				},
 			},
 			errors: []string{

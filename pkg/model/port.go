@@ -4,7 +4,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
-// Port represents a network port
+// Port represents a network port.
 type Port int
 
 func NewPort(port int) *Port {
@@ -12,7 +12,7 @@ func NewPort(port int) *Port {
 	return &p
 }
 
-// PortRange represents a range of network ports
+// PortRange represents a range of network ports.
 type PortRange struct {
 	Start Port
 	End   Port

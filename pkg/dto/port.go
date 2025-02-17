@@ -11,7 +11,7 @@ import (
 // @Description Port is a single network port.
 type Port int
 
-// Validate checks if the port number is within the valid range (1-65535)
+// Validate checks if the port number is within the valid range (1-65535).
 func (p *Port) Validate() error {
 	if p == nil {
 		return nil
@@ -30,7 +30,7 @@ func (p *Port) ToModel() *model.Port {
 	return &port
 }
 
-// NewPortFromModel creates a DTO Port from a model Port
+// NewPortFromModel creates a DTO Port from a model Port.
 func NewPortFromModel(m *model.Port) *Port {
 	if m == nil {
 		return nil
