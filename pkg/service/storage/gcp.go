@@ -3,12 +3,12 @@ package storage
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"cloud.google.com/go/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go"
-	gcp "github.com/aerospike/backup-go/io/gcp/storage"
+	ioStorage "github.com/aerospike/backup-go/io/storage"
+	gcp "github.com/aerospike/backup-go/io/storage/gcp/storage"
 	"google.golang.org/api/option"
 )
 
@@ -22,54 +22,24 @@ func (a *GcpStorageAccessor) supports(storage model.Storage) bool {
 func (a *GcpStorageAccessor) createReader(
 	ctx context.Context,
 	storage model.Storage,
-	path string,
-	isFile, sorted bool,
-	filter Validator,
-	startScanFrom string,
+	opts ...ioStorage.Opt,
 ) (backup.StreamingReader, error) {
 	gcps := storage.(*model.GcpStorage)
 	client, err := getGcpClient(ctx, gcps)
 	if err != nil {
 		return nil, fmt.Errorf("reader failed to create GCP client: %w", err)
 	}
-	opts := []gcp.Opt{
-		gcp.WithValidator(filter),
-		gcp.WithNestedDir(),
-		gcp.WithStartOffset(filepath.Join(gcps.Path, startScanFrom)),
-	}
-	fullPath := filepath.Join(gcps.Path, path)
-	if isFile {
-		opts = append(opts, gcp.WithFile(fullPath))
-	} else {
-		opts = append(opts, gcp.WithDir(fullPath))
-	}
-	if sorted {
-		opts = append(opts, gcp.WithSorting())
-	}
 
 	return gcp.NewReader(ctx, client, gcps.BucketName, opts...)
 }
 
 func (a *GcpStorageAccessor) createWriter(
-	ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool,
+	ctx context.Context, storage model.Storage, opts ...ioStorage.Opt,
 ) (backup.Writer, error) {
 	gcps := storage.(*model.GcpStorage)
 	client, err := getGcpClient(ctx, gcps)
 	if err != nil {
 		return nil, fmt.Errorf("writer failed to create GCP client: %w", err)
-	}
-	fullPath := filepath.Join(gcps.Path, path)
-	var opts []gcp.Opt
-	if isFile {
-		opts = append(opts, gcp.WithFile(fullPath))
-	} else {
-		opts = append(opts, gcp.WithDir(fullPath))
-	}
-	if isRemoveFiles {
-		opts = append(opts, gcp.WithRemoveFiles())
-	}
-	if withNested {
-		opts = append(opts, gcp.WithNestedDir())
 	}
 
 	return gcp.NewWriter(ctx, client, gcps.BucketName, opts...)

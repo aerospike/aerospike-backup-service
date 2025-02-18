@@ -3,12 +3,12 @@ package storage
 import (
 	"context"
 	"net/http"
-	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/io/aws/s3"
+	ioStorage "github.com/aerospike/backup-go/io/storage"
+	"github.com/aerospike/backup-go/io/storage/aws/s3"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -33,55 +33,24 @@ func (a *S3StorageAccessor) supports(storage model.Storage) bool {
 func (a *S3StorageAccessor) createReader(
 	ctx context.Context,
 	storage model.Storage,
-	path string,
-	isFile, sorted bool,
-	filter Validator,
-	startScanFrom string,
+	opts ...ioStorage.Opt,
 ) (backup.StreamingReader, error) {
 	s3s := storage.(*model.S3Storage)
 	client, err := a.clientMap.GetWithContext(ctx, s3s)
 	if err != nil {
 		return nil, err
 	}
-	opts := []s3.Opt{
-		s3.WithValidator(filter),
-		s3.WithNestedDir(),
-		s3.WithStartAfter(filepath.Join(s3s.Path, startScanFrom)),
-	}
-	fullPath := filepath.Join(s3s.Path, path)
-	if isFile {
-		opts = append(opts, s3.WithFile(fullPath))
-	} else {
-		opts = append(opts, s3.WithDir(fullPath))
-	}
-
-	if sorted {
-		opts = append(opts, s3.WithSorting())
-	}
 
 	return s3.NewReader(ctx, client, s3s.Bucket, opts...)
 }
 
 func (a *S3StorageAccessor) createWriter(
-	ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool,
+	ctx context.Context, storage model.Storage, opts ...ioStorage.Opt,
 ) (backup.Writer, error) {
 	s3s := storage.(*model.S3Storage)
 	client, err := a.clientMap.GetWithContext(ctx, s3s)
 	if err != nil {
 		return nil, err
-	}
-	fullPath := filepath.Join(s3s.Path, path)
-	var opts []s3.Opt
-	if isFile {
-		opts = append(opts, s3.WithFile(fullPath))
-	} else {
-		opts = append(opts, s3.WithDir(fullPath))
-	}
-	if isRemoveFiles {
-		opts = append(opts, s3.WithRemoveFiles())
-	}
-	if withNested {
-		opts = append(opts, s3.WithNestedDir())
 	}
 
 	return s3.NewWriter(ctx, client, s3s.Bucket, opts...)

@@ -9,7 +9,7 @@ require (
 	github.com/aerospike/aerospike-client-go/v7 v7.8.0
 	github.com/aerospike/aerospike-client-go/v8 v8.0.1
 	github.com/aerospike/aerospike-management-lib v1.5.0
-	github.com/aerospike/backup-go v0.3.2-0.20250216154211-e6f957c55a5d
+	github.com/aerospike/backup-go v0.3.2-0.20250218112806-c5f0f9f61d3c
 	github.com/aws/aws-sdk-go-v2 v1.32.7
 	github.com/aws/aws-sdk-go-v2/config v1.28.7
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.48

@@ -41,7 +41,7 @@ func (r *DefaultBackupExecutor) Run(
 	path string,
 ) (BackupHandler, error) {
 	xdrEnabled := routine.BackupPolicy.XDRConfig != nil
-	writer, err := storage.CreateWriter(ctx, routine.Storage, path, false, false, false)
+	writer, err := storage.CreateDirWriter(ctx, routine.Storage, path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer: %w", err)
 	}

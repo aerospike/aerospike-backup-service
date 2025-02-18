@@ -19,7 +19,10 @@ type GcpStorage struct {
 	SecretAgent *SecretAgent
 }
 
-func (s *GcpStorage) storage() {}
+func (s *GcpStorage) GetPath() string {
+	return s.Path
+}
+
 func (s *GcpStorage) String() string {
 	return fmt.Sprintf("GcpStorage(Bucket: %s, Path: %s)", s.BucketName, s.Path)
 }

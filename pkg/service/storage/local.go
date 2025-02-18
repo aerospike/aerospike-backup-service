@@ -2,11 +2,11 @@ package storage
 
 import (
 	"context"
-	"path/filepath"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/io/local"
+	ioStorage "github.com/aerospike/backup-go/io/storage"
+	"github.com/aerospike/backup-go/io/storage/local"
 )
 
 type LocalStorageAccessor struct{}
@@ -18,48 +18,15 @@ func (a *LocalStorageAccessor) supports(storage model.Storage) bool {
 
 func (a *LocalStorageAccessor) createReader(
 	ctx context.Context,
-	storage model.Storage,
-	path string,
-	isFile, sorted bool,
-	filter Validator,
-	_ string,
+	_ model.Storage,
+	opts ...ioStorage.Opt,
 ) (backup.StreamingReader, error) {
-	ls := storage.(*model.LocalStorage)
-	fullPath := filepath.Join(ls.Path, path)
-	opts := []local.Opt{
-		local.WithValidator(filter),
-		local.WithNestedDir(),
-	}
-	if isFile {
-		opts = append(opts, local.WithFile(fullPath))
-	} else {
-		opts = append(opts, local.WithDir(fullPath))
-	}
-	if sorted {
-		opts = append(opts, local.WithSorting())
-	}
-
 	return local.NewReader(ctx, opts...)
 }
 
 func (a *LocalStorageAccessor) createWriter(
-	ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool,
+	ctx context.Context, _ model.Storage, opts ...ioStorage.Opt,
 ) (backup.Writer, error) {
-	ls := storage.(*model.LocalStorage)
-	fullPath := filepath.Join(ls.Path, path)
-	var opts []local.Opt
-	if isFile {
-		opts = append(opts, local.WithFile(fullPath))
-	} else {
-		opts = append(opts, local.WithDir(fullPath))
-	}
-	if isRemoveFiles {
-		opts = append(opts, local.WithRemoveFiles())
-	}
-	if withNested {
-		opts = append(opts, local.WithNestedDir())
-	}
-
 	return local.NewWriter(ctx, opts...)
 }
 

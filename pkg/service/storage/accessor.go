@@ -6,20 +6,16 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go"
+	ioStorage "github.com/aerospike/backup-go/io/storage"
 )
 
 // Accessor interface abstracts storage layer.
 type Accessor interface {
 	supports(storage model.Storage) bool
-	createReader(ctx context.Context,
-		storage model.Storage,
-		path string,
-		isFile, sorted bool,
-		filter Validator,
-		startScanFrom string,
-	) (backup.StreamingReader, error)
-	createWriter(ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool,
-	) (backup.Writer, error)
+
+	createReader(ctx context.Context, storage model.Storage, opts ...ioStorage.Opt) (backup.StreamingReader, error)
+
+	createWriter(ctx context.Context, storage model.Storage, opts ...ioStorage.Opt) (backup.Writer, error)
 }
 
 var accessors []Accessor
