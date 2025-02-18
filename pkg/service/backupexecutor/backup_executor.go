@@ -31,7 +31,7 @@ func NewDefaultBackupExecutor() *DefaultBackupExecutor {
 // Run implements the backup logic.
 // - For regular backups without XDR config, it uses scan-based backup (both full and incremental)
 // - For full backups with XDR config, it combines XDR for records and scan for UDFs/indexes
-// - For incremental backups with XDR config, it uses XDR-only backup
+// - For incremental backups with XDR config, it uses XDR-only backup.
 func (r *DefaultBackupExecutor) Run(
 	ctx context.Context,
 	client *backup.Client,
