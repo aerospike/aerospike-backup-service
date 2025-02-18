@@ -1841,7 +1841,7 @@ const docTemplate = `{
                     "example": 2000
                 },
                 "xdr": {
-                    "description": "XDR configuration for MRT backups",
+                    "description": "XDR configuration for MRT backups.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.XDRConfig"
@@ -2286,11 +2286,11 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "end": {
-                    "description": "@Description End port of the range (inclusive).",
+                    "description": "End port of the range (inclusive).",
                     "type": "integer"
                 },
                 "start": {
-                    "description": "@Description Start port of the range (inclusive).",
+                    "description": "Start port of the range (inclusive).",
                     "type": "integer"
                 }
             }

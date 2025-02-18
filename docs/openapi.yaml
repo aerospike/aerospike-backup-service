@@ -1505,7 +1505,7 @@ components:
         xdr:
           allOf:
           - $ref: '#/components/schemas/dto.XDRConfig'
-          description: XDR configuration for MRT backups
+          description: XDR configuration for MRT backups.
           type: object
       type: object
     dto.BackupRoutine:
@@ -1960,10 +1960,10 @@ components:
       description: PortRange is a range of ports (inclusive).
       properties:
         end:
-          description: '@Description End port of the range (inclusive).'
+          description: End port of the range (inclusive).
           type: integer
         start:
-          description: '@Description Start port of the range (inclusive).'
+          description: Start port of the range (inclusive).
           type: integer
       type: object
     dto.RateLimiterConfig:
