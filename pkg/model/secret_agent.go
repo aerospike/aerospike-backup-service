@@ -38,7 +38,7 @@ func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
 	return &backup.SecretAgentConfig{
 		ConnectionType:     &s.ConnectionType,
 		Address:            &s.Address,
-		Port:               s.Port.IntValue(),
+		Port:               (*int)(s.Port),
 		TimeoutMillisecond: s.Timeout,
 		CaFile:             s.TLSCAString,
 		IsBase64:           s.IsBase64,

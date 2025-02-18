@@ -14,6 +14,8 @@ type BackupHandler interface {
 	Wait(context.Context) error
 }
 
+// CombinedBackupHandler is a wrapper around two backup handlers.
+// It combines the stats and waits on both handlers.
 type CombinedBackupHandler struct {
 	xdrHandler  BackupHandler
 	scanHandler BackupHandler

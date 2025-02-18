@@ -48,7 +48,7 @@ type BackupPolicy struct {
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
 	// This parameter does not affect XDR backups (which always includes all keys).
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
-	// XDR configuration for MRT backups
+	// XDR configuration for MRT backups.
 	XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
 }
 

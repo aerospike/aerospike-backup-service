@@ -19,6 +19,7 @@ func (p *Port) Validate() error {
 	if *p < 1 || *p > 65535 {
 		return fmt.Errorf("port number %d invalid: must be between 1 and 65535", *p)
 	}
+
 	return nil
 }
 
@@ -26,6 +27,7 @@ func (p *Port) ToModel() *model.Port {
 	if p == nil {
 		return nil
 	}
+
 	port := model.Port(*p)
 	return &port
 }
@@ -43,10 +45,10 @@ func NewPortFromModel(m *model.Port) *Port {
 // PortRange represents a range of network ports.
 // @Description PortRange is a range of ports (inclusive).
 type PortRange struct {
-	// @Description Start port of the range (inclusive).
+	// Start port of the range (inclusive).
 	Start Port `json:"start" yaml:"start"`
 
-	// @Description End port of the range (inclusive).
+	// End port of the range (inclusive).
 	End Port `json:"end" yaml:"end"`
 }
 

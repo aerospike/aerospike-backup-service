@@ -108,7 +108,6 @@ func isPortAvailable(port model.Port) bool {
 // getFreePort finds a free TCP port on localhost.
 func getFreePort() (model.Port, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
-
 	if err != nil {
 		return 0, err
 	}
