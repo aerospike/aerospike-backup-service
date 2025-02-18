@@ -13,10 +13,11 @@ var defaultConfig = struct {
 	logger        LoggerConfig
 	backupPolicy  BackupPolicy
 	restorePolicy RestorePolicy
+	xdrConfig     XDRConfig
 }{
 	http: HTTPServerConfig{
 		Address: util.Ptr("0.0.0.0"),
-		Port:    util.Ptr(8080),
+		Port:    NewPort(8080),
 		Rate: &RateLimiterConfig{
 			Tps:       util.Ptr(1024),
 			Size:      util.Ptr(1024),
@@ -53,5 +54,19 @@ var defaultConfig = struct {
 		BatchSize:       util.Ptr(128),
 		SocketTimeout:   util.Ptr(10 * time.Second),
 		TotalTimeout:    util.Ptr(time.Duration(0)),
+	},
+	xdrConfig: XDRConfig{
+		MaxConns:        util.Ptr(100),
+		ReadTimeout:     util.Ptr(int64(1_000)),
+		WriteTimeout:    util.Ptr(int64(1_000)),
+		StartTimeout:    util.Ptr(int64(30_000)),
+		PollingPeriod:   util.Ptr(int64(1_000)),
+		ResultQueueSize: util.Ptr(256),
+		AckQueueSize:    util.Ptr(256),
+		InfoRetryPolicy: &models.RetryPolicy{
+			BaseTimeout: 2 * time.Second,
+			MaxRetries:  5,
+			Multiplier:  2,
+		},
 	},
 }

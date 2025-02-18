@@ -31,6 +31,8 @@ type RestoreTimestampRequest struct {
 	Time int64 `json:"time" format:"int64" example:"1739538000000" validate:"required"`
 	// The backup routine name.
 	Routine string `json:"routine" example:"daily" validate:"required"`
+	// Disable reverse order of incremental backups optimisation.
+	DisableReordering bool `json:"disable-reordering"`
 }
 
 // Validate validates the restore operation request.
@@ -92,6 +94,7 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 		SecretAgent:        secretAgent,
 		Time:               time.UnixMilli(r.Time),
 		RoutineName:        r.Routine,
+		DisableReordering:  r.DisableReordering,
 	}, nil
 }
 

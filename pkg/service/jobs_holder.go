@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
 type jobInfo struct {
-	handlers     []*RestoreHandlerWithCancel // Each handler restores one namespace.
+	handlers     []*restoreexecutor.RestoreHandlerWithCancel // Each handler restores one namespace.
 	status       model.JobStatus
 	err          error
 	totalRecords uint64
@@ -46,7 +47,7 @@ func (h *RestoreJobsHolder) newJob(label string) model.RestoreJobID {
 }
 
 // addHandler should be called for each backup (full or incremental) handler.
-func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler *RestoreHandlerWithCancel) {
+func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler *restoreexecutor.RestoreHandlerWithCancel) {
 	h.Apply(id, func(job *jobInfo) {
 		job.handlers = append(job.handlers, handler)
 	})

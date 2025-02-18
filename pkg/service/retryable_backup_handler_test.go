@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -24,14 +25,14 @@ var retry = newRetryExecutor(models.RetryPolicy{
 func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	ctx := context.Background()
 	mockHandler := &mockBackupHandler{}
-	stats := &models.BackupStats{}
+	stats := models.NewBackupStats()
 	mockHandler.On("Wait", mock.Anything).Return(nil)
 	mockHandler.On("GetStats").Return(stats)
 
 	successCount := 0
 	failureCount := 0
 
-	start := func(_ context.Context) (BackupHandler, error) {
+	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		return mockHandler, nil
 	}
 
@@ -57,7 +58,7 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	ctx := context.Background()
 	failedHandler := &mockBackupHandler{}
 	successHandler := &mockBackupHandler{}
-	stats := &models.BackupStats{}
+	stats := models.NewBackupStats()
 
 	failedHandler.On("Wait", mock.Anything).Return(errors.New("wait failed"))
 	successHandler.On("Wait", mock.Anything).Return(nil)
@@ -67,7 +68,7 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	successCount := 0
 	failureCount := 0
 
-	start := func(_ context.Context) (BackupHandler, error) {
+	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		attemptCount++
 		if attemptCount == 1 {
 			return failedHandler, nil
@@ -108,7 +109,7 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	failureCount := 0
 	var mu sync.Mutex
 
-	start := func(_ context.Context) (BackupHandler, error) {
+	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		return mockHandler, nil
 	}
 
@@ -148,7 +149,7 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	successCount := 0
 	failureCount := 0
 
-	start := func(_ context.Context) (BackupHandler, error) {
+	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		return mockHandler, nil
 	}
 
@@ -176,7 +177,7 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 	successCount := 0
 	failureCount := 0
 
-	start := func(_ context.Context) (BackupHandler, error) {
+	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		return nil, errors.New("start failed")
 	}
 
@@ -221,7 +222,7 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 	successCount := 0
 	failureCount := 0
 
-	start := func(_ context.Context) (BackupHandler, error) {
+	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		return mockHandler, nil
 	}
 

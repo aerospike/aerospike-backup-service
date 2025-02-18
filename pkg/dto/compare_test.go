@@ -21,7 +21,7 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			current: BackupServiceConfig{
 				HTTPServer: &HTTPServerConfig{
 					Address: util.Ptr("localhost"),
-					Port:    util.Ptr(8080),
+					Port:    util.Ptr(Port(8080)),
 				},
 				Logger: &LoggerConfig{
 					Level:  util.Ptr("INFO"),
@@ -31,7 +31,7 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			other: BackupServiceConfig{
 				HTTPServer: &HTTPServerConfig{
 					Address: util.Ptr("localhost"),
-					Port:    util.Ptr(8080),
+					Port:    util.Ptr(Port(8080)),
 				},
 				Logger: &LoggerConfig{
 					Level:  util.Ptr("INFO"),
@@ -45,13 +45,13 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			current: BackupServiceConfig{
 				HTTPServer: &HTTPServerConfig{
 					Address: util.Ptr("localhost"),
-					Port:    util.Ptr(8080),
+					Port:    util.Ptr(Port(8080)),
 				},
 			},
 			other: BackupServiceConfig{
 				HTTPServer: &HTTPServerConfig{
 					Address: util.Ptr("0.0.0.0"),
-					Port:    util.Ptr(9090),
+					Port:    util.Ptr(Port(9090)),
 				},
 			},
 			errors: []string{
@@ -249,13 +249,13 @@ func TestHTTPServerConfig_Compare(t *testing.T) {
 			name: "identical configs",
 			current: &HTTPServerConfig{
 				Address:     util.Ptr("localhost"),
-				Port:        util.Ptr(8080),
+				Port:        util.Ptr(Port(8080)),
 				ContextPath: util.Ptr("/api"),
 				Timeout:     util.Ptr(5000),
 			},
 			other: &HTTPServerConfig{
 				Address:     util.Ptr("localhost"),
-				Port:        util.Ptr(8080),
+				Port:        util.Ptr(Port(8080)),
 				ContextPath: util.Ptr("/api"),
 				Timeout:     util.Ptr(5000),
 			},
@@ -265,13 +265,13 @@ func TestHTTPServerConfig_Compare(t *testing.T) {
 			name: "all fields changed",
 			current: &HTTPServerConfig{
 				Address:     util.Ptr("localhost"),
-				Port:        util.Ptr(8080),
+				Port:        util.Ptr(Port(8080)),
 				ContextPath: util.Ptr("/api"),
 				Timeout:     util.Ptr(5000),
 			},
 			other: &HTTPServerConfig{
 				Address:     util.Ptr("0.0.0.0"),
-				Port:        util.Ptr(9090),
+				Port:        util.Ptr(Port(9090)),
 				ContextPath: util.Ptr("/v1/api"),
 				Timeout:     util.Ptr(10000),
 			},

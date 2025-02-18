@@ -1827,7 +1827,7 @@ const docTemplate = `{
                     ]
                 },
                 "sealed": {
-                    "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.",
+                    "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.\nThis parameter does not affect XDR backups (which always includes all keys).",
                     "type": "boolean"
                 },
                 "socket-timeout": {
@@ -1839,6 +1839,14 @@ const docTemplate = `{
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
                     "type": "integer",
                     "example": 2000
+                },
+                "xdr": {
+                    "description": "XDR configuration for MRT backups.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.XDRConfig"
+                        }
+                    ]
                 }
             }
         },
@@ -2273,6 +2281,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PortRange": {
+            "description": "PortRange is a range of ports (inclusive).",
+            "type": "object",
+            "properties": {
+                "end": {
+                    "description": "End port of the range (inclusive).",
+                    "type": "integer"
+                },
+                "start": {
+                    "description": "Start port of the range (inclusive).",
+                    "type": "integer"
+                }
+            }
+        },
         "dto.RateLimiterConfig": {
             "description": "RateLimiterConfig is the HTTP server rate limiter configuration.",
             "type": "object",
@@ -2587,6 +2609,10 @@ const docTemplate = `{
                 "destination-name": {
                     "description": "Link to one of preconfigured clusters.\nMutually exclusive with 'destination'.",
                     "type": "string"
+                },
+                "disable-reordering": {
+                    "description": "Disable reverse order of incremental backups optimisation.",
+                    "type": "boolean"
                 },
                 "policy": {
                     "description": "Restore policy to use in the operation.",
@@ -2944,6 +2970,68 @@ const docTemplate = `{
                     "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
                     "type": "string",
                     "example": "TLSv1.2"
+                }
+            }
+        },
+        "dto.XDRConfig": {
+            "description": "XDRConfig represents the configuration for XDR backups.",
+            "type": "object",
+            "properties": {
+                "ack-queue-size": {
+                    "description": "AckQueueSize is the size of the acknowledgment queue used by the TCP server for XDR.",
+                    "type": "integer",
+                    "example": 100
+                },
+                "info-retry-policy": {
+                    "description": "InfoRetryPolicy defines the retry policy for info commands.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RetryPolicy"
+                        }
+                    ]
+                },
+                "local-host": {
+                    "description": "LocalHost is the local address where the source cluster will send data.",
+                    "type": "string",
+                    "example": "127.0.0.1"
+                },
+                "max-conns": {
+                    "description": "MaxConns specifies the maximum number of allowed simultaneous connections to the server.\nUsed by the TCP server for XDR.",
+                    "type": "integer",
+                    "example": 100
+                },
+                "polling-period": {
+                    "description": "PollingPeriod specifies how often a backup client will send info commands to check Aerospike cluster stats.\nUsed to measure recovery state and lag.",
+                    "type": "integer",
+                    "example": 60000
+                },
+                "port-range": {
+                    "description": "PortRange limits the range of ports that the TCP server for XDR will listen on (optional).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PortRange"
+                        }
+                    ]
+                },
+                "read-timeout": {
+                    "description": "ReadTimeout is the timeout in milliseconds for TCP read operations.\nUsed by the TCP server for XDR.",
+                    "type": "integer",
+                    "example": 5000
+                },
+                "result-queue-size": {
+                    "description": "ResultQueueSize is the size of the results queue used by the TCP server for XDR.",
+                    "type": "integer",
+                    "example": 1000
+                },
+                "start-timeout": {
+                    "description": "StartTimeout is the timeout for starting the TCP server for XDR.\nIf the TCP server does not receive any data within this timeout period, it will shut down.\nThis situation can occur if the LocalAddress and LocalPort options are misconfigured.",
+                    "type": "integer",
+                    "example": 3000
+                },
+                "write-timeout": {
+                    "description": "WriteTimeout is the timeout in milliseconds for TCP write operations.\nUsed by the TCP server for XDR.",
+                    "type": "integer",
+                    "example": 5000
                 }
             }
         }

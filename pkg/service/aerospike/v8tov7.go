@@ -5,6 +5,7 @@ import (
 	v8 "github.com/aerospike/aerospike-client-go/v8"
 )
 
+// DowngradeHost copies a v8.Host to a v7.Host.
 func DowngradeHost(h *v8.Host) *v7.Host {
 	if h == nil {
 		return nil

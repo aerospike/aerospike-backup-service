@@ -29,6 +29,8 @@ type RestoreTimestampRequest struct {
 	Time time.Time
 	// The backup routine name.
 	RoutineName string
+	// Disable reverse order of incremental backups optimisation.
+	DisableReordering bool
 }
 
 // String satisfies the fmt.Stringer interface.

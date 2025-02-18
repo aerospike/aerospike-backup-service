@@ -43,29 +43,31 @@ type BackupPolicy struct {
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
 	Sealed *bool
+	// XDR configuration for MRT backups.
+	XDRConfig *XDRConfig
 }
 
 // IsSealedOrDefault returns the value of the Sealed property.
 // If the property is not set, it returns the default value.
 func (p *BackupPolicy) IsSealedOrDefault() bool {
-	if p.Sealed != nil {
+	if p != nil && p.Sealed != nil {
 		return *p.Sealed
 	}
 	return defaultConfig.backupPolicy.Sealed != nil && *defaultConfig.backupPolicy.Sealed
 }
 
-// CopySMDDisabled creates a new instance of the BackupPolicy struct with identical field values.
-// New instance has NoIndexes and NoUdfs set to true.
-func (p *BackupPolicy) CopySMDDisabled() *BackupPolicy {
+// CopyWithNoRecords creates a new instance of the BackupPolicy struct with identical field values.
+// New instance has NoRecords set to true.
+func (p *BackupPolicy) CopyWithNoRecords() *BackupPolicy {
 	return &BackupPolicy{
 		Parallel:         p.Parallel,
 		SocketTimeout:    p.SocketTimeout,
 		TotalTimeout:     p.TotalTimeout,
 		RetryPolicy:      p.RetryPolicy,
 		RetentionPolicy:  p.RetentionPolicy,
-		NoRecords:        p.NoRecords,
-		NoIndexes:        util.Ptr(true),
-		NoUdfs:           util.Ptr(true),
+		NoRecords:        util.Ptr(true),
+		NoIndexes:        p.NoIndexes,
+		NoUdfs:           p.NoUdfs,
 		Bandwidth:        p.Bandwidth,
 		RecordsPerSecond: p.RecordsPerSecond,
 		FileLimit:        p.FileLimit,

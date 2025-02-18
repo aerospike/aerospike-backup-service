@@ -7,7 +7,7 @@ import (
 )
 
 func TestValidSecretAgent(t *testing.T) {
-	port := 8080
+	port := Port(8080)
 	timeout := 5000
 	config := SecretAgentConfig{
 		SecretAgent: &SecretAgent{
@@ -45,7 +45,7 @@ func TestMutuallyExclusive(t *testing.T) {
 }
 
 func TestInvalidSecretAgent(t *testing.T) {
-	port := -1 // Invalid port
+	port := Port(-1) // Invalid port
 	config := SecretAgentConfig{
 		SecretAgent: &SecretAgent{
 			ConnectionType: "tcp",

@@ -14,7 +14,7 @@ type HTTPServerConfig struct {
 	// The address to listen on.
 	Address *string `yaml:"address,omitempty" json:"address,omitempty" default:"0.0.0.0" example:"0.0.0.0"`
 	// The port to listen on.
-	Port *int `yaml:"port,omitempty" json:"port,omitempty" default:"8080" example:"8080"`
+	Port *Port `yaml:"port,omitempty" json:"port,omitempty" default:"8080" example:"8080"`
 	// HTTP rate limiter configuration.
 	Rate *RateLimiterConfig `yaml:"rate,omitempty" json:"rate,omitempty"`
 	// ContextPath customizes path for the API endpoints.
@@ -46,7 +46,7 @@ func (s *HTTPServerConfig) ToModel() *model.HTTPServerConfig {
 
 	return &model.HTTPServerConfig{
 		Address:     s.Address,
-		Port:        s.Port,
+		Port:        s.Port.ToModel(),
 		Rate:        s.Rate.ToModel(),
 		ContextPath: s.ContextPath,
 		Timeout:     millisToDuration(s.Timeout),
@@ -58,7 +58,7 @@ func (s *HTTPServerConfig) fromModel(m *model.HTTPServerConfig) {
 		return
 	}
 	s.Address = m.Address
-	s.Port = m.Port
+	s.Port = NewPortFromModel(m.Port)
 	if s.Rate != nil {
 		s.Rate = &RateLimiterConfig{}
 		s.Rate.fromModel(m.Rate)

@@ -5,7 +5,7 @@ import "fmt"
 // Storage represents the configuration for a backup storage details.
 // This interface is implemented by all specific storage types.
 type Storage interface {
-	storage()
+	GetPath() string
 }
 
 type LocalStorage struct {
@@ -13,7 +13,10 @@ type LocalStorage struct {
 	Path string
 }
 
-func (s *LocalStorage) storage() {}
+func (s *LocalStorage) GetPath() string {
+	return s.Path
+}
+
 func (s *LocalStorage) String() string {
 	return fmt.Sprintf("LocalStorage(Path: %s)", s.Path)
 }

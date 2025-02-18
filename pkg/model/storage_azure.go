@@ -17,7 +17,10 @@ type AzureStorage struct {
 	SecretAgent *SecretAgent
 }
 
-func (s *AzureStorage) storage() {}
+func (s *AzureStorage) GetPath() string {
+	return s.Path
+}
+
 func (s *AzureStorage) String() string {
 	return fmt.Sprintf("AzureStorage(Endpoint: %s, Container: %s, Path: %s)", s.Endpoint, s.ContainerName, s.Path)
 }

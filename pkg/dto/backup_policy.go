@@ -46,7 +46,10 @@ type BackupPolicy struct {
 	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
+	// This parameter does not affect XDR backups (which always includes all keys).
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
+	// XDR configuration for MRT backups.
+	XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
 }
 
 // NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.
@@ -98,6 +101,9 @@ func (p *BackupPolicy) Validate() error {
 	if err := p.CompressionPolicy.Validate(); err != nil {
 		return err
 	}
+	if err := p.XDRConfig.Validate(); err != nil {
+		return fmt.Errorf("invalid xdr config: %w", err)
+	}
 
 	return nil
 }
@@ -118,6 +124,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		EncryptionPolicy:  p.EncryptionPolicy.ToModel(),
 		CompressionPolicy: p.CompressionPolicy.ToModel(),
 		Sealed:            p.Sealed,
+		XDRConfig:         p.XDRConfig.ToModel(),
 	}
 }
 
@@ -168,6 +175,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 		p.CompressionPolicy.fromModel(m.CompressionPolicy)
 	}
 	p.Sealed = m.Sealed
+	p.XDRConfig = newXDRConfigFromModel(m.XDRConfig)
 }
 
 // RetentionPolicy specifies how many full and incremental backups to keep.

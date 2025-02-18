@@ -3,13 +3,13 @@ package storage
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go"
-	azure "github.com/aerospike/backup-go/io/azure/blob"
+	ioStorage "github.com/aerospike/backup-go/io/storage"
+	azure "github.com/aerospike/backup-go/io/storage/azure/blob"
 )
 
 type AzureStorageAccessor struct{}
@@ -19,49 +19,24 @@ func (a *AzureStorageAccessor) supports(storage model.Storage) bool {
 	return ok
 }
 
-func (a *AzureStorageAccessor) createReader(
-	ctx context.Context, storage model.Storage, path string, isFile bool, filter Validator, startScanFrom string,
+func (a *AzureStorageAccessor) createReader(ctx context.Context, storage model.Storage, opts ...ioStorage.Opt,
 ) (backup.StreamingReader, error) {
 	azures := storage.(*model.AzureStorage)
 	client, err := getAzureClient(azures)
 	if err != nil {
 		return nil, err
 	}
-	opts := []azure.Opt{
-		azure.WithValidator(filter),
-		azure.WithNestedDir(),
-		azure.WithStartAfter(filepath.Join(azures.Path, startScanFrom)),
-	}
-	fullPath := filepath.Join(azures.Path, path)
-	if isFile {
-		opts = append(opts, azure.WithFile(fullPath))
-	} else {
-		opts = append(opts, azure.WithDir(fullPath))
-	}
 
 	return azure.NewReader(ctx, client, azures.ContainerName, opts...)
 }
 
 func (a *AzureStorageAccessor) createWriter(
-	ctx context.Context, storage model.Storage, path string, isFile, isRemoveFiles, withNested bool,
+	ctx context.Context, storage model.Storage, opts ...ioStorage.Opt,
 ) (backup.Writer, error) {
 	azures := storage.(*model.AzureStorage)
 	client, err := getAzureClient(azures)
 	if err != nil {
 		return nil, err
-	}
-	fullPath := filepath.Join(azures.Path, path)
-	var opts []azure.Opt
-	if isFile {
-		opts = append(opts, azure.WithFile(fullPath))
-	} else {
-		opts = append(opts, azure.WithDir(fullPath))
-	}
-	if isRemoveFiles {
-		opts = append(opts, azure.WithRemoveFiles())
-	}
-	if withNested {
-		opts = append(opts, azure.WithNestedDir())
 	}
 
 	return azure.NewWriter(ctx, client, azures.ContainerName, opts...)

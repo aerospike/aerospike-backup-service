@@ -1,10 +1,8 @@
-package service
+package restoreexecutor
 
 import (
 	"context"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -23,6 +21,14 @@ type RestoreHandlerWithCancel struct {
 	cancel func()
 }
 
+// NewRestoreHandlerWithCancel creates a new RestoreHandlerWithCancel.
+func NewRestoreHandlerWithCancel(handler RestoreHandler, cancelFunc func()) *RestoreHandlerWithCancel {
+	return &RestoreHandlerWithCancel{
+		RestoreHandler: handler,
+		cancel:         cancelFunc,
+	}
+}
+
 // Cancel cancels the restore job.
 func (rj *RestoreHandlerWithCancel) Cancel() {
 	rj.cancel()
@@ -31,13 +37,4 @@ func (rj *RestoreHandlerWithCancel) Cancel() {
 // GetStats returns the statistics of the restore job.
 func (rj *RestoreHandlerWithCancel) GetStats() *models.RestoreStats {
 	return rj.RestoreHandler.GetStats()
-}
-
-// Restore represents a restore service.
-type Restore interface {
-	Run(
-		ctx context.Context,
-		client *backup.Client,
-		restoreRequest *model.RestoreRequest,
-	) (RestoreHandler, error)
 }

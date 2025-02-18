@@ -1,4 +1,4 @@
-package service
+package restoreexecutor
 
 import (
 	"context"
@@ -10,33 +10,17 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asb"
+	ioStorage "github.com/aerospike/backup-go/io/storage"
 )
 
-// RestoreRunner implements the [Restore] interface.
-type RestoreRunner struct {
-}
-
-// NewRestore returns a new RestoreRunner instance.
-func NewRestore() *RestoreRunner {
-	return &RestoreRunner{}
-}
-
-// Run initiates the restore operation.
-// A restore handler is returned to monitor the job status.
-func (r *RestoreRunner) Run(
-	ctx context.Context,
-	client *backup.Client,
-	request *model.RestoreRequest,
-) (RestoreHandler, error) {
-	var err error
-
-	config := makeRestoreConfig(request)
-
-	reader, err := storage.CreateReader(ctx, request.SourceStorage, request.BackupDataPath, false, asb.NewValidator(), "")
+func runScanRestore(ctx context.Context, client *backup.Client, request *model.RestoreRequest) (RestoreHandler, error) {
+	reader, err := storage.CreateDirReader(ctx,
+		request.SourceStorage, request.BackupDataPath, ioStorage.WithValidator(asb.NewValidator()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}
 
+	config := makeRestoreConfig(request)
 	handler, err := client.Restore(ctx, config, reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start restore, %w", err)
@@ -46,7 +30,7 @@ func (r *RestoreRunner) Run(
 }
 
 func makeRestoreConfig(restoreRequest *model.RestoreRequest,
-) *backup.RestoreConfig {
+) *backup.ConfigRestore {
 	config := backup.NewDefaultRestoreConfig()
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList

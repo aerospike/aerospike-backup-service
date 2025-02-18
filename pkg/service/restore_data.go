@@ -11,6 +11,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
@@ -35,7 +36,7 @@ func NewErrJobNotFound(id model.RestoreJobID) *ErrJobNotFound {
 type dataRestorer struct {
 	configRetriever
 	restoreJobs    *RestoreJobsHolder
-	restoreService Restore
+	restoreService restoreexecutor.Restore
 	backends       BackendsHolder
 	clientManager  aerospike.ClientManager
 	nsValidator    aerospike.NamespaceValidator
@@ -45,7 +46,7 @@ var _ RestoreManager = (*dataRestorer)(nil)
 
 // NewRestoreManager returns a new dataRestorer instance.
 func NewRestoreManager(backends BackendsHolder,
-	restoreService Restore,
+	restoreService restoreexecutor.Restore,
 	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,
 	nsValidator aerospike.NamespaceValidator,
@@ -93,10 +94,7 @@ func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobI
 		}
 		r.restoreJobs.addTotalRecords(jobID, totalRecords)
 		ctx, cancel := context.WithCancel(ctx)
-		r.restoreJobs.addHandler(jobID, &RestoreHandlerWithCancel{
-			RestoreHandler: handler,
-			cancel:         cancel,
-		})
+		r.restoreJobs.addHandler(jobID, restoreexecutor.NewRestoreHandlerWithCancel(handler, cancel))
 
 		// Wait for the restore operation to complete
 		err = handler.Wait(ctx)
@@ -203,7 +201,7 @@ func (r *dataRestorer) restoreNamespace(
 		return fmt.Errorf("could not determine if namespace %s is empty: %w", fullBackup.Namespace, err)
 	}
 
-	if dbEmpty {
+	if dbEmpty && !request.DisableReordering {
 		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
 		// This way we reduce generation noise and unnecessary load.
 		slices.Reverse(allBackups)
@@ -225,10 +223,7 @@ func (r *dataRestorer) restoreNamespace(
 
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 		ctx, cancel := context.WithCancel(ctx)
-		r.restoreJobs.addHandler(jobID, &RestoreHandlerWithCancel{
-			RestoreHandler: handler,
-			cancel:         cancel,
-		})
+		r.restoreJobs.addHandler(jobID, restoreexecutor.NewRestoreHandlerWithCancel(handler, cancel))
 
 		err = handler.Wait(ctx)
 		if err != nil {
@@ -245,7 +240,7 @@ func (r *dataRestorer) restoreFromPath(
 	request *model.RestoreTimestampRequest,
 	backupPath string,
 	storage model.Storage,
-) (RestoreHandler, error) {
+) (restoreexecutor.RestoreHandler, error) {
 	restoreRequest := model.NewRestoreRequest(
 		request.DestinationCluster,
 		request.Policy,

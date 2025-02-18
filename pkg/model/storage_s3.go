@@ -49,7 +49,9 @@ func (a *S3Authentication) ReadSecrets() (keyID, accessKey string, err error) {
 	return
 }
 
-func (s *S3Storage) storage() {}
+func (s *S3Storage) GetPath() string {
+	return s.Path
+}
 func (s *S3Storage) String() string {
 	return fmt.Sprintf("S3Storage(Bucket: %s, Path: %s)", s.Bucket, s.Path)
 }
