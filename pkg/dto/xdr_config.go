@@ -105,10 +105,10 @@ func (x *XDRConfig) ToModel() *model.XDRConfig {
 		ResultQueueSize: x.ResultQueueSize,
 		AckQueueSize:    x.AckQueueSize,
 		MaxConns:        x.MaxConns,
-		ReadTimeout:     x.ReadTimeout,
-		WriteTimeout:    x.WriteTimeout,
-		StartTimeout:    x.StartTimeout,
-		PollingPeriod:   x.PollingPeriod,
+		ReadTimeout:     millisToDuration(x.ReadTimeout),
+		WriteTimeout:    millisToDuration(x.WriteTimeout),
+		StartTimeout:    millisToDuration(x.StartTimeout),
+		PollingPeriod:   millisToDuration(x.PollingPeriod),
 		InfoRetryPolicy: x.InfoRetryPolicy.ToModel(),
 	}
 }
@@ -124,10 +124,10 @@ func newXDRConfigFromModel(m *model.XDRConfig) *XDRConfig {
 		ResultQueueSize: m.ResultQueueSize,
 		AckQueueSize:    m.AckQueueSize,
 		MaxConns:        m.MaxConns,
-		ReadTimeout:     m.ReadTimeout,
-		WriteTimeout:    m.WriteTimeout,
-		StartTimeout:    m.StartTimeout,
-		PollingPeriod:   m.PollingPeriod,
+		ReadTimeout:     durationToMillis(m.ReadTimeout),
+		WriteTimeout:    durationToMillis(m.WriteTimeout),
+		StartTimeout:    durationToMillis(m.StartTimeout),
+		PollingPeriod:   durationToMillis(m.PollingPeriod),
 		InfoRetryPolicy: newRetryPolicyFromModel(m.InfoRetryPolicy),
 	}
 }
