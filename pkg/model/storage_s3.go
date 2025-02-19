@@ -1,6 +1,10 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+)
 
 type S3Storage struct {
 	// Path is the root directory within the S3 bucket where backups will be stored.
@@ -23,6 +27,8 @@ type S3Storage struct {
 	MaxConnsPerHost int
 	// Optional authentication.
 	Auth *S3Authentication
+	// StorageClass defines the storage class for data and metadata objects.
+	StorageClass *S3StorageClass
 }
 
 type S3Authentication struct {
@@ -54,4 +60,9 @@ func (s *S3Storage) GetPath() string {
 }
 func (s *S3Storage) String() string {
 	return fmt.Sprintf("S3Storage(Bucket: %s, Path: %s)", s.Bucket, s.Path)
+}
+
+type S3StorageClass struct {
+	DataClass     *types.ObjectStorageClass
+	MetadataClass *types.ObjectStorageClass
 }
