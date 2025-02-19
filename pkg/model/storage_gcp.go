@@ -19,6 +19,16 @@ type GcpStorage struct {
 	SecretAgent *SecretAgent
 }
 
+func (s *GcpStorage) GetMetadataStorageClass() string {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *GcpStorage) GetDataStorageClass() string {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s *GcpStorage) GetPath() string {
 	return s.Path
 }

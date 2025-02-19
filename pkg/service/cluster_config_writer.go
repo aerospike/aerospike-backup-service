@@ -46,7 +46,7 @@ func (w *DefaultClusterConfigWriter) Write(
 
 	for i, info := range infos {
 		confFilePath := getConfigurationPath(w.routineName, timestamp, i)
-		err := storage.WriteFile(ctx, w.storage, confFilePath, []byte(info))
+		err := storage.WriteFile(ctx, w.storage, confFilePath, w.storage.GetDataStorageClass(), []byte(info))
 		if err != nil {
 			w.logger.Error("Failed to write cluster configuration backup",
 				slog.Any("err", err))

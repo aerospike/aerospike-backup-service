@@ -17,6 +17,16 @@ type AzureStorage struct {
 	SecretAgent *SecretAgent
 }
 
+func (s *AzureStorage) GetMetadataStorageClass() string {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *AzureStorage) GetDataStorageClass() string {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s *AzureStorage) GetPath() string {
 	return s.Path
 }

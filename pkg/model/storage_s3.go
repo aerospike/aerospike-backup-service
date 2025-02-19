@@ -31,6 +31,21 @@ type S3Storage struct {
 	StorageClass *S3StorageClass
 }
 
+func (s *S3Storage) GetMetadataStorageClass() string {
+	if s.StorageClass == nil || s.StorageClass.MetadataClass == nil {
+		return ""
+	}
+
+	return string(*s.StorageClass.MetadataClass)
+}
+
+func (s *S3Storage) GetDataStorageClass() string {
+	if s.StorageClass == nil || s.StorageClass.DataClass == nil {
+		return ""
+	}
+	return string(*s.StorageClass.DataClass)
+}
+
 type S3Authentication struct {
 	KeyIDSecret     string
 	AccessKeySecret string

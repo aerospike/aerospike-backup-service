@@ -131,8 +131,8 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 	}
 }
 
-func WriteFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {
-	writer, err := CreateFileWriter(ctx, storage, fileName)
+func WriteFile(ctx context.Context, storage model.Storage, fileName, storageClass string, content []byte) error {
+	writer, err := CreateFileWriter(ctx, storage, fileName, ioStorage.WithStorageClass(storageClass))
 	if err != nil {
 		return fmt.Errorf("failed to create writer: %w", err)
 	}
