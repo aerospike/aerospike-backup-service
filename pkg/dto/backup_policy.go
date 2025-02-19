@@ -140,7 +140,7 @@ func durationToMillis(duration *time.Duration) *int64 {
 	if duration == nil {
 		return nil
 	}
-	ms := int64(*duration / time.Millisecond)
+	ms := duration.Milliseconds()
 	return &ms
 }
 
