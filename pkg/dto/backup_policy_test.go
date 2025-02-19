@@ -9,8 +9,8 @@ import (
 
 func TestBackupPolicyConversionIsLossless(t *testing.T) {
 	parallel := 4
-	socketTimeout := 5000
-	totalTimeout := 10000
+	socketTimeout := int64(5000)
+	totalTimeout := int64(10000)
 	retryPolicy := &RetryPolicy{MaxRetries: 3}
 	noRecords := true
 	noIndexes := false

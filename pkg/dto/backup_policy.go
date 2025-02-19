@@ -16,9 +16,9 @@ type BackupPolicy struct {
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
 	// Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
+	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
-	TotalTimeout *int `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`
+	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`
 	// RetryPolicy defines the configuration for retry attempts in case of failures.
 	// If nil, default policy is used.
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
@@ -128,7 +128,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 	}
 }
 
-func millisToDuration(ms *int) *time.Duration {
+func millisToDuration(ms *int64) *time.Duration {
 	if ms == nil {
 		return nil
 	}
@@ -136,11 +136,11 @@ func millisToDuration(ms *int) *time.Duration {
 	return &duration
 }
 
-func durationToMillis(d *time.Duration) *int {
-	if d == nil {
+func durationToMillis(duration *time.Duration) *int64 {
+	if duration == nil {
 		return nil
 	}
-	ms := int((*d) / time.Millisecond)
+	ms := duration.Milliseconds()
 	return &ms
 }
 
