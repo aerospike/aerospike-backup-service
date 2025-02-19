@@ -18,7 +18,7 @@ type AerospikeCluster struct {
 	// The seed nodes details.
 	SeedNodes []SeedNode `yaml:"seed-nodes,omitempty" json:"seed-nodes,omitempty"`
 	// The connection timeout in milliseconds.
-	ConnTimeout *int `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty" example:"5000"`
+	ConnTimeout *int64 `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty" example:"5000"`
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
 	UseServicesAlternate *bool `yaml:"use-services-alternate,omitempty" json:"use-services-alternate,omitempty"`
 	// The authentication details to the Aerospike cluster.

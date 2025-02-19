@@ -57,10 +57,10 @@ var defaultConfig = struct {
 	},
 	xdrConfig: XDRConfig{
 		MaxConns:        util.Ptr(100),
-		ReadTimeout:     util.Ptr(int64(1_000)),
-		WriteTimeout:    util.Ptr(int64(1_000)),
-		StartTimeout:    util.Ptr(int64(30_000)),
-		PollingPeriod:   util.Ptr(int64(1_000)),
+		ReadTimeout:     util.Ptr(1 * time.Second),
+		WriteTimeout:    util.Ptr(1 * time.Second),
+		StartTimeout:    util.Ptr(30 * time.Second),
+		PollingPeriod:   util.Ptr(1 * time.Second),
 		ResultQueueSize: util.Ptr(256),
 		AckQueueSize:    util.Ptr(256),
 		InfoRetryPolicy: &models.RetryPolicy{

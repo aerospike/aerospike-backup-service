@@ -20,7 +20,7 @@ type HTTPServerConfig struct {
 	// ContextPath customizes path for the API endpoints.
 	ContextPath *string `yaml:"context-path,omitempty" json:"context-path,omitempty" default:"/"`
 	// Timeout for http server operations in milliseconds.
-	Timeout *int `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"5000"`
+	Timeout *int64 `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"5000"`
 }
 
 // Validate validates the HTTP server configuration.
