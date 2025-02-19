@@ -2931,9 +2931,36 @@
           "secret-agent-name" : {
             "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
             "type" : "string"
+          },
+          "storage-class" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.S3StorageClass"
+            } ],
+            "description" : "StorageClass defines the storage class for data and metadata objects.",
+            "type" : "object"
           }
         },
         "required" : [ "bucket", "s3-region" ],
+        "type" : "object"
+      },
+      "dto.S3StorageClass" : {
+        "description" : "S3StorageClass represents the configuration for S3 Storage Class.",
+        "properties" : {
+          "data" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.StorageClass"
+            } ],
+            "description" : "DataClass specifies the storage class for object data",
+            "type" : "object"
+          },
+          "metadata" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.StorageClass"
+            } ],
+            "description" : "MetadataClass specifies the storage class for metadata",
+            "type" : "object"
+          }
+        },
         "type" : "object"
       },
       "dto.SecretAgent" : {
@@ -3028,6 +3055,12 @@
           }
         },
         "type" : "object"
+      },
+      "dto.StorageClass" : {
+        "description" : "Storage classes available on Amazon S3",
+        "enum" : [ "STANDARD", "REDUCED_REDUNDANCY", "GLACIER", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING", "DEEP_ARCHIVE", "OUTPOSTS", "GLACIER_IR", "SNOW", "EXPRESS_ONEZONE" ],
+        "type" : "string",
+        "x-enum-varnames" : [ "StorageClassStandard", "StorageClassReducedRedundancy", "StorageClassGlacier", "StorageClassStandardIa", "StorageClassOnezoneIa", "StorageClassIntelligentTiering", "StorageClassDeepArchive", "StorageClassOutposts", "StorageClassGlacierIr", "StorageClassSnow", "StorageClassExpressOnezone" ]
       },
       "dto.TLS" : {
         "description" : "TLS represents the Aerospike cluster TLS configuration options.",
