@@ -63,6 +63,6 @@ func (s *S3Storage) String() string {
 }
 
 type S3StorageClass struct {
-	DataClass     *types.ObjectStorageClass
-	MetadataClass *types.ObjectStorageClass
+	DataClass     *types.StorageClass
+	MetadataClass *types.StorageClass
 }
