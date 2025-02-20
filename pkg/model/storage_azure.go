@@ -15,10 +15,8 @@ type AzureStorage struct {
 	Auth AzureAuth
 	// SecretAgent configuration to fetch keyfile from a secret store (optional).
 	SecretAgent *SecretAgent
-}
-
-func (s *AzureStorage) GetStorageClass() StorageClass {
-	return StorageClass{}
+	// StorageClass defines the storage class for data and metadata objects.
+	StorageClass *StorageClass
 }
 
 func (s *AzureStorage) GetPath() string {
@@ -56,3 +54,11 @@ type AzureADAuth struct {
 }
 
 func (AzureADAuth) azureAuth() {}
+
+func (s *AzureStorage) GetStorageClass() StorageClass {
+	if s.StorageClass == nil {
+		return StorageClass{}
+	}
+
+	return *s.StorageClass
+}

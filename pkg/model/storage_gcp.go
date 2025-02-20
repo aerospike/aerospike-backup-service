@@ -17,10 +17,8 @@ type GcpStorage struct {
 	Endpoint string
 	// SecretAgent configuration to fetch keyfile from a secret store (optional).
 	SecretAgent *SecretAgent
-}
-
-func (s *GcpStorage) GetStorageClass() StorageClass {
-	return StorageClass{}
+	// StorageClass defines the storage class for data and metadata objects.
+	StorageClass *StorageClass
 }
 
 func (s *GcpStorage) GetPath() string {
@@ -29,4 +27,12 @@ func (s *GcpStorage) GetPath() string {
 
 func (s *GcpStorage) String() string {
 	return fmt.Sprintf("GcpStorage(Bucket: %s, Path: %s)", s.BucketName, s.Path)
+}
+
+func (s *GcpStorage) GetStorageClass() StorageClass {
+	if s.StorageClass == nil {
+		return StorageClass{}
+	}
+
+	return *s.StorageClass
 }

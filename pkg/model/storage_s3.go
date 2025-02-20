@@ -30,14 +30,6 @@ type S3Storage struct {
 	StorageClass *StorageClass
 }
 
-func (s *S3Storage) GetStorageClass() StorageClass {
-	if s.StorageClass == nil {
-		return StorageClass{}
-	}
-
-	return *s.StorageClass
-}
-
 type S3Authentication struct {
 	KeyIDSecret     string
 	AccessKeySecret string
@@ -69,7 +61,10 @@ func (s *S3Storage) String() string {
 	return fmt.Sprintf("S3Storage(Bucket: %s, Path: %s)", s.Bucket, s.Path)
 }
 
-type StorageClass struct {
-	DataClass     string
-	MetadataClass string
+func (s *S3Storage) GetStorageClass() StorageClass {
+	if s.StorageClass == nil {
+		return StorageClass{}
+	}
+
+	return *s.StorageClass
 }

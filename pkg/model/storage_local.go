@@ -9,6 +9,11 @@ type Storage interface {
 	GetStorageClass() StorageClass
 }
 
+type StorageClass struct {
+	DataClass     string
+	MetadataClass string
+}
+
 type LocalStorage struct {
 	// Path is the root directory where backups will be stored locally.
 	Path string
