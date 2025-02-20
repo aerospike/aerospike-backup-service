@@ -112,34 +112,31 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 	return result
 }
 
-// StorageClass represents the different types of storage classes available on Amazon S3.
+// Storage classes represents the different types of storage classes available on Amazon S3.
 // See https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html for more details.
-// @Description Storage classes available on Amazon S3
-type StorageClass string
-
 const (
-	StorageClassStandard           StorageClass = "STANDARD"
-	StorageClassReducedRedundancy  StorageClass = "REDUCED_REDUNDANCY"
-	StorageClassGlacier            StorageClass = "GLACIER"
-	StorageClassStandardIa         StorageClass = "STANDARD_IA"
-	StorageClassOnezoneIa          StorageClass = "ONEZONE_IA"
-	StorageClassIntelligentTiering StorageClass = "INTELLIGENT_TIERING"
-	StorageClassDeepArchive        StorageClass = "DEEP_ARCHIVE"
-	StorageClassOutposts           StorageClass = "OUTPOSTS"
-	StorageClassGlacierIr          StorageClass = "GLACIER_IR"
-	StorageClassSnow               StorageClass = "SNOW"
-	StorageClassExpressOnezone     StorageClass = "EXPRESS_ONEZONE"
+	StorageClassStandard           = "STANDARD"
+	StorageClassReducedRedundancy  = "REDUCED_REDUNDANCY"
+	StorageClassGlacier            = "GLACIER"
+	StorageClassStandardIa         = "STANDARD_IA"
+	StorageClassOnezoneIa          = "ONEZONE_IA"
+	StorageClassIntelligentTiering = "INTELLIGENT_TIERING"
+	StorageClassDeepArchive        = "DEEP_ARCHIVE"
+	StorageClassOutposts           = "OUTPOSTS"
+	StorageClassGlacierIr          = "GLACIER_IR"
+	StorageClassSnow               = "SNOW"
+	StorageClassExpressOnezone     = "EXPRESS_ONEZONE"
 )
 
 // metadata should only be stored in classes with fast retrieval time.
-var s3metadataClasses = []StorageClass{
+var s3metadataClasses = []string{
 	StorageClassStandard,
 	StorageClassIntelligentTiering,
 	StorageClassExpressOnezone,
 }
 
 // backup data can be stored in any class.
-var s3dataClasses = []StorageClass{
+var s3dataClasses = []string{
 	StorageClassStandard,
 	StorageClassReducedRedundancy,
 	StorageClassGlacier,
@@ -157,10 +154,10 @@ var s3dataClasses = []StorageClass{
 // @Description S3StorageClass represents the configuration for S3 Storage Class.
 type S3StorageClass struct {
 	// DataClass specifies the storage class for object data
-	DataClass *StorageClass `json:"data" yaml:"data"`
+	DataClass *string `json:"data" yaml:"data"`
 
 	// MetadataClass specifies the storage class for metadata
-	MetadataClass *StorageClass `json:"metadata" yaml:"metadata"`
+	MetadataClass *string `json:"metadata" yaml:"metadata"`
 }
 
 func (s *S3StorageClass) Validate() error {
@@ -196,7 +193,7 @@ func newS3StorageClassFromModel(s *model.S3StorageClass) *S3StorageClass {
 	}
 
 	return &S3StorageClass{
-		DataClass:     (*StorageClass)(s.DataClass),
-		MetadataClass: (*StorageClass)(s.MetadataClass),
+		DataClass:     (*string)(s.DataClass),
+		MetadataClass: (*string)(s.MetadataClass),
 	}
 }
