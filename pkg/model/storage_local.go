@@ -6,8 +6,7 @@ import "fmt"
 // This interface is implemented by all specific storage types.
 type Storage interface {
 	GetPath() string
-	GetDataStorageClass() string
-	GetMetadataStorageClass() string
+	GetStorageClass() StorageClass
 }
 
 type LocalStorage struct {
@@ -15,12 +14,8 @@ type LocalStorage struct {
 	Path string
 }
 
-func (s *LocalStorage) GetMetadataStorageClass() string {
-	return ""
-}
-
-func (s *LocalStorage) GetDataStorageClass() string {
-	return ""
+func (s *LocalStorage) GetStorageClass() StorageClass {
+	return StorageClass{}
 }
 
 func (s *LocalStorage) GetPath() string {

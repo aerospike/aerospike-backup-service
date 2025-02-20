@@ -2,11 +2,10 @@ package model
 
 import (
 	"fmt"
-
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 type S3Storage struct {
+
 	// Path is the root directory within the S3 bucket where backups will be stored.
 	// It should not include the bucket name.
 	Path string
@@ -28,22 +27,15 @@ type S3Storage struct {
 	// Optional authentication.
 	Auth *S3Authentication
 	// StorageClass defines the storage class for data and metadata objects.
-	StorageClass *S3StorageClass
+	StorageClass *StorageClass
 }
 
-func (s *S3Storage) GetMetadataStorageClass() string {
-	if s.StorageClass == nil || s.StorageClass.MetadataClass == nil {
-		return ""
+func (s *S3Storage) GetStorageClass() StorageClass {
+	if s.StorageClass == nil {
+		return StorageClass{}
 	}
 
-	return string(*s.StorageClass.MetadataClass)
-}
-
-func (s *S3Storage) GetDataStorageClass() string {
-	if s.StorageClass == nil || s.StorageClass.DataClass == nil {
-		return ""
-	}
-	return string(*s.StorageClass.DataClass)
+	return *s.StorageClass
 }
 
 type S3Authentication struct {
@@ -77,7 +69,7 @@ func (s *S3Storage) String() string {
 	return fmt.Sprintf("S3Storage(Bucket: %s, Path: %s)", s.Bucket, s.Path)
 }
 
-type S3StorageClass struct {
-	DataClass     *types.StorageClass
-	MetadataClass *types.StorageClass
+type StorageClass struct {
+	DataClass     string
+	MetadataClass string
 }

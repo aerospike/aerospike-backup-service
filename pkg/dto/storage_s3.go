@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 // S3Storage represents the configuration for S3 storage.
@@ -116,7 +115,6 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 // See https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html for more details.
 const (
 	StorageClassStandard           = "STANDARD"
-	StorageClassReducedRedundancy  = "REDUCED_REDUNDANCY"
 	StorageClassGlacier            = "GLACIER"
 	StorageClassStandardIa         = "STANDARD_IA"
 	StorageClassOnezoneIa          = "ONEZONE_IA"
@@ -130,15 +128,19 @@ const (
 
 // metadata should only be stored in classes with fast retrieval time.
 var s3metadataClasses = []string{
+	"",
 	StorageClassStandard,
+	StorageClassStandardIa,
 	StorageClassIntelligentTiering,
 	StorageClassExpressOnezone,
+	StorageClassOnezoneIa,
+	StorageClassOutposts,
 }
 
 // backup data can be stored in any class.
 var s3dataClasses = []string{
+	"",
 	StorageClassStandard,
-	StorageClassReducedRedundancy,
 	StorageClassGlacier,
 	StorageClassStandardIa,
 	StorageClassOnezoneIa,
@@ -154,10 +156,10 @@ var s3dataClasses = []string{
 // @Description S3StorageClass represents the configuration for S3 Storage Class.
 type S3StorageClass struct {
 	// DataClass specifies the storage class for object data
-	DataClass *string `json:"data" yaml:"data"`
+	DataClass string `json:"data" yaml:"data"`
 
 	// MetadataClass specifies the storage class for metadata
-	MetadataClass *string `json:"metadata" yaml:"metadata"`
+	MetadataClass string `json:"metadata" yaml:"metadata"`
 }
 
 func (s *S3StorageClass) Validate() error {
@@ -165,35 +167,35 @@ func (s *S3StorageClass) Validate() error {
 		return nil
 	}
 
-	if s.DataClass != nil && !slices.Contains(s3dataClasses, *s.DataClass) {
+	if !slices.Contains(s3dataClasses, s.DataClass) {
 		return errValidationInvalidValue("data", s.DataClass, s3dataClasses)
 	}
 
-	if s.MetadataClass != nil && !slices.Contains(s3metadataClasses, *s.MetadataClass) {
+	if !slices.Contains(s3metadataClasses, s.MetadataClass) {
 		return errValidationInvalidValue("metadata", s.MetadataClass, s3metadataClasses)
 	}
 
 	return nil
 }
 
-func (s *S3StorageClass) ToModel() *model.S3StorageClass {
+func (s *S3StorageClass) ToModel() *model.StorageClass {
 	if s == nil {
 		return nil
 	}
 
-	return &model.S3StorageClass{
-		DataClass:     (*types.StorageClass)(s.DataClass),
-		MetadataClass: (*types.StorageClass)(s.MetadataClass),
+	return &model.StorageClass{
+		DataClass:     s.DataClass,
+		MetadataClass: s.MetadataClass,
 	}
 }
 
-func newS3StorageClassFromModel(s *model.S3StorageClass) *S3StorageClass {
+func newS3StorageClassFromModel(s *model.StorageClass) *S3StorageClass {
 	if s == nil {
 		return nil
 	}
 
 	return &S3StorageClass{
-		DataClass:     (*string)(s.DataClass),
-		MetadataClass: (*string)(s.MetadataClass),
+		DataClass:     s.DataClass,
+		MetadataClass: s.MetadataClass,
 	}
 }

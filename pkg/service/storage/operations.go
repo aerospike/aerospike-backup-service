@@ -131,7 +131,15 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 	}
 }
 
-func WriteFile(ctx context.Context, storage model.Storage, fileName, storageClass string, content []byte) error {
+func WriteMetadataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {
+	return writeFile(ctx, storage, fileName, storage.GetStorageClass().MetadataClass, content)
+}
+
+func WriteDataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {
+	return writeFile(ctx, storage, fileName, storage.GetStorageClass().DataClass, content)
+}
+
+func writeFile(ctx context.Context, storage model.Storage, fileName, storageClass string, content []byte) error {
 	writer, err := CreateFileWriter(ctx, storage, fileName, ioStorage.WithStorageClass(storageClass))
 	if err != nil {
 		return fmt.Errorf("failed to create writer: %w", err)

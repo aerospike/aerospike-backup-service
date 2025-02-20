@@ -42,7 +42,7 @@ func (r *DefaultBackupExecutor) Run(
 	path string,
 ) (BackupHandler, error) {
 	xdrEnabled := routine.BackupPolicy.XDRConfig != nil
-	withStorageClass := ioStorage.WithStorageClass(routine.Storage.GetDataStorageClass())
+	withStorageClass := ioStorage.WithStorageClass(routine.Storage.GetStorageClass().DataClass)
 	writer, err := storage.CreateDirWriter(ctx, routine.Storage, path, withStorageClass)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer: %w", err)
