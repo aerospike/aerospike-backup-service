@@ -23,7 +23,7 @@ type GcpStorage struct {
 	// Alternative url.
 	// It is not recommended to use an alternate URL in a production environment.
 	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
-	// StorageClass defines the storage class for data and metadata objects
+	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *GcpStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
 

@@ -2368,7 +2368,7 @@
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.GcpStorageClass"
             } ],
-            "description" : "StorageClass defines the storage class for data and metadata objects",
+            "description" : "StorageClass defines the storage class for data and metadata objects.",
             "type" : "object"
           }
         },

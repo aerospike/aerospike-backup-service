@@ -1895,7 +1895,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/dto.GcpStorageClass'
           description: StorageClass defines the storage class for data and metadata
-            objects
+            objects.
           type: object
       required:
       - bucket-name

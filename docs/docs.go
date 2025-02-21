@@ -2196,7 +2196,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "storage-class": {
-                    "description": "StorageClass defines the storage class for data and metadata objects",
+                    "description": "StorageClass defines the storage class for data and metadata objects.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.GcpStorageClass"
