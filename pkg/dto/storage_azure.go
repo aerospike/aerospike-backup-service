@@ -119,15 +119,16 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 const (
 	AzureTierHot     = "Hot"
 	AzureTierCool    = "Cool"
+	AzureTierCold    = "Cold"
 	AzureTierArchive = "Archive"
-	AzureTierPremium = "Premium"
 )
 
 // metadata should only be stored in tiers with fast retrieval time.
 var azureMetadataTiers = []string{
 	"",
 	AzureTierHot,
-	AzureTierPremium,
+	AzureTierCool,
+	AzureTierCold,
 }
 
 // data can be stored in any tier.
@@ -135,8 +136,8 @@ var azureDataTiers = []string{
 	"",
 	AzureTierHot,
 	AzureTierCool,
+	AzureTierCold,
 	AzureTierArchive,
-	AzureTierPremium,
 }
 
 // AzureStorageClass represents the configuration for Azure Blob Storage access tiers.
