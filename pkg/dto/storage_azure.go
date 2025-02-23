@@ -142,10 +142,10 @@ var azureDataTiers = []string{
 
 // AzureStorageClass represents the configuration for Azure Blob Storage access tiers.
 type AzureStorageClass struct {
-	// DataClass specifies the storage tier for object data
+	// DataClass specifies the storage tier for object data.
 	DataClass string `json:"data" yaml:"data"`
 
-	// MetadataClass specifies the storage tier for metadata
+	// MetadataClass specifies the storage tier for metadata.
 	MetadataClass string `json:"metadata" yaml:"metadata"`
 }
 

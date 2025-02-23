@@ -91,7 +91,7 @@ var gcpDataClasses = []string{
 
 // GcpStorageClass represents the configuration for GCP Storage Class.
 type GcpStorageClass struct {
-	// DataClass specifies the storage class for object data
+	// DataClass specifies the storage class for object data.
 	DataClass string `json:"data" yaml:"data"`
 }
 

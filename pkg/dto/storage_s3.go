@@ -155,10 +155,10 @@ var s3dataClasses = []string{
 // S3StorageClass represents the configuration for S3 Storage Class.
 // @Description S3StorageClass represents the configuration for S3 Storage Class.
 type S3StorageClass struct {
-	// DataClass specifies the storage class for object data
+	// DataClass specifies the storage class for object data.
 	DataClass string `json:"data" yaml:"data"`
 
-	// MetadataClass specifies the storage class for metadata
+	// MetadataClass specifies the storage class for metadata.
 	MetadataClass string `json:"metadata" yaml:"metadata"`
 }
 
