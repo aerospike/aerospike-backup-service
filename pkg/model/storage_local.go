@@ -9,6 +9,7 @@ type Storage interface {
 	GetStorageClass() StorageClass
 }
 
+// StorageClass defines the storage class of data and metadata.
 type StorageClass struct {
 	DataClass     string
 	MetadataClass string
