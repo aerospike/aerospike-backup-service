@@ -75,6 +75,10 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(ctx context.Context,
 		go func(routineName string, routineReader BackupMetadataReader) {
 			defer r.ready.Done()
 
+			if _, ok := r.lastSuccessful.Load(routineName); ok {
+				return // already initialized
+			}
+
 			lastRun := routineReader.FindLastRun(ctx)
 			slog.Info("Last run", slog.String(routine, lastRun.String()))
 
