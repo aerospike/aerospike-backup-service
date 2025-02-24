@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ type RunningBackupsRegistry interface {
 	GetRunningState() map[string]*model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.
 	Cancel(routineName string)
+	StartBackupHistorySync(ctx context.Context, backends BackendsHolder)
 }
 type registryKey struct {
 	routineName string
@@ -60,19 +62,22 @@ func NewRunningBackupsRegistry(ctx context.Context, backends BackendsHolder) *Ru
 		lastSuccessful: util.NewSafeMap[string, *model.LastBackupRun](),
 	}
 
-	registry.startBackupHistorySync(ctx, backends)
+	registry.StartBackupHistorySync(ctx, backends)
 	return registry
 }
 
-// startBackupHistorySync updates the backup registry with the most recent backup timestamps
+// StartBackupHistorySync updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
-func (r *RunningBackupsRegistryImpl) startBackupHistorySync(ctx context.Context, backends BackendsHolder) {
+func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(ctx context.Context, backends BackendsHolder) {
+	slog.Info("Start backup history sync")
 	for routine, reader := range backends.GetAllReaders() {
 		r.ready.Add(1)
 		go func(routineName string, routineReader BackupMetadataReader) {
 			defer r.ready.Done()
 
 			lastRun := routineReader.FindLastRun(ctx)
+			slog.Info("Last run", slog.String(routine, lastRun.String()))
+
 			if lastRun.FullBackupTime() != nil {
 				r.setLastTime(routineName, jobTypeFull, *lastRun.FullBackupTime())
 			}

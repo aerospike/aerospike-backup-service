@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -59,4 +60,21 @@ func (r *LastBackupRun) IncrementalBackupTime() *time.Time {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.incremental
+}
+
+func (r *LastBackupRun) String() string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	full := "nil"
+	if r.full != nil {
+		full = r.full.Format(time.RFC3339)
+	}
+
+	incremental := "nil"
+	if r.incremental != nil {
+		incremental = r.incremental.Format(time.RFC3339)
+	}
+
+	return fmt.Sprintf("Full: %s, Incremental: %s", full, incremental)
 }

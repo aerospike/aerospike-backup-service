@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -51,6 +52,7 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.Backu
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
 	a.backends.Init(routines)
+	a.registry.StartBackupHistorySync(context.TODO(), a.backends)
 
 	// Refill handlers
 	newHandlers := makeHandlers(a.clientManager, routines, a.backends, a.registry)
