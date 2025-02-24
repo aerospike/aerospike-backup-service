@@ -1,8 +1,11 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type S3Storage struct {
+
 	// Path is the root directory within the S3 bucket where backups will be stored.
 	// It should not include the bucket name.
 	Path string
@@ -23,6 +26,8 @@ type S3Storage struct {
 	MaxConnsPerHost int
 	// Optional authentication.
 	Auth *S3Authentication
+	// StorageClass defines the storage class for data and metadata objects.
+	StorageClass *StorageClass
 }
 
 type S3Authentication struct {
@@ -54,4 +59,12 @@ func (s *S3Storage) GetPath() string {
 }
 func (s *S3Storage) String() string {
 	return fmt.Sprintf("S3Storage(Bucket: %s, Path: %s)", s.Bucket, s.Path)
+}
+
+func (s *S3Storage) GetStorageClass() StorageClass {
+	if s.StorageClass == nil {
+		return StorageClass{}
+	}
+
+	return *s.StorageClass
 }

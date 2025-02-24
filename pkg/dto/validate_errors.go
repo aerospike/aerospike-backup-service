@@ -12,6 +12,7 @@ var (
 	errNotFound          = fmt.Errorf("not found %w", errValidation)
 	errNonPositive       = fmt.Errorf("non-positive value %w", errValidation)
 	errNegative          = fmt.Errorf("negative value %w", errValidation)
+	errInvalidValue      = fmt.Errorf("invalid value %w", errValidation)
 )
 
 func errValidationRequiredEither(field1, field2 string) error {
@@ -36,4 +37,9 @@ func errValidationNonPositive[T ~int | ~int8 | ~int16 | ~int32 | ~int64](field s
 
 func errValidationNegative[T ~int | ~int8 | ~int16 | ~int32 | ~int64](field string, value T) error {
 	return fmt.Errorf("%w: %q %d invalid, should not be negative number", errNegative, field, value)
+}
+
+func errValidationInvalidValue(field, value any, allowed any) error {
+	return fmt.Errorf("%w: %q is not a valid %s. Allowed values: %v",
+		errInvalidValue, value, field, allowed)
 }

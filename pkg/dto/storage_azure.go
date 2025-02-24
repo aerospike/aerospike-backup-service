@@ -2,6 +2,8 @@ package dto
 
 import (
 	"errors"
+	"fmt"
+	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -28,6 +30,8 @@ type AzureStorage struct {
 	// ClientSecret is the Azure Active Directory client secret for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty"`
+	// StorageClass defines the storage tier for data and metadata objects.
+	StorageClass *AzureStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
 
 // Validate checks if the AzureStorage is valid.
@@ -47,6 +51,9 @@ func (a *AzureStorage) Validate() error {
 		return errors.New(`azure storage authentication method is ambiguous:
 use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 	}
+	if err := a.StorageClass.Validate(); err != nil {
+		return fmt.Errorf("invalid storage class: %w", err)
+	}
 
 	return nil
 }
@@ -62,6 +69,7 @@ func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
 		Path:          a.Path,
 		Auth:          getAzureAuth(a),
 		SecretAgent:   agent,
+		StorageClass:  a.StorageClass.ToModel(),
 	}, nil
 }
 
@@ -90,6 +98,7 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 		ContainerName:     s.ContainerName,
 		Path:              s.Path,
 		SecretAgentConfig: ResolveSecretAgentFromModel(s.SecretAgent, config),
+		StorageClass:      newAzureStorageClassFromModel(s.StorageClass),
 	}
 
 	switch auth := s.Auth.(type) {
@@ -103,4 +112,77 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 	}
 
 	return azureStorage
+}
+
+// Azure Storage Tiers
+// See https://learn.microsoft.com/en-us/azure/storage/blobs/access-tiers-overview
+const (
+	AzureTierHot     = "Hot"
+	AzureTierCool    = "Cool"
+	AzureTierCold    = "Cold"
+	AzureTierArchive = "Archive"
+)
+
+// metadata should only be stored in tiers with fast retrieval time.
+var azureMetadataTiers = []string{
+	"",
+	AzureTierHot,
+	AzureTierCool,
+	AzureTierCold,
+}
+
+// data can be stored in any tier.
+var azureDataTiers = []string{
+	"",
+	AzureTierHot,
+	AzureTierCool,
+	AzureTierCold,
+	AzureTierArchive,
+}
+
+// AzureStorageClass represents the configuration for Azure Blob Storage access tiers.
+type AzureStorageClass struct {
+	// DataClass specifies the storage tier for object data.
+	DataClass string `json:"data" yaml:"data"`
+
+	// MetadataClass specifies the storage tier for metadata.
+	MetadataClass string `json:"metadata" yaml:"metadata"`
+}
+
+func (s *AzureStorageClass) Validate() error {
+	if s == nil {
+		return nil
+	}
+
+	if !slices.Contains(azureDataTiers, s.DataClass) {
+		return errValidationInvalidValue("data", s.DataClass, azureDataTiers)
+	}
+
+	if !slices.Contains(azureMetadataTiers, s.MetadataClass) {
+		return errValidationInvalidValue("metadata", s.MetadataClass, azureMetadataTiers)
+	}
+
+	return nil
+}
+
+func (s *AzureStorageClass) ToModel() *model.StorageClass {
+	if s == nil {
+		return nil
+	}
+
+	return &model.StorageClass{
+		DataClass:     s.DataClass,
+		MetadataClass: s.MetadataClass,
+	}
+}
+
+func newAzureStorageClassFromModel(s *model.StorageClass) *AzureStorageClass {
+	if s == nil {
+		return nil
+	}
+
+	return &AzureStorageClass{
+		DataClass:     s.DataClass,
+		MetadataClass: s.MetadataClass,
+	}
 }

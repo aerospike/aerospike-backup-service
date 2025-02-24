@@ -6,11 +6,22 @@ import "fmt"
 // This interface is implemented by all specific storage types.
 type Storage interface {
 	GetPath() string
+	GetStorageClass() StorageClass
+}
+
+// StorageClass defines the storage class of data and metadata.
+type StorageClass struct {
+	DataClass     string
+	MetadataClass string
 }
 
 type LocalStorage struct {
 	// Path is the root directory where backups will be stored locally.
 	Path string
+}
+
+func (s *LocalStorage) GetStorageClass() StorageClass {
+	return StorageClass{}
 }
 
 func (s *LocalStorage) GetPath() string {

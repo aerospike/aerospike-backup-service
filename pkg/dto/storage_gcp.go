@@ -2,6 +2,8 @@ package dto
 
 import (
 	"errors"
+	"fmt"
+	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -21,6 +23,8 @@ type GcpStorage struct {
 	// Alternative url.
 	// It is not recommended to use an alternate URL in a production environment.
 	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
+	// StorageClass defines the storage class for data and metadata objects.
+	StorageClass *GcpStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
 
 // Validate checks if the GcpStorage is valid.
@@ -31,6 +35,10 @@ func (s *GcpStorage) Validate() error {
 	if s.KeyFile != "" && s.Key != "" {
 		return errValidationMutuallyExclusive("key-file-path", "key-json")
 	}
+	if err := s.StorageClass.Validate(); err != nil {
+		return fmt.Errorf("invalid storage class: %w", err)
+	}
+
 	return nil
 }
 
@@ -41,12 +49,13 @@ func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
 	}
 
 	return &model.GcpStorage{
-		KeyFile:     s.KeyFile,
-		BucketName:  s.BucketName,
-		Path:        s.Path,
-		Endpoint:    s.Endpoint,
-		KeyJSON:     s.Key,
-		SecretAgent: agent,
+		KeyFile:      s.KeyFile,
+		BucketName:   s.BucketName,
+		Path:         s.Path,
+		Endpoint:     s.Endpoint,
+		KeyJSON:      s.Key,
+		SecretAgent:  agent,
+		StorageClass: s.StorageClass.ToModel(),
 	}, nil
 }
 
@@ -58,5 +67,63 @@ func newGcpStorageFromModel(s *model.GcpStorage, config *model.BackupConfig) *Gc
 		Endpoint:          s.Endpoint,
 		Key:               s.KeyJSON,
 		SecretAgentConfig: ResolveSecretAgentFromModel(s.SecretAgent, config),
+		StorageClass:      newGcpStorageClassFromModel(s.StorageClass),
+	}
+}
+
+// GCP Storage Classes
+// See https://cloud.google.com/storage/docs/storage-classes
+const (
+	GcpClassStandard = "STANDARD"
+	GcpClassNearline = "NEARLINE"
+	GcpClassColdline = "COLDLINE"
+	GcpClassArchive  = "ARCHIVE"
+)
+
+// data can be stored in any class.
+var gcpDataClasses = []string{
+	"",
+	GcpClassStandard,
+	GcpClassNearline,
+	GcpClassColdline,
+	GcpClassArchive,
+}
+
+// GcpStorageClass represents the configuration for GCP Storage Class.
+type GcpStorageClass struct {
+	// DataClass specifies the storage class for object data.
+	DataClass string `json:"data" yaml:"data"`
+}
+
+func (s *GcpStorageClass) Validate() error {
+	if s == nil {
+		return nil
+	}
+
+	if !slices.Contains(gcpDataClasses, s.DataClass) {
+		return errValidationInvalidValue("data", s.DataClass, gcpDataClasses)
+	}
+
+	return nil
+}
+
+func (s *GcpStorageClass) ToModel() *model.StorageClass {
+	if s == nil {
+		return nil
+	}
+
+	return &model.StorageClass{
+		DataClass:     s.DataClass,
+		MetadataClass: "", // GCP metadata always uses STANDARD class
+	}
+}
+
+func newGcpStorageClassFromModel(s *model.StorageClass) *GcpStorageClass {
+	if s == nil {
+		return nil
+	}
+
+	return &GcpStorageClass{
+		DataClass: s.DataClass,
 	}
 }

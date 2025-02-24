@@ -7,6 +7,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go"
+	ioStorage "github.com/aerospike/backup-go/io/storage"
 )
 
 // Backup defines the interface for running backups.
@@ -41,7 +42,8 @@ func (r *DefaultBackupExecutor) Run(
 	path string,
 ) (BackupHandler, error) {
 	xdrEnabled := routine.BackupPolicy.XDRConfig != nil
-	writer, err := storage.CreateDirWriter(ctx, routine.Storage, path)
+	withStorageClass := ioStorage.WithStorageClass(routine.Storage.GetStorageClass().DataClass)
+	writer, err := storage.CreateDirWriter(ctx, routine.Storage, path, withStorageClass)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer: %w", err)
 	}

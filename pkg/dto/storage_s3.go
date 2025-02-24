@@ -2,6 +2,7 @@ package dto
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -34,6 +35,8 @@ type S3Storage struct {
 	// Secret Access Key for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	SecretAccessKey *string `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty"`
+	// StorageClass defines the storage class for data and metadata objects.
+	StorageClass *S3StorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
 
 // Validate checks if the S3Storage is valid.
@@ -50,6 +53,9 @@ func (s *S3Storage) Validate() error {
 	}
 	if s.AccessKeyID == nil && s.SecretAccessKey != nil {
 		return fmt.Errorf("secret-access-key is set but access-key-id is missing")
+	}
+	if err := s.StorageClass.Validate(); err != nil {
+		return fmt.Errorf("invalid storage class: %w", err)
 	}
 
 	return s.SecretAgentConfig.validate()
@@ -80,6 +86,7 @@ func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 		MinPartSize:        s.MinPartSize,
 		MaxConnsPerHost:    s.MaxConnsPerHost,
 		Auth:               auth,
+		StorageClass:       s.StorageClass.ToModel(),
 	}, nil
 }
 
@@ -93,6 +100,7 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 		S3LogLevel:         s.S3LogLevel,
 		MinPartSize:        s.MinPartSize,
 		MaxConnsPerHost:    s.MaxConnsPerHost,
+		StorageClass:       newS3StorageClassFromModel(s.StorageClass),
 	}
 	if s.Auth != nil {
 		result.SecretAgentConfig = ResolveSecretAgentFromModel(s.Auth.SecretAgent, config)
@@ -101,4 +109,93 @@ func newS3StorageFromModel(s *model.S3Storage, config *model.BackupConfig) *S3St
 	}
 
 	return result
+}
+
+// Storage classes represents the different types of storage classes available on Amazon S3.
+// See https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html for more details.
+const (
+	StorageClassStandard           = "STANDARD"
+	StorageClassGlacier            = "GLACIER"
+	StorageClassStandardIa         = "STANDARD_IA"
+	StorageClassOnezoneIa          = "ONEZONE_IA"
+	StorageClassIntelligentTiering = "INTELLIGENT_TIERING"
+	StorageClassDeepArchive        = "DEEP_ARCHIVE"
+	StorageClassOutposts           = "OUTPOSTS"
+	StorageClassGlacierIr          = "GLACIER_IR"
+	StorageClassSnow               = "SNOW"
+	StorageClassExpressOnezone     = "EXPRESS_ONEZONE"
+)
+
+// metadata should only be stored in classes with fast retrieval time.
+var s3metadataClasses = []string{
+	"",
+	StorageClassStandard,
+	StorageClassStandardIa,
+	StorageClassIntelligentTiering,
+	StorageClassExpressOnezone,
+	StorageClassOnezoneIa,
+	StorageClassOutposts,
+}
+
+// backup data can be stored in any class.
+var s3dataClasses = []string{
+	"",
+	StorageClassStandard,
+	StorageClassGlacier,
+	StorageClassStandardIa,
+	StorageClassOnezoneIa,
+	StorageClassIntelligentTiering,
+	StorageClassDeepArchive,
+	StorageClassOutposts,
+	StorageClassGlacierIr,
+	StorageClassSnow,
+	StorageClassExpressOnezone,
+}
+
+// S3StorageClass represents the configuration for S3 Storage Class.
+// @Description S3StorageClass represents the configuration for S3 Storage Class.
+type S3StorageClass struct {
+	// DataClass specifies the storage class for object data.
+	DataClass string `json:"data" yaml:"data"`
+
+	// MetadataClass specifies the storage class for metadata.
+	MetadataClass string `json:"metadata" yaml:"metadata"`
+}
+
+func (s *S3StorageClass) Validate() error {
+	if s == nil {
+		return nil
+	}
+
+	if !slices.Contains(s3dataClasses, s.DataClass) {
+		return errValidationInvalidValue("data", s.DataClass, s3dataClasses)
+	}
+
+	if !slices.Contains(s3metadataClasses, s.MetadataClass) {
+		return errValidationInvalidValue("metadata", s.MetadataClass, s3metadataClasses)
+	}
+
+	return nil
+}
+
+func (s *S3StorageClass) ToModel() *model.StorageClass {
+	if s == nil {
+		return nil
+	}
+
+	return &model.StorageClass{
+		DataClass:     s.DataClass,
+		MetadataClass: s.MetadataClass,
+	}
+}
+
+func newS3StorageClassFromModel(s *model.StorageClass) *S3StorageClass {
+	if s == nil {
+		return nil
+	}
+
+	return &S3StorageClass{
+		DataClass:     s.DataClass,
+		MetadataClass: s.MetadataClass,
+	}
 }

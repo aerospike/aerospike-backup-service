@@ -40,7 +40,7 @@ func (m *storageManager) Write(ctx context.Context, config *model.Config) error 
 		return err
 	}
 
-	if err := storage.WriteFile(ctx, m.storage, "", buf.Bytes()); err != nil {
+	if err := storage.WriteDataFile(ctx, m.storage, "", buf.Bytes()); err != nil {
 		return fmt.Errorf("failed to write configuration to storage %+v: %w", m.storage, err)
 	}
 

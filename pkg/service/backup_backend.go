@@ -65,7 +65,7 @@ func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, me
 	}
 
 	metadataFilePath := filepath.Join(path, metadataFile)
-	return storage.WriteFile(ctx, b.storage, metadataFilePath, dataYaml)
+	return storage.WriteMetadataFile(ctx, b.storage, metadataFilePath, dataYaml)
 }
 
 // FullBackupList returns a list of available full backups.

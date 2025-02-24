@@ -1693,8 +1693,29 @@ const docTemplate = `{
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
                     "type": "string"
                 },
+                "storage-class": {
+                    "description": "StorageClass defines the storage tier for data and metadata objects.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.AzureStorageClass"
+                        }
+                    ]
+                },
                 "tenant-id": {
                     "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.",
+                    "type": "string"
+                }
+            }
+        },
+        "dto.AzureStorageClass": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "DataClass specifies the storage tier for object data",
+                    "type": "string"
+                },
+                "metadata": {
+                    "description": "MetadataClass specifies the storage tier for metadata",
                     "type": "string"
                 }
             }
@@ -2172,6 +2193,23 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+                    "type": "string"
+                },
+                "storage-class": {
+                    "description": "StorageClass defines the storage class for data and metadata objects.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.GcpStorageClass"
+                        }
+                    ]
+                }
+            }
+        },
+        "dto.GcpStorageClass": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "DataClass specifies the storage class for object data",
                     "type": "string"
                 }
             }
@@ -2821,6 +2859,28 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+                    "type": "string"
+                },
+                "storage-class": {
+                    "description": "StorageClass defines the storage class for data and metadata objects.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.S3StorageClass"
+                        }
+                    ]
+                }
+            }
+        },
+        "dto.S3StorageClass": {
+            "description": "S3StorageClass represents the configuration for S3 Storage Class.",
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "DataClass specifies the storage class for object data",
+                    "type": "string"
+                },
+                "metadata": {
+                    "description": "MetadataClass specifies the storage class for metadata",
                     "type": "string"
                 }
             }
