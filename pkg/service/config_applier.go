@@ -51,7 +51,10 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(ctx context.Context, routines ma
 	if err != nil {
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
+
+	// Create backup backends for each routine.
 	a.backends.Init(routines)
+	// Scan existing backups to find the last successful runs for every routine.
 	a.registry.StartBackupHistorySync(ctx, a.backends)
 
 	// Refill handlers
