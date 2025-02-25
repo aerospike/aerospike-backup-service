@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -14,7 +15,7 @@ import (
 
 // ConfigApplier is responsible for applying new configuration to the service.
 type ConfigApplier interface {
-	ApplyNewRoutines(routines map[string]*model.BackupRoutine) error
+	ApplyNewRoutines(ctx context.Context, routines map[string]*model.BackupRoutine) error
 }
 
 type DefaultConfigApplier struct {
@@ -42,7 +43,7 @@ func NewDefaultConfigApplier(
 	}
 }
 
-func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.BackupRoutine) error {
+func (a *DefaultConfigApplier) ApplyNewRoutines(ctx context.Context, routines map[string]*model.BackupRoutine) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -50,7 +51,11 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.Backu
 	if err != nil {
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
+
+	// Create backup backends for each routine.
 	a.backends.Init(routines)
+	// Scan existing backups to find the last successful runs for every routine.
+	a.registry.StartBackupHistorySync(ctx, a.backends)
 
 	// Refill handlers
 	newHandlers := makeHandlers(a.clientManager, routines, a.backends, a.registry)

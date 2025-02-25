@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 	"sync"
 	"time"
@@ -27,6 +28,9 @@ type RunningBackupsRegistry interface {
 	GetRunningState() map[string]*model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.
 	Cancel(routineName string)
+	// StartBackupHistorySync updates the backup registry with the most recent backup timestamps
+	// found in the storage backends. It scans all backup routines in parallel.
+	StartBackupHistorySync(ctx context.Context, backends BackendsHolder)
 }
 type registryKey struct {
 	routineName string
@@ -54,32 +58,37 @@ type RunningBackupsRegistryImpl struct {
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
-func NewRunningBackupsRegistry(ctx context.Context, backends BackendsHolder) *RunningBackupsRegistryImpl {
-	registry := &RunningBackupsRegistryImpl{
+func NewRunningBackupsRegistry() *RunningBackupsRegistryImpl {
+	return &RunningBackupsRegistryImpl{
 		handlers:       util.NewSafeMap[registryKey, CancelableBackupHandler](),
 		lastSuccessful: util.NewSafeMap[string, *model.LastBackupRun](),
 	}
-
-	registry.startBackupHistorySync(ctx, backends)
-	return registry
 }
 
-// startBackupHistorySync updates the backup registry with the most recent backup timestamps
+// StartBackupHistorySync updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
-func (r *RunningBackupsRegistryImpl) startBackupHistorySync(ctx context.Context, backends BackendsHolder) {
-	for routine, reader := range backends.GetAllReaders() {
+func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(ctx context.Context, backends BackendsHolder) {
+	for routineName, reader := range backends.GetAllReaders() {
+		if _, ok := r.lastSuccessful.Load(routineName); ok {
+			continue // already initialized
+		}
+
 		r.ready.Add(1)
 		go func(routineName string, routineReader BackupMetadataReader) {
 			defer r.ready.Done()
 
 			lastRun := routineReader.FindLastRun(ctx)
+			slog.Info("Last backup time",
+				slog.String("routine", routineName),
+				slog.String("lastRun", lastRun.String()))
+
 			if lastRun.FullBackupTime() != nil {
 				r.setLastTime(routineName, jobTypeFull, *lastRun.FullBackupTime())
 			}
 			if lastRun.IncrementalBackupTime() != nil {
 				r.setLastTime(routineName, jobTypeIncremental, *lastRun.IncrementalBackupTime())
 			}
-		}(routine, reader)
+		}(routineName, reader)
 	}
 }
 
