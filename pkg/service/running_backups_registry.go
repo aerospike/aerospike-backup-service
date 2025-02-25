@@ -28,6 +28,8 @@ type RunningBackupsRegistry interface {
 	GetRunningState() map[string]*model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.
 	Cancel(routineName string)
+	// StartBackupHistorySync updates the backup registry with the most recent backup timestamps
+	// found in the storage backends. It scans all backup routines in parallel.
 	StartBackupHistorySync(ctx context.Context, backends BackendsHolder)
 }
 type registryKey struct {
@@ -56,14 +58,11 @@ type RunningBackupsRegistryImpl struct {
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
-func NewRunningBackupsRegistry(ctx context.Context, backends BackendsHolder) *RunningBackupsRegistryImpl {
-	registry := &RunningBackupsRegistryImpl{
+func NewRunningBackupsRegistry() *RunningBackupsRegistryImpl {
+	return &RunningBackupsRegistryImpl{
 		handlers:       util.NewSafeMap[registryKey, CancelableBackupHandler](),
 		lastSuccessful: util.NewSafeMap[string, *model.LastBackupRun](),
 	}
-
-	registry.StartBackupHistorySync(ctx, backends)
-	return registry
 }
 
 // StartBackupHistorySync updates the backup registry with the most recent backup timestamps
@@ -71,13 +70,13 @@ func NewRunningBackupsRegistry(ctx context.Context, backends BackendsHolder) *Ru
 func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(ctx context.Context, backends BackendsHolder) {
 	slog.Info("Start backup history sync")
 	for routine, reader := range backends.GetAllReaders() {
+		if _, ok := r.lastSuccessful.Load(routine); ok {
+			continue // already initialized
+		}
+
 		r.ready.Add(1)
 		go func(routineName string, routineReader BackupMetadataReader) {
 			defer r.ready.Done()
-
-			if _, ok := r.lastSuccessful.Load(routineName); ok {
-				return // already initialized
-			}
 
 			lastRun := routineReader.FindLastRun(ctx)
 			slog.Info("Last run", slog.String(routine, lastRun.String()))
