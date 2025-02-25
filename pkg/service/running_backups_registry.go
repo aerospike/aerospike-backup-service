@@ -70,9 +70,9 @@ func NewRunningBackupsRegistry() *RunningBackupsRegistryImpl {
 func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(ctx context.Context, backends BackendsHolder) {
 	slog.Info("Start backup history sync")
 	for routine, reader := range backends.GetAllReaders() {
-		//if _, ok := r.lastSuccessful.Load(routine); ok {
-		//	continue // already initialized
-		//}
+		if _, ok := r.lastSuccessful.Load(routine); ok {
+			continue // already initialized
+		}
 
 		r.ready.Add(1)
 		go func(routineName string, routineReader BackupMetadataReader) {
