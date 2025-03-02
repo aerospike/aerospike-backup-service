@@ -68,6 +68,11 @@ fi
 
 docker login aerospike.jfrog.io -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 
+GO_VERSION="$(curl -s https://go.dev/dl/\?mode\=json | \
+jq -r \
+--arg ver "go$(grep '^go ' "$WORKSPACE/go.mod" | cut -d ' ' -f2)" '.[] | select(.version | startswith($ver)) | .version' \
+| sort -V | tail -n1 | cut -c3- | tr -d '\n')"
+
 PLATFORMS="$PLATFORMS" \
 TAG="$TAG" \
 HUB="$HUB" \
@@ -77,6 +82,7 @@ LATEST="$TAG_LATEST" \
 GIT_BRANCH="$(git rev-parse --abbrev-ref HEAD)" \
 GIT_COMMIT_SHA="$(git rev-parse HEAD)" \
 VERSION="$(cat "$WORKSPACE/VERSION")" \
+GO_VERSION="$GO_VERSION" \
 ISO8601="$(LC_TIME=en_US.UTF-8 date "+%Y-%m-%dT%H:%M:%S%z")" \
 CONTEXT="$WORKSPACE" \
 docker buildx bake \

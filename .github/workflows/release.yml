@@ -1,0 +1,59 @@
+name: Promote Images to DockerHub
+on:
+  workflow_dispatch:
+  release:
+    types:
+      - published
+
+jobs:
+  promote-to-jfrog-prod-env:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Metadata
+        run: |
+          git fetch --tags --depth=1
+          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "BUNDLE_VERSION=$LATEST_TAG" >> $GITHUB_ENV
+          echo "BUNDLE_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+
+      - name: Login to JFrog
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+
+      - name: Promote to JFrog PROD Envioroment
+        run: |
+          jfrog release-bundle-promote "$BUNDLE_NAME" "$BUNDLE_VERSION" \
+          --signing-key="aerospike" --project="ecosystem" PROD
+
+  promote-to-dockerhub:
+    runs-on: ubuntu-latest
+    needs:
+      - promote-to-jfrog-prod-env
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Get Metadata
+        run: |
+          git fetch --tags --depth=1
+          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "TAG=$LATEST_TAG" >> $GITHUB_ENV
+          echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+      - name: Promote to DockerHub
+        env:
+          TAG: ${{env.TAG}}
+          REPO_NAME: ${{env.REPO_NAME}}
+          ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
+        run: |
+          docker buildx imagetools create \
+          --tag "docker.io/aerospike/$REPO_NAME:$TAG" \
+          --tag "docker.io/aerospike/$REPO_NAME:latest" \
+          "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/$REPO_NAME:$TAG"

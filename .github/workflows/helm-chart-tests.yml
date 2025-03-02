@@ -1,0 +1,200 @@
+name: Test Chart Install and Tests
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  pull_request:
+    paths:
+      - helm/aerospike-backup-service/**
+  workflow_dispatch:
+
+jobs:
+  lint-charts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          sparse-checkout: |
+            helm/aerospike-backup-service
+          sparse-checkout-cone-mode: true
+
+      - name: Set up Helm
+        uses: azure/setup-helm@fe7b79cd5ee1e45176fcad797de68ecaf3ca4814
+        with:
+          version: latest
+
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38
+        with:
+          python-version: '3.x'
+          check-latest: true
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@0d28d3144d3a25ea2cc349d6e59901c4ff469b3b
+
+      - name: Run chart-testing (lint)
+        run: |
+          cd helm/aerospike-backup-service
+          ct lint --chart-dirs . --charts .
+
+  test-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4.3.0
+        with:
+          version: latest
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+          check-latest: true
+
+      - name: Set up Chart Testing
+        uses: helm/chart-testing-action@v2
+
+      - name: Create Kind Cluster
+        uses: helm/kind-action@v1
+
+      - name: Build ABS Docker Container and Load to Kind Cluster
+        run: |
+          TAG="chart-testing" make docker-build
+          kind load docker-image aerospike/aerospike-backup-service:chart-testing --name chart-testing
+
+      - name: Setup Prerequisites
+        run: |
+          echo "Deploying AKO"
+
+          OLM_VERSION="$(curl --silent https://api.github.com/repos/operator-framework/operator-lifecycle-manager/releases/latest | jq -r '.tag_name' | head -n 1 | tr -d '\n')"
+          curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/$OLM_VERSION/install.sh | bash -s "$OLM_VERSION"
+
+          kubectl create -f https://operatorhub.io/install/aerospike-kubernetes-operator.yaml
+          AKO_CSV_NAME="aerospike-kubernetes-operator.v$(curl -s https://api.github.com/repos/aerospike/aerospike-kubernetes-operator/tags | jq -r '.[0].name')"
+
+          echo "Waiting for AKO"
+          echo "Waiting for CSV to be created"
+          kubectl wait --for=create "csv/$AKO_CSV_NAME" --namespace operators --timeout=300s
+          echo "Waiting for CSV to be in Succeeded phase"
+          kubectl wait --for=jsonpath='{.status.phase}'=Succeeded "csv/$AKO_CSV_NAME" --namespace operators --timeout=300s
+          echo "Waiting for operator pods to be ready"
+          kubectl wait --for=condition=Ready pod --all --namespace operators --timeout=300s
+
+          echo "Grant permissions to the target namespace"
+          kubectl create namespace aerospike
+          kubectl --namespace aerospike create serviceaccount aerospike-operator-controller-manager
+          kubectl create clusterrolebinding aerospike-cluster --clusterrole=aerospike-cluster --serviceaccount=aerospike:aerospike-operator-controller-manager
+
+          echo "Set Secrets for Aerospike Cluster"
+          kubectl --namespace aerospike create secret generic aerospike-secret --from-literal=features.conf="$(echo "${{ secrets.FEATURES_CONF }}")"
+          kubectl --namespace aerospike create secret generic minio-credentials --from-file=credentials=<(cat <<EOF
+          [minio]
+          aws_access_key_id=minioadmin
+          aws_secret_access_key=minioadmin
+          EOF
+          )
+
+          echo "Deploy ASDB"
+          ASDB_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/aerospike/aerospike-server/tags?page_size=1024" | jq -r '[.results[].name | select(. != "latest")] | sort_by(.) | reverse | .[0]')
+
+          cat <<EOF | kubectl apply -f -
+          apiVersion: asdb.aerospike.com/v1
+          kind: AerospikeCluster
+          metadata:
+            name: aerocluster
+            namespace: aerospike
+          spec:
+            aerospikeConfig:
+              namespaces:
+                - name: test
+                  replication-factor: 2
+                  storage-engine:
+                    data-size: 1073741824
+                    type: memory
+              network:
+                fabric:
+                  port: 3001
+                heartbeat:
+                  port: 3002
+                service:
+                  port: 3000
+              service:
+                feature-key-file: /etc/aerospike/secret/features.conf
+            image: "aerospike/aerospike-server-enterprise:${ASDB_VERSION}"
+            podSpec:
+              multiPodPerHost: true
+            size: 2
+            storage:
+              volumes:
+                - aerospike:
+                    path: /etc/aerospike/secret
+                  name: aerospike-config-secret
+                  source:
+                    secret:
+                      secretName: aerospike-secret
+            validationPolicy:
+              skipWorkDirValidate: true
+              skipXdrDlogFileValidate: true
+          EOF
+
+      - name: Run chart-testing (install)
+        env:
+          GITHUB_BRANCH: ${{ github.ref_name }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          cat <<EOF > ct-values.yaml
+          backupServiceConfig:
+            aerospike-clusters:
+              asdb-cluster:
+                seed-nodes:
+                  - host-name: aerocluster-0-0
+                    port: 3000
+            storage:
+              minio:
+                s3-storage:
+                  path: abs
+                  bucket: abs-testing-bucket
+                  s3-region: us-east-1
+                  s3-profile: minio
+                  s3-endpoint-override: http://minio:9000
+            backup-policies:
+              keepFilesPolicy:
+                parallel: 1
+                remove-files: KeepAll
+            backup-routines:
+              minioKeepFilesRoutine:
+                interval-cron: "@daily"
+                incr-interval-cron: "@hourly"
+                source-cluster: asdb-cluster
+                storage: minio
+                namespaces: [ "test" ]
+                backup-policy: keepFilesPolicy
+          volumes:
+            - name: minio-credentials
+              secret:
+                secretName: minio-credentials
+                optional: false
+          extraSecretVolumeMounts:
+            - name: minio-credentials
+              mountPath: /root/.aws/credentials
+              readOnly: true
+          image:
+            pullPolicy: IfNotPresent
+            tag: chart-testing
+          configmap:
+            create: false
+          EOF
+
+          ct install \
+          --namespace aerospike \
+          --chart-dirs helm \
+          --target-branch "$GITHUB_DEFAULT_BRANCH" \
+          --debug --helm-extra-args="--debug" \
+          --helm-extra-set-args="--values=ct-values.yaml"
