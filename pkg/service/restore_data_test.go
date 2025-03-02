@@ -57,8 +57,8 @@ func makeTestRestoreService(wg *sync.WaitGroup) *dataRestorer {
 type BackendMock struct {
 }
 
-func (m *BackendMock) FindLastRun(_ context.Context) *model.LastBackupRun {
-	return nil
+func (m *BackendMock) FindLastRun(_ context.Context) (*model.LastBackupRun, error) {
+	return nil, nil
 }
 
 func (m *BackendMock) FindIncrementalBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,
@@ -137,8 +137,8 @@ func (*BackendFailMock) FindLastFullBackup(_ time.Time) ([]model.BackupDetails, 
 type BackendFailMock struct {
 }
 
-func (m *BackendFailMock) FindLastRun(_ context.Context) *model.LastBackupRun {
-	return nil
+func (m *BackendFailMock) FindLastRun(_ context.Context) (*model.LastBackupRun, error) {
+	return nil, nil
 }
 
 func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,

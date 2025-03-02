@@ -78,7 +78,12 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(ctx context.Context,
 		go func(routineName string, routineReader BackupMetadataReader) {
 			defer r.ready.Done()
 
-			lastRun := routineReader.FindLastRun(ctx)
+			lastRun, err := routineReader.FindLastRun(ctx)
+			if err != nil {
+				slog.Warn("Failed to load last backup time", slog.Any("error", err))
+				return
+			}
+
 			slog.Info("Last backup time",
 				slog.String("routine", routineName),
 				slog.String("lastRun", lastRun.String()))

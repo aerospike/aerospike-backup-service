@@ -33,7 +33,7 @@ type BackupMetadataReader interface {
 	) ([]model.BackupDetails, error)
 
 	// FindLastRun return timestamps of last full and incremental backups.
-	FindLastRun(ctx context.Context) *model.LastBackupRun
+	FindLastRun(ctx context.Context) (*model.LastBackupRun, error)
 }
 
 // BackupMetadataWriter provides methods for writing backup metadata and deleting backups.

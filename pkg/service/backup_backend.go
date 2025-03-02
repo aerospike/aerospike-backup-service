@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -35,22 +34,24 @@ func newBackend(routineName string, storage model.Storage) *BackupBackend {
 	}
 }
 
-func (b *BackupBackend) FindLastRun(ctx context.Context) *model.LastBackupRun {
+func (b *BackupBackend) FindLastRun(ctx context.Context) (*model.LastBackupRun, error) {
 	fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{})
 	if err != nil {
-		slog.Warn("Failed to fetch backup list", slog.Any("err", err))
-		return nil
+		return nil, fmt.Errorf("read full backups list failed: %w", err)
 	}
 	lastFullBackup := lastBackupTime(fullBackupList)
 	if lastFullBackup == nil {
-		slog.Info("No full backup was found")
-		return model.NewLastBackupRun(nil, nil)
+		return model.NewLastBackupRun(nil, nil), nil
 	}
 
-	incrementalBackupList, _ := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})
+	incrementalBackupList, err := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})
+	if err != nil {
+		return nil, fmt.Errorf("read incremental backups list failed: %w", err)
+	}
+
 	lastIncrBackup := lastBackupTime(incrementalBackupList)
 
-	return model.NewLastBackupRun(lastFullBackup, lastIncrBackup)
+	return model.NewLastBackupRun(lastFullBackup, lastIncrBackup), nil
 }
 
 func lastBackupTime(b []model.BackupDetails) *time.Time {

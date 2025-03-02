@@ -69,9 +69,9 @@ func (m *MockBackupMetadataReader) FindIncrementalBackupsForNamespace(
 	return args.Get(0).([]model.BackupDetails), args.Error(1)
 }
 
-func (m *MockBackupMetadataReader) FindLastRun(ctx context.Context) *model.LastBackupRun {
+func (m *MockBackupMetadataReader) FindLastRun(ctx context.Context) (*model.LastBackupRun, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(*model.LastBackupRun)
+	return args.Get(0).(*model.LastBackupRun), args.Error(1)
 }
 
 // MockScheduler mocks the quartz.Scheduler interface.
