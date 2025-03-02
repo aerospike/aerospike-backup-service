@@ -30,7 +30,7 @@ type RunningBackupsRegistry interface {
 	Cancel(routineName string)
 	// StartBackupHistorySync updates the backup registry with the most recent backup timestamps
 	// found in the storage backends. It scans all backup routines in parallel.
-	StartBackupHistorySync(ctx context.Context, backends BackendsHolder)
+	StartBackupHistorySync(backends BackendsHolder)
 }
 type registryKey struct {
 	routineName string
@@ -53,13 +53,15 @@ type RunningBackupsRegistryImpl struct {
 	// It ensures all last backup timestamps are loaded from storage backends
 	// before allowing access through GetRoutineState/GetRunningState.
 	ready sync.WaitGroup
+	ctx   context.Context
 }
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
-func NewRunningBackupsRegistry() *RunningBackupsRegistryImpl {
+func NewRunningBackupsRegistry(ctx context.Context) *RunningBackupsRegistryImpl {
 	return &RunningBackupsRegistryImpl{
+		ctx:            ctx,
 		handlers:       util.NewSafeMap[registryKey, CancelableBackupHandler](),
 		lastSuccessful: util.NewSafeMap[string, *model.LastBackupRun](),
 	}
@@ -67,8 +69,9 @@ func NewRunningBackupsRegistry() *RunningBackupsRegistryImpl {
 
 // StartBackupHistorySync updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
-func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(ctx context.Context, backends BackendsHolder) {
-	slog.Info("Starting backup history synchronization", slog.Int("lastSuccessful", r.lastSuccessful.Size()))
+func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(backends BackendsHolder) {
+	r.ready.Wait() // wait for previous scan
+
 	for routineName, reader := range backends.GetAllReaders() {
 		if _, ok := r.lastSuccessful.Load(routineName); ok {
 			continue // already initialized
@@ -78,7 +81,7 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(ctx context.Context,
 		go func(routineName string, routineReader BackupMetadataReader) {
 			defer r.ready.Done()
 
-			lastRun, err := routineReader.FindLastRun(ctx)
+			lastRun, err := routineReader.FindLastRun(r.ctx)
 			if err != nil {
 				slog.Warn("Failed to load last backup time", slog.Any("error", err))
 				return
