@@ -1,0 +1,12 @@
+{{- if .Values.configmap.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aerospike-backup-service.fullname" . }}-cm
+  namespace: {{ .Values.namespace | default "default" }}
+  labels:
+    {{- include "aerospike-backup-service.labels" . | nindent 4 }}
+data:
+  aerospike-backup-service.yml: |-
+    {{- .Values.backupServiceConfig | toYaml | nindent 4 }}
+{{- end }}
