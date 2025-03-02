@@ -28,9 +28,9 @@ type RunningBackupsRegistry interface {
 	GetRunningState() map[string]*model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.
 	Cancel(routineName string)
-	// StartBackupHistorySync updates the backup registry with the most recent backup timestamps
+	// StartBackupHistorySynchronisation updates the backup registry with the most recent backup timestamps
 	// found in the storage backends. It scans all backup routines in parallel.
-	StartBackupHistorySync(backends BackendsHolder)
+	StartBackupHistorySynchronisation(backends BackendsHolder)
 }
 type registryKey struct {
 	routineName string
@@ -49,11 +49,11 @@ type RunningBackupsRegistryImpl struct {
 	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
 	lastSuccessful *util.SafeMap[string, *model.LastBackupRun]
 
-	// ready synchronizes access to backup state data
+	// syncLock synchronizes access to backup state data
 	// It ensures all last backup timestamps are loaded from storage backends
 	// before allowing access through GetRoutineState/GetRunningState.
-	ready sync.WaitGroup
-	ctx   context.Context
+	syncLock sync.RWMutex
+	ctx      context.Context
 }
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
@@ -67,19 +67,20 @@ func NewRunningBackupsRegistry(ctx context.Context) *RunningBackupsRegistryImpl 
 	}
 }
 
-// StartBackupHistorySync updates the backup registry with the most recent backup timestamps
+// StartBackupHistorySynchronisation updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
-func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(backends BackendsHolder) {
-	r.ready.Wait() // wait for previous scan
+func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends BackendsHolder) {
+	r.syncLock.Lock()
 
+	var wg sync.WaitGroup
 	for routineName, reader := range backends.GetAllReaders() {
 		if _, ok := r.lastSuccessful.Load(routineName); ok {
 			continue // already initialized
 		}
 
-		r.ready.Add(1)
+		wg.Add(1)
 		go func(routineName string, routineReader BackupMetadataReader) {
-			defer r.ready.Done()
+			defer wg.Done()
 
 			lastRun, err := routineReader.FindLastRun(r.ctx)
 			if err != nil {
@@ -94,6 +95,11 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(backends BackendsHol
 			r.lastSuccessful.Store(routineName, lastRun)
 		}(routineName, reader)
 	}
+
+	go func() {
+		wg.Wait()
+		r.syncLock.Unlock()
+	}()
 }
 
 // register adds a new backup handler for a specific routine and job type.
@@ -132,7 +138,8 @@ func (r *RunningBackupsRegistryImpl) remove(routineName string, job jobType) {
 
 // GetRoutineState returns the current backup statistics for a routine.
 func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.RoutineState {
-	r.ready.Wait() // ensure backups are synced.
+	r.syncLock.RLock() // ensure backups are synced.
+	defer r.syncLock.RUnlock()
 
 	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
 	incrBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeIncremental))
@@ -141,6 +148,7 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 	if !found {
 		lastRun = &model.LastBackupRun{}
 	}
+
 	return &model.RoutineState{
 		Full:        currentBackupStatus(fullBackupHandler),
 		Incremental: currentBackupStatus(incrBackupHandler),
@@ -150,7 +158,8 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 
 // GetRunningState returns statistics for all current backups.
 func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]*model.RoutineState {
-	r.ready.Wait() // ensure backups are synced.
+	r.syncLock.RLock() // ensure backups are synced.
+	defer r.syncLock.RUnlock()
 
 	var routines []string
 	r.handlers.Iterate(func(key registryKey, _ CancelableBackupHandler) {
