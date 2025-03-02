@@ -69,9 +69,9 @@ func (m *MockBackupMetadataReader) FindIncrementalBackupsForNamespace(
 	return args.Get(0).([]model.BackupDetails), args.Error(1)
 }
 
-func (m *MockBackupMetadataReader) FindLastRun(ctx context.Context) *model.LastBackupRun {
+func (m *MockBackupMetadataReader) FindLastRun(ctx context.Context) (*model.LastBackupRun, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(*model.LastBackupRun)
+	return args.Get(0).(*model.LastBackupRun), args.Error(1)
 }
 
 // MockScheduler mocks the quartz.Scheduler interface.
@@ -176,7 +176,7 @@ func (mock configurationManagerMock) Write(_ context.Context, config *model.Conf
 
 type MockConfigApplier struct{}
 
-func (a *MockConfigApplier) ApplyNewRoutines(_ context.Context, _ map[string]*model.BackupRoutine) error {
+func (a *MockConfigApplier) ApplyNewRoutines(_ map[string]*model.BackupRoutine) error {
 	return nil
 }
 

@@ -34,17 +34,24 @@ func newBackend(routineName string, storage model.Storage) *BackupBackend {
 	}
 }
 
-func (b *BackupBackend) FindLastRun(ctx context.Context) *model.LastBackupRun {
-	fullBackupList, _ := b.FullBackupList(ctx, model.TimeBounds{})
+func (b *BackupBackend) FindLastRun(ctx context.Context) (*model.LastBackupRun, error) {
+	fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{})
+	if err != nil {
+		return nil, fmt.Errorf("read full backups list failed: %w", err)
+	}
 	lastFullBackup := lastBackupTime(fullBackupList)
 	if lastFullBackup == nil {
-		return model.NewLastBackupRun(nil, nil)
+		return model.NewLastBackupRun(nil, nil), nil
 	}
 
-	incrementalBackupList, _ := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})
+	incrementalBackupList, err := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})
+	if err != nil {
+		return nil, fmt.Errorf("read incremental backups list failed: %w", err)
+	}
+
 	lastIncrBackup := lastBackupTime(incrementalBackupList)
 
-	return model.NewLastBackupRun(lastFullBackup, lastIncrBackup)
+	return model.NewLastBackupRun(lastFullBackup, lastIncrBackup), nil
 }
 
 func lastBackupTime(b []model.BackupDetails) *time.Time {

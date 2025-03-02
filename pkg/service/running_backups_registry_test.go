@@ -31,7 +31,7 @@ func (m *mockCancelableBackupHandler) IsCanceled() bool {
 }
 
 func TestRegisterAndCurrentStat(t *testing.T) {
-	registry := NewRunningBackupsRegistry()
+	registry := NewRunningBackupsRegistry(context.Background())
 
 	routineName := "routine1"
 	backupStats := models.NewBackupStats()
@@ -50,7 +50,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 }
 
 func TestFinishFull(t *testing.T) {
-	registry := NewRunningBackupsRegistry()
+	registry := NewRunningBackupsRegistry(context.Background())
 
 	routineName := "routine1"
 	handler := &mockCancelableBackupHandler{}
@@ -67,7 +67,7 @@ func TestFinishFull(t *testing.T) {
 }
 
 func TestFinishIncremental(t *testing.T) {
-	registry := NewRunningBackupsRegistry()
+	registry := NewRunningBackupsRegistry(context.Background())
 
 	routineName := "routine1"
 	handler := &mockCancelableBackupHandler{}
@@ -85,7 +85,7 @@ func TestFinishIncremental(t *testing.T) {
 }
 
 func TestGetAllCurrentStats(t *testing.T) {
-	registry := NewRunningBackupsRegistry()
+	registry := NewRunningBackupsRegistry(context.Background())
 
 	routine1 := "routine1"
 	routine2 := "routine2"
@@ -114,7 +114,7 @@ func TestGetAllCurrentStats(t *testing.T) {
 }
 
 func TestCancel(t *testing.T) {
-	registry := NewRunningBackupsRegistry()
+	registry := NewRunningBackupsRegistry(context.Background())
 
 	routineName := "routine1"
 	handlerFull := &mockCancelableBackupHandler{}
