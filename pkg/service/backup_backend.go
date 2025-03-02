@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -35,9 +36,14 @@ func newBackend(routineName string, storage model.Storage) *BackupBackend {
 }
 
 func (b *BackupBackend) FindLastRun(ctx context.Context) *model.LastBackupRun {
-	fullBackupList, _ := b.FullBackupList(ctx, model.TimeBounds{})
+	fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{})
+	if err != nil {
+		slog.Warn("Failed to fetch backup list", slog.Any("err", err))
+		return nil
+	}
 	lastFullBackup := lastBackupTime(fullBackupList)
 	if lastFullBackup == nil {
+		slog.Info("No full backup was found")
 		return model.NewLastBackupRun(nil, nil)
 	}
 

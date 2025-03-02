@@ -68,6 +68,7 @@ func NewRunningBackupsRegistry() *RunningBackupsRegistryImpl {
 // StartBackupHistorySync updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
 func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(ctx context.Context, backends BackendsHolder) {
+	slog.Info("Starting backup history synchronization", slog.Int("lastSuccessful", r.lastSuccessful.Size()))
 	for routineName, reader := range backends.GetAllReaders() {
 		if _, ok := r.lastSuccessful.Load(routineName); ok {
 			continue // already initialized
@@ -82,12 +83,7 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySync(ctx context.Context,
 				slog.String("routine", routineName),
 				slog.String("lastRun", lastRun.String()))
 
-			if lastRun.FullBackupTime() != nil {
-				r.setLastTime(routineName, jobTypeFull, *lastRun.FullBackupTime())
-			}
-			if lastRun.IncrementalBackupTime() != nil {
-				r.setLastTime(routineName, jobTypeIncremental, *lastRun.IncrementalBackupTime())
-			}
+			r.lastSuccessful.Store(routineName, lastRun)
 		}(routineName, reader)
 	}
 }
