@@ -1,0 +1,436 @@
+name: Create Aerospike Backup Service Pre Release
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-22.04
+    outputs:
+      upload_url: ${{ steps.create-release.outputs.upload_url }}
+    steps:
+      - name: Check if release exists
+        id: check-release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              const response = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: "${{ github.ref_name }}"
+              });
+
+              if (response.status === 200) {
+                console.log(`Release with tag exists.`);
+                core.setOutput('release-exists', 'true');
+              }
+            } catch (error) {
+              if (error.status === 404) {
+                console.log(`Release with tag does not exist.`);
+                core.setOutput('release-exists', 'false');
+              } else {
+                throw error;
+              }
+            }
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/create-release@v1
+        if: ${{ steps.check-release.outputs.release-exists == 'false'}}
+        id: create-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
+          draft: true
+          prerelease: true
+
+  build-packages:
+    needs:
+      - create-release
+    runs-on: ubuntu-22.04
+    outputs:
+      package_version: ${{ steps.metadata.outputs.PACKAGE_VERSION }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Get Go version from go.mod
+        run: |
+          echo "GO_VERSION==$(grep '^go ' go.mod | cut -d ' ' -f2)" >> "$GITHUB_ENV"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: setup GPG
+        uses: aerospike/shared-workflows/devops/setup-gpg@af875da2c1956bc5848705de17c4998a0fad7b77 # v0.2.0
+        with:
+          gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
+          gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
+          gpg-key-pass: ${{ secrets.GPG_PASS }}
+          gpg-key-name: "aerospike-inc"
+
+      - name: Install Dependencies
+        run: |
+          go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
+          sudo apt -y install dpkg-sig
+
+      - name: Get Metadata
+        id: metadata
+        run: |
+          PACKAGE_VERSION=$(cat VERSION)
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "PACKAGE_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+
+      - name: Login to JFrog
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+
+      - name: Build Packages
+        run: |
+          make packages
+
+      - name: Find files matching "*.rpm" "*.deb""
+        run: |
+          RPM_ASSET_LIST=$(find . -type f \( -name "*.rpm" \) | tr '\n' ',')
+          DEB_ASSET_LIST=$(find . -type f \( -name "*.deb" \) | tr '\n' ',')
+          echo "RPM_ASSET_LIST=$RPM_ASSET_LIST" >> $GITHUB_ENV
+          echo "DEB_ASSET_LIST=$DEB_ASSET_LIST" >> $GITHUB_ENV
+
+      - name: Sign RPM Packages
+        env:
+          GPG_TTY: no-tty
+
+        run: |
+          IFS=',' read -r -a asset_array <<< "$RPM_ASSET_LIST"
+          for file in "${asset_array[@]}"; do
+            echo "file is: ${file}"
+            rpm --addsign "${file}"
+            echo "here"
+            OUTPUT=$(rpm --checksig "${file}")
+            if [[ "$OUTPUT" =~ 'digests signatures OK' ]]; then
+              echo "Successfully GPG Signed $file"
+            else
+              echo "$OUTPUT"
+              echo "GPG Signing $file has failed."
+              exit 1
+            fi
+          done
+
+      - name: Sign DEB Packages
+        env:
+          GPG_TTY: no-tty
+        run: |
+          IFS=',' read -r -a asset_array <<< "$DEB_ASSET_LIST"
+          for file in "${asset_array[@]}"; do
+            dpkg-sig --sign builder "${file}"
+            OUTPUT=$(dpkg-sig --verify "${file}")
+            if [[ "$OUTPUT" =~ 'GOODSIG _gpgbuilder' ]]; then
+              echo "Successfully GPG Signed $file"
+            else
+              echo "$OUTPUT"
+              echo "GPG Signing $file has failed."
+              exit 1
+            fi
+           done
+
+      - name: Create checksums
+        run: |
+          make checksums
+          CHECKSUMS_ASSET_LIST=$(find . -type f \( -name "*.sha256" \) | tr '\n' ',')
+          echo "CHECKSUMS_ASSET_LIST=$CHECKSUMS_ASSET_LIST" >> $GITHUB_ENV
+
+      - name: Sign checksums
+        env:
+          GPG_TTY: no-tty
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
+        run: |
+          IFS=',' read -r -a asset_array <<< "$CHECKSUMS_ASSET_LIST"
+          for file in "${asset_array[@]}"; do
+            gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
+            gpg --verify "${file}.asc" "${file}" &>/dev/null
+            RETURN_CODE=$?
+            if [ ! "$RETURN_CODE" = 0 ]; then
+              echo "GPG Signing of $file has failed."
+              exit 1
+            else
+              echo "Successfully GPG Signed $file"
+            fi
+          done
+          ASC_ASSET_LIST=$(find . -type f \( -name "*.asc" \) | tr '\n' ',')
+          echo "ASC_ASSET_LIST=$ASC_ASSET_LIST" >> $GITHUB_ENV
+
+      - name: Upload Assets to Github Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          upload_url="$(echo "${{ needs.create-release.outputs.upload_url }}" | sed 's/\(assets\).*/\1/')"
+          ASSET_LIST="${RPM_ASSET_LIST%,},${DEB_ASSET_LIST%,},${CHECKSUMS_ASSET_LIST%,},${ASC_ASSET_LIST%,}"
+          ASSET_LIST="${ASSET_LIST#,}"
+          IFS=',' read -r -a asset_array <<< "$ASSET_LIST"
+          for file in "${asset_array[@]}"; do
+            curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: $(file -b --mime-type $file)" \
+            "$upload_url?name=$(basename $file)" \
+            --data-binary "@$file"
+          done
+
+      - name: Upload RPM Packages to Jfrog
+        env:
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+          ARTIFACTORY_RPM_DEV: ${{ vars.ARTIFACTORY_RPM_DEV }}
+
+        run: |
+          IFS=',' read -r -a asset_array <<< "$RPM_ASSET_LIST"
+          for file in "${asset_array[@]}"; do
+            arch=$(rpm -q --qf "%{ARCH}" -p "$file")
+
+            jfrog rt upload "$file" "$ARTIFACTORY_RPM_DEV/$PACKAGE_NAME/$PACKAGE_VERSION/$(basename $file)" \
+            --build-name=$PACKAGE_NAME-rpm --build-number=$PACKAGE_VERSION \
+            --target-props "rpm.distribution=stable;rpm.component=main;rpm.architecture=$arch"
+          done
+
+          jfrog rt build-collect-env "$PACKAGE_NAME-rpm" "$PACKAGE_VERSION"
+          jfrog rt build-add-git  "$PACKAGE_NAME-rpm" "$PACKAGE_VERSION"
+          jfrog rt build-publish  "$PACKAGE_NAME-rpm" "$PACKAGE_VERSION"
+
+      - name: Upload DEB Packages to Jfrog
+        env:
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+          ARTIFACTORY_DEB_DEV: ${{ vars.ARTIFACTORY_DEB_DEV }}
+        run: |
+          IFS=',' read -r -a asset_array <<< "$DEB_ASSET_LIST"
+          for file in "${asset_array[@]}"; do
+            arch=$(dpkg --info "$file" | grep 'Architecture' | awk '{print $2}')
+            jfrog rt upload "$file" "$ARTIFACTORY_DEB_DEV/$PACKAGE_NAME/$PACKAGE_VERSION/$(basename $file)" \
+            --build-name=$PACKAGE_NAME-deb \
+            --build-number=$PACKAGE_VERSION \
+            --target-props "deb.distribution=stable;deb.component=main;deb.architecture=${arch}" \
+            --deb "stable/main/${arch}"
+          done
+
+          jfrog rt build-collect-env "$PACKAGE_NAME-deb" "$PACKAGE_VERSION"
+          jfrog rt build-add-git  "$PACKAGE_NAME-deb" "$PACKAGE_VERSION"
+          jfrog rt build-publish  "$PACKAGE_NAME-deb" "$PACKAGE_VERSION"
+
+  build-docker-image:
+    needs:
+      - create-release
+    runs-on: ubuntu-latest
+    outputs:
+      image_version: ${{ steps.metadata.outputs.IMAGE_VERSION }}
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Get Metadata
+        id: metadata
+        run: |
+          GO_VERSION=$(curl -s https://go.dev/dl/?mode=json | \
+          jq -r --arg ver "go$(grep '^go ' go.mod | cut -d ' ' -f2)" \
+          '.[] | select(.version | startswith($ver)) | .version' | \
+          sort -V | \
+          tail -n1 | \
+          cut -c3- | \
+          tr -d '\n')
+          
+          IMAGE_VERSION=$(cat VERSION | cut -c 2-)
+          echo "IMAGE_VERSION=$IMAGE_VERSION" >> $GITHUB_ENV
+          echo "IMAGE_VERSION=$IMAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "GO_VERSION=$GO_VERSION" >> "$GITHUB_ENV"
+          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+          echo "ISO8601=$(LC_TIME=en_US.UTF-8 date "+%Y-%m-%dT%H:%M:%S%z")" >> $GITHUB_ENV
+          echo "IMAGE_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+
+      - name: Login to JFrog
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+
+      - name: Login to JFrog Artifactory
+        uses: docker/login-action@v3
+        with:
+          registry: aerospike.jfrog.io
+          username: ${{ secrets.ARTIFACTORY_USER }}
+          password: ${{ secrets.ARTIFACTORY_TOKEN }}
+
+      - name: Build and Push Docker Image
+        env:
+          GIT_COMMIT_SHA: ${{ github.sha }}
+          GIT_BRANCH: ${{ github.ref }}
+          LATEST: false
+          TAG: ${{env.IMAGE_VERSION}}
+          VERSION: ${{env.VERSION}}
+          CONTEXT: ${{ github.workspace }}
+          ISO8601: ${{env.ISO8601}}
+          IMAGE_NAME: ${{env.IMAGE_NAME}}
+          GO_VERSION: ${{env.GO_VERSION}}
+          ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
+
+        run: |
+          jfrog docker buildx bake  \
+          --file ${{ github.workspace }}/build/docker-build/docker-bake.hcl \
+          --metadata-file=build-metadata \
+          --progress plain \
+          --no-cache \
+          --push
+
+          jq -r '
+          .[] |
+          {
+            digest: .["containerimage.digest"],
+            names: (.["image.name"] | split(","))
+                     } |
+                     .digest
+            ' build-metadata > sha
+
+          echo artifact.aerospike.io/$ARTIFACTORY_CONTAINER_DEV/$IMAGE_NAME:$TAG@$(cat sha) > meta-info
+
+          jfrog rt build-docker-create \
+          --build-name=$IMAGE_NAME-container \
+          --build-number=$TAG \
+          --image-file ./meta-info \
+          $ARTIFACTORY_CONTAINER_DEV
+
+          jfrog rt build-collect-env $IMAGE_NAME-container $TAG
+          jfrog rt build-add-git $IMAGE_NAME-container $TAG
+          jfrog rt build-publish --detailed-summary $IMAGE_NAME-container $TAG
+
+  build-helm-chart:
+    needs:
+      - create-release
+    runs-on: ubuntu-22.04
+    outputs:
+      helm_version: ${{ steps.metadata.outputs.HELM_VERSION }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          sparse-checkout: |
+            helm/aerospike-backup-service
+          sparse-checkout-cone-mode: true
+
+      - name: Get Metadata
+        id: metadata
+        run: |
+          HELM_VERSION=$(yq '.version' helm/aerospike-backup-service/Chart.yaml | tr -d '\n')
+          echo "HELM_VERSION=$HELM_VERSION" >> $GITHUB_OUTPUT
+          echo "HELM_CHART_VERSION=$HELM_VERSION" >> $GITHUB_ENV
+          echo "HELM_CHART_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+
+      - name: setup GPG
+        uses: aerospike/shared-workflows/devops/setup-gpg@af875da2c1956bc5848705de17c4998a0fad7b77 # v0.2.0
+        with:
+          gpg-private-key: ${{ secrets.GPG_SECRET_KEY }}
+          gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
+          gpg-key-pass: ${{ secrets.GPG_PASS }}
+          gpg-key-name: "aerospike-inc"
+
+
+      - name: Login to JFrog
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+
+      - name: Sign and Push Helm Charts to JFrog
+        env:
+          GPG_TTY: no-tty
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
+          ARTIFACTORY_HELM_DEV: ${{ vars.ARTIFACTORY_HELM_DEV }}
+        working-directory: helm
+        run: |
+          gpg --export --no-tty  --passphrase "$GPG_PASSPHRASE" > $HOME/.gnupg/pubring.gpg
+          gpg --export-secret-keys --no-tty  --passphrase "$GPG_PASSPHRASE" > $HOME/.gnupg/secring.gpg
+          echo $GPG_PASSPHRASE > passphrase.txt
+
+          helm \
+          --sign \
+          --key=aerospike-inc \
+          --keyring=$HOME/.gnupg/secring.gpg \
+          --passphrase-file passphrase.txt package $HELM_CHART_NAME 
+          
+          jfrog rt upload \
+          "$HELM_CHART_NAME-$HELM_CHART_VERSION.tgz*" \
+          "$ARTIFACTORY_HELM_DEV/$HELM_CHART_NAME/$HELM_CHART_VERSION/" \
+          --build-name=$HELM_CHART_NAME-helm --build-number=$HELM_CHART_VERSION
+
+          jfrog rt build-collect-env $HELM_CHART_NAME-helm $HELM_CHART_VERSION
+          jfrog rt build-add-git $HELM_CHART_NAME-helm $HELM_CHART_VERSION
+          jfrog rt build-publish $HELM_CHART_NAME-helm $HELM_CHART_VERSION
+        
+  create-release-bundle:
+    needs:
+      - create-release
+      - build-packages
+      - build-docker-image
+      - build-helm-chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to JFrog
+        uses: jfrog/setup-jfrog-cli@v4
+        env:
+          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+
+      - name: Get Metadata
+        run: |
+          echo "BUNDLE_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+
+      - name: Create release bundle
+        env:
+          BUNDLE_NAME: ${{env.BUNDLE_NAME}}
+          BUNDLE_VERSION: ${{ needs.build-packages.outputs.package_version }}
+          PACKAGE_VERSION: ${{ needs.build-packages.outputs.package_version }}
+          HELM_VERSION: ${{ needs.build-helm-chart.outputs.helm_version }}
+          IMAGE_VERSION: ${{ needs.build-docker-image.outputs.image_version }}
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+        run: |
+          echo '{
+            "name": "'"$BUNDLE_NAME"'",
+            "version": "'"$BUNDLE_VERSION"'",
+            "files": [
+              {
+                "project": "'"$JF_PROJECT"'",
+                "build": "'"$BUNDLE_NAME"'-container/'"$IMAGE_VERSION"'"
+              },
+              {
+                "project": "'"$JF_PROJECT"'",
+                "build": "'"$BUNDLE_NAME"'-helm/'"$HELM_VERSION"'"
+              },
+              {
+                "project": "'"$JF_PROJECT"'",
+                "build": "'"$BUNDLE_NAME"'-rpm/'"$PACKAGE_VERSION"'"
+              },
+              {
+                "project": "'"$JF_PROJECT"'",
+                "build": "'"$BUNDLE_NAME"'-deb/'"$PACKAGE_VERSION"'"
+              }
+            ]
+          }' > release-bundle-spec.json
+
+          cat release-bundle-spec.json
+
+          jfrog release-bundle-create "$BUNDLE_NAME" "$BUNDLE_VERSION" \
+          --spec release-bundle-spec.json --project="$JF_PROJECT" --signing-key="aerospike"

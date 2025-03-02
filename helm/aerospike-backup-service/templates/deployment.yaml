@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "aerospike-backup-service.fullname" . }}
-  namespace: {{ .Values.namespace | default "default" }}
   labels:
     app: {{ include "aerospike-backup-service.fullname" . }}
     {{- include "aerospike-backup-service.labels" . | nindent 4 }}

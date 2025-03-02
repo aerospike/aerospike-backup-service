@@ -14,16 +14,13 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# the helm chart will be deployed into the default namespace if namespace is not set.
-namespace: ""
-
 configmap:
   # Specifies whether a configmap should be created with the backupServiceConfig.
   # When false the backupServiceConfig will get created in the deployment init container.
   # Set to false when needing to change the config at runtime.
   create: true
 
-#args: ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml", "-r"]
+# args: ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml", "-r"]
 args: []
 
 envFrom: []
@@ -46,7 +43,7 @@ env: []
 #       name: secret-name
 #       key: secret-key
 
-backupServiceConfig: { }
+backupServiceConfig: {}
 # service:
 #   http:
 #     address: <address> # Optional default: 0.0.0.0
@@ -205,8 +202,6 @@ backupServiceConfig: { }
 #     timeout: <timeout> # Optional timeout in miliseconds default: 0
 #     tls-ca-file: <path-to-ca-file> # Optional default: ""
 #     is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
-
-
 
 initContainers: []
 
