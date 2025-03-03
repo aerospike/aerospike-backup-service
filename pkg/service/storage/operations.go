@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -119,6 +120,7 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 			buf := new(bytes.Buffer)
 			_, err := func() (int64, error) {
 				defer r.Reader.Close()
+				slog.Info("file", slog.String("name", r.Name))
 				return io.Copy(buf, r.Reader)
 			}()
 			if err != nil {

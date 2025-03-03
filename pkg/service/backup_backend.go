@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -101,6 +102,11 @@ func (b *BackupBackend) readMetadataList(
 		}
 		return nil, fmt.Errorf("read metadata files error: %w", err)
 	}
+
+	slog.Info("Read metadata files",
+		slog.Int("files count", len(files)),
+		slog.String("path", backupRoot),
+		slog.Any("storage", b.storage))
 
 	var backups []model.BackupDetails
 	for _, buf := range files {
