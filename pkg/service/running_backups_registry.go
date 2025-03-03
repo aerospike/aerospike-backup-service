@@ -73,6 +73,7 @@ func NewRunningBackupsRegistry(ctx context.Context) *RunningBackupsRegistryImpl 
 // found in the storage backends. It scans all backup routines in parallel.
 func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsHolder) {
 	if r.cancel != nil {
+		slog.Info("Cancelling previous backup history scan")
 		r.cancel() // stop previous scanning when starting another one.
 	}
 
@@ -83,9 +84,6 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 	r.cancel = cancelFunc
 	var wg sync.WaitGroup
 	for routineName, reader := range backends.GetAllReaders() {
-		// if _, ok := r.lastSuccessful.Load(routineName); ok {
-		//	continue // already initialized
-		//}
 		slog.Info("Last backup time request", slog.String("routine", routineName))
 
 		wg.Add(1)
@@ -94,7 +92,9 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 
 			lastRun, err := routineReader.FindLastRun(ctx)
 			if err != nil {
-				if !errors.Is(err, context.Canceled) {
+				if errors.Is(err, context.Canceled) {
+					slog.Info("Backup history scan cancelled", slog.String("routine", routineName))
+				} else {
 					slog.Warn("Failed to load last backup time", slog.Any("error", err))
 				}
 				return
