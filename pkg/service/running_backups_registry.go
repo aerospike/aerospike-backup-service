@@ -74,9 +74,9 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends 
 
 	var wg sync.WaitGroup
 	for routineName, reader := range backends.GetAllReaders() {
-		if _, ok := r.lastSuccessful.Load(routineName); ok {
-			continue // already initialized
-		}
+		//if _, ok := r.lastSuccessful.Load(routineName); ok {
+		//	continue // already initialized
+		//}
 
 		wg.Add(1)
 		go func(routineName string, routineReader BackupMetadataReader) {
