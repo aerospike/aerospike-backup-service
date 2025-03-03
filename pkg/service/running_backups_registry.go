@@ -29,9 +29,9 @@ type RunningBackupsRegistry interface {
 	GetRunningState() map[string]*model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.
 	Cancel(routineName string)
-	// StartBackupHistorySynchronisation updates the backup registry with the most recent backup timestamps
+	// SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
 	// found in the storage backends. It scans all backup routines in parallel.
-	StartBackupHistorySynchronisation(backends BackendsHolder)
+	SynchroniseBackupHistory(backends BackendsHolder)
 }
 type registryKey struct {
 	routineName string
@@ -69,9 +69,9 @@ func NewRunningBackupsRegistry(ctx context.Context) *RunningBackupsRegistryImpl 
 	}
 }
 
-// StartBackupHistorySynchronisation updates the backup registry with the most recent backup timestamps
+// SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
-func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends BackendsHolder) {
+func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsHolder) {
 	if r.cancel != nil {
 		r.cancel() // stop previous scanning when starting another one.
 	}
@@ -108,12 +108,9 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends 
 		}(routineName, reader)
 	}
 
-	go func() {
-		wg.Wait()
-		slog.Info("Finished backup history synchronization")
-		cancelFunc()
-		r.syncLock.Unlock()
-	}()
+	wg.Wait()
+	slog.Info("Finished backup history synchronization")
+	r.syncLock.Unlock()
 }
 
 // register adds a new backup handler for a specific routine and job type.
