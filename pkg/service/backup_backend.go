@@ -37,16 +37,46 @@ func newBackend(routineName string, storage model.Storage) *BackupBackend {
 
 func (b *BackupBackend) FindLastRun(ctx context.Context) (*model.LastBackupRun, error) {
 	slog.Info("start find last backup run", slog.String("routine", b.routineName))
-	fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{})
-	if err != nil {
-		return nil, fmt.Errorf("read full backups list failed: %w", err)
+
+	var lastFullBackup *time.Time
+	var err error
+
+	// Start with an small range and double it until we find a backup or exceed a maximum range.
+	maxRange := 365 * 24 * time.Hour // 1 year maximum range
+	duration := 24 * time.Hour       // Start with 1 day range
+
+	for duration <= maxRange {
+		toTime := time.Now()
+		fromTime := toTime.Add(-duration)
+
+		fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{FromTime: &fromTime, ToTime: &toTime})
+		if err != nil {
+			return nil, fmt.Errorf("read full backups list failed: %w", err)
+		}
+
+		lastFullBackup = lastBackupTime(fullBackupList)
+		if lastFullBackup != nil {
+			break // Found a backup, exit the loop
+		}
+
+		duration *= 2
 	}
-	lastFullBackup := lastBackupTime(fullBackupList)
+
+	// If no backup was found within the maxRange, make a final attempt without any bounds
+	if lastFullBackup == nil {
+		fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{})
+		if err != nil {
+			return nil, fmt.Errorf("read full backups list failed: %w", err)
+		}
+		lastFullBackup = lastBackupTime(fullBackupList)
+	}
+
 	if lastFullBackup == nil {
 		slog.Info("no backup found", slog.String("routine", b.routineName))
 		return model.NewLastBackupRun(nil, nil), nil
 	}
 
+	// Now find the last incremental backup after the last full backup
 	incrementalBackupList, err := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})
 	if err != nil {
 		return nil, fmt.Errorf("read incremental backups list failed: %w", err)

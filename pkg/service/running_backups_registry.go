@@ -75,6 +75,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 	if r.cancel != nil {
 		slog.Info("Cancelling previous backup history scan")
 		r.cancel() // stop previous scanning when starting another one.
+		r.cancel = nil
 	}
 
 	r.syncLock.Lock()
