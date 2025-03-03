@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"slices"
 	"sync"
@@ -53,6 +54,7 @@ type RunningBackupsRegistryImpl struct {
 	// It ensures all last backup timestamps are loaded from storage backends
 	// before allowing access through GetRoutineState/GetRunningState.
 	syncLock sync.RWMutex
+	cancel   context.CancelFunc
 	ctx      context.Context
 }
 
@@ -70,13 +72,18 @@ func NewRunningBackupsRegistry(ctx context.Context) *RunningBackupsRegistryImpl 
 // StartBackupHistorySynchronisation updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
 func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends BackendsHolder) {
+	if r.cancel != nil {
+		r.cancel() // stop previous scanning when starting another one.
+	}
+
 	r.syncLock.Lock()
 	slog.Info("Starting backup history synchronization")
 
 	ctx, cancelFunc := context.WithTimeout(r.ctx, 10*time.Second)
+	r.cancel = cancelFunc
 	var wg sync.WaitGroup
 	for routineName, reader := range backends.GetAllReaders() {
-		//if _, ok := r.lastSuccessful.Load(routineName); ok {
+		// if _, ok := r.lastSuccessful.Load(routineName); ok {
 		//	continue // already initialized
 		//}
 		slog.Info("Last backup time request", slog.String("routine", routineName))
@@ -87,7 +94,9 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends 
 
 			lastRun, err := routineReader.FindLastRun(ctx)
 			if err != nil {
-				slog.Warn("Failed to load last backup time", slog.Any("error", err))
+				if !errors.Is(err, context.Canceled) {
+					slog.Warn("Failed to load last backup time", slog.Any("error", err))
+				}
 				return
 			}
 
