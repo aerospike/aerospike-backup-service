@@ -71,6 +71,7 @@ func NewRunningBackupsRegistry(ctx context.Context) *RunningBackupsRegistryImpl 
 // found in the storage backends. It scans all backup routines in parallel.
 func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends BackendsHolder) {
 	r.syncLock.Lock()
+	slog.Info("Starting backup history synchronization")
 
 	var wg sync.WaitGroup
 	for routineName, reader := range backends.GetAllReaders() {
@@ -99,6 +100,7 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends 
 
 	go func() {
 		wg.Wait()
+		slog.Info("Finished backup history synchronization")
 		r.syncLock.Unlock()
 	}()
 }
