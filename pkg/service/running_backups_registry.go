@@ -73,6 +73,7 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends 
 	r.syncLock.Lock()
 	slog.Info("Starting backup history synchronization")
 
+	ctx, cancelFunc := context.WithTimeout(r.ctx, 1*time.Minute)
 	var wg sync.WaitGroup
 	for routineName, reader := range backends.GetAllReaders() {
 		//if _, ok := r.lastSuccessful.Load(routineName); ok {
@@ -84,7 +85,7 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends 
 		go func(routineName string, routineReader BackupMetadataReader) {
 			defer wg.Done()
 
-			lastRun, err := routineReader.FindLastRun(r.ctx)
+			lastRun, err := routineReader.FindLastRun(ctx)
 			if err != nil {
 				slog.Warn("Failed to load last backup time", slog.Any("error", err))
 				return
@@ -101,6 +102,7 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends 
 	go func() {
 		wg.Wait()
 		slog.Info("Finished backup history synchronization")
+		cancelFunc()
 		r.syncLock.Unlock()
 	}()
 }
