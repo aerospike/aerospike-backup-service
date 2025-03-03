@@ -36,12 +36,14 @@ func newBackend(routineName string, storage model.Storage) *BackupBackend {
 }
 
 func (b *BackupBackend) FindLastRun(ctx context.Context) (*model.LastBackupRun, error) {
+	slog.Info("start find last backup run", slog.String("routine", b.routineName))
 	fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{})
 	if err != nil {
 		return nil, fmt.Errorf("read full backups list failed: %w", err)
 	}
 	lastFullBackup := lastBackupTime(fullBackupList)
 	if lastFullBackup == nil {
+		slog.Info("no backup found", slog.String("routine", b.routineName))
 		return model.NewLastBackupRun(nil, nil), nil
 	}
 
@@ -98,6 +100,10 @@ func (b *BackupBackend) readMetadataList(
 	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timeBounds.FromTime)
 	if err != nil {
 		if errors.Is(err, storage.ErrEmptyStorage) {
+			slog.Info("Read metadata files empty",
+				slog.String("path", backupRoot),
+				slog.Any("storage", b.storage),
+				slog.Any("timebounds", timeBounds.String()))
 			return nil, nil
 		}
 		return nil, fmt.Errorf("read metadata files error: %w", err)
