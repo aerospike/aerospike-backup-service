@@ -73,7 +73,7 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends 
 	r.syncLock.Lock()
 	slog.Info("Starting backup history synchronization")
 
-	ctx, cancelFunc := context.WithTimeout(r.ctx, 1*time.Minute)
+	ctx, cancelFunc := context.WithTimeout(r.ctx, 10*time.Second)
 	var wg sync.WaitGroup
 	for routineName, reader := range backends.GetAllReaders() {
 		//if _, ok := r.lastSuccessful.Load(routineName); ok {
