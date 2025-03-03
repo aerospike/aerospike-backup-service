@@ -77,6 +77,7 @@ func (r *RunningBackupsRegistryImpl) StartBackupHistorySynchronisation(backends 
 		//if _, ok := r.lastSuccessful.Load(routineName); ok {
 		//	continue // already initialized
 		//}
+		slog.Info("Last backup time request", slog.String("routine", routineName))
 
 		wg.Add(1)
 		go func(routineName string, routineReader BackupMetadataReader) {
