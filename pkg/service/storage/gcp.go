@@ -6,13 +6,22 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 	ioStorage "github.com/aerospike/backup-go/io/storage"
 	gcp "github.com/aerospike/backup-go/io/storage/gcp/storage"
 	"google.golang.org/api/option"
 )
 
-type GcpStorageAccessor struct{}
+type GcpStorageAccessor struct {
+	clientMap *util.LoadingCache[*model.GcpStorage, *storage.Client]
+}
+
+func NewGcpStorageAccessor() *GcpStorageAccessor {
+	return &GcpStorageAccessor{
+		clientMap: util.NewLoadingCache[*model.GcpStorage, *storage.Client](context.Background(), getGcpClient),
+	}
+}
 
 func (a *GcpStorageAccessor) supports(storage model.Storage) bool {
 	_, ok := storage.(*model.GcpStorage)
@@ -25,7 +34,7 @@ func (a *GcpStorageAccessor) createReader(
 	opts ...ioStorage.Opt,
 ) (backup.StreamingReader, error) {
 	gcps := storage.(*model.GcpStorage)
-	client, err := getGcpClient(ctx, gcps)
+	client, err := a.clientMap.GetWithContext(ctx, gcps)
 	if err != nil {
 		return nil, fmt.Errorf("reader failed to create GCP client: %w", err)
 	}
@@ -37,7 +46,7 @@ func (a *GcpStorageAccessor) createWriter(
 	ctx context.Context, storage model.Storage, opts ...ioStorage.Opt,
 ) (backup.Writer, error) {
 	gcps := storage.(*model.GcpStorage)
-	client, err := getGcpClient(ctx, gcps)
+	client, err := a.clientMap.GetWithContext(ctx, gcps)
 	if err != nil {
 		return nil, fmt.Errorf("writer failed to create GCP client: %w", err)
 	}
@@ -46,7 +55,7 @@ func (a *GcpStorageAccessor) createWriter(
 }
 
 func init() {
-	registerAccessor(&GcpStorageAccessor{})
+	registerAccessor(NewGcpStorageAccessor())
 }
 
 func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, error) {
