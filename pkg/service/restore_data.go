@@ -122,18 +122,17 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 	return nil
 }
 
-func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
+func (r *dataRestorer) RestoreByTime(ctx context.Context, request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
 	reader, found := r.backends.GetReader(request.RoutineName)
 	if !found {
 		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.RoutineName)
 	}
-	fullBackups, err := reader.FindLastFullBackup(request.Time)
+	fullBackups, err := reader.FindLastFullBackup(ctx, request.Time)
 	if err != nil {
 		return 0, fmt.Errorf("restore failed: %w", err)
 	}
 	jobID := r.restoreJobs.newJob(request.RoutineName)
-	ctx := context.TODO()
 	go r.restoreByTimeSync(ctx, reader, request, jobID, fullBackups)
 
 	return jobID, nil

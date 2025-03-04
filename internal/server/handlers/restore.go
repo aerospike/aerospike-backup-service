@@ -116,7 +116,7 @@ func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, err := s.restoreManager.RestoreByTime(restoreRequest)
+	jobID, err := s.restoreManager.RestoreByTime(s.ctx, restoreRequest)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -196,7 +196,7 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf, err := s.restoreManager.RetrieveConfiguration(name, time.UnixMilli(timestamp))
+	buf, err := s.restoreManager.RetrieveConfiguration(s.ctx, name, time.UnixMilli(timestamp))
 	if err != nil {
 		httpError(w, err)
 		return

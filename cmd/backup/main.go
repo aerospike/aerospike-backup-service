@@ -128,6 +128,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		backends, restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator)
 
 	httpService := handlers.NewService(
+		ctx,
 		config,
 		configApplier,
 		scheduler,

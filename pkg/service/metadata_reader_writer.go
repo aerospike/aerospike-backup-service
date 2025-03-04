@@ -25,15 +25,12 @@ type BackupMetadataReader interface {
 
 	// FindLastFullBackup returns last full backup prior to given time.
 	// Each element of an array is backup of a namespace.
-	FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error)
+	FindLastFullBackup(ctx context.Context, toTime time.Time) ([]model.BackupDetails, error)
 
 	// FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
 	FindIncrementalBackupsForNamespace(
 		ctx context.Context, bounds model.TimeBounds, namespace string,
 	) ([]model.BackupDetails, error)
-
-	// FindLastRun return timestamps of last full and incremental backups.
-	FindLastRun(ctx context.Context) (*model.LastBackupRun, error)
 }
 
 // BackupMetadataWriter provides methods for writing backup metadata and deleting backups.

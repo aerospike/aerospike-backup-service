@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 	"sync"
@@ -102,7 +103,8 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 			routineLock.Lock()
 			defer routineLock.Unlock()
 
-			lastRun, err := routineReader.FindLastRun(ctx)
+			slog.Info("start find last backup run", slog.String("routine", routineName))
+			lastRun, err := findLastRun(ctx, routineReader)
 			if err != nil {
 				if errors.Is(err, context.Canceled) {
 					slog.Info("Backup history scan cancelled", slog.String("routine", routineName))
@@ -204,4 +206,33 @@ func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
 			handler.Cancel()
 		}
 	}
+}
+
+func findLastRun(ctx context.Context, b BackupMetadataReader) (*model.LastBackupRun, error) {
+	fullBackupList, err := b.FindLastFullBackup(ctx, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	lastFullBackup := lastBackupTime(fullBackupList)
+	if lastFullBackup == nil {
+		return model.NewLastBackupRun(nil, nil), nil
+	}
+
+	// Now find the last incremental backup after the last full backup
+	incrementalBackupList, err := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})
+	if err != nil {
+		return nil, fmt.Errorf("read incremental backups list failed: %w", err)
+	}
+
+	lastIncrBackup := lastBackupTime(incrementalBackupList)
+
+	return model.NewLastBackupRun(lastFullBackup, lastIncrBackup), nil
+}
+
+func lastBackupTime(b []model.BackupDetails) *time.Time {
+	if len(b) > 0 {
+		return &latestBackupBeforeTime(b, nil)[0].Created
+	}
+
+	return nil
 }

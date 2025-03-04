@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -14,14 +15,14 @@ type configRetriever struct {
 }
 
 // RetrieveConfiguration return backed up Aerospike configuration.
-func (cr *configRetriever) RetrieveConfiguration(routine string, toTime time.Time,
+func (cr *configRetriever) RetrieveConfiguration(ctx context.Context, routine string, toTime time.Time,
 ) ([]byte, error) {
 	backend, found := cr.backends.GetReader(routine)
 	if !found {
 		return nil, fmt.Errorf("%w: routine %s", errBackendNotFound, routine)
 	}
 
-	fullBackups, err := backend.FindLastFullBackup(toTime)
+	fullBackups, err := backend.FindLastFullBackup(ctx, toTime)
 	if err != nil {
 		return nil, fmt.Errorf("failed retrieve configuration: %w", err)
 	}
