@@ -7,12 +7,21 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 	ioStorage "github.com/aerospike/backup-go/io/storage"
 	azure "github.com/aerospike/backup-go/io/storage/azure/blob"
 )
 
-type AzureStorageAccessor struct{}
+type AzureStorageAccessor struct {
+	clientMap *util.LoadingCache[*model.AzureStorage, *azblob.Client]
+}
+
+func NewAzureStorageAccessor() *AzureStorageAccessor {
+	return &AzureStorageAccessor{
+		clientMap: util.NewLoadingCache[*model.AzureStorage, *azblob.Client](context.Background(), getAzureClient),
+	}
+}
 
 func (a *AzureStorageAccessor) supports(storage model.Storage) bool {
 	_, ok := storage.(*model.AzureStorage)
@@ -22,7 +31,7 @@ func (a *AzureStorageAccessor) supports(storage model.Storage) bool {
 func (a *AzureStorageAccessor) createReader(ctx context.Context, storage model.Storage, opts ...ioStorage.Opt,
 ) (backup.StreamingReader, error) {
 	azures := storage.(*model.AzureStorage)
-	client, err := getAzureClient(azures)
+	client, err := a.clientMap.Get(azures)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +43,7 @@ func (a *AzureStorageAccessor) createWriter(
 	ctx context.Context, storage model.Storage, opts ...ioStorage.Opt,
 ) (backup.Writer, error) {
 	azures := storage.(*model.AzureStorage)
-	client, err := getAzureClient(azures)
+	client, err := a.clientMap.Get(azures)
 	if err != nil {
 		return nil, err
 	}
@@ -43,10 +52,9 @@ func (a *AzureStorageAccessor) createWriter(
 }
 
 func init() {
-	registerAccessor(&AzureStorageAccessor{})
+	registerAccessor(NewAzureStorageAccessor())
 }
-
-func getAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
+func getAzureClient(_ context.Context, a *model.AzureStorage) (*azblob.Client, error) {
 	switch auth := a.Auth.(type) {
 	case model.AzureSharedKeyAuth:
 		return clientFromSharedKey(a.Endpoint, auth, a.SecretAgent)
