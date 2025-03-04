@@ -50,12 +50,10 @@ type RunningBackupsRegistryImpl struct {
 	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
 	lastSuccessful *util.SafeMap[string, *model.LastBackupRun]
 
-	// syncLock synchronizes access to backup state data
-	// It ensures all last backup timestamps are loaded from storage backends
-	// before allowing access through GetRoutineState/GetRunningState.
-	syncLock sync.RWMutex
-	cancel   context.CancelFunc
-	ctx      context.Context
+	syncLock     sync.Mutex                           // Protects the synchronization process itself
+	routineLocks *util.SafeMap[string, *sync.RWMutex] // Protects individual routines during synchronization
+	cancel       context.CancelFunc
+	ctx          context.Context
 }
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
@@ -66,7 +64,18 @@ func NewRunningBackupsRegistry(ctx context.Context) *RunningBackupsRegistryImpl 
 		ctx:            ctx,
 		handlers:       util.NewSafeMap[registryKey, CancelableBackupHandler](),
 		lastSuccessful: util.NewSafeMap[string, *model.LastBackupRun](),
+		routineLocks:   util.NewSafeMap[string, *sync.RWMutex](),
 	}
+}
+
+func (r *RunningBackupsRegistryImpl) getRoutineLock(routineName string) *sync.RWMutex {
+	lock, found := r.routineLocks.Load(routineName)
+	if !found {
+		lock = &sync.RWMutex{}
+		r.routineLocks.Store(routineName, lock)
+	}
+
+	return lock
 }
 
 // SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
@@ -74,11 +83,11 @@ func NewRunningBackupsRegistry(ctx context.Context) *RunningBackupsRegistryImpl 
 func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsHolder) {
 	if r.cancel != nil {
 		slog.Info("Cancelling previous backup history scan")
-		r.cancel() // stop previous scanning when starting another one.
-		r.cancel = nil
+		r.cancel()
 	}
 
 	r.syncLock.Lock()
+	defer r.syncLock.Unlock()
 	slog.Info("Starting backup history synchronization")
 
 	ctx, cancelFunc := context.WithTimeout(r.ctx, 10*time.Second)
@@ -86,10 +95,12 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 	var wg sync.WaitGroup
 	for routineName, reader := range backends.GetAllReaders() {
 		slog.Info("Last backup time request", slog.String("routine", routineName))
-
 		wg.Add(1)
 		go func(routineName string, routineReader BackupMetadataReader) {
 			defer wg.Done()
+			routineLock := r.getRoutineLock(routineName)
+			routineLock.Lock()
+			defer routineLock.Unlock()
 
 			lastRun, err := routineReader.FindLastRun(ctx)
 			if err != nil {
@@ -111,8 +122,6 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 
 	wg.Wait()
 	slog.Info("Finished backup history synchronization")
-	r.cancel = nil
-	r.syncLock.Unlock()
 }
 
 // register adds a new backup handler for a specific routine and job type.
@@ -151,8 +160,9 @@ func (r *RunningBackupsRegistryImpl) remove(routineName string, job jobType) {
 
 // GetRoutineState returns the current backup statistics for a routine.
 func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.RoutineState {
-	r.syncLock.RLock() // ensure backups are synced.
-	defer r.syncLock.RUnlock()
+	routineLock := r.getRoutineLock(routineName)
+	routineLock.RLock()
+	defer routineLock.RUnlock()
 
 	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
 	incrBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeIncremental))
@@ -171,9 +181,6 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 
 // GetRunningState returns statistics for all current backups.
 func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]*model.RoutineState {
-	r.syncLock.RLock() // ensure backups are synced.
-	defer r.syncLock.RUnlock()
-
 	var routines []string
 	r.handlers.Iterate(func(key registryKey, _ CancelableBackupHandler) {
 		if !slices.Contains(routines, key.routineName) { // same routine can be stored twice: as full and incr.

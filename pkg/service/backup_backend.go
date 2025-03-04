@@ -46,13 +46,12 @@ func (b *BackupBackend) FindLastRun(ctx context.Context) (*model.LastBackupRun, 
 	duration := 24 * time.Hour       // Start with 1 day range
 
 	for duration <= maxRange {
-		toTime := time.Now()
-		fromTime := toTime.Add(-duration)
+		fromTime := time.Now().Add(-duration)
 		if fromTime.Before(time.Unix(0, 0)) {
 			break
 		}
 
-		fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{FromTime: &fromTime, ToTime: &toTime})
+		fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{FromTime: &fromTime, ToTime: nil})
 		if err != nil {
 			return nil, fmt.Errorf("read full backups list failed: %w", err)
 		}
