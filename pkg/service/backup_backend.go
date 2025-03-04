@@ -48,6 +48,9 @@ func (b *BackupBackend) FindLastRun(ctx context.Context) (*model.LastBackupRun, 
 	for duration <= maxRange {
 		toTime := time.Now()
 		fromTime := toTime.Add(-duration)
+		if fromTime.Before(time.Unix(0, 0)) {
+			break
+		}
 
 		fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{FromTime: &fromTime, ToTime: &toTime})
 		if err != nil {
@@ -59,7 +62,7 @@ func (b *BackupBackend) FindLastRun(ctx context.Context) (*model.LastBackupRun, 
 			break // Found a backup, exit the loop
 		}
 
-		duration *= 2
+		duration *= 10
 	}
 
 	// If no backup was found within the maxRange, make a final attempt without any bounds
