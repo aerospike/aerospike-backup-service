@@ -111,6 +111,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 
 	wg.Wait()
 	slog.Info("Finished backup history synchronization")
+	r.cancel = nil
 	r.syncLock.Unlock()
 }
 
