@@ -20,13 +20,24 @@ func ScanClusterConfiguration(client Cluster, logger *slog.Logger) []asconfig.Do
 	for _, host := range activeHosts {
 		asInfo := info.NewAsInfo(logr.Logger{}, DowngradeHost(host), &policy)
 
-		conf, err := asconfig.GenerateConf(logr.Discard(), asInfo, true)
+		conf, err := util.TryAndRecoverError(func() (*asconfig.GenConf, error) {
+			return asconfig.GenerateConf(logr.Discard(), asInfo, true)
+		})
 		if err != nil {
 			logger.Error("Error reading configuration",
 				slog.Any("host", host), slog.Any("err", err))
 			continue
 		}
-		asconf, _ := asconfig.NewMapAsConfig(logr.Discard(), conf.Conf)
+
+		asconf, err := util.TryAndRecoverError(func() (*asconfig.AsConfig, error) {
+			return asconfig.NewMapAsConfig(logr.Discard(), conf.Conf)
+		})
+		if err != nil {
+			logger.Error("Error parsing configuration",
+				slog.Any("host", host), slog.Any("err", err))
+			continue
+		}
+
 		configAsString, err := util.TryAndRecover(asconf.ToConfFile)
 		if err != nil {
 			logger.Error("Error serialising configuration",
