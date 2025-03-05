@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"net/url"
+	"runtime/debug"
 	"slices"
 	"strings"
 	"time"
@@ -34,16 +35,28 @@ func ValueOrZero[T any](p *T) T {
 	return zero
 }
 
-// TryAndRecover executes the given function `f` and recovers from any panics
-// that occur.
-func TryAndRecover(f func() string) (output string, err error) {
+// TryAndRecover executes a function and recovers from any panic
+func TryAndRecover[T any](f func() T, fallback T) (output T, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("recovered from: %v", r)
-			output = ""
+			stackTrace := string(debug.Stack())
+			err = fmt.Errorf("recovered from panic: %v\nStack trace:\n%s", r, stackTrace)
+			output = fallback
 		}
 	}()
-	return f(), err
+	return f(), nil
+}
+
+// TryAndRecoverError executes a function returning (T, error), recovering from panic.
+func TryAndRecoverError[T any](f func() (T, error), fallback T) (output T, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			stackTrace := string(debug.Stack())
+			err = fmt.Errorf("recovered from panic: %v\nStack trace:\n%s", r, stackTrace)
+			output = fallback
+		}
+	}()
+	return f()
 }
 
 // ParseS3Path parses an S3 path and returns the bucket and path components.
