@@ -15,7 +15,7 @@ type configRetriever struct {
 }
 
 // RetrieveConfiguration return backed up Aerospike configuration.
-func (cr *configRetriever) RetrieveConfiguration(ctx context.Context, routine string, toTime time.Time,
+func (cr *configRetriever) RetrieveConfiguration(ctx context.Context, routine string, toTime *time.Time,
 ) ([]byte, error) {
 	backend, found := cr.backends.GetReader(routine)
 	if !found {

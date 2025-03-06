@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -93,6 +94,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 
 	backupConfig := config.BackupConfigCopy()
 	s.config.SetBackupConfig(backupConfig)
+	slog.Info("Apply new configuration")
 	err = s.configApplier.ApplyNewRoutines(backupConfig.BackupRoutines)
 
 	if err != nil {
@@ -113,6 +115,7 @@ func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Confi
 		return fmt.Errorf("failed to write configuration: %w", err)
 	}
 
+	slog.Info("change configuration")
 	err = s.configApplier.ApplyNewRoutines(s.config.Routines())
 	if err != nil {
 		return fmt.Errorf("failed to apply new configuration: %w", err)

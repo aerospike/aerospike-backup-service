@@ -128,7 +128,7 @@ func (r *dataRestorer) RestoreByTime(ctx context.Context, request *model.Restore
 	if !found {
 		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.RoutineName)
 	}
-	fullBackups, err := reader.FindLastFullBackup(ctx, request.Time)
+	fullBackups, err := reader.FindLastFullBackup(ctx, &request.Time)
 	if err != nil {
 		return 0, fmt.Errorf("restore failed: %w", err)
 	}

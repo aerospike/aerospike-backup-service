@@ -171,7 +171,11 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 
 	lastRun, found := r.lastSuccessful.Load(routineName)
 	if !found {
+		slog.Info("No last backup info available", slog.String("routine", routineName))
 		lastRun = &model.LastBackupRun{}
+	} else {
+		slog.Info("last backup", slog.String("routine", routineName),
+			slog.String("lastRun", lastRun.String()))
 	}
 
 	return &model.RoutineState{
@@ -209,7 +213,7 @@ func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
 }
 
 func findLastRun(ctx context.Context, b BackupMetadataReader) (*model.LastBackupRun, error) {
-	fullBackupList, err := b.FindLastFullBackup(ctx, time.Now())
+	fullBackupList, err := b.FindLastFullBackup(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

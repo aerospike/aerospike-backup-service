@@ -20,7 +20,7 @@ type RestoreManager interface {
 	JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error)
 
 	// RetrieveConfiguration return backed up Aerospike configuration.
-	RetrieveConfiguration(ctx context.Context, routine string, toTime time.Time) ([]byte, error)
+	RetrieveConfiguration(ctx context.Context, routine string, toTime *time.Time) ([]byte, error)
 
 	// CancelRestore cancels an ongoing restore.
 	CancelRestore(jobID model.RestoreJobID) error
