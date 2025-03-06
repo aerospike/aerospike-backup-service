@@ -134,8 +134,13 @@ func (r *RunningBackupsRegistryImpl) register(routineName string, job jobType, h
 // unregister removes a backup from the registry and updates the last success timestamp.
 // Should be called after successful backup completion.
 func (r *RunningBackupsRegistryImpl) unregister(routineName string, job jobType, timestamp time.Time) {
-	r.setLastTime(routineName, job, timestamp)
 	r.remove(routineName, job)
+
+	routineLock := r.getRoutineLock(routineName)
+	routineLock.Lock()
+	defer routineLock.Unlock()
+
+	r.setLastTime(routineName, job, timestamp)
 }
 
 func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType, timestamp time.Time) {
