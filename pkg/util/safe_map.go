@@ -28,19 +28,34 @@ func (s *SafeMap[K, V]) Load(key K) (V, bool) {
 	return value, ok
 }
 
-// LoadOrStore retrieves a value by key if it exists; otherwise, it savuses the provided default value.
+// LoadOrStore retrieves a value by key if it exists; otherwise, it stores the provided default value.
 func (s *SafeMap[K, V]) LoadOrStore(key K, defaultValue V) V {
 	if s == nil {
 		var zeroValue V
 		return zeroValue
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	// First try with a read lock
+	s.mu.RLock()
 	value, ok := s.m[key]
+	s.mu.RUnlock()
+
+	// If found, return immediately
 	if ok {
 		return value
 	}
+
+	// Not found, need to acquire write lock to store
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Need to check again after acquiring write lock
+	// because another goroutine might have stored a value
+	// between our RUnlock() and Lock()
+	if value, ok := s.m[key]; ok {
+		return value
+	}
+
 	s.m[key] = defaultValue
 	return defaultValue
 }
