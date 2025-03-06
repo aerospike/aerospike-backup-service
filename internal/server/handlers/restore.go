@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"net/http"
 	"strconv"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
 // RestoreFullHandler

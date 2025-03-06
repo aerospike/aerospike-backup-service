@@ -70,13 +70,7 @@ func NewRunningBackupsRegistry(ctx context.Context) *RunningBackupsRegistryImpl 
 }
 
 func (r *RunningBackupsRegistryImpl) getRoutineLock(routineName string) *sync.RWMutex {
-	lock, found := r.routineLocks.Load(routineName)
-	if !found {
-		lock = &sync.RWMutex{}
-		r.routineLocks.Store(routineName, lock)
-	}
-
-	return lock
+	return r.routineLocks.LoadOrCreate(routineName, &sync.RWMutex{})
 }
 
 // SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
