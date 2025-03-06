@@ -28,15 +28,15 @@ func (s *SafeMap[K, V]) Load(key K) (V, bool) {
 	return value, ok
 }
 
-// LoadOrCreate retrieves a value by key if it exists; otherwise, it savuses the provided default value.
-func (s *SafeMap[K, V]) LoadOrCreate(key K, defaultValue V) V {
+// LoadOrStore retrieves a value by key if it exists; otherwise, it savuses the provided default value.
+func (s *SafeMap[K, V]) LoadOrStore(key K, defaultValue V) V {
 	if s == nil {
 		var zeroValue V
 		return zeroValue
 	}
 
 	s.mu.Lock()
-	s.mu.Unlock()
+	defer s.mu.Unlock()
 	value, ok := s.m[key]
 	if ok {
 		return value
