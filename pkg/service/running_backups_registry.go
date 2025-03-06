@@ -13,6 +13,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
+const scanTimeout = 1 * time.Minute
+
 // RunningBackupsRegistry defines the interface for managing running backups and their statuses.
 type RunningBackupsRegistry interface {
 	// register adds a new backup handler for a specific routine and job type.
@@ -51,7 +53,7 @@ type RunningBackupsRegistryImpl struct {
 	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
 	lastSuccessful *util.SafeMap[string, *model.LastBackupRun]
 
-	syncLock     sync.Mutex                           // Protects the synchronization process itself
+	cancelLock   sync.Mutex                           // Protects the synchronization process itself
 	routineLocks *util.SafeMap[string, *sync.RWMutex] // Protects individual routines during synchronization
 	cancel       context.CancelFunc
 	ctx          context.Context
@@ -76,17 +78,9 @@ func (r *RunningBackupsRegistryImpl) getRoutineLock(routineName string) *sync.RW
 // SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
 func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsHolder) {
-	if r.cancel != nil {
-		slog.Info("Cancelling previous backup history scan")
-		r.cancel()
-	}
-
-	r.syncLock.Lock()
-	defer r.syncLock.Unlock()
 	slog.Info("Starting backup history synchronization")
+	ctx := r.cancelPreviousScan()
 
-	ctx, cancelFunc := context.WithTimeout(r.ctx, 10*time.Second)
-	r.cancel = cancelFunc
 	var wg sync.WaitGroup
 	for routineName, reader := range backends.GetAllReaders() {
 		slog.Info("Last backup time request", slog.String("routine", routineName))
@@ -118,6 +112,21 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 
 	wg.Wait()
 	slog.Info("Finished backup history synchronization")
+}
+
+func (r *RunningBackupsRegistryImpl) cancelPreviousScan() context.Context {
+	r.cancelLock.Lock()
+	defer r.cancelLock.Unlock()
+
+	if r.cancel != nil {
+		slog.Info("Cancelling previous backup history scan")
+		r.cancel()
+		r.cancel = nil
+	}
+
+	ctx, cancelFunc := context.WithTimeout(r.ctx, scanTimeout)
+	r.cancel = cancelFunc
+	return ctx
 }
 
 // register adds a new backup handler for a specific routine and job type.
