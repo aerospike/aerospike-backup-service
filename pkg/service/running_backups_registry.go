@@ -102,6 +102,16 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 				return
 			}
 
+			r.cancelLock.Lock()
+			defer r.cancelLock.Unlock()
+
+			if ctx.Err() != nil { // second check under the lock
+				slog.Info("Backup history scan error",
+					slog.String("routine", routineName),
+					slog.Any("err", ctx.Err()))
+				return
+			}
+
 			slog.Info("Last backup time",
 				slog.String("routine", routineName),
 				slog.String("lastRun", lastRun.String()))
