@@ -82,6 +82,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 	ctx := r.cancelPreviousScan()
 
 	var wg sync.WaitGroup
+	r.lastSuccessful.ReplaceContent(map[string]*model.LastBackupRun{})
 	for routineName, reader := range backends.GetAllReaders() {
 		slog.Info("Last backup time request", slog.String("routine", routineName))
 		wg.Add(1)
