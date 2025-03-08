@@ -95,10 +95,15 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 			slog.Info("start find last backup run", slog.String("routine", routineName))
 			lastRun, err := findLastRun(ctx, routineReader)
 			if err != nil {
-				if errors.Is(err, context.Canceled) {
+				switch {
+				case errors.Is(err, context.Canceled):
 					slog.Info("Backup history scan cancelled", slog.String("routine", routineName))
-				} else {
-					slog.Warn("Failed to load last backup time", slog.Any("error", err))
+				case errors.Is(err, errBackupNotFound):
+					slog.Warn("Backup not found", slog.String("routine", routineName), slog.Any("error", err))
+				default:
+					slog.Error("Failed to read last backup time",
+						slog.String("routine", routineName),
+						slog.Any("error", err))
 				}
 				return
 			}
@@ -181,12 +186,12 @@ func (r *RunningBackupsRegistryImpl) remove(routineName string, job jobType) {
 
 // GetRoutineState returns the current backup statistics for a routine.
 func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.RoutineState {
+	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
+	incrBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeIncremental))
+
 	routineLock := r.getRoutineLock(routineName)
 	routineLock.RLock()
 	defer routineLock.RUnlock()
-
-	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
-	incrBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeIncremental))
 
 	lastRun, found := r.lastSuccessful.Load(routineName)
 	if !found {
@@ -237,9 +242,6 @@ func findLastRun(ctx context.Context, b BackupMetadataReader) (*model.LastBackup
 		return nil, err
 	}
 	lastFullBackup := lastBackupTime(fullBackupList)
-	if lastFullBackup == nil {
-		return model.NewLastBackupRun(nil, nil), nil
-	}
 
 	// Now find the last incremental backup after the last full backup
 	incrementalBackupList, err := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})
