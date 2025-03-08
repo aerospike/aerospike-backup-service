@@ -99,7 +99,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 				case errors.Is(err, context.Canceled):
 					slog.Info("Backup history scan cancelled", slog.String("routine", routineName))
 				case errors.Is(err, errBackupNotFound):
-					slog.Warn("Backup not found", slog.String("routine", routineName), slog.Any("error", err))
+					slog.Warn("Backup not found", slog.String("routine", routineName))
 				default:
 					slog.Error("Failed to read last backup time",
 						slog.String("routine", routineName),

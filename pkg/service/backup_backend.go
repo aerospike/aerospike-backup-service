@@ -139,7 +139,7 @@ func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Tim
 
 	fullBackup := latestBackupBeforeTime(fullBackupList, toTime)
 	if len(fullBackup) == 0 {
-		return nil, fmt.Errorf("%w: %s", errBackupNotFound, toTime)
+		return nil, fmt.Errorf("%w before time %s", errBackupNotFound, toTime)
 	}
 	return fullBackup, nil
 }
