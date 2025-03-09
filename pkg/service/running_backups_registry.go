@@ -13,7 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
-const scanTimeout = 1 * time.Minute
+const scanTimeout = 5 * time.Second
 
 // RunningBackupsRegistry defines the interface for managing running backups and their statuses.
 type RunningBackupsRegistry interface {
@@ -92,14 +92,14 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 			routineLock.Lock()
 			defer routineLock.Unlock()
 
-			slog.Info("start find last backup run", slog.String("routine", routineName))
+			slog.Info("Start find last backup run", slog.String("routine", routineName))
 			lastRun, err := findLastRun(ctx, routineReader)
 			if err != nil {
 				switch {
 				case errors.Is(err, context.Canceled):
 					slog.Info("Backup history scan cancelled", slog.String("routine", routineName))
 				case errors.Is(err, errBackupNotFound):
-					slog.Warn("Backup not found", slog.String("routine", routineName))
+					slog.Info("Backup not found", slog.String("routine", routineName))
 				default:
 					slog.Error("Failed to read last backup time",
 						slog.String("routine", routineName),
