@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -22,16 +23,16 @@ import (
 // implementation for I/O operations.
 type BackupBackend struct {
 	mu          sync.RWMutex
-	storage     model.Storage
 	routineName string
+	routine     *model.BackupRoutine
 }
 
 var _ BackupMetadataReaderWriter = (*BackupBackend)(nil)
 
-func newBackend(routineName string, storage model.Storage) *BackupBackend {
+func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend {
 	return &BackupBackend{
-		storage:     storage,
 		routineName: routineName,
+		routine:     routine,
 	}
 }
 
@@ -45,7 +46,7 @@ func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, me
 	}
 
 	metadataFilePath := filepath.Join(path, metadataFile)
-	return storage.WriteMetadataFile(ctx, b.storage, metadataFilePath, dataYaml)
+	return storage.WriteMetadataFile(ctx, b.routine.Storage, metadataFilePath, dataYaml)
 }
 
 // FullBackupList returns a list of available full backups.
@@ -67,12 +68,12 @@ func (b *BackupBackend) readMetadataList(
 	defer b.mu.RUnlock()
 
 	backupRoot := getBackupRootPath(b.routineName, backupType)
-	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timeBounds.FromTime)
+	files, err := storage.ReadFiles(ctx, b.routine.Storage, backupRoot, metadataFile, timeBounds.FromTime)
 	if err != nil {
 		if errors.Is(err, storage.ErrEmptyStorage) {
 			slog.Info("Read metadata files empty",
 				slog.String("path", backupRoot),
-				slog.Any("storage", b.storage),
+				slog.Any("storage", b.routine.Storage),
 				slog.Any("timebounds", timeBounds.String()))
 			return nil, nil
 		}
@@ -82,7 +83,7 @@ func (b *BackupBackend) readMetadataList(
 	slog.Info("Read metadata files",
 		slog.Int("files count", len(files)),
 		slog.String("path", backupRoot),
-		slog.Any("storage", b.storage))
+		slog.Any("storage", b.routine.Storage))
 
 	var backups []model.BackupDetails
 	for _, buf := range files {
@@ -94,7 +95,7 @@ func (b *BackupBackend) readMetadataList(
 			backups = append(backups, model.BackupDetails{
 				BackupMetadata: *metadata,
 				Key:            getKey(b.routineName, backupType, metadata),
-				Storage:        b.storage,
+				Storage:        b.routine.Storage,
 			})
 		}
 	}
@@ -106,19 +107,18 @@ func (b *BackupBackend) readMetadataList(
 // returns error when not found.
 func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Time) ([]model.BackupDetails, error) {
 	// Start with an small range and double it until we find a backup or exceed a maximum range.
-	maxRange := 30 * 24 * time.Hour // 1 month maximum range
-	duration := 24 * time.Hour      // Start with 1 day range
 
-	for duration <= maxRange {
+	var fromTime = time.Now()
+	if toTime != nil {
+		fromTime = *toTime
+	}
+
+	for triesLeft := 3; triesLeft > 0; triesLeft-- { // try 3 scheduled intervals back
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
 
-		var fromTime = time.Now().Add(-duration)
-		if toTime != nil {
-			fromTime = toTime.Add(-duration)
-		}
-
+		fromTime = util.PreviousCron(fromTime, b.routine.IntervalCron)
 		if fromTime.Before(time.Unix(0, 0)) {
 			break
 		}
@@ -131,11 +131,9 @@ func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Tim
 		if len(fullBackup) > 0 {
 			return fullBackup, nil
 		}
-
-		duration *= 2
 	}
 
-	// If no backup was found within the maxRange, make a final attempt without any bounds
+	// If no backup was found, make a final attempt without any bounds
 	fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{ToTime: toTime})
 	if err != nil {
 		return nil, fmt.Errorf("cannot read full backup list: %w", err)
@@ -194,11 +192,11 @@ func (b *BackupBackend) FindIncrementalBackupsForNamespace(
 	return filteredIncrementalBackups, nil
 }
 
-func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
+func (b *BackupBackend) ReadClusterConfiguration(ctx context.Context, path string) ([]byte, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	configBackups, err := storage.ReadFiles(context.Background(), b.storage, path, configExt, nil)
+	configBackups, err := storage.ReadFiles(ctx, b.routine.Storage, path, configExt, nil)
 	if err != nil && !errors.Is(err, storage.ErrEmptyStorage) {
 		return nil, err
 	}
@@ -243,5 +241,5 @@ func (b *BackupBackend) deleteFolder(ctx context.Context, path string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	return storage.DeleteFolder(ctx, b.storage, path)
+	return storage.DeleteFolder(ctx, b.routine.Storage, path)
 }

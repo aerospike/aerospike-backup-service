@@ -21,7 +21,7 @@ type BackupMetadataReader interface {
 	IncrementalBackupList(ctx context.Context, timeBounds model.TimeBounds) ([]model.BackupDetails, error)
 
 	// ReadClusterConfiguration return backed up cluster configuration as a compressed zip.
-	ReadClusterConfiguration(path string) ([]byte, error)
+	ReadClusterConfiguration(ctx context.Context, path string) ([]byte, error)
 
 	// FindLastFullBackup returns last full backup prior to given time.
 	// Each element of an array is backup of a namespace.

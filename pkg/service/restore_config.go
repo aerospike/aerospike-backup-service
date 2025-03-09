@@ -35,7 +35,7 @@ func (cr *configRetriever) RetrieveConfiguration(ctx context.Context, routine st
 		return nil, err
 	}
 
-	return backend.ReadClusterConfiguration(configPath)
+	return backend.ReadClusterConfiguration(ctx, configPath)
 }
 
 func calculateConfigurationBackupPath(backupKey string) (string, error) {
