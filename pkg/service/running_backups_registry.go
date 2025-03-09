@@ -81,10 +81,11 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 	slog.Info("Starting backup history synchronization")
 	ctx := r.cancelPreviousScan()
 
+	totalStart := time.Now()
 	var wg sync.WaitGroup
 	r.lastSuccessful.ReplaceContent(map[string]*model.LastBackupRun{})
 	for routineName, reader := range backends.GetAllReaders() {
-		now := time.Now()
+		routineStart := time.Now()
 		slog.Info("Last backup time request", slog.String("routine", routineName))
 		wg.Add(1)
 		go func(routineName string, routineReader BackupMetadataReader) {
@@ -121,7 +122,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 			}
 
 			slog.Info("Last backup time",
-				slog.Duration("duration", time.Since(now)),
+				slog.Duration("duration", time.Since(routineStart)),
 				slog.String("routine", routineName),
 				slog.String("lastRun", lastRun.String()))
 
@@ -130,7 +131,9 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 	}
 
 	wg.Wait()
-	slog.Info("Finished backup history synchronization")
+	slog.Info("Finished backup history synchronization",
+		slog.Duration("duration", time.Since(totalStart)),
+	)
 }
 
 func (r *RunningBackupsRegistryImpl) cancelPreviousScan() context.Context {
