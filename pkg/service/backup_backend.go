@@ -106,8 +106,8 @@ func (b *BackupBackend) readMetadataList(
 // returns error when not found.
 func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Time) ([]model.BackupDetails, error) {
 	// Start with an small range and double it until we find a backup or exceed a maximum range.
-	maxRange := 365 * 24 * time.Hour // 1 year maximum range
-	duration := 24 * time.Hour       // Start with 1 day range
+	maxRange := 30 * 24 * time.Hour // 1 month maximum range
+	duration := 24 * time.Hour      // Start with 1 day range
 
 	for duration <= maxRange {
 		if ctx.Err() != nil {
