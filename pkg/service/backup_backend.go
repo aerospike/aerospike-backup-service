@@ -110,6 +110,10 @@ func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Tim
 	duration := 24 * time.Hour       // Start with 1 day range
 
 	for duration <= maxRange {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+
 		var fromTime = time.Now().Add(-duration)
 		if toTime != nil {
 			fromTime = toTime.Add(-duration)
