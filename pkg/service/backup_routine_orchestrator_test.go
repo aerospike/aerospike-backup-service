@@ -115,7 +115,7 @@ func setupTestHandler(
 		},
 		logger:           slog.Default(),
 		retry:            &simpleExecutor{},
-		registry:         NewRunningBackupsRegistry(context.Background()),
+		registry:         NewRunningBackupsRegistry(context.Background(), nil),
 		retentionManager: retentionManager,
 		runner: NewBackupNamespaceRunner(
 			"routine",

@@ -54,7 +54,7 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.Backu
 	// Create backup backends for each routine.
 	a.backends.Init(routines)
 	// Scan existing backups to find the last successful runs for every routine.
-	go a.registry.SynchroniseBackupHistory(a.backends)
+	go a.registry.SynchroniseBackupHistory()
 
 	// Refill handlers
 	newHandlers := makeHandlers(a.clientManager, routines, a.backends, a.registry)

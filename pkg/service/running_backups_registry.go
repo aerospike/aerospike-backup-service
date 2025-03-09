@@ -34,7 +34,7 @@ type RunningBackupsRegistry interface {
 	Cancel(routineName string)
 	// SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
 	// found in the storage backends. It scans all backup routines in parallel.
-	SynchroniseBackupHistory(backends BackendsHolder)
+	SynchroniseBackupHistory()
 }
 type registryKey struct {
 	routineName string
@@ -53,21 +53,27 @@ type RunningBackupsRegistryImpl struct {
 	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
 	lastSuccessful *util.SafeMap[string, *model.LastBackupRun]
 
-	cancelLock   sync.Mutex                           // Protects the synchronization process itself
-	routineLocks *util.SafeMap[string, *sync.RWMutex] // Protects individual routines during synchronization
-	cancel       context.CancelFunc
-	ctx          context.Context
+	cancelLock    sync.Mutex                           // Protects the synchronization process itself
+	routineLocks  *util.SafeMap[string, *sync.RWMutex] // Protects individual routines during synchronization
+	cancel        context.CancelFunc
+	ctx           context.Context
+	config        *model.Config
+	backends      *BackendHolderImpl
+	routineCancel *util.SafeMap[string, context.CancelFunc]
 }
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
-func NewRunningBackupsRegistry(ctx context.Context) *RunningBackupsRegistryImpl {
+func NewRunningBackupsRegistry(ctx context.Context, backends *BackendHolderImpl, config *model.Config) *RunningBackupsRegistryImpl {
 	return &RunningBackupsRegistryImpl{
 		ctx:            ctx,
+		config:         config,
+		backends:       backends,
 		handlers:       util.NewSafeMap[registryKey, CancelableBackupHandler](),
 		lastSuccessful: util.NewSafeMap[string, *model.LastBackupRun](),
 		routineLocks:   util.NewSafeMap[string, *sync.RWMutex](),
+		routineCancel:  util.NewSafeMap[string, context.CancelFunc](),
 	}
 }
 
@@ -77,24 +83,36 @@ func (r *RunningBackupsRegistryImpl) getRoutineLock(routineName string) *sync.RW
 
 // SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
-func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsHolder) {
+func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 	slog.Info("Starting backup history synchronization")
-	ctx := r.cancelPreviousScan()
-
 	totalStart := time.Now()
+
+	invalidatedRoutines := r.config.PopInvalidatedRoutines()
 	var wg sync.WaitGroup
-	r.lastSuccessful.ReplaceContent(map[string]*model.LastBackupRun{})
-	for routineName, reader := range backends.GetAllReaders() {
-		routineStart := time.Now()
-		slog.Info("Last backup time request", slog.String("routine", routineName))
+	for _, routineName := range invalidatedRoutines {
+		reader, found := r.backends.GetReader(routineName)
+		if !found {
+			slog.Warn("Skipping not existing routine", slog.String("routine", routineName))
+			continue
+		}
+
 		wg.Add(1)
 		go func(routineName string, routineReader BackupMetadataReader) {
 			defer wg.Done()
+			// cancel previous scan
+			r.routineCancel.Apply(routineName, func(cancel context.CancelFunc) {
+				cancel()
+			})
 			routineLock := r.getRoutineLock(routineName)
 			routineLock.Lock()
 			defer routineLock.Unlock()
 
 			slog.Info("Start find last backup run", slog.String("routine", routineName))
+			ctx, cancelFunc := context.WithTimeout(r.ctx, scanTimeout)
+			r.routineCancel.Store(routineName, cancelFunc)
+			defer cancelFunc()
+
+			routineStart := time.Now()
 			lastRun, err := findLastRun(ctx, routineReader)
 			if err != nil {
 				switch {
@@ -107,17 +125,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 						slog.String("routine", routineName),
 						slog.Any("error", err))
 				}
-				return
-			}
-
-			r.cancelLock.Lock()
-			defer r.cancelLock.Unlock()
-			r.cancel = nil
-
-			if ctx.Err() != nil { // second check under the lock
-				slog.Info("Backup history scan error",
-					slog.String("routine", routineName),
-					slog.Any("err", ctx.Err()))
+				r.lastSuccessful.Remove(routineName)
 				return
 			}
 
@@ -132,23 +140,10 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 
 	wg.Wait()
 	slog.Info("Finished backup history synchronization",
+		slog.Any("routines", invalidatedRoutines),
+		slog.Any("len", len(invalidatedRoutines)),
 		slog.Duration("duration", time.Since(totalStart)),
 	)
-}
-
-func (r *RunningBackupsRegistryImpl) cancelPreviousScan() context.Context {
-	r.cancelLock.Lock()
-	defer r.cancelLock.Unlock()
-
-	if r.cancel != nil {
-		slog.Info("Cancelling previous backup history scan")
-		r.cancel()
-		r.cancel = nil
-	}
-
-	ctx, cancelFunc := context.WithTimeout(r.ctx, scanTimeout)
-	r.cancel = cancelFunc
-	return ctx
 }
 
 // register adds a new backup handler for a specific routine and job type.
