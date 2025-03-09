@@ -121,7 +121,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(backends BackendsH
 			}
 
 			slog.Info("Last backup time",
-				slog.Duration("time", time.Since(now)),
+				slog.Duration("duration", time.Since(now)),
 				slog.String("routine", routineName),
 				slog.String("lastRun", lastRun.String()))
 
