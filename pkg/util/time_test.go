@@ -1,12 +1,13 @@
 package util
 
 import (
-	"github.com/reugn/go-quartz/quartz"
 	"testing"
 	"time"
+
+	"github.com/reugn/go-quartz/quartz"
 )
 
-// Test implementations of next functions
+// Test implementations of next functions.
 func nextMidnight(t time.Time) time.Time {
 	// Return the next midnight
 	midnight := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
@@ -77,7 +78,6 @@ func TestPrevious(t *testing.T) {
 	input := time.Date(2025, 6, 1, 0, 1, 0, 0, loc)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			result := previous(input, tc.nextFunc)
 
 			// The key requirement: next(result) should be <= input

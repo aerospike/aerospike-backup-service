@@ -57,6 +57,7 @@ func (s *SafeMap[K, V]) LoadOrStore(key K, defaultValue V) V {
 	}
 
 	s.m[key] = defaultValue
+
 	return defaultValue
 }
 

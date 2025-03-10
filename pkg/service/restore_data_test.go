@@ -80,7 +80,7 @@ func (m *BackendMock) FindIncrementalBackupsForNamespace(_ context.Context, _ mo
 	}}, nil
 }
 
-func (m *BackendMock) ReadClusterConfiguration(_ string) ([]byte, error) {
+func (m *BackendMock) ReadClusterConfiguration(_ context.Context, _ string) ([]byte, error) {
 	return []byte{}, nil
 }
 
@@ -113,10 +113,10 @@ func (*BackendMock) IncrementalBackupList(_ context.Context, _ model.TimeBounds)
 	}}, nil
 }
 
-func (*BackendMock) FindLastFullBackup(toTime time.Time, ctx context.Context) ([]model.BackupDetails, error) {
+func (*BackendMock) FindLastFullBackup(_ context.Context, toTime *time.Time) ([]model.BackupDetails, error) {
 	created := time.UnixMilli(5)
 
-	if t.After(created) {
+	if toTime != nil && toTime.After(created) {
 		return []model.BackupDetails{{
 			BackupMetadata: model.BackupMetadata{
 				Created:   created,
@@ -130,11 +130,11 @@ func (*BackendMock) FindLastFullBackup(toTime time.Time, ctx context.Context) ([
 	return nil, errBackupNotFound
 }
 
-func (*BackendFailMock) FindLastFullBackup(toTime time.Time, ctx context.Context) ([]model.BackupDetails, error) {
-	return nil, errBackupNotFound
+type BackendFailMock struct {
 }
 
-type BackendFailMock struct {
+func (*BackendFailMock) FindLastFullBackup(_ context.Context, _ *time.Time) ([]model.BackupDetails, error) {
+	return nil, errBackupNotFound
 }
 
 func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,
@@ -142,7 +142,7 @@ func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ context.Context, 
 	return nil, nil
 }
 
-func (m *BackendFailMock) ReadClusterConfiguration(_ string) ([]byte, error) {
+func (m *BackendFailMock) ReadClusterConfiguration(_ context.Context, _ string) ([]byte, error) {
 	return nil, errors.New("mock error")
 }
 
@@ -239,7 +239,7 @@ func Test_RestoreTimestamp(t *testing.T) {
 		RoutineName: "routine",
 	}
 
-	jobID, err := restoreService.RestoreByTime(&request)
+	jobID, err := restoreService.RestoreByTime(context.Background(), &request)
 	require.NoError(t, err, "RestoreByTime should not return an error")
 
 	jobStatus, err := waitForJobStatus(t, jobID, model.JobStatusDone)
@@ -257,7 +257,7 @@ func Test_RestoreByTimeFailNoBackend(t *testing.T) {
 		RoutineName: "wrongRoutine",
 	}
 
-	_, err := restoreService.RestoreByTime(request)
+	_, err := restoreService.RestoreByTime(context.Background(), request)
 	require.ErrorIs(t, err, errBackendNotFound)
 }
 
@@ -266,7 +266,7 @@ func Test_RestoreByTimeFailNoTimestamp(t *testing.T) {
 		RoutineName: "routine",
 	}
 
-	_, err := restoreService.RestoreByTime(request)
+	_, err := restoreService.RestoreByTime(context.Background(), request)
 	require.ErrorIs(t, err, errBackupNotFound)
 }
 
@@ -276,7 +276,7 @@ func Test_RestoreByTimeFailNoBackup(t *testing.T) {
 		Time:        time.UnixMilli(1),
 	}
 
-	_, err := restoreService.RestoreByTime(request)
+	_, err := restoreService.RestoreByTime(context.Background(), request)
 	require.ErrorIs(t, err, errBackupNotFound)
 }
 
@@ -287,7 +287,7 @@ func Test_restoreTimestampFail(t *testing.T) {
 		DestinationCluster: &model.AerospikeCluster{},
 	}
 
-	_, err := restoreService.RestoreByTime(request)
+	_, err := restoreService.RestoreByTime(context.Background(), request)
 	require.Error(t, err)
 }
 

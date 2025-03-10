@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"gopkg.in/yaml.v3"
 )
 
@@ -163,6 +163,7 @@ func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Tim
 	if len(fullBackup) == 0 {
 		return nil, fmt.Errorf("%w before time %s", errBackupNotFound, toTime)
 	}
+
 	return fullBackup, nil
 }
 

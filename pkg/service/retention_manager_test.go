@@ -15,7 +15,9 @@ func TestMultipleBackups(t *testing.T) {
 	s := &model.LocalStorage{Path: dir}
 	routineName := "routine1"
 	namespace := "ns1"
-	backend := newBackend(routineName, s)
+	backend := newBackend(routineName, &model.BackupRoutine{
+		Storage: s,
+	})
 
 	for _, t := range []int64{10, 20, 30, 40, 50} {
 		path := getBackupPath(routineName, jobTypeFull, namespace, time.UnixMilli(t))
@@ -55,7 +57,9 @@ func TestZeroRetentionLimit(t *testing.T) {
 	s := &model.LocalStorage{Path: dir}
 	routineName := "routine1"
 	namespace := "ns1"
-	backend := newBackend(routineName, s)
+	backend := newBackend(routineName, &model.BackupRoutine{
+		Storage: s,
+	})
 
 	for _, t := range []int64{10, 20, 30} {
 		path := getBackupPath(routineName, jobTypeFull, namespace, time.UnixMilli(t))
@@ -95,7 +99,9 @@ func TestNoBackups(t *testing.T) {
 	dir := t.TempDir()
 	s := &model.LocalStorage{Path: dir}
 	routineName := "routine1"
-	backend := newBackend(routineName, s)
+	backend := newBackend(routineName, &model.BackupRoutine{
+		Storage: s,
+	})
 
 	r := NewBackupRetentionManager(
 		backend,
@@ -125,7 +131,9 @@ func TestExactRetentionLimit(t *testing.T) {
 	s := &model.LocalStorage{Path: dir}
 	routineName := "routine1"
 	namespace := "ns1"
-	backend := newBackend(routineName, s)
+	backend := newBackend(routineName, &model.BackupRoutine{
+		Storage: s,
+	})
 
 	for _, t := range []int64{10, 20, 30} {
 		path := getBackupPath(routineName, jobTypeFull, namespace, time.UnixMilli(t))
@@ -167,7 +175,9 @@ func TestNilRetentionPolicy(t *testing.T) {
 	s := &model.LocalStorage{Path: dir}
 	routineName := "routine1"
 	namespace := "ns1"
-	backend := newBackend(routineName, s)
+	backend := newBackend(routineName, &model.BackupRoutine{
+		Storage: s,
+	})
 
 	for _, t := range []int64{10, 20, 30} {
 		path := getBackupPath(routineName, jobTypeFull, namespace, time.UnixMilli(t))
@@ -197,7 +207,9 @@ func TestHighRetentionLimits(t *testing.T) {
 	s := &model.LocalStorage{Path: dir}
 	routineName := "routine1"
 	namespace := "ns1"
-	backend := newBackend(routineName, s)
+	backend := newBackend(routineName, &model.BackupRoutine{
+		Storage: s,
+	})
 
 	for _, t := range []int64{10, 20, 30} {
 		path := getBackupPath(routineName, jobTypeFull, namespace, time.UnixMilli(t))

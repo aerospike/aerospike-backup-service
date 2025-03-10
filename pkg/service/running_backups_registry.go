@@ -51,9 +51,7 @@ type RunningBackupsRegistryImpl struct {
 	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
 	lastSuccessful *util.SafeMap[string, *model.LastBackupRun]
 
-	cancelLock    sync.Mutex                           // Protects the synchronization process itself
 	routineLocks  *util.SafeMap[string, *sync.RWMutex] // Protects individual routines during synchronization
-	cancel        context.CancelFunc
 	ctx           context.Context
 	config        *model.Config
 	backends      *BackendHolderImpl
@@ -63,7 +61,11 @@ type RunningBackupsRegistryImpl struct {
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
-func NewRunningBackupsRegistry(ctx context.Context, backends *BackendHolderImpl, config *model.Config) *RunningBackupsRegistryImpl {
+func NewRunningBackupsRegistry(
+	ctx context.Context,
+	backends *BackendHolderImpl,
+	config *model.Config,
+) *RunningBackupsRegistryImpl {
 	return &RunningBackupsRegistryImpl{
 		ctx:            ctx,
 		config:         config,
@@ -106,38 +108,8 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 				slog.Info("Cancelling previous scan", slog.String("routine", routineName))
 				cancel()
 			})
-			routineLock := r.getRoutineLock(routineName)
-			routineLock.Lock()
-			defer routineLock.Unlock()
 
-			slog.Info("Start find last backup run", slog.String("routine", routineName))
-			ctx, cancelFunc := context.WithCancel(r.ctx)
-			r.routineCancel.Store(routineName, cancelFunc)
-			defer cancelFunc()
-
-			routineStart := time.Now()
-			lastRun, err := findLastRun(ctx, routineReader)
-			if err != nil {
-				switch {
-				case errors.Is(err, context.Canceled):
-					slog.Info("Backup history scan cancelled", slog.String("routine", routineName))
-				case errors.Is(err, errBackupNotFound):
-					slog.Info("Backup not found", slog.String("routine", routineName))
-				default:
-					slog.Error("Failed to read last backup time",
-						slog.String("routine", routineName),
-						slog.Any("error", err))
-				}
-				r.lastSuccessful.Remove(routineName)
-				return
-			}
-
-			slog.Info("Last backup time",
-				slog.Duration("duration", time.Since(routineStart)),
-				slog.String("routine", routineName),
-				slog.String("lastRun", lastRun.String()))
-
-			r.lastSuccessful.Store(routineName, lastRun)
+			r.scanForRoutine(routineName, routineReader)
 		}(routineName, reader)
 	}
 
@@ -147,6 +119,42 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 		slog.Any("len", len(invalidatedRoutines)),
 		slog.Duration("duration", time.Since(totalStart)),
 	)
+}
+
+func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string, routineReader BackupMetadataReader) {
+	routineLock := r.getRoutineLock(routineName)
+	routineLock.Lock()
+	defer routineLock.Unlock()
+
+	slog.Info("Start find last backup run", slog.String("routine", routineName))
+	ctx, cancelFunc := context.WithCancel(r.ctx)
+	r.routineCancel.Store(routineName, cancelFunc)
+	defer cancelFunc()
+
+	routineStart := time.Now()
+	lastRun, err := findLastRun(ctx, routineReader)
+	if err != nil {
+		switch {
+		case errors.Is(err, context.Canceled):
+			slog.Info("Backup history scan cancelled", slog.String("routine", routineName))
+		case errors.Is(err, errBackupNotFound):
+			slog.Info("Backup not found", slog.String("routine", routineName))
+		default:
+			slog.Error("Failed to read last backup time",
+				slog.String("routine", routineName),
+				slog.Any("error", err))
+		}
+		r.lastSuccessful.Remove(routineName)
+
+		return
+	}
+
+	slog.Info("Last backup time",
+		slog.Duration("duration", time.Since(routineStart)),
+		slog.String("routine", routineName),
+		slog.String("lastRun", lastRun.String()))
+
+	r.lastSuccessful.Store(routineName, lastRun)
 }
 
 // register adds a new backup handler for a specific routine and job type.

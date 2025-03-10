@@ -1,8 +1,9 @@
 package util
 
 import (
-	"github.com/reugn/go-quartz/quartz"
 	"time"
+
+	"github.com/reugn/go-quartz/quartz"
 )
 
 const errorMargin = 24 * time.Hour

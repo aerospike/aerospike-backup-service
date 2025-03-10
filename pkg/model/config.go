@@ -323,6 +323,7 @@ func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
 	if !isDisabled { // only invalidate if we are enabling the routine
 		c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, name)
 	}
+
 	return nil
 }
 
