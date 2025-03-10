@@ -84,10 +84,10 @@ func (r *RunningBackupsRegistryImpl) getRoutineLock(routineName string) *sync.RW
 // SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
 func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
-	slog.Info("Starting backup history synchronization")
 	totalStart := time.Now()
 
 	invalidatedRoutines := r.config.PopInvalidatedRoutines()
+	slog.Info("Starting backup history synchronization", slog.Int("len", len(invalidatedRoutines)))
 	var wg sync.WaitGroup
 	for _, routineName := range invalidatedRoutines {
 		reader, found := r.backends.GetReader(routineName)
