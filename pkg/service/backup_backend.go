@@ -104,6 +104,7 @@ func (b *BackupBackend) readMetadataList(
 }
 
 const maxRequests = 5
+const maxDuration = 365 * 24 * time.Hour
 
 // FindLastFullBackup returns last full backup prior to given time.
 // returns error when not found.
@@ -120,6 +121,10 @@ func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Tim
 	for range maxRequests {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
+		}
+
+		if duration >= maxDuration {
+			break
 		}
 
 		var fromTime = time.Now().Add(-duration)

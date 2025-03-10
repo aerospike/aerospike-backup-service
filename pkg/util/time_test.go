@@ -87,9 +87,9 @@ func TestPrevious(t *testing.T) {
 					nextAfterResult, input)
 			}
 
-			errorMargin := input.Sub(nextAfterResult)
-			if errorMargin > time.Hour {
-				t.Errorf("error margin between result and next(result) is too big (%v)", errorMargin)
+			margin := input.Sub(nextAfterResult)
+			if margin > errorMargin {
+				t.Errorf("error margin between result and next(result) is too big (%v)", margin)
 			}
 		})
 	}

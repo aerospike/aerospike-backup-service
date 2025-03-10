@@ -13,8 +13,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
-const scanTimeout = 5 * time.Second
-
 // RunningBackupsRegistry defines the interface for managing running backups and their statuses.
 type RunningBackupsRegistry interface {
 	// register adds a new backup handler for a specific routine and job type.
@@ -108,7 +106,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 			defer routineLock.Unlock()
 
 			slog.Info("Start find last backup run", slog.String("routine", routineName))
-			ctx, cancelFunc := context.WithTimeout(r.ctx, scanTimeout)
+			ctx, cancelFunc := context.WithCancel(r.ctx)
 			r.routineCancel.Store(routineName, cancelFunc)
 			defer cancelFunc()
 
