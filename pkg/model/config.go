@@ -19,7 +19,7 @@ type BackupConfig struct {
 	BackupPolicies      map[string]*BackupPolicy
 	BackupRoutines      map[string]*BackupRoutine
 	SecretAgents        map[string]*SecretAgent
-	invalidatedRoutines []string
+	invalidatedRoutines []string // routines that need to be rescanned after a change
 }
 
 func (bc *BackupConfig) copy() *BackupConfig {
@@ -327,10 +327,13 @@ func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
 	return nil
 }
 
+// PopInvalidatedRoutines returns all invalidated routines since the last call.
 func (c *Config) PopInvalidatedRoutines() []string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	result := c.backupConfig.invalidatedRoutines
 	c.backupConfig.invalidatedRoutines = nil
+
 	return result
 }
