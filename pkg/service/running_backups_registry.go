@@ -85,6 +85,10 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 	totalStart := time.Now()
 
 	invalidatedRoutines := r.config.PopInvalidatedRoutines()
+	if len(invalidatedRoutines) == 0 {
+		return
+	}
+
 	slog.Info("Starting backup history synchronization", slog.Int("len", len(invalidatedRoutines)))
 	var wg sync.WaitGroup
 	for _, routineName := range invalidatedRoutines {
@@ -99,6 +103,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 			defer wg.Done()
 			// cancel previous scan
 			r.routineCancel.Apply(routineName, func(cancel context.CancelFunc) {
+				slog.Info("Cancelling previous scan", slog.String("routine", routineName))
 				cancel()
 			})
 			routineLock := r.getRoutineLock(routineName)
