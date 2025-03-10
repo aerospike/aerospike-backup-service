@@ -52,6 +52,10 @@ func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, me
 // FullBackupList returns a list of available full backups.
 func (b *BackupBackend) FullBackupList(ctx context.Context, timeBounds model.TimeBounds,
 ) ([]model.BackupDetails, error) {
+	slog.Info("Searching for full backup",
+		slog.String("bounds", timeBounds.String()),
+		slog.Any("routine", b.routine))
+
 	return b.readMetadataList(ctx, timeBounds, jobTypeFull)
 }
 

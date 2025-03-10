@@ -115,7 +115,6 @@ func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Confi
 		return fmt.Errorf("failed to write configuration: %w", err)
 	}
 
-	slog.Info("change configuration")
 	err = s.configApplier.ApplyNewRoutines(s.config.Routines())
 	if err != nil {
 		return fmt.Errorf("failed to apply new configuration: %w", err)
