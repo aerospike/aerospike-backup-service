@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+const errorMargin = 24 * time.Hour
+
+// PreviousCron returns the estimated (within error margin) previous fireTime of a given time.
+// input time is guaranteed to be between result and trigger.NextFireTime(result).
 func PreviousCron(t time.Time, cronSpec string) time.Time {
 	trigger, _ := quartz.NewCronTrigger(cronSpec)
 	next := func(t time.Time) time.Time {
@@ -21,7 +25,7 @@ func previous(t time.Time, next func(time.Time) time.Time) time.Time {
 
 	// Use binary search between start and end (input time)
 	end := t
-	for end.Sub(start).Hours() > 1 {
+	for end.Sub(start) > errorMargin {
 		mid := start.Add(end.Sub(start) / 2)
 
 		nextMid := next(mid)

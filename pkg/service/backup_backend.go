@@ -52,10 +52,6 @@ func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, me
 // FullBackupList returns a list of available full backups.
 func (b *BackupBackend) FullBackupList(ctx context.Context, timeBounds model.TimeBounds,
 ) ([]model.BackupDetails, error) {
-	slog.Info("Searching for full backup",
-		slog.String("bounds", timeBounds.String()),
-		slog.Any("routine", b.routine))
-
 	return b.readMetadataList(ctx, timeBounds, jobTypeFull)
 }
 
@@ -107,26 +103,39 @@ func (b *BackupBackend) readMetadataList(
 	return backups, nil
 }
 
+const maxRequests = 5
+
 // FindLastFullBackup returns last full backup prior to given time.
 // returns error when not found.
 func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Time) ([]model.BackupDetails, error) {
-	// Start with an small range and double it until we find a backup or exceed a maximum range.
-
 	var fromTime = time.Now()
 	if toTime != nil {
 		fromTime = *toTime
 	}
 
-	for triesLeft := 3; triesLeft > 0; triesLeft-- { // try 3 scheduled intervals back
+	prevSchedule := util.PreviousCron(fromTime, b.routine.IntervalCron)
+	duration := fromTime.Sub(prevSchedule) // start with difference between previous schedule and now
+
+	// Start with an small range and double it until we find a backup or exceed a maximum range.
+	for range maxRequests {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
 
-		fromTime = util.PreviousCron(fromTime, b.routine.IntervalCron)
+		var fromTime = time.Now().Add(-duration)
+		if toTime != nil {
+			fromTime = toTime.Add(-duration)
+		}
+
 		if fromTime.Before(time.Unix(0, 0)) {
 			break
 		}
 		timeBounds, _ := model.NewTimeBounds(&fromTime, toTime)
+		slog.Info("Searching for full backup",
+			slog.Duration("duration", duration),
+			slog.String("timebounds", timeBounds.String()),
+			slog.Any("routine", b.routineName))
+
 		fullBackupList, err := b.FullBackupList(ctx, timeBounds)
 		if err != nil {
 			return nil, fmt.Errorf("cannot read full backup list: %w", err)
@@ -135,6 +144,8 @@ func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Tim
 		if len(fullBackup) > 0 {
 			return fullBackup, nil
 		}
+
+		duration *= 2
 	}
 
 	// If no backup was found, make a final attempt without any bounds
