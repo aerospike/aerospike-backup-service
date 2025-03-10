@@ -54,6 +54,7 @@ func (a *AzureStorageAccessor) createWriter(
 func init() {
 	registerAccessor(NewAzureStorageAccessor())
 }
+
 func getAzureClient(_ context.Context, a *model.AzureStorage) (*azblob.Client, error) {
 	switch auth := a.Auth.(type) {
 	case model.AzureSharedKeyAuth:

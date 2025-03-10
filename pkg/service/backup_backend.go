@@ -139,7 +139,7 @@ func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Tim
 		duration *= 2
 	}
 
-	// If no backup was found, make a final attempt without any bounds
+	// If no backup was found, make a final attempt without any bounds.
 	fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{ToTime: toTime})
 	if err != nil {
 		return nil, fmt.Errorf("cannot read full backup list: %w", err)
