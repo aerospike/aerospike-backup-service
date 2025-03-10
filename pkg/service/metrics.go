@@ -118,7 +118,9 @@ func (mc *MetricsCollector) Start(ctx context.Context, duration time.Duration) {
 }
 
 func (mc *MetricsCollector) collectMetrics() {
-	mc.mu.Lock()
+	if !mc.mu.TryLock() {
+		return // Previous collection still ongoing.
+	}
 	defer mc.mu.Unlock()
 
 	mc.collectBackupMetrics()
