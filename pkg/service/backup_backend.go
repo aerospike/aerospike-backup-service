@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -71,19 +70,10 @@ func (b *BackupBackend) readMetadataList(
 	files, err := storage.ReadFiles(ctx, b.routine.Storage, backupRoot, metadataFile, timeBounds.FromTime)
 	if err != nil {
 		if errors.Is(err, storage.ErrEmptyStorage) {
-			slog.Info("Read metadata files empty",
-				slog.String("path", backupRoot),
-				slog.Any("storage", b.routine.Storage),
-				slog.Any("timebounds", timeBounds.String()))
 			return nil, nil
 		}
 		return nil, fmt.Errorf("read metadata files error: %w", err)
 	}
-
-	slog.Info("Read metadata files",
-		slog.Int("files count", len(files)),
-		slog.String("path", backupRoot),
-		slog.Any("storage", b.routine.Storage))
 
 	var backups []model.BackupDetails
 	for _, buf := range files {
@@ -135,12 +125,8 @@ func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Tim
 		if fromTime.Before(time.Unix(0, 0)) {
 			break
 		}
-		timeBounds, _ := model.NewTimeBounds(&fromTime, toTime)
-		slog.Info("Searching for full backup",
-			slog.Duration("duration", duration),
-			slog.String("timebounds", timeBounds.String()),
-			slog.Any("routine", b.routineName))
 
+		timeBounds, _ := model.NewTimeBounds(&fromTime, toTime)
 		fullBackupList, err := b.FullBackupList(ctx, timeBounds)
 		if err != nil {
 			return nil, fmt.Errorf("cannot read full backup list: %w", err)

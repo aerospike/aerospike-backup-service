@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
 	"sync"
 	"time"
 
@@ -146,10 +145,6 @@ func (cm *ClientManagerImpl) createClient(cluster *model.AerospikeCluster) (*bac
 	}
 
 	var options []backup.ClientOpt
-	warnLogger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelWarn,
-	}))
-	options = append(options, backup.WithLogger(warnLogger))
 	if cluster.MaxParallelScans != nil {
 		options = append(options, backup.WithScanLimiter(
 			semaphore.NewWeighted(int64(*cluster.MaxParallelScans))))
