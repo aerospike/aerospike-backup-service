@@ -113,28 +113,21 @@ func (*BackendMock) IncrementalBackupList(_ context.Context, _ model.TimeBounds)
 	}}, nil
 }
 
-func (*BackendMock) FindLastFullBackup(_ context.Context, toTime *time.Time) (model.BackupDetails, error) {
+func (*BackendMock) FindLastFullBackup(_ context.Context, toTime *time.Time) (time.Time, error) {
 	created := time.UnixMilli(5)
 
 	if toTime != nil && toTime.After(created) {
-		return model.BackupDetails{
-			BackupMetadata: model.BackupMetadata{
-				Created:   created,
-				Namespace: "ns1",
-				FileCount: 1,
-			},
-			Key: validBackupPath,
-		}, nil
+		return created, nil
 	}
 
-	return model.BackupDetails{}, errBackupNotFound
+	return time.Time{}, errBackupNotFound
 }
 
 type BackendFailMock struct {
 }
 
-func (*BackendFailMock) FindLastFullBackup(_ context.Context, _ *time.Time) (model.BackupDetails, error) {
-	return model.BackupDetails{}, errBackupNotFound
+func (*BackendFailMock) FindLastFullBackup(_ context.Context, _ *time.Time) (time.Time, error) {
+	return time.Time{}, errBackupNotFound
 }
 
 func (m *BackendFailMock) FindIncrementalBackupsForNamespace(_ context.Context, _ model.TimeBounds, _ string,

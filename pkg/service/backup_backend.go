@@ -94,23 +94,19 @@ func (b *BackupBackend) readMetadataList(
 
 // FindLastFullBackup returns last full backup prior to given time.
 // returns error when not found.
-func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Time) (model.BackupDetails, error) {
+func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Time) (time.Time, error) {
 	path := getBackupRootPath(b.routineName, jobTypeFull)
 	file, err := storage.ReadLastFile(ctx, b.routine.Storage, path, metadataFile, toTime)
 	if err != nil {
-		return model.BackupDetails{}, err
+		return time.Time{}, err
 	}
 
 	metadata, err := model.NewMetadataFromBytes(file)
 	if err != nil {
-		return model.BackupDetails{}, fmt.Errorf("error decoding backup metadata YAML: %w", err)
+		return time.Time{}, fmt.Errorf("error decoding backup metadata YAML: %w", err)
 	}
 
-	return model.BackupDetails{
-		BackupMetadata: *metadata,
-		Key:            getKey(b.routineName, jobTypeFull, metadata),
-		Storage:        b.routine.Storage,
-	}, nil
+	return metadata.Created, nil
 }
 
 // latestBackupBeforeTime returns list of backups with same creation time,

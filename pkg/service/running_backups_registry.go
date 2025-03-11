@@ -255,14 +255,14 @@ func findLastRun(ctx context.Context, b BackupMetadataReader) (*model.LastBackup
 	}
 
 	// Now find the last incremental backup after the last full backup
-	incrementalBackupList, err := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: &lastFullBackup.Created})
+	incrementalBackupList, err := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: &lastFullBackup})
 	if err != nil {
 		return nil, fmt.Errorf("read incremental backups list failed: %w", err)
 	}
 
 	lastIncrBackup := lastBackupTime(incrementalBackupList)
 
-	return model.NewLastBackupRun(&lastFullBackup.Created, lastIncrBackup), nil
+	return model.NewLastBackupRun(&lastFullBackup, lastIncrBackup), nil
 }
 
 func lastBackupTime(b []model.BackupDetails) *time.Time {

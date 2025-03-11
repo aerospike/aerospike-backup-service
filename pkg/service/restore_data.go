@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -134,8 +135,8 @@ func (r *dataRestorer) RestoreByTime(ctx context.Context, request *model.Restore
 	}
 
 	fullBackups, err := reader.FullBackupList(ctx, model.TimeBounds{
-		FromTime: &lastbackup.Created,
-		ToTime:   &lastbackup.Created,
+		FromTime: &lastbackup,
+		ToTime:   util.Ptr(lastbackup.Add(1 * time.Second)), // TODO
 	})
 	if err != nil {
 		return 0, fmt.Errorf("FullBackupList restore failed: %w", err)

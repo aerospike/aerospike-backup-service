@@ -3,10 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
-
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
 // configRetriever is used to read Aerospike configuration from backup.
@@ -27,21 +24,5 @@ func (cr *configRetriever) RetrieveConfiguration(ctx context.Context, routine st
 		return nil, fmt.Errorf("failed retrieve configuration: %w", err)
 	}
 
-	configPath, err := calculateConfigurationBackupPath(lastFullBackup.Key)
-	if err != nil {
-		return nil, err
-	}
-
-	return backend.ReadClusterConfiguration(ctx, configPath)
-}
-
-func calculateConfigurationBackupPath(backupKey string) (string, error) {
-	_, path, err := util.ParseS3Path(backupKey)
-	if err != nil {
-		return "", err
-	}
-	// Move up two directories
-	base := filepath.Dir(filepath.Dir(path))
-	// Join new directory 'config' with the new base
-	return filepath.Join(base, configurationBackupDirectory), nil
+	return backend.ReadClusterConfiguration(ctx, getConfigurationPath(routine, lastFullBackup))
 }

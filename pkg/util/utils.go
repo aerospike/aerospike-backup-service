@@ -2,10 +2,8 @@ package util
 
 import (
 	"fmt"
-	"net/url"
 	"runtime/debug"
 	"slices"
-	"strings"
 	"time"
 )
 
@@ -55,18 +53,6 @@ func TryAndRecoverError[T any](f func() (T, error)) (output T, err error) {
 		}
 	}()
 	return f()
-}
-
-// ParseS3Path parses an S3 path and returns the bucket and path components.
-// The path is trimmed of the leading slash (/).
-// Amazon S3 require paths to be without slashes.
-func ParseS3Path(s string) (bucket string, path string, err error) {
-	parsed, err := url.Parse(s)
-	if err != nil {
-		return "", "", err
-	}
-
-	return parsed.Host, strings.TrimPrefix(parsed.Path, "/"), nil
 }
 
 // MissingElements returns all elements in `subset` that are not present in `superset`.
