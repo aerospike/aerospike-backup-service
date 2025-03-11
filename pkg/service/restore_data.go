@@ -130,7 +130,7 @@ func (r *dataRestorer) RestoreByTime(ctx context.Context, request *model.Restore
 	}
 	lastbackup, err := reader.FindLastFullBackup(ctx, &request.Time)
 	if err != nil {
-		return 0, fmt.Errorf("restore failed: %w", err)
+		return 0, fmt.Errorf("FindLastFullBackup restore failed: %w", err)
 	}
 
 	fullBackups, err := reader.FullBackupList(ctx, model.TimeBounds{
@@ -138,7 +138,7 @@ func (r *dataRestorer) RestoreByTime(ctx context.Context, request *model.Restore
 		ToTime:   &lastbackup.Created,
 	})
 	if err != nil {
-		return 0, fmt.Errorf("restore failed: %w", err)
+		return 0, fmt.Errorf("FullBackupList restore failed: %w", err)
 	}
 
 	jobID := r.restoreJobs.newJob(request.RoutineName)
