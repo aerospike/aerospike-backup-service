@@ -6,11 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 	ioStorage "github.com/aerospike/backup-go/io/storage"
 	"github.com/aerospike/backup-go/models"
@@ -129,6 +132,44 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 			return nil, ctx.Err()
 		}
 	}
+}
+
+type ObjectLister interface {
+	ListObjects(ctx context.Context, path string) ([]string, error)
+}
+
+func ReadLastFile(
+	ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
+) ([]byte, error) {
+	var startScanFrom string
+	if fromTime != nil {
+		fromTimeStr := strconv.FormatInt(fromTime.UnixMilli()-1, 10) // -1 to ensure filter is greater or equal.
+		startScanFrom = filepath.Join(path, fromTimeStr)
+	}
+
+	reader, err := CreateDirReader(ctx, storage, path,
+		ioStorage.WithValidator(newNameValidator(filterStr)),
+		ioStorage.WithStartAfter(startScanFrom),
+		ioStorage.WithNestedDir(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create reader: %w", err)
+	}
+
+	lister, ok := reader.(ObjectLister)
+	if !ok {
+		// Handle the case where the assertion fails
+		log.Fatal("givenInterface does not implement ObjectLister")
+	}
+
+	join := filepath.Join(storage.GetPath(), path)
+	objects, err := lister.ListObjects(ctx, join)
+	if err != nil || len(objects) == 0 {
+		return nil, fmt.Errorf("failed to list objects: %w", err)
+	}
+	lastFile := util.LastString(objects)
+
+	return ReadFile(ctx, storage, strings.TrimPrefix(lastFile, storage.GetPath()))
 }
 
 func WriteMetadataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {

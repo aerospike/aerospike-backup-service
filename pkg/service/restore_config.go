@@ -22,14 +22,11 @@ func (cr *configRetriever) RetrieveConfiguration(ctx context.Context, routine st
 		return nil, fmt.Errorf("%w: routine %s", errBackendNotFound, routine)
 	}
 
-	fullBackups, err := backend.FindLastFullBackup(ctx, toTime)
+	lastFullBackup, err := backend.FindLastFullBackup(ctx, toTime)
 	if err != nil {
 		return nil, fmt.Errorf("failed retrieve configuration: %w", err)
 	}
 
-	// fullBackups has backups for multiple namespaces, but same timestamp,
-	// they share the same configuration.
-	lastFullBackup := fullBackups[0]
 	configPath, err := calculateConfigurationBackupPath(lastFullBackup.Key)
 	if err != nil {
 		return nil, err

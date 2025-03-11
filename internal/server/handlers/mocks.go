@@ -59,9 +59,9 @@ func (m *MockBackupMetadataReader) ReadClusterConfiguration(ctx context.Context,
 
 func (m *MockBackupMetadataReader) FindLastFullBackup(
 	ctx context.Context, toTime *time.Time,
-) ([]model.BackupDetails, error) {
+) (model.BackupDetails, error) {
 	args := m.Called(ctx, toTime)
-	return args.Get(0).([]model.BackupDetails), args.Error(1)
+	return args.Get(0).(model.BackupDetails), args.Error(1)
 }
 
 func (m *MockBackupMetadataReader) FindIncrementalBackupsForNamespace(

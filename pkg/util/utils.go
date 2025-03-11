@@ -91,3 +91,12 @@ func NowWithZeroNanoseconds() time.Time {
 	now := time.Now()
 	return now.Truncate(time.Millisecond)
 }
+
+func LastString(strs []string) (last string) {
+	for _, str := range strs {
+		if str > last {
+			last = str
+		}
+	}
+	return
+}

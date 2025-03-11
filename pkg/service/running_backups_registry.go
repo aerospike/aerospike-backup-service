@@ -101,7 +101,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 		}
 
 		wg.Add(1)
-		go func(routineName string, routineReader BackupMetadataReader) {
+		func(routineName string, routineReader BackupMetadataReader) {
 			defer wg.Done()
 			// cancel previous scan
 			r.routineCancel.Apply(routineName, func(cancel context.CancelFunc) {
@@ -249,21 +249,20 @@ func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
 }
 
 func findLastRun(ctx context.Context, b BackupMetadataReader) (*model.LastBackupRun, error) {
-	fullBackupList, err := b.FindLastFullBackup(ctx, nil)
+	lastFullBackup, err := b.FindLastFullBackup(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	lastFullBackup := lastBackupTime(fullBackupList)
 
 	// Now find the last incremental backup after the last full backup
-	incrementalBackupList, err := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})
+	incrementalBackupList, err := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: &lastFullBackup.Created})
 	if err != nil {
 		return nil, fmt.Errorf("read incremental backups list failed: %w", err)
 	}
 
 	lastIncrBackup := lastBackupTime(incrementalBackupList)
 
-	return model.NewLastBackupRun(lastFullBackup, lastIncrBackup), nil
+	return model.NewLastBackupRun(&lastFullBackup.Created, lastIncrBackup), nil
 }
 
 func lastBackupTime(b []model.BackupDetails) *time.Time {

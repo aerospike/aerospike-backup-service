@@ -14,7 +14,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"gopkg.in/yaml.v3"
 )
 
@@ -93,64 +92,25 @@ func (b *BackupBackend) readMetadataList(
 	return backups, nil
 }
 
-const maxRequests = 5
-const maxDuration = 365 * 24 * time.Hour
-
 // FindLastFullBackup returns last full backup prior to given time.
 // returns error when not found.
-func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Time) ([]model.BackupDetails, error) {
-	var fromTime = time.Now()
-	if toTime != nil {
-		fromTime = *toTime
-	}
-
-	prevSchedule := util.PreviousCron(fromTime, b.routine.IntervalCron)
-	duration := fromTime.Sub(prevSchedule) // start with difference between previous schedule and now
-
-	// Start with an small range and double it until we find a backup or exceed a maximum range.
-	for range maxRequests {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-
-		if duration >= maxDuration {
-			break
-		}
-
-		var fromTime = time.Now().Add(-duration)
-		if toTime != nil {
-			fromTime = toTime.Add(-duration)
-		}
-
-		if fromTime.Before(time.Unix(0, 0)) {
-			break
-		}
-
-		timeBounds, _ := model.NewTimeBounds(&fromTime, toTime)
-		fullBackupList, err := b.FullBackupList(ctx, timeBounds)
-		if err != nil {
-			return nil, fmt.Errorf("cannot read full backup list: %w", err)
-		}
-		fullBackup := latestBackupBeforeTime(fullBackupList, toTime)
-		if len(fullBackup) > 0 {
-			return fullBackup, nil
-		}
-
-		duration *= 2
-	}
-
-	// If no backup was found, make a final attempt without any bounds.
-	fullBackupList, err := b.FullBackupList(ctx, model.TimeBounds{ToTime: toTime})
+func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Time) (model.BackupDetails, error) {
+	path := getBackupRootPath(b.routineName, jobTypeFull)
+	file, err := storage.ReadLastFile(ctx, b.routine.Storage, path, metadataFile, toTime)
 	if err != nil {
-		return nil, fmt.Errorf("cannot read full backup list: %w", err)
+		return model.BackupDetails{}, err
 	}
 
-	fullBackup := latestBackupBeforeTime(fullBackupList, toTime)
-	if len(fullBackup) == 0 {
-		return nil, fmt.Errorf("%w before time %s", errBackupNotFound, toTime)
+	metadata, err := model.NewMetadataFromBytes(file)
+	if err != nil {
+		return model.BackupDetails{}, fmt.Errorf("error decoding backup metadata YAML: %w", err)
 	}
 
-	return fullBackup, nil
+	return model.BackupDetails{
+		BackupMetadata: *metadata,
+		Key:            getKey(b.routineName, jobTypeFull, metadata),
+		Storage:        b.routine.Storage,
+	}, nil
 }
 
 // latestBackupBeforeTime returns list of backups with same creation time,
