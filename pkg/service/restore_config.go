@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -26,5 +27,7 @@ func (cr *configRetriever) RetrieveConfiguration(ctx context.Context, routine st
 		return nil, fmt.Errorf("failed retrieve configuration: %w", err)
 	}
 
-	return backend.ReadClusterConfiguration(ctx, getConfigurationPath(routine, lastFullBackup))
+	path := getConfigurationPath(routine, lastFullBackup)
+	slog.Info("getConfiguration", slog.String("routine", routine), slog.String("path", path))
+	return backend.ReadClusterConfiguration(ctx, path)
 }

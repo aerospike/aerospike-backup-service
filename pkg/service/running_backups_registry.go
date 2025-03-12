@@ -175,6 +175,11 @@ func (r *RunningBackupsRegistryImpl) unregister(routineName string, job jobType,
 }
 
 func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType, timestamp time.Time) {
+	slog.Info("set last backup time",
+		slog.String("routine", routineName),
+		slog.String("time", timestamp.String()),
+		slog.String("job", string(job)),
+	)
 	updateLastTimestamp := func(lastBackupRun *model.LastBackupRun) {
 		if job == jobTypeFull {
 			lastBackupRun.SetFullBackupTime(&timestamp)

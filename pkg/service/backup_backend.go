@@ -97,7 +97,7 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 	path := getBackupRootPath(b.routineName, jobType)
 	files, err := storage.ReadFileNames(ctx, b.routine.Storage, path, metadataFile, timeBounds.FromTime)
 	if err != nil {
-		return time.Time{}, err
+		return time.Time{}, fmt.Errorf("read metadata files in %v: %w", timeBounds, err)
 	}
 
 	if len(files) == 0 {
@@ -118,7 +118,7 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 
 	file, err := storage.ReadFile(ctx, b.routine.Storage, strings.TrimPrefix(lastFile, b.routine.Storage.GetPath()))
 	if err != nil {
-		return time.Time{}, fmt.Errorf("read metadata file error: %w", err)
+		return time.Time{}, fmt.Errorf("read metadata file %s error: %w", lastFile, err)
 	}
 
 	metadata, err := model.NewMetadataFromBytes(file)
