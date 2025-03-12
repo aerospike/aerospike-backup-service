@@ -105,7 +105,6 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 			defer wg.Done()
 			// cancel previous scan
 			r.routineCancel.Apply(routineName, func(cancel context.CancelFunc) {
-				slog.Info("Cancelling previous scan", slog.String("routine", routineName))
 				cancel()
 			})
 
