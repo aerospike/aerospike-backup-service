@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -115,6 +116,8 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 	if timeBounds.ToTime != nil {
 		maxString = getTimestampPath(b.routineName, *timeBounds.ToTime, jobType)
 	}
+
+	slog.Info("Filtering backups", slog.Any("files", files), slog.String("max", maxString))
 
 	var lastFile string
 	for _, file := range files {
