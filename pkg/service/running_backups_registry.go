@@ -125,13 +125,9 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 }
 
 func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string, routineReader BackupMetadataReader) {
-	slog.Debug("scanForRoutine: get routine lock", slog.String("routine", routineName))
 	routineLock := r.getRoutineLock(routineName)
 	routineLock.Lock()
-	defer func() {
-		slog.Debug("scanForRoutine: release routine lock", slog.String("routine", routineName))
-		routineLock.Unlock()
-	}()
+	defer routineLock.Unlock()
 
 	slog.Info("Start find last backup run", slog.String("routine", routineName))
 	ctx, cancelFunc := context.WithCancel(r.ctx)
@@ -179,18 +175,15 @@ func (r *RunningBackupsRegistryImpl) unregister(routineName string, job jobType,
 
 func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType, timestamp time.Time) {
 	routineLock := r.getRoutineLock(routineName)
-	slog.Debug("setLastTime: get routine lock", slog.String("routine", routineName))
 	routineLock.Lock()
-	defer func() {
-		slog.Debug("setLastTime: release routine lock", slog.String("routine", routineName))
-		routineLock.Unlock()
-	}()
+	defer routineLock.Unlock()
 
 	slog.Info("set last backup time",
 		slog.String("routine", routineName),
 		slog.String("time", timestamp.String()),
 		slog.String("job", string(job)),
 	)
+
 	updateLastTimestamp := func(lastBackupRun *model.LastBackupRun) {
 		if job == jobTypeFull {
 			lastBackupRun.SetFullBackupTime(&timestamp)
@@ -218,13 +211,9 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
 	incrBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeIncremental))
 
-	slog.Debug("GetRoutineState: get routine rlock ", slog.String("routine", routineName))
 	routineLock := r.getRoutineLock(routineName)
 	routineLock.RLock()
-	defer func() {
-		slog.Debug("GetRoutineState: release routine state rlock", slog.String("routine", routineName))
-		routineLock.RUnlock()
-	}()
+	defer routineLock.RUnlock()
 
 	lastRun, found := r.lastSuccessful.Load(routineName)
 	if !found {
@@ -258,11 +247,9 @@ func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]*model.Routine
 
 // Cancel stops all ongoing backups for a specific routine.
 func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
-	slog.Info("canceling routine", slog.String("routine", routineName))
 	for _, job := range []jobType{jobTypeFull, jobTypeIncremental} {
 		key := makeRegistryKey(routineName, job)
 		r.handlers.Apply(key, func(handler CancelableBackupHandler) {
-			slog.Info("canceling handler", slog.String("routine", routineName), slog.String("job", string(job)))
 			handler.Cancel()
 		})
 	}
