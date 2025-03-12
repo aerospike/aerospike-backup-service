@@ -249,26 +249,17 @@ func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
 }
 
 func findLastRun(ctx context.Context, b BackupMetadataReader) (*model.LastBackupRun, error) {
-	lastFullBackup, err := b.FindLastFullBackup(ctx, nil)
+	lastFullBackup, err := b.LastBackupTime(ctx, model.TimeBounds{}, jobTypeFull)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read last full backup failed: %w", err)
 	}
+	lastIncrBackup, err := b.LastBackupTime(ctx, model.TimeBounds{
+		FromTime: &lastFullBackup,
+	}, jobTypeIncremental)
 
-	// Now find the last incremental backup after the last full backup
-	incrementalBackupList, err := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: &lastFullBackup})
 	if err != nil {
-		return nil, fmt.Errorf("read incremental backups list failed: %w", err)
+		return nil, fmt.Errorf("read last incremental backup failed: %w", err)
 	}
 
-	lastIncrBackup := lastBackupTime(incrementalBackupList)
-
-	return model.NewLastBackupRun(&lastFullBackup, lastIncrBackup), nil
-}
-
-func lastBackupTime(b []model.BackupDetails) *time.Time {
-	if len(b) > 0 {
-		return &latestBackupBeforeTime(b, nil)[0].Created
-	}
-
-	return nil
+	return model.NewLastBackupRun(&lastFullBackup, &lastIncrBackup), nil
 }

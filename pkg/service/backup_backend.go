@@ -9,6 +9,7 @@ import (
 	"io"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -92,13 +93,32 @@ func (b *BackupBackend) readMetadataList(
 	return backups, nil
 }
 
-// FindLastFullBackup returns last full backup prior to given time.
-// returns error when not found.
-func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Time) (time.Time, error) {
-	path := getBackupRootPath(b.routineName, jobTypeFull)
-	file, err := storage.ReadLastFile(ctx, b.routine.Storage, path, metadataFile, toTime)
+func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.TimeBounds, jobType jobType) (time.Time, error) {
+	path := getBackupRootPath(b.routineName, jobType)
+	files, err := storage.ReadFileNames(ctx, b.routine.Storage, path, metadataFile, timeBounds.FromTime)
 	if err != nil {
 		return time.Time{}, err
+	}
+
+	if len(files) == 0 {
+		return time.Time{}, errBackupNotFound
+	}
+
+	maxString := "\uffff"
+	if timeBounds.ToTime != nil {
+		maxString = getTimestampPath(b.routineName, *timeBounds.ToTime, jobType)
+	}
+
+	var lastFile string
+	for _, file := range files {
+		if file > lastFile && file <= maxString {
+			lastFile = file
+		}
+	}
+
+	file, err := storage.ReadFile(ctx, b.routine.Storage, strings.TrimPrefix(lastFile, b.routine.Storage.GetPath()))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("read metadata file error: %w", err)
 	}
 
 	metadata, err := model.NewMetadataFromBytes(file)
@@ -107,29 +127,6 @@ func (b *BackupBackend) FindLastFullBackup(ctx context.Context, toTime *time.Tim
 	}
 
 	return metadata.Created, nil
-}
-
-// latestBackupBeforeTime returns list of backups with same creation time,
-// latest before upperBound.
-func latestBackupBeforeTime(allBackups []model.BackupDetails, upperBound *time.Time,
-) []model.BackupDetails {
-	var result []model.BackupDetails
-	var latestTime time.Time
-	for i := range allBackups {
-		current := &allBackups[i]
-		if upperBound != nil && current.Created.After(*upperBound) {
-			continue
-		}
-
-		if len(result) == 0 || latestTime.Before(current.Created) {
-			latestTime = current.Created
-			result = []model.BackupDetails{*current}
-		} else if current.Created.Equal(latestTime) {
-			result = append(result, *current)
-		}
-	}
-
-	return result
 }
 
 // FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.

@@ -23,9 +23,8 @@ type BackupMetadataReader interface {
 	// ReadClusterConfiguration return backed up cluster configuration as a compressed zip.
 	ReadClusterConfiguration(ctx context.Context, path string) ([]byte, error)
 
-	// FindLastFullBackup returns last full backup prior to given time.
-	// Each element of an array is backup of a namespace.
-	FindLastFullBackup(ctx context.Context, toTime *time.Time) (time.Time, error)
+	// LastBackupTime returns last backup in the given time range.
+	LastBackupTime(ctx context.Context, timeBounds model.TimeBounds, jobType jobType) (time.Time, error)
 
 	// FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
 	FindIncrementalBackupsForNamespace(

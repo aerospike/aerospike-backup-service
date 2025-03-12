@@ -113,10 +113,10 @@ func (*BackendMock) IncrementalBackupList(_ context.Context, _ model.TimeBounds)
 	}}, nil
 }
 
-func (*BackendMock) FindLastFullBackup(_ context.Context, toTime *time.Time) (time.Time, error) {
+func (*BackendMock) LastBackupTime(ctx context.Context, timeBounds model.TimeBounds, jobType jobType) (time.Time, error) {
 	created := time.UnixMilli(5)
 
-	if toTime != nil && toTime.After(created) {
+	if timeBounds.Contains(created) {
 		return created, nil
 	}
 
@@ -126,7 +126,7 @@ func (*BackendMock) FindLastFullBackup(_ context.Context, toTime *time.Time) (ti
 type BackendFailMock struct {
 }
 
-func (*BackendFailMock) FindLastFullBackup(_ context.Context, _ *time.Time) (time.Time, error) {
+func (*BackendFailMock) LastBackupTime(ctx context.Context, timeBounds model.TimeBounds, jobType jobType) (time.Time, error) {
 	return time.Time{}, errBackupNotFound
 }
 
@@ -179,50 +179,6 @@ func TestRestoreOK(t *testing.T) {
 
 	_, err = waitForJobStatus(t, jobID, model.JobStatusDone)
 	require.NoError(t, err)
-}
-
-func TestLatestFullBackupBeforeTime(t *testing.T) {
-	backupList := []model.BackupDetails{
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)}},
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}}, // Should be the latest full backup
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}}, // Should be the latest full backup too
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(30)}},
-	}
-
-	toTime := time.UnixMilli(25)
-	result := latestBackupBeforeTime(backupList, &toTime)
-
-	require.NotNil(t, result)
-	require.Equal(t, 2, len(result))
-	require.Equal(t, result[0], backupList[1])
-}
-
-func TestLatestFullBackupEqualTime(t *testing.T) {
-	backupList := []model.BackupDetails{
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)}},
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}}, // Should be the latest full backup
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(30)}},
-	}
-
-	toTime := time.UnixMilli(20)
-	result := latestBackupBeforeTime(backupList, &toTime)
-
-	require.NotNil(t, result)
-	require.Equal(t, 1, len(result))
-	require.Equal(t, result[0], backupList[1])
-}
-
-func TestLatestFullBackupBeforeTime_NotFound(t *testing.T) {
-	backupList := []model.BackupDetails{
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(10)}},
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(20)}},
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(30)}},
-	}
-
-	toTime := time.UnixMilli(5)
-	result := latestBackupBeforeTime(backupList, &toTime)
-
-	require.Nil(t, result)
 }
 
 func Test_RestoreTimestamp(t *testing.T) {

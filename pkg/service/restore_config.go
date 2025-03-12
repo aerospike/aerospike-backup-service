@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // configRetriever is used to read Aerospike configuration from backup.
@@ -19,7 +21,7 @@ func (cr *configRetriever) RetrieveConfiguration(ctx context.Context, routine st
 		return nil, fmt.Errorf("%w: routine %s", errBackendNotFound, routine)
 	}
 
-	lastFullBackup, err := backend.FindLastFullBackup(ctx, toTime)
+	lastFullBackup, err := backend.LastBackupTime(ctx, model.TimeBounds{ToTime: toTime}, jobTypeFull)
 	if err != nil {
 		return nil, fmt.Errorf("failed retrieve configuration: %w", err)
 	}
