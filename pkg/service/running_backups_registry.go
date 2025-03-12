@@ -91,7 +91,11 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 		return
 	}
 
-	slog.Info("Starting backup history synchronization", slog.Int("len", len(invalidatedRoutines)))
+	slog.Info("Starting backup history synchronization",
+		slog.Any("routines", invalidatedRoutines),
+		slog.Int("len", len(invalidatedRoutines)),
+	)
+
 	var wg sync.WaitGroup
 	for _, routineName := range invalidatedRoutines {
 		reader, found := r.backends.GetReader(routineName)
