@@ -255,13 +255,10 @@ func findLastRun(ctx context.Context, b BackupMetadataReader) (*model.LastBackup
 	if err != nil {
 		return nil, fmt.Errorf("read last full backup failed: %w", err)
 	}
-	lastIncrBackup, err := b.LastBackupTime(ctx, model.TimeBounds{
+
+	lastIncrBackup, _ := b.LastBackupTime(ctx, model.TimeBounds{
 		FromTime: &lastFullBackup,
 	}, jobTypeIncremental)
-
-	if err != nil {
-		return nil, fmt.Errorf("read last incremental backup failed: %w", err)
-	}
 
 	return model.NewLastBackupRun(&lastFullBackup, &lastIncrBackup), nil
 }
