@@ -125,9 +125,13 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 }
 
 func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string, routineReader BackupMetadataReader) {
+	slog.Debug("scanForRoutine: get routine lock", slog.String("routine", routineName))
 	routineLock := r.getRoutineLock(routineName)
 	routineLock.Lock()
-	defer routineLock.Unlock()
+	defer func() {
+		slog.Debug("scanForRoutine: release routine lock", slog.String("routine", routineName))
+		routineLock.Unlock()
+	}()
 
 	slog.Info("Start find last backup run", slog.String("routine", routineName))
 	ctx, cancelFunc := context.WithCancel(r.ctx)
@@ -170,15 +174,18 @@ func (r *RunningBackupsRegistryImpl) register(routineName string, job jobType, h
 // Should be called after successful backup completion.
 func (r *RunningBackupsRegistryImpl) unregister(routineName string, job jobType, timestamp time.Time) {
 	r.remove(routineName, job)
-
-	routineLock := r.getRoutineLock(routineName)
-	routineLock.Lock()
-	defer routineLock.Unlock()
-
 	r.setLastTime(routineName, job, timestamp)
 }
 
 func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType, timestamp time.Time) {
+	routineLock := r.getRoutineLock(routineName)
+	slog.Debug("setLastTime: get routine lock", slog.String("routine", routineName))
+	routineLock.Lock()
+	defer func() {
+		slog.Debug("setLastTime: release routine lock", slog.String("routine", routineName))
+		routineLock.Unlock()
+	}()
+
 	slog.Info("set last backup time",
 		slog.String("routine", routineName),
 		slog.String("time", timestamp.String()),
@@ -211,9 +218,13 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
 	incrBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeIncremental))
 
+	slog.Debug("GetRoutineState: get routine rlock ", slog.String("routine", routineName))
 	routineLock := r.getRoutineLock(routineName)
 	routineLock.RLock()
-	defer routineLock.RUnlock()
+	defer func() {
+		slog.Debug("GetRoutineState: release routine state rlock", slog.String("routine", routineName))
+		routineLock.RUnlock()
+	}()
 
 	lastRun, found := r.lastSuccessful.Load(routineName)
 	if !found {
