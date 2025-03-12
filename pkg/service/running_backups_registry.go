@@ -214,9 +214,6 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 	if !found {
 		slog.Info("No last backup info available", slog.String("routine", routineName))
 		lastRun = &model.LastBackupRun{}
-	} else {
-		slog.Info("last backup", slog.String("routine", routineName),
-			slog.String("lastRun", lastRun.String()))
 	}
 
 	return &model.RoutineState{
