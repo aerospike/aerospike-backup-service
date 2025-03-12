@@ -4,18 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
-	"path/filepath"
-	"slices"
-	"sync"
-	"time"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
+	"log/slog"
+	"path/filepath"
+	"slices"
+	"sync"
 )
 
 var errBackendNotFound = errors.New("backend not found")
@@ -136,7 +134,7 @@ func (r *dataRestorer) RestoreByTime(ctx context.Context, request *model.Restore
 
 	fullBackups, err := reader.FullBackupList(ctx, model.TimeBounds{
 		FromTime: &lastbackup,
-		ToTime:   util.Ptr(lastbackup.Add(1 * time.Second)), // TODO
+		ToTime:   &lastbackup,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("FullBackupList restore failed: %w", err)
@@ -221,6 +219,10 @@ func (r *dataRestorer) restoreNamespace(
 	}
 
 	for _, b := range allBackups {
+		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
+	}
+
+	for _, b := range allBackups {
 		if b.FileCount == 0 { // skip empty namespaces
 			continue
 		}
@@ -230,7 +232,6 @@ func (r *dataRestorer) restoreNamespace(
 			return err
 		}
 
-		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 		ctx, cancel := context.WithCancel(ctx)
 		r.restoreJobs.addHandler(jobID, restoreexecutor.NewRestoreHandlerWithCancel(handler, cancel))
 
