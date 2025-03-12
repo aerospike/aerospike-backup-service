@@ -105,7 +105,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 		}
 
 		wg.Add(1)
-		func(routineName string, routineReader BackupMetadataReader) {
+		go func(routineName string, routineReader BackupMetadataReader) {
 			defer wg.Done()
 			// cancel previous scan
 			r.routineCancel.Apply(routineName, func(cancel context.CancelFunc) {
