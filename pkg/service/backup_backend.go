@@ -105,7 +105,7 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 
 	files, err := storage.ReadFileNames(ctx, b.routine.Storage, path, metadataFile, timeBounds.FromTime)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("read metadata files in %v: %w", timeBounds, err)
+		return time.Time{}, fmt.Errorf("read metadata files in %s: %w", timeBounds.String(), err)
 	}
 
 	if len(files) == 0 {
@@ -127,7 +127,7 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 	}
 
 	if lastFile == "" {
-		return time.Time{}, fmt.Errorf("no backups matching time bounds %v: %w", timeBounds, errBackupNotFound)
+		return time.Time{}, fmt.Errorf("no backups matching time bounds %s: %w", timeBounds.String(), errBackupNotFound)
 	}
 
 	file, err := storage.ReadFile(ctx, b.routine.Storage, strings.TrimPrefix(lastFile, b.routine.Storage.GetPath()))
@@ -148,7 +148,7 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 func LastBackupTimeLocal(ctx context.Context, s *model.LocalStorage, path string, timeBounds model.TimeBounds) (time.Time, error) {
 	files, err := storage.ReadFiles(ctx, s, path, metadataFile, timeBounds.FromTime)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("read metadata files in %v: %w", timeBounds, err)
+		return time.Time{}, fmt.Errorf("read local metadata files in %v: %w", timeBounds, err)
 	}
 
 	if len(files) == 0 {
