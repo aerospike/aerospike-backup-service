@@ -247,11 +247,13 @@ func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]*model.Routine
 
 // Cancel stops all ongoing backups for a specific routine.
 func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
+	slog.Info("canceling routine", slog.String("routine", routineName))
 	for _, job := range []jobType{jobTypeFull, jobTypeIncremental} {
 		key := makeRegistryKey(routineName, job)
-		if handler, found := r.handlers.Load(key); found {
+		r.handlers.Apply(key, func(handler CancelableBackupHandler) {
+			slog.Info("canceling handler", slog.String("routine", routineName), slog.String("job", string(job)))
 			handler.Cancel()
-		}
+		})
 	}
 }
 
