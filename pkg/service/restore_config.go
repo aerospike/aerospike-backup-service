@@ -24,7 +24,7 @@ func (cr *configRetriever) RetrieveConfiguration(ctx context.Context, routine st
 
 	lastFullBackup, err := backend.LastBackupTime(ctx, model.TimeBounds{ToTime: toTime}, jobTypeFull)
 	if err != nil {
-		return nil, fmt.Errorf("failed retrieve configuration: %w", err)
+		return nil, fmt.Errorf("failed find last backup: %w", err)
 	}
 
 	path := getConfigurationPath(routine, lastFullBackup)

@@ -95,6 +95,13 @@ func (b *BackupBackend) readMetadataList(
 
 func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.TimeBounds, jobType jobType) (time.Time, error) {
 	path := getBackupRootPath(b.routineName, jobType)
+
+	// local storage is special case
+	local, ok := b.routine.Storage.(*model.LocalStorage)
+	if ok {
+		return LastBackupTimeLocal(ctx, local, path, timeBounds)
+	}
+
 	files, err := storage.ReadFileNames(ctx, b.routine.Storage, path, metadataFile, timeBounds.FromTime)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("read metadata files in %v: %w", timeBounds, err)
@@ -116,9 +123,13 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 		}
 	}
 
+	if lastFile == "" {
+		return time.Time{}, fmt.Errorf("no backups matching time bounds %v: %w", timeBounds, errBackupNotFound)
+	}
+
 	file, err := storage.ReadFile(ctx, b.routine.Storage, strings.TrimPrefix(lastFile, b.routine.Storage.GetPath()))
 	if err != nil {
-		return time.Time{}, fmt.Errorf("read metadata file %s error: %w", lastFile, err)
+		return time.Time{}, fmt.Errorf("read metadata file %q error: %w", lastFile, err)
 	}
 
 	metadata, err := model.NewMetadataFromBytes(file)
@@ -127,6 +138,32 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 	}
 
 	return metadata.Created, nil
+}
+
+// LastBackupTimeLocal finds the latest backup within a specified time range in local storage.
+// Local storage does not support listing files in nested folders, but it is fast so we can just iterate over all of them.
+func LastBackupTimeLocal(ctx context.Context, s *model.LocalStorage, path string, timeBounds model.TimeBounds) (time.Time, error) {
+	files, err := storage.ReadFiles(ctx, s, path, metadataFile, timeBounds.FromTime)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("read metadata files in %v: %w", timeBounds, err)
+	}
+
+	if len(files) == 0 {
+		return time.Time{}, errBackupNotFound
+	}
+
+	lastTime := time.Time{}
+	for _, buf := range files {
+		metadata, err := model.NewMetadataFromBytes(buf.Bytes())
+		if err != nil {
+			return time.Time{}, fmt.Errorf("error decoding backup metadata YAML: %w", err)
+		}
+		if metadata.Created.After(lastTime) && timeBounds.Contains(metadata.Created) {
+			lastTime = metadata.Created
+		}
+	}
+
+	return lastTime, nil
 }
 
 // FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
