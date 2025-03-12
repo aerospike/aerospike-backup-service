@@ -30,7 +30,7 @@ func (b *BackendHolderImpl) Init(routines map[string]*model.BackupRoutine) {
 
 	b.data = make(map[string]*BackupBackend, len(routines))
 	for routineName, routine := range routines {
-		b.data[routineName] = newBackend(routineName, routine)
+		b.data[routineName] = newBackend(routineName, routine.Storage)
 	}
 }
 

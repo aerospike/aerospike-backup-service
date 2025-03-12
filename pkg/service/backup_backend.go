@@ -24,15 +24,15 @@ import (
 type BackupBackend struct {
 	mu          sync.RWMutex
 	routineName string
-	routine     *model.BackupRoutine
+	storage     model.Storage
 }
 
 var _ BackupMetadataReaderWriter = (*BackupBackend)(nil)
 
-func newBackend(routineName string, routine *model.BackupRoutine) *BackupBackend {
+func newBackend(routineName string, storage model.Storage) *BackupBackend {
 	return &BackupBackend{
 		routineName: routineName,
-		routine:     routine,
+		storage:     storage,
 	}
 }
 
@@ -46,7 +46,7 @@ func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, me
 	}
 
 	metadataFilePath := filepath.Join(path, metadataFile)
-	return storage.WriteMetadataFile(ctx, b.routine.Storage, metadataFilePath, dataYaml)
+	return storage.WriteMetadataFile(ctx, b.storage, metadataFilePath, dataYaml)
 }
 
 // FullBackupList returns a list of available full backups.
@@ -68,7 +68,7 @@ func (b *BackupBackend) readMetadataList(
 	defer b.mu.RUnlock()
 
 	backupRoot := getBackupRootPath(b.routineName, backupType)
-	files, err := storage.ReadFiles(ctx, b.routine.Storage, backupRoot, metadataFile, timeBounds.FromTime)
+	files, err := storage.ReadFiles(ctx, b.storage, backupRoot, metadataFile, timeBounds.FromTime)
 	if err != nil {
 		if errors.Is(err, storage.ErrEmptyStorage) {
 			return nil, nil
@@ -86,7 +86,7 @@ func (b *BackupBackend) readMetadataList(
 			backups = append(backups, model.BackupDetails{
 				BackupMetadata: *metadata,
 				Key:            getKey(b.routineName, backupType, metadata),
-				Storage:        b.routine.Storage,
+				Storage:        b.storage,
 			})
 		}
 	}
@@ -98,12 +98,12 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 	path := getBackupRootPath(b.routineName, jobType)
 
 	// local storage is special case
-	local, ok := b.routine.Storage.(*model.LocalStorage)
+	local, ok := b.storage.(*model.LocalStorage)
 	if ok {
 		return LastBackupTimeLocal(ctx, local, path, timeBounds)
 	}
 
-	files, err := storage.ReadFileNames(ctx, b.routine.Storage, path, metadataFile, timeBounds.FromTime)
+	files, err := storage.ReadFileNames(ctx, b.storage, path, metadataFile, timeBounds.FromTime)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("read metadata files in %s: %w", timeBounds.String(), err)
 	}
@@ -130,7 +130,7 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 		return time.Time{}, fmt.Errorf("no backups matching time bounds %s: %w", timeBounds.String(), errBackupNotFound)
 	}
 
-	file, err := storage.ReadFile(ctx, b.routine.Storage, strings.TrimPrefix(lastFile, b.routine.Storage.GetPath()))
+	file, err := storage.ReadFile(ctx, b.storage, strings.TrimPrefix(lastFile, b.storage.GetPath()))
 	if err != nil {
 		return time.Time{}, fmt.Errorf("read metadata file %q error: %w", lastFile, err)
 	}
@@ -196,7 +196,7 @@ func (b *BackupBackend) ReadClusterConfiguration(ctx context.Context, path strin
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	configBackups, err := storage.ReadFiles(ctx, b.routine.Storage, path, configExt, nil)
+	configBackups, err := storage.ReadFiles(ctx, b.storage, path, configExt, nil)
 	if err != nil && !errors.Is(err, storage.ErrEmptyStorage) {
 		return nil, err
 	}
@@ -241,5 +241,5 @@ func (b *BackupBackend) deleteFolder(ctx context.Context, path string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	return storage.DeleteFolder(ctx, b.routine.Storage, path)
+	return storage.DeleteFolder(ctx, b.storage, path)
 }
