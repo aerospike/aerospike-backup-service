@@ -162,6 +162,7 @@ func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string, routineR
 
 // register adds a new backup handler for a specific routine and job type.
 func (r *RunningBackupsRegistryImpl) register(routineName string, job jobType, handler CancelableBackupHandler) {
+	slog.Info("add backup to registry", slog.String("routine", routineName), slog.String("job", string(job)))
 	r.handlers.Store(makeRegistryKey(routineName, job), handler)
 }
 
@@ -201,6 +202,7 @@ func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType
 // remove deletes a backup from the registry.
 // Should be called for failed backups.
 func (r *RunningBackupsRegistryImpl) remove(routineName string, job jobType) {
+	slog.Info("remove backup from registry", slog.String("routine", routineName), slog.String("job", string(job)))
 	r.handlers.Remove(makeRegistryKey(routineName, job))
 }
 
