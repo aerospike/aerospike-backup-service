@@ -23,16 +23,16 @@ import (
 // implementation for I/O operations.
 type BackupBackend struct {
 	mu          sync.RWMutex
-	routineName string
 	storage     model.Storage
+	routineName string
 }
 
 var _ BackupMetadataReaderWriter = (*BackupBackend)(nil)
 
 func newBackend(routineName string, storage model.Storage) *BackupBackend {
 	return &BackupBackend{
-		routineName: routineName,
 		storage:     storage,
+		routineName: routineName,
 	}
 }
 
@@ -94,7 +94,19 @@ func (b *BackupBackend) readMetadataList(
 	return backups, nil
 }
 
-func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.TimeBounds, jobType jobType) (time.Time, error) {
+// LastFullBackupTime retrieves the time of the most recent backup full in the specified time range.
+func (b *BackupBackend) LastFullBackupTime(ctx context.Context, timeBounds model.TimeBounds) (time.Time, error) {
+	return b.lastBackupTime(ctx, timeBounds, jobTypeFull)
+}
+
+// LastIncrementalBackupTime retrieves the time of the most recent incremental backup in the specified time range.
+func (b *BackupBackend) LastIncrementalBackupTime(ctx context.Context, timeBounds model.TimeBounds) (time.Time, error) {
+	return b.lastBackupTime(ctx, timeBounds, jobTypeIncremental)
+}
+
+func (b *BackupBackend) lastBackupTime(
+	ctx context.Context, timeBounds model.TimeBounds, jobType jobType,
+) (time.Time, error) {
 	path := getBackupRootPath(b.routineName, jobType)
 
 	// local storage is special case
@@ -112,6 +124,8 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 		return time.Time{}, errBackupNotFound
 	}
 
+	// Storage returned all files >= fromTime. We need to find the one with highest timestamp that's still < ToTime.
+	// We use the timestamps that are part of file path.
 	maxString := "\uffff"
 	if timeBounds.ToTime != nil {
 		maxString = getTimestampPath(b.routineName, *timeBounds.ToTime, jobType)
@@ -121,7 +135,7 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 
 	var lastFile string
 	for _, file := range files {
-		if file > lastFile && file <= maxString {
+		if file > lastFile && file < maxString {
 			lastFile = file
 		}
 	}
@@ -130,6 +144,7 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 		return time.Time{}, fmt.Errorf("no backups matching time bounds %s: %w", timeBounds.String(), errBackupNotFound)
 	}
 
+	// Only read one (last) file.
 	file, err := storage.ReadFile(ctx, b.storage, strings.TrimPrefix(lastFile, b.storage.GetPath()))
 	if err != nil {
 		return time.Time{}, fmt.Errorf("read metadata file %q error: %w", lastFile, err)
@@ -144,8 +159,10 @@ func (b *BackupBackend) LastBackupTime(ctx context.Context, timeBounds model.Tim
 }
 
 // LastBackupTimeLocal finds the latest backup within a specified time range in local storage.
-// Local storage does not support listing files in nested folders, but it is fast so we can just iterate over all of them.
-func LastBackupTimeLocal(ctx context.Context, s *model.LocalStorage, path string, timeBounds model.TimeBounds) (time.Time, error) {
+// Local storage does not support listing files in nested folders, but it is fast so we just iterate over all of them.
+func LastBackupTimeLocal(
+	ctx context.Context, s *model.LocalStorage, path string, timeBounds model.TimeBounds,
+) (time.Time, error) {
 	files, err := storage.ReadFiles(ctx, s, path, metadataFile, timeBounds.FromTime)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("read local metadata files in %v: %w", timeBounds, err)

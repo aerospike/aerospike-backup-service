@@ -256,14 +256,12 @@ func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
 }
 
 func findLastRun(ctx context.Context, b BackupMetadataReader) (*model.LastBackupRun, error) {
-	lastFullBackup, err := b.LastBackupTime(ctx, model.TimeBounds{}, jobTypeFull)
+	lastFullBackup, err := b.LastFullBackupTime(ctx, model.TimeBounds{})
 	if err != nil {
 		return nil, fmt.Errorf("read last full backup failed: %w", err)
 	}
 
-	lastIncrBackup, _ := b.LastBackupTime(ctx, model.TimeBounds{
-		FromTime: &lastFullBackup,
-	}, jobTypeIncremental)
+	lastIncrBackup, _ := b.LastIncrementalBackupTime(ctx, model.TimeBounds{FromTime: &lastFullBackup})
 
 	return model.NewLastBackupRun(&lastFullBackup, &lastIncrBackup), nil
 }

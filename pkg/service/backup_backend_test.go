@@ -17,9 +17,7 @@ func TestFullBackupReadFiles(t *testing.T) {
 	tempFolder := t.TempDir()
 	name := "routine"
 	backend := &BackupBackend{
-		routine: &model.BackupRoutine{
-			Storage: &model.LocalStorage{Path: tempFolder},
-		},
+		storage:     &model.LocalStorage{Path: tempFolder},
 		routineName: name,
 	}
 

@@ -4,16 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"path/filepath"
+	"slices"
+	"sync"
+
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
-	"log/slog"
-	"path/filepath"
-	"slices"
-	"sync"
 )
 
 var errBackendNotFound = errors.New("backend not found")
@@ -127,7 +128,7 @@ func (r *dataRestorer) RestoreByTime(ctx context.Context, request *model.Restore
 	if !found {
 		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.RoutineName)
 	}
-	lastbackup, err := reader.LastBackupTime(ctx, model.TimeBounds{ToTime: &request.Time}, jobTypeFull)
+	lastbackup, err := reader.LastFullBackupTime(ctx, model.TimeBounds{ToTime: &request.Time})
 	if err != nil {
 		return 0, fmt.Errorf("FindLastFullBackup restore failed: %w", err)
 	}

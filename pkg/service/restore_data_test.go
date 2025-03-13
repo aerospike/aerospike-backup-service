@@ -113,7 +113,17 @@ func (*BackendMock) IncrementalBackupList(_ context.Context, _ model.TimeBounds)
 	}}, nil
 }
 
-func (*BackendMock) LastBackupTime(ctx context.Context, timeBounds model.TimeBounds, jobType jobType) (time.Time, error) {
+func (*BackendMock) LastFullBackupTime(_ context.Context, timeBounds model.TimeBounds) (time.Time, error) {
+	created := time.UnixMilli(5)
+
+	if timeBounds.Contains(created) {
+		return created, nil
+	}
+
+	return time.Time{}, errBackupNotFound
+}
+
+func (*BackendMock) LastIncrementalBackupTime(_ context.Context, timeBounds model.TimeBounds) (time.Time, error) {
 	created := time.UnixMilli(5)
 
 	if timeBounds.Contains(created) {
@@ -126,7 +136,11 @@ func (*BackendMock) LastBackupTime(ctx context.Context, timeBounds model.TimeBou
 type BackendFailMock struct {
 }
 
-func (*BackendFailMock) LastBackupTime(ctx context.Context, timeBounds model.TimeBounds, jobType jobType) (time.Time, error) {
+func (*BackendFailMock) LastFullBackupTime(_ context.Context, _ model.TimeBounds) (time.Time, error) {
+	return time.Time{}, errBackupNotFound
+}
+
+func (*BackendFailMock) LastIncrementalBackupTime(_ context.Context, _ model.TimeBounds) (time.Time, error) {
 	return time.Time{}, errBackupNotFound
 }
 

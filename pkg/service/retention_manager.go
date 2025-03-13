@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"sync"
 	"time"
@@ -48,7 +47,6 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context) error {
 	defer e.mu.Unlock()
 
 	if e.policy == nil || (e.policy.FullBackups == nil && e.policy.IncrBackups == nil) {
-		slog.Info("deleteOldBackups: Retention policy disabled", "routine", e.routineName)
 		return nil // Retention policy is not enabled, do nothing.
 	}
 
@@ -58,7 +56,6 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context) error {
 	}
 
 	timestamps := getTimestamps(fullBackups)
-	slog.Info("deleteOldBackups: got timestamps", "timestamps", timestamps, "routine", e.routineName)
 	if e.policy.FullBackups != nil {
 		if err := e.deleteFullBackups(ctx, timestamps, *e.policy.FullBackups); err != nil {
 			return fmt.Errorf("failed to delete excess full backups: %w", err)
@@ -78,14 +75,12 @@ func (e *RetentionManagerImpl) deleteFullBackups(
 	ctx context.Context, timestamps []time.Time, retainCount int,
 ) error {
 	if len(timestamps) <= retainCount {
-		slog.Info("deleteOldBackups full: nothing to delete", "routine", e.routineName, "len", len(timestamps), "retainCount", retainCount)
 		return nil
 	}
 
 	var errs error
 	for _, t := range timestamps[:len(timestamps)-retainCount] {
 		path := getTimestampPath(e.routineName, t, jobTypeFull)
-		slog.Info("deleteOldBackups: deleting full backup", "path", path, "routine", e.routineName)
 		if err := storage.DeleteFolder(ctx, e.storage, path); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", path, err))
 		}
@@ -98,13 +93,11 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 	ctx context.Context, timestamps []time.Time, retainCount int,
 ) error {
 	if len(timestamps) <= retainCount {
-		slog.Info("deleteOldBackups incr: nothing to delete", "routine", e.routineName, "len", len(timestamps), "retainCount", retainCount)
 		return nil
 	}
 
 	if retainCount == 0 { // Delete all incremental backups.
 		path := getBackupRootPath(e.routineName, jobTypeIncremental)
-		slog.Info("deleteOldBackups incr: deleting all incremental backups", "routine", e.routineName, "path", path)
 		return storage.DeleteFolder(ctx, e.storage, path)
 	}
 
@@ -117,7 +110,6 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 	var errs error
 	for _, b := range incrBackups {
 		path := getTimestampPath(e.routineName, b.Created, jobTypeIncremental)
-		slog.Info("deleteOldBackups: deleting incr backup", "path", path, "routine", e.routineName)
 		if err := storage.DeleteFolder(ctx, e.storage, path); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", path, err))
 		}

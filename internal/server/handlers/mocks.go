@@ -57,8 +57,17 @@ func (m *MockBackupMetadataReader) ReadClusterConfiguration(ctx context.Context,
 	return args.Get(0).([]byte), args.Error(1)
 }
 
-func (m *MockBackupMetadataReader) LastBackupTime(ctx context.Context, toTime *time.Time, jobType interface{}) (time.Time, error) {
-	args := m.Called(ctx, toTime)
+func (m *MockBackupMetadataReader) LastIncrementalBackupTime(
+	ctx context.Context, timeBounds model.TimeBounds,
+) (time.Time, error) {
+	args := m.Called(ctx, timeBounds)
+	return args.Get(0).(time.Time), args.Error(1)
+}
+
+func (m *MockBackupMetadataReader) LastFullBackupTime(
+	ctx context.Context, timeBounds model.TimeBounds,
+) (time.Time, error) {
+	args := m.Called(ctx, timeBounds)
 	return args.Get(0).(time.Time), args.Error(1)
 }
 

@@ -132,7 +132,6 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 }
 
 func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
-	h.logger.Debug("skipFullBackup", slog.String("routine", h.routineName))
 	currentStat := h.registry.GetRoutineState(h.routineName)
 	if currentStat.Full != nil {
 		// This can happen in rare scenario, when user re-applied config
@@ -141,7 +140,6 @@ func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
 		return true
 	}
 
-	h.logger.Debug("Not skipping full backup", slog.String("routine", h.routineName), slog.Any("stat", currentStat))
 	return false
 }
 

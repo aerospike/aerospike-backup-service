@@ -22,12 +22,13 @@ func (cr *configRetriever) RetrieveConfiguration(ctx context.Context, routine st
 		return nil, fmt.Errorf("%w: routine %s", errBackendNotFound, routine)
 	}
 
-	lastFullBackup, err := backend.LastBackupTime(ctx, model.TimeBounds{ToTime: toTime}, jobTypeFull)
+	lastFullBackup, err := backend.LastFullBackupTime(ctx, model.TimeBounds{ToTime: toTime})
 	if err != nil {
 		return nil, fmt.Errorf("failed find last backup: %w", err)
 	}
 
 	path := getConfigurationPath(routine, lastFullBackup)
 	slog.Info("getConfiguration", slog.String("routine", routine), slog.String("path", path))
+
 	return backend.ReadClusterConfiguration(ctx, path)
 }
