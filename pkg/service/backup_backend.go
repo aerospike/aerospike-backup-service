@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,27 +34,6 @@ func newBackend(routineName string, storage model.Storage) *BackupBackend {
 		storage:     storage,
 		routineName: routineName,
 	}
-}
-
-func (b *BackupBackend) FindLastRun(ctx context.Context) *model.LastBackupRun {
-	fullBackupList, _ := b.FullBackupList(ctx, model.TimeBounds{})
-	lastFullBackup := lastBackupTime(fullBackupList)
-	if lastFullBackup == nil {
-		return model.NewLastBackupRun(nil, nil)
-	}
-
-	incrementalBackupList, _ := b.IncrementalBackupList(ctx, model.TimeBounds{FromTime: lastFullBackup})
-	lastIncrBackup := lastBackupTime(incrementalBackupList)
-
-	return model.NewLastBackupRun(lastFullBackup, lastIncrBackup)
-}
-
-func lastBackupTime(b []model.BackupDetails) *time.Time {
-	if len(b) > 0 {
-		return &latestBackupBeforeTime(b, nil)[0].Created
-	}
-
-	return nil
 }
 
 func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, metadata model.BackupMetadata) error {
@@ -113,41 +94,96 @@ func (b *BackupBackend) readMetadataList(
 	return backups, nil
 }
 
-// FindLastFullBackup returns last full backup prior to given time.
-func (b *BackupBackend) FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error) {
-	fullBackupList, err := b.FullBackupList(context.Background(), model.NewTimeBoundsTo(toTime))
-	if err != nil {
-		return nil, fmt.Errorf("cannot read full backup list: %w", err)
-	}
-
-	fullBackup := latestBackupBeforeTime(fullBackupList, &toTime) // it's a list of namespaces
-	if len(fullBackup) == 0 {
-		return nil, fmt.Errorf("%w: %s", errBackupNotFound, toTime)
-	}
-	return fullBackup, nil
+// LastFullBackupTime retrieves the time of the most recent backup full in the specified time range.
+func (b *BackupBackend) LastFullBackupTime(ctx context.Context, timeBounds model.TimeBounds) (time.Time, error) {
+	return b.lastBackupTime(ctx, timeBounds, jobTypeFull)
 }
 
-// latestBackupBeforeTime returns list of backups with same creation time,
-// latest before upperBound.
-func latestBackupBeforeTime(allBackups []model.BackupDetails, upperBound *time.Time,
-) []model.BackupDetails {
-	var result []model.BackupDetails
-	var latestTime time.Time
-	for i := range allBackups {
-		current := &allBackups[i]
-		if upperBound != nil && current.Created.After(*upperBound) {
-			continue
-		}
+// LastIncrementalBackupTime retrieves the time of the most recent incremental backup in the specified time range.
+func (b *BackupBackend) LastIncrementalBackupTime(ctx context.Context, timeBounds model.TimeBounds) (time.Time, error) {
+	return b.lastBackupTime(ctx, timeBounds, jobTypeIncremental)
+}
 
-		if len(result) == 0 || latestTime.Before(current.Created) {
-			latestTime = current.Created
-			result = []model.BackupDetails{*current}
-		} else if current.Created.Equal(latestTime) {
-			result = append(result, *current)
+func (b *BackupBackend) lastBackupTime(
+	ctx context.Context, timeBounds model.TimeBounds, jobType jobType,
+) (time.Time, error) {
+	path := getBackupRootPath(b.routineName, jobType)
+
+	// local storage is special case
+	local, ok := b.storage.(*model.LocalStorage)
+	if ok {
+		return lastBackupTimeLocal(ctx, local, path, timeBounds)
+	}
+
+	files, err := storage.ReadFileNames(ctx, b.storage, path, metadataFile, timeBounds.FromTime)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("read metadata files in %s: %w", timeBounds.String(), err)
+	}
+
+	if len(files) == 0 {
+		return time.Time{}, errBackupNotFound
+	}
+
+	// Storage returned all files >= fromTime. We need to find the one with highest timestamp that's still < ToTime.
+	// We use the timestamps that are part of file path.
+	maxString := "\uffff"
+	if timeBounds.ToTime != nil {
+		maxString = getTimestampPath(b.routineName, *timeBounds.ToTime, jobType)
+	}
+
+	slog.Info("Filtering backups", slog.Any("files", files), slog.String("max", maxString))
+
+	var lastFile string
+	for _, file := range files {
+		if file > lastFile && file < maxString {
+			lastFile = file
 		}
 	}
 
-	return result
+	if lastFile == "" {
+		return time.Time{}, fmt.Errorf("no backups matching time bounds %s: %w", timeBounds.String(), errBackupNotFound)
+	}
+
+	// Only read one (last) file.
+	file, err := storage.ReadFile(ctx, b.storage, strings.TrimPrefix(lastFile, b.storage.GetPath()))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("read metadata file %q error: %w", lastFile, err)
+	}
+
+	metadata, err := model.NewMetadataFromBytes(file)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("error decoding backup metadata YAML: %w", err)
+	}
+
+	return metadata.Created, nil
+}
+
+// lastBackupTimeLocal finds the latest backup within a specified time range in local storage.
+// Local storage does not support listing files in nested folders, but it is fast so we just iterate over all of them.
+func lastBackupTimeLocal(
+	ctx context.Context, s *model.LocalStorage, path string, timeBounds model.TimeBounds,
+) (time.Time, error) {
+	files, err := storage.ReadFiles(ctx, s, path, metadataFile, timeBounds.FromTime)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("read local metadata files in %v: %w", timeBounds, err)
+	}
+
+	if len(files) == 0 {
+		return time.Time{}, errBackupNotFound
+	}
+
+	lastTime := time.Time{}
+	for _, buf := range files {
+		metadata, err := model.NewMetadataFromBytes(buf.Bytes())
+		if err != nil {
+			return time.Time{}, fmt.Errorf("error decoding backup metadata YAML: %w", err)
+		}
+		if metadata.Created.After(lastTime) && timeBounds.Contains(metadata.Created) {
+			lastTime = metadata.Created
+		}
+	}
+
+	return lastTime, nil
 }
 
 // FindIncrementalBackupsForNamespace returns all incremental backups in given range, sorted by time.
@@ -173,11 +209,11 @@ func (b *BackupBackend) FindIncrementalBackupsForNamespace(
 	return filteredIncrementalBackups, nil
 }
 
-func (b *BackupBackend) ReadClusterConfiguration(path string) ([]byte, error) {
+func (b *BackupBackend) ReadClusterConfiguration(ctx context.Context, path string) ([]byte, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	configBackups, err := storage.ReadFiles(context.Background(), b.storage, path, configExt, nil)
+	configBackups, err := storage.ReadFiles(ctx, b.storage, path, configExt, nil)
 	if err != nil && !errors.Is(err, storage.ErrEmptyStorage) {
 		return nil, err
 	}

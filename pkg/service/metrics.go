@@ -118,7 +118,9 @@ func (mc *MetricsCollector) Start(ctx context.Context, duration time.Duration) {
 }
 
 func (mc *MetricsCollector) collectMetrics() {
-	mc.mu.Lock()
+	if !mc.mu.TryLock() {
+		return // Previous collection still ongoing.
+	}
 	defer mc.mu.Unlock()
 
 	mc.collectBackupMetrics()
@@ -126,9 +128,10 @@ func (mc *MetricsCollector) collectMetrics() {
 }
 
 func (mc *MetricsCollector) collectBackupMetrics() {
+	runningState := mc.backups.GetRunningState() // Collecting routines states can take some time.
 	backupProgress.Reset()
 
-	for routineName, currentStat := range mc.backups.GetRunningState() {
+	for routineName, currentStat := range runningState {
 		// Update Full backup metric if running
 		if currentStat.Full != nil {
 			backupProgress.WithLabelValues(routineName, "Full").Set(float64(currentStat.Full.PercentageDone))

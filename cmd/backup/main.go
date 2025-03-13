@@ -106,7 +106,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 
 	backends := service.NewBackupBackends()
 	backupHandlers := service.NewBackupHandlerHolder()
-	registry := service.NewRunningBackupsRegistry()
+	registry := service.NewRunningBackupsRegistry(ctx, backends, config)
 
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,
@@ -116,7 +116,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		registry,
 	)
 
-	err = configApplier.ApplyNewRoutines(ctx, config.Routines())
+	err = configApplier.ApplyNewRoutines(config.Routines())
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
@@ -128,6 +128,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		backends, restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator)
 
 	httpService := handlers.NewService(
+		ctx,
 		config,
 		configApplier,
 		scheduler,

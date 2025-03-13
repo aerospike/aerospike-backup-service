@@ -1,11 +1,12 @@
 package service
 
 import (
+	"context"
 	"fmt"
-	"path/filepath"
+	"log/slog"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // configRetriever is used to read Aerospike configuration from backup.
@@ -14,36 +15,20 @@ type configRetriever struct {
 }
 
 // RetrieveConfiguration return backed up Aerospike configuration.
-func (cr *configRetriever) RetrieveConfiguration(routine string, toTime time.Time,
+func (cr *configRetriever) RetrieveConfiguration(ctx context.Context, routine string, toTime *time.Time,
 ) ([]byte, error) {
 	backend, found := cr.backends.GetReader(routine)
 	if !found {
 		return nil, fmt.Errorf("%w: routine %s", errBackendNotFound, routine)
 	}
 
-	fullBackups, err := backend.FindLastFullBackup(toTime)
+	lastFullBackup, err := backend.LastFullBackupTime(ctx, model.TimeBounds{ToTime: toTime})
 	if err != nil {
-		return nil, fmt.Errorf("failed retrieve configuration: %w", err)
+		return nil, fmt.Errorf("failed find last backup: %w", err)
 	}
 
-	// fullBackups has backups for multiple namespaces, but same timestamp,
-	// they share the same configuration.
-	lastFullBackup := fullBackups[0]
-	configPath, err := calculateConfigurationBackupPath(lastFullBackup.Key)
-	if err != nil {
-		return nil, err
-	}
+	path := getConfigurationPath(routine, lastFullBackup)
+	slog.Info("getConfiguration", slog.String("routine", routine), slog.String("path", path))
 
-	return backend.ReadClusterConfiguration(configPath)
-}
-
-func calculateConfigurationBackupPath(backupKey string) (string, error) {
-	_, path, err := util.ParseS3Path(backupKey)
-	if err != nil {
-		return "", err
-	}
-	// Move up two directories
-	base := filepath.Dir(filepath.Dir(path))
-	// Join new directory 'config' with the new base
-	return filepath.Join(base, configurationBackupDirectory), nil
+	return backend.ReadClusterConfiguration(ctx, path)
 }
