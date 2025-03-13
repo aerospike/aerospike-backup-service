@@ -2,9 +2,8 @@ package util
 
 import (
 	"fmt"
-	"net/url"
+	"runtime/debug"
 	"slices"
-	"strings"
 	"time"
 )
 
@@ -34,28 +33,26 @@ func ValueOrZero[T any](p *T) T {
 	return zero
 }
 
-// TryAndRecover executes the given function `f` and recovers from any panics
-// that occur.
-func TryAndRecover(f func() string) (output string, err error) {
+// TryAndRecover executes a function and recovers from any panic.
+func TryAndRecover[T any](f func() T) (output T, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("recovered from: %v", r)
-			output = ""
+			stackTrace := string(debug.Stack())
+			err = fmt.Errorf("recovered from panic: %v\nStack trace:\n%s", r, stackTrace)
 		}
 	}()
-	return f(), err
+	return f(), nil
 }
 
-// ParseS3Path parses an S3 path and returns the bucket and path components.
-// The path is trimmed of the leading slash (/).
-// Amazon S3 require paths to be without slashes.
-func ParseS3Path(s string) (bucket string, path string, err error) {
-	parsed, err := url.Parse(s)
-	if err != nil {
-		return "", "", err
-	}
-
-	return parsed.Host, strings.TrimPrefix(parsed.Path, "/"), nil
+// TryAndRecoverError executes a function returning (T, error) and recovers from any panic.
+func TryAndRecoverError[T any](f func() (T, error)) (output T, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			stackTrace := string(debug.Stack())
+			err = fmt.Errorf("recovered from panic: %v\nStack trace:\n%s", r, stackTrace)
+		}
+	}()
+	return f()
 }
 
 // MissingElements returns all elements in `subset` that are not present in `superset`.

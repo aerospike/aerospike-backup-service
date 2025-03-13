@@ -131,6 +131,27 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 	}
 }
 
+func ReadFileNames(
+	ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
+) ([]string, error) {
+	var startScanFrom string
+	if fromTime != nil {
+		fromTimeStr := strconv.FormatInt(fromTime.UnixMilli()-1, 10) // -1 to ensure filter is greater or equal.
+		startScanFrom = filepath.Join(path, fromTimeStr)
+	}
+
+	reader, err := CreateDirReader(ctx, storage, path,
+		ioStorage.WithValidator(newNameValidator(filterStr)),
+		ioStorage.WithStartAfter(startScanFrom),
+		ioStorage.WithNestedDir(),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create reader: %w", err)
+	}
+
+	return reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path))
+}
+
 func WriteMetadataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {
 	return writeFile(ctx, storage, fileName, storage.GetStorageClass().MetadataClass, content)
 }

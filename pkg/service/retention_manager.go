@@ -97,7 +97,8 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 	}
 
 	if retainCount == 0 { // Delete all incremental backups.
-		return storage.DeleteFolder(ctx, e.storage, getBackupRootPath(e.routineName, jobTypeIncremental))
+		path := getBackupRootPath(e.routineName, jobTypeIncremental)
+		return storage.DeleteFolder(ctx, e.storage, path)
 	}
 
 	earliestToKeep := timestamps[len(timestamps)-retainCount]

@@ -40,7 +40,7 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),
 				slog.Int("status", rw.status),
-				slog.Int64("duration", time.Since(start).Milliseconds()),
+				slog.Duration("duration", time.Since(start)),
 				slog.String("ip", r.RemoteAddr),
 			}
 
