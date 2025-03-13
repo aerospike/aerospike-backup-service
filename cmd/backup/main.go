@@ -106,7 +106,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 
 	backends := service.NewBackupBackends()
 	backupHandlers := service.NewBackupHandlerHolder()
-	registry := service.NewRunningBackupsRegistry(ctx)
+	registry := service.NewRunningBackupsRegistry(ctx, backends, config)
 
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,
@@ -128,6 +128,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		backends, restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator)
 
 	httpService := handlers.NewService(
+		ctx,
 		config,
 		configApplier,
 		scheduler,

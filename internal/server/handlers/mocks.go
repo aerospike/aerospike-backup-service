@@ -52,14 +52,23 @@ func (m *MockBackupMetadataReader) IncrementalBackupList(ctx context.Context, ti
 	return args.Get(0).([]model.BackupDetails), args.Error(1)
 }
 
-func (m *MockBackupMetadataReader) ReadClusterConfiguration(path string) ([]byte, error) {
-	args := m.Called(path)
+func (m *MockBackupMetadataReader) ReadClusterConfiguration(ctx context.Context, path string) ([]byte, error) {
+	args := m.Called(ctx, path)
 	return args.Get(0).([]byte), args.Error(1)
 }
 
-func (m *MockBackupMetadataReader) FindLastFullBackup(toTime time.Time) ([]model.BackupDetails, error) {
-	args := m.Called(toTime)
-	return args.Get(0).([]model.BackupDetails), args.Error(1)
+func (m *MockBackupMetadataReader) LastIncrementalBackupTime(
+	ctx context.Context, timeBounds model.TimeBounds,
+) (time.Time, error) {
+	args := m.Called(ctx, timeBounds)
+	return args.Get(0).(time.Time), args.Error(1)
+}
+
+func (m *MockBackupMetadataReader) LastFullBackupTime(
+	ctx context.Context, timeBounds model.TimeBounds,
+) (time.Time, error) {
+	args := m.Called(ctx, timeBounds)
+	return args.Get(0).(time.Time), args.Error(1)
 }
 
 func (m *MockBackupMetadataReader) FindIncrementalBackupsForNamespace(
@@ -67,11 +76,6 @@ func (m *MockBackupMetadataReader) FindIncrementalBackupsForNamespace(
 ) ([]model.BackupDetails, error) {
 	args := m.Called(ctx, bounds, namespace)
 	return args.Get(0).([]model.BackupDetails), args.Error(1)
-}
-
-func (m *MockBackupMetadataReader) FindLastRun(ctx context.Context) (*model.LastBackupRun, error) {
-	args := m.Called(ctx)
-	return args.Get(0).(*model.LastBackupRun), args.Error(1)
 }
 
 // MockScheduler mocks the quartz.Scheduler interface.
@@ -141,8 +145,10 @@ func (m *MockRestoreManager) Restore(request *model.RestoreRequest) (model.Resto
 	return args.Get(0).(model.RestoreJobID), args.Error(1)
 }
 
-func (m *MockRestoreManager) RestoreByTime(request *model.RestoreTimestampRequest) (model.RestoreJobID, error) {
-	args := m.Called(request)
+func (m *MockRestoreManager) RestoreByTime(
+	ctx context.Context, request *model.RestoreTimestampRequest,
+) (model.RestoreJobID, error) {
+	args := m.Called(ctx, request)
 	return args.Get(0).(model.RestoreJobID), args.Error(1)
 }
 
@@ -151,8 +157,10 @@ func (m *MockRestoreManager) JobStatus(jobID model.RestoreJobID) (*model.Restore
 	return args.Get(0).(*model.RestoreJobStatus), args.Error(1)
 }
 
-func (m *MockRestoreManager) RetrieveConfiguration(routine string, toTime time.Time) ([]byte, error) {
-	args := m.Called(routine, toTime)
+func (m *MockRestoreManager) RetrieveConfiguration(
+	ctx context.Context, routine string, toTime *time.Time,
+) ([]byte, error) {
+	args := m.Called(ctx, routine, toTime)
 	return args.Get(0).([]byte), args.Error(1)
 }
 

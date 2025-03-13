@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -249,6 +250,7 @@ func setupTestService() *Service {
 	mockRegistry := &mockRunningBackupsRegistry{}
 
 	return NewService(
+		context.Background(),
 		model.NewConfig(),
 		mockConfigApplier,
 		mockScheduler,

@@ -122,18 +122,26 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 	return nil
 }
 
-func (r *dataRestorer) RestoreByTime(request *model.RestoreTimestampRequest,
+func (r *dataRestorer) RestoreByTime(ctx context.Context, request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
 	reader, found := r.backends.GetReader(request.RoutineName)
 	if !found {
 		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.RoutineName)
 	}
-	fullBackups, err := reader.FindLastFullBackup(request.Time)
+	lastbackup, err := reader.LastFullBackupTime(ctx, model.TimeBounds{ToTime: &request.Time})
 	if err != nil {
-		return 0, fmt.Errorf("restore failed: %w", err)
+		return 0, fmt.Errorf("FindLastFullBackup restore failed: %w", err)
 	}
+
+	fullBackups, err := reader.FullBackupList(ctx, model.TimeBounds{
+		FromTime: &lastbackup,
+		ToTime:   &lastbackup,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("FullBackupList restore failed: %w", err)
+	}
+
 	jobID := r.restoreJobs.newJob(request.RoutineName)
-	ctx := context.TODO()
 	go r.restoreByTimeSync(ctx, reader, request, jobID, fullBackups)
 
 	return jobID, nil
@@ -212,6 +220,10 @@ func (r *dataRestorer) restoreNamespace(
 	}
 
 	for _, b := range allBackups {
+		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
+	}
+
+	for _, b := range allBackups {
 		if b.FileCount == 0 { // skip empty namespaces
 			continue
 		}
@@ -221,7 +233,6 @@ func (r *dataRestorer) restoreNamespace(
 			return err
 		}
 
-		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 		ctx, cancel := context.WithCancel(ctx)
 		r.restoreJobs.addHandler(jobID, restoreexecutor.NewRestoreHandlerWithCancel(handler, cancel))
 

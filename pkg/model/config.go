@@ -14,11 +14,12 @@ type Config struct {
 }
 
 type BackupConfig struct {
-	AerospikeClusters map[string]*AerospikeCluster
-	Storage           map[string]Storage // Storage is an interface
-	BackupPolicies    map[string]*BackupPolicy
-	BackupRoutines    map[string]*BackupRoutine
-	SecretAgents      map[string]*SecretAgent
+	AerospikeClusters   map[string]*AerospikeCluster
+	Storage             map[string]Storage // Storage is an interface
+	BackupPolicies      map[string]*BackupPolicy
+	BackupRoutines      map[string]*BackupRoutine
+	SecretAgents        map[string]*SecretAgent
+	invalidatedRoutines []string // routines that need to be rescanned after a change
 }
 
 func (bc *BackupConfig) copy() *BackupConfig {
@@ -99,6 +100,15 @@ func (c *Config) DeleteStorage(name string) error {
 	return nil
 }
 
+func (c *Config) routineUsesStorage(s Storage) string {
+	for name, r := range c.backupConfig.BackupRoutines {
+		if r.Storage == s {
+			return name
+		}
+	}
+	return ""
+}
+
 func (c *Config) UpdateStorage(name string, s Storage) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -108,24 +118,16 @@ func (c *Config) UpdateStorage(name string, s Storage) error {
 	}
 
 	oldStorage := c.backupConfig.Storage[name]
-	for _, r := range c.backupConfig.BackupRoutines {
+	for routineName, r := range c.backupConfig.BackupRoutines {
 		if r.Storage == oldStorage {
 			r.Storage = s
+			c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, routineName)
 		}
 	}
 
 	c.backupConfig.Storage[name] = s
 
 	return nil
-}
-
-func (c *Config) routineUsesStorage(s Storage) string {
-	for name, r := range c.backupConfig.BackupRoutines {
-		if r.Storage == s {
-			return name
-		}
-	}
-	return ""
 }
 
 func (c *Config) AddPolicy(name string, p *BackupPolicy) error {
@@ -155,6 +157,15 @@ func (c *Config) DeletePolicy(name string) error {
 	return nil
 }
 
+func (c *Config) routineUsesPolicy(p *BackupPolicy) string {
+	for name, r := range c.backupConfig.BackupRoutines {
+		if r.BackupPolicy == p {
+			return name
+		}
+	}
+	return ""
+}
+
 func (c *Config) UpdatePolicy(name string, p *BackupPolicy) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -172,15 +183,6 @@ func (c *Config) UpdatePolicy(name string, p *BackupPolicy) error {
 	c.backupConfig.BackupPolicies[name] = p
 
 	return nil
-}
-
-func (c *Config) routineUsesPolicy(p *BackupPolicy) string {
-	for name, r := range c.backupConfig.BackupRoutines {
-		if r.BackupPolicy == p {
-			return name
-		}
-	}
-	return ""
 }
 
 func (c *Config) Routines() map[string]*BackupRoutine {
@@ -201,6 +203,8 @@ func (c *Config) AddRoutine(name string, r *BackupRoutine) error {
 		return fmt.Errorf("add backup routine %q: %w", name, ErrAlreadyExists)
 	}
 	c.backupConfig.BackupRoutines[name] = r
+	c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, name)
+
 	return nil
 }
 
@@ -212,6 +216,7 @@ func (c *Config) DeleteRoutine(name string) error {
 		return fmt.Errorf("delete backup routine %q: %w", name, ErrNotFound)
 	}
 	delete(c.backupConfig.BackupRoutines, name)
+
 	return nil
 }
 
@@ -223,6 +228,8 @@ func (c *Config) UpdateRoutine(name string, r *BackupRoutine) error {
 		return fmt.Errorf("update backup routine %q: %w", name, ErrNotFound)
 	}
 	c.backupConfig.BackupRoutines[name] = r
+	c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, name)
+
 	return nil
 }
 
@@ -297,6 +304,9 @@ func (c *Config) SetBackupConfig(other *BackupConfig) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.backupConfig = *other
+	for name := range c.backupConfig.BackupRoutines {
+		c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, name)
+	}
 }
 
 // ToggleRoutineDisabled sets the Disabled field of the BackupRoutine based on the provided state.
@@ -310,5 +320,20 @@ func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
 	}
 
 	c.backupConfig.BackupRoutines[name].Disabled = isDisabled
+	if !isDisabled { // only invalidate if we are enabling the routine
+		c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, name)
+	}
+
 	return nil
+}
+
+// PopInvalidatedRoutines returns all invalidated routines since the last call.
+func (c *Config) PopInvalidatedRoutines() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	result := c.backupConfig.invalidatedRoutines
+	c.backupConfig.invalidatedRoutines = nil
+
+	return result
 }

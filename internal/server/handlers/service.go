@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -10,6 +12,7 @@ import (
 
 // Service holds all dependencies required to access business logic from endpoints.
 type Service struct {
+	ctx                  context.Context
 	config               *model.Config
 	configApplier        service.ConfigApplier
 	scheduler            quartz.Scheduler
@@ -22,6 +25,7 @@ type Service struct {
 }
 
 func NewService(
+	ctx context.Context,
 	config *model.Config,
 	configApplier service.ConfigApplier,
 	scheduler quartz.Scheduler,
@@ -33,6 +37,7 @@ func NewService(
 	nsValidator aerospike.NamespaceValidator,
 ) *Service {
 	return &Service{
+		ctx:                  ctx,
 		config:               config,
 		configApplier:        configApplier,
 		scheduler:            scheduler,

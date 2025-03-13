@@ -38,9 +38,12 @@ func getBackupPath(routineName string, backupType jobType, namespace string, tim
 	return filepath.Join(routineName, incrementalBackupDirectory, formatTimestamp(timestamp), dataDirectory, namespace)
 }
 
-func getConfigurationPath(routineName string, timestamp time.Time, index int) string {
-	return filepath.Join(routineName, fullBackupDirectory, formatTimestamp(timestamp),
-		configurationBackupDirectory, getConfigFileName(index))
+func getConfigurationPath(routineName string, timestamp time.Time) string {
+	return filepath.Join(routineName, fullBackupDirectory, formatTimestamp(timestamp), configurationBackupDirectory)
+}
+
+func getConfigurationFilePath(routineName string, timestamp time.Time, index int) string {
+	return filepath.Join(getConfigurationPath(routineName, timestamp), getConfigFileName(index))
 }
 
 func getKey(routineName string, backupType jobType, metadata *model.BackupMetadata) string {
