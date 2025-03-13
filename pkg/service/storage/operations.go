@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -132,10 +131,6 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 	}
 }
 
-type ObjectLister interface {
-	ListObjects(ctx context.Context, path string) ([]string, error)
-}
-
 func ReadFileNames(
 	ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
 ) ([]string, error) {
@@ -154,13 +149,7 @@ func ReadFileNames(
 		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}
 
-	lister, ok := reader.(ObjectLister)
-	if !ok {
-		// Handle the case where the assertion fails
-		log.Fatal("givenInterface does not implement ObjectLister")
-	}
-
-	return lister.ListObjects(ctx, filepath.Join(storage.GetPath(), path))
+	return reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path))
 }
 
 func WriteMetadataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {
