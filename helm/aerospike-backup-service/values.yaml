@@ -1,0 +1,308 @@
+# Default values for aerospike-backup-service.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: aerospike/aerospike-backup-service
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "3.0.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+configmap:
+  # Specifies whether a configmap should be created with the backupServiceConfig.
+  # When false the backupServiceConfig will get created in the deployment init container.
+  # Set to false when needing to change the config at runtime.
+  create: true
+
+# args: ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml", "-r"]
+args: []
+
+envFrom: []
+# - configMapRef:
+#     name: config-map-name
+# - secretRef:
+#     name: secret-name
+
+env: []
+# - name: SOME_ENV_VAR
+#   value: some-env-var-value
+# - name: SOME_ENV_VAR_FROM_CONFIG_MAP
+#   valueFrom:
+#     configMapRef:
+#       name: configmap-name
+#       key: config-key
+# - name: SOME_ENV_SECRET
+#   valueFrom:
+#     secretKeyRef:
+#       name: secret-name
+#       key: secret-key
+
+backupServiceConfig: {}
+# service:
+#   http:
+#     address: <address> # Optional default: 0.0.0.0
+#     port: <port> # Optional default: 8080
+#     rate:
+#       tps: <tokens-per-second-threshold> # Optional default: 1024
+#       size: <token=bucket-size> # Optional default: 1024
+#       white-list: [ <ips> ] # Optional default: empty list
+#     context-path: <custom-path-for-api-endpoints> # Optional default: "/"
+#   logger:
+#     level: <log-level> # Optional default: DEBUG Valid values: (TRACE,DEBUG,INFO,WARN,WARNING,ERROR)
+#     format: <format> # Optional default: PLAIN Valid values: (PLAIN,JSON)
+#     stdout-writer: <true/false> # Optional default: true
+#     file-writer:
+#       filename: <filename-path> # Optional default: log.txt
+#       maxsize: <max-logfile-size> # Optional default: 100 (Size is in megabytes)
+#       maxage: <max-days-retain-logs> # Optional default: 0
+#       maxbackups: <backup-logfiles> # Optional default: 0
+#       compress: <true/false> # Optional default: false
+#
+# aerospike-clusters:
+#   <cluster-name>: # At least one service is required
+#     label: <cluster-label> # Optional
+#     seed-nodes:
+#       - host-name: <cluster ip/dns-name> # Mandatory
+#         port: 3000 # Mandatory
+#         tls-name: <tls-socket-connection-name> # mandatiry if TLS is enabled
+#     conn-timeout: <conection-timeout> # optional example: 5000
+#     use-services-alternate: <true/false> # optional default: false
+#     credentials:
+#       user: <cluster username> # Mandatory
+#       password: <cluster password> # Mandatory if  password-path is empty
+#       password-path: <path-to-password-file> # Mandatory if  password is empty
+#       auth-mode: <auth-mode> # Optional Valid values: INTERNAL, EXTERNAL, PKI
+#       secret-agent-name: <secret-agent-name> # optional
+#       secret-agent: #optional
+#         connection-type: <tcp/udp> # required
+#         address: <address> # Optional Address of the Secret Agent defaultL localhost
+#         port: <port> # Optional Secret Agent port default: 8080
+#         timeout: <timeout> # Optional timeout in miliseconds default: 0
+#         tls-ca-file: <path-to-ca-file> # Optional default: ""
+#         is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
+#     tls:
+#       cafile: <path-to-ca-file> # Mandatory if TLS enabled and capath is empty
+#       capath: <path-to-ca-dorectory> # Mandatory if TLS enabled and cafile if empty
+#       name: <tls-socket-connection-name> # Mandatory if TLS enabled
+#       protocols: <protocols> # Optional
+#       cipher-suite: <cipher-suite> # Optional
+#       keyfile: <path-to-key-file> # Optional
+#       keyfile-password: <keyfile-password> # Optional
+#       certfile: <path-to-certfile> # Optional
+#
+# storage:
+#   local-storage:
+#     path: <root-path> # Mandatory. The root path for the backup repository.
+#   s3-storage:
+#     path: <root-path> # Mandatory. The root path for the backup repository within the bucket.
+#     bucket: <bucket> # Mandatory. The S3 bucket name.
+#     s3-region: <s3-region> # Mandatory. The S3 region where the bucket resides (e.g., eu-central-1).
+#     s3-profile: <s3-profile> # Optional. AWS profile name (e.g., default).
+#     s3-endpoint-override: <s3-endpoint> # Optional. Alternative endpoint for the S3 SDK to communicate (e.g., http://host.docker.internal:9000).
+#     s3-log-level: <s3-log-level> # Optional. Log level of the AWS S3 SDK (OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE). Default: FATAL.
+#     min_part_size: <min-part-size> # Optional. Minimum size in bytes of individual S3 UploadParts. Default: 5242880.
+#     max_async_connections: <max-connections> # Optional. Maximum number of simultaneous requests to S3. Default: 16.
+#     access-key-id: <access-key-id> # Optional. Access Key ID for S3 StaticCredentialsProvider.
+#     secret-access-key: <secret-access-key> # Optional. Secret Access Key for S3 StaticCredentialsProvider.
+#     secret-agent-name: <secret-agent-name> # Optional
+#     secret-agent: #Optional
+#       connection-type: <tcp/udp> # required
+#       address: <address> # Optional Address of the Secret Agent defaultL localhost
+#       port: <port> # Optional Secret Agent port default: 8080
+#       timeout: <timeout> # Optional timeout in miliseconds default: 0
+#       tls-ca-file: <path-to-ca-file> # Optional default: ""
+#       is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
+#   gcp-storage:
+#     key-file-path: <key-file-path> # Optional. Path to the file containing the service account key in JSON format.
+#     key: <key> # Optional. Service account key in JSON format. Can be sensitive information.
+#     bucket-name: <bucket-name> # Mandatory. GCP storage bucket name.
+#     path: <root-path> # Optional. Root path for the backup repository. Defaults to the bucket's root.
+#     endpoint: <endpoint> # Optional. Alternative endpoint URL. Not recommended for production environments.
+#     secret-agent-name: <secret-agent-name> # Optional
+#     secret-agent: #Optional
+#       connection-type: <tcp/udp> # required
+#       address: <address> # Optional Address of the Secret Agent defaultL localhost
+#       port: <port> # Optional Secret Agent port default: 8080
+#       timeout: <timeout> # Optional timeout in miliseconds default: 0
+#       tls-ca-file: <path-to-ca-file> # Optional default: ""
+#       is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
+#   azure-storage:
+#     endpoint: <endpoint> # Mandatory. Azure Blob service endpoint URL.
+#     container-name: <container-name> # Mandatory. Name of the Azure Blob container.
+#     path: <root-path> # Optional. Root path for the backup repository within the container. Defaults to the container's root.
+#     account-name: <account-name> # Optional. Azure storage account name for Shared Key authentication.
+#     account-key: <account-key> # Optional. Azure storage account key for Shared Key authentication.
+#     tenant-id: <tenant-id> # Optional. Azure Active Directory tenant ID for AAD authentication.
+#     client-id: <client-id> # Optional. Azure Active Directory client ID for AAD authentication.
+#     client-secret: <client-secret> # Optional. Azure Active Directory client secret for AAD authentication.#  backup-policies:
+#     secret-agent-name: <secret-agent-name> # optional
+#     secret-agent: #optional
+#       connection-type: <tcp/udp> # required
+#       address: <address> # Optional Address of the Secret Agent defaultL localhost
+#       port: <port> # Optional Secret Agent port default: 8080
+#       timeout: <timeout> # Optional timeout in miliseconds default: 0
+#       tls-ca-file: <path-to-ca-file> # Optional default: ""
+#       is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
+#
+# backup-policies:
+#   <policy-name>:
+#     parallel: <parallel> # Optional Max number of parallel scan calls default: 1
+#     socket-timeout: <socket-timeout> # Optional default: 0 (Timeout is in milliseconds)
+#     total-timeout: <total-timeout> # Optional default: 0 (Timeout is in milliseconds)
+#     retry-policy:
+#       base-timeout: <base-timeout> # Mandatory. Initial delay between retry attempts, in milliseconds.
+#       multiplier: <multiplier> # Mandatory. Factor to increase the delay between retries.
+#       max-retries: <max-retries> # Mandatory. Maximum number of retry attempts. Set to 0 for no retries.
+#     retention:
+#       full: <full> # Optional. Number of full backups to retain:
+#       incremental: <incremental> # Optional. Number of full backups to retain incremental backups for
+#     no-bins: <true/false> # Optional backup only metadata (digest, TTL, generation count, key) default: false
+#     no-records: <true/false> # Optional do not back up any record data (metadata or bin data) default: false
+#     no-indexes: <true/false> # Optional do not back up any secondary index definitions default: false
+#     no-udfs: <true/false> # Optional do not back up any UDF modules default: false
+#     bandwidth: <bandwidth> # Optional throttles write operations to backup files not exceeding bandwidth in MiB/s. default: 0
+#     records-per-second: <records-per-second> # Optional limit of total returned records per second. default: 0
+#     file-limit: <file-limit> # Optional .asb file size limit. default: 0
+#     encryption:
+#       mode: <mode> # Optional encryption mode to be used. Valid values: (NONE, AES128, AES256) default: None
+#       key-file: <key-file> # Optional path to the file containing the encryption key default: ""
+#       key-env: <key-env> # Optional environment variable containing the encryption key default: ""
+#       key-secret: <key-secret> # Optional secret keyword in Aerospike Secret Agent containing the encryption key default: ""
+#     compression:
+#       mode: <mode> # Optional compression mode to be used Valid values: (NONE,ZSTD) default NONE
+#       level: <level> # Optional compression level default: 0
+#     sealed: <true/false> # Optional determines whether backup should include keys updated during the backup process default: false
+#
+# backup-routines:
+#   <routine-name>:
+#     backup-policy: <policy-name> # Mandatory name of the corresponding backup policy
+#     source-cluster: <cluster-name> # Mandatory name of the corresponding source cluste
+#     storage: <storage-name> # Mandatory name of the corresponding storage provider configuration
+#     secret-agent: <secret-agent> # Optional Secret Agent configuration for the routine
+#     interval-cron: <interval-cron> # Mandatory interval for full backup as a cron expression string
+#     incr-interval-cron: <incr-interval-cron> # Optional interval for incremental backup as a cron expression string
+#     namespaces: [ <namespace-name> ] # Optional list of the namespaces to back up default: empty list
+#     set-list: [ <set-names> ] # Optional list of backup set names default: empty list
+#     bin-list: [ <bin-names> ] # Optional list of backup bin names default: empty list
+#     prefer-racks: [ <rack-ids> ] # Optional list of rack IDs to prefer when reading records for a backup
+#     partition-list: <partition-list> # Optional list of partition filters default: empty string
+#     disabled: <true/false> #Optional. Disabled routines are not executed.
+#
+# secret-agents:
+#   <agent-name>:
+#     connection-type: <tcp/udp> # required
+#     address: <address> # Optional Address of the Secret Agent defaultL localhost
+#     port: <port> # Optional Secret Agent port default: 8080
+#     timeout: <timeout> # Optional timeout in miliseconds default: 0
+#     tls-ca-file: <path-to-ca-file> # Optional default: ""
+#     is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
+
+initContainers: []
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: &p 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: *p
+  initialDelaySeconds: 15
+  periodSeconds: 10
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: *p
+  initialDelaySeconds: 15
+  periodSeconds: 10
+
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+# - name: foo
+#   secret:
+#     secretName: mysecret
+#     optional: false
+
+
+# Additional volumeMounts on the output Deployment definition.
+extraVolumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+extraSecretVolumeMounts: []
+# - name: foo
+#   mountPath: "/etc/foo"
+#   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
