@@ -112,7 +112,7 @@ func (b *BackupBackend) lastBackupTime(
 	// local storage is special case
 	local, ok := b.storage.(*model.LocalStorage)
 	if ok {
-		return LastBackupTimeLocal(ctx, local, path, timeBounds)
+		return lastBackupTimeLocal(ctx, local, path, timeBounds)
 	}
 
 	files, err := storage.ReadFileNames(ctx, b.storage, path, metadataFile, timeBounds.FromTime)
@@ -158,9 +158,9 @@ func (b *BackupBackend) lastBackupTime(
 	return metadata.Created, nil
 }
 
-// LastBackupTimeLocal finds the latest backup within a specified time range in local storage.
+// lastBackupTimeLocal finds the latest backup within a specified time range in local storage.
 // Local storage does not support listing files in nested folders, but it is fast so we just iterate over all of them.
-func LastBackupTimeLocal(
+func lastBackupTimeLocal(
 	ctx context.Context, s *model.LocalStorage, path string, timeBounds model.TimeBounds,
 ) (time.Time, error) {
 	files, err := storage.ReadFiles(ctx, s, path, metadataFile, timeBounds.FromTime)
