@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const maxSize = 10_000 // Maximum size of request body to log in bytes.
+const maxLogSize = 10_000 // Maximum size of request body to log in bytes.
 
 // RequestLogger returns a middleware that logs request details using provided logger.
 func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
@@ -45,7 +45,7 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 			}
 
 			if len(body) > 0 {
-				attrs = append(attrs, slog.String("request_body", string(body)))
+				attrs = append(attrs, slog.String("request_body", string(body[:maxLogSize])))
 			}
 
 			// Log based on response status
@@ -76,8 +76,7 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 
 // readRequestBody reads the request body and resets is, so it can be used by subsequent handlers.
 func readRequestBody(r *http.Request) ([]byte, error) {
-	limitedReader := io.LimitReader(r.Body, maxSize)
-	bodyBytes, err := io.ReadAll(limitedReader)
+	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
