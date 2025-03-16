@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -25,8 +24,7 @@ import (
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
-	var request dto.RestoreRequest
-	err := json.NewDecoder(r.Body).Decode(&request)
+	request, err := dto.NewRestoreRequestFromReader(r.Body)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return
@@ -61,9 +59,7 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
-	var request dto.RestoreRequest
-
-	err := json.NewDecoder(r.Body).Decode(&request)
+	request, err := dto.NewRestoreRequestFromReader(r.Body)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -99,9 +95,8 @@ func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Reque
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreByTimeHandler(w http.ResponseWriter, r *http.Request) {
-	var request dto.RestoreTimestampRequest
+	request, err := dto.NewRestoreTimestampRequestFromReader(r.Body)
 
-	err := json.NewDecoder(r.Body).Decode(&request)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return

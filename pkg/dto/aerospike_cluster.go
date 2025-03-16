@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -50,9 +51,9 @@ func (a *AerospikeCluster) Validate() error {
 }
 
 // NewClusterFromReader creates a new Storage object from a given reader.
-func NewClusterFromReader(r io.Reader, format SerializationFormat) (*AerospikeCluster, error) {
+func NewClusterFromReader(r io.Reader, format decoder.SerializationFormat) (*AerospikeCluster, error) {
 	a := &AerospikeCluster{}
-	if err := Deserialize(a, r, format); err != nil {
+	if err := decoder.Deserialize(a, r, format); err != nil {
 		return nil, err
 	}
 

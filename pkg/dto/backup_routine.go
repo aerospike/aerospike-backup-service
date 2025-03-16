@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aws/smithy-go/ptr"
@@ -140,9 +141,9 @@ func (r *BackupRoutine) ToModel(
 }
 
 // NewRoutineFromReader creates a new BackupRoutine object from a given reader.
-func NewRoutineFromReader(r io.Reader, format SerializationFormat) (*BackupRoutine, error) {
+func NewRoutineFromReader(r io.Reader, format decoder.SerializationFormat) (*BackupRoutine, error) {
 	b := &BackupRoutine{}
-	if err := Deserialize(b, r, format); err != nil {
+	if err := decoder.Deserialize(b, r, format); err != nil {
 		return nil, err
 	}
 

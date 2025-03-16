@@ -6,6 +6,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -53,9 +54,9 @@ type BackupPolicy struct {
 }
 
 // NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.
-func NewBackupPolicyFromReader(r io.Reader, format SerializationFormat) (*BackupPolicy, error) {
+func NewBackupPolicyFromReader(r io.Reader, format decoder.SerializationFormat) (*BackupPolicy, error) {
 	b := &BackupPolicy{}
-	if err := Deserialize(b, r, format); err != nil {
+	if err := decoder.Deserialize(b, r, format); err != nil {
 		return nil, err
 	}
 

@@ -53,7 +53,7 @@ func NewLocalAerospikeCluster() *AerospikeCluster {
 func TestValidConfigValidation(t *testing.T) {
 	config := validConfig()
 
-	if err := config.validate(); err != nil {
+	if err := config.Validate(); err != nil {
 		t.Errorf("Expected no validation error, but got: %v", err)
 	}
 }

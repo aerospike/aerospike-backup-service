@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -25,7 +26,7 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	newRoutine, err := dto.NewRoutineFromReader(r.Body, dto.JSON)
+	newRoutine, err := dto.NewRoutineFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return
@@ -108,7 +109,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedRoutine, err := dto.NewRoutineFromReader(r.Body, dto.JSON)
+	updatedRoutine, err := dto.NewRoutineFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return

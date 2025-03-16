@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -26,7 +27,7 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newCluster, err := dto.NewClusterFromReader(r.Body, dto.JSON)
+	newCluster, err := dto.NewClusterFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return
@@ -112,7 +113,7 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	updatedCluster, err := dto.NewClusterFromReader(r.Body, dto.JSON)
+	updatedCluster, err := dto.NewClusterFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return

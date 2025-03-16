@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/validation"
 )
@@ -36,7 +37,7 @@ func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
-	newConfig, err := dto.NewConfigFromReader(r.Body, dto.JSON)
+	newConfig, err := dto.NewConfigFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return

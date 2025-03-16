@@ -1,45 +1,12 @@
 package dto
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"gopkg.in/yaml.v3"
-)
-
-// SerializationFormat represents the format for serialization/deserialization.
-type SerializationFormat int
-
-const (
-	JSON SerializationFormat = iota
-	YAML
 )
 
 // Validator interface for types that can be validated.
 type Validator interface {
 	Validate() error
-}
-
-// Deserialize handles deserialization.
-func Deserialize(v any, r io.Reader, format SerializationFormat) error {
-	var err error
-
-	switch format {
-	case JSON:
-		err = json.NewDecoder(r).Decode(v)
-	case YAML:
-		err = yaml.NewDecoder(r).Decode(v)
-	default:
-		return fmt.Errorf("unsupported format: %v", format)
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal: %w", err)
-	}
-
-	return nil
 }
 
 // ConvertModelsToDTO converts an array of models to an array of DTOs.

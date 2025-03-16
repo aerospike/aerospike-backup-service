@@ -172,7 +172,7 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 
 func TestConfigValidation(t *testing.T) {
 	configJSON, _ := json.Marshal(originalConfig)
-	require.NoError(t, originalConfig.validate())
+	require.NoError(t, originalConfig.Validate())
 	configJSONAfter, _ := json.Marshal(originalConfig)
 	require.Equal(t, string(configJSON), string(configJSONAfter), "validation should not change the config")
 }
