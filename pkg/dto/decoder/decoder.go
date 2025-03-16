@@ -102,7 +102,7 @@ func parseJSONError(errMsg string) (string, error) {
 // * suggest possible replacements.
 func enhanceYamlErrors(err error) error {
 	var typeErr *yaml.TypeError
-	if !errors.As(err, &typeErr) { // Yaml parser is so nice that it return it's own error type.
+	if !errors.As(err, &typeErr) { // Yaml parser is so nice that it return its own error type.
 		return err
 	}
 
