@@ -45,7 +45,7 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 			}
 
 			if len(body) > 0 {
-				attrs = append(attrs, slog.String("request_body", string(body[:maxLogSize])))
+				attrs = append(attrs, slog.String("request_body", string(body[:min(len(body), maxLogSize)])))
 			}
 
 			// Log based on response status

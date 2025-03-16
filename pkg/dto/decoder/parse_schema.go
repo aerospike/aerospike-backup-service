@@ -1,49 +1,38 @@
 package decoder
 
 import (
-	"fmt"
-
 	"gopkg.in/yaml.v3"
 )
 
-// Parse the OpenAPI spec and build a map of struct types to their fieldsByStruct.
+// OpenAPISpec represents the structure of an OpenAPI specification.
+type OpenAPISpec struct {
+	Definitions map[string]SchemaObject `yaml:"definitions"`
+}
+
+// SchemaObject represents a schema definition in OpenAPI.
+type SchemaObject struct {
+	Properties map[string]PropertyObject `yaml:"properties"`
+}
+
+// PropertyObject represents a property definition in a schema.
+type PropertyObject struct {
+	Type string `yaml:"type"`
+}
+
+// Parse the OpenAPI spec and build a map of struct types to their fields.
 // result map: struct name -> list of field names.
 func parseOpenAPISpec(yamlSpec string) (map[string][]string, error) {
-	var spec map[string]interface{}
+	var spec OpenAPISpec
 	err := yaml.Unmarshal([]byte(yamlSpec), &spec)
 	if err != nil {
-		fmt.Printf("Error parsing YAML: %v\n", err)
 		return nil, err
 	}
 
-	// Extract schemas from definitions
-	definitions, ok := spec["definitions"].(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("no definitions section found in spec")
-	}
-
 	result := make(map[string][]string)
-
-	for schemaName, schemaData := range definitions {
-		schemaObj, ok := schemaData.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		properties, ok := schemaObj["properties"].(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		// Extract field names
-		for fieldName := range properties {
+	for schemaName, schemaObj := range spec.Definitions {
+		for fieldName := range schemaObj.Properties {
 			result[schemaName] = append(result[schemaName], fieldName)
 		}
-	}
-
-	// Print the result
-	for structName, fields := range result {
-		fmt.Printf("%s: %v\n", structName, fields)
 	}
 
 	return result, nil
