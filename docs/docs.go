@@ -1711,11 +1711,11 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {
-                    "description": "DataClass specifies the storage tier for object data",
+                    "description": "DataClass specifies the storage tier for object data.",
                     "type": "string"
                 },
                 "metadata": {
-                    "description": "MetadataClass specifies the storage tier for metadata",
+                    "description": "MetadataClass specifies the storage tier for metadata.",
                     "type": "string"
                 }
             }
@@ -2209,7 +2209,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {
-                    "description": "DataClass specifies the storage class for object data",
+                    "description": "DataClass specifies the storage class for object data.",
                     "type": "string"
                 }
             }
@@ -2876,11 +2876,11 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "data": {
-                    "description": "DataClass specifies the storage class for object data",
+                    "description": "DataClass specifies the storage class for object data.",
                     "type": "string"
                 },
                 "metadata": {
-                    "description": "MetadataClass specifies the storage class for metadata",
+                    "description": "MetadataClass specifies the storage class for metadata.",
                     "type": "string"
                 }
             }
