@@ -52,7 +52,9 @@ func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 	return nil
 }
 
-// enhanceJSONError enhances json unmarshaling errors.
+// enhanceJSONError enhances json unmarshaling errors:
+// * provide deprecation information
+// * suggest possible replacements.
 func enhanceJSONError(jsonError error) error {
 	field, err := parseJSONError(jsonError.Error())
 	if err != nil {
@@ -90,9 +92,9 @@ func parseJSONError(errMsg string) (string, error) {
 	return matches[1], nil
 }
 
-// EnhanceYamlErrors enhances yaml.TypeErrors by
-// * providing deprecation information
-// * suggesting possible replacements.
+// EnhanceYamlErrors enhances yaml.TypeErrors:
+// * provide deprecation information
+// * suggest possible replacements.
 func enhanceYamlErrors(err error) error {
 	var typeErr *yaml.TypeError
 	if !errors.As(err, &typeErr) { // Yaml parser is so nice that it return it's own error type.
