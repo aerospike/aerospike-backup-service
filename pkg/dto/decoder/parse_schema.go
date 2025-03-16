@@ -11,12 +11,7 @@ type OpenAPISpec struct {
 
 // SchemaObject represents a schema definition in OpenAPI.
 type SchemaObject struct {
-	Properties map[string]PropertyObject `yaml:"properties"`
-}
-
-// PropertyObject represents a property definition in a schema.
-type PropertyObject struct {
-	Type string `yaml:"type"`
+	Properties map[string]struct{} `yaml:"properties"`
 }
 
 // Parse the OpenAPI spec and build a map of struct types to their fields.
