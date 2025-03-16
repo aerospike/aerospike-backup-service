@@ -21,6 +21,7 @@ type RestoreRequest struct {
 	BackupDataPath string `json:"backup-data-path" validate:"required"`
 }
 
+// NewRestoreRequestFromReader reads and deserializes the restore request from reader.
 func NewRestoreRequestFromReader(r io.Reader) (*RestoreRequest, error) {
 	var req RestoreRequest
 	err := decoder.Deserialize(&req, r, decoder.JSON)
@@ -47,6 +48,7 @@ type RestoreTimestampRequest struct {
 	DisableReordering bool `json:"disable-reordering"`
 }
 
+// NewRestoreTimestampRequestFromReader reads and deserializes the restore by timestamp request from reader.
 func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest, error) {
 	var req RestoreTimestampRequest
 	err := decoder.Deserialize(&req, r, decoder.JSON)

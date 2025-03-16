@@ -19,7 +19,6 @@ func parseOpenAPISpec(yamlSpec string) (map[string][]string, error) {
 	// Extract schemas from definitions
 	definitions, ok := spec["definitions"].(map[string]interface{})
 	if !ok {
-		fmt.Println("No definitions section found in spec")
 		return nil, fmt.Errorf("no definitions section found in spec")
 	}
 

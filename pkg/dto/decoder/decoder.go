@@ -20,6 +20,15 @@ const (
 	YAML
 )
 
+// Regular expressions to match field error patterns
+// Yaml example:
+// line 34: field retry-delay not found in type dto.BackupPolicy.
+var yamlErrorRegex = regexp.MustCompile(`line (\d+):\s*field ([a-zA-Z0-9-_]+) not found in type (.+)`)
+
+// Json example:
+// json: unknown field "seed-noodes"
+var jsonErrorRegex = regexp.MustCompile(`json: unknown field "([^"]+)"`)
+
 // Deserialize handles deserialization.
 func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 	if r == nil {
@@ -28,21 +37,20 @@ func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 	if v == nil {
 		return fmt.Errorf("nil target")
 	}
-	var err error
 
 	switch format {
 	case JSON:
 		dec := json.NewDecoder(r)
 		dec.DisallowUnknownFields() // Strict mode for JSON
-		err = dec.Decode(v)
-		if err != nil {
+
+		if err := dec.Decode(v); err != nil {
 			return enhanceJSONError(err)
 		}
 	case YAML:
 		dec := yaml.NewDecoder(r)
 		dec.KnownFields(true) // Strict mode for YAML
-		err = dec.Decode(v)
-		if err != nil {
+
+		if err := dec.Decode(v); err != nil {
 			return enhanceYamlErrors(err)
 		}
 	default:
@@ -80,10 +88,7 @@ func enhanceJSONError(jsonError error) error {
 }
 
 func parseJSONError(errMsg string) (string, error) {
-	// Example:
-	// json: unknown field "seed-noodes"
-	re := regexp.MustCompile(`json: unknown field "([^"]+)"`)
-	matches := re.FindStringSubmatch(errMsg)
+	matches := jsonErrorRegex.FindStringSubmatch(errMsg)
 
 	if len(matches) < 2 { // No match found, return the original error
 		return "", fmt.Errorf("failed to parse error message: %s", errMsg)
@@ -135,12 +140,7 @@ func processYamlError(errMsg string) error {
 
 // parseYamlErrorMessage parses an error message and returns the line number, field, and dto name.
 func parseYamlErrorMessage(errMsg string) (line int, field string, dtoName string, err error) {
-	// Regular expressions to match field error patterns
-	// Example:
-	// line 34: field retry-delay not found in type dto.BackupPolicy
-	regex := regexp.MustCompile(`line (\d+):\s*field ([a-zA-Z0-9-_]+) not found in type (.+)`)
-
-	match := regex.FindStringSubmatch(errMsg)
+	match := yamlErrorRegex.FindStringSubmatch(errMsg)
 	if len(match) < 4 {
 		err = fmt.Errorf("failed to parse error message: %s", errMsg)
 		return
