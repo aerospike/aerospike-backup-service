@@ -101,7 +101,7 @@ func readStorage(configURI string) (model.Storage, error) {
 	}
 	slog.Info("Configuration storage:\n" + string(content))
 	configStorage := &dto.Storage{}
-	if err = yaml.Unmarshal(content, configStorage); err != nil {
+	if err = decoder.Deserialize(configStorage, bytes.NewReader(content), decoder.YAML); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal storage configuration: %w", err)
 	}
 
