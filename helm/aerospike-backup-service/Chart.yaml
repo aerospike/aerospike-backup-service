@@ -1,0 +1,16 @@
+apiVersion: v2
+name: aerospike-backup-service
+description: A Helm chart for Aerospike Backup Service
+type: application
+icon: https://avatars0.githubusercontent.com/u/2214313?s=200&v=4
+keywords:
+  - Aerospike
+  - Vector
+maintainers:
+  - name: Aerospike
+    email: developers@aerospike.com
+# The helm chart version
+version: 2.0.3
+
+# The default version of Aerospike Backup Service
+appVersion: "3.0.0"

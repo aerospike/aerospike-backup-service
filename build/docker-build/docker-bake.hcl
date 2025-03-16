@@ -44,6 +44,10 @@ variable REGISTRY {
   default = "docker.io"
 }
 
+variable GO_VERSION {
+  default = "1.23.4"
+}
+
 variable RH_REGISTRY {
   default = "registry.access.redhat.com"
 }
@@ -72,6 +76,7 @@ target aerospike-backup-service {
   }
 
   args = {
+    GO_VERSION = "${GO_VERSION}"
     REGISTRY = "${REGISTRY}"
     RH_REGISTRY = "${RH_REGISTRY}"
   }

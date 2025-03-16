@@ -75,7 +75,6 @@ packages: buildx
 			--target $(TARGET_DIR); \
 			done; \
   	done; \
-  	$(MAKE) checksums
 
 .PHONY: checksums
 checksums:
@@ -96,8 +95,15 @@ test:
 	$(GOTEST) -v ./...
 
 .PHONY: release
-release:
+release: service-release helm-chart-release
+
+.PHONY: service-release
+service-release:
 	cd ./build/scripts && ./release.sh $(NEXT_VERSION)
+
+.PHONY: helm-chart-release
+helm-chart-release:
+	cd ./build/scripts && ./helm-chart-release.sh $(NEXT_HELM_CHART_VERSION)
 
 .PHONY: clean
 clean:
