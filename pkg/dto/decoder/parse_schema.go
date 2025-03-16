@@ -7,7 +7,7 @@ import (
 )
 
 // Parse the OpenAPI spec and build a map of struct types to their fieldsByStruct.
-// result map: struct name -> list of field names
+// result map: struct name -> list of field names.
 func parseOpenAPISpec(yamlSpec string) (map[string][]string, error) {
 	var spec map[string]interface{}
 	err := yaml.Unmarshal([]byte(yamlSpec), &spec)
@@ -40,7 +40,6 @@ func parseOpenAPISpec(yamlSpec string) (map[string][]string, error) {
 		for fieldName := range properties {
 			result[schemaName] = append(result[schemaName], fieldName)
 		}
-
 	}
 
 	// Print the result

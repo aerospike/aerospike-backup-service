@@ -164,12 +164,12 @@ func TestEnhanceJSONError_UnparseableError(t *testing.T) {
 	setupTest(t)
 
 	// Mock a situation where the JSON error can't be parsed
-	mockJsonError := errors.New("some unexpected json error format")
+	mockError := errors.New("some unexpected json error format")
 
-	err := enhanceJSONError(mockJsonError)
+	err := enhanceJSONError(mockError)
 
 	// Should return the original error when it can't be parsed
-	assert.Equal(t, mockJsonError, err)
+	assert.Equal(t, mockError, err)
 }
 
 func TestEnhanceYamlErrors_UnparseableError(t *testing.T) {
