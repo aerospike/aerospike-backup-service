@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
@@ -62,17 +63,17 @@ func (c *Config) fromModel(m *model.Config) {
 }
 
 // NewConfigFromReader creates a new Config object from a given reader.
-func NewConfigFromReader(r io.Reader, format SerializationFormat) (*Config, error) {
+func NewConfigFromReader(r io.Reader, format decoder.SerializationFormat) (*Config, error) {
 	c := &Config{}
-	if err := Deserialize(c, r, format); err != nil {
+	if err := decoder.Deserialize(c, r, format); err != nil {
 		return nil, err
 	}
 
 	return c, nil
 }
 
-// validate validates the configuration.
-func (c *Config) validate() error {
+// Validate validates the configuration.
+func (c *Config) Validate() error {
 	for name, routine := range c.BackupRoutines {
 		if name == "" {
 			return errValidationEmptyField("routine name")
@@ -130,7 +131,7 @@ func (c *Config) validate() error {
 }
 
 func (c *Config) ToModel(nsValidator aerospike.NamespaceValidator) (*model.Config, error) {
-	if err := c.validate(); err != nil {
+	if err := c.Validate(); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
 

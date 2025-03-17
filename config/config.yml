@@ -26,8 +26,6 @@ backup-policies:
   keepFilesMaxRecordsPolicy:
     parallel: 8
     sealed: true
-    retry-delay: 10_000
-    max-retries: 10
   keepFilesPolicy:
     parallel: 8
     sealed: true
@@ -39,7 +37,6 @@ backup-policies:
       incremental: 0
   removeIncrementalPolicy:
     parallel: 8
-    remove-files: RemoveIncremental
     sealed: true
     retention:
       incremental: 0

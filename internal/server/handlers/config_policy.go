@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -18,7 +19,7 @@ import (
 // @Success     201
 // @Failure     400 {string} string
 func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
-	newPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
+	newPolicy, err := dto.NewBackupPolicyFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return
@@ -90,7 +91,7 @@ func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
-	updatedPolicy, err := dto.NewBackupPolicyFromReader(r.Body, dto.JSON)
+	updatedPolicy, err := dto.NewBackupPolicyFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return

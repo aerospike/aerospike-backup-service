@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -25,7 +26,7 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newStorage, err := dto.NewStorageFromReader(r.Body, dto.JSON)
+	newStorage, err := dto.NewStorageFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return
@@ -105,7 +106,7 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedStorage, err := dto.NewStorageFromReader(r.Body, dto.JSON)
+	updatedStorage, err := dto.NewStorageFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
 		return

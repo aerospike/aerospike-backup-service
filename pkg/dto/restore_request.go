@@ -2,8 +2,10 @@ package dto
 
 import (
 	"fmt"
+	"io"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -17,6 +19,17 @@ type RestoreRequest struct {
 	Policy *RestorePolicy `json:"policy"`
 	// Path to the data from storage root.
 	BackupDataPath string `json:"backup-data-path" validate:"required"`
+}
+
+// NewRestoreRequestFromReader reads and deserializes the restore request from reader.
+func NewRestoreRequestFromReader(r io.Reader) (*RestoreRequest, error) {
+	var req RestoreRequest
+	err := decoder.Deserialize(&req, r, decoder.JSON)
+	if err != nil {
+		return nil, err
+	}
+
+	return &req, nil
 }
 
 // RestoreTimestampRequest represents a restore by timestamp operation request.
@@ -33,6 +46,16 @@ type RestoreTimestampRequest struct {
 	Routine string `json:"routine" example:"daily" validate:"required"`
 	// Disable reverse order of incremental backups optimisation.
 	DisableReordering bool `json:"disable-reordering"`
+}
+
+// NewRestoreTimestampRequestFromReader reads and deserializes the restore by timestamp request from reader.
+func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest, error) {
+	var req RestoreTimestampRequest
+	err := decoder.Deserialize(&req, r, decoder.JSON)
+	if err != nil {
+		return nil, err
+	}
+	return &req, nil
 }
 
 // Validate validates the restore operation request.

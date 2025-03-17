@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -99,9 +100,9 @@ func NewStorageFromModel(m model.Storage, config *model.BackupConfig) *Storage {
 }
 
 // NewStorageFromReader creates a new Storage object from a given reader.
-func NewStorageFromReader(r io.Reader, format SerializationFormat) (*Storage, error) {
+func NewStorageFromReader(r io.Reader, format decoder.SerializationFormat) (*Storage, error) {
 	s := &Storage{}
-	if err := Deserialize(s, r, format); err != nil {
+	if err := decoder.Deserialize(s, r, format); err != nil {
 		return nil, err
 	}
 

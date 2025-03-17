@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"gopkg.in/yaml.v3"
@@ -53,7 +55,7 @@ func readConfig(reader io.Reader, nsValidator aerospike.NamespaceValidator) (*mo
 	slog.Info("Service configuration:\n" + string(configBytes))
 
 	config := &dto.Config{}
-	if err := yaml.Unmarshal(configBytes, config); err != nil {
+	if err := decoder.Deserialize(config, bytes.NewReader(configBytes), decoder.YAML); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 
@@ -99,7 +101,7 @@ func readStorage(configURI string) (model.Storage, error) {
 	}
 	slog.Info("Configuration storage:\n" + string(content))
 	configStorage := &dto.Storage{}
-	if err = yaml.Unmarshal(content, configStorage); err != nil {
+	if err = decoder.Deserialize(configStorage, bytes.NewReader(content), decoder.YAML); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal storage configuration: %w", err)
 	}
 

@@ -1923,11 +1923,11 @@
       "dto.AzureStorageClass" : {
         "properties" : {
           "data" : {
-            "description" : "DataClass specifies the storage tier for object data",
+            "description" : "DataClass specifies the storage tier for object data.",
             "type" : "string"
           },
           "metadata" : {
-            "description" : "MetadataClass specifies the storage tier for metadata",
+            "description" : "MetadataClass specifies the storage tier for metadata.",
             "type" : "string"
           }
         },
@@ -2378,7 +2378,7 @@
       "dto.GcpStorageClass" : {
         "properties" : {
           "data" : {
-            "description" : "DataClass specifies the storage class for object data",
+            "description" : "DataClass specifies the storage class for object data.",
             "type" : "string"
           }
         },
@@ -2983,11 +2983,11 @@
         "description" : "S3StorageClass represents the configuration for S3 Storage Class.",
         "properties" : {
           "data" : {
-            "description" : "DataClass specifies the storage class for object data",
+            "description" : "DataClass specifies the storage class for object data.",
             "type" : "string"
           },
           "metadata" : {
-            "description" : "MetadataClass specifies the storage class for metadata",
+            "description" : "MetadataClass specifies the storage class for metadata.",
             "type" : "string"
           }
         },
