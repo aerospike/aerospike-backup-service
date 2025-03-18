@@ -48,12 +48,10 @@ github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapp
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.48.1/go.mod h1:viRWSEhtMZqz1rhwmOVKkWl6SwmVowfL9O2YR5gI2PE=
 github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc=
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
-github.com/aerospike/aerospike-client-go/v7 v7.8.0 h1:mKWTf/8sWQkWSYlIR3ZWXZMr9FQQPnIihrA+ujGD+n8=
-github.com/aerospike/aerospike-client-go/v7 v7.8.0/go.mod h1:STlBtOkKT8nmp7iD+sEkr/JGEOu+4e2jGlNN0Jiu2a4=
 github.com/aerospike/aerospike-client-go/v8 v8.1.0 h1:UcpBlqr+G1w2gh/WcUru29pTchK5H8UhMT3ssjQuVhw=
 github.com/aerospike/aerospike-client-go/v8 v8.1.0/go.mod h1:JmVOIqacquBd0ZjlZ5Dz6bRMSC3LrZCCNojZ/9NS4R0=
-github.com/aerospike/aerospike-management-lib v1.5.0 h1:uAEaBU+PkzbtwsSrPVokLIUeJaDrFSMtwqeCKba3xIs=
-github.com/aerospike/aerospike-management-lib v1.5.0/go.mod h1:hsEptY/AmTmHoJnItJNmfJ4yCMG8LIB8YPnIpIyvGXI=
+github.com/aerospike/aerospike-management-lib v1.7.0 h1:XUtJKN/+WT3fSXIAQsZAk5rtm70PLCFoEXd5QMENLS8=
+github.com/aerospike/aerospike-management-lib v1.7.0/go.mod h1:m57ZBKHvC4vKM/qnX8md1vizjYLXOUiH8QnHK45KBFg=
 github.com/aerospike/backup-go v0.3.2-0.20250311144027-4afe95816fb4 h1:R7xf7YOcuiTM5esxe13lBpUANCspGgFmY+J+5qpALOY=
 github.com/aerospike/backup-go v0.3.2-0.20250311144027-4afe95816fb4/go.mod h1:lz87o8Iz5hkW5nE4KO/vpQD68ibkSLQITnz9Z3C/yx0=
 github.com/aws/aws-sdk-go-v2 v1.36.2 h1:Ub6I4lq/71+tPb/atswvToaLGVMxKZvjYDVOWEExOcU=
@@ -387,8 +385,8 @@ google.golang.org/protobuf v1.22.0/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2
 google.golang.org/protobuf v1.23.0/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2l/sGQquU=
 google.golang.org/protobuf v1.23.1-0.20200526195155-81db48ad09cc/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2l/sGQquU=
 google.golang.org/protobuf v1.25.0/go.mod h1:9JNX74DMeImyA3h4bdi1ymwjUzf21/xIlbajtzgsN7c=
-google.golang.org/protobuf v1.35.2 h1:8Ar7bF+apOIoThw1EdZl0p1oWvMqTHmpA2fRTyZO8io=
-google.golang.org/protobuf v1.35.2/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
+google.golang.org/protobuf v1.36.1 h1:yBPeRvTftaleIgM3PZ/WBIZ7XM/eEYAaEyCwvyjq/gk=
+google.golang.org/protobuf v1.36.1/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
