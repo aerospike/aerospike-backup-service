@@ -25,7 +25,20 @@ import (
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
-	s.readAllBackups(w, r, true)
+	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
+	if err != nil {
+		httpError(w, errInvalidQueryParam(err, "time bounds"))
+		return
+	}
+
+	filter := service.NewFullBackupFilter().WithTimebounds(timeBounds)
+	result, err := s.readAllBackups(r.Context(), filter)
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+
+	httpOK(w, result)
 }
 
 // GetFullBackupsForRoutine
@@ -41,7 +54,26 @@ func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
-	s.readBackupsForRoutine(w, r, true)
+	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
+	if err != nil {
+		httpError(w, errInvalidQueryParam(err, "time bounds"))
+		return
+	}
+
+	routine := r.PathValue("name")
+	if routine == "" {
+		httpError(w, errMissingRoutineName)
+		return
+	}
+
+	filter := service.NewFullBackupFilter().WithTimebounds(timeBounds).WithRoutine(routine)
+	result, err := s.readBackupsForRoutine(r.Context(), filter)
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+
+	httpOK(w, result)
 }
 
 // GetAllIncrementalBackups
@@ -56,7 +88,20 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Request) {
-	s.readAllBackups(w, r, false)
+	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
+	if err != nil {
+		httpError(w, errInvalidQueryParam(err, "time bounds"))
+		return
+	}
+
+	filter := service.NewIncrementalBackupFilter().WithTimebounds(timeBounds)
+	result, err := s.readAllBackups(r.Context(), filter)
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+
+	httpOK(w, result)
 }
 
 // GetIncrementalBackupsForRoutine
@@ -72,34 +117,7 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
-	s.readBackupsForRoutine(w, r, false)
-}
-
-func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
-	from := r.URL.Query().Get("from")
-	to := r.URL.Query().Get("to")
-
-	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
-	if err != nil {
-		httpError(w, errInvalidQueryParam(err, "time bounds"))
-		return
-	}
-	backups, err := readBackupsLogic(r.Context(), s.backupBackends, timeBounds.ToModel(), isFullBackup)
-	if err != nil {
-		httpError(w, err)
-		return
-	}
-
-	response := dto.ConvertBackupDetailsMap(backups, s.config.BackupConfigCopy())
-
-	httpOK(w, response)
-}
-
-func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
-	from := r.URL.Query().Get("from")
-	to := r.URL.Query().Get("to")
-
-	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
+	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
 		httpError(w, errInvalidQueryParam(err, "time bounds"))
 		return
@@ -111,53 +129,57 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	reader, found := s.backupBackends.GetReader(routine)
-	if !found {
-		httpError(w, errRoutineNotFound(routine))
-		return
-	}
-
-	backupListFunction := backupsReadFunction(reader, isFullBackup)
-	backups, err := backupListFunction(r.Context(), timeBounds.ToModel())
+	filter := service.NewIncrementalBackupFilter().WithTimebounds(timeBounds).WithRoutine(routine)
+	result, err := s.readBackupsForRoutine(r.Context(), filter)
 	if err != nil {
 		httpError(w, err)
 		return
 	}
 
+	httpOK(w, result)
+}
+
+func (s *Service) readAllBackups(
+	ctx context.Context,
+	filter service.BackupFilter,
+) (map[string][]dto.BackupDetails, error) {
+	backupList, err := s.backupService.GetBackups(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	// convert all backups as list of models to DTO and group them by routine
+	backupsByRoutine := groupByRoutine(backupList)
+	response := dto.ConvertBackupDetailsMap(backupsByRoutine, s.config.BackupConfigCopy())
+
+	return response, nil
+}
+
+func groupByRoutine(backups []model.BackupDetails) map[string][]model.BackupDetails {
+	grouped := make(map[string][]model.BackupDetails)
+
+	for _, backup := range backups {
+		grouped[backup.Routine] = append(grouped[backup.Routine], backup)
+	}
+
+	return grouped
+}
+
+func (s *Service) readBackupsForRoutine(
+	ctx context.Context,
+	filter service.BackupFilter,
+) ([]*dto.BackupDetails, error) {
+	backupList, err := s.backupService.GetBackups(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
 	backupConfig := s.config.BackupConfigCopy()
-	backupDetails := dto.ConvertModelsToDTO(backups, func(m *model.BackupDetails) *dto.BackupDetails {
+	backupDetails := dto.ConvertModelsToDTO(backupList, func(m *model.BackupDetails) *dto.BackupDetails {
 		return dto.NewBackupDetailsFromModel(m, backupConfig)
 	})
 
-	httpOK(w, backupDetails)
-}
-
-func readBackupsLogic(ctx context.Context,
-	backends service.BackendsHolder,
-	timeBounds model.TimeBounds,
-	isFullBackup bool,
-) (map[string][]model.BackupDetails, error) {
-	result := make(map[string][]model.BackupDetails)
-
-	for routine, reader := range backends.GetAllReaders() {
-		backupListFunction := backupsReadFunction(reader, isFullBackup)
-		list, err := backupListFunction(ctx, timeBounds)
-		if err != nil {
-			return nil, err
-		}
-		result[routine] = list
-	}
-
-	return result, nil
-}
-
-func backupsReadFunction(
-	backend service.BackupMetadataReader, fullBackup bool,
-) func(context.Context, model.TimeBounds) ([]model.BackupDetails, error) {
-	if fullBackup {
-		return backend.FullBackupList
-	}
-	return backend.IncrementalBackupList
+	return backupDetails, nil
 }
 
 // ScheduleFullBackup

@@ -11,28 +11,16 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockBackendsHolder mocks the BackendsHolder interface.
-type MockBackendsHolder struct {
-	mock.Mock
+// MockBackendsService mocks the BackendsHolder interface.
+type MockBackendsService struct {
+	f func(context.Context, service.BackupFilter) ([]model.BackupDetails, error)
 }
 
-func (m *MockBackendsHolder) Init(routines map[string]*model.BackupRoutine) {
-	m.Called(routines)
-}
-
-func (m *MockBackendsHolder) GetReader(routineName string) (service.BackupMetadataReader, bool) {
-	args := m.Called(routineName)
-	return args.Get(0).(service.BackupMetadataReader), args.Bool(1)
-}
-
-func (m *MockBackendsHolder) Get(routineName string) (service.BackupMetadataReaderWriter, bool) {
-	args := m.Called(routineName)
-	return args.Get(0).(service.BackupMetadataReaderWriter), args.Bool(1)
-}
-
-func (m *MockBackendsHolder) GetAllReaders() map[string]service.BackupMetadataReader {
-	args := m.Called()
-	return args.Get(0).(map[string]service.BackupMetadataReader)
+func (m *MockBackendsService) GetBackups(
+	ctx context.Context,
+	filter service.BackupFilter,
+) ([]model.BackupDetails, error) {
+	return m.f(ctx, filter)
 }
 
 // MockBackupMetadataReader mocks the BackupMetadataReader interface.

@@ -17,7 +17,7 @@ type Service struct {
 	configApplier        service.ConfigApplier
 	scheduler            quartz.Scheduler
 	restoreManager       service.RestoreManager
-	backupBackends       service.BackendsHolder
+	backupService        service.BackupBackendService
 	handlerHolder        service.BackupHandlerHolder
 	registry             RunningBackupsRegistry
 	configurationManager configuration.Manager
@@ -30,7 +30,7 @@ func NewService(
 	configApplier service.ConfigApplier,
 	scheduler quartz.Scheduler,
 	restoreManager service.RestoreManager,
-	backupBackends service.BackendsHolder,
+	backupService service.BackupBackendService,
 	handlerHolder service.BackupHandlerHolder,
 	registry RunningBackupsRegistry,
 	configurationManager configuration.Manager,
@@ -42,7 +42,7 @@ func NewService(
 		configApplier:        configApplier,
 		scheduler:            scheduler,
 		restoreManager:       restoreManager,
-		backupBackends:       backupBackends,
+		backupService:        backupService,
 		handlerHolder:        handlerHolder,
 		registry:             registry,
 		configurationManager: configurationManager,

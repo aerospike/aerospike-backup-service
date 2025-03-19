@@ -241,7 +241,7 @@ func TestDeletePolicy(t *testing.T) {
 // Helper function to setup test service with mocked dependencies.
 func setupTestService() *Service {
 	mockScheduler := &MockScheduler{}
-	mockBackendsHolder := &MockBackendsHolder{}
+	mockBackendsHolder := &MockBackendsService{}
 	mockRestoreManager := &MockRestoreManager{}
 	mockConfigApplier := &MockConfigApplier{}
 	mockHandlerHolder := service.NewBackupHandlerHolder()

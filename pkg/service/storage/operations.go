@@ -136,8 +136,8 @@ func ReadFileNames(
 ) ([]string, error) {
 	var startScanFrom string
 	if fromTime != nil {
-		fromTimeStr := strconv.FormatInt(fromTime.UnixMilli()-1, 10) // -1 to ensure filter is greater or equal.
-		startScanFrom = filepath.Join(path, fromTimeStr)
+		fromTimeStr := fmt.Sprintf("%013d", fromTime.UnixMilli()-1)
+		startScanFrom = filepath.Join(storage.GetPath(), path, fromTimeStr)
 	}
 
 	reader, err := CreateDirReader(ctx, storage, path,
