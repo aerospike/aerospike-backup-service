@@ -18,12 +18,13 @@ type ConfigApplier interface {
 }
 
 type DefaultConfigApplier struct {
-	mu            sync.Mutex
-	scheduler     quartz.Scheduler
-	backends      BackendsHolder
-	clientManager aerospike.ClientManager
-	handlerHolder BackupHandlerHolder
-	registry      RunningBackupsRegistry
+	mu               sync.Mutex
+	scheduler        quartz.Scheduler
+	backends         BackendsHolder
+	clientManager    aerospike.ClientManager
+	handlerHolder    BackupHandlerHolder
+	registry         RunningBackupsRegistry
+	retentionManager RetentionManager
 }
 
 func NewDefaultConfigApplier(
@@ -32,13 +33,15 @@ func NewDefaultConfigApplier(
 	manager aerospike.ClientManager,
 	handlerHolder BackupHandlerHolder,
 	registry RunningBackupsRegistry,
+	retentionManager RetentionManager,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
-		scheduler:     scheduler,
-		backends:      backends,
-		clientManager: manager,
-		handlerHolder: handlerHolder,
-		registry:      registry,
+		scheduler:        scheduler,
+		backends:         backends,
+		clientManager:    manager,
+		handlerHolder:    handlerHolder,
+		registry:         registry,
+		retentionManager: retentionManager,
 	}
 }
 
@@ -57,7 +60,7 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.Backu
 	go a.registry.SynchroniseBackupHistory()
 
 	// Refill handlers
-	newHandlers := makeHandlers(a.clientManager, routines, a.backends, a.registry)
+	newHandlers := makeHandlers(a.clientManager, routines, a.backends, a.registry, a.retentionManager)
 	a.handlerHolder.ReplaceContent(newHandlers)
 
 	err = scheduleRoutines(a.scheduler, routines, a.handlerHolder)
@@ -92,6 +95,7 @@ func makeHandlers(
 	routines map[string]*model.BackupRoutine,
 	backends BackendsHolder,
 	registry RunningBackupsRegistry,
+	retentionManager RetentionManager,
 ) map[string]backupRunner {
 	handlers := make(map[string]backupRunner)
 
@@ -99,7 +103,7 @@ func makeHandlers(
 	for routineName, routine := range routines {
 		backend, _ := backends.Get(routineName)
 		handlers[routineName] =
-			newBackupRoutineOrchestrator(clientManager, backupExecutor, routineName, routine, backend, registry)
+			newBackupRoutineOrchestrator(clientManager, backupExecutor, routineName, routine, backend, registry, retentionManager)
 	}
 
 	return handlers

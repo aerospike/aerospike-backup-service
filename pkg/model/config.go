@@ -195,6 +195,14 @@ func (c *Config) Routines() map[string]*BackupRoutine {
 	return routines
 }
 
+func (c *Config) Routine(name string) (*BackupRoutine, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	routine, found := c.backupConfig.BackupRoutines[name]
+	return routine, found
+}
+
 func (c *Config) AddRoutine(name string, r *BackupRoutine) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()

@@ -108,12 +108,15 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	backupHandlers := service.NewBackupHandlerHolder()
 	registry := service.NewRunningBackupsRegistry(ctx, backends, config)
 
+	backendService := service.NewBackupBackendService(config)
+
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,
 		backends,
 		clientManager,
 		backupHandlers,
 		registry,
+		service.NewBackupRetentionManager(backendService, config),
 	)
 
 	err = configApplier.ApplyNewRoutines(config.Routines())
@@ -126,8 +129,6 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 
 	restoreMgr := service.NewRestoreManager(
 		backends, restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator)
-
-	backendService := service.NewBackupBackendService(config)
 
 	httpService := handlers.NewService(
 		ctx,

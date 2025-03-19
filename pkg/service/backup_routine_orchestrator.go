@@ -51,6 +51,7 @@ func newBackupRoutineOrchestrator(
 	routine *model.BackupRoutine,
 	backupBackend BackupMetadataReaderWriter,
 	registry RunningBackupsRegistry,
+	retentionManager RetentionManager,
 ) *BackupRoutineOrchestrator {
 	backupPolicy := routine.BackupPolicy
 	backupStorage := routine.Storage
@@ -77,11 +78,10 @@ func newBackupRoutineOrchestrator(
 			routineName,
 			backupPolicy,
 			logger),
-		logger:   logger,
-		retry:    retry,
-		registry: registry,
-		retentionManager: NewBackupRetentionManager(
-			backupBackend, backupStorage, routineName, backupPolicy.RetentionPolicy),
+		logger:           logger,
+		retry:            retry,
+		registry:         registry,
+		retentionManager: retentionManager,
 	}
 }
 
@@ -144,7 +144,7 @@ func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
 }
 
 func (h *BackupRoutineOrchestrator) deleteOldBackups(ctx context.Context) {
-	err := h.retentionManager.deleteOldBackups(ctx)
+	err := h.retentionManager.deleteOldBackups(ctx, h.routineName)
 	if err != nil {
 		h.logger.Error("failed to clean up old backups", slog.Any("error", err))
 	}

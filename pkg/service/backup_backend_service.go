@@ -12,22 +12,27 @@ import (
 
 // BackupFilter defines criteria for filtering backups.
 type BackupFilter struct {
+	// required
+	routine string
+	JobType jobType
+
+	// optional
 	FromTime *time.Time
 	ToTime   *time.Time
-	JobType  jobType
-	routine  string // empty means all namespaces
 }
 
 // NewFullBackupFilter creates a filter for full backups.
-func NewFullBackupFilter() BackupFilter {
+func NewFullBackupFilter(routine string) BackupFilter {
 	return BackupFilter{
+		routine: routine,
 		JobType: jobTypeFull,
 	}
 }
 
 // NewIncrementalBackupFilter creates a filter for incremental backups.
-func NewIncrementalBackupFilter() BackupFilter {
+func NewIncrementalBackupFilter(routine string) BackupFilter {
 	return BackupFilter{
+		routine: routine,
 		JobType: jobTypeIncremental,
 	}
 }
@@ -57,12 +62,6 @@ func (f BackupFilter) WithToTime(toTime time.Time) BackupFilter {
 	return f
 }
 
-// WithRoutine filters by routine.
-func (f BackupFilter) WithRoutine(routine string) BackupFilter {
-	f.routine = routine
-	return f
-}
-
 type BackupBackendService interface {
 	GetBackups(context.Context, BackupFilter) ([]model.BackupDetails, error)
 }
@@ -78,7 +77,8 @@ func NewBackupBackendService(config *model.Config) *BackupBackendServiceImpl {
 func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error) {
 	path := getBackupRootPath(filter.routine, filter.JobType)
 
-	routine := b.config.Routines()[filter.routine]
+	routine, _ := b.config.Routine(filter.routine)
+
 	// TODO: support local files
 	files, err := storage.ReadFileNames(ctx, routine.Storage, path, metadataFile, filter.FromTime)
 	if err != nil {

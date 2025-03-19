@@ -10,60 +10,64 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
 // RetentionManager defines the interface for deleting old backups.
 type RetentionManager interface {
 	// Run runs the retention manager. It deletes old backups based on the configured retention policy.
-	deleteOldBackups(ctx context.Context) error
+	deleteOldBackups(ctx context.Context, routineName string) error
 }
 
 type RetentionManagerImpl struct {
-	mu          sync.Mutex
-	backend     BackupMetadataReader
-	storage     model.Storage
-	routineName string
-	policy      *model.RetentionPolicy
+	backendService BackupBackendService
+	config         *model.Config
+
+	locks *util.SafeMap[string, *sync.Mutex] // lock per routine
 }
 
 func NewBackupRetentionManager(
-	backend BackupMetadataReader,
-	storage model.Storage,
-	routineName string,
-	policy *model.RetentionPolicy,
+	backendService BackupBackendService,
+	config *model.Config,
 ) RetentionManager {
 	return &RetentionManagerImpl{
-		backend:     backend,
-		storage:     storage,
-		routineName: routineName,
-		policy:      policy,
+		backendService: backendService,
+		config:         config,
+		locks:          util.NewSafeMap[string, *sync.Mutex](),
 	}
 }
 
-func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context) error {
-	if !e.mu.TryLock() { // If delete operation already in progress, skip this iteration.
-		return nil
+func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routineName string) error {
+	routine, found := e.config.Routine(routineName)
+	if !found {
+		return fmt.Errorf("routine '%s' does not exist", routineName)
 	}
-	defer e.mu.Unlock()
 
-	if e.policy == nil || (e.policy.FullBackups == nil && e.policy.IncrBackups == nil) {
+	policy := routine.BackupPolicy.RetentionPolicy
+	if policy == nil || (policy.FullBackups == nil && policy.IncrBackups == nil) {
 		return nil // Retention policy is not enabled, do nothing.
 	}
 
-	fullBackups, err := e.backend.FullBackupList(ctx, model.TimeBounds{})
+	mu := e.locks.LoadOrStore(routineName, &sync.Mutex{})
+	if !mu.TryLock() { // If delete operation already in progress, skip this iteration.
+		return nil
+	}
+	defer mu.Unlock()
+
+	fullBackups, err := e.backendService.GetBackups(ctx, NewFullBackupFilter(routineName))
 	if err != nil {
 		return fmt.Errorf("failed to get full backups: %w", err)
 	}
 
 	timestamps := getTimestamps(fullBackups)
-	if e.policy.FullBackups != nil {
-		if err := e.deleteFullBackups(ctx, timestamps, *e.policy.FullBackups); err != nil {
+	if policy.FullBackups != nil {
+		if err := e.deleteFullBackups(ctx, timestamps, *policy.FullBackups, routine.Storage, routineName); err != nil {
 			return fmt.Errorf("failed to delete excess full backups: %w", err)
 		}
 	}
 
-	if e.policy.IncrBackups != nil {
-		if err := e.deleteIncrementalBackups(ctx, timestamps, *e.policy.IncrBackups); err != nil {
+	if policy.IncrBackups != nil {
+		if err := e.deleteIncrementalBackups(ctx, timestamps, *policy.IncrBackups, routine.Storage, routineName); err != nil {
 			return fmt.Errorf("failed to delete excess incremental backups: %w", err)
 		}
 	}
@@ -72,7 +76,7 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context) error {
 }
 
 func (e *RetentionManagerImpl) deleteFullBackups(
-	ctx context.Context, timestamps []time.Time, retainCount int,
+	ctx context.Context, timestamps []time.Time, retainCount int, s model.Storage, routineName string,
 ) error {
 	if len(timestamps) <= retainCount {
 		return nil
@@ -80,8 +84,8 @@ func (e *RetentionManagerImpl) deleteFullBackups(
 
 	var errs error
 	for _, t := range timestamps[:len(timestamps)-retainCount] {
-		path := getTimestampPath(e.routineName, t, jobTypeFull)
-		if err := storage.DeleteFolder(ctx, e.storage, path); err != nil {
+		path := getTimestampPath(routineName, t, jobTypeFull)
+		if err := storage.DeleteFolder(ctx, s, path); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", path, err))
 		}
 	}
@@ -90,27 +94,27 @@ func (e *RetentionManagerImpl) deleteFullBackups(
 }
 
 func (e *RetentionManagerImpl) deleteIncrementalBackups(
-	ctx context.Context, timestamps []time.Time, retainCount int,
+	ctx context.Context, timestamps []time.Time, retainCount int, s model.Storage, routineName string,
 ) error {
 	if len(timestamps) <= retainCount {
 		return nil
 	}
 
 	if retainCount == 0 { // Delete all incremental backups.
-		path := getBackupRootPath(e.routineName, jobTypeIncremental)
-		return storage.DeleteFolder(ctx, e.storage, path)
+		path := getBackupRootPath(routineName, jobTypeIncremental)
+		return storage.DeleteFolder(ctx, s, path)
 	}
 
 	earliestToKeep := timestamps[len(timestamps)-retainCount]
-	incrBackups, err := e.backend.IncrementalBackupList(ctx, model.NewTimeBoundsTo(earliestToKeep))
+	incrBackups, err := e.backendService.GetBackups(ctx, NewIncrementalBackupFilter(routineName).WithFromTime(earliestToKeep))
 	if err != nil {
 		return fmt.Errorf("failed to fetch incremental backups: %w", err)
 	}
 
 	var errs error
 	for _, b := range incrBackups {
-		path := getTimestampPath(e.routineName, b.Created, jobTypeIncremental)
-		if err := storage.DeleteFolder(ctx, e.storage, path); err != nil {
+		path := getTimestampPath(routineName, b.Created, jobTypeIncremental)
+		if err := storage.DeleteFolder(ctx, s, path); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", path, err))
 		}
 	}

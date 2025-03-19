@@ -31,8 +31,10 @@ func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter := service.NewFullBackupFilter().WithTimebounds(timeBounds)
-	result, err := s.readAllBackups(r.Context(), filter)
+	result, err := s.readAllBackups(r.Context(), func(routine string) service.BackupFilter {
+		return service.NewFullBackupFilter(routine).WithTimebounds(timeBounds)
+	})
+
 	if err != nil {
 		httpError(w, err)
 		return
@@ -66,7 +68,7 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	filter := service.NewFullBackupFilter().WithTimebounds(timeBounds).WithRoutine(routine)
+	filter := service.NewFullBackupFilter(routine).WithTimebounds(timeBounds)
 	result, err := s.readBackupsForRoutine(r.Context(), filter)
 	if err != nil {
 		httpError(w, err)
@@ -94,12 +96,9 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	filter := service.NewIncrementalBackupFilter().WithTimebounds(timeBounds)
-	result, err := s.readAllBackups(r.Context(), filter)
-	if err != nil {
-		httpError(w, err)
-		return
-	}
+	result, err := s.readAllBackups(r.Context(), func(routine string) service.BackupFilter {
+		return service.NewIncrementalBackupFilter(routine).WithTimebounds(timeBounds)
+	})
 
 	httpOK(w, result)
 }
@@ -129,7 +128,7 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 		return
 	}
 
-	filter := service.NewIncrementalBackupFilter().WithTimebounds(timeBounds).WithRoutine(routine)
+	filter := service.NewIncrementalBackupFilter(routine).WithTimebounds(timeBounds)
 	result, err := s.readBackupsForRoutine(r.Context(), filter)
 	if err != nil {
 		httpError(w, err)
@@ -141,28 +140,19 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 
 func (s *Service) readAllBackups(
 	ctx context.Context,
-	filter service.BackupFilter,
-) (map[string][]dto.BackupDetails, error) {
-	backupList, err := s.backupService.GetBackups(ctx, filter)
-	if err != nil {
-		return nil, err
+	filter func(routine string) service.BackupFilter,
+) (map[string][]*dto.BackupDetails, error) {
+	result := make(map[string][]*dto.BackupDetails)
+	for routine := range s.config.Routines() {
+		routineBackups, err := s.readBackupsForRoutine(ctx, filter(routine))
+		if err != nil {
+			return nil, err
+		}
+
+		result[routine] = routineBackups
 	}
 
-	// convert all backups as list of models to DTO and group them by routine
-	backupsByRoutine := groupByRoutine(backupList)
-	response := dto.ConvertBackupDetailsMap(backupsByRoutine, s.config.BackupConfigCopy())
-
-	return response, nil
-}
-
-func groupByRoutine(backups []model.BackupDetails) map[string][]model.BackupDetails {
-	grouped := make(map[string][]model.BackupDetails)
-
-	for _, backup := range backups {
-		grouped[backup.Routine] = append(grouped[backup.Routine], backup)
-	}
-
-	return grouped
+	return result, nil
 }
 
 func (s *Service) readBackupsForRoutine(
