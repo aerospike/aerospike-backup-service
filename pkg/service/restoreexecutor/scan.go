@@ -90,9 +90,8 @@ func makeWritePolicy(restoreRequest *model.RestoreRequest) *as.WritePolicy {
 	writePolicy.RecordExistsAction = recordExistsAction(
 		restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
 
-	if restoreRequest.Policy.SocketTimeout != nil {
-		writePolicy.SocketTimeout = *restoreRequest.Policy.SocketTimeout
-	}
+	writePolicy.SocketTimeout = restoreRequest.Policy.GetSocketTimeoutOrDefault()
+
 	if restoreRequest.Policy.TotalTimeout != nil {
 		writePolicy.TotalTimeout = *restoreRequest.Policy.TotalTimeout
 	}
