@@ -34,7 +34,7 @@ type BackupPolicy struct {
 	RecordsPerSecond *int
 	// File size limit (in MiB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created.
-	FileLimit *uint64
+	FileLimit *int
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy
 	// Compression details.
@@ -91,7 +91,7 @@ func (p *BackupPolicy) GetParallelOrDefault() int {
 	return *defaultConfig.backupPolicy.Parallel
 }
 
-func (p *BackupPolicy) GetFileLimitOrDefault() uint64 {
+func (p *BackupPolicy) GetFileLimitOrDefault() int {
 	if p.FileLimit != nil {
 		return *p.FileLimit
 	}

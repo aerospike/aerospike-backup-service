@@ -41,7 +41,7 @@ var defaultConfig = struct {
 			Multiplier:  1,
 		},
 		Parallel:  util.Ptr(1),
-		FileLimit: util.Ptr(uint64(250)),
+		FileLimit: util.Ptr(250),
 	},
 	restorePolicy: RestorePolicy{
 		Parallel: util.Ptr(20),
