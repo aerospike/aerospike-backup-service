@@ -144,6 +144,7 @@ func ReadFileNames(
 		ioStorage.WithValidator(newNameValidator(filterStr)),
 		ioStorage.WithStartAfter(startScanFrom),
 		ioStorage.WithNestedDir(),
+		ioStorage.WithSkipDirCheck(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reader: %w", err)
