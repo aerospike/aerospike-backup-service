@@ -21,6 +21,7 @@ type RestoreJobStatus struct {
 	FresherRecords  uint64
 	IndexCount      uint64
 	UDFCount        uint64
+	ErrorsInDoubt   uint64
 
 	CurrentRestore *RunningJob
 	Status         JobStatus

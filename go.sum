@@ -52,8 +52,8 @@ github.com/aerospike/aerospike-client-go/v8 v8.1.0 h1:UcpBlqr+G1w2gh/WcUru29pTch
 github.com/aerospike/aerospike-client-go/v8 v8.1.0/go.mod h1:JmVOIqacquBd0ZjlZ5Dz6bRMSC3LrZCCNojZ/9NS4R0=
 github.com/aerospike/aerospike-management-lib v1.7.0 h1:XUtJKN/+WT3fSXIAQsZAk5rtm70PLCFoEXd5QMENLS8=
 github.com/aerospike/aerospike-management-lib v1.7.0/go.mod h1:m57ZBKHvC4vKM/qnX8md1vizjYLXOUiH8QnHK45KBFg=
-github.com/aerospike/backup-go v0.3.2-0.20250311144027-4afe95816fb4 h1:R7xf7YOcuiTM5esxe13lBpUANCspGgFmY+J+5qpALOY=
-github.com/aerospike/backup-go v0.3.2-0.20250311144027-4afe95816fb4/go.mod h1:lz87o8Iz5hkW5nE4KO/vpQD68ibkSLQITnz9Z3C/yx0=
+github.com/aerospike/backup-go v0.3.2-0.20250319073231-5cd4efacdf20 h1:FyOqvzr2KyxrZIvKbyQVtAqQ055aR68S1qiYuvuGGPk=
+github.com/aerospike/backup-go v0.3.2-0.20250319073231-5cd4efacdf20/go.mod h1:lz87o8Iz5hkW5nE4KO/vpQD68ibkSLQITnz9Z3C/yx0=
 github.com/aws/aws-sdk-go-v2 v1.36.2 h1:Ub6I4lq/71+tPb/atswvToaLGVMxKZvjYDVOWEExOcU=
 github.com/aws/aws-sdk-go-v2 v1.36.2/go.mod h1:LLXuLpgzEbD766Z5ECcRmi8AzSwfZItDtmABVkRLGzg=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 h1:zAybnyUQXIZ5mok5Jqwlf58/TFE7uvd3IAsa1aF9cXs=

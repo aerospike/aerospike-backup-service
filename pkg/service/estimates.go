@@ -40,6 +40,7 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 		status.ExistedRecords += stats.GetRecordsExisted()
 		status.ExpiredRecords += stats.GetRecordsExpired()
 		status.TotalBytes += stats.GetTotalBytesRead()
+		status.ErrorsInDoubt += stats.GetErrorsInDoubt()
 	}
 
 	done := status.InsertedRecords + status.SkippedRecords +

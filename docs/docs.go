@@ -2368,6 +2368,12 @@ const docTemplate = `{
                 "error": {
                     "type": "string"
                 },
+                "errors-in-doubt": {
+                    "description": "The number of errors in doubt while restoring.\n(IsInDoubt signifies that the write operation may have gone through on the server\nbut the client is not able to confirm that due an error.)\nNon zero value indicates that there are might be unexpected side effects during restore, like\n* Generation counter greater than expected for some records.\n* Fresher records counter greater than expected.",
+                    "type": "integer",
+                    "format": "int64",
+                    "example": 7
+                },
                 "existed-records": {
                     "type": "integer",
                     "format": "int64",
