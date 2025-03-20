@@ -7,6 +7,8 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
+const DefaultSocketTimeout = 10 * time.Minute
+
 // defaultConfig represents default configuration values.
 var defaultConfig = struct {
 	http          HTTPServerConfig
@@ -52,7 +54,6 @@ var defaultConfig = struct {
 		},
 		MaxAsyncBatches: util.Ptr(128),
 		BatchSize:       util.Ptr(128),
-		SocketTimeout:   util.Ptr(10 * time.Minute),
 	},
 	xdrConfig: XDRConfig{
 		MaxConns:        util.Ptr(100),
