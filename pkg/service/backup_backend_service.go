@@ -45,8 +45,9 @@ func (f BackupFilter) TimeBounds() *model.TimeBounds {
 	}
 }
 
-func (f BackupFilter) Last() {
+func (f BackupFilter) Last() BackupFilter {
 	f.onlyLast = true
+	return f
 }
 
 // WithFromTime adds a start time to the filter.
@@ -82,7 +83,10 @@ func NewBackupBackendService(config *model.Config) *BackupBackendServiceImpl {
 func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error) {
 	path := getBackupRootPath(filter.routine, filter.JobType)
 
-	routine, _ := b.config.Routine(filter.routine)
+	routine, found := b.config.Routine(filter.routine)
+	if !found {
+		return nil, fmt.Errorf("routine not found: %v", filter.routine)
+	}
 
 	// TODO: support local files
 	files, err := storage.ReadFileNames(ctx, routine.Storage, path, metadataFile, filter.FromTime)
