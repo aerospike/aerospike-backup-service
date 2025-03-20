@@ -106,6 +106,7 @@ func timeToNextTrigger(routine *model.BackupRoutine, isFullBackup bool, now time
 	cronTrigger, _ := quartz.NewCronTrigger(cron)
 	fireTime, _ := cronTrigger.NextFireTime(now.UnixNano())
 	delta := time.Unix(0, fireTime).Sub(now)
+
 	return delta
 }
 
