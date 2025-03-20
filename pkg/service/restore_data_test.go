@@ -43,12 +43,8 @@ func (b *BackendHolderMock) Init(_ map[string]*model.BackupRoutine) {
 
 func makeTestRestoreService(wg *sync.WaitGroup) *dataRestorer {
 	return &dataRestorer{
-		configRetriever: configRetriever{
-			backends: &BackendHolderMock{},
-		},
 		restoreJobs:    NewRestoreJobsHolder(),
 		restoreService: NewRestoreMock(wg),
-		backends:       &BackendHolderMock{},
 		clientManager:  &MockClientManager{},
 		nsValidator:    &nsValidatorMock{},
 	}

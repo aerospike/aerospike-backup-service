@@ -42,7 +42,7 @@ func Test_RetrieveConfiguration(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, err := restoreService.RetrieveConfiguration(context.Background(), tt.routine, &tt.timestamp)
+			res, err := restoreService.RetrieveConfiguration(context.Background(), tt.routine, tt.timestamp)
 			assert.Equal(t, tt.wantErr, err != nil, "Unexpected error presence, got: %v", err)
 
 			if !tt.wantErr {

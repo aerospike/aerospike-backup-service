@@ -34,7 +34,6 @@ func NewErrJobNotFound(id model.RestoreJobID) *ErrJobNotFound {
 // dataRestorer implements the RestoreManager interface.
 // Stores job information locally within a map.
 type dataRestorer struct {
-	configRetriever
 	restoreJobs    *RestoreJobsHolder
 	restoreService restoreexecutor.Restore
 	backendService BackupBackendService
@@ -53,9 +52,6 @@ func NewRestoreManager(backends BackendsHolder,
 	backendService BackupBackendService,
 ) RestoreManager {
 	return &dataRestorer{
-		configRetriever: configRetriever{
-			backends,
-		},
 		restoreJobs:    restoreJobs,
 		restoreService: restoreService,
 		backendService: backendService,
@@ -125,35 +121,44 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 
 func (r *dataRestorer) RestoreByTime(ctx context.Context, request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
-	reader, found := r.backends.GetReader(request.RoutineName)
-	if !found {
-		return 0, fmt.Errorf("%w: routine %s", errBackendNotFound, request.RoutineName)
-	}
-	lastbackup, err := reader.LastFullBackupTime(ctx, model.TimeBounds{ToTime: &request.Time})
+	backups, err := r.backendService.GetBackups(ctx, NewFullBackupFilter(request.RoutineName).Last())
 	if err != nil {
-		return 0, fmt.Errorf("FindLastFullBackup restore failed: %w", err)
+		return 0, fmt.Errorf("failed to read last full backup: %w", err)
 	}
 
-	fullBackups, err := reader.FullBackupList(ctx, model.TimeBounds{
-		FromTime: &lastbackup,
-		ToTime:   &lastbackup,
-	})
+	if len(backups) == 0 {
+		return 0, fmt.Errorf("no full backups found")
+	}
+
+	// Find incremental backups
+	incrementalBackups, err := r.backendService.GetBackups(ctx,
+		NewIncrementalBackupFilter(request.RoutineName).
+			WithFromTime(backups[0].Created).
+			WithToTime(request.Time))
 	if err != nil {
-		return 0, fmt.Errorf("FullBackupList restore failed: %w", err)
+		return 0, fmt.Errorf("could not find incremental backups for namespace %s: %w", err)
+	}
+
+	var backupsByNs = make(map[string][]model.BackupDetails)
+	for _, b := range backups {
+		backupsByNs[b.Namespace] = append(backupsByNs[b.Namespace], b)
+	}
+
+	for _, b := range incrementalBackups {
+		backupsByNs[b.Namespace] = append(backupsByNs[b.Namespace], b)
 	}
 
 	jobID := r.restoreJobs.newJob(request.RoutineName)
-	go r.restoreByTimeSync(ctx, reader, request, jobID, fullBackups)
+	go r.restoreByTimeSync(ctx, request, jobID, backupsByNs)
 
 	return jobID, nil
 }
 
 func (r *dataRestorer) restoreByTimeSync(
 	ctx context.Context,
-	backend BackupMetadataReader,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
-	fullBackups []model.BackupDetails,
+	fullBackups map[string][]model.BackupDetails,
 ) {
 	client, err := r.clientManager.GetClient(request.DestinationCluster)
 	if err != nil {
@@ -167,16 +172,16 @@ func (r *dataRestorer) restoreByTimeSync(
 
 	var wg sync.WaitGroup
 	var multiError error
-	for _, nsBackup := range fullBackups {
+	for namespace, nsBackup := range fullBackups {
 		wg.Add(1)
-		go func(nsBackup model.BackupDetails) {
+		go func(namespace string, nsBackup []model.BackupDetails) {
 			defer wg.Done()
-			if err := r.restoreNamespace(ctx, client, backend, request, jobID, nsBackup); err != nil {
+			if err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup); err != nil {
 				multiError = errors.Join(multiError,
 					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
-						request.RoutineName, nsBackup.Namespace, err))
+						request.RoutineName, namespace, err))
 			}
-		}(nsBackup)
+		}(namespace, nsBackup)
 	}
 
 	wg.Wait()
@@ -187,49 +192,37 @@ func (r *dataRestorer) restoreByTimeSync(
 func (r *dataRestorer) restoreNamespace(
 	ctx context.Context,
 	client *backup.Client,
-	backend BackupMetadataReader,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
-	fullBackup model.BackupDetails,
+	namespace string,
+	backups []model.BackupDetails,
 ) error {
-	// Find incremental backups
-	bounds, err := model.NewTimeBounds(&fullBackup.Created, &request.Time)
-	if err != nil {
-		return err
-	}
-
-	incrementalBackups, err := backend.FindIncrementalBackupsForNamespace(ctx, bounds, fullBackup.Namespace)
-	if err != nil {
-		return fmt.Errorf("could not find incremental backups for namespace %s: %w", fullBackup.Namespace, err)
-	}
-
 	// Now restore all backups in order
-	allBackups := append([]model.BackupDetails{fullBackup}, incrementalBackups...)
-	dbEmpty, err := r.nsValidator.IsEmpty(client.AerospikeClient(), fullBackup.Namespace, request.Policy.SetList)
+	dbEmpty, err := r.nsValidator.IsEmpty(client.AerospikeClient(), namespace, request.Policy.SetList)
 	if err != nil {
-		return fmt.Errorf("could not determine if namespace %s is empty: %w", fullBackup.Namespace, err)
+		return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
 	}
 
 	if dbEmpty && !request.DisableReordering {
 		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
 		// This way we reduce generation noise and unnecessary load.
-		slices.Reverse(allBackups)
+		slices.Reverse(backups)
 
 		// old values are not important, because they qualifies how to handle existing data in db.
 		request.Policy.Unique = util.Ptr(true)
 		request.Policy.Replace = nil
 	}
 
-	for _, b := range allBackups {
+	for _, b := range backups {
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 	}
 
-	for _, b := range allBackups {
+	for _, b := range backups {
 		if b.FileCount == 0 { // skip empty namespaces
 			continue
 		}
 
-		handler, err := r.restoreFromPath(ctx, client, request, b.Key, fullBackup.Storage)
+		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage)
 		if err != nil {
 			return err
 		}

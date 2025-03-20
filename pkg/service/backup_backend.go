@@ -1,12 +1,9 @@
 package service
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"path/filepath"
 	"sort"
@@ -209,50 +206,7 @@ func (b *BackupBackend) FindIncrementalBackupsForNamespace(
 	return filteredIncrementalBackups, nil
 }
 
-func (b *BackupBackend) ReadClusterConfiguration(ctx context.Context, path string) ([]byte, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	configBackups, err := storage.ReadFiles(ctx, b.storage, path, configExt, nil)
-	if err != nil && !errors.Is(err, storage.ErrEmptyStorage) {
-		return nil, err
-	}
-	if len(configBackups) == 0 {
-		return nil, fmt.Errorf("no configuration backups found for %s", path)
-	}
-
-	return b.packageFiles(configBackups)
-}
-
 // packageFiles creates a zip archive from the given file list and returns it as a byte array.
-func (b *BackupBackend) packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
-	// Create a buffer to write our archive to
-	buf := new(bytes.Buffer)
-
-	// Create a new zip archive
-	w := zip.NewWriter(buf)
-
-	for i, data := range buffers {
-		fileName := getConfigFileName(i)
-
-		f, err := w.Create(fileName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create entry for filename %s: %w", fileName, err)
-		}
-
-		_, err = io.Copy(f, data)
-		if err != nil {
-			return nil, fmt.Errorf("failed to write buffer %d: %w", i, err)
-		}
-	}
-
-	err := w.Close()
-	if err != nil {
-		return nil, fmt.Errorf("failed to close the zip writer: %w", err)
-	}
-
-	return buf.Bytes(), nil
-}
 
 func (b *BackupBackend) deleteFolder(ctx context.Context, path string) error {
 	b.mu.Lock()

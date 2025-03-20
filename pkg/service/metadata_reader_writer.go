@@ -20,9 +20,6 @@ type BackupMetadataReader interface {
 	// where from is inclusive and to is exclusive.
 	IncrementalBackupList(ctx context.Context, timeBounds model.TimeBounds) ([]model.BackupDetails, error)
 
-	// ReadClusterConfiguration return backed up cluster configuration as a compressed zip.
-	ReadClusterConfiguration(ctx context.Context, path string) ([]byte, error)
-
 	// LastFullBackupTime retrieves the time of the most recent full backup in the specified time range.
 	LastFullBackupTime(ctx context.Context, timeBounds model.TimeBounds) (time.Time, error)
 
