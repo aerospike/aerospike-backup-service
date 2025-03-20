@@ -25,6 +25,14 @@ type RestoreJobStatus struct {
 	IndexCount      uint64 `yaml:"index-count,omitempty" json:"index-count,omitempty" format:"int64" example:"3"`
 	UDFCount        uint64 `yaml:"udf-count,omitempty" json:"udf-count,omitempty" format:"int64" example:"1"`
 
+	// The number of errors in doubt while restoring.
+	// (IsInDoubt signifies that the write operation may have gone through on the server
+	// but the client is not able to confirm that due an error.)
+	// Non zero value indicates that there are might be unexpected side effects during restore, like
+	// * Generation counter greater than expected for some records.
+	// * Fresher records counter greater than expected.
+	ErrorsInDoubt uint64 `yaml:"errors-in-doubt,omitempty" json:"errors-in-doubt,omitempty" format:"int64" example:"7"`
+
 	CurrentRestore *RunningJob `yaml:"current-restore,omitempty" json:"current-job,omitempty"`
 	Status         JobStatus   `yaml:"status,omitempty" json:"status,omitempty"`
 	Error          string      `yaml:"error,omitempty" json:"error,omitempty"`
@@ -53,5 +61,6 @@ func (r *RestoreJobStatus) fromModel(m *model.RestoreJobStatus) {
 	r.UDFCount = m.UDFCount
 	r.Status = JobStatus(m.Status)
 	r.Error = m.Error
+	r.ErrorsInDoubt = m.ErrorsInDoubt
 	r.CurrentRestore = NewRunningJobFromModel(m.CurrentRestore)
 }
