@@ -106,9 +106,8 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 
 	backends := service.NewBackupBackends()
 	backupHandlers := service.NewBackupHandlerHolder()
-	registry := service.NewRunningBackupsRegistry(ctx, backends, config)
-
 	backendService := service.NewBackupBackendService(config)
+	registry := service.NewRunningBackupsRegistry(ctx, backendService, config)
 
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,

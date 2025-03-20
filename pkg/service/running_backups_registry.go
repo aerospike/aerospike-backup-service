@@ -51,11 +51,11 @@ type RunningBackupsRegistryImpl struct {
 	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
 	lastSuccessful *util.SafeMap[string, *model.LastBackupRun]
 
-	routineLocks  *util.SafeMap[string, *sync.RWMutex] // Protects individual routines during synchronization
-	ctx           context.Context
-	config        *model.Config
-	backends      *BackendHolderImpl
-	routineCancel *util.SafeMap[string, context.CancelFunc]
+	routineLocks   *util.SafeMap[string, *sync.RWMutex] // Protects individual routines during synchronization
+	ctx            context.Context
+	config         *model.Config
+	backendService BackupBackendService
+	routineCancel  *util.SafeMap[string, context.CancelFunc]
 }
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
@@ -63,13 +63,13 @@ var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
 func NewRunningBackupsRegistry(
 	ctx context.Context,
-	backends *BackendHolderImpl,
+	backendService BackupBackendService,
 	config *model.Config,
 ) *RunningBackupsRegistryImpl {
 	return &RunningBackupsRegistryImpl{
 		ctx:            ctx,
 		config:         config,
-		backends:       backends,
+		backendService: backendService,
 		handlers:       util.NewSafeMap[registryKey, CancelableBackupHandler](),
 		lastSuccessful: util.NewSafeMap[string, *model.LastBackupRun](),
 		routineLocks:   util.NewSafeMap[string, *sync.RWMutex](),
@@ -98,22 +98,16 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 
 	var wg sync.WaitGroup
 	for _, routineName := range invalidatedRoutines {
-		reader, found := r.backends.GetReader(routineName)
-		if !found {
-			slog.Warn("Skipping not existing routine", slog.String("routine", routineName))
-			continue
-		}
-
 		wg.Add(1)
-		go func(routineName string, routineReader BackupMetadataReader) {
+		go func(routineName string) {
 			defer wg.Done()
 			// cancel previous scan
 			r.routineCancel.Apply(routineName, func(cancel context.CancelFunc) {
 				cancel()
 			})
 
-			r.scanForRoutine(routineName, routineReader)
-		}(routineName, reader)
+			r.scanForRoutine(routineName)
+		}(routineName)
 	}
 
 	wg.Wait()
@@ -124,7 +118,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 	)
 }
 
-func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string, routineReader BackupMetadataReader) {
+func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string) {
 	routineLock := r.getRoutineLock(routineName)
 	routineLock.Lock()
 	defer routineLock.Unlock()
@@ -134,7 +128,7 @@ func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string, routineR
 	defer cancelFunc()
 
 	routineStart := time.Now()
-	lastRun, err := findLastRun(ctx, routineReader)
+	lastRun, err := r.findLastRun(ctx, routineName)
 	if err != nil {
 		switch {
 		case errors.Is(err, context.Canceled):
@@ -252,13 +246,27 @@ func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
 	}
 }
 
-func findLastRun(ctx context.Context, b BackupMetadataReader) (*model.LastBackupRun, error) {
-	lastFullBackup, err := b.LastFullBackupTime(ctx, model.TimeBounds{})
+func (r *RunningBackupsRegistryImpl) findLastRun(ctx context.Context, routineName string) (*model.LastBackupRun, error) {
+	lastFullBackup, err := r.backendService.GetBackups(ctx, NewFullBackupFilter(routineName).Last())
 	if err != nil {
 		return nil, fmt.Errorf("read last full backup failed: %w", err)
 	}
 
-	lastIncrBackup, _ := b.LastIncrementalBackupTime(ctx, model.TimeBounds{FromTime: &lastFullBackup})
+	if len(lastFullBackup) == 0 {
+		return model.NewLastBackupRun(nil, nil), nil
+	}
+	lastFullTime := lastFullBackup[0].Created
 
-	return model.NewLastBackupRun(&lastFullBackup, &lastIncrBackup), nil
+	lastIncrBackup, err := r.backendService.GetBackups(ctx,
+		NewIncrementalBackupFilter(routineName).WithFromTime(lastFullTime).Last())
+	if err != nil {
+		return nil, fmt.Errorf("read last incremental backup failed: %w", err)
+	}
+
+	var lastIncrTime time.Time
+	if len(lastIncrBackup) > 0 {
+		lastIncrTime = lastIncrBackup[0].Created
+	}
+
+	return model.NewLastBackupRun(&lastFullTime, &lastIncrTime), nil
 }

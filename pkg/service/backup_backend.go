@@ -46,12 +46,6 @@ func (b *BackupBackend) writeBackupMetadata(ctx context.Context, path string, me
 	return storage.WriteMetadataFile(ctx, b.storage, metadataFilePath, dataYaml)
 }
 
-// FullBackupList returns a list of available full backups.
-func (b *BackupBackend) FullBackupList(ctx context.Context, timeBounds model.TimeBounds,
-) ([]model.BackupDetails, error) {
-	return b.readMetadataList(ctx, timeBounds, jobTypeFull)
-}
-
 // IncrementalBackupList returns a list of available incremental backups.
 func (b *BackupBackend) IncrementalBackupList(ctx context.Context, timeBounds model.TimeBounds,
 ) ([]model.BackupDetails, error) {

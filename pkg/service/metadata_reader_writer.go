@@ -10,16 +10,6 @@ import (
 
 // BackupMetadataReader allows to read list of existing backups.
 type BackupMetadataReader interface {
-	// FullBackupList returns a list of available full backups.
-	// The parameters are timestamp filters by creation time (epoch millis),
-	// where from is inclusive and to is exclusive.
-	FullBackupList(ctx context.Context, timeBounds model.TimeBounds) ([]model.BackupDetails, error)
-
-	// IncrementalBackupList returns a list of available incremental backups.
-	// The parameters are timestamp filters by creation time (epoch millis),
-	// where from is inclusive and to is exclusive.
-	IncrementalBackupList(ctx context.Context, timeBounds model.TimeBounds) ([]model.BackupDetails, error)
-
 	// LastFullBackupTime retrieves the time of the most recent full backup in the specified time range.
 	LastFullBackupTime(ctx context.Context, timeBounds model.TimeBounds) (time.Time, error)
 
