@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -57,4 +58,14 @@ func formatTimestamp(t time.Time) string {
 
 func getConfigFileName(index int) string {
 	return fmt.Sprintf("aerospike_%d%s", index, configExt)
+}
+
+// extractTimestampFromPath extracts the timestamp part from a path
+func extractTimestampFromPath(path string) string {
+	parts := strings.Split(path, "/")
+	if len(parts) < 7 {
+		return ""
+	}
+
+	return parts[3]
 }

@@ -37,7 +37,7 @@ type dataRestorer struct {
 	configRetriever
 	restoreJobs    *RestoreJobsHolder
 	restoreService restoreexecutor.Restore
-	backends       BackendsHolder
+	backendService BackupBackendService
 	clientManager  aerospike.ClientManager
 	nsValidator    aerospike.NamespaceValidator
 }
@@ -50,6 +50,7 @@ func NewRestoreManager(backends BackendsHolder,
 	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,
 	nsValidator aerospike.NamespaceValidator,
+	backendService BackupBackendService,
 ) RestoreManager {
 	return &dataRestorer{
 		configRetriever: configRetriever{
@@ -57,7 +58,7 @@ func NewRestoreManager(backends BackendsHolder,
 		},
 		restoreJobs:    restoreJobs,
 		restoreService: restoreService,
-		backends:       backends,
+		backendService: backendService,
 		clientManager:  clientManager,
 		nsValidator:    nsValidator,
 	}

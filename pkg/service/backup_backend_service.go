@@ -19,6 +19,7 @@ type BackupFilter struct {
 	// optional
 	FromTime *time.Time
 	ToTime   *time.Time
+	onlyLast bool // onlyLast backup only
 }
 
 // NewFullBackupFilter creates a filter for full backups.
@@ -42,6 +43,10 @@ func (f BackupFilter) TimeBounds() *model.TimeBounds {
 		FromTime: f.FromTime,
 		ToTime:   f.ToTime,
 	}
+}
+
+func (f BackupFilter) Last() {
+	f.onlyLast = true
 }
 
 // WithFromTime adds a start time to the filter.
@@ -87,17 +92,13 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 
 	// Storage returned all files >= fromTime. We need to find the one with highest timestamp that's still < ToTime.
 	// We use the timestamps that are part of file path.
-	maxString := "\uffff"
-	if filter.ToTime != nil {
-		maxString = getTimestampPath(filter.routine, *filter.ToTime, filter.JobType)
-	}
+	maxString := getUpperBoundary(filter)
+
+	// Filter files based on timestamp criteria
+	eligibleFiles := filterEligibleFiles(files, maxString, filter)
 
 	var backups []model.BackupDetails
-	for _, fileName := range files {
-		if fileName > maxString {
-			continue
-		}
-
+	for _, fileName := range eligibleFiles {
 		file, err := storage.ReadFile(ctx, routine.Storage, strings.TrimPrefix(fileName, routine.Storage.GetPath()))
 		if err != nil {
 			return nil, fmt.Errorf("read metadata file %q: %w", fileName, err)
@@ -114,4 +115,49 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 	}
 
 	return backups, nil
+}
+
+func getUpperBoundary(filter BackupFilter) string {
+	if filter.ToTime != nil {
+		return getTimestampPath(filter.routine, *filter.ToTime, filter.JobType)
+	}
+
+	return "\uffff"
+}
+
+// filterEligibleFiles returns files that meet the timestamp criteria
+func filterEligibleFiles(files []string, maxString string, filter BackupFilter) []string {
+	var lessThenMaxString []string
+	for _, fileName := range files {
+		if fileName <= maxString {
+			lessThenMaxString = append(lessThenMaxString, fileName)
+		}
+	}
+
+	if !filter.onlyLast {
+		return lessThenMaxString
+	}
+
+	highestTimestamp := findHighestTimestamp(lessThenMaxString)
+
+	// Filter further to keep only files with the highest timestamp
+	var latestFiles []string
+	for _, fileName := range lessThenMaxString {
+		if extractTimestampFromPath(fileName) == highestTimestamp {
+			latestFiles = append(latestFiles, fileName)
+		}
+	}
+	return latestFiles
+
+}
+
+func findHighestTimestamp(files []string) string {
+	var highestTimestamp string
+	for _, fileName := range files {
+		timestamp := extractTimestampFromPath(fileName)
+		if timestamp > highestTimestamp {
+			highestTimestamp = timestamp
+		}
+	}
+	return highestTimestamp
 }
