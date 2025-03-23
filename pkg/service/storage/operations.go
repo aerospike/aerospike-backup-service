@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -63,6 +63,7 @@ func CreateDirWriter(
 }
 
 func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
+	now := time.Now()
 	reader, err := CreateFileReader(ctx, storage, filepath)
 
 	if err != nil {
@@ -78,23 +79,18 @@ func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]by
 		return nil, err
 	case r := <-readersCh:
 		defer r.Reader.Close()
-		return io.ReadAll(r.Reader)
+		readAll, err := io.ReadAll(r.Reader)
+		slog.Info("ReadFile", slog.String("path", filepath), slog.Duration("d", time.Since(now)))
+		return readAll, err
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
 }
 
-func ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
-) ([]*bytes.Buffer, error) {
-	var startScanFrom string
-	if fromTime != nil {
-		fromTimeStr := strconv.FormatInt(fromTime.UnixMilli()-1, 10) // -1 to ensure filter is greater or equal.
-		startScanFrom = filepath.Join(path, fromTimeStr)
-	}
-
+func ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error) {
 	reader, err := CreateDirReader(ctx, storage, path,
 		ioStorage.WithValidator(newNameValidator(filterStr)),
-		ioStorage.WithStartAfter(startScanFrom))
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}
@@ -150,7 +146,10 @@ func ReadFileNames(
 		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}
 
-	return reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path))
+	now := time.Now()
+	objects, err := reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path))
+	slog.Info("ListObjects", slog.String("path", path), slog.Duration("d", time.Since(now)))
+	return objects, err
 }
 
 func WriteMetadataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {

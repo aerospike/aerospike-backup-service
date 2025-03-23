@@ -46,7 +46,7 @@ func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routin
 	path := getConfigurationPath(routine, backups[0].Created)
 
 	backupRoutine, _ := cr.config.Routine(routine)
-	configBackups, err := storage.ReadFiles(ctx, backupRoutine.Storage, path, configExt, nil)
+	configBackups, err := storage.ReadFiles(ctx, backupRoutine.Storage, path, configExt)
 	if err != nil && !errors.Is(err, storage.ErrEmptyStorage) {
 		return nil, err
 	}
