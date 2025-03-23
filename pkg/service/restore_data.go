@@ -119,24 +119,46 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 	return nil
 }
 
-func (r *dataRestorer) RestoreByTime(ctx context.Context, request *model.RestoreTimestampRequest,
+func (r *dataRestorer) RestoreByTime(
+	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
-	backups, err := r.backendService.GetBackups(ctx, NewFullBackupFilter(request.RoutineName).Last())
+	backupsByNs, err := r.findBackupsToRestore(ctx, request)
 	if err != nil {
-		return 0, fmt.Errorf("failed to read last full backup: %w", err)
+		return 0, err
+	}
+
+	jobID := r.restoreJobs.newJob(request.RoutineName)
+	go r.restoreByTimeSync(ctx, request, jobID, backupsByNs)
+
+	return jobID, nil
+}
+
+// findBackupsToRestore returns list of backups for each namespace, sorted by creation date. First is full backup.
+func (r *dataRestorer) findBackupsToRestore(
+	ctx context.Context, request *model.RestoreTimestampRequest,
+) (map[string][]model.BackupDetails, error) {
+	backups, err := r.backendService.GetBackups(ctx,
+		NewFullBackupFilter(request.RoutineName).
+			WithToTime(request.Time).
+			Last(),
+	)
+	// backups contains list of full backups for every namespace.
+	// They all have same created time, routine name and storage.
+	if err != nil {
+		return nil, fmt.Errorf("failed to read last full backup: %w", err)
 	}
 
 	if len(backups) == 0 {
-		return 0, fmt.Errorf("no full backups found")
+		return nil, fmt.Errorf("no full backups found")
 	}
 
-	// Find incremental backups
+	// Find incremental backups.
 	incrementalBackups, err := r.backendService.GetBackups(ctx,
 		NewIncrementalBackupFilter(request.RoutineName).
 			WithFromTime(backups[0].Created).
 			WithToTime(request.Time))
 	if err != nil {
-		return 0, fmt.Errorf("could not find incremental backups for namespace %s: %w", err)
+		return nil, fmt.Errorf("could not find incremental backups for namespace %s: %w", err)
 	}
 
 	var backupsByNs = make(map[string][]model.BackupDetails)
@@ -148,10 +170,7 @@ func (r *dataRestorer) RestoreByTime(ctx context.Context, request *model.Restore
 		backupsByNs[b.Namespace] = append(backupsByNs[b.Namespace], b)
 	}
 
-	jobID := r.restoreJobs.newJob(request.RoutineName)
-	go r.restoreByTimeSync(ctx, request, jobID, backupsByNs)
-
-	return jobID, nil
+	return backupsByNs, nil
 }
 
 func (r *dataRestorer) restoreByTimeSync(
