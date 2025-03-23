@@ -134,7 +134,8 @@ func getUpperBoundary(filter BackupFilter) string {
 func filterEligibleFiles(files []string, maxString string, filter BackupFilter) []string {
 	var lessThenMaxString []string
 	for _, fileName := range files {
-		if fileName <= maxString {
+		if fileName < maxString || strings.HasPrefix(fileName, maxString) {
+			// hasPrefix conditions is required to filter in exact timestamp
 			lessThenMaxString = append(lessThenMaxString, fileName)
 		}
 	}
