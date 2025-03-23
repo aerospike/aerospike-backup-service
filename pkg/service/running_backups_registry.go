@@ -263,10 +263,10 @@ func (r *RunningBackupsRegistryImpl) findLastRun(ctx context.Context, routineNam
 		return nil, fmt.Errorf("read last incremental backup failed: %w", err)
 	}
 
-	var lastIncrTime time.Time
+	var lastIncrTime *time.Time
 	if len(lastIncrBackup) > 0 {
-		lastIncrTime = lastIncrBackup[0].Created
+		lastIncrTime = &lastIncrBackup[0].Created
 	}
 
-	return model.NewLastBackupRun(&lastFullTime, &lastIncrTime), nil
+	return model.NewLastBackupRun(&lastFullTime, lastIncrTime), nil
 }
