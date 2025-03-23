@@ -56,17 +56,12 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 
 // scheduleRoutines schedules the given handlers using the scheduler.
 func scheduleRoutines(
-	scheduler Scheduler, routines map[string]*model.BackupRoutine, handlers BackupHandlerHolder,
+	scheduler Scheduler, routines map[string]*model.BackupRoutine, handler *BackupRunnerWrapper,
 ) error {
 	newJobs := map[string]*quartz.JobDetail{}
 	var errs error
 	for routineName, routine := range routines {
 		if routine.Disabled {
-			continue
-		}
-		handler, found := handlers.Load(routineName)
-		if !found {
-			errs = errors.Join(errs, fmt.Errorf("handler not found for routine %q", routineName))
 			continue
 		}
 
@@ -90,14 +85,14 @@ func scheduleRoutines(
 }
 
 func scheduleFullBackup(
-	scheduler Scheduler, handler backupRunner, interval string, routineName string,
+	scheduler Scheduler, handler *BackupRunnerWrapper, interval string, routineName string,
 ) (*quartz.JobDetail, error) {
 	job := createJobDetail(handler, routineName, jobTypeFull)
 	return job, schedule(scheduler, interval, job)
 }
 
 func scheduleIncrementalBackup(
-	scheduler Scheduler, handler backupRunner, interval string, routineName string,
+	scheduler Scheduler, handler *BackupRunnerWrapper, interval string, routineName string,
 ) error {
 	if len(interval) == 0 { // no need to schedule if there is no interval set
 		return nil
@@ -107,7 +102,7 @@ func scheduleIncrementalBackup(
 	return schedule(scheduler, interval, job)
 }
 
-func createJobDetail(handler backupRunner, routineName string, jobType jobType) *quartz.JobDetail {
+func createJobDetail(handler *BackupRunnerWrapper, routineName string, jobType jobType) *quartz.JobDetail {
 	job := newBackupJob(handler, jobType, routineName)
 	return quartz.NewJobDetail(job, jobKey(routineName, jobType))
 }

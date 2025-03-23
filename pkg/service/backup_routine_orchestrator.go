@@ -29,18 +29,48 @@ type BackupRoutineOrchestrator struct {
 	registry            RunningBackupsRegistry
 }
 
-var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
-
 // ClusterConfigWriter handles writing cluster configuration to storage.
 type ClusterConfigWriter interface {
 	Write(ctx context.Context, client aerospike.Cluster, timestamp time.Time)
 }
+type BackupRunnerWrapper struct {
+	clientManager    aerospike.ClientManager
+	backupService    backupexecutor.Backup
+	registry         RunningBackupsRegistry
+	retentionManager RetentionManager
+	backendService   BackupBackendService
+	config           *model.Config
+}
 
-// BackupHandlerHolder stores backupRunners by routine name.
-type BackupHandlerHolder = *util.SafeMap[string, backupRunner]
+func NewBackupRunnerWrapper(
+	clientManager aerospike.ClientManager,
+	backupService backupexecutor.Backup,
+	registry RunningBackupsRegistry,
+	retentionManager RetentionManager,
+	backendService BackupBackendService,
+	config *model.Config,
+) *BackupRunnerWrapper {
+	return &BackupRunnerWrapper{
+		clientManager:    clientManager,
+		backupService:    backupService,
+		registry:         registry,
+		retentionManager: retentionManager,
+		backendService:   backendService,
+		config:           config,
+	}
+}
 
-func NewBackupHandlerHolder() BackupHandlerHolder {
-	return util.NewSafeMap[string, backupRunner]()
+func (h *BackupRunnerWrapper) NewOrchestrator(routineName string) *BackupRoutineOrchestrator {
+	routine, _ := h.config.Routine(routineName)
+	return newBackupRoutineOrchestrator(
+		h.clientManager,
+		h.backupService,
+		routineName,
+		routine,
+		h.registry,
+		h.retentionManager,
+		h.backendService,
+	)
 }
 
 // newBackupRoutineOrchestrator returns a new BackupRoutineOrchestrator instance.
@@ -49,9 +79,9 @@ func newBackupRoutineOrchestrator(
 	backupService backupexecutor.Backup,
 	routineName string,
 	routine *model.BackupRoutine,
-	backupBackend BackupMetadataReaderWriter,
 	registry RunningBackupsRegistry,
 	retentionManager RetentionManager,
+	backendService BackupBackendService,
 ) *BackupRoutineOrchestrator {
 	backupPolicy := routine.BackupPolicy
 	backupStorage := routine.Storage
@@ -64,7 +94,7 @@ func newBackupRoutineOrchestrator(
 			routineName,
 			backupService,
 			retry,
-			backupBackend,
+			backendService,
 			logger,
 		),
 

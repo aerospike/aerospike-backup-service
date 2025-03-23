@@ -44,7 +44,7 @@ type dataRestorer struct {
 var _ RestoreManager = (*dataRestorer)(nil)
 
 // NewRestoreManager returns a new dataRestorer instance.
-func NewRestoreManager(backends BackendsHolder,
+func NewRestoreManager(
 	restoreService restoreexecutor.Restore,
 	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,

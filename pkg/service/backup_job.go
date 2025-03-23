@@ -3,25 +3,23 @@ package service
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"sync/atomic"
-	"time"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
+	"log/slog"
+	"sync/atomic"
 )
 
-// backupRunner defines an interface for running and managing backups for single routine.
-type backupRunner interface {
-	// runFullBackup starts a full backup operation.
-	runFullBackup(ctx context.Context, now time.Time)
-	// runIncrementalBackup starts an incremental backup operation.
-	runIncrementalBackup(ctx context.Context, now time.Time)
-}
+//// backupRunner defines an interface for running backups.
+//type backupRunner interface {
+//	// runFullBackup starts a full backup operation.
+//	runFullBackup(ctx context.Context, routineName string, now time.Time)
+//	// runIncrementalBackup starts an incremental backup operation.
+//	runIncrementalBackup(ctx context.Context, routineName string, now time.Time)
+//}
 
 // backupJob implements the quartz.Job interface.
 type backupJob struct {
-	handler     backupRunner
+	handler     *BackupRunnerWrapper
 	jobType     jobType
 	isRunning   atomic.Bool
 	routineName string
@@ -36,16 +34,17 @@ func (j *backupJob) Execute(ctx context.Context) error {
 		defer j.isRunning.Store(false)
 		switch j.jobType {
 		case jobTypeFull:
-			j.handler.runFullBackup(ctx, util.NowWithZeroNanoseconds())
+			j.handler.NewOrchestrator(j.routineName).runFullBackup(ctx, util.NowWithZeroNanoseconds())
 		case jobTypeIncremental:
-			j.handler.runIncrementalBackup(ctx, util.NowWithZeroNanoseconds())
+			j.handler.NewOrchestrator(j.routineName).runIncrementalBackup(ctx, util.NowWithZeroNanoseconds())
 		default:
 			j.logger.Error("Unsupported backup type")
 		}
-	} else {
-		j.logger.Debug("Backup is currently in progress, skipping it")
-		incrementSkippedCounters(j.jobType)
+		return nil
 	}
+
+	j.logger.Debug("Backup is currently in progress, skipping it")
+	incrementSkippedCounters(j.jobType)
 
 	return nil
 }
@@ -65,7 +64,7 @@ func (j *backupJob) Description() string {
 }
 
 // newBackupJob creates a new backup job.
-func newBackupJob(handler backupRunner, jobType jobType, routineName string) quartz.Job {
+func newBackupJob(handler *BackupRunnerWrapper, jobType jobType, routineName string) quartz.Job {
 	return &backupJob{
 		handler:     handler,
 		jobType:     jobType,

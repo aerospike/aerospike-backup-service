@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"gopkg.in/yaml.v3"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -73,6 +74,7 @@ func (f BackupFilter) WithToTime(toTime time.Time) BackupFilter {
 
 type BackupBackendService interface {
 	GetBackups(context.Context, BackupFilter) ([]model.BackupDetails, error)
+	WriteBackupMetadata(ctx context.Context, routineName string, path string, metadata model.BackupMetadata) error
 	Delete(ctx context.Context, routine string, path string) error
 }
 
@@ -177,6 +179,26 @@ func findHighestTimestamp(files []string) string {
 		}
 	}
 	return highestTimestamp
+}
+
+func (b *BackupBackendServiceImpl) WriteBackupMetadata(ctx context.Context, routineName string, path string, metadata model.BackupMetadata) error {
+	routine, ok := b.config.Routine(routineName)
+	if !ok {
+		return fmt.Errorf("routine not found: %q", routine)
+	}
+
+	dataYaml, err := yaml.Marshal(metadata)
+	if err != nil {
+		return err
+	}
+
+	metadataFilePath := filepath.Join(path, metadataFile)
+
+	lock := b.locks.LoadOrStore(routineName, &sync.RWMutex{})
+	lock.Lock()
+	defer lock.Unlock()
+
+	return storage.WriteMetadataFile(ctx, routine.Storage, metadataFilePath, dataYaml)
 }
 
 func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName string, path string) error {

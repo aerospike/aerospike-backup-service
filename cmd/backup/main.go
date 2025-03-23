@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -104,18 +105,16 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		return nil, nil, nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
 
-	backends := service.NewBackupBackends()
-	backupHandlers := service.NewBackupHandlerHolder()
 	backendService := service.NewBackupBackendService(config)
 	registry := service.NewRunningBackupsRegistry(ctx, backendService, config)
 
+	retentionManager := service.NewBackupRetentionManager(backendService, config)
+	backupRunnerWrapper := service.NewBackupRunnerWrapper(clientManager, backupexecutor.NewDefaultBackupExecutor(), registry, retentionManager, backendService, config)
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,
-		backends,
 		clientManager,
-		backupHandlers,
 		registry,
-		service.NewBackupRetentionManager(backendService, config),
+		backupRunnerWrapper,
 	)
 
 	err = configApplier.ApplyNewRoutines(config.Routines())
@@ -127,7 +126,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
-		backends, restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator, backendService)
+		restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator, backendService)
 
 	configRetriever := service.NewConfigRetriever(backendService, config)
 	httpService := handlers.NewService(
@@ -138,7 +137,6 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		restoreMgr,
 		configRetriever,
 		backendService,
-		backupHandlers,
 		registry,
 		configurationManager,
 		nsValidator,
