@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -71,14 +73,19 @@ func (f BackupFilter) WithToTime(toTime time.Time) BackupFilter {
 
 type BackupBackendService interface {
 	GetBackups(context.Context, BackupFilter) ([]model.BackupDetails, error)
+	Delete(ctx context.Context, routine string, path string) error
 }
 
 type BackupBackendServiceImpl struct {
 	config *model.Config
+	locks  *util.SafeMap[string, *sync.RWMutex] // lock per routine
 }
 
 func NewBackupBackendService(config *model.Config) *BackupBackendServiceImpl {
-	return &BackupBackendServiceImpl{config: config}
+	return &BackupBackendServiceImpl{
+		config: config,
+		locks:  util.NewSafeMap[string, *sync.RWMutex](),
+	}
 }
 
 func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error) {
@@ -86,8 +93,12 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 
 	routine, found := b.config.Routine(filter.routine)
 	if !found {
-		return nil, fmt.Errorf("routine not found: %v", filter.routine)
+		return nil, fmt.Errorf("routine not found: %q", filter.routine)
 	}
+
+	lock := b.locks.LoadOrStore(filter.routine, &sync.RWMutex{})
+	lock.RLock()
+	defer lock.RUnlock()
 
 	// TODO: support local files
 	files, err := storage.ReadFileNames(ctx, routine.Storage, path, metadataFile, filter.FromTime)
@@ -166,4 +177,17 @@ func findHighestTimestamp(files []string) string {
 		}
 	}
 	return highestTimestamp
+}
+
+func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName string, path string) error {
+	routine, ok := b.config.Routine(routineName)
+	if !ok {
+		return fmt.Errorf("routine not found: %q", routine)
+	}
+
+	lock := b.locks.LoadOrStore(routineName, &sync.RWMutex{})
+	lock.Lock()
+	defer lock.Unlock()
+
+	return storage.DeleteFolder(ctx, routine.Storage, path)
 }

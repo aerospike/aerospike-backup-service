@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
@@ -61,13 +60,13 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routineName
 
 	timestamps := getTimestamps(fullBackups)
 	if policy.FullBackups != nil {
-		if err := e.deleteFullBackups(ctx, timestamps, *policy.FullBackups, routine.Storage, routineName); err != nil {
+		if err := e.deleteFullBackups(ctx, timestamps, *policy.FullBackups, routineName); err != nil {
 			return fmt.Errorf("failed to delete excess full backups: %w", err)
 		}
 	}
 
 	if policy.IncrBackups != nil {
-		if err := e.deleteIncrementalBackups(ctx, timestamps, *policy.IncrBackups, routine.Storage, routineName); err != nil {
+		if err := e.deleteIncrementalBackups(ctx, timestamps, *policy.IncrBackups, routineName); err != nil {
 			return fmt.Errorf("failed to delete excess incremental backups: %w", err)
 		}
 	}
@@ -76,7 +75,7 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routineName
 }
 
 func (e *RetentionManagerImpl) deleteFullBackups(
-	ctx context.Context, timestamps []time.Time, retainCount int, s model.Storage, routineName string,
+	ctx context.Context, timestamps []time.Time, retainCount int, routineName string,
 ) error {
 	if len(timestamps) <= retainCount {
 		return nil
@@ -85,7 +84,7 @@ func (e *RetentionManagerImpl) deleteFullBackups(
 	var errs error
 	for _, t := range timestamps[:len(timestamps)-retainCount] {
 		path := getTimestampPath(routineName, t, jobTypeFull)
-		if err := storage.DeleteFolder(ctx, s, path); err != nil {
+		if err := e.backendService.Delete(ctx, routineName, path); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", path, err))
 		}
 	}
@@ -94,7 +93,7 @@ func (e *RetentionManagerImpl) deleteFullBackups(
 }
 
 func (e *RetentionManagerImpl) deleteIncrementalBackups(
-	ctx context.Context, timestamps []time.Time, retainCount int, s model.Storage, routineName string,
+	ctx context.Context, timestamps []time.Time, retainCount int, routineName string,
 ) error {
 	if len(timestamps) <= retainCount {
 		return nil
@@ -102,7 +101,7 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 
 	if retainCount == 0 { // Delete all incremental backups.
 		path := getBackupRootPath(routineName, jobTypeIncremental)
-		return storage.DeleteFolder(ctx, s, path)
+		return e.backendService.Delete(ctx, routineName, path)
 	}
 
 	earliestToKeep := timestamps[len(timestamps)-retainCount]
@@ -114,7 +113,7 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 	var errs error
 	for _, b := range incrBackups {
 		path := getTimestampPath(routineName, b.Created, jobTypeIncremental)
-		if err := storage.DeleteFolder(ctx, s, path); err != nil {
+		if err := e.backendService.Delete(ctx, routineName, path); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", path, err))
 		}
 	}
