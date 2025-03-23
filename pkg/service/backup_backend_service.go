@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -99,7 +100,7 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 	maxString := getUpperBoundary(filter)
 
 	// Filter files based on timestamp criteria
-	eligibleFiles := filterEligibleFiles(files, maxString, filter)
+	eligibleFiles := filterEligibleFiles(files, filepath.Join(routine.Storage.GetPath(), maxString), filter)
 
 	var backups []model.BackupDetails
 	for _, fileName := range eligibleFiles {
