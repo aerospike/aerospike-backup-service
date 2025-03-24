@@ -133,8 +133,6 @@ func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string) {
 		switch {
 		case errors.Is(err, context.Canceled):
 			slog.Info("Backup history scan cancelled", slog.String("routine", routineName))
-		case errors.Is(err, errBackupNotFound):
-			slog.Info("Backup not found", slog.String("routine", routineName))
 		default:
 			slog.Error("Failed to read last backup time",
 				slog.String("routine", routineName),
