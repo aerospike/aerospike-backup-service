@@ -3,8 +3,8 @@ package service
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -18,6 +18,11 @@ const (
 	configurationBackupDirectory = "configuration"
 	dataDirectory                = "data"
 )
+
+// "prefix/fullBackup2/backup/1742795103082/data/source-ns11/metadata.yaml"
+var timestampPattern = regexp.MustCompile(fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})/`,
+	fullBackupDirectory,
+	incrementalBackupDirectory))
 
 func getBackupRootPath(routineName string, backupType jobType) string {
 	if backupType == jobTypeFull {
@@ -62,10 +67,10 @@ func getConfigFileName(index int) string {
 
 // extractTimestampFromPath extracts the timestamp part from a path
 func extractTimestampFromPath(path string) string {
-	parts := strings.Split(path, "/")
-	if len(parts) < 7 {
-		return ""
+	matches := timestampPattern.FindStringSubmatch(path)
+	if len(matches) >= 3 {
+		return matches[2] // The timestamp is in the second capturing group
 	}
 
-	return parts[3]
+	return ""
 }

@@ -158,7 +158,7 @@ func (r *dataRestorer) findBackupsToRestore(
 			WithFromTime(backups[0].Created).
 			WithToTime(request.Time))
 	if err != nil {
-		return nil, fmt.Errorf("could not find incremental backups for namespace %s: %w", err)
+		return nil, fmt.Errorf("could not find incremental backups: %w", err)
 	}
 
 	var backupsByNs = make(map[string][]model.BackupDetails)

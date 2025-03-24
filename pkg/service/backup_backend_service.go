@@ -190,7 +190,7 @@ func findHighestTimestamp(files []string) string {
 func (b *BackupBackendServiceImpl) WriteBackupMetadata(ctx context.Context, routineName string, path string, metadata model.BackupMetadata) error {
 	routine, ok := b.config.Routine(routineName)
 	if !ok {
-		return fmt.Errorf("routine not found: %q", routine)
+		return fmt.Errorf("routine not found: %q", routineName)
 	}
 
 	dataYaml, err := yaml.Marshal(metadata)
@@ -210,7 +210,7 @@ func (b *BackupBackendServiceImpl) WriteBackupMetadata(ctx context.Context, rout
 func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName string, path string) error {
 	routine, ok := b.config.Routine(routineName)
 	if !ok {
-		return fmt.Errorf("routine not found: %q", routine)
+		return fmt.Errorf("routine not found: %q", routineName)
 	}
 
 	lock := b.locks.LoadOrStore(routineName, &sync.RWMutex{})
