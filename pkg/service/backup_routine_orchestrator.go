@@ -194,6 +194,7 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 		}
 		namespaces, err = aerospike.ResolveNamespaces(h.namespaces, client.AerospikeClient())
 		if err != nil {
+			h.clientManager.Close(client)
 			return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
 		}
 
