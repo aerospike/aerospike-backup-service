@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/matcher"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -17,22 +16,21 @@ type ConfigApplier interface {
 }
 
 type DefaultConfigApplier struct {
-	mu        sync.Mutex
-	scheduler quartz.Scheduler
-	registry  RunningBackupsRegistry
-	handler   *BackupRunnerWrapper
+	mu         sync.Mutex
+	scheduler  quartz.Scheduler
+	registry   RunningBackupsRegistry
+	components *BackupComponents
 }
 
 func NewDefaultConfigApplier(
 	scheduler quartz.Scheduler,
-	manager aerospike.ClientManager,
 	registry RunningBackupsRegistry,
-	handler *BackupRunnerWrapper,
+	components *BackupComponents,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
-		scheduler: scheduler,
-		registry:  registry,
-		handler:   handler,
+		scheduler:  scheduler,
+		registry:   registry,
+		components: components,
 	}
 }
 
@@ -48,7 +46,7 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.Backu
 	// Scan existing backups to find the last successful runs for every routine.
 	go a.registry.SynchroniseBackupHistory()
 
-	err = scheduleRoutines(a.scheduler, routines, a.handler)
+	err = scheduleRoutines(a.scheduler, routines, a.components)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}

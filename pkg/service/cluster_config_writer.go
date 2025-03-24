@@ -10,6 +10,11 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
+// ClusterConfigWriter handles writing cluster configuration to storage.
+type ClusterConfigWriter interface {
+	Write(ctx context.Context, routineName string, timestamp time.Time)
+}
+
 // DefaultClusterConfigWriter is the default implementation of ClusterConfigWriter.
 type DefaultClusterConfigWriter struct {
 	config        *model.Config

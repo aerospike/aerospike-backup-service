@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -19,6 +18,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
@@ -111,13 +111,10 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	retentionManager := service.NewBackupRetentionManager(backendService, config)
 	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, config)
 	backupExecutor := backupexecutor.NewDefaultBackupExecutor()
-	backupRunnerWrapper := service.NewBackupRunnerWrapper(clientManager, backupExecutor, registry, retentionManager, backendService, clusterConfigWriter, config)
-	configApplier := service.NewDefaultConfigApplier(
-		scheduler,
-		clientManager,
-		registry,
-		backupRunnerWrapper,
-	)
+	backupRunnerWrapper := service.NewBackupComponents(
+		clientManager, backupExecutor, registry, retentionManager,
+		backendService, clusterConfigWriter, config)
+	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupRunnerWrapper)
 
 	err = configApplier.ApplyNewRoutines(config.Routines())
 	if err != nil {

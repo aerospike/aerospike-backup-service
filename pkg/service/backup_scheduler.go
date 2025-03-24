@@ -56,7 +56,7 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 
 // scheduleRoutines schedules the given handlers using the scheduler.
 func scheduleRoutines(
-	scheduler Scheduler, routines map[string]*model.BackupRoutine, wrapper *BackupRunnerWrapper,
+	scheduler Scheduler, routines map[string]*model.BackupRoutine, components *BackupComponents,
 ) error {
 	newJobs := map[string]*quartz.JobDetail{}
 	var errs error
@@ -65,7 +65,7 @@ func scheduleRoutines(
 			continue
 		}
 
-		handler := wrapper.NewOrchestrator(routineName)
+		handler := newOrchestrator(routineName, components)
 		// schedule a full backup job for the routine
 		job, err := scheduleFullBackup(scheduler, handler, routine.IntervalCron, routineName)
 		if err != nil {
@@ -75,7 +75,7 @@ func scheduleRoutines(
 		newJobs[job.JobKey().String()] = job
 
 		// schedule an incremental backup job for the routine
-		if err := scheduleIncrementalBackup(scheduler, handler, routine.IncrIntervalCron, routineName); err != nil {
+		if err = scheduleIncrementalBackup(scheduler, handler, routine.IncrIntervalCron, routineName); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
 		}
 	}

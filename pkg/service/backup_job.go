@@ -3,10 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	"github.com/reugn/go-quartz/quartz"
 	"log/slog"
 	"sync/atomic"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/reugn/go-quartz/quartz"
 )
 
 //// backupRunner defines an interface for running backups.

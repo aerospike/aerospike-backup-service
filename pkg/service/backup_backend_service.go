@@ -3,8 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	"gopkg.in/yaml.v3"
 	"log/slog"
 	"path/filepath"
 	"strings"
@@ -13,6 +11,8 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"gopkg.in/yaml.v3"
 )
 
 // BackupFilter defines criteria for filtering backups.

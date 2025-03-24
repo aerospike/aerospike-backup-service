@@ -27,24 +27,18 @@ type BackupRoutineOrchestrator struct {
 	retentionManager    RetentionManager
 }
 
-// ClusterConfigWriter handles writing cluster configuration to storage.
-type ClusterConfigWriter interface {
-	Write(ctx context.Context,
-		routineName string,
-		timestamp time.Time,
-	)
-}
-type BackupRunnerWrapper struct {
+// BackupComponents holds all components required for executing a backup routine.
+type BackupComponents struct {
+	config              *model.Config
 	clientManager       aerospike.ClientManager
 	backupService       backupexecutor.Backup
 	registry            RunningBackupsRegistry
 	retentionManager    RetentionManager
 	backendService      BackupBackendService
 	clusterConfigWriter ClusterConfigWriter
-	config              *model.Config
 }
 
-func NewBackupRunnerWrapper(
+func NewBackupComponents(
 	clientManager aerospike.ClientManager,
 	backupService backupexecutor.Backup,
 	registry RunningBackupsRegistry,
@@ -52,8 +46,8 @@ func NewBackupRunnerWrapper(
 	backendService BackupBackendService,
 	clusterConfigWriter ClusterConfigWriter,
 	config *model.Config,
-) *BackupRunnerWrapper {
-	return &BackupRunnerWrapper{
+) *BackupComponents {
+	return &BackupComponents{
 		clientManager:       clientManager,
 		backupService:       backupService,
 		registry:            registry,
@@ -64,7 +58,7 @@ func NewBackupRunnerWrapper(
 	}
 }
 
-func (h *BackupRunnerWrapper) NewOrchestrator(routineName string) *BackupRoutineOrchestrator {
+func newOrchestrator(routineName string, h *BackupComponents) *BackupRoutineOrchestrator {
 	routine, _ := h.config.Routine(routineName)
 	logger := slog.With(slog.String("routine_name", routineName))
 	retry := newRetryExecutor(routine.BackupPolicy.GetRetryPolicyOrDefault(), logger)
