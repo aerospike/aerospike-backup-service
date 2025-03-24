@@ -109,7 +109,9 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	registry := service.NewRunningBackupsRegistry(ctx, backendService, config)
 
 	retentionManager := service.NewBackupRetentionManager(backendService, config)
-	backupRunnerWrapper := service.NewBackupRunnerWrapper(clientManager, backupexecutor.NewDefaultBackupExecutor(), registry, retentionManager, backendService, config)
+	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, config)
+	backupExecutor := backupexecutor.NewDefaultBackupExecutor()
+	backupRunnerWrapper := service.NewBackupRunnerWrapper(clientManager, backupExecutor, registry, retentionManager, backendService, clusterConfigWriter, config)
 	configApplier := service.NewDefaultConfigApplier(
 		scheduler,
 		clientManager,

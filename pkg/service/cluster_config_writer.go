@@ -12,45 +12,42 @@ import (
 
 // DefaultClusterConfigWriter is the default implementation of ClusterConfigWriter.
 type DefaultClusterConfigWriter struct {
-	storage     model.Storage
-	routineName string
-	policy      *model.BackupPolicy
-	logger      *slog.Logger
+	config        *model.Config
+	clientManager aerospike.ClientManager
 }
 
 // NewClusterConfigWriter returns a new DefaultClusterConfigWriter instance.
-func NewClusterConfigWriter(
-	storage model.Storage,
-	routineName string,
-	policy *model.BackupPolicy,
-	logger *slog.Logger,
-) *DefaultClusterConfigWriter {
+func NewClusterConfigWriter(clientManager aerospike.ClientManager, config *model.Config) *DefaultClusterConfigWriter {
 	return &DefaultClusterConfigWriter{
-		storage:     storage,
-		routineName: routineName,
-		policy:      policy,
-		logger:      logger,
+		config:        config,
+		clientManager: clientManager,
 	}
 }
 
 func (w *DefaultClusterConfigWriter) Write(
 	ctx context.Context,
-	client aerospike.Cluster,
+	routineName string,
 	timestamp time.Time,
 ) {
-	infos := aerospike.ScanClusterConfiguration(client, w.logger)
+	logger := slog.Default().With(slog.String("routine", routineName))
+	routine, _ := w.config.Routine(routineName)
+
+	client, _ := w.clientManager.GetClient(routine.SourceCluster)
+	defer w.clientManager.Close(client)
+
+	infos := aerospike.ScanClusterConfiguration(client.AerospikeClient(), logger)
 	if len(infos) == 0 {
-		w.logger.Warn("Could not read aerospike configuration")
+		logger.Warn("Could not read aerospike configuration")
 		return
 	}
 
 	for i, info := range infos {
-		confFilePath := getConfigurationFilePath(w.routineName, timestamp, i)
-		err := storage.WriteDataFile(ctx, w.storage, confFilePath, []byte(info))
+		confFilePath := getConfigurationFilePath(routineName, timestamp, i)
+		err := storage.WriteDataFile(ctx, routine.Storage, confFilePath, []byte(info))
 		if err != nil {
-			w.logger.Error("Failed to write cluster configuration backup",
+			logger.Error("Failed to write cluster configuration backup",
 				slog.Any("err", err))
 		}
-		w.logger.Debug("Wrote cluster configuration backup", slog.String("path", confFilePath))
+		logger.Debug("Wrote cluster configuration backup", slog.String("path", confFilePath))
 	}
 }

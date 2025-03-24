@@ -19,7 +19,7 @@ import (
 
 // backupJob implements the quartz.Job interface.
 type backupJob struct {
-	handler     *BackupRunnerWrapper
+	handler     *BackupRoutineOrchestrator
 	jobType     jobType
 	isRunning   atomic.Bool
 	routineName string
@@ -34,9 +34,9 @@ func (j *backupJob) Execute(ctx context.Context) error {
 		defer j.isRunning.Store(false)
 		switch j.jobType {
 		case jobTypeFull:
-			j.handler.NewOrchestrator(j.routineName).runFullBackup(ctx, util.NowWithZeroNanoseconds())
+			j.handler.runFullBackup(ctx, util.NowWithZeroNanoseconds())
 		case jobTypeIncremental:
-			j.handler.NewOrchestrator(j.routineName).runIncrementalBackup(ctx, util.NowWithZeroNanoseconds())
+			j.handler.runIncrementalBackup(ctx, util.NowWithZeroNanoseconds())
 		default:
 			j.logger.Error("Unsupported backup type")
 		}
@@ -64,7 +64,7 @@ func (j *backupJob) Description() string {
 }
 
 // newBackupJob creates a new backup job.
-func newBackupJob(handler *BackupRunnerWrapper, jobType jobType, routineName string) quartz.Job {
+func newBackupJob(handler *BackupRoutineOrchestrator, jobType jobType, routineName string) quartz.Job {
 	return &backupJob{
 		handler:     handler,
 		jobType:     jobType,
