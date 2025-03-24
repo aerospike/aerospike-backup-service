@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"gopkg.in/yaml.v3"
+	"log/slog"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -72,6 +73,10 @@ func (f BackupFilter) WithToTime(toTime time.Time) BackupFilter {
 	return f
 }
 
+func (f BackupFilter) String() string {
+	return fmt.Sprintf("routine: %v type: %v last: %v timebounds: %s", f.routine, f.JobType, f.onlyLast, f.TimeBounds().String())
+}
+
 type BackupBackendService interface {
 	GetBackups(context.Context, BackupFilter) ([]model.BackupDetails, error)
 	WriteBackupMetadata(ctx context.Context, routineName string, path string, metadata model.BackupMetadata) error
@@ -115,6 +120,7 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 	// Filter files based on timestamp criteria
 	eligibleFiles := filterEligibleFiles(files, filepath.Join(routine.Storage.GetPath(), maxString), filter)
 
+	slog.Info("ReadFileNames", slog.Any("files", files), slog.Any("eligibleFiles", eligibleFiles), slog.String("path", path), slog.String("filter", filter.String()))
 	var backups []model.BackupDetails
 	for _, fileName := range eligibleFiles {
 		file, err := storage.ReadFile(ctx, routine.Storage, strings.TrimPrefix(fileName, routine.Storage.GetPath()))
