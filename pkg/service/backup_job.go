@@ -5,22 +5,23 @@ import (
 	"fmt"
 	"log/slog"
 	"sync/atomic"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
 )
 
-//// backupRunner defines an interface for running backups.
-//type backupRunner interface {
-//	// runFullBackup starts a full backup operation.
-//	runFullBackup(ctx context.Context, routineName string, now time.Time)
-//	// runIncrementalBackup starts an incremental backup operation.
-//	runIncrementalBackup(ctx context.Context, routineName string, now time.Time)
-//}
+// backupRunner defines an interface for running backups.
+type backupRunner interface {
+	// runFullBackup starts a full backup operation.
+	runFullBackup(ctx context.Context, now time.Time)
+	// runIncrementalBackup starts an incremental backup operation.
+	runIncrementalBackup(ctx context.Context, now time.Time)
+}
 
 // backupJob implements the quartz.Job interface.
 type backupJob struct {
-	handler     *BackupRoutineOrchestrator
+	handler     backupRunner
 	jobType     jobType
 	isRunning   atomic.Bool
 	routineName string

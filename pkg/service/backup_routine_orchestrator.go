@@ -31,7 +31,7 @@ type BackupRoutineOrchestrator struct {
 type BackupComponents struct {
 	config              *model.Config
 	clientManager       aerospike.ClientManager
-	backupService       backupexecutor.Backup
+	backupExecutor      backupexecutor.Backup
 	registry            RunningBackupsRegistry
 	retentionManager    RetentionManager
 	backendService      BackupBackendService
@@ -40,7 +40,7 @@ type BackupComponents struct {
 
 func NewBackupComponents(
 	clientManager aerospike.ClientManager,
-	backupService backupexecutor.Backup,
+	backupExecutor backupexecutor.Backup,
 	registry RunningBackupsRegistry,
 	retentionManager RetentionManager,
 	backendService BackupBackendService,
@@ -49,7 +49,7 @@ func NewBackupComponents(
 ) *BackupComponents {
 	return &BackupComponents{
 		clientManager:       clientManager,
-		backupService:       backupService,
+		backupExecutor:      backupExecutor,
 		registry:            registry,
 		retentionManager:    retentionManager,
 		backendService:      backendService,
@@ -65,7 +65,7 @@ func newOrchestrator(routineName string, h *BackupComponents) *BackupRoutineOrch
 	return &BackupRoutineOrchestrator{
 		routineName:         routineName,
 		routine:             routine,
-		runner:              NewBackupNamespaceRunner(routineName, h.backupService, retry, h.backendService, logger),
+		runner:              NewBackupNamespaceRunner(routineName, h.backupExecutor, retry, h.backendService, logger),
 		retry:               retry,
 		clusterConfigWriter: h.clusterConfigWriter,
 		clientManager:       h.clientManager,

@@ -28,14 +28,14 @@ type BackupNamespaceRunner struct {
 // NewBackupNamespaceRunner creates a new BackupNamespaceRunner instance.
 func NewBackupNamespaceRunner(
 	routineName string,
-	backupService backupexecutor.Backup,
+	backupExecutor backupexecutor.Backup,
 	retry executor,
 	backendService BackupBackendService,
 	logger *slog.Logger,
 ) *BackupNamespaceRunner {
 	return &BackupNamespaceRunner{
 		routineName:    routineName,
-		backupExecutor: backupService,
+		backupExecutor: backupExecutor,
 		retry:          retry,
 		backendService: backendService,
 		logger:         logger,
