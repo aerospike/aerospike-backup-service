@@ -18,7 +18,6 @@ import (
 type BackupRoutineOrchestrator struct {
 	backupService       backupexecutor.Backup
 	backupRoutine       *model.BackupRoutine
-	namespaces          []string
 	retry               executor
 	clientManager       aerospike.ClientManager
 	logger              *slog.Logger
@@ -101,7 +100,6 @@ func newBackupRoutineOrchestrator(
 		backupService: backupService,
 		backupRoutine: routine,
 		routineName:   routineName,
-		namespaces:    routine.Namespaces,
 		clientManager: clientManager,
 		clusterConfigWriter: NewClusterConfigWriter(
 			backupStorage,
@@ -192,7 +190,7 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 		if err != nil {
 			return fmt.Errorf("cannot get backup client: %w", err)
 		}
-		namespaces, err = aerospike.ResolveNamespaces(h.namespaces, client.AerospikeClient())
+		namespaces, err = aerospike.ResolveNamespaces(h.backupRoutine.Namespaces, client.AerospikeClient())
 		if err != nil {
 			h.clientManager.Close(client)
 			return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
