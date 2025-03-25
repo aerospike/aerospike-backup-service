@@ -10,29 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockCancelableBackupHandler struct {
-	stats    *models.BackupStats
-	canceled bool
-}
-
-func (m *mockCancelableBackupHandler) GetStats() *models.BackupStats {
-	return m.stats
-}
-
-func (m *mockCancelableBackupHandler) Wait(context.Context) error {
-	return nil
-}
-
-func (m *mockCancelableBackupHandler) Cancel() {
-	m.canceled = true
-}
-
-func (m *mockCancelableBackupHandler) IsCanceled() bool {
-	return m.canceled
-}
-
 func TestRegisterAndCurrentStat(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), NewBackupBackends(), model.NewConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, model.NewConfig())
 
 	routineName := "routine1"
 	backupStats := models.NewBackupStats()
@@ -51,7 +30,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 }
 
 func TestFinishFull(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), NewBackupBackends(), model.NewConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, model.NewConfig())
 
 	routineName := "routine1"
 	handler := &mockCancelableBackupHandler{}
@@ -68,7 +47,7 @@ func TestFinishFull(t *testing.T) {
 }
 
 func TestFinishIncremental(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), NewBackupBackends(), model.NewConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, model.NewConfig())
 
 	routineName := "routine1"
 	handler := &mockCancelableBackupHandler{}
@@ -86,7 +65,7 @@ func TestFinishIncremental(t *testing.T) {
 }
 
 func TestGetAllCurrentStats(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), NewBackupBackends(), model.NewConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, model.NewConfig())
 
 	routine1 := "routine1"
 	routine2 := "routine2"
@@ -115,7 +94,7 @@ func TestGetAllCurrentStats(t *testing.T) {
 }
 
 func TestCancel(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), NewBackupBackends(), model.NewConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, model.NewConfig())
 
 	routineName := "routine1"
 	handlerFull := &mockCancelableBackupHandler{}
