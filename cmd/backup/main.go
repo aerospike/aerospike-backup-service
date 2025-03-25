@@ -114,9 +114,9 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	backupRunnerWrapper := service.NewBackupComponents(
 		clientManager, backupExecutor, registry, retentionManager,
 		backendService, clusterConfigWriter)
-	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupRunnerWrapper)
+	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupRunnerWrapper, config)
 
-	err = configApplier.ApplyNewRoutines(config)
+	err = configApplier.ApplyNewConfig()
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}

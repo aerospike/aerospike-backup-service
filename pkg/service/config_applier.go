@@ -12,7 +12,7 @@ import (
 
 // ConfigApplier is responsible for applying new configuration to the service.
 type ConfigApplier interface {
-	ApplyNewRoutines(config *model.Config) error
+	ApplyNewConfig() error
 }
 
 type DefaultConfigApplier struct {
@@ -20,21 +20,24 @@ type DefaultConfigApplier struct {
 	scheduler  quartz.Scheduler
 	registry   RunningBackupsRegistry
 	components *BackupComponents
+	config     *model.Config
 }
 
 func NewDefaultConfigApplier(
 	scheduler quartz.Scheduler,
 	registry RunningBackupsRegistry,
 	components *BackupComponents,
+	config *model.Config,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
 		scheduler:  scheduler,
 		registry:   registry,
 		components: components,
+		config:     config,
 	}
 }
 
-func (a *DefaultConfigApplier) ApplyNewRoutines(config *model.Config) error {
+func (a *DefaultConfigApplier) ApplyNewConfig() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -46,7 +49,7 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(config *model.Config) error {
 	// Scan existing backups to find the last successful runs for every routine.
 	go a.registry.SynchroniseBackupHistory()
 
-	err = scheduleRoutines(a.scheduler, config, a.components)
+	err = scheduleRoutines(a.scheduler, a.config, a.components)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
