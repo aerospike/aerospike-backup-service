@@ -77,10 +77,16 @@ func (f BackupFilter) String() string {
 	return fmt.Sprintf("routine: %v type: %v last: %v timebounds: %s", f.routine, f.JobType, f.onlyLast, f.TimeBounds().String())
 }
 
+// BackupBackendService defines operations for reading and writing backups metadata.
 type BackupBackendService interface {
-	GetBackups(context.Context, BackupFilter) ([]model.BackupDetails, error)
-	WriteBackupMetadata(ctx context.Context, routineName string, path string, metadata model.BackupMetadata) error
-	Delete(ctx context.Context, routine string, path string) error
+	// GetBackups retrieves backup details based on the provided filter.
+	GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error)
+
+	// WriteBackupMetadata stores metadata for a specific backup.
+	WriteBackupMetadata(ctx context.Context, routineName, path string, metadata model.BackupMetadata) error
+
+	// Delete removes a specific backup folder.
+	Delete(ctx context.Context, routineName, path string) error
 }
 
 type BackupBackendServiceImpl struct {
