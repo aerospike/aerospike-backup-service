@@ -10,7 +10,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/stretchr/testify/assert"
@@ -241,10 +240,8 @@ func TestDeletePolicy(t *testing.T) {
 // Helper function to setup test service with mocked dependencies.
 func setupTestService() *Service {
 	mockScheduler := &MockScheduler{}
-	mockBackendsHolder := &MockBackendsService{}
 	mockRestoreManager := &MockRestoreManager{}
 	mockConfigApplier := &MockConfigApplier{}
-	mockHandlerHolder := service.NewBackupHandlerHolder()
 	mockNsValidator := &aerospike.NoopNamespaceValidator{}
 	mockConfigurationManager := &configurationManagerMock{}
 	mockRegistry := &mockRunningBackupsRegistry{}
@@ -255,8 +252,8 @@ func setupTestService() *Service {
 		mockConfigApplier,
 		mockScheduler,
 		mockRestoreManager,
-		mockBackendsHolder,
-		mockHandlerHolder,
+		nil,
+		nil,
 		mockRegistry,
 		mockConfigurationManager,
 		mockNsValidator,

@@ -12,7 +12,7 @@ import (
 
 // ConfigApplier is responsible for applying new configuration to the service.
 type ConfigApplier interface {
-	ApplyNewRoutines(routines map[string]*model.BackupRoutine) error
+	ApplyNewRoutines(config *model.Config) error
 }
 
 type DefaultConfigApplier struct {
@@ -34,7 +34,7 @@ func NewDefaultConfigApplier(
 	}
 }
 
-func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.BackupRoutine) error {
+func (a *DefaultConfigApplier) ApplyNewRoutines(config *model.Config) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -46,7 +46,7 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.Backu
 	// Scan existing backups to find the last successful runs for every routine.
 	go a.registry.SynchroniseBackupHistory()
 
-	err = scheduleRoutines(a.scheduler, routines, a.components)
+	err = scheduleRoutines(a.scheduler, config, a.components)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}

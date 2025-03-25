@@ -3,13 +3,13 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	"github.com/prometheus/client_golang/prometheus"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go/models"
+	"github.com/prometheus/client_golang/prometheus"
 	p "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -79,14 +79,13 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockBackupBackend := new(MockBackupBackendService)
 	mockBackupBackend.On("WriteBackupMetadata", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	o := newOrchestrator("routine1", NewBackupComponents(
+	o := newOrchestrator("routine1", config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
 		mockRetentionManager,
 		mockBackupBackend,
 		mockClusterConfigWriter,
-		config,
 	))
 
 	ctx := context.Background()
@@ -118,14 +117,13 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		},
 	})
 
-	o := newOrchestrator("routine1", NewBackupComponents(
+	o := newOrchestrator("routine1", config, NewBackupComponents(
 		new(mockClientManager),
 		new(mockBackupExecutor),
 		mockRegistry,
 		new(mockRetentionManager),
 		new(MockBackupBackendService),
 		new(mockClusterConfigWriter),
-		config,
 	))
 
 	ctx := context.Background()
@@ -138,7 +136,6 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 }
 
 func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
-
 	config := setupBaseConfig()
 
 	mockClientManager := new(mockClientManager)
@@ -147,15 +144,15 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	mockRegistry := new(MockRunningBackupsRegistry)
 	mockRegistry.On("GetRoutineState", mock.Anything).Return(&model.RoutineState{})
 
-	o := newOrchestrator("routine1", NewBackupComponents(
-		mockClientManager,
-		new(mockBackupExecutor),
-		mockRegistry,
-		new(mockRetentionManager),
-		new(MockBackupBackendService),
-		new(mockClusterConfigWriter),
-		config,
-	))
+	o := newOrchestrator("routine1", config,
+		NewBackupComponents(
+			mockClientManager,
+			new(mockBackupExecutor),
+			mockRegistry,
+			new(mockRetentionManager),
+			new(MockBackupBackendService),
+			new(mockClusterConfigWriter),
+		))
 
 	ctx := context.Background()
 	now := time.Now()
@@ -213,14 +210,13 @@ func TestRunIncrementalBackupInternal_Success(t *testing.T) {
 	mockBackupBackend := new(MockBackupBackendService)
 	mockBackupBackend.On("WriteBackupMetadata", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
-	o := newOrchestrator("routine1", NewBackupComponents(
+	o := newOrchestrator("routine1", config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
 		new(mockRetentionManager),
 		mockBackupBackend,
 		new(mockClusterConfigWriter),
-		config,
 	))
 
 	ctx := context.Background()
@@ -246,14 +242,13 @@ func TestRunIncrementalBackup_SkipWhenNoFullBackup(t *testing.T) {
 		LastRunTime: model.NewLastBackupRun(nil, nil),
 	})
 
-	o := newOrchestrator("routine1", NewBackupComponents(
+	o := newOrchestrator("routine1", config, NewBackupComponents(
 		new(mockClientManager),
 		new(mockBackupExecutor),
 		mockRegistry,
 		new(mockRetentionManager),
 		new(MockBackupBackendService),
 		new(mockClusterConfigWriter),
-		config,
 	))
 
 	ctx := context.Background()
@@ -284,14 +279,13 @@ func TestRunIncrementalBackup_SkipWhenFullBackupInProgress(t *testing.T) {
 		},
 	})
 
-	o := newOrchestrator("routine1", NewBackupComponents(
+	o := newOrchestrator("routine1", config, NewBackupComponents(
 		new(mockClientManager),
 		new(mockBackupExecutor),
 		mockRegistry,
 		new(mockRetentionManager),
 		new(MockBackupBackendService),
 		new(mockClusterConfigWriter),
-		config,
 	))
 
 	ctx := context.Background()

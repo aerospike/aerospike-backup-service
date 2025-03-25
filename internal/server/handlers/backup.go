@@ -99,6 +99,10 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 	result, err := s.readAllBackups(r.Context(), func(routine string) service.BackupFilter {
 		return service.NewIncrementalBackupFilter(routine).WithTimebounds(timeBounds)
 	})
+	if err != nil {
+		httpError(w, err)
+		return
+	}
 
 	httpOK(w, result)
 }

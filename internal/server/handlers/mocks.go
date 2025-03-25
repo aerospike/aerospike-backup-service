@@ -11,16 +11,32 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockBackendsService mocks the BackendsHolder interface.
-type MockBackendsService struct {
-	f func(context.Context, service.BackupFilter) ([]model.BackupDetails, error)
+// MockBackupBackendService is a mock implementation of BackupBackendService.
+type MockBackupBackendService struct {
+	mock.Mock
 }
 
-func (m *MockBackendsService) GetBackups(
-	ctx context.Context,
-	filter service.BackupFilter,
+// GetBackups retrieves backup details based on the provided filter.
+func (m *MockBackupBackendService) GetBackups(ctx context.Context, filter service.BackupFilter,
 ) ([]model.BackupDetails, error) {
-	return m.f(ctx, filter)
+	args := m.Called(ctx, filter)
+	return args.Get(0).([]model.BackupDetails), args.Error(1)
+}
+
+// WriteBackupMetadata stores metadata for a specific backup.
+func (m *MockBackupBackendService) WriteBackupMetadata(
+	ctx context.Context,
+	routineName, path string,
+	metadata model.BackupMetadata,
+) error {
+	args := m.Called(ctx, routineName, path, metadata)
+	return args.Error(0)
+}
+
+// Delete removes a specific backup folder.
+func (m *MockBackupBackendService) Delete(ctx context.Context, routineName, path string) error {
+	args := m.Called(ctx, routineName, path)
+	return args.Error(0)
 }
 
 // MockBackupMetadataReader mocks the BackupMetadataReader interface.
@@ -172,7 +188,7 @@ func (mock configurationManagerMock) Write(_ context.Context, config *model.Conf
 
 type MockConfigApplier struct{}
 
-func (a *MockConfigApplier) ApplyNewRoutines(_ map[string]*model.BackupRoutine) error {
+func (a *MockConfigApplier) ApplyNewRoutines(_ *model.Config) error {
 	return nil
 }
 

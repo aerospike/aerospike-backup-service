@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"path/filepath"
 	"time"
 
@@ -63,7 +62,6 @@ func CreateDirWriter(
 }
 
 func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
-	now := time.Now()
 	reader, err := CreateFileReader(ctx, storage, filepath)
 
 	if err != nil {
@@ -79,9 +77,7 @@ func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]by
 		return nil, err
 	case r := <-readersCh:
 		defer r.Reader.Close()
-		readAll, err := io.ReadAll(r.Reader)
-		slog.Info("ReadFile", slog.String("path", filepath), slog.Duration("d", time.Since(now)))
-		return readAll, err
+		return io.ReadAll(r.Reader)
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -146,10 +142,7 @@ func ReadFileNames(
 		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}
 
-	now := time.Now()
-	objects, err := reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path))
-	slog.Info("ListObjects", slog.String("path", path), slog.Duration("d", time.Since(now)))
-	return objects, err
+	return reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path))
 }
 
 func WriteMetadataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {

@@ -244,7 +244,10 @@ func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
 	}
 }
 
-func (r *RunningBackupsRegistryImpl) findLastRun(ctx context.Context, routineName string) (*model.LastBackupRun, error) {
+func (r *RunningBackupsRegistryImpl) findLastRun(
+	ctx context.Context,
+	routineName string,
+) (*model.LastBackupRun, error) {
 	lastFullBackup, err := r.backendService.GetBackups(ctx, NewFullBackupFilter(routineName).Last())
 	if err != nil {
 		return nil, fmt.Errorf("read last full backup failed: %w", err)

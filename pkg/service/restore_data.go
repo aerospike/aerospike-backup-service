@@ -17,8 +17,6 @@ import (
 	"github.com/aerospike/backup-go"
 )
 
-var errBackendNotFound = errors.New("backend not found")
-
 type ErrJobNotFound struct {
 	JobID model.RestoreJobID
 }

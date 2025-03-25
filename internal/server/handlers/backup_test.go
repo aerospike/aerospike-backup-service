@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,8 +8,8 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,7 +17,7 @@ func TestService_GetAllFullBackups(t *testing.T) {
 	tests := []struct {
 		name           string
 		queryParams    map[string]string
-		setupMock      func(*MockBackendsService)
+		setupMock      func(*MockBackupBackendService)
 		expectedStatus int
 		expectedBody   map[string][]dto.BackupDetails
 	}{
@@ -28,10 +27,9 @@ func TestService_GetAllFullBackups(t *testing.T) {
 				"from": "1000",
 				"to":   "2000",
 			},
-			setupMock: func(m *MockBackendsService) {
-				m.f = func(_ context.Context, _ service.BackupFilter) ([]model.BackupDetails, error) {
-					return []model.BackupDetails{{Key: "backup1", Routine: "routine1"}}, nil
-				}
+			setupMock: func(m *MockBackupBackendService) {
+				m.On("GetBackups", mock.Anything, mock.Anything).
+					Return([]model.BackupDetails{{Key: "backup1", Routine: "routine1"}}, nil)
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string][]dto.BackupDetails{
@@ -48,14 +46,14 @@ func TestService_GetAllFullBackups(t *testing.T) {
 				"from": "invalid",
 				"to":   "2000",
 			},
-			setupMock:      func(*MockBackendsService) {},
+			setupMock:      func(*MockBackupBackendService) {},
 			expectedStatus: http.StatusBadRequest,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockBackends := &MockBackendsService{}
+			mockBackends := &MockBackupBackendService{}
 			cfg := model.NewConfig()
 
 			tt.setupMock(mockBackends)

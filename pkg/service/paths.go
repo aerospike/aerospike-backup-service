@@ -19,7 +19,7 @@ const (
 	dataDirectory                = "data"
 )
 
-// "prefix/fullBackup2/backup/1742795103082/data/source-ns11/metadata.yaml"
+// "prefix/fullBackup2/backup/1742795103082/data/source-ns11/metadata.yaml".
 var timestampPattern = regexp.MustCompile(fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})/`,
 	fullBackupDirectory,
 	incrementalBackupDirectory))
@@ -65,7 +65,7 @@ func getConfigFileName(index int) string {
 	return fmt.Sprintf("aerospike_%d%s", index, configExt)
 }
 
-// extractTimestampFromPath extracts the timestamp part from a path
+// extractTimestampFromPath extracts the timestamp part from a path.
 func extractTimestampFromPath(path string) string {
 	matches := timestampPattern.FindStringSubmatch(path)
 	if len(matches) >= 3 {

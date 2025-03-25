@@ -104,8 +104,8 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 		return e.backendService.Delete(ctx, routineName, path)
 	}
 
-	earliestToKeep := timestamps[len(timestamps)-retainCount]
-	incrBackups, err := e.backendService.GetBackups(ctx, NewIncrementalBackupFilter(routineName).WithFromTime(earliestToKeep))
+	earliest := timestamps[len(timestamps)-retainCount]
+	incrBackups, err := e.backendService.GetBackups(ctx, NewIncrementalBackupFilter(routineName).WithFromTime(earliest))
 	if err != nil {
 		return fmt.Errorf("failed to fetch incremental backups: %w", err)
 	}

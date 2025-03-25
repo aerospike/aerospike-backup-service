@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -74,7 +73,8 @@ func (f BackupFilter) WithToTime(toTime time.Time) BackupFilter {
 }
 
 func (f BackupFilter) String() string {
-	return fmt.Sprintf("routine: %v type: %v last: %v timebounds: %s", f.routine, f.JobType, f.onlyLast, f.TimeBounds().String())
+	return fmt.Sprintf("routine: %v type: %v last: %v timebounds: %s",
+		f.routine, f.JobType, f.onlyLast, f.TimeBounds().String())
 }
 
 // BackupBackendService defines operations for reading and writing backups metadata.
@@ -126,7 +126,6 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 	// Filter files based on timestamp criteria
 	eligibleFiles := filterEligibleFiles(files, filepath.Join(routine.Storage.GetPath(), maxString), filter)
 
-	slog.Info("ReadFileNames", slog.Any("files", files), slog.Any("eligibleFiles", eligibleFiles), slog.String("path", path), slog.String("filter", filter.String()))
 	var backups []model.BackupDetails
 	for _, fileName := range eligibleFiles {
 		file, err := storage.ReadFile(ctx, routine.Storage, strings.TrimPrefix(fileName, routine.Storage.GetPath()))
@@ -155,7 +154,7 @@ func getUpperBoundary(filter BackupFilter) string {
 	return "\uffff"
 }
 
-// filterEligibleFiles returns files that meet the timestamp criteria
+// filterEligibleFiles returns files that meet the timestamp criteria.
 func filterEligibleFiles(files []string, maxString string, filter BackupFilter) []string {
 	var lessThenMaxString []string
 	for _, fileName := range files {
@@ -178,8 +177,8 @@ func filterEligibleFiles(files []string, maxString string, filter BackupFilter) 
 			latestFiles = append(latestFiles, fileName)
 		}
 	}
-	return latestFiles
 
+	return latestFiles
 }
 
 func findHighestTimestamp(files []string) string {
@@ -193,7 +192,12 @@ func findHighestTimestamp(files []string) string {
 	return highestTimestamp
 }
 
-func (b *BackupBackendServiceImpl) WriteBackupMetadata(ctx context.Context, routineName string, path string, metadata model.BackupMetadata) error {
+func (b *BackupBackendServiceImpl) WriteBackupMetadata(
+	ctx context.Context,
+	routineName string,
+	path string,
+	metadata model.BackupMetadata,
+) error {
 	routine, ok := b.config.Routine(routineName)
 	if !ok {
 		return fmt.Errorf("routine not found: %q", routineName)
