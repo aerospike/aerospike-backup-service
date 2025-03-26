@@ -32,9 +32,8 @@ func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := s.readAllBackups(r.Context(), func(routine string) service.BackupFilter {
-		return service.NewFullBackupFilter(routine).WithTimebounds(timeBounds)
+		return service.NewFullBackupFilter(routine).WithTimeBounds(timeBounds)
 	})
-
 	if err != nil {
 		httpError(w, err)
 		return
@@ -68,7 +67,7 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	filter := service.NewFullBackupFilter(routine).WithTimebounds(timeBounds)
+	filter := service.NewFullBackupFilter(routine).WithTimeBounds(timeBounds)
 	result, err := s.readBackupsForRoutine(r.Context(), filter)
 	if err != nil {
 		httpError(w, err)
@@ -97,7 +96,7 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 	}
 
 	result, err := s.readAllBackups(r.Context(), func(routine string) service.BackupFilter {
-		return service.NewIncrementalBackupFilter(routine).WithTimebounds(timeBounds)
+		return service.NewIncrementalBackupFilter(routine).WithTimeBounds(timeBounds)
 	})
 	if err != nil {
 		httpError(w, err)
@@ -132,7 +131,7 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 		return
 	}
 
-	filter := service.NewIncrementalBackupFilter(routine).WithTimebounds(timeBounds)
+	filter := service.NewIncrementalBackupFilter(routine).WithTimeBounds(timeBounds)
 	result, err := s.readBackupsForRoutine(r.Context(), filter)
 	if err != nil {
 		httpError(w, err)

@@ -60,7 +60,7 @@ func (f BackupFilter) WithFromTime(fromTime time.Time) BackupFilter {
 	return f
 }
 
-func (f BackupFilter) WithTimebounds(bounds model.TimeBounds) BackupFilter {
+func (f BackupFilter) WithTimeBounds(bounds model.TimeBounds) BackupFilter {
 	f.FromTime = bounds.FromTime
 	f.ToTime = bounds.ToTime
 	return f
