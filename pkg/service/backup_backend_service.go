@@ -23,7 +23,7 @@ type BackupFilter struct {
 	// optional
 	FromTime *time.Time
 	ToTime   *time.Time
-	onlyLast bool // onlyLast backup only
+	onlyLast bool // last backup only
 }
 
 // NewFullBackupFilter creates a filter for full backups.
