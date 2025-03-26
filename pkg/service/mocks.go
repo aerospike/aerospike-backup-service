@@ -69,8 +69,9 @@ type mockClusterConfigWriter struct {
 	mock.Mock
 }
 
-func (m *mockClusterConfigWriter) Write(ctx context.Context, routineName string, timestamp time.Time) {
-	m.Called(ctx, routineName, timestamp)
+func (m *mockClusterConfigWriter) Write(ctx context.Context, routineName string, timestamp time.Time) error {
+	args := m.Called(ctx, routineName, timestamp)
+	return args.Error(0)
 }
 
 type mockRetentionManager struct {

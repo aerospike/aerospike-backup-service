@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -12,7 +14,7 @@ import (
 
 // ClusterConfigWriter handles writing cluster configuration to storage.
 type ClusterConfigWriter interface {
-	Write(ctx context.Context, routineName string, timestamp time.Time)
+	Write(ctx context.Context, routineName string, timestamp time.Time) error
 }
 
 // DefaultClusterConfigWriter is the default implementation of ClusterConfigWriter.
@@ -33,17 +35,23 @@ func (w *DefaultClusterConfigWriter) Write(
 	ctx context.Context,
 	routineName string,
 	timestamp time.Time,
-) {
+) error {
 	logger := slog.Default().With(slog.String("routine", routineName))
-	routine, _ := w.config.Routine(routineName)
+	routine, found := w.config.Routine(routineName)
+	if !found {
+		return fmt.Errorf("routine not found: %q", routineName)
+	}
 
-	client, _ := w.clientManager.GetClient(routine.SourceCluster)
+	client, err := w.clientManager.GetClient(routine.SourceCluster)
+	if err != nil {
+		return fmt.Errorf("cannot get backup client: %w", err)
+	}
+
 	defer w.clientManager.Close(client)
 
 	infos := aerospike.ScanClusterConfiguration(client.AerospikeClient(), logger)
 	if len(infos) == 0 {
-		logger.Warn("Could not read aerospike configuration")
-		return
+		return errors.New("could not read aerospike configuration")
 	}
 
 	for i, info := range infos {
@@ -55,4 +63,6 @@ func (w *DefaultClusterConfigWriter) Write(
 		}
 		logger.Debug("Wrote cluster configuration backup", slog.String("path", confFilePath))
 	}
+
+	return nil
 }

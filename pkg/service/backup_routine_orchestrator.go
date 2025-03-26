@@ -99,7 +99,10 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	}
 	defer h.clientManager.Close(client)
 
-	h.clusterConfigWriter.Write(ctx, h.routineName, now)
+	err = h.clusterConfigWriter.Write(ctx, h.routineName, now)
+	if err != nil {
+		return err
+	}
 
 	timeBounds := h.createTimeBounds(jobTypeFull, now)
 	backupHandler := startNamespacesBackup(ctx,

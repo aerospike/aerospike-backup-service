@@ -205,7 +205,7 @@ func (b *BackupBackendServiceImpl) WriteBackupMetadata(
 
 	dataYaml, err := yaml.Marshal(metadata)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
 	metadataFilePath := filepath.Join(path, metadataFile)

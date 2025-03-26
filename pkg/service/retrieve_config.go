@@ -78,8 +78,7 @@ func packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
 		}
 	}
 
-	err := w.Close()
-	if err != nil {
+	if err := w.Close(); err != nil {
 		return nil, fmt.Errorf("failed to close the zip writer: %w", err)
 	}
 
