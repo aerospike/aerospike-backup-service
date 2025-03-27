@@ -142,7 +142,7 @@ func ReadFileNames(
 		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}
 
-	return reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path))
+	return reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path)+"/")
 }
 
 func WriteMetadataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {
