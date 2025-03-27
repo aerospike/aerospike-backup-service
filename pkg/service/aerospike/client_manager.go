@@ -45,6 +45,8 @@ type ClientManagerImpl struct {
 	locks  sync.Map
 }
 
+var _ ClientManager = (*ClientManagerImpl)(nil)
+
 type clientInfo struct {
 	client     *backup.Client
 	count      int

@@ -25,6 +25,8 @@ type RetentionManagerImpl struct {
 	locks *util.SafeMap[string, *sync.Mutex] // lock per routine
 }
 
+var _ RetentionManager = (*RetentionManagerImpl)(nil)
+
 func NewBackupRetentionManager(
 	backendService BackupBackendService,
 	config *model.Config,

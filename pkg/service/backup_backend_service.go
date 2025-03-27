@@ -94,6 +94,8 @@ type BackupBackendServiceImpl struct {
 	locks  *util.SafeMap[string, *sync.RWMutex] // lock per routine
 }
 
+var _ BackupBackendService = (*BackupBackendServiceImpl)(nil)
+
 func NewBackupBackendService(config *model.Config) *BackupBackendServiceImpl {
 	return &BackupBackendServiceImpl{
 		config: config,

@@ -27,6 +27,8 @@ type BackupRoutineOrchestrator struct {
 	retentionManager    RetentionManager
 }
 
+var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
+
 // BackupComponents holds all components required for executing a backup routine.
 type BackupComponents struct {
 	clientManager       aerospike.ClientManager

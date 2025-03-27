@@ -13,15 +13,18 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
-type ConfigRetriever interface { //nolint:golint
+// ConfigRetriever is used to read saved Aerospike configuration from backup.
+type ConfigRetriever interface {
 	RetrieveConfiguration(context.Context, string, time.Time) ([]byte, error)
 }
 
-// ConfigRetrieverImpl is used to read Aerospike configuration from backup.
+// ConfigRetrieverImpl default implementation of ConfigRetriever.
 type ConfigRetrieverImpl struct {
 	backendService BackupBackendService
 	config         *model.Config
 }
+
+var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
 
 func NewConfigRetriever(backendService BackupBackendService, config *model.Config) *ConfigRetrieverImpl {
 	return &ConfigRetrieverImpl{
