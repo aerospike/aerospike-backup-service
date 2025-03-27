@@ -48,10 +48,6 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 				attrs = append(attrs, slog.String("request_body", string(body[:min(len(body), maxLogSize)])))
 			}
 
-			if r.URL.RawQuery != "" {
-				attrs = append(attrs, slog.String("query_params", r.URL.RawQuery))
-			}
-
 			// Log based on response status
 			var (
 				msg      string
