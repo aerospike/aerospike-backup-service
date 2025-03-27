@@ -29,6 +29,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
+replace github.com/aerospike/aerospike-client-go/v8 v8.2.0 => github.com/aerospike/aerospike-client-go/v8 v8.1.0
+
 require (
 	cel.dev/expr v0.22.1 // indirect
 	cloud.google.com/go v0.120.0 // indirect
