@@ -74,7 +74,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	var writtenTimestamp time.Time
 	mockClusterConfigWriter.On("Write", mock.Anything, "routine1", mock.Anything).Run(func(args mock.Arguments) {
 		writtenTimestamp = args.Get(2).(time.Time)
-	}).Return()
+	}).Return(nil)
 
 	mockBackupBackend := new(MockBackupBackendService)
 	mockBackupBackend.On("WriteBackupMetadata", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
