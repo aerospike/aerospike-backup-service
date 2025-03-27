@@ -62,7 +62,7 @@ func makeXDRConfig(
 		CompressionPolicy: makeCompressionPolicy(policy),
 		SecretAgentConfig: routine.SecretAgent.ToSecretAgentConfig(),
 		EncoderType:       backup.EncoderTypeASBX,
-		FileLimit:         int64(policy.GetFileLimitOrDefault()) * 1_048_576,
+		FileLimit:         uint64(policy.GetFileLimitOrDefault()) * 1_048_576,
 		ParallelWrite:     policy.GetParallelOrDefault(),
 		DC:                dc,
 		LocalAddress:      xdrConfig.LocalHost,
