@@ -74,6 +74,6 @@ func extractTimestampFromPath(path string) string {
 		return matches[2] // The timestamp is in the second capturing group
 	}
 
-	slog.Warn("could not extract timestamp from " + path)
+	slog.Warn("could not extract timestamp", slog.String("path", path))
 	return ""
 }
