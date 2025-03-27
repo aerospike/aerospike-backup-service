@@ -3,11 +3,14 @@ package backupexecutor
 import (
 	"context"
 	"fmt"
+	"math"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
+	"github.com/reugn/go-quartz/quartz"
 )
 
 // runScanBackup performs a regular scan-based backup.
@@ -28,6 +31,8 @@ func runScanBackup(
 
 	return handler, nil
 }
+
+const megabyte = 1_048_576
 
 func makeBackupConfig(
 	namespace string,
@@ -53,9 +58,9 @@ func makeBackupConfig(
 
 	config.ParallelRead = backupPolicy.GetParallelOrDefault()
 	config.ParallelWrite = backupPolicy.GetParallelOrDefault()
-	config.FileLimit = uint64(backupPolicy.GetFileLimitOrDefault()) * 1_048_576 // lib expects limit in bytes.
+	config.FileLimit = uint64(backupPolicy.GetFileLimitOrDefault() * megabyte) // lib expects limit in bytes.
 	config.RecordsPerSecond = util.ValueOrZero(backupPolicy.RecordsPerSecond)
-	config.Bandwidth = util.ValueOrZero(backupPolicy.Bandwidth) * 1_048_576 // lib expects file size in bytes.
+	config.Bandwidth = util.ValueOrZero(backupPolicy.Bandwidth) * megabyte // lib expects file size in bytes.
 
 	config.ModBefore = timeBounds.ToTime
 	config.ModAfter = timeBounds.FromTime
@@ -64,15 +69,47 @@ func makeBackupConfig(
 	if backupPolicy.TotalTimeout != nil {
 		config.ScanPolicy.TotalTimeout = *backupPolicy.TotalTimeout
 	}
-	if backupPolicy.SocketTimeout != nil {
-		config.ScanPolicy.SocketTimeout = *backupPolicy.SocketTimeout
-	}
+
+	config.ScanPolicy.SocketTimeout = calculateSocketTimeout(backupRoutine, isFullBackup(timeBounds), time.Now())
 	config.ScanPolicy.MaxRetries = 100
 
 	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
 	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)
 
 	return config
+}
+
+// calculateSocketTimeout calculates socket timeout for the given backup routine and timestamp.
+// timeout should not exceed the next interval trigger.
+func calculateSocketTimeout(routine *model.BackupRoutine, isFullBackup bool, now time.Time) time.Duration {
+	var timeout = model.DefaultSocketTimeout
+	if routine.BackupPolicy.SocketTimeout != nil && *routine.BackupPolicy.SocketTimeout != 0 {
+		timeout = *routine.BackupPolicy.SocketTimeout
+	}
+
+	// If timeout is 0, treat as infinite
+	if timeout == 0 {
+		timeout = time.Duration(math.MaxInt64)
+	}
+
+	nextTrigger := timeToNextTrigger(routine, isFullBackup, now)
+
+	return min(timeout, nextTrigger, model.DefaultSocketTimeout)
+}
+
+func timeToNextTrigger(routine *model.BackupRoutine, isFullBackup bool, now time.Time) time.Duration {
+	var cron string
+	if isFullBackup {
+		cron = routine.IntervalCron
+	} else {
+		cron = routine.IncrIntervalCron
+	}
+
+	cronTrigger, _ := quartz.NewCronTrigger(cron)
+	fireTime, _ := cronTrigger.NextFireTime(now.UnixNano())
+	delta := time.Unix(0, fireTime).Sub(now)
+
+	return delta
 }
 
 func makeCompressionPolicy(policy *model.BackupPolicy) *backup.CompressionPolicy {
