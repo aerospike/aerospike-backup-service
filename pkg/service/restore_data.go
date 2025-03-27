@@ -120,13 +120,13 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 func (r *dataRestorer) RestoreByTime(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
-	backupsByNs, err := r.findBackupsToRestore(ctx, request)
+	fullBackupsByNamespace, err := r.findBackupsToRestore(ctx, request)
 	if err != nil {
 		return 0, err
 	}
 
 	jobID := r.restoreJobs.newJob(request.RoutineName)
-	go r.restoreByTimeSync(ctx, request, jobID, backupsByNs)
+	go r.restoreByTimeSync(ctx, request, jobID, fullBackupsByNamespace)
 
 	return jobID, nil
 }
@@ -175,7 +175,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	ctx context.Context,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
-	fullBackups map[string][]model.BackupDetails,
+	fullBackupsByNamespace map[string][]model.BackupDetails,
 ) {
 	client, err := r.clientManager.GetClient(request.DestinationCluster)
 	if err != nil {
@@ -189,7 +189,7 @@ func (r *dataRestorer) restoreByTimeSync(
 
 	var wg sync.WaitGroup
 	var multiError error
-	for namespace, nsBackup := range fullBackups {
+	for namespace, nsBackup := range fullBackupsByNamespace {
 		wg.Add(1)
 		go func(namespace string, nsBackup []model.BackupDetails) {
 			defer wg.Done()

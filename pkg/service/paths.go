@@ -19,7 +19,8 @@ const (
 	dataDirectory                = "data"
 )
 
-// "prefix/fullBackup2/backup/1742795103082/data/source-ns11/metadata.yaml".
+// Example:
+// prefix/fullBackup2/backup/1742795103082/data/source-ns11/metadata.yaml.
 var timestampPattern = regexp.MustCompile(fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})/`,
 	fullBackupDirectory,
 	incrementalBackupDirectory))
