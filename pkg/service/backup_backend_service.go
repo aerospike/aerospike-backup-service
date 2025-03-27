@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -125,10 +126,12 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 	lock.RLock()
 	defer lock.RUnlock()
 
+	startReading := time.Now()
 	files, err := storage.ReadFileNames(ctx, routine.Storage, path, metadataFile, filter.FromTime)
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.FromTime, err)
 	}
+	slog.Info("ReadFileNames", slog.Int("len", len(files)), slog.Duration("d", time.Since(startReading)), slog.String("routine", filter.routine))
 
 	// Storage returned all files >= fromTime. We need to find the one with highest timestamp that's still < ToTime.
 	// We use the timestamps that are part of file path.
@@ -140,10 +143,12 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 
 	var backups []model.BackupDetails
 	for _, fileName := range eligibleFiles {
+		startReading = time.Now()
 		file, err := storage.ReadFile(ctx, routine.Storage, strings.TrimPrefix(fileName, storagePrefix))
 		if err != nil {
 			return nil, fmt.Errorf("read metadata file %q: %w", fileName, err)
 		}
+		slog.Info("ReadFile", slog.String("file", fileName), slog.Duration("d", time.Since(startReading)), slog.String("routine", filter.routine))
 		metadata, err := model.NewMetadataFromBytes(file)
 		if err != nil {
 			return nil, fmt.Errorf("error decoding backup metadata YAML: %w", err)
