@@ -56,22 +56,18 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 
 // scheduleRoutines schedules the given handlers using the scheduler.
 func scheduleRoutines(
-	scheduler Scheduler, routines map[string]*model.BackupRoutine, handlers BackupHandlerHolder,
+	scheduler Scheduler, config *model.Config, components *BackupComponents,
 ) error {
 	newJobs := map[string]*quartz.JobDetail{}
 	var errs error
-	for routineName, routine := range routines {
+	for routineName, routine := range config.Routines() {
 		if routine.Disabled {
 			continue
 		}
-		handler, found := handlers.Load(routineName)
-		if !found {
-			errs = errors.Join(errs, fmt.Errorf("handler not found for routine %q", routineName))
-			continue
-		}
 
+		runner := newOrchestrator(routineName, config, components)
 		// schedule a full backup job for the routine
-		job, err := scheduleFullBackup(scheduler, handler, routine.IntervalCron, routineName)
+		job, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routineName)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule full backup: %w", err))
 			continue
@@ -79,7 +75,7 @@ func scheduleRoutines(
 		newJobs[job.JobKey().String()] = job
 
 		// schedule an incremental backup job for the routine
-		if err := scheduleIncrementalBackup(scheduler, handler, routine.IncrIntervalCron, routineName); err != nil {
+		if err = scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routineName); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
 		}
 	}
@@ -90,25 +86,25 @@ func scheduleRoutines(
 }
 
 func scheduleFullBackup(
-	scheduler Scheduler, handler backupRunner, interval string, routineName string,
+	scheduler Scheduler, runner backupRunner, interval string, routineName string,
 ) (*quartz.JobDetail, error) {
-	job := createJobDetail(handler, routineName, jobTypeFull)
+	job := createJobDetail(runner, routineName, jobTypeFull)
 	return job, schedule(scheduler, interval, job)
 }
 
 func scheduleIncrementalBackup(
-	scheduler Scheduler, handler backupRunner, interval string, routineName string,
+	scheduler Scheduler, runner backupRunner, interval string, routineName string,
 ) error {
 	if len(interval) == 0 { // no need to schedule if there is no interval set
 		return nil
 	}
 
-	job := createJobDetail(handler, routineName, jobTypeIncremental)
+	job := createJobDetail(runner, routineName, jobTypeIncremental)
 	return schedule(scheduler, interval, job)
 }
 
-func createJobDetail(handler backupRunner, routineName string, jobType jobType) *quartz.JobDetail {
-	job := newBackupJob(handler, jobType, routineName)
+func createJobDetail(runner backupRunner, routineName string, jobType jobType) *quartz.JobDetail {
+	job := newBackupJob(runner, jobType, routineName)
 	return quartz.NewJobDetail(job, jobKey(routineName, jobType))
 }
 

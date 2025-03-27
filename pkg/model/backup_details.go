@@ -14,6 +14,16 @@ type BackupDetails struct {
 	// The path to the backup files.
 	Key     string
 	Storage Storage
+	Routine string
+}
+
+func NewBackupDetails(md BackupMetadata, key string, storage Storage, routine string) BackupDetails {
+	return BackupDetails{
+		BackupMetadata: md,
+		Key:            key,
+		Storage:        storage,
+		Routine:        routine,
+	}
 }
 
 // BackupMetadata is an internal container for storing backup metadata.

@@ -21,23 +21,23 @@ type BackupNamespaceRunner struct {
 	routineName    string
 	backupExecutor backupexecutor.Backup
 	retry          executor
-	metadataWriter BackupMetadataWriter
+	backendService BackupWriter
 	logger         *slog.Logger
 }
 
 // NewBackupNamespaceRunner creates a new BackupNamespaceRunner instance.
 func NewBackupNamespaceRunner(
 	routineName string,
-	backupService backupexecutor.Backup,
+	backupExecutor backupexecutor.Backup,
 	retry executor,
-	metadataWriter BackupMetadataWriter,
+	backendService BackupWriter,
 	logger *slog.Logger,
 ) *BackupNamespaceRunner {
 	return &BackupNamespaceRunner{
 		routineName:    routineName,
-		backupExecutor: backupService,
+		backupExecutor: backupExecutor,
 		retry:          retry,
-		metadataWriter: metadataWriter,
+		backendService: backendService,
 		logger:         logger,
 	}
 }
@@ -83,22 +83,19 @@ func (op *BackupNamespaceRunner) Run(
 }
 
 func (op *BackupNamespaceRunner) deleteFolder(ctx context.Context, path string) {
-	err := op.metadataWriter.deleteFolder(ctx, path)
+	err := op.backendService.Delete(ctx, op.routineName, path)
 	if err != nil {
 		op.logger.Error("Could not delete folder", slog.Any("err", err))
 		return
 	}
+
 	op.logger.Debug("Deleted folder", slog.String("path", path))
 }
 
 func (op *BackupNamespaceRunner) writeBackupMetadata(
 	ctx context.Context, metadata model.BackupMetadata, backupFolder string,
 ) error {
-	if err := op.metadataWriter.writeBackupMetadata(ctx, backupFolder, metadata); err != nil {
-		op.logger.Error("Could not Write backup metadata",
-			slog.String("folder", backupFolder),
-			slog.Any("err", err))
-
+	if err := op.backendService.WriteBackupMetadata(ctx, op.routineName, backupFolder, metadata); err != nil {
 		return fmt.Errorf("could not write backup metadata to %q: %w", backupFolder, err)
 	}
 

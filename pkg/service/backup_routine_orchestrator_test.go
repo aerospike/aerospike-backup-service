@@ -3,395 +3,304 @@ package service
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
-	"github.com/aerospike/backup-go"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go/models"
+	"github.com/prometheus/client_golang/prometheus"
+	p "github.com/prometheus/client_model/go"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-// Mock implementations.
-type mockBackupService struct {
-	mock.Mock
-}
-
-func (m *mockBackupService) Run(
-	ctx context.Context,
-	client *backup.Client,
-	routine *model.BackupRoutine,
-	timeBounds model.TimeBounds,
-	namespace string,
-	path string,
-) (backupexecutor.BackupHandler, error) {
-	args := m.Called(ctx, client, routine, timeBounds, namespace, path)
-	return args.Get(0).(backupexecutor.BackupHandler), args.Error(1)
-}
-
-type mockClientManager struct {
-	mock.Mock
-}
-
-func (m *mockClientManager) GetClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
-	args := m.Called(cluster)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*backup.Client), args.Error(1)
-}
-
-func (m *mockClientManager) Close(client *backup.Client) {
-	m.Called(client)
-}
-
-type mockBackupHandler struct {
-	mock.Mock
-}
-
-func (m *mockBackupHandler) GetStats() *models.BackupStats {
-	args := m.Called()
-	return args.Get(0).(*models.BackupStats)
-}
-
-func (m *mockBackupHandler) Wait(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
-func (m *mockBackupHandler) Cancel() {}
-
-type mockMetadataWriter struct {
-	mock.Mock
-}
-
-func (m *mockMetadataWriter) deleteFolder(ctx context.Context, path string) error {
-	args := m.Called(ctx, path)
-	return args.Error(0)
-}
-
-func (m *mockMetadataWriter) writeBackupMetadata(
-	ctx context.Context, path string, metadata model.BackupMetadata,
-) error {
-	args := m.Called(ctx, path, metadata)
-	return args.Error(0)
-}
-
-type mockClusterConfigWriter struct {
-	mock.Mock
-}
-
-func (m *mockClusterConfigWriter) Write(ctx context.Context, client aerospike.Cluster, timestamp time.Time) {
-	m.Called(ctx, client, timestamp)
-}
-
-type mockRetentionManager struct {
-	mock.Mock
-}
-
-func (m *mockRetentionManager) deleteOldBackups(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
-}
-
-func setupTestHandler(
-	backupService *mockBackupService,
-	clientManager *mockClientManager,
-	metadataWriter *mockMetadataWriter,
-	configWriter *mockClusterConfigWriter,
-	retentionManager *mockRetentionManager,
-) *BackupRoutineOrchestrator {
-	return &BackupRoutineOrchestrator{
-		routineName:         "routine",
-		namespaces:          []string{"ns1", "ns2"},
-		backupService:       backupService,
-		clientManager:       clientManager,
-		clusterConfigWriter: configWriter,
-		backupRoutine: &model.BackupRoutine{
-			SourceCluster: &model.AerospikeCluster{},
+func setupBaseConfig() *model.Config {
+	config := model.NewConfig()
+	_ = config.AddRoutine("routine1", &model.BackupRoutine{
+		Storage:       &model.LocalStorage{Path: "test-path"},
+		SourceCluster: &model.AerospikeCluster{},
+		BackupPolicy: &model.BackupPolicy{
+			RetryPolicy: &models.RetryPolicy{
+				BaseTimeout: 1 * time.Millisecond,
+				MaxRetries:  1,
+				Multiplier:  1,
+			},
 		},
-		logger:           slog.Default(),
-		retry:            &simpleExecutor{},
-		registry:         NewRunningBackupsRegistry(context.Background(), NewBackupBackends(), model.NewConfig()),
-		retentionManager: retentionManager,
-		runner: NewBackupNamespaceRunner(
-			"routine",
-			backupService,
-			&simpleExecutor{},
-			metadataWriter,
-			slog.Default(),
-		),
-	}
+		IntervalCron: "@daily",
+		Namespaces:   []string{"ns1", "ns2"},
+	})
+	return config
 }
 
 func TestRunFullBackupInternal_Success(t *testing.T) {
-	backupService := new(mockBackupService)
-	clientManager := clientManagerMock()
-	metadataWriter := new(mockMetadataWriter)
-	configWriter := new(mockClusterConfigWriter)
-	retentionManager := new(mockRetentionManager)
+	config := setupBaseConfig()
 
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
+	mockClientManager, mockClient := clientManagerMock()
 
-	backupHandler := new(mockBackupHandler)
-	backupHandler.On("Wait", mock.Anything).Return(nil)
-	backupHandler.On("GetStats").Return(models.NewBackupStats())
-
-	// Expect backup run for each namespace
-	backupService.On("Run",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		"ns1",
-		mock.Anything,
-	).Return(backupHandler, nil).Once()
-
-	backupService.On("Run",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		"ns2",
-		mock.Anything,
-	).Return(backupHandler, nil).Once()
-
-	metadataWriter.On("writeBackupMetadata",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return(nil).Times(2) // Once for each namespace
-
-	configWriter.On("Write",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return()
-
-	retentionManager.On("deleteOldBackups", mock.Anything).Return(nil)
-
-	handler.runFullBackup(context.Background(), time.Now())
-
-	clientManager.AssertExpectations(t)
-	backupService.AssertExpectations(t)
-	metadataWriter.AssertExpectations(t)
-	configWriter.AssertExpectations(t)
-	retentionManager.AssertExpectations(t)
-}
-
-func TestRunFullBackupInternal_WaitError(t *testing.T) {
-	backupService := new(mockBackupService)
-	clientManager := clientManagerMock()
-	metadataWriter := new(mockMetadataWriter)
-	configWriter := new(mockClusterConfigWriter)
-	retentionManager := new(mockRetentionManager)
-
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-
-	backupHandler := new(mockBackupHandler)
-	expectedErr := errors.New("wait error")
-	backupHandler.On("Wait", mock.Anything).Return(expectedErr)
-
-	backupService.On("Run",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return(backupHandler, nil)
-	metadataWriter.On("deleteFolder", mock.Anything, mock.Anything).Return(nil)
-	configWriter.On("Write",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return()
-
-	handler.runFullBackup(context.Background(), time.Now())
-
-	clientManager.AssertExpectations(t)
-	backupService.AssertExpectations(t)
-	backupHandler.AssertExpectations(t)
-}
-
-func TestRunIncrementalBackup_NoFullBackupYet(t *testing.T) {
-	backupService := new(mockBackupService)
-	clientManager := clientManagerMock()
-	metadataWriter := new(mockMetadataWriter)
-	configWriter := new(mockClusterConfigWriter)
-	retentionManager := new(mockRetentionManager)
-
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-
-	handler.runIncrementalBackup(context.Background(), time.Now())
-
-	clientManager.AssertNotCalled(t, "GetClient")
-	backupService.AssertNotCalled(t, "Run")
-}
-
-func TestRunIncrementalBackup_SkipIfFullBackupInProgress(t *testing.T) {
-	backupService := new(mockBackupService)
-	clientManager := clientManagerMock()
-	metadataWriter := new(mockMetadataWriter)
-	configWriter := new(mockClusterConfigWriter)
-	retentionManager := new(mockRetentionManager)
-
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-
-	handler.runIncrementalBackup(context.Background(), time.Now())
-
-	clientManager.AssertNotCalled(t, "GetClient")
-	backupService.AssertNotCalled(t, "Run")
-}
-
-func TestRunIncrementalBackup_SkipIfIncrementalBackupInProgress(t *testing.T) {
-	backupService := new(mockBackupService)
-	clientManager := clientManagerMock()
-	metadataWriter := new(mockMetadataWriter)
-	configWriter := new(mockClusterConfigWriter)
-	retentionManager := new(mockRetentionManager)
-
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-
-	handler.runIncrementalBackup(context.Background(), time.Now())
-
-	clientManager.AssertNotCalled(t, "GetClient")
-	backupService.AssertNotCalled(t, "Run")
-}
-
-func TestRunIncrementalBackup_ClientError(t *testing.T) {
-	backupService := new(mockBackupService)
-	clientManager := new(mockClientManager)
-	metadataWriter := new(mockMetadataWriter)
-	configWriter := new(mockClusterConfigWriter)
-	retentionManager := new(mockRetentionManager)
-
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	now := time.Now()
-	handler.registry.unregister("routine", jobTypeFull, now.Add(-1*time.Second))
-
-	expectedErr := errors.New("client error")
-	clientManager.On("GetClient", mock.Anything).Return(nil, expectedErr)
-
-	handler.runIncrementalBackup(context.Background(), now)
-
-	clientManager.AssertExpectations(t)
-	backupService.AssertNotCalled(t, "Run")
-}
-
-func TestRunIncrementalBackup_Success(t *testing.T) {
-	backupService := new(mockBackupService)
-	clientManager := clientManagerMock()
-	metadataWriter := new(mockMetadataWriter)
-	configWriter := new(mockClusterConfigWriter)
-	retentionManager := new(mockRetentionManager)
-
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
-	now := time.Now()
-	handler.registry.unregister("routine", jobTypeFull, now.Add(-1*time.Second))
-
-	backupHandler := new(mockBackupHandler)
+	mockBackupHandler := new(mockBackupHandler)
 	stats := models.NewBackupStats()
-	backupHandler.On("Wait", mock.Anything).Return(nil)
-	backupHandler.On("GetStats").Return(stats)
+	stats.Start()
+	stats.TotalRecords = 10
+	stats.IncFiles()
+	stats.ReadRecords.Add(10)
+	mockBackupHandler.On("GetStats").Return(stats)
+	mockBackupHandler.On("Wait", mock.Anything).Return(nil)
 
-	// Expect backup run for each namespace
-	backupService.On("Run",
+	mockBackupExecutor := new(mockBackupExecutor)
+	mockBackupExecutor.On("Run",
+		mock.Anything,
+		mockClient,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
 		mock.Anything,
-		"ns1",
-		mock.Anything,
-	).Return(backupHandler, nil)
+	).Return(mockBackupHandler, nil)
 
-	backupService.On("Run",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		"ns2",
-		mock.Anything,
-	).Return(backupHandler, nil)
+	mockRegistry := new(MockRunningBackupsRegistry)
+	initialState := &model.RoutineState{}
+	mockRegistry.On("GetRoutineState", mock.Anything).Return(initialState)
 
-	metadataWriter.On("writeBackupMetadata",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return(nil)
-	metadataWriter.On("deleteFolder", mock.Anything, mock.Anything).Return(nil)
+	var registeredHandler CancelableBackupHandler
+	mockRegistry.On("register", "routine1", jobTypeFull, mock.Anything).Run(func(args mock.Arguments) {
+		registeredHandler = args.Get(2).(CancelableBackupHandler)
+	}).Return()
+	mockRegistry.On("unregister", "routine1", jobTypeFull, mock.Anything).Return()
 
-	handler.runIncrementalBackup(context.Background(), now)
+	mockRetentionManager := new(mockRetentionManager)
+	mockRetentionManager.On("deleteOldBackups", mock.Anything, mock.Anything).Return(nil)
 
-	clientManager.AssertExpectations(t)
-	backupService.AssertExpectations(t)
-	backupHandler.AssertExpectations(t)
+	mockClusterConfigWriter := new(mockClusterConfigWriter)
+	var writtenTimestamp time.Time
+	mockClusterConfigWriter.On("Write", mock.Anything, "routine1", mock.Anything).Run(func(args mock.Arguments) {
+		writtenTimestamp = args.Get(2).(time.Time)
+	}).Return(nil)
+
+	mockBackupBackend := new(MockBackupBackendService)
+	mockBackupBackend.On("WriteBackupMetadata", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	o := newOrchestrator("routine1", config, NewBackupComponents(
+		mockClientManager,
+		mockBackupExecutor,
+		mockRegistry,
+		mockRetentionManager,
+		mockBackupBackend,
+		mockClusterConfigWriter,
+	))
+
+	ctx := context.Background()
+	now := time.Now()
+
+	err := o.runFullBackupInternal(ctx, now)
+	assert.NoError(t, err)
+
+	mockClientManager.AssertExpectations(t)
+	mockBackupExecutor.AssertExpectations(t)
+	mockBackupHandler.AssertExpectations(t)
+	mockRegistry.AssertExpectations(t)
+	assert.Eventually(t, func() bool {
+		return mockRetentionManager.AssertExpectations(t)
+	}, time.Second, time.Millisecond*10)
+
+	mockClusterConfigWriter.AssertExpectations(t)
+
+	assert.NotNil(t, registeredHandler, "Backup handler should be registered")
+	assert.Equal(t, now.Unix(), writtenTimestamp.Unix(), "Timestamp should match execution time")
+	assert.Equal(t, uint64(10), mockBackupHandler.GetStats().TotalRecords, "Backup stats should be correct")
 }
 
-func TestRunFullBackup_PartialFailure(t *testing.T) {
-	backupService := new(mockBackupService)
-	metadataWriter := new(mockMetadataWriter)
-	configWriter := new(mockClusterConfigWriter)
-	clientManager := clientManagerMock()
-	retentionManager := new(mockRetentionManager)
+func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
+	config := setupBaseConfig()
 
-	handler := setupTestHandler(backupService, clientManager, metadataWriter, configWriter, retentionManager)
+	mockRegistry := new(MockRunningBackupsRegistry)
+	// Simulate an ongoing full backup
+	mockRegistry.On("GetRoutineState", mock.Anything).Return(&model.RoutineState{
+		Full: &model.RunningJob{
+			StartTime: time.Now(),
+		},
+	})
 
-	successHandler := new(mockBackupHandler)
-	successHandler.On("Wait", mock.Anything).Return(nil)
-	successHandler.On("GetStats").Return(models.NewBackupStats())
+	o := newOrchestrator("routine1", config, NewBackupComponents(
+		new(mockClientManager),
+		new(mockBackupExecutor),
+		mockRegistry,
+		new(mockRetentionManager),
+		new(MockBackupBackendService),
+		new(mockClusterConfigWriter),
+	))
 
-	failHandler := new(mockBackupHandler)
-	failHandler.On("Wait", mock.Anything).Return(errors.New("failed backup for namespace2"))
+	ctx := context.Background()
+	now := time.Now()
 
-	// Set up BackupRun calls for namespaces
-	backupService.On("Run",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		"ns1",
-		mock.Anything,
-	).Return(successHandler, nil).Once()
+	err := o.runFullBackupInternal(ctx, now)
+	assert.NoError(t, err)
 
-	backupService.On("Run",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-		"ns2",
-		mock.Anything,
-	).Return(failHandler, nil).Once()
-
-	metadataWriter.On("writeBackupMetadata",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return(nil).Times(1) // Only for ns1
-	metadataWriter.On("deleteFolder", mock.Anything, mock.Anything).Return(nil)
-	retentionManager.On("deleteOldBackups", mock.Anything).Return(nil)
-	configWriter.On("Write",
-		mock.Anything,
-		mock.Anything,
-		mock.Anything,
-	).Return()
-
-	// Run full backup and expect an error for one of the namespaces
-	handler.runFullBackup(context.Background(), time.Now())
-
-	// Assertions
-	successHandler.AssertExpectations(t)
-	failHandler.AssertExpectations(t)
-	backupService.AssertExpectations(t)
+	mockRegistry.AssertExpectations(t)
 }
 
-func clientManagerMock() *mockClientManager {
-	client := &backup.Client{}
-	clientManager := new(mockClientManager)
-	clientManager.On("GetClient", mock.Anything).Return(client, nil)
-	clientManager.On("Close", client).Return()
-	return clientManager
+func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
+	config := setupBaseConfig()
+
+	mockClientManager := new(mockClientManager)
+	mockClientManager.On("GetClient", mock.Anything).Return(nil, errors.New("connection failed"))
+
+	mockRegistry := new(MockRunningBackupsRegistry)
+	mockRegistry.On("GetRoutineState", mock.Anything).Return(&model.RoutineState{})
+
+	o := newOrchestrator("routine1", config,
+		NewBackupComponents(
+			mockClientManager,
+			new(mockBackupExecutor),
+			mockRegistry,
+			new(mockRetentionManager),
+			new(MockBackupBackendService),
+			new(mockClusterConfigWriter),
+		))
+
+	ctx := context.Background()
+	now := time.Now()
+
+	err := o.runFullBackupInternal(ctx, now)
+
+	assert.Error(t, err, "Should return error on client connection failure")
+	assert.Contains(t, err.Error(), "cannot get backup client")
+	mockClientManager.AssertExpectations(t)
+	mockRegistry.AssertExpectations(t)
+}
+
+func TestRunIncrementalBackupInternal_Success(t *testing.T) {
+	config := setupBaseConfig()
+
+	// Setup last full backup time
+	lastFullBackupTime := time.Now().Add(-24 * time.Hour)
+	initialState := &model.RoutineState{
+		LastRunTime: model.NewLastBackupRun(&lastFullBackupTime, nil),
+	}
+
+	mockClientManager, mockClient := clientManagerMock()
+
+	mockBackupHandler := new(mockBackupHandler)
+	stats := models.NewBackupStats()
+	stats.Start()
+	stats.TotalRecords = 5
+	stats.IncFiles()
+	stats.ReadRecords.Add(5)
+	mockBackupHandler.On("GetStats").Return(stats)
+	mockBackupHandler.On("Wait", mock.Anything).Return(nil)
+
+	mockBackupExecutor := new(mockBackupExecutor)
+	mockBackupExecutor.On("Run",
+		mock.Anything,
+		mockClient,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	).Return(mockBackupHandler, nil).Run(func(args mock.Arguments) {
+		timeBounds := args.Get(3).(model.TimeBounds)
+		assert.Equal(t, lastFullBackupTime, *timeBounds.FromTime, "FromTime should match last full backup time")
+	})
+
+	mockRegistry := new(MockRunningBackupsRegistry)
+	mockRegistry.On("GetRoutineState", mock.Anything).Return(initialState)
+
+	var registeredHandler CancelableBackupHandler
+	mockRegistry.On("register", "routine1", jobTypeIncremental, mock.Anything).Run(func(args mock.Arguments) {
+		registeredHandler = args.Get(2).(CancelableBackupHandler)
+	}).Return()
+	mockRegistry.On("unregister", "routine1", jobTypeIncremental, mock.Anything).Return()
+
+	mockBackupBackend := new(MockBackupBackendService)
+	mockBackupBackend.On("WriteBackupMetadata", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	o := newOrchestrator("routine1", config, NewBackupComponents(
+		mockClientManager,
+		mockBackupExecutor,
+		mockRegistry,
+		new(mockRetentionManager),
+		mockBackupBackend,
+		new(mockClusterConfigWriter),
+	))
+
+	ctx := context.Background()
+	now := time.Now()
+
+	err := o.runIncrementalBackupInternal(ctx, now)
+	assert.NoError(t, err)
+
+	mockClientManager.AssertExpectations(t)
+	mockBackupExecutor.AssertExpectations(t)
+	mockBackupHandler.AssertExpectations(t)
+	mockRegistry.AssertExpectations(t)
+
+	assert.NotNil(t, registeredHandler, "Backup handler should be registered")
+	assert.Equal(t, uint64(5), mockBackupHandler.GetStats().TotalRecords, "Backup stats should be correct")
+}
+
+func TestRunIncrementalBackup_SkipWhenNoFullBackup(t *testing.T) {
+	config := setupBaseConfig()
+
+	mockRegistry := new(MockRunningBackupsRegistry)
+	mockRegistry.On("GetRoutineState", mock.Anything).Return(&model.RoutineState{
+		LastRunTime: model.NewLastBackupRun(nil, nil),
+	})
+
+	o := newOrchestrator("routine1", config, NewBackupComponents(
+		new(mockClientManager),
+		new(mockBackupExecutor),
+		mockRegistry,
+		new(mockRetentionManager),
+		new(MockBackupBackendService),
+		new(mockClusterConfigWriter),
+	))
+
+	ctx := context.Background()
+	now := time.Now()
+
+	skippedBefore := getCounterValue(incrBackupSkippedCounter)
+	o.runIncrementalBackup(ctx, now)
+
+	skipped := getCounterValue(incrBackupSkippedCounter)
+	assert.Equal(t, skippedBefore+1, skipped)
+}
+
+func getCounterValue(c prometheus.Counter) int {
+	m := &p.Metric{}
+	_ = c.Write(m)
+	return int(m.GetCounter().GetValue())
+}
+
+func TestRunIncrementalBackup_SkipWhenFullBackupInProgress(t *testing.T) {
+	config := setupBaseConfig()
+
+	mockRegistry := new(MockRunningBackupsRegistry)
+	// Simulate an ongoing full backup
+	mockRegistry.On("GetRoutineState", mock.Anything).Return(&model.RoutineState{
+		LastRunTime: model.NewLastBackupRun(util.Ptr(time.Now().Add(-24*time.Hour)), nil),
+		Full: &model.RunningJob{
+			StartTime: time.Now(),
+		},
+	})
+
+	o := newOrchestrator("routine1", config, NewBackupComponents(
+		new(mockClientManager),
+		new(mockBackupExecutor),
+		mockRegistry,
+		new(mockRetentionManager),
+		new(MockBackupBackendService),
+		new(mockClusterConfigWriter),
+	))
+
+	ctx := context.Background()
+	now := time.Now()
+
+	o.runIncrementalBackup(ctx, now)
+
+	mockRegistry.AssertExpectations(t)
+
+	skippedBefore := getCounterValue(incrBackupSkippedCounter)
+	o.runIncrementalBackup(ctx, now)
+
+	skipped := getCounterValue(incrBackupSkippedCounter)
+	assert.Equal(t, skippedBefore+1, skipped)
 }

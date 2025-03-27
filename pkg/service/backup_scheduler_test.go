@@ -1,9 +1,7 @@
 package service
 
 import (
-	"context"
 	"testing"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/reugn/go-quartz/quartz"
@@ -21,56 +19,16 @@ func (m *MockScheduler) ScheduleJob(detail *quartz.JobDetail, trigger quartz.Tri
 	return args.Error(0)
 }
 
-// TestDisabledRoutine verifies that disabled routines are skipped in scheduleRoutines.
-func TestDisabledRoutine(t *testing.T) {
-	mockScheduler := new(MockScheduler)
-	mockScheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
-
-	config := model.NewConfig()
-	_ = config.AddRoutine("routine1", &model.BackupRoutine{Disabled: true})
-	_ = config.AddRoutine("routine2", &model.BackupRoutine{IntervalCron: "@daily"})
-
-	handlers := NewBackupHandlerHolder()
-	handlers.ReplaceContent(map[string]backupRunner{
-		"routine1": &BackupRoutineOrchestrator{},
-		"routine2": &BackupRoutineOrchestrator{},
-	})
-
-	err := scheduleRoutines(mockScheduler, config.Routines(), handlers)
-
-	require.NoError(t, err)
-	mockScheduler.AssertNumberOfCalls(t, "ScheduleJob", 1)
-}
-
-// MockBackupRunner is a mock implementation of backupRunner interface.
-type MockBackupRunner struct {
-	mock.Mock
-}
-
-func (m *MockBackupRunner) runFullBackup(ctx context.Context, t time.Time) {
-	m.Called(ctx, t)
-}
-
-func (m *MockBackupRunner) runIncrementalBackup(ctx context.Context, t time.Time) {
-	m.Called(ctx, t)
-}
-
-func (m *MockBackupRunner) Cancel() {
-	m.Called()
-}
-
-func (m *MockBackupRunner) CurrentStat() *model.RoutineState {
-	args := m.Called()
-	return args.Get(0).(*model.RoutineState)
-}
+var components = NewBackupComponents(
+	new(mockClientManager),
+	new(mockBackupExecutor),
+	new(MockRunningBackupsRegistry),
+	new(mockRetentionManager),
+	new(MockBackupBackendService),
+	new(mockClusterConfigWriter),
+)
 
 func TestScheduleRoutines(t *testing.T) {
-	handlers := NewBackupHandlerHolder()
-	handlers.ReplaceContent(map[string]backupRunner{
-		"routine":          &MockBackupRunner{},
-		"disabled-routine": &MockBackupRunner{},
-		"full-only":        &MockBackupRunner{},
-	})
 	tests := []struct {
 		name              string
 		routines          map[string]*model.BackupRoutine
@@ -117,7 +75,11 @@ func TestScheduleRoutines(t *testing.T) {
 			scheduler := new(MockScheduler)
 			scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
 
-			err := scheduleRoutines(scheduler, tt.routines, handlers)
+			config := model.NewConfig()
+			for name, routine := range tt.routines {
+				_ = config.AddRoutine(name, routine)
+			}
+			err := scheduleRoutines(scheduler, config, components)
 
 			require.NoError(t, err)
 			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)

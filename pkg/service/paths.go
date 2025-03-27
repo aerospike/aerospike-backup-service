@@ -2,7 +2,9 @@ package service
 
 import (
 	"fmt"
+	"log/slog"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -17,6 +19,12 @@ const (
 	configurationBackupDirectory = "configuration"
 	dataDirectory                = "data"
 )
+
+// Example:
+// prefix/fullBackup2/backup/1742795103082/data/source-ns11/metadata.yaml.
+var timestampPattern = regexp.MustCompile(fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})/`,
+	fullBackupDirectory,
+	incrementalBackupDirectory))
 
 func getBackupRootPath(routineName string, backupType jobType) string {
 	if backupType == jobTypeFull {
@@ -57,4 +65,15 @@ func formatTimestamp(t time.Time) string {
 
 func getConfigFileName(index int) string {
 	return fmt.Sprintf("aerospike_%d%s", index, configExt)
+}
+
+// extractTimestampFromPath extracts the timestamp part from a path.
+func extractTimestampFromPath(path string) string {
+	matches := timestampPattern.FindStringSubmatch(path)
+	if len(matches) >= 3 {
+		return matches[2] // The timestamp is in the second capturing group
+	}
+
+	slog.Warn("could not extract timestamp", slog.String("path", path))
+	return ""
 }

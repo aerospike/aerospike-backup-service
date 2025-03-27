@@ -10,7 +10,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
 // RestoreFullHandler
@@ -192,7 +191,7 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf, err := s.restoreManager.RetrieveConfiguration(s.ctx, name, util.Ptr(time.UnixMilli(timestamp)))
+	buf, err := s.configRetriever.RetrieveConfiguration(s.ctx, name, time.UnixMilli(timestamp))
 	if err != nil {
 		httpError(w, err)
 		return

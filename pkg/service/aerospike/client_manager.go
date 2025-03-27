@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 
@@ -43,6 +44,8 @@ type ClientManagerImpl struct {
 	logger *slog.Logger
 	locks  sync.Map
 }
+
+var _ ClientManager = (*ClientManagerImpl)(nil)
 
 type clientInfo struct {
 	client     *backup.Client
@@ -152,6 +155,10 @@ func (cm *ClientManagerImpl) createClient(cluster *model.AerospikeCluster) (*bac
 	if cluster.ClusterLabel != nil {
 		options = append(options, backup.WithID(*cluster.ClusterLabel))
 	}
+
+	options = append(options, backup.WithLogger(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelWarn,
+	}))))
 
 	return backup.NewClient(aeroClient, options...)
 }

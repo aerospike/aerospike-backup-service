@@ -173,8 +173,8 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	_, ok := s.handlerHolder.Load(routineName)
-	if !ok {
+	_, found := s.config.Routine(routineName)
+	if !found {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
@@ -205,7 +205,7 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	_, found := s.handlerHolder.Load(routineName)
+	_, found := s.config.Routine(routineName)
 	if !found {
 		httpError(w, errRoutineNotFound(routineName))
 		return

@@ -25,7 +25,21 @@ import (
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
-	s.readAllBackups(w, r, true)
+	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
+	if err != nil {
+		httpError(w, errInvalidQueryParam(err, "time bounds"))
+		return
+	}
+
+	result, err := s.readAllBackups(r.Context(), func(routine string) service.BackupFilter {
+		return service.NewFullBackupFilter(routine).WithTimeBounds(timeBounds)
+	})
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+
+	httpOK(w, result)
 }
 
 // GetFullBackupsForRoutine
@@ -41,7 +55,26 @@ func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
-	s.readBackupsForRoutine(w, r, true)
+	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
+	if err != nil {
+		httpError(w, errInvalidQueryParam(err, "time bounds"))
+		return
+	}
+
+	routine := r.PathValue("name")
+	if routine == "" {
+		httpError(w, errMissingRoutineName)
+		return
+	}
+
+	filter := service.NewFullBackupFilter(routine).WithTimeBounds(timeBounds)
+	result, err := s.readBackupsForRoutine(r.Context(), filter)
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+
+	httpOK(w, result)
 }
 
 // GetAllIncrementalBackups
@@ -56,7 +89,21 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Request) {
-	s.readAllBackups(w, r, false)
+	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
+	if err != nil {
+		httpError(w, errInvalidQueryParam(err, "time bounds"))
+		return
+	}
+
+	result, err := s.readAllBackups(r.Context(), func(routine string) service.BackupFilter {
+		return service.NewIncrementalBackupFilter(routine).WithTimeBounds(timeBounds)
+	})
+	if err != nil {
+		httpError(w, err)
+		return
+	}
+
+	httpOK(w, result)
 }
 
 // GetIncrementalBackupsForRoutine
@@ -72,34 +119,7 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http.Request) {
-	s.readBackupsForRoutine(w, r, false)
-}
-
-func (s *Service) readAllBackups(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
-	from := r.URL.Query().Get("from")
-	to := r.URL.Query().Get("to")
-
-	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
-	if err != nil {
-		httpError(w, errInvalidQueryParam(err, "time bounds"))
-		return
-	}
-	backups, err := readBackupsLogic(r.Context(), s.backupBackends, timeBounds.ToModel(), isFullBackup)
-	if err != nil {
-		httpError(w, err)
-		return
-	}
-
-	response := dto.ConvertBackupDetailsMap(backups, s.config.BackupConfigCopy())
-
-	httpOK(w, response)
-}
-
-func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, isFullBackup bool) {
-	from := r.URL.Query().Get("from")
-	to := r.URL.Query().Get("to")
-
-	timeBounds, err := dto.NewTimeBoundsFromString(from, to)
+	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
 		httpError(w, errInvalidQueryParam(err, "time bounds"))
 		return
@@ -111,53 +131,48 @@ func (s *Service) readBackupsForRoutine(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	reader, found := s.backupBackends.GetReader(routine)
-	if !found {
-		httpError(w, errRoutineNotFound(routine))
-		return
-	}
-
-	backupListFunction := backupsReadFunction(reader, isFullBackup)
-	backups, err := backupListFunction(r.Context(), timeBounds.ToModel())
+	filter := service.NewIncrementalBackupFilter(routine).WithTimeBounds(timeBounds)
+	result, err := s.readBackupsForRoutine(r.Context(), filter)
 	if err != nil {
 		httpError(w, err)
 		return
 	}
 
-	backupConfig := s.config.BackupConfigCopy()
-	backupDetails := dto.ConvertModelsToDTO(backups, func(m *model.BackupDetails) *dto.BackupDetails {
-		return dto.NewBackupDetailsFromModel(m, backupConfig)
-	})
-
-	httpOK(w, backupDetails)
+	httpOK(w, result)
 }
 
-func readBackupsLogic(ctx context.Context,
-	backends service.BackendsHolder,
-	timeBounds model.TimeBounds,
-	isFullBackup bool,
-) (map[string][]model.BackupDetails, error) {
-	result := make(map[string][]model.BackupDetails)
-
-	for routine, reader := range backends.GetAllReaders() {
-		backupListFunction := backupsReadFunction(reader, isFullBackup)
-		list, err := backupListFunction(ctx, timeBounds)
+func (s *Service) readAllBackups(
+	ctx context.Context,
+	filter func(routine string) service.BackupFilter,
+) (map[string][]*dto.BackupDetails, error) {
+	result := make(map[string][]*dto.BackupDetails)
+	for routine := range s.config.Routines() {
+		routineBackups, err := s.readBackupsForRoutine(ctx, filter(routine))
 		if err != nil {
 			return nil, err
 		}
-		result[routine] = list
+
+		result[routine] = routineBackups
 	}
 
 	return result, nil
 }
 
-func backupsReadFunction(
-	backend service.BackupMetadataReader, fullBackup bool,
-) func(context.Context, model.TimeBounds) ([]model.BackupDetails, error) {
-	if fullBackup {
-		return backend.FullBackupList
+func (s *Service) readBackupsForRoutine(
+	ctx context.Context,
+	filter service.BackupFilter,
+) ([]*dto.BackupDetails, error) {
+	backupList, err := s.backupReader.GetBackups(ctx, filter)
+	if err != nil {
+		return nil, err
 	}
-	return backend.IncrementalBackupList
+
+	backupConfig := s.config.BackupConfigCopy()
+	backupDetails := dto.ConvertModelsToDTO(backupList, func(m *model.BackupDetails) *dto.BackupDetails {
+		return dto.NewBackupDetailsFromModel(m, backupConfig)
+	})
+
+	return backupDetails, nil
 }
 
 // ScheduleFullBackup
@@ -231,7 +246,7 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, found := s.handlerHolder.Load(routineName)
+	_, found := s.config.Routine(routineName)
 	if !found {
 		httpError(w, errRoutineNotFound(routineName))
 		return
@@ -257,7 +272,7 @@ func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, found := s.handlerHolder.Load(routineName)
+	_, found := s.config.Routine(routineName)
 	if !found {
 		httpError(w, errRoutineNotFound(routineName))
 		return

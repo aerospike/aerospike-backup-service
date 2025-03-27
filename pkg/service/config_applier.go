@@ -6,43 +6,38 @@ import (
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/reugn/go-quartz/matcher"
 	"github.com/reugn/go-quartz/quartz"
 )
 
 // ConfigApplier is responsible for applying new configuration to the service.
 type ConfigApplier interface {
-	ApplyNewRoutines(routines map[string]*model.BackupRoutine) error
+	ApplyNewConfig() error
 }
 
 type DefaultConfigApplier struct {
-	mu            sync.Mutex
-	scheduler     quartz.Scheduler
-	backends      BackendsHolder
-	clientManager aerospike.ClientManager
-	handlerHolder BackupHandlerHolder
-	registry      RunningBackupsRegistry
+	mu         sync.Mutex
+	scheduler  quartz.Scheduler
+	registry   RunningBackupsRegistry
+	components *BackupComponents
+	config     *model.Config
 }
 
 func NewDefaultConfigApplier(
 	scheduler quartz.Scheduler,
-	backends BackendsHolder,
-	manager aerospike.ClientManager,
-	handlerHolder BackupHandlerHolder,
 	registry RunningBackupsRegistry,
+	components *BackupComponents,
+	config *model.Config,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
-		scheduler:     scheduler,
-		backends:      backends,
-		clientManager: manager,
-		handlerHolder: handlerHolder,
-		registry:      registry,
+		scheduler:  scheduler,
+		registry:   registry,
+		components: components,
+		config:     config,
 	}
 }
 
-func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.BackupRoutine) error {
+func (a *DefaultConfigApplier) ApplyNewConfig() error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -51,16 +46,10 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(routines map[string]*model.Backu
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
 
-	// Create backup backends for each routine.
-	a.backends.Init(routines)
 	// Scan existing backups to find the last successful runs for every routine.
 	go a.registry.SynchroniseBackupHistory()
 
-	// Refill handlers
-	newHandlers := makeHandlers(a.clientManager, routines, a.backends, a.registry)
-	a.handlerHolder.ReplaceContent(newHandlers)
-
-	err = scheduleRoutines(a.scheduler, routines, a.handlerHolder)
+	err = scheduleRoutines(a.scheduler, a.config, a.components)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
@@ -84,23 +73,4 @@ func (a *DefaultConfigApplier) clearPeriodicSchedulerJobs() error {
 	}
 
 	return nil
-}
-
-// makeHandlers creates and returns a map of backup handlers per the configured routines.
-func makeHandlers(
-	clientManager aerospike.ClientManager,
-	routines map[string]*model.BackupRoutine,
-	backends BackendsHolder,
-	registry RunningBackupsRegistry,
-) map[string]backupRunner {
-	handlers := make(map[string]backupRunner)
-
-	backupExecutor := backupexecutor.NewDefaultBackupExecutor()
-	for routineName, routine := range routines {
-		backend, _ := backends.Get(routineName)
-		handlers[routineName] =
-			newBackupRoutineOrchestrator(clientManager, backupExecutor, routineName, routine, backend, registry)
-	}
-
-	return handlers
 }

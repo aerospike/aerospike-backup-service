@@ -16,72 +16,62 @@ import (
 // BackupRoutineOrchestrator orchestrates the execution of a single backup routine (both full and incremental).
 // It manages all necessary preparations, executes the backup process, handles post-processing, and updates metrics.
 type BackupRoutineOrchestrator struct {
-	backupService       backupexecutor.Backup
-	backupRoutine       *model.BackupRoutine
-	namespaces          []string
 	retry               executor
-	clientManager       aerospike.ClientManager
 	logger              *slog.Logger
-	clusterConfigWriter ClusterConfigWriter
-	retentionManager    RetentionManager
 	runner              *BackupNamespaceRunner
 	routineName         string
+	routine             *model.BackupRoutine
+	clusterConfigWriter ClusterConfigWriter
+	clientManager       aerospike.ClientManager
 	registry            RunningBackupsRegistry
+	retentionManager    RetentionManager
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
 
-// ClusterConfigWriter handles writing cluster configuration to storage.
-type ClusterConfigWriter interface {
-	Write(ctx context.Context, client aerospike.Cluster, timestamp time.Time)
+// BackupComponents holds all components required to execute a backup routine.
+type BackupComponents struct {
+	clientManager    aerospike.ClientManager // Retrieves the Aerospike client before starting the backup.
+	backupExecutor   backupexecutor.Backup   // Executes the backup using the backup-go library.
+	registry         RunningBackupsRegistry  // Stores the backup handler during execution.
+	retentionManager RetentionManager        // Deletes old backups after a successful backup.
+	backendService   BackupWriter            // Writes backup metadata after a successful backup and
+	// deletes created files if the backup fails.
+	clusterConfigWriter ClusterConfigWriter // Backs up cluster configuration.
 }
 
-// BackupHandlerHolder stores backupRunners by routine name.
-type BackupHandlerHolder = *util.SafeMap[string, backupRunner]
-
-func NewBackupHandlerHolder() BackupHandlerHolder {
-	return util.NewSafeMap[string, backupRunner]()
-}
-
-// newBackupRoutineOrchestrator returns a new BackupRoutineOrchestrator instance.
-func newBackupRoutineOrchestrator(
+func NewBackupComponents(
 	clientManager aerospike.ClientManager,
-	backupService backupexecutor.Backup,
-	routineName string,
-	routine *model.BackupRoutine,
-	backupBackend BackupMetadataReaderWriter,
+	backupExecutor backupexecutor.Backup,
 	registry RunningBackupsRegistry,
-) *BackupRoutineOrchestrator {
-	backupPolicy := routine.BackupPolicy
-	backupStorage := routine.Storage
-	logger := slog.Default().With(slog.String("routine", routineName))
-	retry := newRetryExecutor(
-		backupPolicy.GetRetryPolicyOrDefault(),
-		logger)
-	return &BackupRoutineOrchestrator{
-		runner: NewBackupNamespaceRunner(
-			routineName,
-			backupService,
-			retry,
-			backupBackend,
-			logger,
-		),
+	retentionManager RetentionManager,
+	backendService BackupWriter,
+	clusterConfigWriter ClusterConfigWriter,
+) *BackupComponents {
+	return &BackupComponents{
+		clientManager:       clientManager,
+		backupExecutor:      backupExecutor,
+		registry:            registry,
+		retentionManager:    retentionManager,
+		backendService:      backendService,
+		clusterConfigWriter: clusterConfigWriter,
+	}
+}
 
-		backupService: backupService,
-		backupRoutine: routine,
-		routineName:   routineName,
-		namespaces:    routine.Namespaces,
-		clientManager: clientManager,
-		clusterConfigWriter: NewClusterConfigWriter(
-			backupStorage,
-			routineName,
-			backupPolicy,
-			logger),
-		logger:   logger,
-		retry:    retry,
-		registry: registry,
-		retentionManager: NewBackupRetentionManager(
-			backupBackend, backupStorage, routineName, backupPolicy.RetentionPolicy),
+func newOrchestrator(routineName string, config *model.Config, h *BackupComponents) *BackupRoutineOrchestrator {
+	routine, _ := config.Routine(routineName)
+	logger := slog.With(slog.String("routine_name", routineName))
+	retry := newRetryExecutor(routine.BackupPolicy.GetRetryPolicyOrDefault(), logger)
+	return &BackupRoutineOrchestrator{
+		routineName:         routineName,
+		routine:             routine,
+		runner:              NewBackupNamespaceRunner(routineName, h.backupExecutor, retry, h.backendService, logger),
+		retry:               retry,
+		clusterConfigWriter: h.clusterConfigWriter,
+		clientManager:       h.clientManager,
+		registry:            h.registry,
+		retentionManager:    h.retentionManager,
+		logger:              logger,
 	}
 }
 
@@ -112,11 +102,14 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	}
 	defer h.clientManager.Close(client)
 
-	h.clusterConfigWriter.Write(ctx, client.AerospikeClient(), now)
+	err = h.clusterConfigWriter.Write(ctx, h.routineName, now)
+	if err != nil {
+		return err
+	}
 
 	timeBounds := h.createTimeBounds(jobTypeFull, now)
 	backupHandler := startNamespacesBackup(ctx,
-		h.runner, client, namespaces, timeBounds, now, h.backupRoutine, jobTypeFull)
+		h.runner, client, namespaces, timeBounds, now, h.routine, jobTypeFull)
 
 	h.registry.register(h.routineName, jobTypeFull, backupHandler)
 
@@ -126,7 +119,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	}
 	go h.registry.unregister(h.routineName, jobTypeFull, now)
 
-	go h.deleteOldBackups(ctx)
+	go h.deleteOldBackups(ctx, h.routineName)
 
 	return nil
 }
@@ -143,8 +136,8 @@ func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
 	return false
 }
 
-func (h *BackupRoutineOrchestrator) deleteOldBackups(ctx context.Context) {
-	err := h.retentionManager.deleteOldBackups(ctx)
+func (h *BackupRoutineOrchestrator) deleteOldBackups(ctx context.Context, routineName string) {
+	err := h.retentionManager.deleteOldBackups(ctx, routineName)
 	if err != nil {
 		h.logger.Error("failed to clean up old backups", slog.Any("error", err))
 	}
@@ -158,12 +151,13 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 
 	err := retry.run("cluster connection", func() error {
 		var err error
-		client, err = h.clientManager.GetClient(h.backupRoutine.SourceCluster)
+		client, err = h.clientManager.GetClient(h.routine.SourceCluster)
 		if err != nil {
 			return fmt.Errorf("cannot get backup client: %w", err)
 		}
-		namespaces, err = aerospike.ResolveNamespaces(h.namespaces, client.AerospikeClient())
+		namespaces, err = aerospike.ResolveNamespaces(h.routine.Namespaces, client.AerospikeClient())
 		if err != nil {
+			h.clientManager.Close(client)
 			return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
 		}
 
@@ -183,7 +177,7 @@ func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.T
 		fromTime = h.registry.GetRoutineState(h.routineName).LastRunTime.LatestRun()
 	}
 
-	if h.backupRoutine.BackupPolicy.IsSealedOrDefault() {
+	if h.routine.BackupPolicy.IsSealedOrDefault() {
 		toTime = &now
 	}
 
@@ -237,7 +231,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 
 	timeBounds := h.createTimeBounds(jobTypeIncremental, now)
 	backupHandler := startNamespacesBackup(ctx,
-		h.runner, client, namespaces, timeBounds, now, h.backupRoutine, jobTypeIncremental)
+		h.runner, client, namespaces, timeBounds, now, h.routine, jobTypeIncremental)
 	h.registry.register(h.routineName, jobTypeIncremental, backupHandler)
 
 	if err := backupHandler.Wait(ctx); err != nil {

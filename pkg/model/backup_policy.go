@@ -76,7 +76,7 @@ func (p *BackupPolicy) CopyWithNoRecords() *BackupPolicy {
 }
 
 func (p *BackupPolicy) GetRetryPolicyOrDefault() models.RetryPolicy {
-	if p.RetryPolicy != nil {
+	if p != nil && p.RetryPolicy != nil {
 		return *p.RetryPolicy
 	}
 

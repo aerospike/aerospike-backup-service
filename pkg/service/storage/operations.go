@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -84,17 +83,10 @@ func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]by
 	}
 }
 
-func ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
-) ([]*bytes.Buffer, error) {
-	var startScanFrom string
-	if fromTime != nil {
-		fromTimeStr := strconv.FormatInt(fromTime.UnixMilli()-1, 10) // -1 to ensure filter is greater or equal.
-		startScanFrom = filepath.Join(path, fromTimeStr)
-	}
-
+func ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error) {
 	reader, err := CreateDirReader(ctx, storage, path,
 		ioStorage.WithValidator(newNameValidator(filterStr)),
-		ioStorage.WithStartAfter(startScanFrom))
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}
@@ -136,20 +128,21 @@ func ReadFileNames(
 ) ([]string, error) {
 	var startScanFrom string
 	if fromTime != nil {
-		fromTimeStr := strconv.FormatInt(fromTime.UnixMilli()-1, 10) // -1 to ensure filter is greater or equal.
-		startScanFrom = filepath.Join(path, fromTimeStr)
+		fromTimeStr := fmt.Sprintf("%013d", fromTime.UnixMilli()-1)
+		startScanFrom = filepath.Join(storage.GetPath(), path, fromTimeStr)
 	}
 
 	reader, err := CreateDirReader(ctx, storage, path,
 		ioStorage.WithValidator(newNameValidator(filterStr)),
 		ioStorage.WithStartAfter(startScanFrom),
 		ioStorage.WithNestedDir(),
+		ioStorage.WithSkipDirCheck(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}
 
-	return reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path))
+	return reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path)+"/")
 }
 
 func WriteMetadataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error {

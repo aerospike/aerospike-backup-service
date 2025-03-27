@@ -18,6 +18,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
@@ -104,19 +105,18 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		return nil, nil, nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
 
-	backends := service.NewBackupBackends()
-	backupHandlers := service.NewBackupHandlerHolder()
-	registry := service.NewRunningBackupsRegistry(ctx, backends, config)
+	backendService := service.NewBackupBackendService(config)
+	registry := service.NewRunningBackupsRegistry(ctx, backendService, config)
 
-	configApplier := service.NewDefaultConfigApplier(
-		scheduler,
-		backends,
-		clientManager,
-		backupHandlers,
-		registry,
-	)
+	retentionManager := service.NewBackupRetentionManager(backendService, config)
+	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, config)
+	backupExecutor := backupexecutor.NewDefaultBackupExecutor()
+	backupComponents := service.NewBackupComponents(
+		clientManager, backupExecutor, registry, retentionManager,
+		backendService, clusterConfigWriter)
+	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config)
 
-	err = configApplier.ApplyNewRoutines(config.Routines())
+	err = configApplier.ApplyNewConfig()
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
@@ -125,16 +125,17 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
-		backends, restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator)
+		restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator, backendService)
 
+	configRetriever := service.NewConfigRetriever(backendService, config)
 	httpService := handlers.NewService(
 		ctx,
 		config,
 		configApplier,
 		scheduler,
 		restoreMgr,
-		backends,
-		backupHandlers,
+		configRetriever,
+		backendService,
 		registry,
 		configurationManager,
 		nsValidator,

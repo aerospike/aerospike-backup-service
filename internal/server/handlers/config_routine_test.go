@@ -246,7 +246,6 @@ func TestEnableRoutine(t *testing.T) {
 				Disabled: true,
 			}
 			_ = svc.config.AddRoutine("test-routine", routine)
-			svc.handlerHolder.Store("test-routine", nil) // Mock handler storage
 
 			req := httptest.NewRequest(http.MethodPut, "/v1/config/routines/"+tt.routineName+"/enable", nil)
 			req.SetPathValue("name", tt.routineName)
@@ -300,7 +299,6 @@ func TestDisableRoutine(t *testing.T) {
 
 			routine := &model.BackupRoutine{}
 			_ = svc.config.AddRoutine("test-routine", routine)
-			svc.handlerHolder.Store("test-routine", nil) // Mock handler storage
 
 			req := httptest.NewRequest(http.MethodPut, "/v1/config/routines/"+tt.routineName+"/disable", nil)
 			req.SetPathValue("name", tt.routineName)

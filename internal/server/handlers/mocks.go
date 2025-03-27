@@ -11,28 +11,32 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockBackendsHolder mocks the BackendsHolder interface.
-type MockBackendsHolder struct {
+// MockBackupBackendService is a mock implementation of BackupReaderWriter.
+type MockBackupBackendService struct {
 	mock.Mock
 }
 
-func (m *MockBackendsHolder) Init(routines map[string]*model.BackupRoutine) {
-	m.Called(routines)
+// GetBackups retrieves backup details based on the provided filter.
+func (m *MockBackupBackendService) GetBackups(ctx context.Context, filter service.BackupFilter,
+) ([]model.BackupDetails, error) {
+	args := m.Called(ctx, filter)
+	return args.Get(0).([]model.BackupDetails), args.Error(1)
 }
 
-func (m *MockBackendsHolder) GetReader(routineName string) (service.BackupMetadataReader, bool) {
-	args := m.Called(routineName)
-	return args.Get(0).(service.BackupMetadataReader), args.Bool(1)
+// WriteBackupMetadata stores metadata for a specific backup.
+func (m *MockBackupBackendService) WriteBackupMetadata(
+	ctx context.Context,
+	routineName, path string,
+	metadata model.BackupMetadata,
+) error {
+	args := m.Called(ctx, routineName, path, metadata)
+	return args.Error(0)
 }
 
-func (m *MockBackendsHolder) Get(routineName string) (service.BackupMetadataReaderWriter, bool) {
-	args := m.Called(routineName)
-	return args.Get(0).(service.BackupMetadataReaderWriter), args.Bool(1)
-}
-
-func (m *MockBackendsHolder) GetAllReaders() map[string]service.BackupMetadataReader {
-	args := m.Called()
-	return args.Get(0).(map[string]service.BackupMetadataReader)
+// Delete removes a specific backup folder.
+func (m *MockBackupBackendService) Delete(ctx context.Context, routineName, path string) error {
+	args := m.Called(ctx, routineName, path)
+	return args.Error(0)
 }
 
 // MockBackupMetadataReader mocks the BackupMetadataReader interface.
@@ -184,7 +188,7 @@ func (mock configurationManagerMock) Write(_ context.Context, config *model.Conf
 
 type MockConfigApplier struct{}
 
-func (a *MockConfigApplier) ApplyNewRoutines(_ map[string]*model.BackupRoutine) error {
+func (a *MockConfigApplier) ApplyNewConfig() error {
 	return nil
 }
 
