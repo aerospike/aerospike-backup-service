@@ -20,23 +20,23 @@ type ConfigRetriever interface {
 
 // ConfigRetrieverImpl default implementation of ConfigRetriever.
 type ConfigRetrieverImpl struct {
-	backendService BackupBackendService
-	config         *model.Config
+	backupReader BackupReader
+	config       *model.Config
 }
 
 var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
 
-func NewConfigRetriever(backendService BackupBackendService, config *model.Config) *ConfigRetrieverImpl {
+func NewConfigRetriever(backupReader BackupReaderWriter, config *model.Config) *ConfigRetrieverImpl {
 	return &ConfigRetrieverImpl{
-		backendService: backendService,
-		config:         config,
+		backupReader: backupReader,
+		config:       config,
 	}
 }
 
 // RetrieveConfiguration return backed up Aerospike configuration.
 func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routine string, toTime time.Time,
 ) ([]byte, error) {
-	backups, err := cr.backendService.GetBackups(ctx, NewFullBackupFilter(routine).WithToTime(toTime).Last())
+	backups, err := cr.backupReader.GetBackups(ctx, NewFullBackupFilter(routine).WithToTime(toTime).Last())
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve backups for routine %s: %w", routine, err)
 	}

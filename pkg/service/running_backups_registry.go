@@ -51,11 +51,11 @@ type RunningBackupsRegistryImpl struct {
 	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
 	lastSuccessful *util.SafeMap[string, *model.LastBackupRun]
 
-	routineLocks   *util.SafeMap[string, *sync.RWMutex] // Protects individual routines during synchronization
-	ctx            context.Context
-	config         *model.Config
-	backendService BackupBackendService
-	routineCancel  *util.SafeMap[string, context.CancelFunc]
+	routineLocks  *util.SafeMap[string, *sync.RWMutex] // Protects individual routines during synchronization
+	ctx           context.Context
+	config        *model.Config
+	backupReader  BackupReader
+	routineCancel *util.SafeMap[string, context.CancelFunc]
 }
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
@@ -63,13 +63,13 @@ var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
 func NewRunningBackupsRegistry(
 	ctx context.Context,
-	backendService BackupBackendService,
+	backupReader BackupReaderWriter,
 	config *model.Config,
 ) *RunningBackupsRegistryImpl {
 	return &RunningBackupsRegistryImpl{
 		ctx:            ctx,
 		config:         config,
-		backendService: backendService,
+		backupReader:   backupReader,
 		handlers:       util.NewSafeMap[registryKey, CancelableBackupHandler](),
 		lastSuccessful: util.NewSafeMap[string, *model.LastBackupRun](),
 		routineLocks:   util.NewSafeMap[string, *sync.RWMutex](),
@@ -248,7 +248,7 @@ func (r *RunningBackupsRegistryImpl) findLastRun(
 	ctx context.Context,
 	routineName string,
 ) (*model.LastBackupRun, error) {
-	lastFullBackup, err := r.backendService.GetBackups(ctx, NewFullBackupFilter(routineName).Last())
+	lastFullBackup, err := r.backupReader.GetBackups(ctx, NewFullBackupFilter(routineName).Last())
 	if err != nil {
 		return nil, fmt.Errorf("read last full backup failed: %w", err)
 	}
@@ -258,7 +258,7 @@ func (r *RunningBackupsRegistryImpl) findLastRun(
 	}
 	lastFullTime := lastFullBackup[0].Created
 
-	lastIncrBackup, err := r.backendService.GetBackups(ctx,
+	lastIncrBackup, err := r.backupReader.GetBackups(ctx,
 		NewIncrementalBackupFilter(routineName).WithFromTime(lastFullTime).Last())
 	if err != nil {
 		return nil, fmt.Errorf("read last incremental backup failed: %w", err)

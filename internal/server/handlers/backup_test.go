@@ -60,8 +60,8 @@ func TestService_GetAllFullBackups(t *testing.T) {
 			tt.setupMock(mockBackends)
 
 			svc := &Service{
-				config:         cfg,
-				backendService: mockBackends,
+				config:       cfg,
+				backupReader: mockBackends,
 			}
 
 			req := httptest.NewRequest(http.MethodGet, "/v1/backups/full", nil)

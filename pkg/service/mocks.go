@@ -125,7 +125,7 @@ func (m *MockRunningBackupsRegistry) SynchroniseBackupHistory() {
 	m.Called()
 }
 
-// MockBackupBackendService is a mock implementation of BackupBackendService.
+// MockBackupBackendService is a mock implementation of BackupReaderWriter.
 type MockBackupBackendService struct {
 	mock.Mock
 }

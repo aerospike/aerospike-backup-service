@@ -18,7 +18,7 @@ type Service struct {
 	scheduler            quartz.Scheduler
 	restoreManager       service.RestoreManager
 	configRetriever      service.ConfigRetriever
-	backendService       service.BackupBackendService
+	backupReader         service.BackupReader
 	registry             RunningBackupsRegistry
 	configurationManager configuration.Manager
 	nsValidator          aerospike.NamespaceValidator
@@ -31,7 +31,7 @@ func NewService(
 	scheduler quartz.Scheduler,
 	restoreManager service.RestoreManager,
 	configRetriever service.ConfigRetriever,
-	backupService service.BackupBackendService,
+	backupReader service.BackupReader,
 	registry RunningBackupsRegistry,
 	configurationManager configuration.Manager,
 	nsValidator aerospike.NamespaceValidator,
@@ -43,7 +43,7 @@ func NewService(
 		scheduler:            scheduler,
 		restoreManager:       restoreManager,
 		configRetriever:      configRetriever,
-		backendService:       backupService,
+		backupReader:         backupReader,
 		registry:             registry,
 		configurationManager: configurationManager,
 		nsValidator:          nsValidator,

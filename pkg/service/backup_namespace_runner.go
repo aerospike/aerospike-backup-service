@@ -21,7 +21,7 @@ type BackupNamespaceRunner struct {
 	routineName    string
 	backupExecutor backupexecutor.Backup
 	retry          executor
-	backendService BackupBackendService
+	backendService BackupWriter
 	logger         *slog.Logger
 }
 
@@ -30,7 +30,7 @@ func NewBackupNamespaceRunner(
 	routineName string,
 	backupExecutor backupexecutor.Backup,
 	retry executor,
-	backendService BackupBackendService,
+	backendService BackupWriter,
 	logger *slog.Logger,
 ) *BackupNamespaceRunner {
 	return &BackupNamespaceRunner{

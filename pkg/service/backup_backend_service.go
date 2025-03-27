@@ -77,11 +77,20 @@ func (f BackupFilter) String() string {
 		f.routine, f.JobType, f.onlyLast, f.TimeBounds().String())
 }
 
-// BackupBackendService defines operations for reading and writing backups metadata.
-type BackupBackendService interface {
+// BackupReaderWriter defines operations for reading and writing backups metadata.
+type BackupReaderWriter interface {
+	BackupReader
+	BackupWriter
+}
+
+// BackupReader defines operations for reading backups metadata.
+type BackupReader interface {
 	// GetBackups retrieves backup details based on the provided filter.
 	GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error)
+}
 
+// BackupWriter defines operations for writing backups metadata.
+type BackupWriter interface {
 	// WriteBackupMetadata stores metadata for a specific backup.
 	WriteBackupMetadata(ctx context.Context, routineName, path string, metadata model.BackupMetadata) error
 
@@ -89,13 +98,13 @@ type BackupBackendService interface {
 	Delete(ctx context.Context, routineName, path string) error
 }
 
-// BackupBackendServiceImpl default implementation of BackupBackendService.
+// BackupBackendServiceImpl default implementation of BackupReaderWriter.
 type BackupBackendServiceImpl struct {
 	config *model.Config
 	locks  *util.SafeMap[string, *sync.RWMutex] // lock per routine
 }
 
-var _ BackupBackendService = (*BackupBackendServiceImpl)(nil)
+var _ BackupReaderWriter = (*BackupBackendServiceImpl)(nil)
 
 func NewBackupBackendService(config *model.Config) *BackupBackendServiceImpl {
 	return &BackupBackendServiceImpl{

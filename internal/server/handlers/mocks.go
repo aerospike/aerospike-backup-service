@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockBackupBackendService is a mock implementation of BackupBackendService.
+// MockBackupBackendService is a mock implementation of BackupReaderWriter.
 type MockBackupBackendService struct {
 	mock.Mock
 }

@@ -34,7 +34,7 @@ func NewErrJobNotFound(id model.RestoreJobID) *ErrJobNotFound {
 type dataRestorer struct {
 	restoreJobs    *RestoreJobsHolder
 	restoreService restoreexecutor.Restore
-	backendService BackupBackendService
+	backupReader   BackupReader
 	clientManager  aerospike.ClientManager
 	nsValidator    aerospike.NamespaceValidator
 }
@@ -47,12 +47,12 @@ func NewRestoreManager(
 	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,
 	nsValidator aerospike.NamespaceValidator,
-	backendService BackupBackendService,
+	backupReader BackupReader,
 ) RestoreManager {
 	return &dataRestorer{
 		restoreJobs:    restoreJobs,
 		restoreService: restoreService,
-		backendService: backendService,
+		backupReader:   backupReader,
 		clientManager:  clientManager,
 		nsValidator:    nsValidator,
 	}
@@ -135,7 +135,7 @@ func (r *dataRestorer) RestoreByTime(
 func (r *dataRestorer) findBackupsToRestore(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (map[string][]model.BackupDetails, error) {
-	backups, err := r.backendService.GetBackups(ctx,
+	backups, err := r.backupReader.GetBackups(ctx,
 		NewFullBackupFilter(request.RoutineName).
 			WithToTime(request.Time).
 			Last(),
@@ -151,7 +151,7 @@ func (r *dataRestorer) findBackupsToRestore(
 	}
 
 	// Find incremental backups.
-	incrementalBackups, err := r.backendService.GetBackups(ctx,
+	incrementalBackups, err := r.backupReader.GetBackups(ctx,
 		NewIncrementalBackupFilter(request.RoutineName).
 			WithFromTime(backups[0].Created).
 			WithToTime(request.Time))

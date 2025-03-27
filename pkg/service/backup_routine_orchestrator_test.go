@@ -98,7 +98,10 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockBackupExecutor.AssertExpectations(t)
 	mockBackupHandler.AssertExpectations(t)
 	mockRegistry.AssertExpectations(t)
-	mockRetentionManager.AssertExpectations(t)
+	assert.Eventually(t, func() bool {
+		return mockRetentionManager.AssertExpectations(t)
+	}, time.Second, time.Millisecond*10)
+
 	mockClusterConfigWriter.AssertExpectations(t)
 
 	assert.NotNil(t, registeredHandler, "Backup handler should be registered")

@@ -162,7 +162,7 @@ func (s *Service) readBackupsForRoutine(
 	ctx context.Context,
 	filter service.BackupFilter,
 ) ([]*dto.BackupDetails, error) {
-	backupList, err := s.backendService.GetBackups(ctx, filter)
+	backupList, err := s.backupReader.GetBackups(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

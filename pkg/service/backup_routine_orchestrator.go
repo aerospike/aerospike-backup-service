@@ -29,14 +29,15 @@ type BackupRoutineOrchestrator struct {
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
 
-// BackupComponents holds all components required for executing a backup routine.
+// BackupComponents holds all components required to execute a backup routine.
 type BackupComponents struct {
-	clientManager       aerospike.ClientManager
-	backupExecutor      backupexecutor.Backup
-	registry            RunningBackupsRegistry
-	retentionManager    RetentionManager
-	backendService      BackupBackendService
-	clusterConfigWriter ClusterConfigWriter
+	clientManager    aerospike.ClientManager // Retrieves the Aerospike client before starting the backup.
+	backupExecutor   backupexecutor.Backup   // Executes the backup using the backup-go library.
+	registry         RunningBackupsRegistry  // Stores the backup handler during execution.
+	retentionManager RetentionManager        // Deletes old backups after a successful backup.
+	backendService   BackupWriter            // Writes backup metadata after a successful backup and
+	// deletes created files if the backup fails.
+	clusterConfigWriter ClusterConfigWriter // Backs up cluster configuration.
 }
 
 func NewBackupComponents(
@@ -44,7 +45,7 @@ func NewBackupComponents(
 	backupExecutor backupexecutor.Backup,
 	registry RunningBackupsRegistry,
 	retentionManager RetentionManager,
-	backendService BackupBackendService,
+	backendService BackupWriter,
 	clusterConfigWriter ClusterConfigWriter,
 ) *BackupComponents {
 	return &BackupComponents{
