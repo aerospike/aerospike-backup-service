@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -73,5 +74,6 @@ func extractTimestampFromPath(path string) string {
 		return matches[2] // The timestamp is in the second capturing group
 	}
 
+	slog.Warn("could not extract timestamp from " + path)
 	return ""
 }
