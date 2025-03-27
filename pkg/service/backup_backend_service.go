@@ -125,7 +125,6 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 	lock.RLock()
 	defer lock.RUnlock()
 
-	// TODO: support local files
 	files, err := storage.ReadFileNames(ctx, routine.Storage, path, metadataFile, filter.FromTime)
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.FromTime, err)
@@ -136,11 +135,12 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 	maxString := getUpperBoundary(filter)
 
 	// Filter files based on timestamp criteria
-	eligibleFiles := filterEligibleFiles(files, filepath.Join(routine.Storage.GetPath(), maxString), filter)
+	storagePrefix := filepath.Clean(routine.Storage.GetPath())
+	eligibleFiles := filterEligibleFiles(files, filepath.Join(storagePrefix, maxString), filter)
 
 	var backups []model.BackupDetails
 	for _, fileName := range eligibleFiles {
-		file, err := storage.ReadFile(ctx, routine.Storage, strings.TrimPrefix(fileName, routine.Storage.GetPath()))
+		file, err := storage.ReadFile(ctx, routine.Storage, strings.TrimPrefix(fileName, storagePrefix))
 		if err != nil {
 			return nil, fmt.Errorf("read metadata file %q: %w", fileName, err)
 		}
