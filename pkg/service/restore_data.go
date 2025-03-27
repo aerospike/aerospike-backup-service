@@ -225,7 +225,7 @@ func (r *dataRestorer) restoreNamespace(
 		// This way we reduce generation noise and unnecessary load.
 		slices.Reverse(backups)
 
-		// old values are not important, because they qualifies how to handle existing data in db.
+		// old values are not important, because they qualify how to handle existing data in db.
 		request.Policy.Unique = util.Ptr(true)
 		request.Policy.Replace = nil
 	}
