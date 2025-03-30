@@ -1,15 +1,13 @@
 module github.com/aerospike/aerospike-backup-service/v3
 
-go 1.23
-
-toolchain go1.23.3
+go 1.23.0
 
 require (
 	cloud.google.com/go/storage v1.49.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.5.0
 	github.com/aerospike/aerospike-client-go/v8 v8.2.0
-	github.com/aerospike/aerospike-management-lib v1.5.0
+	github.com/aerospike/aerospike-management-lib v1.7.0
 	github.com/aerospike/backup-go v0.3.1
 	github.com/aws/aws-sdk-go-v2 v1.32.7
 	github.com/aws/aws-sdk-go-v2/config v1.28.7
@@ -31,6 +29,8 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+replace github.com/aerospike/aerospike-client-go/v8 v8.2.0 => github.com/aerospike/aerospike-client-go/v8 v8.1.0
 
 require (
 	cel.dev/expr v0.16.1 // indirect
@@ -121,7 +121,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
 	google.golang.org/grpc v1.67.3 // indirect
-	google.golang.org/protobuf v1.35.2 // indirect
+	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/apimachinery v0.29.0 // indirect
 )
