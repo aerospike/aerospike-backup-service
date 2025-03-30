@@ -3,12 +3,15 @@ package service
 import (
 	"context"
 	"fmt"
+	"math"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
+	"github.com/reugn/go-quartz/quartz"
 )
 
 // BackupGo implements the [Backup] interface.
@@ -79,9 +82,10 @@ func makeBackupConfig(
 	if backupPolicy.TotalTimeout != nil {
 		config.ScanPolicy.TotalTimeout = *backupPolicy.TotalTimeout
 	}
-	if backupPolicy.SocketTimeout != nil {
-		config.ScanPolicy.SocketTimeout = *backupPolicy.SocketTimeout
-	}
+
+	isFullBackup := timebounds.FromTime == nil
+	config.ScanPolicy.SocketTimeout = calculateScanSocketTimeout(backupRoutine, isFullBackup, time.Now())
+
 	config.ScanPolicy.MaxRetries = 100
 
 	if backupPolicy.CompressionPolicy != nil {
@@ -103,4 +107,37 @@ func makeBackupConfig(
 	config.SecretAgentConfig = secretAgent.ToSecretAgentConfig()
 
 	return config
+}
+
+// calculateScanSocketTimeout calculates socket timeout for the given backup routine and timestamp.
+// timeout should not exceed the next interval trigger.
+func calculateScanSocketTimeout(routine *model.BackupRoutine, isFullBackup bool, now time.Time) time.Duration {
+	var timeout = model.DefaultSocketTimeout
+	if routine.BackupPolicy.SocketTimeout != nil && *routine.BackupPolicy.SocketTimeout != 0 {
+		timeout = *routine.BackupPolicy.SocketTimeout
+	}
+
+	// If timeout is 0, treat as infinite
+	if timeout == 0 {
+		timeout = time.Duration(math.MaxInt64)
+	}
+
+	nextTrigger := timeToNextTrigger(routine, isFullBackup, now)
+
+	return min(timeout, nextTrigger, model.DefaultSocketTimeout)
+}
+
+func timeToNextTrigger(routine *model.BackupRoutine, isFullBackup bool, now time.Time) time.Duration {
+	var cron string
+	if isFullBackup {
+		cron = routine.IntervalCron
+	} else {
+		cron = routine.IncrIntervalCron
+	}
+
+	cronTrigger, _ := quartz.NewCronTrigger(cron)
+	fireTime, _ := cronTrigger.NextFireTime(now.UnixNano())
+	delta := time.Unix(0, fireTime).Sub(now)
+
+	return delta
 }
