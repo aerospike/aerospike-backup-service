@@ -19,8 +19,8 @@ generate_mocks() {
     # Derive output package name (last component of the source path)
     _out_pkg_name=$(basename "$_src_pkg_rel_path")
 
-    # Derive output file path (always <package_dir>/mocks_test.go)
-    _full_out_file="$WORKSPACE/$_src_pkg_rel_path/mocks_test.go"
+    # Derive output file path (always <package_dir>/mockgen.go)
+    _full_out_file="$WORKSPACE/$_src_pkg_rel_path/mockgen.go"
 
     # Derive full source package import path
     _full_src_pkg_import="$BASE_IMPORT_PATH/$_src_pkg_rel_path"
@@ -47,7 +47,7 @@ generate_mocks \
 
 generate_mocks \
     "pkg/service/aerospike" \
-    "ClientManager"
+    "ClientManager,NamespaceValidator"
 
 # --- Add more calls here using the simplified format ---
 # generate_mocks \
