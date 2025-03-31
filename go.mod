@@ -15,7 +15,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.78.2
 	github.com/aws/smithy-go v1.22.3
 	github.com/go-logr/logr v1.4.2
-	github.com/golang/mock v1.6.0
 	github.com/prometheus/client_golang v1.21.1
 	github.com/prometheus/client_model v0.6.1
 	github.com/reugn/go-quartz v0.14.0
