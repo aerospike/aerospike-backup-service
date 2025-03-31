@@ -63,7 +63,7 @@ var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
 func NewRunningBackupsRegistry(
 	ctx context.Context,
-	backupReader BackupReaderWriter,
+	backupReader BackupReader,
 	config *model.Config,
 ) *RunningBackupsRegistryImpl {
 	return &RunningBackupsRegistryImpl{
