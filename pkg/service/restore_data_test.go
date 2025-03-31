@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -49,6 +50,60 @@ func TestRestoreOK(t *testing.T) {
 	assert.Empty(t, jobStatus.Error, "Expected no error in final job status")
 }
 
+func TestCancelRestoreOK(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+	defer env.ctrl.Finish()
+
+	cluster := &model.AerospikeCluster{}
+	policy := &model.RestorePolicy{}
+	storage := &model.LocalStorage{}
+	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
+
+	client := env.expectSuccessfulClientInteraction(t, cluster)
+
+	waitReturned := make(chan struct{}) // To signal Wait has returned
+	mockRestoreHandler := restoreexecutor.NewMockRestoreHandler(env.ctrl)
+	mockRestoreHandler.EXPECT().GetStats().Return(models.NewRestoreStats()).AnyTimes()
+
+	// Wait should block until context is cancelled, then return context.Canceled
+	mockRestoreHandler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+		<-ctx.Done()        // Wait for cancellation signal
+		close(waitReturned) // Signal return
+		return ctx.Err()    // Return cancellation error
+	})
+
+	// Expect Run to start the process
+	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(mockRestoreHandler, nil)
+
+	jobID, err := env.restoreManager.Restore(request)
+	require.NoError(t, err)
+	require.NotZero(t, jobID)
+
+	// Give the restore goroutine a moment to start and register the handler
+	assert.Eventually(t, func() bool {
+		return env.jobsHolder.Size() > 0
+	}, time.Second, 10*time.Millisecond)
+
+	// Cancel the job
+	err = env.restoreManager.CancelRestore(jobID)
+	require.NoError(t, err, "Failed to cancel job")
+
+	// Wait for the handler's Wait method to actually return due to cancellation
+	select {
+	case <-waitReturned:
+		// Success
+	case <-time.After(2 * time.Second):
+		t.Fatal("Restore handler Wait() did not return after cancellation")
+	}
+
+	// Check final status reflects cancellation
+	jobStatus, waitErr := waitForRestore(t, env.restoreManager, jobID)
+
+	require.NoError(t, waitErr)
+	require.NotNil(t, jobStatus)
+	assert.Equal(t, model.JobStatusCancelled, jobStatus.Status)
+}
+
 func waitForRestore(
 	t *testing.T,
 	restoreManager RestoreManager,
@@ -65,8 +120,8 @@ func waitForRestore(
 		if err != nil {
 			return false
 		}
-		return jobStatus.Status == model.JobStatusDone
-	}, 2*time.Second, 50*time.Millisecond, "Job should eventually reach Done status")
+		return jobStatus.Status != model.JobStatusRunning
+	}, 2*time.Second, 10*time.Millisecond, "Job should eventually stop running")
 
 	return jobStatus, err
 }
@@ -91,11 +146,12 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 	mockBackupReader := NewMockBackupReader(ctrl)
+	restoreJobsHolder := NewRestoreJobsHolder()
 
 	restoreManager := NewRestoreManager(
 		mockRestore,
 		mockClientManager,
-		NewRestoreJobsHolder(),
+		restoreJobsHolder,
 		mockNsValidator,
 		mockBackupReader,
 	)
@@ -106,7 +162,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 		mockClientManager: mockClientManager,
 		mockNsValidator:   mockNsValidator,
 		mockBackupReader:  mockBackupReader,
-		jobsHolder:        NewRestoreJobsHolder(),
+		jobsHolder:        restoreJobsHolder,
 		restoreManager:    restoreManager,
 	}
 }
