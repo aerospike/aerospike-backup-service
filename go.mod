@@ -15,6 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.78.2
 	github.com/aws/smithy-go v1.22.3
 	github.com/go-logr/logr v1.4.2
+	github.com/golang/mock v1.6.0
 	github.com/prometheus/client_golang v1.21.1
 	github.com/prometheus/client_model v0.6.1
 	github.com/reugn/go-quartz v0.14.0
@@ -22,6 +23,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/swaggo/swag v1.16.4
+	go.uber.org/mock v0.3.0
 	golang.org/x/sync v0.12.0
 	golang.org/x/time v0.11.0
 	google.golang.org/api v0.228.0
