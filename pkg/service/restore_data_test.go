@@ -37,11 +37,11 @@ func TestRestoreOK(t *testing.T) {
 		Return(mockRestoreHandler, nil)
 
 	// Execute the restore
-	jobId, err := env.restoreManager.Restore(request)
+	jobID, err := env.restoreManager.Restore(request)
 	require.NoError(t, err)
-	require.NotZero(t, jobId)
+	require.NotZero(t, jobID)
 
-	jobStatus, err := waitForRestore(t, env.restoreManager, jobId)
+	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusDone, jobStatus.Status)
@@ -49,14 +49,19 @@ func TestRestoreOK(t *testing.T) {
 	assert.Empty(t, jobStatus.Error, "Expected no error in final job status")
 }
 
-func waitForRestore(t *testing.T, restoreManager RestoreManager, jobId model.RestoreJobID) (*model.RestoreJobStatus, error) {
+func waitForRestore(
+	t *testing.T,
+	restoreManager RestoreManager,
+	jobID model.RestoreJobID,
+) (*model.RestoreJobStatus, error) {
+	t.Helper()
 	var (
 		jobStatus *model.RestoreJobStatus
 		err       error
 	)
 
 	assert.Eventually(t, func() bool {
-		jobStatus, err = restoreManager.JobStatus(jobId)
+		jobStatus, err = restoreManager.JobStatus(jobID)
 		if err != nil {
 			return false
 		}
@@ -117,7 +122,10 @@ func mockClient(t *testing.T) *backup.Client {
 
 // expectSuccessfulClientInteraction sets up the common GetClient/Close mock expectations.
 // It returns the mocked client instance for potential further use in the test.
-func (env *testRestoreEnv) expectSuccessfulClientInteraction(t *testing.T, cluster *model.AerospikeCluster) *backup.Client {
+func (env *testRestoreEnv) expectSuccessfulClientInteraction(
+	t *testing.T,
+	cluster *model.AerospikeCluster,
+) *backup.Client {
 	t.Helper()
 	client := mockClient(t)
 
