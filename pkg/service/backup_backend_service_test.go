@@ -65,7 +65,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	// Test both FromTime and ToTime
 	rangeFilter := NewFullBackupFilter(routineName).
 		WithFromTime(times[1]). // From Jan 2
-		WithToTime(times[3]) // To Jan 4
+		WithToTime(times[3])    // To Jan 4
 	rangeBackups, err := service.GetBackups(ctx, rangeFilter)
 	require.NoError(t, err)
 	require.Len(t, rangeBackups, 3) // Should return Jan 2, 3, 4
@@ -89,7 +89,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	// Test Last() with time filters
 	lastRangeFilter := NewFullBackupFilter(routineName).
 		WithFromTime(times[1]). // From Jan 2
-		WithToTime(times[3]). // To Jan 4
+		WithToTime(times[3]).   // To Jan 4
 		Last()
 	lastRangeBackups, err := service.GetBackups(ctx, lastRangeFilter)
 	require.NoError(t, err)
@@ -173,6 +173,71 @@ func TestDelete_RoutineNotFound(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "routine not found")
+}
+
+func TestIncrementalBackup(t *testing.T) {
+	service := setupLocalBackupBackendService(t)
+
+	ctx := context.Background()
+	routineName := "test-routine"
+
+	// First create a full backup as baseline
+	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	fullBackupPath := getBackupPath(routineName, jobTypeFull, "test-ns", fullBackupTime)
+
+	fullMetadata := model.BackupMetadata{
+		Created:     fullBackupTime,
+		Namespace:   "test-ns",
+		RecordCount: 1000,
+		ByteCount:   10240,
+		FileCount:   5,
+	}
+
+	err := service.WriteBackupMetadata(ctx, routineName, fullBackupPath, fullMetadata)
+	require.NoError(t, err)
+
+	// Now create an incremental backup
+	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
+	incrementalPath := getBackupPath(routineName, jobTypeIncremental, "test-ns", incrementalTime)
+
+	incMetadata := model.BackupMetadata{
+		Created:     incrementalTime,
+		From:        fullBackupTime, // From points to the full backup time
+		Namespace:   "test-ns",
+		RecordCount: 200,
+		ByteCount:   2048,
+		FileCount:   2,
+	}
+
+	err = service.WriteBackupMetadata(ctx, routineName, incrementalPath, incMetadata)
+	require.NoError(t, err)
+
+	// Test fetching only incremental backups
+	filter := NewIncrementalBackupFilter(routineName)
+	backups, err := service.GetBackups(ctx, filter)
+
+	// Verify
+	require.NoError(t, err)
+	require.Len(t, backups, 1)
+	assert.Equal(t, uint64(200), backups[0].RecordCount)
+	assert.Equal(t, incrementalTime, backups[0].Created)
+	assert.Equal(t, fullBackupTime, backups[0].From)
+	assert.Equal(t, "test-routine/incremental/1609545600000/data/test-ns", backups[0].Key)
+
+	// Test with time filter for incremental
+	timeFilter := NewIncrementalBackupFilter(routineName).WithFromTime(fullBackupTime)
+	timeBackups, err := service.GetBackups(ctx, timeFilter)
+	require.NoError(t, err)
+	require.Len(t, timeBackups, 1)
+	assert.Equal(t, "test-routine/incremental/1609545600000/data/test-ns", timeBackups[0].Key)
+
+	// Verify independent from full backups
+	fullFilter := NewFullBackupFilter(routineName)
+	fullBackups, err := service.GetBackups(ctx, fullFilter)
+	require.NoError(t, err)
+	require.Len(t, fullBackups, 1)
+	assert.Equal(t, fullBackupTime, fullBackups[0].Created)
+	assert.Equal(t, "test-routine/backup/1609459200000/data/test-ns", fullBackups[0].Key)
 }
 
 // Setup test helpers for local storage tests
