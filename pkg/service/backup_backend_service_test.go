@@ -240,6 +240,54 @@ func TestIncrementalBackup(t *testing.T) {
 	assert.Equal(t, "test-routine/backup/1609459200000/data/test-ns", fullBackups[0].Key)
 }
 
+func TestReadPath(t *testing.T) {
+	service := setupLocalBackupBackendService(t)
+
+	ctx := context.Background()
+	routineName := "test-routine"
+
+	// First create a full backup as baseline
+	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	fullBackupPath := getBackupPath(routineName, jobTypeFull, "test-ns", fullBackupTime)
+
+	fullMetadata := model.BackupMetadata{
+		Created: fullBackupTime,
+	}
+
+	err := service.WriteBackupMetadata(ctx, routineName, fullBackupPath, fullMetadata)
+	require.NoError(t, err)
+
+	// Now create an incremental backup
+	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
+	incrementalPath := getBackupPath(routineName, jobTypeIncremental, "test-ns", incrementalTime)
+
+	incMetadata := model.BackupMetadata{
+		Created: incrementalTime,
+	}
+
+	err = service.WriteBackupMetadata(ctx, routineName, incrementalPath, incMetadata)
+	require.NoError(t, err)
+
+	routine, _ := service.config.Routine(routineName)
+
+	backups, err := service.GetBackups(ctx, NewPathFilter("test-routine", routine.Storage))
+	require.NoError(t, err)
+	require.Len(t, backups, 2)
+
+	backups, err = service.GetBackups(ctx, NewPathFilter("test-routine/backup", routine.Storage))
+	require.NoError(t, err)
+	require.Len(t, backups, 1)
+
+	backups, err = service.GetBackups(ctx, NewPathFilter("test-routine/incremental", routine.Storage))
+	require.NoError(t, err)
+	require.Len(t, backups, 1)
+
+	backups, err = service.GetBackups(ctx, NewPathFilter("test-routine/wrong-path", routine.Storage))
+	require.NoError(t, err)
+	require.Empty(t, backups)
+
+}
+
 // Setup test helpers for local storage tests
 func setupLocalBackupBackendService(t *testing.T) *BackupBackendServiceImpl {
 	t.Helper()

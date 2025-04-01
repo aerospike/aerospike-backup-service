@@ -24,6 +24,10 @@ type BackupFilter struct {
 	FromTime *time.Time
 	ToTime   *time.Time
 	onlyLast bool // last backup only
+
+	// For filtering by explicit path instead of routine/type
+	explicitPath    string
+	explicitStorage model.Storage // Storage associated with the explicit path
 }
 
 // NewFullBackupFilter creates a filter for full backups.
@@ -39,6 +43,15 @@ func NewIncrementalBackupFilter(routine string) BackupFilter {
 	return BackupFilter{
 		routine: routine,
 		JobType: jobTypeIncremental,
+	}
+}
+
+// NewPathFilter creates a filter for retrieving backups directly from a given storage path.
+// It disables routine-based and jobType-based path calculation.
+func NewPathFilter(path string, storage model.Storage) BackupFilter {
+	return BackupFilter{
+		explicitPath:    path,
+		explicitStorage: storage,
 	}
 }
 
@@ -75,6 +88,14 @@ func (f BackupFilter) WithToTime(toTime time.Time) BackupFilter {
 func (f BackupFilter) String() string {
 	return fmt.Sprintf("routine: %v type: %v last: %v timebounds: %s",
 		f.routine, f.JobType, f.onlyLast, f.TimeBounds().String())
+}
+
+func (f BackupFilter) getPath() string {
+	if f.explicitPath != "" {
+		return f.explicitPath
+	}
+
+	return getBackupRootPath(f.routine, f.JobType)
 }
 
 // BackupReaderWriter defines operations for reading and writing backups metadata.
@@ -114,19 +135,14 @@ func NewBackupBackendService(config *model.Config) *BackupBackendServiceImpl {
 }
 
 func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error) {
-	path := getBackupRootPath(filter.routine, filter.JobType)
-
-	routine, found := b.config.Routine(filter.routine)
-	if !found {
-		return nil, fmt.Errorf("routine not found: %q", filter.routine)
+	backupStorage, lock, err := b.getStorage(filter)
+	if err != nil {
+		return nil, err
 	}
-
-	lock := b.locks.LoadOrStore(filter.routine, &sync.RWMutex{})
 	lock.RLock()
 	defer lock.RUnlock()
 
-	backupStorage := routine.Storage
-	files, err := storage.ReadFileNames(ctx, backupStorage, path, metadataFile, filter.FromTime)
+	files, err := storage.ReadFileNames(ctx, backupStorage, filter.getPath(), metadataFile, filter.FromTime)
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.FromTime, err)
 	}
@@ -157,6 +173,21 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 	}
 
 	return backups, nil
+}
+
+func (b *BackupBackendServiceImpl) getStorage(filter BackupFilter) (model.Storage, *sync.RWMutex, error) {
+	if filter.explicitStorage != nil {
+		return filter.explicitStorage, &sync.RWMutex{}, nil
+	}
+
+	routine, found := b.config.Routine(filter.routine)
+	if !found {
+		return nil, nil, fmt.Errorf("routine not found: %q", filter.routine)
+	}
+
+	lock := b.locks.LoadOrStore(filter.routine, &sync.RWMutex{})
+
+	return routine.Storage, lock, nil
 }
 
 func backupKey(fileName, storagePrefix string) string {
