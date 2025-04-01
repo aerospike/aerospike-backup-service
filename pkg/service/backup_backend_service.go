@@ -125,7 +125,8 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 	lock.RLock()
 	defer lock.RUnlock()
 
-	files, err := storage.ReadFileNames(ctx, routine.Storage, path, metadataFile, filter.FromTime)
+	backupStorage := routine.Storage
+	files, err := storage.ReadFileNames(ctx, backupStorage, path, metadataFile, filter.FromTime)
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.FromTime, err)
 	}
@@ -135,12 +136,12 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 	maxString := getUpperBoundary(filter)
 
 	// Filter files based on timestamp criteria
-	storagePrefix := filepath.Clean(routine.Storage.GetPath())
+	storagePrefix := filepath.Clean(backupStorage.GetPath())
 	eligibleFiles := filterEligibleFiles(files, filepath.Join(storagePrefix, maxString), filter)
 
 	var backups []model.BackupDetails
 	for _, fileName := range eligibleFiles {
-		file, err := storage.ReadFile(ctx, routine.Storage, strings.TrimPrefix(fileName, storagePrefix))
+		file, err := storage.ReadFile(ctx, backupStorage, strings.TrimPrefix(fileName, storagePrefix))
 		if err != nil {
 			return nil, fmt.Errorf("read metadata file %q: %w", fileName, err)
 		}
@@ -149,13 +150,23 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 			return nil, fmt.Errorf("error decoding backup metadata YAML: %w", err)
 		}
 		if filter.TimeBounds().Contains(metadata.Created) {
-			key := getKey(filter.routine, filter.JobType, metadata)
-			details := model.NewBackupDetails(*metadata, key, routine.Storage, filter.routine)
+			key := backupKey(fileName, storagePrefix)
+			details := model.NewBackupDetails(*metadata, key, backupStorage, filter.routine)
 			backups = append(backups, details)
 		}
 	}
 
 	return backups, nil
+}
+
+func backupKey(fileName, storagePrefix string) string {
+	/* backup key is a substring between root path and metadata file name.
+	Full Path: "storage/test-routine/backup/1609632000000/data/test-ns/metadata.yaml"
+	           |------|------------------------------------------------|------------|
+	          Storage |                   Backup Key                   |    Filename
+	           prefix |                                                |    (metadata.yaml)
+	*/
+	return strings.Trim(strings.TrimPrefix(filepath.Dir(fileName), storagePrefix), "/")
 }
 
 func getUpperBoundary(filter BackupFilter) string {
