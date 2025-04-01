@@ -50,7 +50,7 @@ func (a *DefaultConfigApplier) ApplyNewRoutines(ctx context.Context, routines ma
 	a.backends.Init(routines)
 
 	// Refill handlers
-	newHandlers := makeHandlers(ctx, a.clientManager, routines, a.backends, a.handlerHolder)
+	newHandlers := makeHandlers(ctx, a.clientManager, routines, a.backends)
 	a.handlerHolder.ReplaceContent(newHandlers)
 
 	err = scheduleRoutines(a.scheduler, routines, a.handlerHolder)
@@ -84,7 +84,6 @@ func makeHandlers(
 	clientManager aerospike.ClientManager,
 	routines map[string]*model.BackupRoutine,
 	backends BackendsHolder,
-	oldHandlers BackupHandlerHolder,
 ) map[string]backupRunner {
 	handlers := make(map[string]backupRunner)
 
@@ -94,7 +93,7 @@ func makeHandlers(
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			handler := makeHandler(ctx, clientManager, backends, oldHandlers, routineName, routine)
+			handler := makeHandler(ctx, clientManager, backends, routineName, routine)
 			mu.Lock()
 			handlers[routineName] = handler
 			mu.Unlock()
@@ -109,20 +108,13 @@ func makeHandler(
 	ctx context.Context,
 	clientManager aerospike.ClientManager,
 	backends BackendsHolder,
-	oldHandlers BackupHandlerHolder,
 	routineName string,
 	routine *model.BackupRoutine,
 ) *BackupRoutineHandler {
 	backupService := NewBackupGo()
 	backend, _ := backends.Get(routineName)
 
-	// try to reuse lastRun from previous handler if it exists.
-	var lastRun *model.LastBackupRun
-	if old, ok := oldHandlers.Load(routineName); ok {
-		lastRun = old.CurrentStat().LastRunTime
-	} else {
-		lastRun = backend.findLastRun(ctx) // this scan can take some time.
-	}
+	lastRun := backend.findLastRun(ctx) // this scan can take some time.
 
 	return newBackupRoutineHandler(clientManager, backupService, routineName, routine, backend, lastRun)
 }
