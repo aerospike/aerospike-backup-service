@@ -11,11 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var (
+	routineName = "test-routine"
+	ctx         = context.Background()
+)
+
 func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	service := setupLocalBackupBackendService(t)
-
-	ctx := context.Background()
-	routineName := "test-routine"
 
 	// Create backups with different timestamps
 	times := []time.Time{
@@ -112,9 +114,6 @@ func TestLocalGetBackups_RoutineNotFound(t *testing.T) {
 func TestLocalDeleteBackup(t *testing.T) {
 	service := setupLocalBackupBackendService(t)
 
-	ctx := context.Background()
-	routineName := "test-routine"
-
 	// Create backup
 	created := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	backupPath := getBackupPath(routineName, jobTypeFull, "test-ns", created)
@@ -178,9 +177,6 @@ func TestDelete_RoutineNotFound(t *testing.T) {
 func TestIncrementalBackup(t *testing.T) {
 	service := setupLocalBackupBackendService(t)
 
-	ctx := context.Background()
-	routineName := "test-routine"
-
 	// First create a full backup as baseline
 	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	fullBackupPath := getBackupPath(routineName, jobTypeFull, "test-ns", fullBackupTime)
@@ -243,9 +239,6 @@ func TestIncrementalBackup(t *testing.T) {
 func TestReadPath(t *testing.T) {
 	service := setupLocalBackupBackendService(t)
 
-	ctx := context.Background()
-	routineName := "test-routine"
-
 	// First create a full backup as baseline
 	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
 	fullBackupPath := getBackupPath(routineName, jobTypeFull, "test-ns", fullBackupTime)
@@ -286,9 +279,12 @@ func TestReadPath(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, backups)
 
+	backups, err = service.GetBackups(ctx, NewPathFilter("wrong-path", routine.Storage))
+	require.NoError(t, err)
+	require.Empty(t, backups)
 }
 
-// Setup test helpers for local storage tests
+// Setup test helpers for local storage tests.
 func setupLocalBackupBackendService(t *testing.T) *BackupBackendServiceImpl {
 	t.Helper()
 

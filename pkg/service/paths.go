@@ -7,8 +7,6 @@ import (
 	"regexp"
 	"strconv"
 	"time"
-
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 const (
@@ -52,11 +50,6 @@ func getConfigurationPath(routineName string, timestamp time.Time) string {
 
 func getConfigurationFilePath(routineName string, timestamp time.Time, index int) string {
 	return filepath.Join(getConfigurationPath(routineName, timestamp), getConfigFileName(index))
-}
-
-func getKey(routineName string, backupType jobType, metadata *model.BackupMetadata) string {
-	rootPath := getBackupRootPath(routineName, backupType)
-	return filepath.Join(rootPath, formatTimestamp(metadata.Created), dataDirectory, metadata.Namespace)
 }
 
 func formatTimestamp(t time.Time) string {
