@@ -7,6 +7,7 @@ import "fmt"
 type Storage interface {
 	GetPath() string
 	GetStorageClass() StorageClass
+	String() string
 }
 
 // StorageClass defines the storage class of data and metadata.

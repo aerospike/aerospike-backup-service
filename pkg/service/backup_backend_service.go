@@ -14,88 +14,131 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// BackupFilter defines criteria for filtering backups.
-type BackupFilter struct {
-	// required
-	routine string
-	JobType jobType
+// BackupFilter is an interface that all filter types must implement.
+type BackupFilter interface {
+	isBackupFilter()
+}
 
-	// optional
+// BaseFilter contains common filter attributes.
+type BaseFilter struct {
 	FromTime *time.Time
 	ToTime   *time.Time
 	onlyLast bool // last backup only
+}
 
-	// For filtering by explicit path instead of routine/type
-	explicitPath    string
-	explicitStorage model.Storage // Storage associated with the explicit path
+// RoutineFilter for filtering by routine and job type.
+type RoutineFilter struct {
+	BaseFilter
+	routine string
+	JobType jobType
 }
 
 // NewFullBackupFilter creates a filter for full backups.
-func NewFullBackupFilter(routine string) BackupFilter {
-	return BackupFilter{
+func NewFullBackupFilter(routine string) *RoutineFilter {
+	return &RoutineFilter{
 		routine: routine,
 		JobType: jobTypeFull,
 	}
 }
 
 // NewIncrementalBackupFilter creates a filter for incremental backups.
-func NewIncrementalBackupFilter(routine string) BackupFilter {
-	return BackupFilter{
+func NewIncrementalBackupFilter(routine string) *RoutineFilter {
+	return &RoutineFilter{
 		routine: routine,
 		JobType: jobTypeIncremental,
 	}
 }
 
-// NewPathFilter creates a filter for retrieving backups directly from a given storage path.
-// It disables routine-based and jobType-based path calculation.
-func NewPathFilter(path string, storage model.Storage) BackupFilter {
-	return BackupFilter{
-		explicitPath:    path,
-		explicitStorage: storage,
-	}
-}
+func (f *RoutineFilter) isBackupFilter() {}
 
-func (f BackupFilter) TimeBounds() *model.TimeBounds {
-	return &model.TimeBounds{
-		FromTime: f.FromTime,
-		ToTime:   f.ToTime,
-	}
-}
-
-func (f BackupFilter) Last() BackupFilter {
+func (f *RoutineFilter) Last() *RoutineFilter {
 	f.onlyLast = true
 	return f
 }
 
-// WithFromTime adds a start time to the filter.
-func (f BackupFilter) WithFromTime(fromTime time.Time) BackupFilter {
+func (f *RoutineFilter) WithFromTime(fromTime time.Time) *RoutineFilter {
 	f.FromTime = &fromTime
 	return f
 }
 
-func (f BackupFilter) WithTimeBounds(bounds model.TimeBounds) BackupFilter {
+func (p *PathFilter) WithFromTime(fromTime time.Time) *PathFilter {
+	p.FromTime = &fromTime
+	return p
+}
+
+func (f *RoutineFilter) WithToTime(toTime time.Time) *RoutineFilter {
+	f.ToTime = &toTime
+	return f
+}
+
+func (f RoutineFilter) getUpperBoundary() string {
+	if f.ToTime != nil {
+		return getTimestampPath(f.routine, *f.ToTime, f.JobType)
+	}
+
+	return "\uffff"
+}
+
+func (f *RoutineFilter) String() string {
+	return fmt.Sprintf("routine: %v type: %v last: %v timebounds: %s",
+		f.routine, f.JobType, f.onlyLast, f.TimeBounds().String())
+}
+
+// PathFilter for filtering by explicit path.
+type PathFilter struct {
+	BaseFilter
+	path    string
+	storage model.Storage
+}
+
+// NewPathFilter creates a filter for retrieving backups directly from a given storage path.
+func NewPathFilter(path string, storage model.Storage) *PathFilter {
+	return &PathFilter{
+		path:    path,
+		storage: storage,
+	}
+}
+
+// Implement BackupFilter interface for both concrete types.
+func (p *PathFilter) isBackupFilter() {}
+
+// TimeBounds returns time bounds for a base filter.
+func (b *BaseFilter) TimeBounds() *model.TimeBounds {
+	return &model.TimeBounds{
+		FromTime: b.FromTime,
+		ToTime:   b.ToTime,
+	}
+}
+
+func (p *PathFilter) WithToTime(toTime time.Time) *PathFilter {
+	p.ToTime = &toTime
+	return p
+}
+
+func (f *RoutineFilter) WithTimeBounds(bounds model.TimeBounds) *RoutineFilter {
 	f.FromTime = bounds.FromTime
 	f.ToTime = bounds.ToTime
 	return f
 }
 
-// WithToTime adds an end time to the filter.
-func (f BackupFilter) WithToTime(toTime time.Time) BackupFilter {
-	f.ToTime = &toTime
-	return f
+func (p *PathFilter) WithTimeBounds(bounds model.TimeBounds) *PathFilter {
+	p.FromTime = bounds.FromTime
+	p.ToTime = bounds.ToTime
+	return p
 }
 
-func (f BackupFilter) String() string {
-	return fmt.Sprintf("routine: %v type: %v last: %v timebounds: %s",
-		f.routine, f.JobType, f.onlyLast, f.TimeBounds().String())
+func (p *PathFilter) String() string {
+	return fmt.Sprintf("path: %v storage: %s last: %v timebounds: %s",
+		p.path, p.storage.String(), p.onlyLast, p.TimeBounds().String())
 }
 
-func (f BackupFilter) getPath() string {
-	if f.explicitPath != "" {
-		return f.explicitPath
-	}
-
+// GetPath methods.
+func (f *RoutineFilter) getPath() string {
 	return getBackupRootPath(f.routine, f.JobType)
+}
+
+func (p *PathFilter) getPath() string {
+	return p.path
 }
 
 // BackupReaderWriter defines operations for reading and writing backups metadata.
@@ -135,10 +178,27 @@ func NewBackupBackendService(config *model.Config) *BackupBackendServiceImpl {
 }
 
 func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error) {
-	backupStorage, lock, err := b.getStorage(filter)
-	if err != nil {
-		return nil, err
+	switch f := filter.(type) {
+	case *RoutineFilter:
+		return b.getRoutineBackups(ctx, *f)
+	case *PathFilter:
+		return b.getPathBackups(ctx, *f)
+	default:
+		return nil, fmt.Errorf("unsupported filter type: %T", f)
 	}
+}
+
+func (b *BackupBackendServiceImpl) getRoutineBackups(
+	ctx context.Context,
+	filter RoutineFilter,
+) ([]model.BackupDetails, error) {
+	routine, found := b.config.Routine(filter.routine)
+	if !found {
+		return nil, fmt.Errorf("routine not found: %q", filter.routine)
+	}
+
+	backupStorage := routine.Storage
+	lock := b.locks.LoadOrStore(filter.routine, &sync.RWMutex{})
 	lock.RLock()
 	defer lock.RUnlock()
 
@@ -149,7 +209,7 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 
 	// Storage returned all files >= fromTime. We need to find the one with highest timestamp that's still < ToTime.
 	// We use the timestamps that are part of file path.
-	maxString := getUpperBoundary(filter)
+	maxString := filter.getUpperBoundary()
 
 	// Filter files based on timestamp criteria
 	storagePrefix := filepath.Clean(backupStorage.GetPath())
@@ -175,41 +235,18 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 	return backups, nil
 }
 
-func (b *BackupBackendServiceImpl) getStorage(filter BackupFilter) (model.Storage, *sync.RWMutex, error) {
-	if filter.explicitStorage != nil {
-		return filter.explicitStorage, &sync.RWMutex{}, nil
-	}
-
-	routine, found := b.config.Routine(filter.routine)
-	if !found {
-		return nil, nil, fmt.Errorf("routine not found: %q", filter.routine)
-	}
-
-	lock := b.locks.LoadOrStore(filter.routine, &sync.RWMutex{})
-
-	return routine.Storage, lock, nil
-}
-
 func backupKey(fileName, storagePrefix string) string {
 	/* backup key is a substring between root path and metadata file name.
-	Full Path: "storage/test-routine/backup/1609632000000/data/test-ns/metadata.yaml"
-	           |------|------------------------------------------------|------------|
-	          Storage |                   Backup Key                   |    Filename
-	           prefix |                                                |    (metadata.yaml)
+	fileName example: "storage/test-routine/backup/1609632000000/data/test-ns/metadata.yaml"
+	                   |------|----------------------------------------------|------------|
+	                   Storage|                   Backup Key                 |    Filename
+	                   prefix |                                              |    (metadata.yaml)
 	*/
 	return strings.Trim(strings.TrimPrefix(filepath.Dir(fileName), storagePrefix), "/")
 }
 
-func getUpperBoundary(filter BackupFilter) string {
-	if filter.ToTime != nil {
-		return getTimestampPath(filter.routine, *filter.ToTime, filter.JobType)
-	}
-
-	return "\uffff"
-}
-
 // filterEligibleFiles returns files that meet the timestamp criteria.
-func filterEligibleFiles(files []string, maxString string, filter BackupFilter) []string {
+func filterEligibleFiles(files []string, maxString string, filter RoutineFilter) []string {
 	var lessThenMaxString []string
 	for _, fileName := range files {
 		if fileName < maxString || strings.HasPrefix(fileName, maxString) {
@@ -282,4 +319,35 @@ func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName strin
 	defer lock.Unlock()
 
 	return storage.DeleteFolder(ctx, routine.Storage, path)
+}
+
+func (b *BackupBackendServiceImpl) getPathBackups(
+	ctx context.Context,
+	filter PathFilter,
+) ([]model.BackupDetails, error) {
+	files, err := storage.ReadFileNames(ctx, filter.storage, filter.getPath(), metadataFile, nil)
+	if err != nil {
+		return nil, fmt.Errorf("read metadata files in %s: %w", filter.String(), err)
+	}
+
+	storagePrefix := filepath.Clean(filter.storage.GetPath())
+	var backups []model.BackupDetails
+	for _, fileName := range files {
+		file, err := storage.ReadFile(ctx, filter.storage, strings.TrimPrefix(fileName, storagePrefix))
+		if err != nil {
+			return nil, fmt.Errorf("read metadata file %q: %w", fileName, err)
+		}
+		metadata, err := model.NewMetadataFromBytes(file)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding backup metadata YAML: %w", err)
+		}
+
+		if filter.TimeBounds().Contains(metadata.Created) {
+			key := backupKey(fileName, storagePrefix)
+			details := model.NewBackupDetails(*metadata, key, filter.storage, "")
+			backups = append(backups, details)
+		}
+	}
+
+	return backups, nil
 }
