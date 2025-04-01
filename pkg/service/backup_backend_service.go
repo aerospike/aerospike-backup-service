@@ -23,7 +23,6 @@ type BackupFilter interface {
 type BaseFilter struct {
 	FromTime *time.Time
 	ToTime   *time.Time
-	onlyLast bool // last backup only
 }
 
 // RoutineFilter for filtering by routine and job type.
@@ -31,6 +30,8 @@ type RoutineFilter struct {
 	BaseFilter
 	routine string
 	JobType jobType
+
+	onlyLast bool // return last backup only
 }
 
 // NewFullBackupFilter creates a filter for full backups.
@@ -79,9 +80,19 @@ func (f RoutineFilter) getUpperBoundary() string {
 	return "\uffff"
 }
 
+func (f *RoutineFilter) WithTimeBounds(bounds model.TimeBounds) *RoutineFilter {
+	f.FromTime = bounds.FromTime
+	f.ToTime = bounds.ToTime
+	return f
+}
+
 func (f *RoutineFilter) String() string {
 	return fmt.Sprintf("routine: %v type: %v last: %v timebounds: %s",
 		f.routine, f.JobType, f.onlyLast, f.TimeBounds().String())
+}
+
+func (f *RoutineFilter) getPath() string {
+	return getBackupRootPath(f.routine, f.JobType)
 }
 
 // PathFilter for filtering by explicit path.
@@ -115,12 +126,6 @@ func (p *PathFilter) WithToTime(toTime time.Time) *PathFilter {
 	return p
 }
 
-func (f *RoutineFilter) WithTimeBounds(bounds model.TimeBounds) *RoutineFilter {
-	f.FromTime = bounds.FromTime
-	f.ToTime = bounds.ToTime
-	return f
-}
-
 func (p *PathFilter) WithTimeBounds(bounds model.TimeBounds) *PathFilter {
 	p.FromTime = bounds.FromTime
 	p.ToTime = bounds.ToTime
@@ -128,17 +133,8 @@ func (p *PathFilter) WithTimeBounds(bounds model.TimeBounds) *PathFilter {
 }
 
 func (p *PathFilter) String() string {
-	return fmt.Sprintf("path: %v storage: %s last: %v timebounds: %s",
-		p.path, p.storage.String(), p.onlyLast, p.TimeBounds().String())
-}
-
-// GetPath methods.
-func (f *RoutineFilter) getPath() string {
-	return getBackupRootPath(f.routine, f.JobType)
-}
-
-func (p *PathFilter) getPath() string {
-	return p.path
+	return fmt.Sprintf("path: %v storage: %s timebounds: %s",
+		p.path, p.storage.String(), p.TimeBounds().String())
 }
 
 // BackupReaderWriter defines operations for reading and writing backups metadata.
@@ -325,7 +321,7 @@ func (b *BackupBackendServiceImpl) getPathBackups(
 	ctx context.Context,
 	filter PathFilter,
 ) ([]model.BackupDetails, error) {
-	files, err := storage.ReadFileNames(ctx, filter.storage, filter.getPath(), metadataFile, nil)
+	files, err := storage.ReadFileNames(ctx, filter.storage, filter.path, metadataFile, nil)
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.String(), err)
 	}
