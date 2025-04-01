@@ -78,10 +78,10 @@ func (p *RestorePolicy) Validate() error {
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
 	}
-	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
+	if p.TotalTimeout != nil && *p.TotalTimeout < 0 {
 		return fmt.Errorf("total timeout %d invalid, should be positive number", *p.TotalTimeout)
 	}
-	if p.SocketTimeout != nil && *p.SocketTimeout <= 0 {
+	if p.SocketTimeout != nil && *p.SocketTimeout < 0 {
 		return fmt.Errorf("socket timeout %d invalid, should be positive number", *p.SocketTimeout)
 	}
 	if p.MaxAsyncBatches != nil && *p.MaxAsyncBatches <= 0 {
