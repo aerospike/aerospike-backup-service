@@ -5,14 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"slices"
 	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 )
@@ -60,57 +58,81 @@ func NewRestoreManager(
 
 func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
 	ctx := context.TODO()
-	totalRecords, err := recordsInBackup(ctx, request)
-	if err != nil {
-		slog.Info("Could not read backup metadata", slog.Any("err", err))
-	}
 
 	jobID := r.restoreJobs.newJob(request.BackupDataPath)
 	go func() {
-		client, err := r.clientManager.GetClient(request.DestinationCluster)
-		if err != nil {
-			slog.Error("Failed to restore by path",
-				slog.Any("cluster", request.DestinationCluster.ClusterLabel),
-				slog.Any("err", err))
-			r.restoreJobs.finishJob(jobID, err)
-			return
-		}
-		defer r.clientManager.Close(client)
-
-		if err := r.validateDestinationNamespace(request); err != nil {
-			r.restoreJobs.finishJob(jobID, err)
-			return
-		}
-
-		handler, err := r.restoreService.Run(ctx, client, request)
-		if err != nil {
-			r.restoreJobs.finishJob(jobID, fmt.Errorf("failed to start restore operation: %w", err))
-			return
-		}
-		r.restoreJobs.addTotalRecords(jobID, totalRecords)
-		ctx, cancel := context.WithCancel(ctx)
-		r.restoreJobs.addHandler(jobID, restoreexecutor.NewRestoreHandlerWithCancel(handler, cancel))
-
-		// Wait for the restore operation to complete
-		err = handler.Wait(ctx)
+		err := r.executeRestore(ctx, request, jobID)
 		r.restoreJobs.finishJob(jobID, err)
 	}()
 
 	return jobID, nil
 }
 
+func (r *dataRestorer) executeRestore(
+	ctx context.Context,
+	request *model.RestoreRequest,
+	jobID model.RestoreJobID,
+) error {
+	client, err := r.clientManager.GetClient(request.DestinationCluster)
+	if err != nil {
+		return err
+	}
+	defer r.clientManager.Close(client)
+
+	if err := r.validateDestinationNamespace(request); err != nil {
+		return err
+	}
+
+	backups, err := r.backupReader.GetBackups(ctx, NewPathFilter(request.BackupDataPath, request.SourceStorage))
+	if err != nil {
+		return fmt.Errorf("failed to read backups: %w", err)
+	}
+
+	if err := r.validateBackupData(backups); err != nil {
+		return err
+	}
+
+	handler, err := r.restoreService.Run(ctx, client, request)
+	if err != nil {
+		return fmt.Errorf("failed to start restore operation: %w", err)
+	}
+	ctx, cancel := context.WithCancel(ctx)
+
+	r.restoreJobs.addTotalRecords(jobID, r.recordsInBackup(backups))
+	r.restoreJobs.addHandler(jobID, restoreexecutor.NewRestoreHandlerWithCancel(handler, cancel))
+
+	// Wait for the restore operation to complete
+	return handler.Wait(ctx)
+}
+
+func (r *dataRestorer) validateBackupData(backups []model.BackupDetails) error {
+	for _, b := range backups {
+		if b.Created != backups[0].Created {
+			return fmt.Errorf("backups from different times were found: %s and %s",
+				b.Created.String(), backups[0].Created.String())
+		}
+	}
+
+	return nil
+}
+
+func (r *dataRestorer) recordsInBackup(backups []model.BackupDetails) uint64 {
+	var records uint64
+	for _, b := range backups {
+		records += b.RecordCount
+	}
+	return records
+}
+
 // validateDestinationNamespace checks if destination cluster contains namespace from restore request (if it is set).
 func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest) error {
 	if request.Policy.Namespace != nil {
+		destinationNS := *request.Policy.Namespace.Destination
 		missingNamespaces := r.nsValidator.MissingNamespaces(
-			request.DestinationCluster, []string{*request.Policy.Namespace.Destination})
+			request.DestinationCluster, []string{destinationNS})
 		if len(missingNamespaces) > 0 {
-			// it can be only 1 missing ns.
-			err := fmt.Errorf("destination cluster does not have namespace %s", missingNamespaces[0])
-			slog.Error("Failed to restore by path",
-				slog.Any("cluster label", request.DestinationCluster.ClusterLabel),
-				slog.Any("err", err))
-			return err
+			// it can be only 1 missing ns: destinationNS
+			return fmt.Errorf("destination cluster does not have namespace %q", destinationNS)
 		}
 	}
 
@@ -281,18 +303,6 @@ func (r *dataRestorer) restoreFromPath(
 // JobStatus returns the status of the job with the given id.
 func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
 	return r.restoreJobs.getStatus(jobID)
-}
-
-func recordsInBackup(ctx context.Context, request *model.RestoreRequest) (uint64, error) {
-	bytes, err := storage.ReadFile(ctx, request.SourceStorage, filepath.Join(request.BackupDataPath, metadataFile))
-	if err != nil {
-		return 0, err
-	}
-	metadata, err := model.NewMetadataFromBytes(bytes)
-	if err != nil {
-		return 0, err
-	}
-	return metadata.RecordCount, nil
 }
 
 // CancelRestore cancels an ongoing restore.

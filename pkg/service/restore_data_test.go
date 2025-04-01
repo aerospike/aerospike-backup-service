@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -36,6 +38,10 @@ func TestRestoreOK(t *testing.T) {
 	env.mockRestore.EXPECT().
 		Run(gomock.Any(), client, request).
 		Return(mockRestoreHandler, nil)
+
+	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now()}}
+	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
+		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Execute the restore
 	jobID, err := env.restoreManager.Restore(request)
@@ -72,6 +78,10 @@ func TestCancelRestoreOK(t *testing.T) {
 		return ctx.Err()    // Return cancellation error
 	})
 
+	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now()}}
+	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
+		[]model.BackupDetails{detailsDetails}, nil)
+
 	// Expect Run to start the process
 	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(mockRestoreHandler, nil)
 
@@ -102,6 +112,64 @@ func TestCancelRestoreOK(t *testing.T) {
 	require.NoError(t, waitErr)
 	require.NotNil(t, jobStatus)
 	assert.Equal(t, model.JobStatusCancelled, jobStatus.Status)
+}
+
+func TestRestoreFailsWithClientError(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+	defer env.ctrl.Finish()
+
+	cluster := &model.AerospikeCluster{}
+	storage := &model.LocalStorage{Path: "/backup/path"}
+	request := model.NewRestoreRequest(cluster, nil, storage, nil, "/backup/path/data")
+
+	clientErr := errors.New("connection error")
+	env.mockClientManager.EXPECT().
+		GetClient(cluster).
+		Return(nil, clientErr)
+
+	// Execute the restore
+	jobID, err := env.restoreManager.Restore(request)
+	require.NoError(t, err)
+	require.NotZero(t, jobID)
+
+	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+
+	require.NoError(t, err)
+	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
+	assert.Contains(t, jobStatus.Error, clientErr.Error())
+}
+
+func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+	defer env.ctrl.Finish()
+
+	cluster := &model.AerospikeCluster{}
+	destinationNS := "test-ns"
+	policy := &model.RestorePolicy{
+		Namespace: &model.RestoreNamespace{
+			Destination: &destinationNS,
+		},
+	}
+	storage := &model.LocalStorage{Path: "/backup/path"}
+	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
+
+	env.expectSuccessfulClientInteraction(t, cluster)
+
+	// Expect namespace validation to fail
+	env.mockNsValidator.EXPECT().
+		MissingNamespaces(cluster, []string{destinationNS}).
+		Return([]string{destinationNS})
+
+	// Execute the restore
+	jobID, err := env.restoreManager.Restore(request)
+	require.NoError(t, err)
+	require.NotZero(t, jobID)
+
+	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+
+	require.NoError(t, err)
+	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
+	assert.Contains(t, jobStatus.Error, fmt.Sprintf("destination cluster does not have namespace %q", destinationNS))
 }
 
 func waitForRestore(
