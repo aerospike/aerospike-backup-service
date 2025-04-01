@@ -172,6 +172,73 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	assert.Contains(t, jobStatus.Error, fmt.Sprintf("destination cluster does not have namespace %q", destinationNS))
 }
 
+func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+	defer env.ctrl.Finish()
+
+	cluster := &model.AerospikeCluster{}
+	policy := &model.RestorePolicy{}
+	storage := &model.LocalStorage{Path: "/backup/path"}
+	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
+
+	env.expectSuccessfulClientInteraction(t, cluster)
+
+	// Namespace validation passes
+	env.mockNsValidator.EXPECT().
+		MissingNamespaces(gomock.Any(), gomock.Any()).
+		Return(nil).AnyTimes()
+
+	// BackupReader returns backups with different creation times, which is invalid
+	backups := []model.BackupDetails{
+		{BackupMetadata: model.BackupMetadata{Created: time.Now().Add(-time.Hour)}},
+		{BackupMetadata: model.BackupMetadata{Created: time.Now()}},
+	}
+	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(backups, nil)
+
+	// Execute the restore
+	jobID, err := env.restoreManager.Restore(request)
+	require.NoError(t, err)
+	require.NotZero(t, jobID)
+
+	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+
+	require.NoError(t, err)
+	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
+	assert.Contains(t, jobStatus.Error, "backups from different times were found")
+}
+
+func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
+	env := setupTestRestoreEnv(t)
+	defer env.ctrl.Finish()
+
+	cluster := &model.AerospikeCluster{}
+	policy := &model.RestorePolicy{}
+	storage := &model.LocalStorage{Path: "/backup/path"}
+	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
+
+	client := env.expectSuccessfulClientInteraction(t, cluster)
+
+	restoreErr := errors.New("restore service error")
+	env.mockRestore.EXPECT().
+		Run(gomock.Any(), client, request).
+		Return(nil, restoreErr)
+
+	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now()}}
+	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
+		[]model.BackupDetails{detailsDetails}, nil)
+
+	// Execute the restore
+	jobID, err := env.restoreManager.Restore(request)
+	require.NoError(t, err)
+	require.NotZero(t, jobID)
+
+	jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+
+	require.NoError(t, err)
+	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
+	assert.Contains(t, jobStatus.Error, "failed to start restore operation")
+}
+
 func waitForRestore(
 	t *testing.T,
 	restoreManager RestoreManager,
