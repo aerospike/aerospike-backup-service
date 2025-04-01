@@ -42,6 +42,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	backups, err := service.GetBackups(ctx, NewFullBackupFilter(routineName))
 	require.NoError(t, err)
 	require.Len(t, backups, 5)
+	assert.Equal(t, "test-routine/backup/1609459200000/data/test-ns", backups[0].Key)
 
 	// Test FromTime filter
 	fromFilter := NewFullBackupFilter(routineName).WithFromTime(times[2]) // From Jan 3
@@ -64,7 +65,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	// Test both FromTime and ToTime
 	rangeFilter := NewFullBackupFilter(routineName).
 		WithFromTime(times[1]). // From Jan 2
-		WithToTime(times[3])    // To Jan 4
+		WithToTime(times[3]) // To Jan 4
 	rangeBackups, err := service.GetBackups(ctx, rangeFilter)
 	require.NoError(t, err)
 	require.Len(t, rangeBackups, 3) // Should return Jan 2, 3, 4
@@ -88,7 +89,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	// Test Last() with time filters
 	lastRangeFilter := NewFullBackupFilter(routineName).
 		WithFromTime(times[1]). // From Jan 2
-		WithToTime(times[3]).   // To Jan 4
+		WithToTime(times[3]). // To Jan 4
 		Last()
 	lastRangeBackups, err := service.GetBackups(ctx, lastRangeFilter)
 	require.NoError(t, err)
