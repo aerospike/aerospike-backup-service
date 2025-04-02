@@ -119,7 +119,7 @@ func recordExistsAction(replace, unique *bool) as.RecordExistsAction {
 }
 
 func calculateSocketTimeout(policy *model.RestorePolicy) time.Duration {
-	if policy.SocketTimeout != nil && *policy.SocketTimeout != 0 {
+	if policy.SocketTimeout != nil {
 		return *policy.SocketTimeout
 	}
 

@@ -77,11 +77,11 @@ func (p *RestorePolicy) Validate() error {
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return errValidationNonPositive("parallel", *p.Parallel)
 	}
-	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
-		return errValidationNonPositive("total-timeout", *p.TotalTimeout)
+	if p.TotalTimeout != nil && *p.TotalTimeout < 0 {
+		return errValidationNegative("total-timeout", *p.TotalTimeout)
 	}
-	if p.SocketTimeout != nil && *p.SocketTimeout <= 0 {
-		return errValidationNonPositive("socket-timeout", *p.SocketTimeout)
+	if p.SocketTimeout != nil && *p.SocketTimeout < 0 {
+		return errValidationNegative("socket-timeout", *p.SocketTimeout)
 	}
 	if p.MaxAsyncBatches != nil && *p.MaxAsyncBatches <= 0 {
 		return errValidationNonPositive("max-async-batches", *p.MaxAsyncBatches)
