@@ -190,7 +190,7 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 ) ([]model.BackupDetails, error) {
 	routine, found := b.config.Routine(filter.routine)
 	if !found {
-		return nil, fmt.Errorf("routine not found: %s", filter.routine)
+		return nil, fmt.Errorf("routine not found: %q", filter.routine)
 	}
 
 	backupStorage := routine.Storage

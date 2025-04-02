@@ -67,6 +67,12 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	_, found := s.config.Routine(routine)
+	if !found {
+		httpError(w, errRoutineNotFound(routine))
+		return
+	}
+
 	filter := service.NewFullBackupFilter(routine).WithTimeBounds(timeBounds)
 	result, err := s.readBackupsForRoutine(r.Context(), filter)
 	if err != nil {
@@ -128,6 +134,12 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 	routine := r.PathValue("name")
 	if routine == "" {
 		httpError(w, errMissingRoutineName)
+		return
+	}
+
+	_, found := s.config.Routine(routine)
+	if !found {
+		httpError(w, errRoutineNotFound(routine))
 		return
 	}
 
