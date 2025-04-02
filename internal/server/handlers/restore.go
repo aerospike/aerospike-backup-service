@@ -23,28 +23,7 @@ import (
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
-	request, err := dto.NewRestoreRequestFromReader(r.Body)
-	if err != nil {
-		httpError(w, errInvalidJSONPayload(err))
-		return
-	}
-	if err = request.Validate(); err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-
-	restoreRequest, err := request.ToModel(s.config)
-	if err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-	jobID, err := s.restoreManager.Restore(restoreRequest)
-	if err != nil {
-		httpError(w, err)
-		return
-	}
-
-	httpAcceptedWithJobID(w, jobID)
+	s.restoreByPath(w, r)
 }
 
 // RestoreIncrementalHandler
@@ -58,15 +37,21 @@ func (s *Service) RestoreFullHandler(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RestoreIncrementalHandler(w http.ResponseWriter, r *http.Request) {
+	s.restoreByPath(w, r)
+}
+
+// RestoreIncremental and RestoreFull share same business logic.
+func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 	request, err := dto.NewRestoreRequestFromReader(r.Body)
 	if err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
 	if err = request.Validate(); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
+
 	restoreRequest, err := request.ToModel(s.config)
 	if err != nil {
 		httpError(w, errBadRequest(err))
