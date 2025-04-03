@@ -21,7 +21,7 @@ type RestorePolicy struct {
 	// Do not restore any UDF modules.
 	NoUdfs *bool `json:"no-udfs,omitempty"`
 	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-	// Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
+	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
 	SocketTimeout *int `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
@@ -78,10 +78,10 @@ func (p *RestorePolicy) Validate() error {
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return fmt.Errorf("parallel %d invalid, should be positive number", *p.Parallel)
 	}
-	if p.TotalTimeout != nil && *p.TotalTimeout <= 0 {
+	if p.TotalTimeout != nil && *p.TotalTimeout < 0 {
 		return fmt.Errorf("total timeout %d invalid, should be positive number", *p.TotalTimeout)
 	}
-	if p.SocketTimeout != nil && *p.SocketTimeout <= 0 {
+	if p.SocketTimeout != nil && *p.SocketTimeout < 0 {
 		return fmt.Errorf("socket timeout %d invalid, should be positive number", *p.SocketTimeout)
 	}
 	if p.MaxAsyncBatches != nil && *p.MaxAsyncBatches <= 0 {

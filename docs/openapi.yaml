@@ -1490,9 +1490,8 @@ components:
             When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
           type: boolean
         socket-timeout:
-          description: |-
-            Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
-            If both are 0, there is no socket idle time limit.
+          description: "Socket timeout in milliseconds. Default is 10 minutes. If\
+            \ this value is 0, it is set to total-timeout."
           example: 1000
           type: integer
         total-timeout:
@@ -2007,6 +2006,7 @@ components:
           percentage-done: 50
           total-records: 100
           done-records: 50
+        errors-in-doubt: 7
         existed-records: 15
         udf-count: 1
         ignored-records: 12
@@ -2021,6 +2021,17 @@ components:
           $ref: '#/components/schemas/dto.RunningJob'
         error:
           type: string
+        errors-in-doubt:
+          description: |-
+            The number of errors in doubt while restoring.
+            (IsInDoubt signifies that the write operation may have gone through on the server
+            but the client is not able to confirm that due an error.)
+            Non zero value indicates that there are might be unexpected side effects during restore, like
+            * Generation counter greater than expected for some records.
+            * Fresher records counter greater than expected.
+          example: 7
+          format: int64
+          type: integer
         existed-records:
           example: 15
           format: int64
@@ -2183,7 +2194,7 @@ components:
         socket-timeout:
           description: |-
             Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-            Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
+            Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
             If both are 0, there is no socket idle time limit.
           example: 1000
           type: integer

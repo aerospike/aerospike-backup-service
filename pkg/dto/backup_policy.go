@@ -14,8 +14,7 @@ import (
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel.
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
-	// Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
-	// If both are 0, there is no socket idle time limit.
+	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
 	SocketTimeout *int `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
 	TotalTimeout *int `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`

@@ -138,7 +138,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 
 	backupHandler := new(mockBackupHandler)
 	backupHandler.On("Wait", mock.Anything).Return(nil)
-	backupHandler.On("GetStats").Return(&models.BackupStats{})
+	backupHandler.On("GetStats").Return(models.NewBackupStats())
 
 	// Expect backup run for each namespace
 	backupService.On("BackupRun",
@@ -310,7 +310,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 	handler.lastRun = model.NewLastBackupRun(&lastRun, nil)
 
 	backupHandler := new(mockBackupHandler)
-	stats := &models.BackupStats{}
+	stats := models.NewBackupStats()
 	backupHandler.On("Wait", mock.Anything).Return(nil)
 	backupHandler.On("GetStats").Return(stats)
 
@@ -365,7 +365,7 @@ func TestRunFullBackup_PartialFailure(t *testing.T) {
 
 	successHandler := new(mockBackupHandler)
 	successHandler.On("Wait", mock.Anything).Return(nil)
-	successHandler.On("GetStats").Return(&models.BackupStats{})
+	successHandler.On("GetStats").Return(models.NewBackupStats())
 
 	failHandler := new(mockBackupHandler)
 	failHandler.On("Wait", mock.Anything).Return(errors.New("failed backup for namespace2"))

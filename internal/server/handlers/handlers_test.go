@@ -28,7 +28,6 @@ var errTest = errors.New("test error")
 func testRestoreJobStatus() *model.RestoreJobStatus {
 	estimatedEndTime := time.Now().Add(1 * time.Minute)
 	return &model.RestoreJobStatus{
-		RestoreStats: model.RestoreStats{},
 		CurrentRestore: &model.RunningJob{
 			TotalRecords:     100,
 			DoneRecords:      10,

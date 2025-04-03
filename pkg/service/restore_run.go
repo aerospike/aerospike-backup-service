@@ -3,11 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	a "github.com/aerospike/aerospike-client-go/v7"
+	a "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asb"
 )
@@ -106,9 +107,8 @@ func makeWritePolicy(restoreRequest *model.RestoreRequest) *a.WritePolicy {
 	writePolicy.RecordExistsAction = recordExistsAction(
 		restoreRequest.Policy.Replace, restoreRequest.Policy.Unique)
 
-	if restoreRequest.Policy.SocketTimeout != nil {
-		writePolicy.SocketTimeout = *restoreRequest.Policy.SocketTimeout
-	}
+	writePolicy.SocketTimeout = calculateSocketTimeout(restoreRequest.Policy)
+
 	if restoreRequest.Policy.TotalTimeout != nil {
 		writePolicy.TotalTimeout = *restoreRequest.Policy.TotalTimeout
 	}
@@ -132,4 +132,12 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 	default:
 		return a.UPDATE
 	}
+}
+
+func calculateSocketTimeout(policy *model.RestorePolicy) time.Duration {
+	if policy.SocketTimeout != nil {
+		return *policy.SocketTimeout
+	}
+
+	return model.DefaultSocketTimeout
 }
