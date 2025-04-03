@@ -1490,9 +1490,8 @@ components:
             When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
           type: boolean
         socket-timeout:
-          description: |-
-            Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
-            If both are 0, there is no socket idle time limit.
+          description: "Socket timeout in milliseconds. Default is 10 minutes. If\
+            \ this value is 0, it is set to total-timeout."
           example: 1000
           type: integer
         total-timeout:
@@ -2195,7 +2194,7 @@ components:
         socket-timeout:
           description: |-
             Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-            Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
+            Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
             If both are 0, there is no socket idle time limit.
           example: 1000
           type: integer
