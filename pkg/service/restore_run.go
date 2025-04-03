@@ -3,14 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	a "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asb"
+	"time"
 )
 
 // RestoreRunner implements the [Restore] interface.
@@ -135,7 +134,7 @@ func recordExistsAction(replace, unique *bool) a.RecordExistsAction {
 }
 
 func calculateSocketTimeout(policy *model.RestorePolicy) time.Duration {
-	if policy.SocketTimeout != nil && *policy.SocketTimeout != 0 {
+	if policy.SocketTimeout != nil {
 		return *policy.SocketTimeout
 	}
 
