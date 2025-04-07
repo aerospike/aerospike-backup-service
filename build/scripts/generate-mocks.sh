@@ -49,9 +49,4 @@ generate_mocks \
     "pkg/service/aerospike" \
     "ClientManager,NamespaceValidator"
 
-# --- Add more calls here using the simplified format ---
-# generate_mocks \
-#    "path/to/another/package" \
-#    "InterfaceX,InterfaceY"
-
 echo "All mocks generated successfully."
