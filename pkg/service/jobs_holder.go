@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"math/rand"
 	"time"
 
@@ -74,6 +75,7 @@ func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
 		}
 		job.status = model.JobStatusFailed
 		job.err = err
+		slog.Error("Failed to restore", slog.Any("jobId", id), slog.Any("err", err))
 	})
 }
 
