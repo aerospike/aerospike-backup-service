@@ -8,9 +8,9 @@ fi
 WORKSPACE="$(git rev-parse --show-toplevel)"
 echo "Workspace root: $WORKSPACE"
 
-# Define the base Go import path for your project
-# (Adjust if your module path is different)
-BASE_IMPORT_PATH="github.com/aerospike/aerospike-backup-service/v3"
+# Extract module path
+BASE_IMPORT_PATH=$(grep '^module' "$WORKSPACE/go.mod" | awk '{print $2}')
+echo "Module path: $BASE_IMPORT_PATH"
 
 generate_mocks() {
     _src_pkg_rel_path="$1"
