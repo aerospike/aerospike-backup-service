@@ -20,18 +20,8 @@ func NewTimeBounds(fromTime, toTime *time.Time) (TimeBounds, error) {
 	return TimeBounds{FromTime: fromTime, ToTime: toTime}, nil
 }
 
-// NewTimeBoundsTo creates a new TimeBounds until the provided toTime.
-func NewTimeBoundsTo(toTime time.Time) TimeBounds {
-	return TimeBounds{ToTime: &toTime}
-}
-
-// NewTimeBoundsFrom creates a new TimeBounds from the provided fromTime.
-func NewTimeBoundsFrom(fromTime time.Time) TimeBounds {
-	return TimeBounds{FromTime: &fromTime}
-}
-
 // Contains verifies if the given value lies within FromTime (inclusive) and ToTime (exclusive).
-func (tb *TimeBounds) Contains(value time.Time) bool {
+func (tb TimeBounds) Contains(value time.Time) bool {
 	if tb.FromTime != nil && value.Before(*tb.FromTime) {
 		return false
 	}
@@ -44,7 +34,7 @@ func (tb *TimeBounds) Contains(value time.Time) bool {
 }
 
 // String implements the Stringer interface.
-func (tb *TimeBounds) String() string {
+func (tb TimeBounds) String() string {
 	if tb.FromTime == nil && tb.ToTime == nil {
 		return "NA"
 	}

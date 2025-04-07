@@ -16,7 +16,8 @@ import (
 
 // BackupFilter is an interface that all filter types must implement.
 type BackupFilter interface {
-	isBackupFilter()
+	// timeBounds returns time bounds specified for current filter.
+	timeBounds() model.TimeBounds
 }
 
 // BaseFilter contains common filter attributes.
@@ -50,8 +51,6 @@ func NewIncrementalBackupFilter(routine string) *RoutineFilter {
 	}
 }
 
-func (f *RoutineFilter) isBackupFilter() {}
-
 func (f *RoutineFilter) Last() *RoutineFilter {
 	f.onlyLast = true
 	return f
@@ -72,7 +71,7 @@ func (f *RoutineFilter) WithToTime(toTime time.Time) *RoutineFilter {
 	return f
 }
 
-func (f RoutineFilter) getUpperBoundary() string {
+func (f *RoutineFilter) getUpperBoundary() string {
 	if f.ToTime != nil {
 		return getTimestampPath(f.routine, *f.ToTime, f.JobType)
 	}
@@ -88,7 +87,7 @@ func (f *RoutineFilter) WithTimeBounds(bounds model.TimeBounds) *RoutineFilter {
 
 func (f *RoutineFilter) String() string {
 	return fmt.Sprintf("routine: %v type: %v last: %v timebounds: %s",
-		f.routine, f.JobType, f.onlyLast, f.TimeBounds().String())
+		f.routine, f.JobType, f.onlyLast, f.timeBounds().String())
 }
 
 func (f *RoutineFilter) getPath() string {
@@ -110,12 +109,9 @@ func NewPathFilter(path string, storage model.Storage) *PathFilter {
 	}
 }
 
-// Implement BackupFilter interface for both concrete types.
-func (p *PathFilter) isBackupFilter() {}
-
 // TimeBounds returns time bounds for a base filter.
-func (b *BaseFilter) TimeBounds() *model.TimeBounds {
-	return &model.TimeBounds{
+func (b *BaseFilter) timeBounds() model.TimeBounds {
+	return model.TimeBounds{
 		FromTime: b.FromTime,
 		ToTime:   b.ToTime,
 	}
@@ -134,7 +130,7 @@ func (p *PathFilter) WithTimeBounds(bounds model.TimeBounds) *PathFilter {
 
 func (p *PathFilter) String() string {
 	return fmt.Sprintf("path: %v storage: %s timebounds: %s",
-		p.path, p.storage.String(), p.TimeBounds().String())
+		p.path, p.storage.String(), p.timeBounds().String())
 }
 
 // BackupReaderWriter defines operations for reading and writing backups metadata.
@@ -176,9 +172,9 @@ func NewBackupBackendService(config *model.Config) *BackupBackendServiceImpl {
 func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter BackupFilter) ([]model.BackupDetails, error) {
 	switch f := filter.(type) {
 	case *RoutineFilter:
-		return b.getRoutineBackups(ctx, *f)
+		return b.getRoutineBackups(ctx, f)
 	case *PathFilter:
-		return b.getPathBackups(ctx, *f)
+		return b.getPathBackups(ctx, f)
 	default:
 		return nil, fmt.Errorf("unsupported filter type: %T", f)
 	}
@@ -186,7 +182,7 @@ func (b *BackupBackendServiceImpl) GetBackups(ctx context.Context, filter Backup
 
 func (b *BackupBackendServiceImpl) getRoutineBackups(
 	ctx context.Context,
-	filter RoutineFilter,
+	filter *RoutineFilter,
 ) ([]model.BackupDetails, error) {
 	routine, found := b.config.Routine(filter.routine)
 	if !found {
@@ -221,7 +217,7 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 		if err != nil {
 			return nil, fmt.Errorf("error decoding backup metadata YAML: %w", err)
 		}
-		if filter.TimeBounds().Contains(metadata.Created) {
+		if filter.timeBounds().Contains(metadata.Created) {
 			key := backupKey(fileName, storagePrefix)
 			details := model.NewBackupDetails(*metadata, key, backupStorage, filter.routine)
 			backups = append(backups, details)
@@ -242,7 +238,7 @@ func backupKey(fileName, storagePrefix string) string {
 }
 
 // filterEligibleFiles returns files that meet the timestamp criteria.
-func filterEligibleFiles(files []string, maxString string, filter RoutineFilter) []string {
+func filterEligibleFiles(files []string, maxString string, filter *RoutineFilter) []string {
 	var lessThenMaxString []string
 	for _, fileName := range files {
 		if fileName < maxString || strings.HasPrefix(fileName, maxString) {
@@ -319,7 +315,7 @@ func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName strin
 
 func (b *BackupBackendServiceImpl) getPathBackups(
 	ctx context.Context,
-	filter PathFilter,
+	filter *PathFilter,
 ) ([]model.BackupDetails, error) {
 	files, err := storage.ReadFileNames(ctx, filter.storage, filter.path, metadataFile, nil)
 	if err != nil {
@@ -338,7 +334,7 @@ func (b *BackupBackendServiceImpl) getPathBackups(
 			return nil, fmt.Errorf("error decoding backup metadata YAML: %w", err)
 		}
 
-		if filter.TimeBounds().Contains(metadata.Created) {
+		if filter.timeBounds().Contains(metadata.Created) {
 			key := backupKey(fileName, storagePrefix)
 			details := model.NewBackupDetails(*metadata, key, filter.storage, "")
 			backups = append(backups, details)
