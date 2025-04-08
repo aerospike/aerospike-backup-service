@@ -12,8 +12,9 @@ import (
 )
 
 var (
-	routineName = "test-routine"
-	ctx         = context.Background()
+	routineName   = "test-routine"
+	testNamespace = "test-ns"
+	ctx           = context.Background()
 )
 
 func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
@@ -29,11 +30,11 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	}
 
 	for _, tm := range times {
-		backupPath := getBackupPath(routineName, jobTypeFull, "test-ns", tm)
+		backupPath := getBackupPath(routineName, jobTypeFull, testNamespace, tm)
 
 		metadata := model.BackupMetadata{
 			Created:   tm,
-			Namespace: "test-ns",
+			Namespace: testNamespace,
 		}
 
 		err := service.WriteBackupMetadata(ctx, routineName, backupPath, metadata)
@@ -116,11 +117,11 @@ func TestLocalDeleteBackup(t *testing.T) {
 
 	// Create backup
 	created := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-	backupPath := getBackupPath(routineName, jobTypeFull, "test-ns", created)
+	backupPath := getBackupPath(routineName, jobTypeFull, testNamespace, created)
 
 	metadata := model.BackupMetadata{
 		Created:   created,
-		Namespace: "test-ns",
+		Namespace: testNamespace,
 	}
 
 	err := service.WriteBackupMetadata(ctx, routineName, backupPath, metadata)
@@ -147,10 +148,10 @@ func TestWriteBackupMetadata_RoutineNotFound(t *testing.T) {
 
 	ctx := context.Background()
 	routineName := "non-existent-routine"
-	backupPath := getBackupPath(routineName, jobTypeFull, "test-ns", time.Now())
+	backupPath := getBackupPath(routineName, jobTypeFull, testNamespace, time.Now())
 	metadata := model.BackupMetadata{
 		Created:   time.Now(),
-		Namespace: "test-ns",
+		Namespace: testNamespace,
 	}
 
 	// Attempt to write metadata
@@ -165,7 +166,7 @@ func TestDelete_RoutineNotFound(t *testing.T) {
 
 	ctx := context.Background()
 	routineName := "non-existent-routine"
-	backupPath := getBackupPath(routineName, jobTypeFull, "test-ns", time.Now())
+	backupPath := getBackupPath(routineName, jobTypeFull, testNamespace, time.Now())
 
 	// Attempt to delete backup
 	err := service.Delete(ctx, routineName, backupPath)
@@ -179,11 +180,11 @@ func TestIncrementalBackup(t *testing.T) {
 
 	// First create a full backup as baseline
 	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-	fullBackupPath := getBackupPath(routineName, jobTypeFull, "test-ns", fullBackupTime)
+	fullBackupPath := getBackupPath(routineName, jobTypeFull, testNamespace, fullBackupTime)
 
 	fullMetadata := model.BackupMetadata{
 		Created:     fullBackupTime,
-		Namespace:   "test-ns",
+		Namespace:   testNamespace,
 		RecordCount: 1000,
 		ByteCount:   10240,
 		FileCount:   5,
@@ -194,12 +195,12 @@ func TestIncrementalBackup(t *testing.T) {
 
 	// Now create an incremental backup
 	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
-	incrementalPath := getBackupPath(routineName, jobTypeIncremental, "test-ns", incrementalTime)
+	incrementalPath := getBackupPath(routineName, jobTypeIncremental, testNamespace, incrementalTime)
 
 	incMetadata := model.BackupMetadata{
 		Created:     incrementalTime,
 		From:        fullBackupTime, // From points to the full backup time
-		Namespace:   "test-ns",
+		Namespace:   testNamespace,
 		RecordCount: 200,
 		ByteCount:   2048,
 		FileCount:   2,
@@ -241,7 +242,7 @@ func TestReadPath(t *testing.T) {
 
 	// First create a full backup as baseline
 	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-	fullBackupPath := getBackupPath(routineName, jobTypeFull, "test-ns", fullBackupTime)
+	fullBackupPath := getBackupPath(routineName, jobTypeFull, testNamespace, fullBackupTime)
 
 	fullMetadata := model.BackupMetadata{
 		Created: fullBackupTime,
@@ -252,7 +253,7 @@ func TestReadPath(t *testing.T) {
 
 	// Now create an incremental backup
 	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
-	incrementalPath := getBackupPath(routineName, jobTypeIncremental, "test-ns", incrementalTime)
+	incrementalPath := getBackupPath(routineName, jobTypeIncremental, testNamespace, incrementalTime)
 
 	incMetadata := model.BackupMetadata{
 		Created: incrementalTime,
