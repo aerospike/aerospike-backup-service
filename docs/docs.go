@@ -1788,6 +1788,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 10000
                 },
+                "cluster-configuration": {
+                    "description": "Back up Aerospike cluster configuration. Default: false.",
+                    "type": "boolean"
+                },
                 "compression": {
                     "description": "Compression details.",
                     "allOf": [
@@ -1810,15 +1814,15 @@ const docTemplate = `{
                     "example": 1024
                 },
                 "no-indexes": {
-                    "description": "Do not back up any secondary index definitions.",
+                    "description": "Do not back up any secondary index definitions. Default: false.",
                     "type": "boolean"
                 },
                 "no-records": {
-                    "description": "Do not back up any record data (metadata or bin data).",
+                    "description": "Do not back up any record data (metadata or bin data). Default: false.",
                     "type": "boolean"
                 },
                 "no-udfs": {
-                    "description": "Do not back up any UDF modules.",
+                    "description": "Do not back up any UDF modules. Default: false.",
                     "type": "boolean"
                 },
                 "parallel": {
