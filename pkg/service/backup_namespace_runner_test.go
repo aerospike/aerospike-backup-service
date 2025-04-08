@@ -221,8 +221,8 @@ func TestBackupHandlerError(t *testing.T) {
 		Return(errors.New("handler error"))
 
 	mocks.backendService.EXPECT(). // Important: delete all backup files, including configuration
-		Delete(gomock.Any(), routineName, timestampPath).
-		Return(nil)
+					Delete(gomock.Any(), routineName, timestampPath).
+					Return(nil)
 
 	handler := runner.Run(ctx, client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
 
@@ -260,8 +260,8 @@ func TestMetadataWriteError(t *testing.T) {
 		Return(backupStats)
 
 	mocks.backendService.EXPECT(). // backup succeeded, but could not write metadata => delete all
-		WriteBackupMetadata(gomock.Any(), routineName, backupFolder, gomock.Any()).
-		Return(metadataError)
+					WriteBackupMetadata(gomock.Any(), routineName, backupFolder, gomock.Any()).
+					Return(metadataError)
 
 	mocks.backendService.EXPECT().
 		Delete(gomock.Any(), routineName, timestampPath).
@@ -306,8 +306,8 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 		})
 
 	mocks.backendService.EXPECT(). // backup cancelled => delete all
-		Delete(gomock.Any(), routineName, timestampPath).
-		Return(nil)
+					Delete(gomock.Any(), routineName, timestampPath).
+					Return(nil)
 
 	handler := runner.Run(ctx, client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
 
