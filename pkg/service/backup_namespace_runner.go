@@ -69,7 +69,7 @@ func (op *BackupNamespaceRunner) Run(
 			return op.backupExecutor.Run(ctx, client, backupRoutine, timeBounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) {
-			op.deleteFolder(ctx, backupFolder)
+			op.deleteFolder(ctx, getTimestampPath(op.routineName, now, backupType))
 		},
 		func(ctx context.Context, stats *models.BackupStats) error {
 			// For incremental backups, skip metadata for empty backups
