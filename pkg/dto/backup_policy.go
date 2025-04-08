@@ -25,12 +25,14 @@ type BackupPolicy struct {
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Specifies how long to retain full and incremental backups.
 	RetentionPolicy *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty"`
-	// Do not back up any record data (metadata or bin data).
+	// Do not back up any record data (metadata or bin data). Default: false.
 	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty"`
-	// Do not back up any secondary index definitions.
+	// Do not back up any secondary index definitions. Default: false.
 	NoIndexes *bool `yaml:"no-indexes,omitempty" json:"no-indexes,omitempty"`
-	// Do not back up any UDF modules.
+	// Do not back up any UDF modules. Default: false.
 	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty"`
+	// Back up Aerospike cluster configuration. Default: false.
+	ClusterConfig *bool `yaml:"cluster-configuration" json:"cluster-configuration,omitempty"`
 	// Throttles backup write operations to the backup file(s) to not exceed the given
 	// bandwidth in MiB/s.
 	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
@@ -119,6 +121,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		NoRecords:         p.NoRecords,
 		NoIndexes:         p.NoIndexes,
 		NoUdfs:            p.NoUdfs,
+		ClusterConfig:     p.ClusterConfig,
 		Bandwidth:         p.Bandwidth,
 		RecordsPerSecond:  p.RecordsPerSecond,
 		FileLimit:         p.FileLimit,
@@ -164,6 +167,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.NoRecords = m.NoRecords
 	p.NoIndexes = m.NoIndexes
 	p.NoUdfs = m.NoUdfs
+	p.ClusterConfig = m.ClusterConfig
 	p.Bandwidth = m.Bandwidth
 	p.RecordsPerSecond = m.RecordsPerSecond
 	p.FileLimit = m.FileLimit
