@@ -122,8 +122,8 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 }
 
 func (h *BackupRoutineOrchestrator) backupClusterConfiguration(ctx context.Context, now time.Time, err error) {
-	// backup configuration only if ClusterConfig is explicitly set to true.
-	if h.routine.BackupPolicy.ClusterConfig == nil || *h.routine.BackupPolicy.ClusterConfig == false {
+	// backup configuration only if WithClusterConfig is explicitly set to true.
+	if h.routine.BackupPolicy.WithClusterConfig == nil || *h.routine.BackupPolicy.WithClusterConfig == false {
 		return
 	}
 

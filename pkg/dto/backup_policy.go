@@ -32,7 +32,7 @@ type BackupPolicy struct {
 	// Do not back up any UDF modules. Default: false.
 	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty"`
 	// Back up Aerospike cluster configuration. Default: false.
-	ClusterConfig *bool `yaml:"cluster-configuration" json:"cluster-configuration,omitempty"`
+	WithClusterConfig *bool `yaml:"with-cluster-configuration" json:"with-cluster-configuration,omitempty"`
 	// Throttles backup write operations to the backup file(s) to not exceed the given
 	// bandwidth in MiB/s.
 	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
@@ -121,7 +121,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		NoRecords:         p.NoRecords,
 		NoIndexes:         p.NoIndexes,
 		NoUdfs:            p.NoUdfs,
-		ClusterConfig:     p.ClusterConfig,
+		WithClusterConfig: p.WithClusterConfig,
 		Bandwidth:         p.Bandwidth,
 		RecordsPerSecond:  p.RecordsPerSecond,
 		FileLimit:         p.FileLimit,
@@ -167,7 +167,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.NoRecords = m.NoRecords
 	p.NoIndexes = m.NoIndexes
 	p.NoUdfs = m.NoUdfs
-	p.ClusterConfig = m.ClusterConfig
+	p.WithClusterConfig = m.WithClusterConfig
 	p.Bandwidth = m.Bandwidth
 	p.RecordsPerSecond = m.RecordsPerSecond
 	p.FileLimit = m.FileLimit

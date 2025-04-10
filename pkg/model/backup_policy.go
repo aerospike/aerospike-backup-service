@@ -27,7 +27,7 @@ type BackupPolicy struct {
 	// Do not back up any UDF modules.
 	NoUdfs *bool
 	// Back up Aerospike cluster configuration.
-	ClusterConfig *bool
+	WithClusterConfig *bool
 	// Throttles backup write operations to the backup file(s) to not exceed the given
 	// bandwidth in MiB/s.
 	Bandwidth *int
