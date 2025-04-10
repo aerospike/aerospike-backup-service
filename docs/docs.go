@@ -1788,10 +1788,6 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 10000
                 },
-                "cluster-configuration": {
-                    "description": "Back up Aerospike cluster configuration. Default: false.",
-                    "type": "boolean"
-                },
                 "compression": {
                     "description": "Compression details.",
                     "allOf": [
@@ -1864,6 +1860,10 @@ const docTemplate = `{
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
                     "type": "integer",
                     "example": 2000
+                },
+                "with-cluster-configuration": {
+                    "description": "Back up Aerospike cluster configuration. Default: false.",
+                    "type": "boolean"
                 },
                 "xdr": {
                     "description": "XDR configuration for MRT backups.",
