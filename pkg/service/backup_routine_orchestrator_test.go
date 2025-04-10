@@ -26,6 +26,7 @@ func setupBaseConfig() *model.Config {
 				MaxRetries:  1,
 				Multiplier:  1,
 			},
+			WithClusterConfig: util.Ptr(true),
 		},
 		IntervalCron: "@daily",
 		Namespaces:   []string{"ns1", "ns2"},

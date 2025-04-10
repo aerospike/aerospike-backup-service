@@ -102,10 +102,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	}
 	defer h.clientManager.Close(client)
 
-	err = h.clusterConfigWriter.Write(ctx, h.routineName, now)
-	if err != nil {
-		return err
-	}
+	h.backupClusterConfiguration(ctx, now)
 
 	timeBounds := h.createTimeBounds(jobTypeFull, now)
 	backupHandler := startNamespacesBackup(ctx,
@@ -122,6 +119,17 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	go h.deleteOldBackups(ctx, h.routineName)
 
 	return nil
+}
+
+func (h *BackupRoutineOrchestrator) backupClusterConfiguration(ctx context.Context, now time.Time) {
+	// backup configuration only if WithClusterConfig is explicitly set to true.
+	if h.routine.BackupPolicy.WithClusterConfig == nil || !*h.routine.BackupPolicy.WithClusterConfig {
+		return
+	}
+
+	if err := h.clusterConfigWriter.Write(ctx, h.routineName, now); err != nil {
+		slog.Warn("Failed to backup cluster configuration", slog.Any("err", err))
+	}
 }
 
 func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
