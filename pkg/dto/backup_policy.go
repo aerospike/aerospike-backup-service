@@ -15,6 +15,8 @@ import (
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel.
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
+	// Number of storage writers to run in parallel.
+	ParallelWrite *int `yaml:"parallel-write,omitempty" json:"parallel-write,omitempty"`
 	// Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
 	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
@@ -32,7 +34,7 @@ type BackupPolicy struct {
 	// Do not back up any UDF modules. Default: false.
 	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty"`
 	// Back up Aerospike cluster configuration. Default: false.
-	WithClusterConfig *bool `yaml:"with-cluster-configuration" json:"with-cluster-configuration,omitempty"`
+	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty"`
 	// Throttles backup write operations to the backup file(s) to not exceed the given
 	// bandwidth in MiB/s.
 	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
@@ -114,6 +116,7 @@ func (p *BackupPolicy) Validate() error {
 func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 	return &model.BackupPolicy{
 		Parallel:          p.Parallel,
+		ParallelWrite:     p.ParallelWrite,
 		SocketTimeout:     millisToDuration(p.SocketTimeout),
 		TotalTimeout:      millisToDuration(p.TotalTimeout),
 		RetryPolicy:       p.RetryPolicy.ToModel(),
@@ -160,6 +163,7 @@ func NewBackupPolicyFromModel(m *model.BackupPolicy) *BackupPolicy {
 
 func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.Parallel = m.Parallel
+	p.ParallelWrite = m.ParallelWrite
 	p.SocketTimeout = durationToMillis(m.SocketTimeout)
 	p.TotalTimeout = durationToMillis(m.TotalTimeout)
 	p.RetryPolicy = newRetryPolicyFromModel(m.RetryPolicy)
