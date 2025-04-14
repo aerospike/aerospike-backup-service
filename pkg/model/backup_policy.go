@@ -96,8 +96,8 @@ func (p *BackupPolicy) GetParallelOrDefault() int {
 }
 
 func (p *BackupPolicy) GetParallelWriteOrDefault() int {
-	if p.Parallel != nil {
-		return *p.Parallel
+	if p.ParallelWrite != nil {
+		return *p.ParallelWrite
 	}
 
 	return *defaultConfig.backupPolicy.ParallelWrite
