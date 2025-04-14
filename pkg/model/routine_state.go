@@ -2,6 +2,8 @@ package model
 
 import (
 	"time"
+
+	"github.com/aerospike/backup-go/models"
 )
 
 // RoutineState represent the current state of backups (full and incremental).
@@ -30,4 +32,5 @@ type RunningJob struct {
 	// EstimatedEndTime: the estimated time when the operation will be completed.
 	// A nil value indicates that the estimation is not available yet.
 	EstimatedEndTime *time.Time
+	Metrics          *models.Metrics
 }

@@ -21,6 +21,11 @@ type RoutineState struct {
 	LastIncremental *time.Time `json:"last-incremental,omitempty"`
 }
 
+type Metrics struct {
+	Read  int `json:"read"`
+	Write int `json:"write"`
+}
+
 func NewRoutineStateFromModel(m *model.RoutineState) *RoutineState {
 	if m == nil {
 		return nil
@@ -54,6 +59,8 @@ type RunningJob struct {
 	// EstimatedEndTime: the estimated time when the backup operation will be completed.
 	// A nil value indicates that the estimation is not available yet.
 	EstimatedEndTime *time.Time `json:"estimated-end-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
+
+	Metrics Metrics `json:"metrics,omitempty"`
 }
 
 func NewRunningJobFromModel(m *model.RunningJob) *RunningJob {
@@ -73,4 +80,9 @@ func (r *RunningJob) fromModel(m *model.RunningJob) {
 	r.FinishTime = m.FinishTime
 	r.PercentageDone = m.PercentageDone
 	r.EstimatedEndTime = m.EstimatedEndTime
+	if m.Metrics != nil {
+		r.Metrics.Write = m.Metrics.PipelineWriteQueueSize
+		r.Metrics.Read = m.Metrics.PipelineReadQueueSize
+	}
+
 }

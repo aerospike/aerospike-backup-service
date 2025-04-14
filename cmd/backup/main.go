@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 
@@ -122,7 +125,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()
-	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
+	//service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
 		restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator, backendService)
@@ -171,6 +174,12 @@ func runHTTPServer(
 	httpServer := server.NewHTTPServer(serverConfig, service, logger)
 	go func() {
 		httpServer.Start()
+	}()
+
+	// TODO: remove in production (or use a feature-toggle)
+	runtime.SetBlockProfileRate(100)
+	go func() {
+		_ = http.ListenAndServe("localhost:6060", nil)
 	}()
 
 	<-ctx.Done()

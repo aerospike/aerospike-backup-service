@@ -12,6 +12,7 @@ import (
 type BackupHandler interface {
 	GetStats() *models.BackupStats
 	Wait(context.Context) error
+	GetMetrics() *models.Metrics
 }
 
 // CombinedBackupHandler is a wrapper around two backup handlers.
@@ -35,6 +36,15 @@ func (h *CombinedBackupHandler) Wait(ctx context.Context) error {
 
 	return errors.Join(errs...)
 }
+
 func (h *CombinedBackupHandler) GetStats() *models.BackupStats {
 	return models.SumBackupStats(h.xdrHandler.GetStats(), h.scanHandler.GetStats())
+}
+func (h *CombinedBackupHandler) GetMetrics() *models.Metrics {
+	xdr := h.xdrHandler.GetMetrics()
+	scan := h.scanHandler.GetMetrics()
+	return models.NewMetrics(
+		xdr.PipelineReadQueueSize+scan.PipelineReadQueueSize,
+		xdr.PipelineWriteQueueSize+scan.PipelineWriteQueueSize,
+	)
 }

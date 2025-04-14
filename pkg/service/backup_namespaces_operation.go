@@ -64,6 +64,15 @@ func (op *BackupNamespacesOperation) Cancel() {
 	}
 }
 
+func (op *BackupNamespacesOperation) GetMetrics() *models.Metrics {
+	metrics := models.NewMetrics(0, 0)
+	for _, handler := range op.handlers {
+		metrics.PipelineReadQueueSize += handler.GetMetrics().PipelineReadQueueSize
+		metrics.PipelineWriteQueueSize += handler.GetMetrics().PipelineWriteQueueSize
+	}
+	return metrics
+}
+
 // GetStats return aggregated public statistics for all inner handlers.
 // return nil if no handlers are currently running.
 func (op *BackupNamespacesOperation) GetStats() *models.BackupStats {
