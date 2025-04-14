@@ -8,14 +8,13 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.6.0
 	github.com/aerospike/aerospike-client-go/v8 v8.2.0
 	github.com/aerospike/aerospike-management-lib v1.7.0
-	github.com/aerospike/backup-go v0.3.2-0.20250406120801-732e7a2c1e75
+	github.com/aerospike/backup-go v0.3.2-0.20250414103102-1273594ba730
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.12
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.65
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.78.2
 	github.com/aws/smithy-go v1.22.3
 	github.com/go-logr/logr v1.4.2
-	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad
 	github.com/prometheus/client_golang v1.21.1
 	github.com/prometheus/client_model v0.6.1
 	github.com/reugn/go-quartz v0.14.0
