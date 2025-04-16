@@ -22,10 +22,9 @@ type BackupRoutine struct {
 	BinList []string
 	// A list of Aerospike Server rack IDs to prefer when reading records for a backup.
 	PreferRacks []int
-	// Back up list of partition filters. Partition filters can be ranges, individual partitions,
-	// or records after a specific digest within a single partition.
+	// Back up list of partition filters. Partition filters can be ranges or individual partitions.
 	// Default number of partitions to back up: 0 to 4095: all partitions.
-	PartitionList *string
+	PartitionList string
 	// NodeList contains a list of nodes to back up.
 	NodeList []string
 	// Whether this routine is disabled and should not run.
