@@ -84,6 +84,9 @@ func (r *BackupRoutine) Validate() error {
 			return errValidationEmptyField("secret-agent")
 		}
 	}
+	if err := validatePartitionList(r.PartitionList); err != nil {
+		return fmt.Errorf("invalid partition list: %w", r.PartitionList)
+	}
 
 	return nil
 }
