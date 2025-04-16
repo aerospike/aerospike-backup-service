@@ -22,7 +22,10 @@ func runScanBackup(
 	namespace string,
 	writer backup.Writer,
 ) (BackupHandler, error) {
-	config := makeBackupConfig(namespace, routine, timeBounds)
+	config, err := makeBackupConfig(namespace, routine, timeBounds)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make backup config: %w", err)
+	}
 
 	handler, err := client.Backup(ctx, config, writer, nil)
 	if err != nil {
@@ -38,13 +41,23 @@ func makeBackupConfig(
 	namespace string,
 	backupRoutine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
-) *backup.ConfigBackup {
+) (*backup.ConfigBackup, error) {
 	config := backup.NewDefaultBackupConfig()
 
 	config.Namespace = namespace
 	config.BinList = backupRoutine.BinList
 	config.NodeList = backupRoutine.NodeList
 	config.SetList = backupRoutine.SetList
+
+	if backupRoutine.PartitionList != "" {
+		// namespace parameter is only applicable for partition by digest; it's not supported by service.
+		partitionFilters, err := backup.ParsePartitionFilterListString("", backupRoutine.PartitionList)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse partition list: %w", err)
+		}
+
+		config.PartitionFilters = partitionFilters
+	}
 
 	backupPolicy := backupRoutine.BackupPolicy
 	config.NoRecords = util.ValueOrZero(backupPolicy.NoRecords)
@@ -76,7 +89,7 @@ func makeBackupConfig(
 	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
 	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)
 
-	return config
+	return config, nil
 }
 
 // calculateSocketTimeout calculates socket timeout for the given backup routine and timestamp.
