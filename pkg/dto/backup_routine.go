@@ -85,7 +85,7 @@ func (r *BackupRoutine) Validate() error {
 		}
 	}
 	if err := validatePartitionList(r.PartitionList); err != nil {
-		return fmt.Errorf("invalid partition list: %w", r.PartitionList)
+		return fmt.Errorf("invalid partition list: %q", r.PartitionList)
 	}
 
 	return nil
