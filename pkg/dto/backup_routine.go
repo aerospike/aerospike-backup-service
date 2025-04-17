@@ -54,9 +54,6 @@ type BackupRoutine struct {
 
 // Validate validates the backup routine configuration.
 func (r *BackupRoutine) Validate() error {
-	if r.BackupPolicy == "" {
-		return errValidationEmptyField("backup-policy")
-	}
 	if r.SourceCluster == "" {
 		return errValidationEmptyField("source-cluster")
 	}
@@ -151,9 +148,9 @@ func (r *BackupRoutine) ToModel(
 	config *model.BackupConfig,
 	nsValidator aerospike.NamespaceValidator,
 ) (*model.BackupRoutine, error) {
-	policy, found := config.BackupPolicies[r.BackupPolicy]
-	if !found {
-		return nil, errValidationNotFound("backup policy", r.BackupPolicy)
+	policy, err := resolveBackupPolicy(r.BackupPolicy, config.BackupPolicies)
+	if err != nil {
+		return nil, err
 	}
 
 	cluster, found := config.AerospikeClusters[r.SourceCluster]
@@ -200,6 +197,19 @@ func (r *BackupRoutine) ToModel(
 		NodeList:         r.NodeList,
 		Disabled:         r.Disabled,
 	}, nil
+}
+
+func resolveBackupPolicy(name string, policies map[string]*model.BackupPolicy) (*model.BackupPolicy, error) {
+	if name == "" {
+		return &model.BackupPolicy{}, nil
+	}
+
+	policy, found := policies[name]
+	if !found {
+		return nil, errValidationNotFound("backup policy", name)
+	}
+
+	return policy, nil
 }
 
 // NewRoutineFromReader creates a new BackupRoutine object from a given reader.

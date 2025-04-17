@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -32,7 +31,7 @@ type BackupPolicy struct {
 	// Do not back up any UDF modules. Default: false.
 	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty"`
 	// Back up Aerospike cluster configuration. Default: false.
-	WithClusterConfig *bool `yaml:"with-cluster-configuration" json:"with-cluster-configuration,omitempty"`
+	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty"`
 	// Throttles backup write operations to the backup file(s) to not exceed the given
 	// bandwidth in MiB/s.
 	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
@@ -72,7 +71,7 @@ func NewBackupPolicyFromReader(r io.Reader, format decoder.SerializationFormat) 
 // Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
 func (p *BackupPolicy) Validate() error {
 	if p == nil {
-		return errors.New("backup policy is not specified")
+		return nil
 	}
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return errValidationNonPositive("parallel", *p.Parallel)
@@ -112,6 +111,10 @@ func (p *BackupPolicy) Validate() error {
 }
 
 func (p *BackupPolicy) ToModel() *model.BackupPolicy {
+	if p == nil {
+		return &model.BackupPolicy{}
+	}
+
 	return &model.BackupPolicy{
 		Parallel:          p.Parallel,
 		SocketTimeout:     millisToDuration(p.SocketTimeout),
