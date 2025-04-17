@@ -72,9 +72,6 @@ func (r *RestoreRequest) Validate() error {
 	if err := r.StorageConfig.Validate(); err != nil {
 		return err
 	}
-	if err := r.Policy.Validate(); err != nil {
-		return err
-	}
 
 	return nil
 }
