@@ -40,6 +40,6 @@ func errValidationNegative[T ~int | ~int8 | ~int16 | ~int32 | ~int64](field stri
 }
 
 func errValidationInvalidValue(field, value any, allowed any) error {
-	return fmt.Errorf("%w: %q is not a valid %s. Allowed values: %v",
+	return fmt.Errorf("%w: '%v' is not a valid %s. Allowed values: %v",
 		errInvalidValue, value, field, allowed)
 }

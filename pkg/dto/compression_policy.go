@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"fmt"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -28,10 +26,10 @@ func (p *CompressionPolicy) Validate() error {
 		return nil
 	}
 	if p.Mode != CompressNone && p.Mode != CompressZSTD {
-		return fmt.Errorf("invalid compression mode: %s", p.Mode)
+		return errValidationInvalidValue("compression mode", p.Mode, []string{CompressNone, CompressZSTD})
 	}
-	if p.Level < -1 {
-		return fmt.Errorf("invalid compression level: %d", p.Level)
+	if p.Level < -1 || p.Level > 22 {
+		return errValidationInvalidValue("compression level", p.Level, "-1 to 22")
 	}
 
 	return nil
