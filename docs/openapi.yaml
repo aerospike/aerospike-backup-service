@@ -1599,8 +1599,9 @@ components:
           type: array
         partition-list:
           description: |-
-            Back up list of partition filters. Partition filters can be ranges, individual partitions,
-            or records after a specific digest within a single partition.
+            Back up list of partition filters. Partition filters can be ranges or individual partitions.
+            Range is a pair of partition number and count.
+            Example: "0,100-50" will backup partitions 0 and 50 partitions starting 100.
             Default number of partitions to back up: 0 to 4095: all partitions.
           example: 0-1000
           type: string
@@ -1660,7 +1661,9 @@ components:
       description: CompressionPolicy contains backup compression information.
       properties:
         level:
-          description: The compression level to use (or -1 if unspecified).
+          description: |-
+            The compression level to use.
+            Algorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).
           type: integer
         mode:
           default: NONE

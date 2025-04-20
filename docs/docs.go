@@ -1937,7 +1937,7 @@ const docTemplate = `{
                     ]
                 },
                 "partition-list": {
-                    "description": "Back up list of partition filters. Partition filters can be ranges, individual partitions,\nor records after a specific digest within a single partition.\nDefault number of partitions to back up: 0 to 4095: all partitions.",
+                    "description": "Back up list of partition filters. Partition filters can be ranges or individual partitions.\nRange is a pair of partition number and count.\nExample: \"0,100-50\" will backup partitions 0 and 50 partitions starting 100.\nDefault number of partitions to back up: 0 to 4095: all partitions.",
                     "type": "string",
                     "example": "0-1000"
                 },
@@ -2005,7 +2005,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "level": {
-                    "description": "The compression level to use (or -1 if unspecified).",
+                    "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).",
                     "type": "integer"
                 },
                 "mode": {
