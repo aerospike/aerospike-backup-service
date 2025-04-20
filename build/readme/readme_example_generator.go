@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -181,7 +182,7 @@ func main() {
 		} else if format == "yaml" {
 			example, exists = yamlExamples[name]
 			if exists {
-				formattedExample, err = yaml.Marshal(example)
+				formattedExample, err = marshalYAML(example)
 			}
 		}
 
@@ -200,4 +201,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// MarshalYAML marshals the input into YAML and replaces 4-space indents with 2-space indents.
+// we need this to be in sync with Goland's markdown formatter.
+func marshalYAML(v interface{}) ([]byte, error) {
+	rawYAML, err := yaml.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	formattedYAML := strings.ReplaceAll(string(rawYAML), "    ", "  ")
+
+	return []byte(formattedYAML), nil
 }
