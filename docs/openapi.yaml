@@ -1432,6 +1432,7 @@ components:
       example:
         no-records: true
         no-udfs: true
+        concurrent-incremental: true
         bandwidth: 10000
         total-timeout: 2000
         sealed: true
@@ -1458,6 +1459,11 @@ components:
           - $ref: '#/components/schemas/dto.CompressionPolicy'
           description: Compression details.
           type: object
+        concurrent-incremental:
+          description: |-
+            Allows incremental backups to run concurrently.
+            When false (default), incremental backups are skipped if another backup for same routine is in progress.
+          type: boolean
         encryption:
           allOf:
           - $ref: '#/components/schemas/dto.EncryptionPolicy'
@@ -1634,7 +1640,6 @@ components:
           example: aws
           type: string
       required:
-      - backup-policy
       - interval-cron
       - source-cluster
       - storage
@@ -1680,6 +1685,7 @@ components:
           key:
             no-records: true
             no-udfs: true
+            concurrent-incremental: true
             bandwidth: 10000
             total-timeout: 2000
             sealed: true

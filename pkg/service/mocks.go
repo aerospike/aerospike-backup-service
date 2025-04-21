@@ -43,14 +43,6 @@ func (m *mockClientManager) Close(client *backup.Client) {
 	m.Called(client)
 }
 
-func clientManagerMock() (*mockClientManager, *backup.Client) {
-	client := &backup.Client{}
-	clientManager := new(mockClientManager)
-	clientManager.On("GetClient", mock.Anything).Return(client, nil)
-	clientManager.On("Close", client).Return()
-	return clientManager, client
-}
-
 type mockBackupHandler struct {
 	mock.Mock
 }
@@ -81,48 +73,6 @@ type mockRetentionManager struct {
 func (m *mockRetentionManager) deleteOldBackups(ctx context.Context, routineName string) error {
 	args := m.Called(ctx, routineName)
 	return args.Error(0)
-}
-
-// MockRunningBackupsRegistry is a mock implementation of RunningBackupsRegistry.
-type MockRunningBackupsRegistry struct {
-	mock.Mock
-}
-
-// register adds a new backup handler for a specific routine and job type.
-func (m *MockRunningBackupsRegistry) register(routineName string, jt jobType, handler CancelableBackupHandler) {
-	m.Called(routineName, jt, handler)
-}
-
-// remove deletes a backup from the registry.
-func (m *MockRunningBackupsRegistry) remove(routineName string, jt jobType) {
-	m.Called(routineName, jt)
-}
-
-// unregister removes a backup from the registry and updates the last success timestamp.
-func (m *MockRunningBackupsRegistry) unregister(routineName string, jt jobType, timestamp time.Time) {
-	m.Called(routineName, jt, timestamp)
-}
-
-// GetRoutineState returns the current backup statistics for a routine.
-func (m *MockRunningBackupsRegistry) GetRoutineState(routineName string) *model.RoutineState {
-	args := m.Called(routineName)
-	return args.Get(0).(*model.RoutineState)
-}
-
-// GetRunningState returns statistics for all current backups.
-func (m *MockRunningBackupsRegistry) GetRunningState() map[string]*model.RoutineState {
-	args := m.Called()
-	return args.Get(0).(map[string]*model.RoutineState)
-}
-
-// Cancel stops all ongoing backups for a specific routine.
-func (m *MockRunningBackupsRegistry) Cancel(routineName string) {
-	m.Called(routineName)
-}
-
-// SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps.
-func (m *MockRunningBackupsRegistry) SynchroniseBackupHistory() {
-	m.Called()
 }
 
 // MockBackupBackendService is a mock implementation of BackupReaderWriter.

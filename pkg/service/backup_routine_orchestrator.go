@@ -217,11 +217,16 @@ func (h *BackupRoutineOrchestrator) skipIncrementalBackup() bool {
 		h.logger.Debug("Skip incremental backup until initial full backup is done")
 		return true
 	}
-	if currentStat.Full != nil {
+
+	// Concurrent incremental are only allowed when explicitly set.
+	allowConcurrent := h.routine.BackupPolicy.ConcurrentIncremental != nil &&
+		*h.routine.BackupPolicy.ConcurrentIncremental
+
+	if currentStat.Full != nil && !allowConcurrent {
 		h.logger.Debug("Full backup is currently in progress, skipping incremental backup")
 		return true
 	}
-	if currentStat.Incremental != nil {
+	if currentStat.Incremental != nil && !allowConcurrent {
 		h.logger.Debug("Incremental backup is currently in progress, skipping incremental backup")
 		return true
 	}

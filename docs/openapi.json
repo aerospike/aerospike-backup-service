@@ -2007,6 +2007,10 @@
             "description" : "Compression details.",
             "type" : "object"
           },
+          "concurrent-incremental" : {
+            "description" : "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
+            "type" : "boolean"
+          },
           "encryption" : {
             "allOf" : [ {
               "$ref" : "#/components/schemas/dto.EncryptionPolicy"
@@ -2166,7 +2170,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "backup-policy", "interval-cron", "source-cluster", "storage" ],
+        "required" : [ "interval-cron", "source-cluster", "storage" ],
         "type" : "object"
       },
       "dto.BackupServiceConfig" : {

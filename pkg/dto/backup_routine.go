@@ -19,7 +19,7 @@ import (
 //nolint:lll
 type BackupRoutine struct {
 	// The name of the corresponding backup policy.
-	BackupPolicy string `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty" example:"keepAllPolicy" validate:"required"`
+	BackupPolicy string `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty" example:"keepAllPolicy"`
 	// The name of the corresponding source cluster.
 	SourceCluster string `yaml:"source-cluster,omitempty" json:"source-cluster,omitempty" example:"testCluster" validate:"required"`
 	// The name of the corresponding storage provider configuration.
