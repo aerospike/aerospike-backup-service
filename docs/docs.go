@@ -1783,10 +1783,6 @@ const docTemplate = `{
             "description": "BackupPolicy represents a scheduled backup policy.",
             "type": "object",
             "properties": {
-                "allow-concurrent-incremental": {
-                    "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
-                    "type": "boolean"
-                },
                 "bandwidth": {
                     "description": "Throttles backup write operations to the backup file(s) to not exceed the given\nbandwidth in MiB/s.",
                     "type": "integer",
@@ -1799,6 +1795,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.CompressionPolicy"
                         }
                     ]
+                },
+                "concurrent-incremental": {
+                    "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
+                    "type": "boolean"
                 },
                 "encryption": {
                     "description": "Encryption details.",

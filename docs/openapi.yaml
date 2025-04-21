@@ -1432,6 +1432,7 @@ components:
       example:
         no-records: true
         no-udfs: true
+        concurrent-incremental: true
         bandwidth: 10000
         total-timeout: 2000
         sealed: true
@@ -1439,7 +1440,6 @@ components:
         with-cluster-configuration: true
         encryption: "{}"
         parallel: 1
-        allow-concurrent-incremental: true
         no-indexes: true
         records-per-second: 1000
         compression: "{}"
@@ -1448,11 +1448,6 @@ components:
         socket-timeout: 1000
         retention: "{}"
       properties:
-        allow-concurrent-incremental:
-          description: |-
-            Allows incremental backups to run concurrently.
-            When false (default), incremental backups are skipped if another backup for same routine is in progress.
-          type: boolean
         bandwidth:
           description: |-
             Throttles backup write operations to the backup file(s) to not exceed the given
@@ -1464,6 +1459,11 @@ components:
           - $ref: '#/components/schemas/dto.CompressionPolicy'
           description: Compression details.
           type: object
+        concurrent-incremental:
+          description: |-
+            Allows incremental backups to run concurrently.
+            When false (default), incremental backups are skipped if another backup for same routine is in progress.
+          type: boolean
         encryption:
           allOf:
           - $ref: '#/components/schemas/dto.EncryptionPolicy'
@@ -1685,6 +1685,7 @@ components:
           key:
             no-records: true
             no-udfs: true
+            concurrent-incremental: true
             bandwidth: 10000
             total-timeout: 2000
             sealed: true
@@ -1692,7 +1693,6 @@ components:
             with-cluster-configuration: true
             encryption: "{}"
             parallel: 1
-            allow-concurrent-incremental: true
             no-indexes: true
             records-per-second: 1000
             compression: "{}"

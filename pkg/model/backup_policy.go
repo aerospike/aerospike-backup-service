@@ -48,7 +48,7 @@ type BackupPolicy struct {
 	// XDR configuration for MRT backups.
 	XDRConfig *XDRConfig
 	// Allows incremental backups to run concurrently.
-	AllowConcurrentIncremental *bool
+	ConcurrentIncremental *bool
 }
 
 // IsSealedOrDefault returns the value of the Sealed property.

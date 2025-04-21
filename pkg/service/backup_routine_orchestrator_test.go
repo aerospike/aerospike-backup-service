@@ -280,10 +280,10 @@ func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
 		LastRunTime: model.NewLastBackupRun(util.Ptr(time.Now()), nil),
 	}
 
-	runIncrementalBackup(t, routineState, configAllowConcurrentIncremental())
+	runIncrementalBackup(t, routineState, configWithConcurrentIncremental())
 }
 
-func TestRunIncrementalBackup_AllowConcurrentIncremental(t *testing.T) {
+func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
 	routineState := &model.RoutineState{
 		Incremental: &model.RunningJob{
 			StartTime: time.Now(),
@@ -291,13 +291,13 @@ func TestRunIncrementalBackup_AllowConcurrentIncremental(t *testing.T) {
 		LastRunTime: model.NewLastBackupRun(util.Ptr(time.Now()), nil),
 	}
 
-	runIncrementalBackup(t, routineState, configAllowConcurrentIncremental())
+	runIncrementalBackup(t, routineState, configWithConcurrentIncremental())
 }
 
-func configAllowConcurrentIncremental() *model.Config {
+func configWithConcurrentIncremental() *model.Config {
 	config := setupBaseConfig()
 	routine, _ := config.Routine(routineName)
-	routine.BackupPolicy.AllowConcurrentIncremental = util.Ptr(true)
+	routine.BackupPolicy.ConcurrentIncremental = util.Ptr(true)
 	_ = config.UpdateRoutine(routineName, routine)
 
 	return config
