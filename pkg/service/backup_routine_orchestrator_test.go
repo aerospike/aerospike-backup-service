@@ -180,83 +180,6 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	assert.Contains(t, err.Error(), "cannot get backup client")
 }
 
-func TestRunIncrementalBackupInternal_Success(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	config := setupBaseConfig()
-
-	// Setup last full backup time
-	lastFullBackupTime := time.Now().Add(-24 * time.Hour)
-	initialState := &model.RoutineState{
-		LastRunTime: model.NewLastBackupRun(&lastFullBackupTime, nil),
-	}
-
-	mockClientManager := aerospike.NewMockClientManager(ctrl)
-
-	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
-	mockBackupHandler := backupexecutor.NewMockBackupHandler(ctrl)
-	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
-	mockRetentionManager := NewMockRetentionManager(ctrl)
-	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
-	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
-
-	stats := models.NewBackupStats()
-	stats.Start()
-	stats.TotalRecords = 5
-	stats.IncFiles()
-	stats.ReadRecords.Add(5)
-
-	mockRegistry.EXPECT().GetRoutineState(routineName).Return(initialState)
-	mockClientManager.EXPECT().GetClient(gomock.Any()).Return(mockClient, nil)
-	mockClientManager.EXPECT().Close(mockClient)
-
-	mockBackupExecutor.EXPECT().Run(
-		gomock.Any(),
-		mockClient,
-		gomock.Any(),
-		newTimeBoundsFromTimeMatcher(lastFullBackupTime),
-		"ns1",
-		gomock.Any(),
-	).Return(mockBackupHandler, nil)
-
-	mockBackupExecutor.EXPECT().Run(
-		gomock.Any(),
-		mockClient,
-		gomock.Any(),
-		newTimeBoundsFromTimeMatcher(lastFullBackupTime),
-		"ns2",
-		gomock.Any(),
-	).Return(mockBackupHandler, nil)
-
-	mockBackupHandler.EXPECT().GetStats().Return(stats).AnyTimes()
-	mockBackupHandler.EXPECT().Wait(gomock.Any()).Return(nil).Times(2) // for ns1 and ns2
-
-	mockRegistry.EXPECT().register(routineName, jobTypeIncremental, gomock.Any())
-	mockRegistry.EXPECT().unregister(routineName, jobTypeIncremental, gomock.Any())
-
-	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil).Times(2)
-
-	o := newOrchestrator(routineName, config, NewBackupComponents(
-		mockClientManager,
-		mockBackupExecutor,
-		mockRegistry,
-		mockRetentionManager,
-		mockBackupBackend,
-		mockClusterConfigWriter,
-	))
-
-	ctx := context.Background()
-	now := time.Now()
-
-	err := o.runIncrementalBackupInternal(ctx, now)
-	time.Sleep(10 * time.Millisecond) // time to unregister routine.
-
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(5), stats.TotalRecords, "Backup stats should be correct")
-}
-
 func TestRunIncrementalBackup_SkipWhenNoFullBackup(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -340,100 +263,51 @@ func TestRunIncrementalBackup_SkipWhenFullBackupInProgress(t *testing.T) {
 	assert.Equal(t, skippedBefore+1, skipped)
 }
 
+func TestRunIncrementalBackup_Success(t *testing.T) {
+	routineState := &model.RoutineState{
+		// no full or incremental backups are running now
+		LastRunTime: model.NewLastBackupRun(util.Ptr(time.Now()), nil),
+	}
+
+	runIncrementalBackup(t, routineState, setupBaseConfig())
+}
+
 func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	config := setupBaseConfig()
-	routine, _ := config.Routine(routineName)
-	routine.BackupPolicy.AllowConcurrentIncremental = util.Ptr(true)
-	_ = config.UpdateRoutine(routineName, routine)
-
-	// Setup last full backup time
-	lastFullBackupTime := time.Now().Add(-24 * time.Hour)
-
-	mockClientManager := aerospike.NewMockClientManager(ctrl)
-
-	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
-	mockBackupHandler := backupexecutor.NewMockBackupHandler(ctrl)
-	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
-	mockRetentionManager := NewMockRetentionManager(ctrl)
-	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
-	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
-
-	stats := models.NewBackupStats()
-	stats.Start()
-	stats.TotalRecords = 5
-	stats.IncFiles()
-	stats.ReadRecords.Add(5)
-
-	// Simulate an ongoing full backup
-	mockRegistry.EXPECT().GetRoutineState(routineName).Return(&model.RoutineState{
+	routineState := &model.RoutineState{
 		Full: &model.RunningJob{
 			StartTime: time.Now(),
 		},
-		LastRunTime: model.NewLastBackupRun(&lastFullBackupTime, nil),
-	}).Times(2) // in skipIncrementalBackup and createTimeBounds
+		LastRunTime: model.NewLastBackupRun(util.Ptr(time.Now()), nil),
+	}
 
-	mockClientManager.EXPECT().GetClient(gomock.Any()).Return(mockClient, nil)
-	mockClientManager.EXPECT().Close(mockClient)
-
-	mockBackupExecutor.EXPECT().Run(
-		gomock.Any(),
-		mockClient,
-		gomock.Any(),
-		newTimeBoundsFromTimeMatcher(lastFullBackupTime),
-		"ns1",
-		gomock.Any(),
-	).Return(mockBackupHandler, nil)
-
-	mockBackupExecutor.EXPECT().Run(
-		gomock.Any(),
-		mockClient,
-		gomock.Any(),
-		newTimeBoundsFromTimeMatcher(lastFullBackupTime),
-		"ns2",
-		gomock.Any(),
-	).Return(mockBackupHandler, nil)
-
-	mockBackupHandler.EXPECT().GetStats().Return(stats).AnyTimes()
-	mockBackupHandler.EXPECT().Wait(gomock.Any()).Return(nil).Times(2) // for ns1 and ns2
-
-	mockRegistry.EXPECT().register(routineName, jobTypeIncremental, gomock.Any())
-	mockRegistry.EXPECT().unregister(routineName, jobTypeIncremental, gomock.Any())
-
-	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil).Times(2)
-
-	o := newOrchestrator(routineName, config, NewBackupComponents(
-		mockClientManager,
-		mockBackupExecutor,
-		mockRegistry,
-		mockRetentionManager,
-		mockBackupBackend,
-		mockClusterConfigWriter,
-	))
-
-	ctx := context.Background()
-	now := time.Now()
-
-	o.runIncrementalBackup(ctx, now)
-	time.Sleep(10 * time.Millisecond) // time to unregister routine.
-
-	assert.Equal(t, uint64(5), stats.TotalRecords, "Backup stats should be correct")
+	runIncrementalBackup(t, routineState, configAllowConcurrentIncremental())
 }
 
 func TestRunIncrementalBackup_AllowConcurrentIncremental(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
+	routineState := &model.RoutineState{
+		Incremental: &model.RunningJob{
+			StartTime: time.Now(),
+		},
+		LastRunTime: model.NewLastBackupRun(util.Ptr(time.Now()), nil),
+	}
 
+	runIncrementalBackup(t, routineState, configAllowConcurrentIncremental())
+}
+
+func configAllowConcurrentIncremental() *model.Config {
 	config := setupBaseConfig()
 	routine, _ := config.Routine(routineName)
 	routine.BackupPolicy.AllowConcurrentIncremental = util.Ptr(true)
 	_ = config.UpdateRoutine(routineName, routine)
 
-	// Setup last full backup time
-	lastFullBackupTime := time.Now().Add(-24 * time.Hour)
+	return config
+}
+
+//nolint:funlen
+func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model.Config) {
+	t.Helper()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 
@@ -451,12 +325,8 @@ func TestRunIncrementalBackup_AllowConcurrentIncremental(t *testing.T) {
 	stats.ReadRecords.Add(5)
 
 	// Simulate an ongoing full backup
-	mockRegistry.EXPECT().GetRoutineState(routineName).Return(&model.RoutineState{
-		Incremental: &model.RunningJob{
-			StartTime: time.Now(),
-		},
-		LastRunTime: model.NewLastBackupRun(&lastFullBackupTime, nil),
-	}).Times(2) // in skipIncrementalBackup and createTimeBounds
+	mockRegistry.EXPECT().GetRoutineState(routineName).Return(state).
+		Times(2) // in skipIncrementalBackup and createTimeBounds
 
 	mockClientManager.EXPECT().GetClient(gomock.Any()).Return(mockClient, nil)
 	mockClientManager.EXPECT().Close(mockClient)
@@ -465,19 +335,10 @@ func TestRunIncrementalBackup_AllowConcurrentIncremental(t *testing.T) {
 		gomock.Any(),
 		mockClient,
 		gomock.Any(),
-		newTimeBoundsFromTimeMatcher(lastFullBackupTime),
-		"ns1",
 		gomock.Any(),
-	).Return(mockBackupHandler, nil)
-
-	mockBackupExecutor.EXPECT().Run(
 		gomock.Any(),
-		mockClient,
 		gomock.Any(),
-		newTimeBoundsFromTimeMatcher(lastFullBackupTime),
-		"ns2",
-		gomock.Any(),
-	).Return(mockBackupHandler, nil)
+	).Return(mockBackupHandler, nil).Times(2)
 
 	mockBackupHandler.EXPECT().GetStats().Return(stats).AnyTimes()
 	mockBackupHandler.EXPECT().Wait(gomock.Any()).Return(nil).Times(2) // for ns1 and ns2
