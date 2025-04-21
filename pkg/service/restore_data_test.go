@@ -303,7 +303,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 }
 
 // mockClient is a helper to create a backup client with a mock Aerospike client.
-func mockClient(t *testing.T) *backup.Client {
+func newMockClient(t *testing.T) *backup.Client {
 	t.Helper()
 
 	client, err := backup.NewClient(&mocks.MockAerospikeClient{})
@@ -318,7 +318,7 @@ func (env *testRestoreEnv) expectSuccessfulClientInteraction(
 	cluster *model.AerospikeCluster,
 ) *backup.Client {
 	t.Helper()
-	client := mockClient(t)
+	client := newMockClient(t)
 
 	env.mockClientManager.EXPECT().
 		GetClient(cluster).
