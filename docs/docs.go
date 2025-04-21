@@ -1879,7 +1879,6 @@ const docTemplate = `{
             "description": "BackupRoutine represents a scheduled backup operation routine.",
             "type": "object",
             "required": [
-                "backup-policy",
                 "interval-cron",
                 "source-cluster",
                 "storage"

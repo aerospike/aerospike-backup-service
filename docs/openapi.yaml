@@ -1634,7 +1634,6 @@ components:
           example: aws
           type: string
       required:
-      - backup-policy
       - interval-cron
       - source-cluster
       - storage

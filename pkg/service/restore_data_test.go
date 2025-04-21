@@ -11,7 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/mocks" // Assuming this path for backup-go mocks
+	"github.com/aerospike/backup-go/mocks"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -267,7 +267,7 @@ type testRestoreEnv struct {
 	mockRestore       *restoreexecutor.MockRestore
 	mockClientManager *aerospike.MockClientManager
 	mockNsValidator   *aerospike.MockNamespaceValidator
-	mockBackupReader  *MockBackupReader // Assuming MockBackupReader exists
+	mockBackupReader  *MockBackupReader
 	jobsHolder        *RestoreJobsHolder
 	restoreManager    RestoreManager
 }

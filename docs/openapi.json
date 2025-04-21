@@ -2166,7 +2166,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "backup-policy", "interval-cron", "source-cluster", "storage" ],
+        "required" : [ "interval-cron", "source-cluster", "storage" ],
         "type" : "object"
       },
       "dto.BackupServiceConfig" : {
