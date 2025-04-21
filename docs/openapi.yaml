@@ -1439,6 +1439,7 @@ components:
         with-cluster-configuration: true
         encryption: "{}"
         parallel: 1
+        allow-concurrent-incremental: true
         no-indexes: true
         records-per-second: 1000
         compression: "{}"
@@ -1447,6 +1448,11 @@ components:
         socket-timeout: 1000
         retention: "{}"
       properties:
+        allow-concurrent-incremental:
+          description: |-
+            Allows incremental backups to run concurrently.
+            When false (default), incremental backups are skipped if another backup for same routine is in progress.
+          type: boolean
         bandwidth:
           description: |-
             Throttles backup write operations to the backup file(s) to not exceed the given
@@ -1686,6 +1692,7 @@ components:
             with-cluster-configuration: true
             encryption: "{}"
             parallel: 1
+            allow-concurrent-incremental: true
             no-indexes: true
             records-per-second: 1000
             compression: "{}"

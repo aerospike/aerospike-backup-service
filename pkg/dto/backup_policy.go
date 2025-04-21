@@ -54,7 +54,7 @@ type BackupPolicy struct {
 	XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
-	AllowConcurrentIncremental *bool `yaml:"allow_concurrent_incremental,omitempty" json:"allow_concurrent_incremental,omitempty"` //nolint:lll
+	AllowConcurrentIncremental *bool `yaml:"allow-concurrent-incremental,omitempty" json:"allow-concurrent-incremental,omitempty"` //nolint:lll
 }
 
 // NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.

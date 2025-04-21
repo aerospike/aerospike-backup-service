@@ -1995,6 +1995,10 @@
       "dto.BackupPolicy" : {
         "description" : "BackupPolicy represents a scheduled backup policy.",
         "properties" : {
+          "allow-concurrent-incremental" : {
+            "description" : "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
+            "type" : "boolean"
+          },
           "bandwidth" : {
             "description" : "Throttles backup write operations to the backup file(s) to not exceed the given\nbandwidth in MiB/s.",
             "example" : 10000,
