@@ -303,7 +303,6 @@ func configAllowConcurrentIncremental() *model.Config {
 	return config
 }
 
-//nolint:funlen
 func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model.Config) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
@@ -335,7 +334,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 		gomock.Any(),
 		mockClient,
 		gomock.Any(),
-		gomock.Any(),
+		newTimeBoundsFromTimeMatcher(*state.LastRunTime.FullBackupTime()),
 		gomock.Any(),
 		gomock.Any(),
 	).Return(mockBackupHandler, nil).Times(2)
