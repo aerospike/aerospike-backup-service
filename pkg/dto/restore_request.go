@@ -45,7 +45,7 @@ type RestoreTimestampRequest struct {
 	// The backup routine name.
 	Routine string `json:"routine" example:"daily" validate:"required"`
 	// Disable reverse order of incremental backups optimisation.
-	DisableReordering bool `json:"disable-reordering"`
+	DisableReordering bool `json:"disable-reordering,omitempty"`
 }
 
 // NewRestoreTimestampRequestFromReader reads and deserializes the restore by timestamp request from reader.
@@ -70,9 +70,6 @@ func (r *RestoreRequest) Validate() error {
 		return err
 	}
 	if err := r.StorageConfig.Validate(); err != nil {
-		return err
-	}
-	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
 
@@ -151,10 +148,10 @@ func (r *RestoreRequest) ToModel(config *model.Config) (*model.RestoreRequest, e
 type DestinationClusterConfig struct {
 	// The details of the Aerospike destination cluster.
 	// Mutually exclusive with 'destination-name'.
-	Cluster *AerospikeCluster `json:"destination"`
+	Cluster *AerospikeCluster `json:"destination,omitempty"`
 	// Link to one of preconfigured clusters.
 	// Mutually exclusive with 'destination'.
-	Name string `json:"destination-name"`
+	Name string `json:"destination-name,omitempty"`
 }
 
 func (c *DestinationClusterConfig) Validate() error {
@@ -191,10 +188,10 @@ func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.Aerospi
 type StorageConfig struct {
 	// The details of the storage configuration.
 	// Mutually exclusive with 'source-name'.
-	Storage *Storage `json:"source"`
+	Storage *Storage `json:"source,omitempty"`
 	// Link to one of preconfigured storages.
 	// Mutually exclusive with 'source'.
-	Name string `json:"source-name"`
+	Name string `json:"source-name,omitempty"`
 }
 
 func (c *StorageConfig) Validate() error {

@@ -1,8 +1,6 @@
 package dto
 
 import (
-	"fmt"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -17,7 +15,8 @@ const (
 type CompressionPolicy struct {
 	// The compression mode to be used (default is NONE).
 	Mode string `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE" enums:"NONE,ZSTD"`
-	// The compression level to use (or -1 if unspecified).
+	// The compression level to use.
+	// Algorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).
 	Level int32 `yaml:"level,omitempty" json:"level,omitempty"`
 }
 
@@ -27,13 +26,10 @@ func (p *CompressionPolicy) Validate() error {
 		return nil
 	}
 	if p.Mode != CompressNone && p.Mode != CompressZSTD {
-		return fmt.Errorf("invalid compression mode: %s", p.Mode)
+		return errValidationInvalidValue("compression mode", p.Mode, []string{CompressNone, CompressZSTD})
 	}
-	if p.Level == 0 {
-		p.Level = -1
-	}
-	if p.Level < -1 {
-		return fmt.Errorf("invalid compression level: %d", p.Level)
+	if p.Level < -1 || p.Level > 22 {
+		return errValidationInvalidValue("compression level", p.Level, "-1 to 22")
 	}
 
 	return nil

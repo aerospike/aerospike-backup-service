@@ -3,6 +3,8 @@ package dto
 import (
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -17,7 +19,7 @@ import (
 //nolint:lll
 type BackupRoutine struct {
 	// The name of the corresponding backup policy.
-	BackupPolicy string `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty" example:"keepAllPolicy" validate:"required"`
+	BackupPolicy string `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty" example:"keepAllPolicy"`
 	// The name of the corresponding source cluster.
 	SourceCluster string `yaml:"source-cluster,omitempty" json:"source-cluster,omitempty" example:"testCluster" validate:"required"`
 	// The name of the corresponding storage provider configuration.
@@ -36,10 +38,11 @@ type BackupRoutine struct {
 	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty" example:"dataBin"`
 	// A list of Aerospike Server rack IDs to prefer when reading records for a backup.
 	PreferRacks []int `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty" example:"0"`
-	// Back up list of partition filters. Partition filters can be ranges, individual partitions,
-	// or records after a specific digest within a single partition.
+	// Back up list of partition filters. Partition filters can be ranges or individual partitions.
+	// Range is a pair of partition number and count.
+	// Example: "0,100-50" will backup partitions 0 and 50 partitions starting 100.
 	// Default number of partitions to back up: 0 to 4095: all partitions.
-	PartitionList *string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" example:"0-1000"`
+	PartitionList string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" example:"0-1000"`
 	// NodeList contains a list of nodes to back up.
 	// Backup the given cluster nodes only.
 	// If it is set, ParallelNodes automatically set to true.
@@ -51,9 +54,6 @@ type BackupRoutine struct {
 
 // Validate validates the backup routine configuration.
 func (r *BackupRoutine) Validate() error {
-	if r.BackupPolicy == "" {
-		return errValidationEmptyField("backup-policy")
-	}
 	if r.SourceCluster == "" {
 		return errValidationEmptyField("source-cluster")
 	}
@@ -81,17 +81,76 @@ func (r *BackupRoutine) Validate() error {
 			return errValidationEmptyField("secret-agent")
 		}
 	}
+	if err := validatePartitionList(r.PartitionList); err != nil {
+		return fmt.Errorf("invalid partition list: %q", r.PartitionList)
+	}
 
 	return nil
+}
+
+func validatePartitionList(partitionList string) error {
+	if partitionList == "" {
+		return nil // empty list is valid
+	}
+
+	entries := strings.Split(partitionList, ",")
+	for _, entry := range entries {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			return fmt.Errorf("empty entry in partition list")
+		}
+
+		if err := validatePartitionEntry(entry); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validatePartitionEntry(entry string) error {
+	if strings.Contains(entry, "-") {
+		return validatePartitionRange(entry)
+	}
+
+	if isValidPartitionID(entry) {
+		return nil
+	}
+
+	return fmt.Errorf("invalid partition entry: %q", entry)
+}
+
+func validatePartitionRange(entry string) error {
+	parts := strings.SplitN(entry, "-", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid range format: %q", entry)
+	}
+
+	start, err := strconv.Atoi(parts[0])
+	if err != nil || start < 0 || start > 4095 {
+		return fmt.Errorf("invalid start in range %q: must be int between 0 and 4095", entry)
+	}
+
+	count, err := strconv.Atoi(parts[1])
+	if err != nil || count < 1 || start+count > 4096 {
+		return fmt.Errorf("invalid count in range %q: must be >=1 and start+count <= 4096", entry)
+	}
+
+	return nil
+}
+
+func isValidPartitionID(entry string) bool {
+	id, err := strconv.Atoi(entry)
+	return err == nil && id >= 0 && id <= 4095
 }
 
 func (r *BackupRoutine) ToModel(
 	config *model.BackupConfig,
 	nsValidator aerospike.NamespaceValidator,
 ) (*model.BackupRoutine, error) {
-	policy, found := config.BackupPolicies[r.BackupPolicy]
-	if !found {
-		return nil, errValidationNotFound("backup policy", r.BackupPolicy)
+	policy, err := resolveBackupPolicy(r.BackupPolicy, config.BackupPolicies)
+	if err != nil {
+		return nil, err
 	}
 
 	cluster, found := config.AerospikeClusters[r.SourceCluster]
@@ -138,6 +197,19 @@ func (r *BackupRoutine) ToModel(
 		NodeList:         r.NodeList,
 		Disabled:         r.Disabled,
 	}, nil
+}
+
+func resolveBackupPolicy(name string, policies map[string]*model.BackupPolicy) (*model.BackupPolicy, error) {
+	if name == "" {
+		return &model.BackupPolicy{}, nil
+	}
+
+	policy, found := policies[name]
+	if !found {
+		return nil, errValidationNotFound("backup policy", name)
+	}
+
+	return policy, nil
 }
 
 // NewRoutineFromReader creates a new BackupRoutine object from a given reader.

@@ -499,15 +499,15 @@ POST {{baseUrl}}/v1/restore/full
       "password": "password"
     }
   },
-  "policy": {
-    "no-generation": true
-  },
   "source": {
     "s3-storage": {
       "bucket": "as-backup-bucket",
       "path": "backups",
       "s3-region": "eu-central-1"
     }
+  },
+  "policy": {
+    "no-generation": true
   },
   "backup-data-path": "routine1/backup/1704110400000/source-ns1"
 }

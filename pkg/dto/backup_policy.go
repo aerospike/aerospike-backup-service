@@ -1,7 +1,6 @@
 package dto
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -55,6 +54,9 @@ type BackupPolicy struct {
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
 	// XDR configuration for MRT backups.
 	XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
+	// Allows incremental backups to run concurrently.
+	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
+	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty"` //nolint:lll
 }
 
 // NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.
@@ -74,7 +76,7 @@ func NewBackupPolicyFromReader(r io.Reader, format decoder.SerializationFormat) 
 // Validate checks if the BackupPolicy is valid and has feasible parameters for the backup to commence.
 func (p *BackupPolicy) Validate() error {
 	if p == nil {
-		return errors.New("backup policy is not specified")
+		return nil
 	}
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return errValidationNonPositive("parallel", *p.Parallel)
@@ -114,24 +116,29 @@ func (p *BackupPolicy) Validate() error {
 }
 
 func (p *BackupPolicy) ToModel() *model.BackupPolicy {
+	if p == nil {
+		return &model.BackupPolicy{}
+	}
+
 	return &model.BackupPolicy{
-		Parallel:          p.Parallel,
+		Parallel:              p.Parallel,
 		ParallelWrite:     p.ParallelWrite,
-		SocketTimeout:     millisToDuration(p.SocketTimeout),
-		TotalTimeout:      millisToDuration(p.TotalTimeout),
-		RetryPolicy:       p.RetryPolicy.ToModel(),
-		RetentionPolicy:   p.RetentionPolicy.toModel(),
-		NoRecords:         p.NoRecords,
-		NoIndexes:         p.NoIndexes,
-		NoUdfs:            p.NoUdfs,
-		WithClusterConfig: p.WithClusterConfig,
-		Bandwidth:         p.Bandwidth,
-		RecordsPerSecond:  p.RecordsPerSecond,
-		FileLimit:         p.FileLimit,
-		EncryptionPolicy:  p.EncryptionPolicy.ToModel(),
-		CompressionPolicy: p.CompressionPolicy.ToModel(),
-		Sealed:            p.Sealed,
-		XDRConfig:         p.XDRConfig.ToModel(),
+		SocketTimeout:         millisToDuration(p.SocketTimeout),
+		TotalTimeout:          millisToDuration(p.TotalTimeout),
+		RetryPolicy:           p.RetryPolicy.ToModel(),
+		RetentionPolicy:       p.RetentionPolicy.toModel(),
+		NoRecords:             p.NoRecords,
+		NoIndexes:             p.NoIndexes,
+		NoUdfs:                p.NoUdfs,
+		WithClusterConfig:     p.WithClusterConfig,
+		Bandwidth:             p.Bandwidth,
+		RecordsPerSecond:      p.RecordsPerSecond,
+		FileLimit:             p.FileLimit,
+		EncryptionPolicy:      p.EncryptionPolicy.ToModel(),
+		CompressionPolicy:     p.CompressionPolicy.ToModel(),
+		Sealed:                p.Sealed,
+		XDRConfig:             p.XDRConfig.ToModel(),
+		ConcurrentIncremental: p.ConcurrentIncremental,
 	}
 }
 
@@ -185,6 +192,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	}
 	p.Sealed = m.Sealed
 	p.XDRConfig = newXDRConfigFromModel(m.XDRConfig)
+	p.ConcurrentIncremental = m.ConcurrentIncremental
 }
 
 // RetentionPolicy specifies how many full and incremental backups to keep.
