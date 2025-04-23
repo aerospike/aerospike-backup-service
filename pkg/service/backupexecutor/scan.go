@@ -3,6 +3,7 @@ package backupexecutor
 import (
 	"context"
 	"fmt"
+	"github.com/aerospike/backup-go/pipeline"
 	"math"
 	"time"
 
@@ -25,6 +26,10 @@ func runScanBackup(
 	config, err := makeBackupConfig(namespace, routine, timeBounds)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make backup config: %w", err)
+	}
+
+	if config.ParallelRead == config.ParallelWrite {
+		config.PipelinesMode = pipeline.ModeParallel
 	}
 
 	handler, err := client.Backup(ctx, config, writer, nil)
