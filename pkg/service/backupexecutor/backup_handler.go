@@ -41,10 +41,5 @@ func (h *CombinedBackupHandler) GetStats() *models.BackupStats {
 	return models.SumBackupStats(h.xdrHandler.GetStats(), h.scanHandler.GetStats())
 }
 func (h *CombinedBackupHandler) GetMetrics() *models.Metrics {
-	xdr := h.xdrHandler.GetMetrics()
-	scan := h.scanHandler.GetMetrics()
-	return models.NewMetrics(
-		xdr.PipelineReadQueueSize+scan.PipelineReadQueueSize,
-		xdr.PipelineWriteQueueSize+scan.PipelineWriteQueueSize,
-	)
+	return h.scanHandler.GetMetrics()
 }

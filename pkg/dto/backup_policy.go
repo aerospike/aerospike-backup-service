@@ -122,7 +122,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 
 	return &model.BackupPolicy{
 		Parallel:              p.Parallel,
-		ParallelWrite:     p.ParallelWrite,
+		ParallelWrite:         p.ParallelWrite,
 		SocketTimeout:         millisToDuration(p.SocketTimeout),
 		TotalTimeout:          millisToDuration(p.TotalTimeout),
 		RetryPolicy:           p.RetryPolicy.ToModel(),

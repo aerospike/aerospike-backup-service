@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"log/slog"
 	"net/http"
 	_ "net/http/pprof"
@@ -76,8 +75,6 @@ func startService(configFile string, remote bool) error {
 		return err
 	}
 
-	go testUpload(ctx, config)
-
 	// start the scheduler only after all the initialization is done
 	scheduler.Start(ctx)
 
@@ -88,17 +85,6 @@ func startService(configFile string, remote bool) error {
 	scheduler.Stop()
 
 	return err
-}
-
-func testUpload(ctx context.Context, config *model.Config) {
-	for _, s := range config.BackupConfigCopy().Storage {
-		speed, err := storage.TestUploadSpeed(ctx, s)
-		if err != nil {
-			slog.Error("failed test upload ", slog.Any("err", err))
-			continue
-		}
-		slog.Info("Upload test", slog.Any("storage", s.String()), slog.Int("averageSpeedMiBps", speed))
-	}
 }
 
 func initComponents(ctx context.Context, configFile string, remote bool) (
@@ -139,7 +125,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()
-	//service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
+	// service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
 		restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator, backendService)

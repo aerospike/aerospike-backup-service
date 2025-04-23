@@ -82,6 +82,20 @@ func (m *MockBackupHandler) EXPECT() *MockBackupHandlerMockRecorder {
 	return m.recorder
 }
 
+// GetMetrics mocks base method.
+func (m *MockBackupHandler) GetMetrics() *models.Metrics {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMetrics")
+	ret0, _ := ret[0].(*models.Metrics)
+	return ret0
+}
+
+// GetMetrics indicates an expected call of GetMetrics.
+func (mr *MockBackupHandlerMockRecorder) GetMetrics() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetrics", reflect.TypeOf((*MockBackupHandler)(nil).GetMetrics))
+}
+
 // GetStats mocks base method.
 func (m *MockBackupHandler) GetStats() *models.BackupStats {
 	m.ctrl.T.Helper()

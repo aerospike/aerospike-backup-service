@@ -19,6 +19,7 @@ func currentBackupStatus(handlers CancelableBackupHandler) *model.RunningJob {
 
 	job := NewRunningJob(stats.StartTime, nil, stats.ReadRecords.Load(), stats.TotalRecords)
 	job.Metrics = handlers.GetMetrics()
+
 	return job
 }
 

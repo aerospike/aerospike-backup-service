@@ -39,10 +39,5 @@ func (h *CombinedRestoreHandler) GetStats() *models.RestoreStats {
 }
 
 func (h *CombinedRestoreHandler) GetMetrics() *models.Metrics {
-	stream := h.streamHandler.GetMetrics()
-	xdr := h.xdrHandler.GetMetrics()
-	return models.NewMetrics(
-		stream.PipelineReadQueueSize+xdr.PipelineReadQueueSize,
-		stream.PipelineWriteQueueSize+xdr.PipelineWriteQueueSize,
-	)
+	return h.streamHandler.GetMetrics()
 }

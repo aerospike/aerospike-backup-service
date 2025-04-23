@@ -84,5 +84,4 @@ func (r *RunningJob) fromModel(m *model.RunningJob) {
 		r.Metrics.Write = m.Metrics.PipelineWriteQueueSize
 		r.Metrics.Read = m.Metrics.PipelineReadQueueSize
 	}
-
 }
