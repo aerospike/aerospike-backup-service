@@ -74,7 +74,10 @@ func (op *BackupNamespacesOperation) GetMetrics() *models.Metrics {
 	for _, handler := range op.handlers {
 		metrics.PipelineReadQueueSize += handler.GetMetrics().PipelineReadQueueSize
 		metrics.PipelineWriteQueueSize += handler.GetMetrics().PipelineWriteQueueSize
+		metrics.RecordsPerSecond += handler.GetMetrics().RecordsPerSecond
+		metrics.KilobytesPerSecond += handler.GetMetrics().KilobytesPerSecond
 	}
+
 	return metrics
 }
 

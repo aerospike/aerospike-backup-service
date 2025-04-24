@@ -9,7 +9,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 	"time"
 
@@ -176,8 +175,6 @@ func runHTTPServer(
 		httpServer.Start()
 	}()
 
-	// TODO: remove in production (or use a feature-toggle)
-	runtime.SetBlockProfileRate(100)
 	go func() {
 		_ = http.ListenAndServe("localhost:6060", nil)
 	}()

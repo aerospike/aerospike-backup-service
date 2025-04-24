@@ -3,7 +3,6 @@ package backupexecutor
 import (
 	"context"
 	"fmt"
-	"github.com/aerospike/backup-go/pipeline"
 	"math"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/pipeline"
 	"github.com/reugn/go-quartz/quartz"
 )
 
