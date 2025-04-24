@@ -28,6 +28,7 @@ func runScanBackup(
 		return nil, fmt.Errorf("failed to make backup config: %w", err)
 	}
 
+	config.MetricsEnabled = true
 	if config.ParallelRead == config.ParallelWrite {
 		config.PipelinesMode = pipeline.ModeParallel
 	}

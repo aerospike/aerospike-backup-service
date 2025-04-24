@@ -24,6 +24,9 @@ type RoutineState struct {
 type Metrics struct {
 	Read  int `json:"read"`
 	Write int `json:"write"`
+
+	RecordsPerSecond   int `json:"records-per-second"`
+	KilobytesPerSecond int `json:"kilobytes-per-second"`
 }
 
 func NewRoutineStateFromModel(m *model.RoutineState) *RoutineState {
@@ -83,5 +86,7 @@ func (r *RunningJob) fromModel(m *model.RunningJob) {
 	if m.Metrics != nil {
 		r.Metrics.Write = m.Metrics.PipelineWriteQueueSize
 		r.Metrics.Read = m.Metrics.PipelineReadQueueSize
+		r.Metrics.KilobytesPerSecond = int(m.Metrics.KilobytesPerSecond)
+		r.Metrics.RecordsPerSecond = int(m.Metrics.RecordsPerSecond)
 	}
 }
