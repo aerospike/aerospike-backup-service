@@ -28,11 +28,6 @@ func runScanBackup(
 		return nil, fmt.Errorf("failed to make backup config: %w", err)
 	}
 
-	config.MetricsEnabled = true
-	if config.ParallelRead == config.ParallelWrite {
-		config.PipelinesMode = pipeline.ModeParallel
-	}
-
 	handler, err := client.Backup(ctx, config, writer, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to start scan backup: %w", err)
@@ -76,7 +71,7 @@ func makeBackupConfig(
 	}
 
 	config.ParallelRead = backupPolicy.GetParallelOrDefault()
-	config.ParallelWrite = backupPolicy.GetParallelWriteOrDefault()
+	config.ParallelWrite = backupPolicy.GetParallelOrDefault()
 	config.FileLimit = uint64(backupPolicy.GetFileLimitOrDefault() * megabyte) // lib expects limit in bytes.
 	config.RecordsPerSecond = util.ValueOrZero(backupPolicy.RecordsPerSecond)
 	config.Bandwidth = util.ValueOrZero(backupPolicy.Bandwidth) * megabyte // lib expects file size in bytes.
@@ -94,6 +89,9 @@ func makeBackupConfig(
 
 	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
 	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)
+
+	config.PipelinesMode = pipeline.ModeParallel
+	config.MetricsEnabled = true
 
 	return config, nil
 }
