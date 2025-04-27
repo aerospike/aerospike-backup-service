@@ -46,8 +46,9 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 		status.ExpiredRecords += stats.GetRecordsExpired()
 		status.TotalBytes += stats.GetTotalBytesRead()
 		status.ErrorsInDoubt += stats.GetErrorsInDoubt()
-		metrics.PipelineReadQueueSize += handler.GetMetrics().PipelineReadQueueSize
-		metrics.PipelineWriteQueueSize += handler.GetMetrics().PipelineWriteQueueSize
+		handlerMetrics := handler.GetMetrics()
+		metrics.PipelineReadQueueSize += handlerMetrics.PipelineReadQueueSize
+		metrics.PipelineWriteQueueSize += handlerMetrics.PipelineWriteQueueSize
 	}
 
 	done := status.InsertedRecords + status.SkippedRecords +
@@ -65,7 +66,7 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 // NewRunningJob created new RunningJob with calculated estimated time and percentage.
 func NewRunningJob(startTime time.Time, finishTime *time.Time, done, total uint64) *model.RunningJob {
 	if total == 0 {
-		return nil
+		return &model.RunningJob{}
 	}
 
 	percentage := float64(done) / float64(total)

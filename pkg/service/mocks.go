@@ -106,29 +106,3 @@ func (m *MockBackupBackendService) Delete(ctx context.Context, routineName, path
 	args := m.Called(ctx, routineName, path)
 	return args.Error(0)
 }
-
-type mockCancelableBackupHandler struct {
-	stats    *models.BackupStats
-	canceled bool
-}
-
-func (m *mockCancelableBackupHandler) GetMetrics() *models.Metrics {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (m *mockCancelableBackupHandler) GetStats() *models.BackupStats {
-	return m.stats
-}
-
-func (m *mockCancelableBackupHandler) Wait(context.Context) error {
-	return nil
-}
-
-func (m *mockCancelableBackupHandler) Cancel() {
-	m.canceled = true
-}
-
-func (m *mockCancelableBackupHandler) IsCanceled() bool {
-	return m.canceled
-}

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	_ "net/http/pprof"
+	_ "net/http/pprof" //nolint:gosec
 	"os"
 	"os/signal"
 	"syscall"
@@ -176,7 +176,7 @@ func runHTTPServer(
 	}()
 
 	go func() {
-		_ = http.ListenAndServe("localhost:6060", nil)
+		_ = http.ListenAndServe("localhost:6060", nil) //nolint:gosec
 	}()
 
 	<-ctx.Done()

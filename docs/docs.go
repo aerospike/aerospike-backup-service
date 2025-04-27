@@ -2326,6 +2326,24 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.Metrics": {
+            "description": "Metrics represents the current job speed.",
+            "type": "object",
+            "properties": {
+                "kilobytes-per-second": {
+                    "description": "KilobytesPerSecond indicates the amount of data processed per second, in kilobytes.",
+                    "type": "integer"
+                },
+                "pipeline": {
+                    "description": "Pipeline represents the number of records that have been read from the source\nbut not yet written to the destination. This metric helps identify bottlenecks:\n- If Pipeline is zero or fluctuates near zero, it means the destination is consuming data\n  faster than the source can read.\n- If Pipeline grows large, it indicates that the source is producing data faster\n  than the destination can consume.",
+                    "type": "integer"
+                },
+                "records-per-second": {
+                    "description": "RecordsPerSecond indicates the number of records processed per second.",
+                    "type": "integer"
+                }
+            }
+        },
         "dto.PortRange": {
             "description": "PortRange is a range of ports (inclusive).",
             "type": "object",
@@ -2789,6 +2807,14 @@ const docTemplate = `{
                     "description": "FinishTime: the time when the operation finished",
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z07:00"
+                },
+                "metrics": {
+                    "description": "Metrics provides real-time information about data flow performance.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.Metrics"
+                        }
+                    ]
                 },
                 "percentage-done": {
                     "description": "PercentageDone: the progress of the backup operation as a percentage.",
