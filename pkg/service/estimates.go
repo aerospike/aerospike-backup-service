@@ -33,7 +33,7 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 		Status: job.status,
 	}
 
-	var metrics []*models.Metrics
+	metrics := make([]*models.Metrics, 0, len(job.handlers))
 	for _, handler := range job.handlers {
 		stats := handler.GetStats()
 		status.ReadRecords += stats.GetReadRecords()
