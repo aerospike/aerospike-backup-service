@@ -8,10 +8,10 @@ import (
 // @Description Metrics represents the current job speed.
 type Metrics struct {
 	// RecordsPerSecond indicates the number of records processed per second.
-	RecordsPerSecond int `json:"records-per-second"`
+	RecordsPerSecond uint64 `json:"records-per-second"`
 
 	// KilobytesPerSecond indicates the amount of data processed per second, in kilobytes.
-	KilobytesPerSecond int `json:"kilobytes-per-second"`
+	KilobytesPerSecond uint64 `json:"kilobytes-per-second"`
 
 	// Pipeline represents the number of records that have been read from the source
 	// but not yet written to the destination. This metric helps identify bottlenecks:
@@ -36,6 +36,6 @@ func (m *Metrics) fromModel(model *models.Metrics) {
 	}
 
 	m.Pipeline = model.PipelineReadQueueSize + model.PipelineWriteQueueSize
-	m.KilobytesPerSecond = int(model.KilobytesPerSecond)
-	m.RecordsPerSecond = int(model.RecordsPerSecond)
+	m.KilobytesPerSecond = model.KilobytesPerSecond
+	m.RecordsPerSecond = model.RecordsPerSecond
 }

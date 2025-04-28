@@ -65,22 +65,13 @@ func (op *BackupNamespacesOperation) Cancel() {
 }
 
 func (op *BackupNamespacesOperation) GetMetrics() *models.Metrics {
-	metrics := &models.Metrics{
-		PipelineReadQueueSize:  0,
-		PipelineWriteQueueSize: 0,
-		RecordsPerSecond:       0,
-	}
+	metrics := make([]*models.Metrics, 0, len(op.handlers))
 
 	for _, handler := range op.handlers {
-		getMetrics := handler.GetMetrics()
-
-		metrics.PipelineReadQueueSize += getMetrics.PipelineReadQueueSize
-		metrics.PipelineWriteQueueSize += getMetrics.PipelineWriteQueueSize
-		metrics.RecordsPerSecond += getMetrics.RecordsPerSecond
-		metrics.KilobytesPerSecond += getMetrics.KilobytesPerSecond
+		metrics = append(metrics, handler.GetMetrics())
 	}
 
-	return metrics
+	return models.SumMetrics(metrics...)
 }
 
 // GetStats return aggregated public statistics for all inner handlers.
