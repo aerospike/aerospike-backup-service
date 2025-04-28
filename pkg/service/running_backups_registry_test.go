@@ -15,7 +15,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, model.NewConfig())
 
 	backupStats := models.NewBackupStats()
-	backupStats.TotalRecords = 100
+	backupStats.TotalRecords.Store(100)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -80,7 +80,7 @@ func TestGetAllCurrentStats(t *testing.T) {
 	routine1 := "routine1"
 	routine2 := "routine2"
 	backupStats := models.NewBackupStats()
-	backupStats.TotalRecords = 100
+	backupStats.TotalRecords.Store(100)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

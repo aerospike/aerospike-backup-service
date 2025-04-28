@@ -52,7 +52,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 
 	stats := models.NewBackupStats()
 	stats.Start()
-	stats.TotalRecords = 10
+	stats.TotalRecords.Store(10)
 	stats.IncFiles()
 	stats.ReadRecords.Add(10)
 
@@ -106,7 +106,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	time.Sleep(10 * time.Millisecond) // time to unregister routine.
 
 	assert.NoError(t, err)
-	assert.Equal(t, uint64(10), stats.TotalRecords, "Backup stats should be correct")
+	assert.Equal(t, uint64(10), stats.TotalRecords.Load(), "Backup stats should be correct")
 }
 
 func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
@@ -319,7 +319,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 
 	stats := models.NewBackupStats()
 	stats.Start()
-	stats.TotalRecords = 5
+	stats.TotalRecords.Store(5)
 	stats.IncFiles()
 	stats.ReadRecords.Add(5)
 
@@ -363,5 +363,5 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 	o.runIncrementalBackup(ctx, now)
 	time.Sleep(10 * time.Millisecond) // time to unregister routine.
 
-	assert.Equal(t, uint64(5), stats.TotalRecords, "Backup stats should be correct")
+	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")
 }

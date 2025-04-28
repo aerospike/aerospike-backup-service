@@ -87,7 +87,7 @@ func (op *BackupNamespacesOperation) GetStats() *models.BackupStats {
 		}
 
 		activeHandlers++
-		res.TotalRecords += backupStats.TotalRecords
+		res.TotalRecords.Add(backupStats.TotalRecords.Load())
 		res.ReadRecords.Add(backupStats.GetReadRecords())
 		res.BytesWritten.Add(backupStats.BytesWritten.Load())
 

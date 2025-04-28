@@ -59,7 +59,7 @@ func TestRun_SuccessfulFullBackup(t *testing.T) {
 	backupRoutine := &model.BackupRoutine{}
 	timeBounds := model.TimeBounds{}
 	backupStats := models.NewBackupStats()
-	backupStats.TotalRecords = 100
+	backupStats.TotalRecords.Store(100)
 	backupStats.ReadRecords.Add(50)
 
 	mocks.backupExecutor.EXPECT().
@@ -106,7 +106,7 @@ func TestSuccessfulIncrementalBackup(t *testing.T) {
 		FromTime: &fromTime,
 	}
 	backupStats := models.NewBackupStats()
-	backupStats.TotalRecords = 50
+	backupStats.TotalRecords.Store(50)
 	backupStats.ReadRecords.Add(25)
 
 	mocks.backupExecutor.EXPECT().
@@ -244,7 +244,7 @@ func TestMetadataWriteError(t *testing.T) {
 	backupRoutine := &model.BackupRoutine{}
 	timeBounds := model.TimeBounds{}
 	backupStats := models.NewBackupStats()
-	backupStats.TotalRecords = 100
+	backupStats.TotalRecords.Store(100)
 
 	metadataError := errors.New("metadata write error")
 	mocks.backupExecutor.EXPECT().
