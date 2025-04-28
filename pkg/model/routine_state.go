@@ -32,5 +32,6 @@ type RunningJob struct {
 	// EstimatedEndTime: the estimated time when the operation will be completed.
 	// A nil value indicates that the estimation is not available yet.
 	EstimatedEndTime *time.Time
-	Metrics          *models.Metrics
+	// Performance metrics of current operation.
+	Metrics *models.Metrics
 }
