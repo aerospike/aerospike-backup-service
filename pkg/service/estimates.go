@@ -33,7 +33,7 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 		Status: job.status,
 	}
 
-	var metrics models.Metrics
+	var metrics []*models.Metrics
 	for _, handler := range job.handlers {
 		stats := handler.GetStats()
 		status.ReadRecords += stats.GetReadRecords()
@@ -46,15 +46,13 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 		status.ExpiredRecords += stats.GetRecordsExpired()
 		status.TotalBytes += stats.GetTotalBytesRead()
 		status.ErrorsInDoubt += stats.GetErrorsInDoubt()
-		handlerMetrics := handler.GetMetrics()
-		metrics.PipelineReadQueueSize += handlerMetrics.PipelineReadQueueSize
-		metrics.PipelineWriteQueueSize += handlerMetrics.PipelineWriteQueueSize
+		metrics = append(metrics, handler.GetMetrics())
 	}
 
 	done := status.InsertedRecords + status.SkippedRecords +
 		status.ExistedRecords + status.ExpiredRecords + status.FresherRecords
 	status.CurrentRestore = NewRunningJob(job.started, job.finished, done, job.totalRecords)
-	status.CurrentRestore.Metrics = &metrics
+	status.CurrentRestore.Metrics = models.SumMetrics(metrics...)
 
 	if job.err != nil {
 		status.Error = job.err.Error()
