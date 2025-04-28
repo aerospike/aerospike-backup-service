@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
-	_ "net/http/pprof" //nolint:gosec
 	"os"
 	"os/signal"
 	"syscall"
@@ -124,7 +122,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()
-	// service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
+	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
 		restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator, backendService)
@@ -173,10 +171,6 @@ func runHTTPServer(
 	httpServer := server.NewHTTPServer(serverConfig, service, logger)
 	go func() {
 		httpServer.Start()
-	}()
-
-	go func() {
-		_ = http.ListenAndServe("localhost:6060", nil) //nolint:gosec
 	}()
 
 	<-ctx.Done()
