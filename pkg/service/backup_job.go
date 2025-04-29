@@ -36,9 +36,9 @@ func (j *backupJob) Execute(ctx context.Context) error {
 		defer j.isRunning.Store(false)
 		switch j.jobType {
 		case jobTypeFull:
-			j.runner.runFullBackup(ctx, util.NowWithZeroNanoseconds())
+			j.runner.runFullBackup(ctx, util.NowWithZeroMillis())
 		case jobTypeIncremental:
-			j.runner.runIncrementalBackup(ctx, util.NowWithZeroNanoseconds())
+			j.runner.runIncrementalBackup(ctx, util.NowWithZeroMillis())
 		default:
 			j.logger.Error("Unsupported backup type")
 		}

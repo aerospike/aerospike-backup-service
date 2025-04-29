@@ -5,7 +5,6 @@ import (
 )
 
 type S3Storage struct {
-
 	// Path is the root directory within the S3 bucket where backups will be stored.
 	// It should not include the bucket name.
 	Path string
