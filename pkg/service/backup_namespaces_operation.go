@@ -64,6 +64,16 @@ func (op *BackupNamespacesOperation) Cancel() {
 	}
 }
 
+func (op *BackupNamespacesOperation) GetMetrics() *models.Metrics {
+	metrics := make([]*models.Metrics, 0, len(op.handlers))
+
+	for _, handler := range op.handlers {
+		metrics = append(metrics, handler.GetMetrics())
+	}
+
+	return models.SumMetrics(metrics...)
+}
+
 // GetStats return aggregated public statistics for all inner handlers.
 // return nil if no handlers are currently running.
 func (op *BackupNamespacesOperation) GetStats() *models.BackupStats {
@@ -77,7 +87,7 @@ func (op *BackupNamespacesOperation) GetStats() *models.BackupStats {
 		}
 
 		activeHandlers++
-		res.TotalRecords += backupStats.TotalRecords
+		res.TotalRecords.Add(backupStats.TotalRecords.Load())
 		res.ReadRecords.Add(backupStats.GetReadRecords())
 		res.BytesWritten.Add(backupStats.BytesWritten.Load())
 

@@ -37,3 +37,7 @@ func (h *CombinedRestoreHandler) Wait(ctx context.Context) error {
 func (h *CombinedRestoreHandler) GetStats() *models.RestoreStats {
 	return models.SumRestoreStats(h.streamHandler.GetStats(), h.xdrHandler.GetStats())
 }
+
+func (h *CombinedRestoreHandler) GetMetrics() *models.Metrics {
+	return h.streamHandler.GetMetrics()
+}

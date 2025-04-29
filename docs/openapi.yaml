@@ -1998,6 +1998,27 @@ components:
           description: Whether to enable logging to the standard output.
           type: boolean
       type: object
+    dto.Metrics:
+      description: Metrics represents the current job speed.
+      properties:
+        kilobytes-per-second:
+          description: "KilobytesPerSecond indicates the amount of data processed\
+            \ per second, in kilobytes."
+          type: integer
+        pipeline:
+          description: |-
+            Pipeline represents the number of records that have been read from the source
+            but not yet written to the destination. This metric helps identify bottlenecks:
+            - If Pipeline is zero or fluctuates near zero, it means the destination is consuming data
+              faster than the source can read.
+            - If Pipeline grows large, it indicates that the source is producing data faster
+              than the destination can consume.
+          type: integer
+        records-per-second:
+          description: RecordsPerSecond indicates the number of records processed
+            per second.
+          type: integer
+      type: object
     dto.PortRange:
       description: PortRange is a range of ports (inclusive).
       properties:
@@ -2036,6 +2057,7 @@ components:
           estimated-end-time: 2006-01-02T15:04:05Z07:00
           start-time: 2006-01-02T15:04:05Z07:00
           percentage-done: 50
+          metrics: "{}"
           total-records: 100
           done-records: 50
         errors-in-doubt: 7
@@ -2435,6 +2457,7 @@ components:
         estimated-end-time: 2006-01-02T15:04:05Z07:00
         start-time: 2006-01-02T15:04:05Z07:00
         percentage-done: 50
+        metrics: "{}"
         total-records: 100
         done-records: 50
       properties:
@@ -2453,6 +2476,11 @@ components:
           description: "FinishTime: the time when the operation finished"
           example: 2006-01-02T15:04:05Z07:00
           type: string
+        metrics:
+          allOf:
+          - $ref: '#/components/schemas/dto.Metrics'
+          description: Metrics provides real-time information about data flow performance.
+          type: object
         percentage-done:
           description: "PercentageDone: the progress of the backup operation as a\
             \ percentage."

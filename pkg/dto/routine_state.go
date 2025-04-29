@@ -54,6 +54,8 @@ type RunningJob struct {
 	// EstimatedEndTime: the estimated time when the backup operation will be completed.
 	// A nil value indicates that the estimation is not available yet.
 	EstimatedEndTime *time.Time `json:"estimated-end-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
+	// Metrics provides real-time information about data flow performance.
+	Metrics Metrics `json:"metrics,omitempty"`
 }
 
 func NewRunningJobFromModel(m *model.RunningJob) *RunningJob {
@@ -73,4 +75,7 @@ func (r *RunningJob) fromModel(m *model.RunningJob) {
 	r.FinishTime = m.FinishTime
 	r.PercentageDone = m.PercentageDone
 	r.EstimatedEndTime = m.EstimatedEndTime
+	if m.Metrics != nil {
+		r.Metrics = NewMetricsFromModel(m.Metrics)
+	}
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/pipeline"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -88,6 +89,9 @@ func makeBackupConfig(
 
 	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
 	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)
+
+	config.PipelinesMode = pipeline.ModeParallel
+	config.MetricsEnabled = true
 
 	return config, nil
 }

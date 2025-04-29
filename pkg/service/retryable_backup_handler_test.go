@@ -202,6 +202,11 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 type mockCancelBackupHandler struct {
 }
 
+func (m *mockCancelBackupHandler) GetMetrics() *models.Metrics {
+	// TODO implement me
+	panic("implement me")
+}
+
 func (m *mockCancelBackupHandler) GetStats() *models.BackupStats {
 	panic("process should be cancelled before GetStats is called")
 }

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/backup-go/models"
 )
 
 func currentBackupStatus(handlers CancelableBackupHandler) *model.RunningJob {
@@ -16,7 +17,10 @@ func currentBackupStatus(handlers CancelableBackupHandler) *model.RunningJob {
 		return nil
 	}
 
-	return NewRunningJob(stats.StartTime, nil, stats.ReadRecords.Load(), stats.TotalRecords)
+	job := NewRunningJob(stats.StartTime, nil, stats.ReadRecords.Load(), stats.TotalRecords.Load())
+	job.Metrics = handlers.GetMetrics()
+
+	return job
 }
 
 // RestoreJobStatus returns the status of a restore job.
@@ -29,6 +33,7 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 		Status: job.status,
 	}
 
+	metrics := make([]*models.Metrics, 0, len(job.handlers))
 	for _, handler := range job.handlers {
 		stats := handler.GetStats()
 		status.ReadRecords += stats.GetReadRecords()
@@ -41,11 +46,13 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 		status.ExpiredRecords += stats.GetRecordsExpired()
 		status.TotalBytes += stats.GetTotalBytesRead()
 		status.ErrorsInDoubt += stats.GetErrorsInDoubt()
+		metrics = append(metrics, handler.GetMetrics())
 	}
 
 	done := status.InsertedRecords + status.SkippedRecords +
 		status.ExistedRecords + status.ExpiredRecords + status.FresherRecords
 	status.CurrentRestore = NewRunningJob(job.started, job.finished, done, job.totalRecords)
+	status.CurrentRestore.Metrics = models.SumMetrics(metrics...)
 
 	if job.err != nil {
 		status.Error = job.err.Error()
@@ -57,7 +64,7 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 // NewRunningJob created new RunningJob with calculated estimated time and percentage.
 func NewRunningJob(startTime time.Time, finishTime *time.Time, done, total uint64) *model.RunningJob {
 	if total == 0 {
-		return nil
+		return &model.RunningJob{}
 	}
 
 	percentage := float64(done) / float64(total)

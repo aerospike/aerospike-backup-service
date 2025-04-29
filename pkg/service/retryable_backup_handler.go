@@ -18,6 +18,10 @@ type retryableBackupHandler struct {
 	errCh   chan error
 }
 
+func (h *retryableBackupHandler) GetMetrics() *models.Metrics {
+	return h.handler.GetMetrics()
+}
+
 var _ backupexecutor.BackupHandler = (*retryableBackupHandler)(nil)
 
 func newRetryableBackupHandler(

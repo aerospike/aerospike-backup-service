@@ -34,6 +34,7 @@ func TestRestoreOK(t *testing.T) {
 	stats.ReadRecords.Add(10)
 	mockRestoreHandler.EXPECT().GetStats().Return(stats).AnyTimes()
 	mockRestoreHandler.EXPECT().Wait(gomock.Any()).Return(nil)
+	mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
 	env.mockRestore.EXPECT().
 		Run(gomock.Any(), client, request).
@@ -77,6 +78,7 @@ func TestCancelRestoreOK(t *testing.T) {
 		close(waitReturned) // Signal return
 		return ctx.Err()    // Return cancellation error
 	})
+	mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
 	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now()}}
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(

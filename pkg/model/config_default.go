@@ -42,7 +42,7 @@ var defaultConfig = struct {
 			MaxRetries:  5,
 			Multiplier:  1,
 		},
-		Parallel:  util.Ptr(1),
+		Parallel:  util.Ptr(8),
 		FileLimit: util.Ptr(250),
 	},
 	restorePolicy: RestorePolicy{

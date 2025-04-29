@@ -13,6 +13,8 @@ type RestoreHandler interface {
 	// Wait waits for the restore job to complete and returns an error if the
 	// job failed.
 	Wait(context.Context) error
+	// GetMetrics returns the performance metrics of the restore job.
+	GetMetrics() *models.Metrics
 }
 
 // RestoreHandlerWithCancel is a wrapper around a RestoreHandler that adds a cancel function.
