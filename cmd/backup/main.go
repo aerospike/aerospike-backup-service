@@ -189,10 +189,10 @@ func runHTTPServer(
 }
 
 func main() {
-	// start the application
-	os.Exit(run())
-
 	go func() {
 		_ = http.ListenAndServe("localhost:6060", nil) //nolint:gosec
 	}()
+
+	// start the application
+	os.Exit(run())
 }
