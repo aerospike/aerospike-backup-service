@@ -52,6 +52,9 @@ func (a *S3StorageAccessor) createWriter(
 	if err != nil {
 		return nil, err
 	}
+	if s3s.MinPartSize > 0 {
+		opts = append(opts, ioStorage.WithChunkSize(s3s.MinPartSize))
+	}
 
 	return s3.NewWriter(ctx, client, s3s.Bucket, opts...)
 }
