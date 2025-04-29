@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
-	_ "net/http/pprof" //nolint:gosec
 	"os"
 	"os/signal"
 	"syscall"
@@ -189,10 +187,6 @@ func runHTTPServer(
 }
 
 func main() {
-	go func() {
-		_ = http.ListenAndServe("localhost:6060", nil) //nolint:gosec
-	}()
-
 	// start the application
 	os.Exit(run())
 }
