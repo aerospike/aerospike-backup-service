@@ -73,7 +73,7 @@ func MeasureDuration(f func() error) (time.Duration, error) {
 	return time.Since(startTime), err
 }
 
-func NowWithZeroNanoseconds() time.Time {
+func NowWithZeroMillis() time.Time {
 	now := time.Now()
-	return now.Truncate(time.Millisecond)
+	return now.Truncate(time.Second)
 }
