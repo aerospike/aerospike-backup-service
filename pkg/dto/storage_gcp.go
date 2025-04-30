@@ -10,7 +10,7 @@ import (
 
 // GcpStorage represents the configuration for GCP storage.
 type GcpStorage struct {
-	SecretAgentConfig SecretAgentConfig `yaml:",inline"`
+	SecretAgentConfig `yaml:",inline"`
 	// Path to the file containing the service account key in JSON format.
 	KeyFile string `yaml:"key-file-path,omitempty" json:"key-file-path,omitempty"`
 	// Key is the service account key in JSON format.
@@ -43,7 +43,7 @@ func (s *GcpStorage) Validate() error {
 }
 
 func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
-	agent, err := s.SecretAgentConfig.ToModel(config)
+	agent, err := s.ToModel(config)
 	if err != nil {
 		return nil, err
 	}

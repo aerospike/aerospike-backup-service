@@ -11,7 +11,7 @@ import (
 //
 //nolint:lll
 type S3Storage struct {
-	SecretAgentConfig SecretAgentConfig `yaml:",inline"`
+	SecretAgentConfig `yaml:",inline"`
 	// The S3 bucket name.
 	Bucket string `yaml:"bucket" json:"bucket" validate:"required"`
 	// The root path for the backup repository within the bucket.
@@ -58,13 +58,13 @@ func (s *S3Storage) Validate() error {
 		return fmt.Errorf("invalid storage class: %w", err)
 	}
 
-	return s.SecretAgentConfig.validate()
+	return s.validate()
 }
 
 func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 	var auth *model.S3Authentication
 	if s.AccessKeyID != nil {
-		agent, err := s.SecretAgentConfig.ToModel(config)
+		agent, err := s.ToModel(config)
 		if err != nil {
 			return nil, err
 		}

@@ -10,7 +10,7 @@ import (
 
 // AzureStorage represents the configuration for Azure Blob storage.
 type AzureStorage struct {
-	SecretAgentConfig SecretAgentConfig `yaml:",inline"`
+	SecretAgentConfig `yaml:",inline"`
 	// Endpoint is the Azure Blob service endpoint URL.
 	Endpoint string `yaml:"endpoint" json:"endpoint" validate:"required"`
 	// ContainerName is the name of the Azure Blob container.
@@ -59,7 +59,7 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 }
 
 func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
-	agent, err := a.SecretAgentConfig.ToModel(config)
+	agent, err := a.ToModel(config)
 	if err != nil {
 		return nil, err
 	}

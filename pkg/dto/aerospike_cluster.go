@@ -170,7 +170,7 @@ func (t *TLS) toModel() *model.TLS {
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
-	SecretAgentConfig SecretAgentConfig `yaml:",inline"`
+	SecretAgentConfig `yaml:",inline"`
 	// The username for the cluster authentication.
 	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"`
 	// The password for the cluster authentication.
@@ -214,7 +214,7 @@ func (c *Credentials) Validate() error {
 		return fmt.Errorf("auth-mode %q incorrect, should be one of: INTERNAL,EXTERNAL,PKI", *c.AuthMode)
 	}
 
-	return c.SecretAgentConfig.validate()
+	return c.validate()
 }
 
 func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) {
@@ -222,7 +222,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 		return nil, nil
 	}
 
-	agent, err := c.SecretAgentConfig.ToModel(config)
+	agent, err := c.ToModel(config)
 	if err != nil {
 		return nil, err
 	}

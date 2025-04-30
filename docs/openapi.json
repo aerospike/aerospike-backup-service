@@ -1894,8 +1894,16 @@
             "example" : "backups",
             "type" : "string"
           },
-          "secretAgentConfig" : {
-            "$ref" : "#/components/schemas/dto.SecretAgentConfig"
+          "secret-agent" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.SecretAgent"
+            } ],
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
+            "type" : "object"
+          },
+          "secret-agent-name" : {
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+            "type" : "string"
           },
           "storage-class" : {
             "allOf" : [ {
@@ -2258,8 +2266,16 @@
             "example" : "/path/to/pass.txt",
             "type" : "string"
           },
-          "secretAgentConfig" : {
-            "$ref" : "#/components/schemas/dto.SecretAgentConfig"
+          "secret-agent" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.SecretAgent"
+            } ],
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
+            "type" : "object"
+          },
+          "secret-agent-name" : {
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+            "type" : "string"
           },
           "user" : {
             "description" : "The username for the cluster authentication.",
@@ -2345,8 +2361,16 @@
             "example" : "backups",
             "type" : "string"
           },
-          "secretAgentConfig" : {
-            "$ref" : "#/components/schemas/dto.SecretAgentConfig"
+          "secret-agent" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.SecretAgent"
+            } ],
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
+            "type" : "object"
+          },
+          "secret-agent-name" : {
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+            "type" : "string"
           },
           "storage-class" : {
             "allOf" : [ {
@@ -2972,8 +2996,16 @@
             "description" : "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
             "type" : "string"
           },
-          "secretAgentConfig" : {
-            "$ref" : "#/components/schemas/dto.SecretAgentConfig"
+          "secret-agent" : {
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/dto.SecretAgent"
+            } ],
+            "description" : "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
+            "type" : "object"
+          },
+          "secret-agent-name" : {
+            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+            "type" : "string"
           },
           "storage-class" : {
             "allOf" : [ {
@@ -3035,22 +3067,6 @@
           }
         },
         "required" : [ "address" ],
-        "type" : "object"
-      },
-      "dto.SecretAgentConfig" : {
-        "properties" : {
-          "secret-agent" : {
-            "allOf" : [ {
-              "$ref" : "#/components/schemas/dto.SecretAgent"
-            } ],
-            "description" : "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
-            "type" : "object"
-          },
-          "secret-agent-name" : {
-            "description" : "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-            "type" : "string"
-          }
-        },
         "type" : "object"
       },
       "dto.SeedNode" : {
