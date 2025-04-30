@@ -10,7 +10,7 @@ import (
 
 // AzureStorage represents the configuration for Azure Blob storage.
 type AzureStorage struct {
-	SecretAgentConfig `yaml:",inline"`
+	SecretAgentConfig SecretAgentConfig `yaml:",inline"`
 	// Endpoint is the Azure Blob service endpoint URL.
 	Endpoint string `yaml:"endpoint" json:"endpoint" validate:"required"`
 	// ContainerName is the name of the Azure Blob container.

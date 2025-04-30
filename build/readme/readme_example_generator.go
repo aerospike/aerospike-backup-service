@@ -174,12 +174,13 @@ func main() {
 		var exists bool
 		var formattedExample []byte
 
-		if format == "json" {
+		switch format {
+		case "json":
 			example, exists = jsonExamples[name]
 			if exists {
 				formattedExample, err = json.MarshalIndent(example, "", "  ")
 			}
-		} else if format == "yaml" {
+		case "yaml":
 			example, exists = yamlExamples[name]
 			if exists {
 				formattedExample, err = marshalYAML(example)

@@ -10,7 +10,7 @@ import (
 
 // GcpStorage represents the configuration for GCP storage.
 type GcpStorage struct {
-	SecretAgentConfig `yaml:",inline"`
+	SecretAgentConfig SecretAgentConfig `yaml:",inline"`
 	// Path to the file containing the service account key in JSON format.
 	KeyFile string `yaml:"key-file-path,omitempty" json:"key-file-path,omitempty"`
 	// Key is the service account key in JSON format.

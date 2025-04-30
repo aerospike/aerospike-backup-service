@@ -1,77 +1,90 @@
-run:
-  timeout: 2m
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
-    - gci
     - bodyclose
     - dogsled
     - dupl
     - errcheck
     - errorlint
     - funlen
-    - gci
     - goconst
     - gocritic
     - gocyclo
     - godot
-    - gofmt
-    - goimports
-    - gocyclo
     - gosec
-    - gosimple
     - govet
     - ineffassign
+    - lll
     - misspell
-    - nolintlint
     - nakedret
     - nestif
     - nlreturn
-    - prealloc # pre-allocate slices with define size if the slice size is known in advance
+    - nolintlint
+    - prealloc
     - predeclared
     - promlinter
     - reassign
     - revive
     - sloglint
     - staticcheck
-    - stylecheck
     - tagliatelle
     - thelper
     - tparallel
-    - typecheck
     - unconvert
     - unparam
     - unused
     - whitespace
-    - lll
-
-linters-settings:
-  gosec:
-    excludes:
-      - G115
-  nlreturn:
-    block-size: 10
-  godot:
-    exclude: [ "@(Success|Failure|Router).*" ]
-  tagliatelle:
-    case:
-      rules:
-        json: kebab
-        yaml: kebab
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - unparam
-        - prealloc
-        - funlen
-        - goconst
-        - nlreturn
-
-  exclude-dirs:
-    - examples
-    - modules
-    - docs
-    - docker
+  settings:
+    godot:
+      exclude:
+        - '@(Success|Failure|Router).*'
+    gosec:
+      excludes:
+        - G115
+    nlreturn:
+      block-size: 10
+    tagliatelle:
+      case:
+        rules:
+          json: kebab
+          yaml: kebab
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+          - funlen
+          - goconst
+          - nlreturn
+          - prealloc
+          - unparam
+        path: _test\.go
+    paths:
+      - examples
+      - modules
+      - docs
+      - docker
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - examples
+      - modules
+      - docs
+      - docker
+      - third_party$
+      - builtin$
+      - examples$

@@ -87,7 +87,7 @@ func (c *AerospikeCluster) Hash() string {
 	}
 
 	if c.UseServicesAlternate != nil {
-		hasher.Write([]byte(fmt.Sprintf("%v:", *c.UseServicesAlternate)))
+		fmt.Fprintf(hasher, "%v:", *c.UseServicesAlternate)
 	}
 
 	if c.Credentials != nil {
@@ -101,7 +101,7 @@ func (c *AerospikeCluster) Hash() string {
 	}
 
 	if c.MaxParallelScans != nil {
-		hasher.Write([]byte(fmt.Sprintf("%d:", *c.MaxParallelScans)))
+		fmt.Fprintf(hasher, "%d:", *c.MaxParallelScans)
 	}
 
 	return hex.EncodeToString(hasher.Sum(nil))

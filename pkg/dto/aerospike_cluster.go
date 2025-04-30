@@ -170,7 +170,7 @@ func (t *TLS) toModel() *model.TLS {
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
-	SecretAgentConfig `yaml:",inline"`
+	SecretAgentConfig SecretAgentConfig `yaml:",inline"`
 	// The username for the cluster authentication.
 	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"`
 	// The password for the cluster authentication.
@@ -208,9 +208,9 @@ func (c *Credentials) Validate() error {
 	}
 
 	if c.AuthMode != nil &&
-		!(strings.ToUpper(*c.AuthMode) == "INTERNAL" ||
-			strings.ToUpper(*c.AuthMode) == "EXTERNAL" ||
-			strings.ToUpper(*c.AuthMode) == "PKI") {
+		(strings.ToUpper(*c.AuthMode) != "INTERNAL" &&
+			strings.ToUpper(*c.AuthMode) != "EXTERNAL" &&
+			strings.ToUpper(*c.AuthMode) != "PKI") {
 		return fmt.Errorf("auth-mode %q incorrect, should be one of: INTERNAL,EXTERNAL,PKI", *c.AuthMode)
 	}
 
