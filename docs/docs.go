@@ -1681,17 +1681,8 @@ const docTemplate = `{
                     "type": "string",
                     "example": "backups"
                 },
-                "secret-agent": {
-                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.SecretAgent"
-                        }
-                    ]
-                },
-                "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                "secretAgentConfig": {
+                    "$ref": "#/definitions/dto.SecretAgentConfig"
                 },
                 "storage-class": {
                     "description": "StorageClass defines the storage tier for data and metadata objects.",
@@ -2084,17 +2075,8 @@ const docTemplate = `{
                     "type": "string",
                     "example": "/path/to/pass.txt"
                 },
-                "secret-agent": {
-                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.SecretAgent"
-                        }
-                    ]
-                },
-                "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                "secretAgentConfig": {
+                    "$ref": "#/definitions/dto.SecretAgentConfig"
                 },
                 "user": {
                     "description": "The username for the cluster authentication.",
@@ -2190,17 +2172,8 @@ const docTemplate = `{
                     "type": "string",
                     "example": "backups"
                 },
-                "secret-agent": {
-                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.SecretAgent"
-                        }
-                    ]
-                },
-                "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                "secretAgentConfig": {
+                    "$ref": "#/definitions/dto.SecretAgentConfig"
                 },
                 "storage-class": {
                     "description": "StorageClass defines the storage class for data and metadata objects.",
@@ -2888,17 +2861,8 @@ const docTemplate = `{
                     "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
                     "type": "string"
                 },
-                "secret-agent": {
-                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.SecretAgent"
-                        }
-                    ]
-                },
-                "secret-agent-name": {
-                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                "secretAgentConfig": {
+                    "$ref": "#/definitions/dto.SecretAgentConfig"
                 },
                 "storage-class": {
                     "description": "StorageClass defines the storage class for data and metadata objects.",
@@ -2960,6 +2924,23 @@ const docTemplate = `{
                     "description": "The path to a trusted CA certificate file in PEM format.",
                     "type": "string",
                     "example": "/path/to/ca.pem"
+                }
+            }
+        },
+        "dto.SecretAgentConfig": {
+            "type": "object",
+            "properties": {
+                "secret-agent": {
+                    "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    ]
+                },
+                "secret-agent-name": {
+                    "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
+                    "type": "string"
                 }
             }
         },

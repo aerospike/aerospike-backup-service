@@ -1330,18 +1330,8 @@ components:
             If not specified, backups will be saved in the container's root.
           example: backups
           type: string
-        secret-agent:
-          allOf:
-          - $ref: '#/components/schemas/dto.SecretAgent'
-          description: |-
-            Secret Agent configuration (optional).
-            Mutually exclusive with 'secret-agent-name'.
-          type: object
-        secret-agent-name:
-          description: |-
-            Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with 'secret-agent'.
-          type: string
+        secretAgentConfig:
+          $ref: '#/components/schemas/dto.SecretAgentConfig'
         storage-class:
           allOf:
           - $ref: '#/components/schemas/dto.AzureStorageClass'
@@ -1799,18 +1789,8 @@ components:
           description: The file path with the password string.
           example: /path/to/pass.txt
           type: string
-        secret-agent:
-          allOf:
-          - $ref: '#/components/schemas/dto.SecretAgent'
-          description: |-
-            Secret Agent configuration (optional).
-            Mutually exclusive with 'secret-agent-name'.
-          type: object
-        secret-agent-name:
-          description: |-
-            Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with 'secret-agent'.
-          type: string
+        secretAgentConfig:
+          $ref: '#/components/schemas/dto.SecretAgentConfig'
         user:
           description: The username for the cluster authentication.
           example: testUser
@@ -1894,18 +1874,8 @@ components:
             \ backups will be saved in the bucket's root."
           example: backups
           type: string
-        secret-agent:
-          allOf:
-          - $ref: '#/components/schemas/dto.SecretAgent'
-          description: |-
-            Secret Agent configuration (optional).
-            Mutually exclusive with 'secret-agent-name'.
-          type: object
-        secret-agent-name:
-          description: |-
-            Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with 'secret-agent'.
-          type: string
+        secretAgentConfig:
+          $ref: '#/components/schemas/dto.SecretAgentConfig'
         storage-class:
           allOf:
           - $ref: '#/components/schemas/dto.GcpStorageClass'
@@ -2541,18 +2511,8 @@ components:
             Secret Access Key for authentication with S3 StaticCredentialsProvider.
             This is sensitive information. Can be a path in secret agent or an actual value.
           type: string
-        secret-agent:
-          allOf:
-          - $ref: '#/components/schemas/dto.SecretAgent'
-          description: |-
-            Secret Agent configuration (optional).
-            Mutually exclusive with 'secret-agent-name'.
-          type: object
-        secret-agent-name:
-          description: |-
-            Secret Agent configuration (optional). Link to one of preconfigured agents.
-            Mutually exclusive with 'secret-agent'.
-          type: string
+        secretAgentConfig:
+          $ref: '#/components/schemas/dto.SecretAgentConfig'
         storage-class:
           allOf:
           - $ref: '#/components/schemas/dto.S3StorageClass'
@@ -2611,6 +2571,21 @@ components:
           type: string
       required:
       - address
+      type: object
+    dto.SecretAgentConfig:
+      properties:
+        secret-agent:
+          allOf:
+          - $ref: '#/components/schemas/dto.SecretAgent'
+          description: |-
+            Secret Agent configuration (optional).
+            Mutually exclusive with 'secret-agent-name'.
+          type: object
+        secret-agent-name:
+          description: |-
+            Secret Agent configuration (optional). Link to one of preconfigured agents.
+            Mutually exclusive with 'secret-agent'.
+          type: string
       type: object
     dto.SeedNode:
       description: SeedNode represents details of a node in the Aerospike cluster.
