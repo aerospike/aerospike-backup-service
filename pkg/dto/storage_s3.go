@@ -57,14 +57,15 @@ func (s *S3Storage) Validate() error {
 	if err := s.StorageClass.Validate(); err != nil {
 		return fmt.Errorf("invalid storage class: %w", err)
 	}
-
-	return s.validate()
+	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
+	return s.SecretAgentConfig.validate()
 }
 
 func (s *S3Storage) toModel(config *model.Config) (*model.S3Storage, error) {
 	var auth *model.S3Authentication
 	if s.AccessKeyID != nil {
-		agent, err := s.ToModel(config)
+		//nolint:staticcheck // We want to call embedded methods with embedded struct name.
+		agent, err := s.SecretAgentConfig.ToModel(config)
 		if err != nil {
 			return nil, err
 		}
