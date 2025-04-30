@@ -59,6 +59,7 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 }
 
 func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
+	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 	agent, err := a.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, err

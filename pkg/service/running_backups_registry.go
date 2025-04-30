@@ -175,9 +175,10 @@ func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType
 	)
 
 	updateLastTimestamp := func(lastBackupRun *model.LastBackupRun) {
-		if job == jobTypeFull {
+		switch job {
+		case jobTypeFull:
 			lastBackupRun.SetFullBackupTime(&timestamp)
-		} else if job == jobTypeIncremental {
+		case jobTypeIncremental:
 			lastBackupRun.SetIncrementalBackupTime(&timestamp)
 		}
 	}

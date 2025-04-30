@@ -33,7 +33,7 @@ jobs:
           git submodule update --init --recursive
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.60.2
+          version: v2.1.5
           args: --timeout=5m

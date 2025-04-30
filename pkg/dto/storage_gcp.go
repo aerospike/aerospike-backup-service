@@ -43,6 +43,7 @@ func (s *GcpStorage) Validate() error {
 }
 
 func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
+	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 	agent, err := s.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, err

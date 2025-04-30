@@ -208,12 +208,12 @@ func (c *Credentials) Validate() error {
 	}
 
 	if c.AuthMode != nil &&
-		!(strings.ToUpper(*c.AuthMode) == "INTERNAL" ||
-			strings.ToUpper(*c.AuthMode) == "EXTERNAL" ||
-			strings.ToUpper(*c.AuthMode) == "PKI") {
+		(strings.ToUpper(*c.AuthMode) != "INTERNAL" &&
+			strings.ToUpper(*c.AuthMode) != "EXTERNAL" &&
+			strings.ToUpper(*c.AuthMode) != "PKI") {
 		return fmt.Errorf("auth-mode %q incorrect, should be one of: INTERNAL,EXTERNAL,PKI", *c.AuthMode)
 	}
-
+	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 	return c.SecretAgentConfig.validate()
 }
 
@@ -221,7 +221,7 @@ func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) 
 	if c == nil {
 		return nil, nil
 	}
-
+	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
 	agent, err := c.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, err
