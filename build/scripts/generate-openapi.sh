@@ -32,3 +32,13 @@ mv "$WORKSPACE"/tmp/openapi/openapi.yaml "$WORKSPACE"/docs/openapi.yaml
 mv "$WORKSPACE"/tmp/openapi.json "$WORKSPACE"/docs/openapi.json
 
 rm -rf "$WORKSPACE"/tmp "$WORKSPACE"/docs/swagger.yaml "$WORKSPACE"/docs/swagger.json
+
+jq '{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": .components.schemas["dto.Config"].properties,
+  "required": .components.schemas["dto.Config"].required,
+  "components": {
+    "schemas": ( .components.schemas | del(.["dto.Config"]) )
+  }
+}' "$WORKSPACE"/docs/openapi.json > "$WORKSPACE"/docs/config.schema.json
