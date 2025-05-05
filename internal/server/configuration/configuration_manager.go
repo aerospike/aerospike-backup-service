@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	backup "github.com/aerospike/aerospike-backup-service/v3"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -23,6 +24,9 @@ type Manager interface {
 	// Write writes the configuration to the source.
 	Write(ctx context.Context, config *model.Config) error
 }
+
+//nolint:lll
+const schema = "# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/%s/docs/config.schema.json\n"
 
 func Load(
 	ctx context.Context,
@@ -73,7 +77,8 @@ func writeConfig(writer io.Writer, config *model.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration: %w", err)
 	}
-	_, err = writer.Write(data)
+	dataWithScheme := append([]byte(fmt.Sprintf(schema, backup.Version)), data...)
+	_, err = writer.Write(dataWithScheme)
 	return err
 }
 
