@@ -26,7 +26,7 @@ type Manager interface {
 }
 
 //nolint:lll
-const schema = "# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/%s/docs/config.schema.json\n"
+const schemaHeader = "# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/%s/docs/config.schema.json\n"
 
 func Load(
 	ctx context.Context,
@@ -77,7 +77,7 @@ func writeConfig(writer io.Writer, config *model.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration: %w", err)
 	}
-	dataWithScheme := append([]byte(fmt.Sprintf(schema, backup.Version)), data...)
+	dataWithScheme := append([]byte(fmt.Sprintf(schemaHeader, backup.Version)), data...)
 	_, err = writer.Write(dataWithScheme)
 	return err
 }
