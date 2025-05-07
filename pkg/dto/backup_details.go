@@ -11,8 +11,12 @@ import (
 type BackupDetails struct {
 	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created" json:"created" example:"2023-03-20T14:50:00Z"`
+	// The backup time in epoch millis
+	CreatedMillis int64 `yaml:"createdMillis" json:"createdMillis"`
 	// The time backup had finished.
 	Finished time.Time `yaml:"finished" json:"finished" example:"2023-03-20T14:50:00Z"`
+	// Duration represents the elapsed time taken by the backup process in seconds.
+	Duration uint `yaml:"duration" json:"duration"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).
 	From time.Time `yaml:"from,omitempty" json:"from,omitempty" example:"2023-03-19T14:50:00Z"`
 	// The namespace of a backup.
@@ -47,7 +51,9 @@ func NewBackupDetailsFromModel(m *model.BackupDetails, config *model.BackupConfi
 func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupConfig) {
 	d.Key = m.Key
 	d.Created = m.Created
+	d.CreatedMillis = m.Created.UnixMilli()
 	d.Finished = m.Finished
+	d.Duration = uint(m.Finished.Sub(d.Created) / time.Second)
 	d.From = m.From
 	d.Namespace = m.Namespace
 	d.RecordCount = m.RecordCount

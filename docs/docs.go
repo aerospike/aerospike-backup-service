@@ -1735,11 +1735,24 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2023-03-20T14:50:00Z"
                 },
+                "createdMillis": {
+                    "description": "The backup time in epoch millis",
+                    "type": "integer"
+                },
+                "duration": {
+                    "description": "Duration represents the elapsed time taken by the backup process in seconds.",
+                    "type": "integer"
+                },
                 "file-count": {
                     "description": "The number of backup files created.",
                     "type": "integer",
                     "format": "int64",
                     "example": 1
+                },
+                "finished": {
+                    "description": "The time backup had finished.",
+                    "type": "string",
+                    "example": "2023-03-20T14:50:00Z"
                 },
                 "from": {
                     "description": "The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).",
@@ -1747,7 +1760,7 @@ const docTemplate = `{
                     "example": "2023-03-19T14:50:00Z"
                 },
                 "key": {
-                    "description": "The path to the backup files.",
+                    "description": "The path to the backup files in storage.",
                     "type": "string",
                     "example": "daily/backup/1707915600000/source-ns1"
                 },
@@ -1769,7 +1782,12 @@ const docTemplate = `{
                     "example": 5
                 },
                 "storage": {
-                    "$ref": "#/definitions/dto.Storage"
+                    "description": "Storage specifying the data location.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.Storage"
+                        }
+                    ]
                 },
                 "udf-count": {
                     "description": "The number of UDF files backed up.",
