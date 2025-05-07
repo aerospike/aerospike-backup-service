@@ -10,8 +10,8 @@ import (
 
 // BackupDetails contains information about a backup.
 type BackupDetails struct {
-	BackupMetadata
-	// The path to the backup files.
+	BackupMetadata // Backup metadata that is stored in metadata.yaml file
+
 	Key     string
 	Storage Storage
 	Routine string
@@ -31,6 +31,8 @@ func NewBackupDetails(md BackupMetadata, key string, storage Storage, routine st
 type BackupMetadata struct {
 	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created" json:"created"`
+	// The time backup had finished.
+	Finished time.Time `yaml:"finished" json:"finished"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups).
 	From time.Time `yaml:"from" json:"from"`
 	// The namespace of a backup.
@@ -60,10 +62,11 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 	return &metadata, nil
 }
 
-func NewMetadataFromStats(stats *models.BackupStats, namespace string, from, now time.Time) BackupMetadata {
+func NewMetadataFromStats(stats *models.BackupStats, namespace string, from, startTime time.Time) BackupMetadata {
 	return BackupMetadata{
 		From:                from,
-		Created:             now,
+		Created:             startTime,
+		Finished:            time.Now(),
 		Namespace:           namespace,
 		RecordCount:         stats.GetReadRecords(),
 		FileCount:           stats.GetFileCount(),

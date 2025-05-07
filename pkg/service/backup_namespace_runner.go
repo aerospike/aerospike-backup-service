@@ -57,10 +57,10 @@ func (op *BackupNamespaceRunner) Run(
 	backupRoutine *model.BackupRoutine,
 	backupType jobType,
 	namespace string,
-	now time.Time,
+	startTime time.Time,
 	timeBounds model.TimeBounds,
 ) CancelableBackupHandler {
-	backupFolder := getBackupPath(op.routineName, backupType, namespace, now)
+	backupFolder := getBackupPath(op.routineName, backupType, namespace, startTime)
 
 	return newRetryableBackupHandler(
 		ctx,
@@ -69,14 +69,14 @@ func (op *BackupNamespaceRunner) Run(
 			return op.backupExecutor.Run(ctx, client, backupRoutine, timeBounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) {
-			op.deleteFolder(ctx, getTimestampPath(op.routineName, now, backupType))
+			op.deleteFolder(ctx, getTimestampPath(op.routineName, startTime, backupType))
 		},
 		func(ctx context.Context, stats *models.BackupStats) error {
 			// For incremental backups, skip metadata for empty backups
 			if backupType == jobTypeIncremental && stats.IsEmpty() {
 				return nil
 			}
-			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timeBounds.FromTime), now)
+			metadata := model.NewMetadataFromStats(stats, namespace, util.ValueOrZero(timeBounds.FromTime), startTime)
 			return op.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
 	)

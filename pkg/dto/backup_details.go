@@ -9,16 +9,10 @@ import (
 // BackupDetails contains information about a backup.
 // @Description BackupDetails contains information about a backup.
 type BackupDetails struct {
-	BackupMetadata
-	// The path to the backup files.
-	Key     string   `yaml:"key" json:"key" example:"daily/backup/1707915600000/source-ns1"`
-	Storage *Storage `yaml:"storage" json:"storage"`
-}
-
-// BackupMetadata is an internal container for storing backup metadata.
-type BackupMetadata struct {
 	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created" json:"created" example:"2023-03-20T14:50:00Z"`
+	// The time backup had finished.
+	Finished time.Time `yaml:"finished" json:"finished" example:"2023-03-20T14:50:00Z"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).
 	From time.Time `yaml:"from,omitempty" json:"from,omitempty" example:"2023-03-19T14:50:00Z"`
 	// The namespace of a backup.
@@ -33,6 +27,10 @@ type BackupMetadata struct {
 	SecondaryIndexCount uint64 `yaml:"secondary-index-count" json:"secondary-index-count" format:"int64" example:"5"`
 	// The number of UDF files backed up.
 	UDFCount uint64 `yaml:"udf-count" json:"udf-count" format:"int64" example:"2"`
+	// The path to the backup files in storage.
+	Key string `yaml:"key" json:"key" example:"daily/backup/1707915600000/source-ns1"`
+	// Storage specifying the data location.
+	Storage *Storage `yaml:"storage" json:"storage"`
 }
 
 // NewBackupDetailsFromModel creates a new BackupDetails from a model.BackupDetails.
@@ -49,6 +47,7 @@ func NewBackupDetailsFromModel(m *model.BackupDetails, config *model.BackupConfi
 func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupConfig) {
 	d.Key = m.Key
 	d.Created = m.Created
+	d.Finished = m.Finished
 	d.From = m.From
 	d.Namespace = m.Namespace
 	d.RecordCount = m.RecordCount

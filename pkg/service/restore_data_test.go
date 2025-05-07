@@ -53,7 +53,7 @@ func TestRestoreOK(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusDone, jobStatus.Status)
-	assert.Equal(t, uint64(10), jobStatus.ReadRecords, "Read records count mismatch")
+	assert.Equal(t, uint64(10), jobStatus.Counters.GetReadRecords(), "Read records count mismatch")
 	assert.Empty(t, jobStatus.Error, "Expected no error in final job status")
 }
 

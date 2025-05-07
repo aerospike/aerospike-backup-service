@@ -419,6 +419,7 @@ GET {{baseUrl}}/v1/backups/full
   "routine1": [
     {
       "created": "2024-01-01T12:00:00Z",
+      "finished": "2024-01-01T12:05:00Z",
       "from": "0001-01-01T00:00:00Z",
       "namespace": "source-ns1",
       "record-count": 42,
@@ -439,6 +440,7 @@ GET {{baseUrl}}/v1/backups/full
   "routine2": [
     {
       "created": "2024-01-01T12:00:00Z",
+      "finished": "2024-01-01T12:04:00Z",
       "from": "0001-01-01T00:00:00Z",
       "namespace": "source-ns2",
       "record-count": 1890,
