@@ -6,7 +6,6 @@ docker run --rm --volume "$WORKSPACE":/local davi17g/swag:latest init \
 -d /local/internal/server/handlers,/local/pkg/dto -g info.go -o /local/docs
 
 # swag codegen cannot handle int64 format for return values
-
 cat <<< "$(docker run --rm --volume "$WORKSPACE/docs/swagger.json":/local/docs/swagger.json ghcr.io/jqlang/jq:latest \
 '(.paths.[].[].responses
 | select(has("202")).["202"]
@@ -24,7 +23,6 @@ cat <<< "$(docker run --rm --volume "$WORKSPACE/docs/swagger.yaml":/local/docs/s
 mkdir -p "$WORKSPACE"/tmp
 
 # convert swagger to open-api
-
 docker run --rm --volume "$WORKSPACE":/local openapitools/openapi-generator-cli:latest generate \
 -i /local/docs/swagger.yaml -g openapi-yaml -o /local/tmp
 
