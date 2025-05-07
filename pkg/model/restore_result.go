@@ -1,5 +1,7 @@
 package model
 
+import "github.com/aerospike/backup-go/models"
+
 type JobStatus string
 
 const (
@@ -11,19 +13,8 @@ const (
 
 // RestoreJobStatus represents a restore job status.
 type RestoreJobStatus struct {
-	ReadRecords     uint64
-	TotalBytes      uint64
-	ExpiredRecords  uint64
-	SkippedRecords  uint64
-	IgnoredRecords  uint64
-	InsertedRecords uint64
-	ExistedRecords  uint64
-	FresherRecords  uint64
-	IndexCount      uint64
-	UDFCount        uint64
-	ErrorsInDoubt   uint64
-
+	Stats          *models.RestoreStats
 	CurrentRestore *RunningJob
 	Status         JobStatus
-	Error          string
+	Error          error
 }

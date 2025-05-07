@@ -29,34 +29,26 @@ func currentBackupStatus(handlers CancelableBackupHandler) *model.RunningJob {
 //   - model.JobStatusDone -> statistics.
 //   - status model.JobStatusFailed -> error.
 func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
-	status := &model.RestoreJobStatus{
-		Status: job.status,
-	}
 
 	metrics := make([]*models.Metrics, 0, len(job.handlers))
+	stats := make([]*models.RestoreStats, 0, len(job.handlers))
 	for _, handler := range job.handlers {
-		stats := handler.GetStats()
-		status.ReadRecords += stats.GetReadRecords()
-		status.InsertedRecords += stats.GetRecordsInserted()
-		status.IndexCount += uint64(stats.GetSIndexes())
-		status.UDFCount += uint64(stats.GetUDFs())
-		status.FresherRecords += stats.GetRecordsFresher()
-		status.SkippedRecords += stats.GetRecordsSkipped()
-		status.ExistedRecords += stats.GetRecordsExisted()
-		status.ExpiredRecords += stats.GetRecordsExpired()
-		status.TotalBytes += stats.GetTotalBytesRead()
-		status.ErrorsInDoubt += stats.GetErrorsInDoubt()
 		metrics = append(metrics, handler.GetMetrics())
+		stats = append(stats, handler.GetStats())
 	}
 
-	done := status.InsertedRecords + status.SkippedRecords +
-		status.ExistedRecords + status.ExpiredRecords + status.FresherRecords
-	status.CurrentRestore = NewRunningJob(job.started, job.finished, done, job.totalRecords)
+	restoreStats := models.SumRestoreStats(stats...)
+
+	status := &model.RestoreJobStatus{
+		Status: job.status,
+		Error:  job.err,
+		Stats:  restoreStats,
+	}
+
+	doneRecords := restoreStats.GetReadRecords()
+
+	status.CurrentRestore = NewRunningJob(job.started, job.finished, doneRecords, job.totalRecords)
 	status.CurrentRestore.Metrics = models.SumMetrics(metrics...)
-
-	if job.err != nil {
-		status.Error = job.err.Error()
-	}
 
 	return status
 }
