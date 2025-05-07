@@ -49,18 +49,18 @@ func NewResultFromModel(m *model.RestoreJobStatus) *RestoreJobStatus {
 }
 
 func (r *RestoreJobStatus) fromModel(m *model.RestoreJobStatus) {
-	r.ReadRecords = m.Stats.GetReadRecords()
-	r.TotalBytes = m.Stats.GetTotalBytesRead()
-	r.ExpiredRecords = m.Stats.GetRecordsExpired()
-	r.SkippedRecords = m.Stats.GetRecordsSkipped()
-	r.IgnoredRecords = m.Stats.GetRecordsIgnored()
-	r.InsertedRecords = m.Stats.GetRecordsInserted()
-	r.ExistedRecords = m.Stats.GetRecordsExisted()
-	r.FresherRecords = m.Stats.GetRecordsFresher()
-	r.IndexCount = uint64(m.Stats.GetSIndexes())
-	r.UDFCount = uint64(m.Stats.GetUDFs())
+	r.ReadRecords = m.Counters.GetReadRecords()
+	r.TotalBytes = m.Counters.GetTotalBytesRead()
+	r.ExpiredRecords = m.Counters.GetRecordsExpired()
+	r.SkippedRecords = m.Counters.GetRecordsSkipped()
+	r.IgnoredRecords = m.Counters.GetRecordsIgnored()
+	r.InsertedRecords = m.Counters.GetRecordsInserted()
+	r.ExistedRecords = m.Counters.GetRecordsExisted()
+	r.FresherRecords = m.Counters.GetRecordsFresher()
+	r.IndexCount = uint64(m.Counters.GetSIndexes())
+	r.UDFCount = uint64(m.Counters.GetUDFs())
 	r.Status = JobStatus(m.Status)
-	r.ErrorsInDoubt = m.Stats.GetErrorsInDoubt()
+	r.ErrorsInDoubt = m.Counters.GetErrorsInDoubt()
 
 	if m.Error != nil {
 		r.Error = m.Error.Error()

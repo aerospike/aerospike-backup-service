@@ -29,7 +29,6 @@ func currentBackupStatus(handlers CancelableBackupHandler) *model.RunningJob {
 //   - model.JobStatusDone -> statistics.
 //   - status model.JobStatusFailed -> error.
 func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
-
 	metrics := make([]*models.Metrics, 0, len(job.handlers))
 	stats := make([]*models.RestoreStats, 0, len(job.handlers))
 	for _, handler := range job.handlers {
@@ -39,18 +38,16 @@ func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
 
 	restoreStats := models.SumRestoreStats(stats...)
 
-	status := &model.RestoreJobStatus{
-		Status: job.status,
-		Error:  job.err,
-		Stats:  restoreStats,
-	}
-
 	doneRecords := restoreStats.GetReadRecords()
+	runningJob := NewRunningJob(job.started, job.finished, doneRecords, job.totalRecords)
+	runningJob.Metrics = models.SumMetrics(metrics...)
 
-	status.CurrentRestore = NewRunningJob(job.started, job.finished, doneRecords, job.totalRecords)
-	status.CurrentRestore.Metrics = models.SumMetrics(metrics...)
-
-	return status
+	return &model.RestoreJobStatus{
+		Status:         job.status,
+		Error:          job.err,
+		Counters:       restoreStats,
+		CurrentRestore: runningJob,
+	}
 }
 
 // NewRunningJob created new RunningJob with calculated estimated time and percentage.

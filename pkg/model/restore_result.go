@@ -13,7 +13,7 @@ const (
 
 // RestoreJobStatus represents a restore job status.
 type RestoreJobStatus struct {
-	Stats          *models.RestoreStats
+	Counters       *models.RestoreStats
 	CurrentRestore *RunningJob
 	Status         JobStatus
 	Error          error
