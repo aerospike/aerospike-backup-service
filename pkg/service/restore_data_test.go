@@ -138,7 +138,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error, clientErr.Error())
+	assert.ErrorIs(t, jobStatus.Error, clientErr)
 }
 
 func TestRestoreFailsWithInvalidNamespace(t *testing.T) {

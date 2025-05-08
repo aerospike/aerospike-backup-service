@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -29,13 +30,20 @@ func TestService_GetAllFullBackups(t *testing.T) {
 			},
 			setupMock: func(m *MockBackupBackendService) {
 				m.On("GetBackups", mock.Anything, mock.Anything).
-					Return([]model.BackupDetails{{Key: "backup1", Routine: "routine1"}}, nil)
+					Return([]model.BackupDetails{{Key: "backup1", Routine: "routine1", BackupMetadata: model.BackupMetadata{
+						Created:  time.UnixMilli(1000),
+						Finished: time.UnixMilli(5000),
+					}}}, nil)
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string][]dto.BackupDetails{
 				"routine1": {
 					{
-						Key: "backup1",
+						Key:           "backup1",
+						CreatedMillis: 1000,
+						Created:       time.UnixMilli(1000),
+						Finished:      time.UnixMilli(5000),
+						Duration:      4,
 					},
 				},
 			},
