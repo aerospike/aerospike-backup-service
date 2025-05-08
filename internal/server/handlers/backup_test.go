@@ -31,8 +31,8 @@ func TestService_GetAllFullBackups(t *testing.T) {
 			setupMock: func(m *MockBackupBackendService) {
 				m.On("GetBackups", mock.Anything, mock.Anything).
 					Return([]model.BackupDetails{{Key: "backup1", Routine: "routine1", BackupMetadata: model.BackupMetadata{
-						Created:  time.UnixMilli(1000),
-						Finished: time.UnixMilli(5000),
+						Created:  time.UnixMilli(1000).In(time.UTC),
+						Finished: time.UnixMilli(5000).In(time.UTC),
 					}}}, nil)
 			},
 			expectedStatus: http.StatusOK,
@@ -41,9 +41,9 @@ func TestService_GetAllFullBackups(t *testing.T) {
 					{
 						Key:           "backup1",
 						CreatedMillis: 1000,
-						Created:       time.UnixMilli(1000),
-						Finished:      time.UnixMilli(5000),
-						Duration:      4,
+						Created:       time.UnixMilli(1000).In(time.UTC),
+						Finished:      time.UnixMilli(5000).In(time.UTC),
+						Duration:      4, //
 					},
 				},
 			},
