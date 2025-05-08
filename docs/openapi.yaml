@@ -1367,6 +1367,7 @@ components:
     dto.BackupDetails:
       description: BackupDetails contains information about a backup.
       example:
+        created-millis: 0
         file-count: 1
         created: 2023-03-20T14:50:00Z
         finished: 2023-03-20T14:50:00Z
@@ -1374,7 +1375,6 @@ components:
         byte-count: 2000
         duration: 6
         udf-count: 2
-        createdMillis: 0
         encryption: encryption
         namespace: testNamespace
         from: 2023-03-19T14:50:00Z
@@ -1396,7 +1396,7 @@ components:
           description: The backup time in the ISO 8601 format.
           example: 2023-03-20T14:50:00Z
           type: string
-        createdMillis:
+        created-millis:
           description: The backup time in epoch millis
           type: integer
         duration:

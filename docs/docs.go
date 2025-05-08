@@ -1739,7 +1739,7 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2023-03-20T14:50:00Z"
                 },
-                "createdMillis": {
+                "created-millis": {
                     "description": "The backup time in epoch millis",
                     "type": "integer"
                 },
