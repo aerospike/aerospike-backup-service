@@ -171,7 +171,8 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error.Error(), fmt.Sprintf("destination cluster does not have namespace %q", destinationNS))
+	assert.Contains(t, jobStatus.Error.Error(),
+		fmt.Sprintf("destination cluster does not have namespace %q", destinationNS))
 }
 
 func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
