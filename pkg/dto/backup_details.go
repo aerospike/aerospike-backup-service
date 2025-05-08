@@ -35,6 +35,10 @@ type BackupDetails struct {
 	Key string `yaml:"key" json:"key" example:"daily/backup/1707915600000/source-ns1"`
 	// Storage specifying the data location.
 	Storage *Storage `yaml:"storage" json:"storage"`
+	// Compression specifies the compression mode used for the backup (ZSTD or NONE)
+	Compression string `yaml:"compression" json:"compression"`
+	// Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256)
+	Encryption string `yaml:"encryption" json:"encryption"`
 }
 
 // NewBackupDetailsFromModel creates a new BackupDetails from a model.BackupDetails.
@@ -61,19 +65,7 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupCo
 	d.FileCount = m.FileCount
 	d.SecondaryIndexCount = m.SecondaryIndexCount
 	d.UDFCount = m.UDFCount
+	d.Encryption = m.Encryption
+	d.Compression = m.Compression
 	d.Storage = NewStorageFromModel(m.Storage, config)
-}
-
-func ConvertBackupDetailsMap(
-	modelMap map[string][]model.BackupDetails, config *model.BackupConfig,
-) map[string][]BackupDetails {
-	result := make(map[string][]BackupDetails, len(modelMap))
-	for key, modelSlice := range modelMap {
-		dtoSlice := make([]BackupDetails, len(modelSlice))
-		for i := range modelSlice {
-			dtoSlice[i] = *NewBackupDetailsFromModel(&modelSlice[i], config)
-		}
-		result[key] = dtoSlice
-	}
-	return result
 }

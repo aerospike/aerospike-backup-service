@@ -1375,8 +1375,10 @@ components:
         duration: 6
         udf-count: 2
         createdMillis: 0
+        encryption: encryption
         namespace: testNamespace
         from: 2023-03-19T14:50:00Z
+        compression: compression
         record-count: 100
         secondary-index-count: 5
         key: daily/backup/1707915600000/source-ns1
@@ -1386,6 +1388,10 @@ components:
           example: 2000
           format: int64
           type: integer
+        compression:
+          description: Compression specifies the compression mode used for the backup
+            (ZSTD or NONE)
+          type: string
         created:
           description: The backup time in the ISO 8601 format.
           example: 2023-03-20T14:50:00Z
@@ -1397,6 +1403,10 @@ components:
           description: Duration represents the elapsed time taken by the backup process
             in seconds.
           type: integer
+        encryption:
+          description: "Encryption specifies the encryption mode used for the backup\
+            \ (NONE, AES128, AES256)"
+          type: string
         file-count:
           description: The number of backup files created.
           example: 1

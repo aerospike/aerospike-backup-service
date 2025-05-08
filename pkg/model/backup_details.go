@@ -47,6 +47,10 @@ type BackupMetadata struct {
 	SecondaryIndexCount uint64 `yaml:"secondary-index-count" json:"secondary-index-count"`
 	// The number of UDF files backed up.
 	UDFCount uint64 `yaml:"udf-count" json:"udf-count"`
+	// Compression specifies the compression mode used for the backup (ZSTD or NONE)
+	Compression string
+	// Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256)
+	Encryption string
 }
 
 // NewMetadataFromBytes creates a new Metadata object from a byte slice.
@@ -62,7 +66,20 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 	return &metadata, nil
 }
 
-func NewMetadataFromStats(stats *models.BackupStats, namespace string, from, startTime time.Time) BackupMetadata {
+func NewBackupMetadata(
+	stats *models.BackupStats,
+	namespace string,
+	from, startTime time.Time,
+	backupPolicy *BackupPolicy,
+) BackupMetadata {
+	compression := "NONE"
+	if backupPolicy.CompressionPolicy != nil {
+		compression = backupPolicy.CompressionPolicy.Mode
+	}
+	encryption := "NONE"
+	if backupPolicy.EncryptionPolicy != nil {
+		encryption = backupPolicy.EncryptionPolicy.Mode
+	}
 	return BackupMetadata{
 		From:                from,
 		Created:             startTime,
@@ -73,5 +90,7 @@ func NewMetadataFromStats(stats *models.BackupStats, namespace string, from, sta
 		ByteCount:           stats.GetBytesWritten(),
 		SecondaryIndexCount: uint64(stats.GetSIndexes()),
 		UDFCount:            uint64(stats.GetUDFs()),
+		Compression:         compression,
+		Encryption:          encryption,
 	}
 }

@@ -1730,6 +1730,10 @@ const docTemplate = `{
                     "format": "int64",
                     "example": 2000
                 },
+                "compression": {
+                    "description": "Compression specifies the compression mode used for the backup (ZSTD or NONE)",
+                    "type": "string"
+                },
                 "created": {
                     "description": "The backup time in the ISO 8601 format.",
                     "type": "string",
@@ -1742,6 +1746,10 @@ const docTemplate = `{
                 "duration": {
                     "description": "Duration represents the elapsed time taken by the backup process in seconds.",
                     "type": "integer"
+                },
+                "encryption": {
+                    "description": "Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256)",
+                    "type": "string"
                 },
                 "file-count": {
                     "description": "The number of backup files created.",
