@@ -73,11 +73,11 @@ func NewBackupMetadata(
 	backupPolicy *BackupPolicy,
 ) BackupMetadata {
 	compression := "NONE"
-	if backupPolicy.CompressionPolicy != nil {
+	if backupPolicy != nil && backupPolicy.CompressionPolicy != nil {
 		compression = backupPolicy.CompressionPolicy.Mode
 	}
 	encryption := "NONE"
-	if backupPolicy.EncryptionPolicy != nil {
+	if backupPolicy != nil && backupPolicy.EncryptionPolicy != nil {
 		encryption = backupPolicy.EncryptionPolicy.Mode
 	}
 	return BackupMetadata{

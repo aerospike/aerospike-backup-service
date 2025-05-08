@@ -76,7 +76,9 @@ func (op *BackupNamespaceRunner) Run(
 			if backupType == jobTypeIncremental && stats.IsEmpty() {
 				return nil
 			}
-			metadata := model.NewBackupMetadata(stats, namespace, util.ValueOrZero(timeBounds.FromTime), startTime, backupRoutine.BackupPolicy)
+			metadata := model.NewBackupMetadata(
+				stats, namespace, util.ValueOrZero(timeBounds.FromTime), startTime, backupRoutine.BackupPolicy,
+			)
 			return op.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
 	)

@@ -171,7 +171,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error, fmt.Sprintf("destination cluster does not have namespace %q", destinationNS))
+	assert.Contains(t, jobStatus.Error.Error(), fmt.Sprintf("destination cluster does not have namespace %q", destinationNS))
 }
 
 func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
@@ -206,7 +206,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error, "backups from different times were found")
+	assert.Contains(t, jobStatus.Error.Error(), "backups from different times were found")
 }
 
 func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
@@ -238,7 +238,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error, "failed to start restore operation")
+	assert.Contains(t, jobStatus.Error.Error(), "failed to start restore operation")
 }
 
 func waitForRestore(
