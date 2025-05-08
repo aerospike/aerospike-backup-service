@@ -11,6 +11,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/reugn/go-quartz/quartz"
 )
 
 // RunningBackupsRegistry defines the interface for managing running backups and their statuses.
@@ -49,7 +50,7 @@ func makeRegistryKey(routineName string, job jobType) registryKey {
 // RunningBackupsRegistryImpl implements the RunningBackupsRegistry interface.
 type RunningBackupsRegistryImpl struct {
 	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
-	lastSuccessful *util.SafeMap[string, *model.LastBackupRun]
+	lastSuccessful *util.SafeMap[string, *model.BackupTime]
 
 	routineLocks  *util.SafeMap[string, *sync.RWMutex] // Protects individual routines during synchronization
 	ctx           context.Context
@@ -71,7 +72,7 @@ func NewRunningBackupsRegistry(
 		config:         config,
 		backupReader:   backupReader,
 		handlers:       util.NewSafeMap[registryKey, CancelableBackupHandler](),
-		lastSuccessful: util.NewSafeMap[string, *model.LastBackupRun](),
+		lastSuccessful: util.NewSafeMap[string, *model.BackupTime](),
 		routineLocks:   util.NewSafeMap[string, *sync.RWMutex](),
 		routineCancel:  util.NewSafeMap[string, context.CancelFunc](),
 	}
@@ -174,7 +175,7 @@ func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType
 		slog.String("job", string(job)),
 	)
 
-	updateLastTimestamp := func(lastBackupRun *model.LastBackupRun) {
+	updateLastTimestamp := func(lastBackupRun *model.BackupTime) {
 		switch job {
 		case jobTypeFull:
 			lastBackupRun.SetFullBackupTime(&timestamp)
@@ -186,7 +187,7 @@ func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType
 	r.lastSuccessful.ApplyOrCreate(
 		routineName,
 		updateLastTimestamp,
-		model.NewLastBackupRun(&timestamp, nil), // it was first backup, always full.
+		model.NewFullBackupTime(timestamp), // it was first backup, always full.
 	)
 }
 
@@ -208,14 +209,33 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 	lastRun, found := r.lastSuccessful.Load(routineName)
 	if !found {
 		slog.Info("No last backup info available", slog.String("routine", routineName))
-		lastRun = &model.LastBackupRun{}
+		lastRun = model.NewNoBackupTime()
 	}
 
 	return &model.RoutineState{
 		Full:        currentBackupStatus(fullBackupHandler),
 		Incremental: currentBackupStatus(incrBackupHandler),
 		LastRunTime: lastRun,
+		NextRunTime: nextBackup(routineName, r.config),
 	}
+}
+
+func nextBackup(routineName string, config *model.Config) *model.BackupTime {
+	// at this moment routine exists and is validated.
+	routine, _ := config.Routine(routineName)
+	nextFullBackup := nextTrigger(routine.IntervalCron)
+	if routine.IncrIntervalCron == "" {
+		return model.NewFullBackupTime(nextFullBackup)
+	}
+
+	nextIncrementalBackup := nextTrigger(routine.IncrIntervalCron)
+	return model.NewBackupTime(nextFullBackup, nextIncrementalBackup)
+}
+
+func nextTrigger(cron string) time.Time {
+	trigger, _ := quartz.NewCronTrigger(cron)
+	fireTime, _ := trigger.NextFireTime(time.Now().UnixNano())
+	return time.Unix(0, fireTime)
 }
 
 // GetRunningState returns statistics for all current backups.
@@ -248,14 +268,14 @@ func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
 func (r *RunningBackupsRegistryImpl) findLastRun(
 	ctx context.Context,
 	routineName string,
-) (*model.LastBackupRun, error) {
+) (*model.BackupTime, error) {
 	lastFullBackup, err := r.backupReader.GetBackups(ctx, NewFullBackupFilter(routineName).Last())
 	if err != nil {
 		return nil, fmt.Errorf("read last full backup failed: %w", err)
 	}
 
 	if len(lastFullBackup) == 0 {
-		return model.NewLastBackupRun(nil, nil), nil
+		return model.NewNoBackupTime(), nil
 	}
 	lastFullTime := lastFullBackup[0].Created
 
@@ -265,10 +285,9 @@ func (r *RunningBackupsRegistryImpl) findLastRun(
 		return nil, fmt.Errorf("read last incremental backup failed: %w", err)
 	}
 
-	var lastIncrTime *time.Time
 	if len(lastIncrBackup) > 0 {
-		lastIncrTime = &lastIncrBackup[0].Created
+		return model.NewBackupTime(lastFullTime, lastIncrBackup[0].Created), nil
 	}
 
-	return model.NewLastBackupRun(&lastFullTime, lastIncrTime), nil
+	return model.NewFullBackupTime(lastFullTime), nil
 }

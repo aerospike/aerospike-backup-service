@@ -1367,13 +1367,12 @@ components:
     dto.BackupDetails:
       description: BackupDetails contains information about a backup.
       example:
-        created-millis: 0
         file-count: 1
         created: 2023-03-20T14:50:00Z
         finished: 2023-03-20T14:50:00Z
         storage: "{}"
         byte-count: 2000
-        duration: 6
+        duration: 0
         udf-count: 2
         encryption: encryption
         namespace: testNamespace
@@ -1382,6 +1381,7 @@ components:
         record-count: 100
         secondary-index-count: 5
         key: daily/backup/1707915600000/source-ns1
+        timestamp: 6
       properties:
         byte-count:
           description: The size of the backup in bytes.
@@ -1396,9 +1396,6 @@ components:
           description: The backup time in the ISO 8601 format.
           example: 2023-03-20T14:50:00Z
           type: string
-        created-millis:
-          description: The backup time in epoch millis
-          type: integer
         duration:
           description: Duration represents the elapsed time taken by the backup process
             in seconds.
@@ -1444,6 +1441,9 @@ components:
           - $ref: '#/components/schemas/dto.Storage'
           description: Storage specifying the data location.
           type: object
+        timestamp:
+          description: The backup time in epoch millis
+          type: integer
         udf-count:
           description: The number of UDF files backed up.
           example: 2
@@ -2449,6 +2449,8 @@ components:
         last-incremental: last-incremental
         full: "{}"
         last-full: last-full
+        next-full: next-full
+        next-incremental: next-incremental
       properties:
         full:
           allOf:
@@ -2464,13 +2466,20 @@ components:
           type: object
         last-full:
           description: |-
-            LastFull: the timestamp of the last successful full backup.
+            LastFull: the time of the last successful full backup.
             A nil value indicates that there has never been a full backup.
           type: string
         last-incremental:
           description: |-
-            LastIncremental: the timestamp of the last successful incremental backup.
+            LastIncremental: the time of the last successful incremental backup.
             A nil value indicates that there has never been an incremental backup.
+          type: string
+        next-full:
+          description: "NextFull: the time of the next scheduled full backup."
+          type: string
+        next-incremental:
+          description: "NextIncremental: the time of the next scheduled incremental\
+            \ backup."
           type: string
       type: object
     dto.RunningJob:

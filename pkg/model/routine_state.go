@@ -13,7 +13,9 @@ type RoutineState struct {
 	// Incremental represents the state of an incremental backup. Nil if no incremental backup is running.
 	Incremental *RunningJob
 	// LastRunTime contains information about the latest run time for both full and incremental backups.
-	LastRunTime *LastBackupRun
+	LastRunTime *BackupTime
+	// NextRunTime specifies the scheduled next execution time for the routine's backup operations.
+	NextRunTime *BackupTime
 }
 
 // RunningJob tracks progress of currently running job.

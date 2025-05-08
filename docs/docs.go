@@ -1739,10 +1739,6 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2023-03-20T14:50:00Z"
                 },
-                "created-millis": {
-                    "description": "The backup time in epoch millis",
-                    "type": "integer"
-                },
                 "duration": {
                     "description": "Duration represents the elapsed time taken by the backup process in seconds.",
                     "type": "integer"
@@ -1796,6 +1792,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.Storage"
                         }
                     ]
+                },
+                "timestamp": {
+                    "description": "The backup time in epoch millis",
+                    "type": "integer"
                 },
                 "udf-count": {
                     "description": "The number of UDF files backed up.",
@@ -2806,11 +2806,19 @@ const docTemplate = `{
                     ]
                 },
                 "last-full": {
-                    "description": "LastFull: the timestamp of the last successful full backup.\nA nil value indicates that there has never been a full backup.",
+                    "description": "LastFull: the time of the last successful full backup.\nA nil value indicates that there has never been a full backup.",
                     "type": "string"
                 },
                 "last-incremental": {
-                    "description": "LastIncremental: the timestamp of the last successful incremental backup.\nA nil value indicates that there has never been an incremental backup.",
+                    "description": "LastIncremental: the time of the last successful incremental backup.\nA nil value indicates that there has never been an incremental backup.",
+                    "type": "string"
+                },
+                "next-full": {
+                    "description": "NextFull: the time of the next scheduled full backup.",
+                    "type": "string"
+                },
+                "next-incremental": {
+                    "description": "NextIncremental: the time of the next scheduled incremental backup.",
                     "type": "string"
                 }
             }

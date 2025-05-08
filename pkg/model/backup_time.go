@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// LastBackupRun stores the last run times for both full and incremental backups.
-type LastBackupRun struct {
+// BackupTime stores execution timestamps for both full and incremental backups.
+type BackupTime struct {
 	mu sync.RWMutex
 	// Last time the Full backup was performed.
 	full *time.Time
@@ -15,20 +15,30 @@ type LastBackupRun struct {
 	incremental *time.Time
 }
 
-func NewLastBackupRun(lastFullBackup *time.Time, lastIncrBackup *time.Time) *LastBackupRun {
-	return &LastBackupRun{
-		full:        lastFullBackup,
-		incremental: lastIncrBackup,
+func NewBackupTime(lastFullBackup time.Time, lastIncrBackup time.Time) *BackupTime {
+	return &BackupTime{
+		full:        &lastFullBackup,
+		incremental: &lastIncrBackup,
 	}
 }
 
-func (r *LastBackupRun) NoFullBackup() bool {
+func NewFullBackupTime(lastFullBackup time.Time) *BackupTime {
+	return &BackupTime{
+		full: &lastFullBackup,
+	}
+}
+
+func NewNoBackupTime() *BackupTime {
+	return &BackupTime{}
+}
+
+func (r *BackupTime) NoFullBackup() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.full == nil
 }
 
-func (r *LastBackupRun) LatestRun() *time.Time {
+func (r *BackupTime) LatestRun() *time.Time {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -38,31 +48,31 @@ func (r *LastBackupRun) LatestRun() *time.Time {
 	return r.full
 }
 
-func (r *LastBackupRun) SetFullBackupTime(t *time.Time) {
+func (r *BackupTime) SetFullBackupTime(t *time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.full = t
 }
 
-func (r *LastBackupRun) SetIncrementalBackupTime(t *time.Time) {
+func (r *BackupTime) SetIncrementalBackupTime(t *time.Time) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.incremental = t
 }
 
-func (r *LastBackupRun) FullBackupTime() *time.Time {
+func (r *BackupTime) FullBackupTime() *time.Time {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.full
 }
 
-func (r *LastBackupRun) IncrementalBackupTime() *time.Time {
+func (r *BackupTime) IncrementalBackupTime() *time.Time {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.incremental
 }
 
-func (r *LastBackupRun) String() string {
+func (r *BackupTime) String() string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
