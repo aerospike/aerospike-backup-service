@@ -12,7 +12,7 @@ import (
 )
 
 func TestRegisterAndCurrentStat(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, model.NewConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, initConfig())
 
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
@@ -33,7 +33,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 }
 
 func TestFinishFull(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, model.NewConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, initConfig())
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -53,7 +53,7 @@ func TestFinishFull(t *testing.T) {
 }
 
 func TestFinishIncremental(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, model.NewConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, initConfig())
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -75,10 +75,18 @@ func TestFinishIncremental(t *testing.T) {
 }
 
 func TestGetAllCurrentStats(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, model.NewConfig())
+	config := initConfig()
+	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, config)
 
 	routine1 := "routine1"
 	routine2 := "routine2"
+	_ = config.AddRoutine(routine1, &model.BackupRoutine{
+		IntervalCron: "@daily",
+	})
+	_ = config.AddRoutine(routine2, &model.BackupRoutine{
+		IntervalCron: "@daily",
+	})
+
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
 
@@ -107,7 +115,7 @@ func TestGetAllCurrentStats(t *testing.T) {
 }
 
 func TestCancel(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, model.NewConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, initConfig())
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -122,4 +130,12 @@ func TestCancel(t *testing.T) {
 	registry.register(routineName, jobTypeIncremental, handlerIncr)
 
 	registry.Cancel(routineName)
+}
+
+func initConfig() *model.Config {
+	config := model.NewConfig()
+	_ = config.AddRoutine(routineName, &model.BackupRoutine{
+		IntervalCron: "@daily",
+	})
+	return config
 }
