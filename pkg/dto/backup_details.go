@@ -12,7 +12,7 @@ type BackupDetails struct {
 	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created" json:"created" example:"2023-03-20T14:50:00Z"`
 	// The backup time in epoch millis.
-	Timestamp int64 `yaml:"timestamp" json:"timestamp" example:"1685458200000"`
+	Timestamp int64 `yaml:"timestamp" json:"timestamp" example:"1685458200000" format:"int64"`
 	// The time the backup operation completed.
 	Finished time.Time `yaml:"finished" json:"finished" example:"2023-03-20T14:50:00Z"`
 	// DurationSec represents the elapsed time taken by the backup process in seconds.

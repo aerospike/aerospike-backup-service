@@ -1381,7 +1381,7 @@ components:
         record-count: 100
         secondary-index-count: 5
         key: daily/backup/1707915600000/source-ns1
-        timestamp: 6
+        timestamp: 1685458200000
       properties:
         byte-count:
           description: The size of the backup in bytes.
@@ -1444,7 +1444,9 @@ components:
             the backup is stored.
           type: object
         timestamp:
-          description: The backup time in epoch millis
+          description: The backup time in epoch millis.
+          example: 1685458200000
+          format: int64
           type: integer
         udf-count:
           description: The number of UDF files backed up.

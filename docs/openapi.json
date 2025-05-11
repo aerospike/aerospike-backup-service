@@ -2005,7 +2005,9 @@
             "type" : "object"
           },
           "timestamp" : {
-            "description" : "The backup time in epoch millis",
+            "description" : "The backup time in epoch millis.",
+            "example" : 1685458200000,
+            "format" : "int64",
             "type" : "integer"
           },
           "udf-count" : {
