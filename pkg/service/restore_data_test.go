@@ -53,7 +53,7 @@ func TestRestoreOK(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusDone, jobStatus.Status)
-	assert.Equal(t, uint64(10), jobStatus.ReadRecords, "Read records count mismatch")
+	assert.Equal(t, uint64(10), jobStatus.Counters.GetReadRecords(), "Read records count mismatch")
 	assert.Empty(t, jobStatus.Error, "Expected no error in final job status")
 }
 
@@ -138,7 +138,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error, clientErr.Error())
+	assert.ErrorIs(t, jobStatus.Error, clientErr)
 }
 
 func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
@@ -171,7 +171,8 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error, fmt.Sprintf("destination cluster does not have namespace %q", destinationNS))
+	assert.Contains(t, jobStatus.Error.Error(),
+		fmt.Sprintf("destination cluster does not have namespace %q", destinationNS))
 }
 
 func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
@@ -206,7 +207,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error, "backups from different times were found")
+	assert.Contains(t, jobStatus.Error.Error(), "backups from different times were found")
 }
 
 func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
@@ -238,7 +239,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
-	assert.Contains(t, jobStatus.Error, "failed to start restore operation")
+	assert.Contains(t, jobStatus.Error.Error(), "failed to start restore operation")
 }
 
 func waitForRestore(

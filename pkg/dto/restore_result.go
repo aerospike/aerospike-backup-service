@@ -49,18 +49,21 @@ func NewResultFromModel(m *model.RestoreJobStatus) *RestoreJobStatus {
 }
 
 func (r *RestoreJobStatus) fromModel(m *model.RestoreJobStatus) {
-	r.ReadRecords = m.ReadRecords
-	r.TotalBytes = m.TotalBytes
-	r.ExpiredRecords = m.ExpiredRecords
-	r.SkippedRecords = m.SkippedRecords
-	r.IgnoredRecords = m.IgnoredRecords
-	r.InsertedRecords = m.InsertedRecords
-	r.ExistedRecords = m.ExistedRecords
-	r.FresherRecords = m.FresherRecords
-	r.IndexCount = m.IndexCount
-	r.UDFCount = m.UDFCount
+	r.ReadRecords = m.Counters.GetReadRecords()
+	r.TotalBytes = m.Counters.GetTotalBytesRead()
+	r.ExpiredRecords = m.Counters.GetRecordsExpired()
+	r.SkippedRecords = m.Counters.GetRecordsSkipped()
+	r.IgnoredRecords = m.Counters.GetRecordsIgnored()
+	r.InsertedRecords = m.Counters.GetRecordsInserted()
+	r.ExistedRecords = m.Counters.GetRecordsExisted()
+	r.FresherRecords = m.Counters.GetRecordsFresher()
+	r.IndexCount = uint64(m.Counters.GetSIndexes())
+	r.UDFCount = uint64(m.Counters.GetUDFs())
 	r.Status = JobStatus(m.Status)
-	r.Error = m.Error
-	r.ErrorsInDoubt = m.ErrorsInDoubt
+	r.ErrorsInDoubt = m.Counters.GetErrorsInDoubt()
+
+	if m.Error != nil {
+		r.Error = m.Error.Error()
+	}
 	r.CurrentRestore = NewRunningJobFromModel(m.CurrentRestore)
 }

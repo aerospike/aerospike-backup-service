@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/heads/v3/docs/config.schema.json
 aerospike-clusters:
   absDefaultCluster:
     seed-nodes:

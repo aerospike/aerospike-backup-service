@@ -13,12 +13,16 @@ type RoutineState struct {
 	Full *RunningJob `json:"full,omitempty"`
 	// Incremental represents the state of an incremental backup. Nil if no incremental backup is running.
 	Incremental *RunningJob `json:"incremental,omitempty"`
-	// LastFull: the timestamp of the last successful full backup.
+	// LastFull: the time of the last successful full backup.
 	// A nil value indicates that there has never been a full backup.
 	LastFull *time.Time `json:"last-full,omitempty"`
-	// LastIncremental: the timestamp of the last successful incremental backup.
+	// LastIncremental: the time of the last successful incremental backup.
 	// A nil value indicates that there has never been an incremental backup.
 	LastIncremental *time.Time `json:"last-incremental,omitempty"`
+	// NextFull: the time of the next scheduled full backup.
+	NextFull *time.Time `json:"next-full,omitempty"`
+	// NextIncremental: the time of the next scheduled incremental backup.
+	NextIncremental *time.Time `json:"next-incremental,omitempty"`
 }
 
 func NewRoutineStateFromModel(m *model.RoutineState) *RoutineState {
@@ -36,6 +40,8 @@ func (c *RoutineState) fromModel(m *model.RoutineState) {
 	c.Incremental = NewRunningJobFromModel(m.Incremental)
 	c.LastFull = m.LastRunTime.FullBackupTime()
 	c.LastIncremental = m.LastRunTime.IncrementalBackupTime()
+	c.NextFull = m.NextRunTime.FullBackupTime()
+	c.NextIncremental = m.NextRunTime.IncrementalBackupTime()
 }
 
 // RunningJob tracks progress of currently running job.

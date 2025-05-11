@@ -419,6 +419,9 @@ GET {{baseUrl}}/v1/backups/full
   "routine1": [
     {
       "created": "2024-01-01T12:00:00Z",
+      "timestamp": 1704110400000,
+      "finished": "2024-01-01T12:05:00Z",
+      "duration": 300,
       "from": "0001-01-01T00:00:00Z",
       "namespace": "source-ns1",
       "record-count": 42,
@@ -433,27 +436,9 @@ GET {{baseUrl}}/v1/backups/full
           "path": "backups",
           "s3-region": "eu-central-1"
         }
-      }
-    }
-  ],
-  "routine2": [
-    {
-      "created": "2024-01-01T12:00:00Z",
-      "from": "0001-01-01T00:00:00Z",
-      "namespace": "source-ns2",
-      "record-count": 1890,
-      "byte-count": 1234567890,
-      "file-count": 4,
-      "secondary-index-count": 0,
-      "udf-count": 0,
-      "key": "routine2/backup/1704110400000/source-ns2",
-      "storage": {
-        "s3-storage": {
-          "bucket": "as-backup-bucket",
-          "path": "backups",
-          "s3-region": "eu-central-1"
-        }
-      }
+      },
+      "compression": "ZSTD",
+      "encryption": "NONE"
     }
   ]
 }

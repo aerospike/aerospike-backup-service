@@ -194,7 +194,7 @@ func TestRunIncrementalBackup_SkipWhenNoFullBackup(t *testing.T) {
 	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
 
 	mockRegistry.EXPECT().GetRoutineState(routineName).Return(&model.RoutineState{
-		LastRunTime: model.NewLastBackupRun(nil, nil),
+		LastRunTime: model.NewNoBackupTime(),
 	}).AnyTimes()
 
 	o := newOrchestrator(routineName, config, NewBackupComponents(
@@ -237,7 +237,7 @@ func TestRunIncrementalBackup_SkipWhenFullBackupInProgress(t *testing.T) {
 
 	// Simulate an ongoing full backup
 	runningBackup := model.RoutineState{
-		LastRunTime: model.NewLastBackupRun(util.Ptr(time.Now().Add(-24*time.Hour)), nil),
+		LastRunTime: model.NewFullBackupTime(time.Now().Add(-24 * time.Hour)),
 		Full: &model.RunningJob{
 			StartTime: time.Now(),
 		},
@@ -266,7 +266,7 @@ func TestRunIncrementalBackup_SkipWhenFullBackupInProgress(t *testing.T) {
 func TestRunIncrementalBackup_Success(t *testing.T) {
 	routineState := &model.RoutineState{
 		// no full or incremental backups are running now
-		LastRunTime: model.NewLastBackupRun(util.Ptr(time.Now()), nil),
+		LastRunTime: model.NewFullBackupTime(time.Now()),
 	}
 
 	runIncrementalBackup(t, routineState, setupBaseConfig())
@@ -277,7 +277,7 @@ func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
 		Full: &model.RunningJob{
 			StartTime: time.Now(),
 		},
-		LastRunTime: model.NewLastBackupRun(util.Ptr(time.Now()), nil),
+		LastRunTime: model.NewFullBackupTime(time.Now()),
 	}
 
 	runIncrementalBackup(t, routineState, configWithConcurrentIncremental())
@@ -288,7 +288,7 @@ func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
 		Incremental: &model.RunningJob{
 			StartTime: time.Now(),
 		},
-		LastRunTime: model.NewLastBackupRun(util.Ptr(time.Now()), nil),
+		LastRunTime: model.NewFullBackupTime(time.Now()),
 	}
 
 	runIncrementalBackup(t, routineState, configWithConcurrentIncremental())

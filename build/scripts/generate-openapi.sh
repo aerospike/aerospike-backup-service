@@ -39,7 +39,6 @@ jq '{
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": .components.schemas["dto.Config"].properties,
-  "required": .components.schemas["dto.Config"].required,
   "components": {
     "schemas": ( .components.schemas | del(.["dto.Config"]) )
   }

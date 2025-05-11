@@ -1367,42 +1367,60 @@ components:
     dto.BackupDetails:
       description: BackupDetails contains information about a backup.
       example:
-        udf-count: 2
         file-count: 1
         created: 2023-03-20T14:50:00Z
+        finished: 2023-03-20T14:50:00Z
+        storage: "{}"
+        byte-count: 2000
+        duration: 0
+        udf-count: 2
+        encryption: encryption
         namespace: testNamespace
         from: 2023-03-19T14:50:00Z
-        storage:
-          azure-storage: "{}"
-          gcp-storage: "{}"
-          s3-storage: "{}"
-          local-storage: "{}"
+        compression: compression
         record-count: 100
         secondary-index-count: 5
-        byte-count: 2000
         key: daily/backup/1707915600000/source-ns1
+        timestamp: 6
       properties:
         byte-count:
           description: The size of the backup in bytes.
           example: 2000
           format: int64
           type: integer
+        compression:
+          description: Compression specifies the compression mode used for the backup
+            (ZSTD or NONE).
+          type: string
         created:
           description: The backup time in the ISO 8601 format.
           example: 2023-03-20T14:50:00Z
+          type: string
+        duration:
+          description: DurationSec represents the elapsed time taken by the backup
+            process in seconds.
+          type: integer
+        encryption:
+          description: "Encryption specifies the encryption mode used for the backup\
+            \ (NONE, AES128, AES256)."
           type: string
         file-count:
           description: The number of backup files created.
           example: 1
           format: int64
           type: integer
+        finished:
+          description: The time the backup operation completed.
+          example: 2023-03-20T14:50:00Z
+          type: string
         from:
           description: The lower time bound of backup entities in the ISO 8601 format
             (for incremental backups only).
           example: 2023-03-19T14:50:00Z
           type: string
         key:
-          description: The path to the backup files.
+          description: Key is the path to the backup files within the configured storage
+            location.
           example: daily/backup/1707915600000/source-ns1
           type: string
         namespace:
@@ -1420,7 +1438,14 @@ components:
           format: int64
           type: integer
         storage:
-          $ref: '#/components/schemas/dto.Storage'
+          allOf:
+          - $ref: '#/components/schemas/dto.Storage'
+          description: Storage specifies the details of the storage location where
+            the backup is stored.
+          type: object
+        timestamp:
+          description: The backup time in epoch millis
+          type: integer
         udf-count:
           description: The number of UDF files backed up.
           example: 2
@@ -2426,6 +2451,8 @@ components:
         last-incremental: last-incremental
         full: "{}"
         last-full: last-full
+        next-full: next-full
+        next-incremental: next-incremental
       properties:
         full:
           allOf:
@@ -2441,13 +2468,20 @@ components:
           type: object
         last-full:
           description: |-
-            LastFull: the timestamp of the last successful full backup.
+            LastFull: the time of the last successful full backup.
             A nil value indicates that there has never been a full backup.
           type: string
         last-incremental:
           description: |-
-            LastIncremental: the timestamp of the last successful incremental backup.
+            LastIncremental: the time of the last successful incremental backup.
             A nil value indicates that there has never been an incremental backup.
+          type: string
+        next-full:
+          description: "NextFull: the time of the next scheduled full backup."
+          type: string
+        next-incremental:
+          description: "NextIncremental: the time of the next scheduled incremental\
+            \ backup."
           type: string
       type: object
     dto.RunningJob:

@@ -8,10 +8,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	CompressNone = "NONE"
+	EncryptNone  = "NONE"
+)
+
 // BackupDetails contains information about a backup.
 type BackupDetails struct {
-	BackupMetadata
-	// The path to the backup files.
+	BackupMetadata // Backup metadata that is stored in metadata.yaml file
+
 	Key     string
 	Storage Storage
 	Routine string
@@ -31,6 +36,8 @@ func NewBackupDetails(md BackupMetadata, key string, storage Storage, routine st
 type BackupMetadata struct {
 	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created" json:"created"`
+	// The time the backup operation completed.
+	Finished time.Time `yaml:"finished" json:"finished"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups).
 	From time.Time `yaml:"from" json:"from"`
 	// The namespace of a backup.
@@ -45,6 +52,10 @@ type BackupMetadata struct {
 	SecondaryIndexCount uint64 `yaml:"secondary-index-count" json:"secondary-index-count"`
 	// The number of UDF files backed up.
 	UDFCount uint64 `yaml:"udf-count" json:"udf-count"`
+	// Compression specifies the compression mode used for the backup (ZSTD or NONE).
+	Compression string
+	// Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256).
+	Encryption string
 }
 
 // NewMetadataFromBytes creates a new Metadata object from a byte slice.
@@ -60,15 +71,31 @@ func NewMetadataFromBytes(data []byte) (*BackupMetadata, error) {
 	return &metadata, nil
 }
 
-func NewMetadataFromStats(stats *models.BackupStats, namespace string, from, now time.Time) BackupMetadata {
+func NewBackupMetadata(
+	stats *models.BackupStats,
+	namespace string,
+	from, startTime time.Time,
+	backupPolicy *BackupPolicy,
+) BackupMetadata {
+	compression := CompressNone
+	if backupPolicy != nil && backupPolicy.CompressionPolicy != nil {
+		compression = backupPolicy.CompressionPolicy.Mode
+	}
+	encryption := EncryptNone
+	if backupPolicy != nil && backupPolicy.EncryptionPolicy != nil {
+		encryption = backupPolicy.EncryptionPolicy.Mode
+	}
 	return BackupMetadata{
 		From:                from,
-		Created:             now,
+		Created:             startTime,
+		Finished:            time.Now(),
 		Namespace:           namespace,
 		RecordCount:         stats.GetReadRecords(),
 		FileCount:           stats.GetFileCount(),
 		ByteCount:           stats.GetBytesWritten(),
 		SecondaryIndexCount: uint64(stats.GetSIndexes()),
 		UDFCount:            uint64(stats.GetUDFs()),
+		Compression:         compression,
+		Encryption:          encryption,
 	}
 }

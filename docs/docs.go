@@ -1730,10 +1730,22 @@ const docTemplate = `{
                     "format": "int64",
                     "example": 2000
                 },
+                "compression": {
+                    "description": "Compression specifies the compression mode used for the backup (ZSTD or NONE).",
+                    "type": "string"
+                },
                 "created": {
                     "description": "The backup time in the ISO 8601 format.",
                     "type": "string",
                     "example": "2023-03-20T14:50:00Z"
+                },
+                "duration": {
+                    "description": "DurationSec represents the elapsed time taken by the backup process in seconds.",
+                    "type": "integer"
+                },
+                "encryption": {
+                    "description": "Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256).",
+                    "type": "string"
                 },
                 "file-count": {
                     "description": "The number of backup files created.",
@@ -1741,13 +1753,18 @@ const docTemplate = `{
                     "format": "int64",
                     "example": 1
                 },
+                "finished": {
+                    "description": "The time the backup operation completed.",
+                    "type": "string",
+                    "example": "2023-03-20T14:50:00Z"
+                },
                 "from": {
                     "description": "The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).",
                     "type": "string",
                     "example": "2023-03-19T14:50:00Z"
                 },
                 "key": {
-                    "description": "The path to the backup files.",
+                    "description": "Key is the path to the backup files within the configured storage location.",
                     "type": "string",
                     "example": "daily/backup/1707915600000/source-ns1"
                 },
@@ -1769,7 +1786,16 @@ const docTemplate = `{
                     "example": 5
                 },
                 "storage": {
-                    "$ref": "#/definitions/dto.Storage"
+                    "description": "Storage specifies the details of the storage location where the backup is stored.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.Storage"
+                        }
+                    ]
+                },
+                "timestamp": {
+                    "description": "The backup time in epoch millis",
+                    "type": "integer"
                 },
                 "udf-count": {
                     "description": "The number of UDF files backed up.",
@@ -2780,11 +2806,19 @@ const docTemplate = `{
                     ]
                 },
                 "last-full": {
-                    "description": "LastFull: the timestamp of the last successful full backup.\nA nil value indicates that there has never been a full backup.",
+                    "description": "LastFull: the time of the last successful full backup.\nA nil value indicates that there has never been a full backup.",
                     "type": "string"
                 },
                 "last-incremental": {
-                    "description": "LastIncremental: the timestamp of the last successful incremental backup.\nA nil value indicates that there has never been an incremental backup.",
+                    "description": "LastIncremental: the time of the last successful incremental backup.\nA nil value indicates that there has never been an incremental backup.",
+                    "type": "string"
+                },
+                "next-full": {
+                    "description": "NextFull: the time of the next scheduled full backup.",
+                    "type": "string"
+                },
+                "next-incremental": {
+                    "description": "NextIncremental: the time of the next scheduled incremental backup.",
                     "type": "string"
                 }
             }

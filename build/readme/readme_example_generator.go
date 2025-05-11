@@ -80,41 +80,29 @@ var jsonExamples = map[string]any{
 	"StorageResponse": allStorageTypes,
 	"FullBackupsResponse": map[string][]dto.BackupDetails{
 		"routine1": {{
-			BackupMetadata: dto.BackupMetadata{
-				Created:             time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
-				Namespace:           "source-ns1",
-				ByteCount:           480_000,
-				FileCount:           1,
-				UDFCount:            1,
-				RecordCount:         42,
-				SecondaryIndexCount: 5,
-			},
-			Key: "routine1/backup/1704110400000/source-ns1",
+			Created:             time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
+			Timestamp:           time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC).UnixMilli(),
+			Finished:            time.Date(2024, 01, 01, 12, 5, 0, 0, time.UTC),
+			DurationSec:         300,
+			From:                time.Time{},
+			Namespace:           "source-ns1",
+			RecordCount:         42,
+			ByteCount:           480_000,
+			FileCount:           1,
+			SecondaryIndexCount: 5,
+			UDFCount:            1,
+			Key:                 "routine1/backup/1704110400000/source-ns1",
 			Storage: &dto.Storage{
 				S3Storage: &dto.S3Storage{
 					Bucket:   "as-backup-bucket",
 					Path:     "backups",
 					S3Region: "eu-central-1",
 				},
-			}},
+			},
+			Compression: dto.CompressZSTD,
+			Encryption:  dto.EncryptNone,
 		},
-		"routine2": {{
-			BackupMetadata: dto.BackupMetadata{
-				Created:     time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
-				Namespace:   "source-ns2",
-				ByteCount:   1_234_567_890,
-				RecordCount: 1890,
-				FileCount:   4,
-			},
-			Key: "routine2/backup/1704110400000/source-ns2",
-			Storage: &dto.Storage{
-				S3Storage: &dto.S3Storage{
-					Bucket:   "as-backup-bucket",
-					Path:     "backups",
-					S3Region: "eu-central-1",
-				},
-			},
-		}},
+		},
 	},
 	"RestoreFullRequest": dto.RestoreRequest{
 		DestinationClusterConfig: dto.DestinationClusterConfig{
