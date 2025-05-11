@@ -44,5 +44,5 @@ func (h *CombinedBackupHandler) GetStats() *models.BackupStats {
 	return models.SumBackupStats(h.xdrHandler.GetStats(), h.scanHandler.GetStats())
 }
 func (h *CombinedBackupHandler) GetMetrics() *models.Metrics {
-	return h.scanHandler.GetMetrics()
+	return models.SumMetrics(h.xdrHandler.GetMetrics(), h.scanHandler.GetMetrics())
 }

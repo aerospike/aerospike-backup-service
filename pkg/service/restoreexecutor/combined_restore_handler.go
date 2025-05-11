@@ -39,5 +39,5 @@ func (h *CombinedRestoreHandler) GetStats() *models.RestoreStats {
 }
 
 func (h *CombinedRestoreHandler) GetMetrics() *models.Metrics {
-	return h.streamHandler.GetMetrics()
+	return models.SumMetrics(h.streamHandler.GetMetrics(), h.xdrHandler.GetMetrics())
 }
