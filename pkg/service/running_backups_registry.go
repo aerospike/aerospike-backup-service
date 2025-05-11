@@ -212,30 +212,56 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 		lastRun = model.NewNoBackupTime()
 	}
 
+	nextRunTime, err := nextBackup(routineName, r.config)
+	if err != nil {
+		slog.Warn("Could not calculate next fire time",
+			slog.String("routine", routineName), slog.Any("err", err))
+		nextRunTime = model.NewNoBackupTime()
+	}
+
 	return &model.RoutineState{
 		Full:        currentBackupStatus(fullBackupHandler),
 		Incremental: currentBackupStatus(incrBackupHandler),
 		LastRunTime: lastRun,
-		NextRunTime: nextBackup(routineName, r.config),
+		NextRunTime: nextRunTime,
 	}
 }
 
-func nextBackup(routineName string, config *model.Config) *model.BackupTime {
-	// at this moment routine exists and is validated.
-	routine, _ := config.Routine(routineName)
-	nextFullBackup := nextTrigger(routine.IntervalCron)
+func nextBackup(routineName string, config *model.Config) (*model.BackupTime, error) {
+	routine, ok := config.Routine(routineName)
+	if !ok {
+		return nil, fmt.Errorf("routine %q not found", routineName)
+	}
+
+	nextFullBackup, err := nextTrigger(routine.IntervalCron)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse full backup cron: %w", err)
+	}
+
 	if routine.IncrIntervalCron == "" {
-		return model.NewFullBackupTime(nextFullBackup)
+		return model.NewFullBackupTime(nextFullBackup), nil
 	}
 
-	nextIncrementalBackup := nextTrigger(routine.IncrIntervalCron)
-	return model.NewBackupTime(nextFullBackup, nextIncrementalBackup)
+	nextIncrementalBackup, err := nextTrigger(routine.IncrIntervalCron)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse incremental backup cron: %w", err)
+	}
+
+	return model.NewBackupTime(nextFullBackup, nextIncrementalBackup), nil
 }
 
-func nextTrigger(cron string) time.Time {
-	trigger, _ := quartz.NewCronTrigger(cron)
-	fireTime, _ := trigger.NextFireTime(time.Now().UnixNano())
-	return time.Unix(0, fireTime)
+func nextTrigger(cron string) (time.Time, error) {
+	trigger, err := quartz.NewCronTrigger(cron)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	fireTime, err := trigger.NextFireTime(time.Now().UnixNano())
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return time.Unix(0, fireTime), nil
 }
 
 // GetRunningState returns statistics for all current backups.
