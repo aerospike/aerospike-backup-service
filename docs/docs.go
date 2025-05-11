@@ -1794,8 +1794,10 @@ const docTemplate = `{
                     ]
                 },
                 "timestamp": {
-                    "description": "The backup time in epoch millis",
-                    "type": "integer"
+                    "description": "The backup time in epoch millis.",
+                    "type": "integer",
+                    "format": "int64",
+                    "example": 1685458200000
                 },
                 "udf-count": {
                     "description": "The number of UDF files backed up.",
