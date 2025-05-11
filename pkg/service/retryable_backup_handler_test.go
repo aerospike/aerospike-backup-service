@@ -12,8 +12,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 var retry = newRetryExecutor(models.RetryPolicy{
@@ -24,10 +24,13 @@ var retry = newRetryExecutor(models.RetryPolicy{
 
 func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	ctx := context.Background()
-	mockHandler := &mockBackupHandler{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	stats := models.NewBackupStats()
-	mockHandler.On("Wait", mock.Anything).Return(nil)
-	mockHandler.On("GetStats").Return(stats)
+	mockHandler.EXPECT().Wait(gomock.Any()).Return(nil)
+	mockHandler.EXPECT().GetStats().Return(stats)
 
 	successCount := 0
 	failureCount := 0
@@ -51,18 +54,21 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 0, failureCount)
 	assert.Equal(t, 1, successCount)
-	mockHandler.AssertExpectations(t)
+
 }
 
 func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	ctx := context.Background()
-	failedHandler := &mockBackupHandler{}
-	successHandler := &mockBackupHandler{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	failedHandler := backupexecutor.NewMockBackupHandler(ctrl)
+	successHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	stats := models.NewBackupStats()
 
-	failedHandler.On("Wait", mock.Anything).Return(errors.New("wait failed"))
-	successHandler.On("Wait", mock.Anything).Return(nil)
-	successHandler.On("GetStats").Return(stats)
+	failedHandler.EXPECT().Wait(gomock.Any()).Return(errors.New("wait failed"))
+	successHandler.EXPECT().Wait(gomock.Any()).Return(nil)
+	successHandler.EXPECT().GetStats().Return(stats)
 
 	attemptCount := 0
 	successCount := 0
@@ -91,19 +97,21 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, failureCount)
 	assert.Equal(t, 1, successCount)
-	failedHandler.AssertExpectations(t)
-	successHandler.AssertExpectations(t)
 }
 
 func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	mockHandler := &mockBackupHandler{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
 
 	waitCalled := make(chan struct{})
-	mockHandler.On("Wait", mock.Anything).Run(func(_ mock.Arguments) {
+	mockHandler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(_ context.Context) error {
 		close(waitCalled)
 		<-ctx.Done()
-	}).Return(context.Canceled)
+		return context.Canceled
+	})
 
 	successCount := 0
 	failureCount := 0
@@ -138,13 +146,15 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	assert.ErrorIs(t, err, context.Canceled)
 	assert.Equal(t, 0, failureCount)
 	assert.Equal(t, 0, successCount)
-	mockHandler.AssertExpectations(t)
 }
 
 func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	ctx := context.Background()
-	mockHandler := &mockBackupHandler{}
-	mockHandler.On("Wait", mock.Anything).Return(errors.New("wait failed"))
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
+	mockHandler.EXPECT().Wait(gomock.Any()).Return(errors.New("wait failed")).Times(3)
 
 	successCount := 0
 	failureCount := 0
@@ -169,7 +179,6 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	assert.Contains(t, err.Error(), "backup failed after 3 attempts")
 	assert.Equal(t, 3, failureCount)
 	assert.Equal(t, 0, successCount)
-	mockHandler.AssertExpectations(t)
 }
 
 func TestStartRetryableBackup_StartFails(t *testing.T) {
@@ -199,30 +208,22 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 	assert.Equal(t, 0, successCount)
 }
 
-type mockCancelBackupHandler struct {
-}
-
-func (m *mockCancelBackupHandler) GetMetrics() *models.Metrics {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (m *mockCancelBackupHandler) GetStats() *models.BackupStats {
-	panic("process should be cancelled before GetStats is called")
-}
-
-func (m *mockCancelBackupHandler) Wait(ctx context.Context) error {
-	select {
-	case <-time.After(1 * time.Second):
-		return fmt.Errorf("cancel was not called")
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
 func TestStartRetryableBackup_Cancel(t *testing.T) {
 	ctx := context.Background()
-	mockHandler := &mockCancelBackupHandler{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockHandler := backupexecutor.NewMockBackupHandler(ctrl)
+
+	// The handler should wait until context is done, then return context.Canceled
+	mockHandler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+		select {
+		case <-time.After(1 * time.Second):
+			return fmt.Errorf("cancel was not called")
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	})
 
 	successCount := 0
 	failureCount := 0
