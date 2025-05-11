@@ -8,6 +8,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	CompressNone = "NONE"
+	EncryptNone  = "NONE"
+)
+
 // BackupDetails contains information about a backup.
 type BackupDetails struct {
 	BackupMetadata // Backup metadata that is stored in metadata.yaml file
@@ -47,9 +52,9 @@ type BackupMetadata struct {
 	SecondaryIndexCount uint64 `yaml:"secondary-index-count" json:"secondary-index-count"`
 	// The number of UDF files backed up.
 	UDFCount uint64 `yaml:"udf-count" json:"udf-count"`
-	// Compression specifies the compression mode used for the backup (ZSTD or NONE)
+	// Compression specifies the compression mode used for the backup (ZSTD or NONE).
 	Compression string
-	// Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256)
+	// Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256).
 	Encryption string
 }
 
@@ -72,11 +77,11 @@ func NewBackupMetadata(
 	from, startTime time.Time,
 	backupPolicy *BackupPolicy,
 ) BackupMetadata {
-	compression := "NONE"
+	compression := CompressNone
 	if backupPolicy != nil && backupPolicy.CompressionPolicy != nil {
 		compression = backupPolicy.CompressionPolicy.Mode
 	}
-	encryption := "NONE"
+	encryption := EncryptNone
 	if backupPolicy != nil && backupPolicy.EncryptionPolicy != nil {
 		encryption = backupPolicy.EncryptionPolicy.Mode
 	}
