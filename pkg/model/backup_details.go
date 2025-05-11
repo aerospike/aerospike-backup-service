@@ -31,7 +31,7 @@ func NewBackupDetails(md BackupMetadata, key string, storage Storage, routine st
 type BackupMetadata struct {
 	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created" json:"created"`
-	// The time backup had finished.
+	// The time the backup operation completed.
 	Finished time.Time `yaml:"finished" json:"finished"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups).
 	From time.Time `yaml:"from" json:"from"`

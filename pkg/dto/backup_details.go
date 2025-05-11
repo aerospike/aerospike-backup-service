@@ -13,10 +13,10 @@ type BackupDetails struct {
 	Created time.Time `yaml:"created" json:"created" example:"2023-03-20T14:50:00Z"`
 	// The backup time in epoch millis
 	Timestamp int64 `yaml:"timestamp" json:"timestamp"`
-	// The time backup had finished.
+	// The time the backup operation completed.
 	Finished time.Time `yaml:"finished" json:"finished" example:"2023-03-20T14:50:00Z"`
-	// Duration represents the elapsed time taken by the backup process in seconds.
-	Duration uint `yaml:"duration" json:"duration"`
+	// DurationSec represents the elapsed time taken by the backup process in seconds.
+	DurationSec uint `yaml:"duration" json:"duration"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).
 	From time.Time `yaml:"from,omitempty" json:"from,omitempty" example:"2023-03-19T14:50:00Z"`
 	// The namespace of a backup.
@@ -31,13 +31,13 @@ type BackupDetails struct {
 	SecondaryIndexCount uint64 `yaml:"secondary-index-count" json:"secondary-index-count" format:"int64" example:"5"`
 	// The number of UDF files backed up.
 	UDFCount uint64 `yaml:"udf-count" json:"udf-count" format:"int64" example:"2"`
-	// The path to the backup files in storage.
+	// Key is the path to the backup files within the configured storage location.
 	Key string `yaml:"key" json:"key" example:"daily/backup/1707915600000/source-ns1"`
-	// Storage specifying the data location.
+	// Storage specifies the details of the storage location where the backup is stored.
 	Storage *Storage `yaml:"storage" json:"storage"`
-	// Compression specifies the compression mode used for the backup (ZSTD or NONE)
+	// Compression specifies the compression mode used for the backup (ZSTD or NONE).
 	Compression string `yaml:"compression" json:"compression"`
-	// Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256)
+	// Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256).
 	Encryption string `yaml:"encryption" json:"encryption"`
 }
 
@@ -57,7 +57,7 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupCo
 	d.Created = m.Created
 	d.Timestamp = m.Created.UnixMilli()
 	d.Finished = m.Finished
-	d.Duration = uint(m.Finished.Sub(d.Created) / time.Second)
+	d.DurationSec = uint(m.Finished.Sub(d.Created) / time.Second)
 	d.From = m.From
 	d.Namespace = m.Namespace
 	d.RecordCount = m.RecordCount

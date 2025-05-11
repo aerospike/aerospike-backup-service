@@ -83,7 +83,7 @@ var jsonExamples = map[string]any{
 			Created:             time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 			Timestamp:           time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC).UnixMilli(),
 			Finished:            time.Date(2024, 01, 01, 12, 5, 0, 0, time.UTC),
-			Duration:            300,
+			DurationSec:         300,
 			From:                time.Time{},
 			Namespace:           "source-ns1",
 			RecordCount:         42,

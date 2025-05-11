@@ -1390,19 +1390,19 @@ components:
           type: integer
         compression:
           description: Compression specifies the compression mode used for the backup
-            (ZSTD or NONE)
+            (ZSTD or NONE).
           type: string
         created:
           description: The backup time in the ISO 8601 format.
           example: 2023-03-20T14:50:00Z
           type: string
         duration:
-          description: Duration represents the elapsed time taken by the backup process
-            in seconds.
+          description: DurationSec represents the elapsed time taken by the backup
+            process in seconds.
           type: integer
         encryption:
           description: "Encryption specifies the encryption mode used for the backup\
-            \ (NONE, AES128, AES256)"
+            \ (NONE, AES128, AES256)."
           type: string
         file-count:
           description: The number of backup files created.
@@ -1410,7 +1410,7 @@ components:
           format: int64
           type: integer
         finished:
-          description: The time backup had finished.
+          description: The time the backup operation completed.
           example: 2023-03-20T14:50:00Z
           type: string
         from:
@@ -1419,7 +1419,8 @@ components:
           example: 2023-03-19T14:50:00Z
           type: string
         key:
-          description: The path to the backup files in storage.
+          description: Key is the path to the backup files within the configured storage
+            location.
           example: daily/backup/1707915600000/source-ns1
           type: string
         namespace:
@@ -1439,7 +1440,8 @@ components:
         storage:
           allOf:
           - $ref: '#/components/schemas/dto.Storage'
-          description: Storage specifying the data location.
+          description: Storage specifies the details of the storage location where
+            the backup is stored.
           type: object
         timestamp:
           description: The backup time in epoch millis

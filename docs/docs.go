@@ -1731,7 +1731,7 @@ const docTemplate = `{
                     "example": 2000
                 },
                 "compression": {
-                    "description": "Compression specifies the compression mode used for the backup (ZSTD or NONE)",
+                    "description": "Compression specifies the compression mode used for the backup (ZSTD or NONE).",
                     "type": "string"
                 },
                 "created": {
@@ -1740,11 +1740,11 @@ const docTemplate = `{
                     "example": "2023-03-20T14:50:00Z"
                 },
                 "duration": {
-                    "description": "Duration represents the elapsed time taken by the backup process in seconds.",
+                    "description": "DurationSec represents the elapsed time taken by the backup process in seconds.",
                     "type": "integer"
                 },
                 "encryption": {
-                    "description": "Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256)",
+                    "description": "Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256).",
                     "type": "string"
                 },
                 "file-count": {
@@ -1754,7 +1754,7 @@ const docTemplate = `{
                     "example": 1
                 },
                 "finished": {
-                    "description": "The time backup had finished.",
+                    "description": "The time the backup operation completed.",
                     "type": "string",
                     "example": "2023-03-20T14:50:00Z"
                 },
@@ -1764,7 +1764,7 @@ const docTemplate = `{
                     "example": "2023-03-19T14:50:00Z"
                 },
                 "key": {
-                    "description": "The path to the backup files in storage.",
+                    "description": "Key is the path to the backup files within the configured storage location.",
                     "type": "string",
                     "example": "daily/backup/1707915600000/source-ns1"
                 },
@@ -1786,7 +1786,7 @@ const docTemplate = `{
                     "example": 5
                 },
                 "storage": {
-                    "description": "Storage specifying the data location.",
+                    "description": "Storage specifies the details of the storage location where the backup is stored.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.Storage"
