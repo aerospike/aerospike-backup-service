@@ -1896,14 +1896,6 @@ const docTemplate = `{
                 "with-cluster-configuration": {
                     "description": "Back up Aerospike cluster configuration. Default: false.",
                     "type": "boolean"
-                },
-                "xdr": {
-                    "description": "XDR configuration for MRT backups.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.XDRConfig"
-                        }
-                    ]
                 }
             }
         },
@@ -2368,20 +2360,6 @@ const docTemplate = `{
                 },
                 "records-per-second": {
                     "description": "RecordsPerSecond indicates the number of records processed per second.",
-                    "type": "integer"
-                }
-            }
-        },
-        "dto.PortRange": {
-            "description": "PortRange is a range of ports (inclusive).",
-            "type": "object",
-            "properties": {
-                "end": {
-                    "description": "End port of the range (inclusive).",
-                    "type": "integer"
-                },
-                "start": {
-                    "description": "Start port of the range (inclusive).",
                     "type": "integer"
                 }
             }
@@ -3105,68 +3083,6 @@ const docTemplate = `{
                     "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
                     "type": "string",
                     "example": "TLSv1.2"
-                }
-            }
-        },
-        "dto.XDRConfig": {
-            "description": "XDRConfig represents the configuration for XDR backups.",
-            "type": "object",
-            "properties": {
-                "ack-queue-size": {
-                    "description": "AckQueueSize is the size of the acknowledgment queue used by the TCP server for XDR.",
-                    "type": "integer",
-                    "example": 100
-                },
-                "info-retry-policy": {
-                    "description": "InfoRetryPolicy defines the retry policy for info commands.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.RetryPolicy"
-                        }
-                    ]
-                },
-                "local-host": {
-                    "description": "LocalHost is the local address where the source cluster will send data.",
-                    "type": "string",
-                    "example": "127.0.0.1"
-                },
-                "max-conns": {
-                    "description": "MaxConns specifies the maximum number of allowed simultaneous connections to the server.\nUsed by the TCP server for XDR.",
-                    "type": "integer",
-                    "example": 100
-                },
-                "polling-period": {
-                    "description": "PollingPeriod specifies how often a backup client will send info commands to check Aerospike cluster stats.\nUsed to measure recovery state and lag.",
-                    "type": "integer",
-                    "example": 60000
-                },
-                "port-range": {
-                    "description": "PortRange limits the range of ports that the TCP server for XDR will listen on (optional).",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.PortRange"
-                        }
-                    ]
-                },
-                "read-timeout": {
-                    "description": "ReadTimeout is the timeout in milliseconds for TCP read operations.\nUsed by the TCP server for XDR.",
-                    "type": "integer",
-                    "example": 5000
-                },
-                "result-queue-size": {
-                    "description": "ResultQueueSize is the size of the results queue used by the TCP server for XDR.",
-                    "type": "integer",
-                    "example": 1000
-                },
-                "start-timeout": {
-                    "description": "StartTimeout is the timeout for starting the TCP server for XDR.\nIf the TCP server does not receive any data within this timeout period, it will shut down.\nThis situation can occur if the LocalAddress and LocalPort options are misconfigured.",
-                    "type": "integer",
-                    "example": 3000
-                },
-                "write-timeout": {
-                    "description": "WriteTimeout is the timeout in milliseconds for TCP write operations.\nUsed by the TCP server for XDR.",
-                    "type": "integer",
-                    "example": 5000
                 }
             }
         }
