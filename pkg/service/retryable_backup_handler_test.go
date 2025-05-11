@@ -54,7 +54,6 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 0, failureCount)
 	assert.Equal(t, 1, successCount)
-
 }
 
 func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
