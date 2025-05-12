@@ -10,17 +10,19 @@ import (
 // @Description RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
 	// The number of concurrent record readers from backup files.
+	// This value determines the number of threads the backup service will use.
+	// The optimal value depends on hardware and network configuration.
+	// Default: 8.
 	Parallel *int `json:"parallel,omitempty" example:"8"`
 	// Do not restore any record data (metadata or bin data).
-	// By default, record data, secondary index definitions, and UDF modules
-	// will be restored.
+	// By default, record data, secondary index definitions, and UDF modules will be restored.
 	NoRecords *bool `json:"no-records,omitempty"`
 	// Do not restore any secondary index definitions.
 	NoIndexes *bool `json:"no-indexes,omitempty"`
 	// Do not restore any UDF modules.
 	NoUdfs *bool `json:"no-udfs,omitempty"`
 	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-	// Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
+	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
 	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
@@ -31,9 +33,10 @@ type RestorePolicy struct {
 	// The max number of outstanding async record batch write calls at a time.
 	MaxAsyncBatches *int `json:"max-async-batches,omitempty" example:"32"`
 	// The max allowed number of records per an async batch write call.
-	// Default is 128 with batch writes enabled, or 16 without batch writes.
+	// Only applicable when using batch writes.
+	// Default: 128.
 	BatchSize *int `json:"batch-size,omitempty" example:"128"`
-	// Namespace details for the restore operation.
+	// Namespace optionally specifies an alternative namespace name for the restore operation.
 	// By default, the data is restored to the namespace from which it was taken.
 	Namespace *RestoreNamespace `json:"namespace,omitempty"`
 	// The sets to restore (optional, an empty list implies restoring all sets).
@@ -57,12 +60,12 @@ type RestorePolicy struct {
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions
 	// per second.
 	Tps *int `json:"tps,omitempty" example:"4000"`
-	// Encryption details.
+	// Encryption details (algorithm and key). Default is not encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
-	// Compression details.
+	// Compression details (algorithm). Default is no compression.
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
 	// Configuration of retries for each restore write operation.
-	// If nil, default retry policy will be used.
+	// If nil, the default policy is used (5 retries with a one-minute delay between attempts).
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Amount of extra time-to-live to add to records that have expirable void-times.
 	// Must be set in seconds.

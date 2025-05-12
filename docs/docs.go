@@ -1815,12 +1815,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bandwidth": {
-                    "description": "Throttles backup write operations to the backup file(s) to not exceed the given\nbandwidth in MiB/s.",
+                    "description": "Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.\nDefault is no limit.",
                     "type": "integer",
                     "example": 10000
                 },
                 "compression": {
-                    "description": "Compression details.",
+                    "description": "Compression details (algorithm and mode). Default is no compression.\nEnabling compression reduces storage and network usage, but increases CPU usage during the backup.\nDepending on the system configuration, compression may improve or degrade overall performance.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.CompressionPolicy"
@@ -1832,7 +1832,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "encryption": {
-                    "description": "Encryption details.",
+                    "description": "Encryption details (algorithm and key). Default is not encryption.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.EncryptionPolicy"
@@ -1840,7 +1840,7 @@ const docTemplate = `{
                     ]
                 },
                 "file-limit": {
-                    "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created.",
+                    "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created. Default is 250 MB.",
                     "type": "integer",
                     "example": 1024
                 },
@@ -1850,8 +1850,7 @@ const docTemplate = `{
                 },
                 "no-records": {
                     "description": "Do not back up any record data (metadata or bin data). Default: false.",
-                    "type": "boolean",
-                    "default": false
+                    "type": "boolean"
                 },
                 "no-udfs": {
                     "description": "Do not back up any UDF modules. Default: false.",
@@ -1863,12 +1862,12 @@ const docTemplate = `{
                     "example": 1
                 },
                 "records-per-second": {
-                    "description": "Limit total returned records per second (RPS). If RPS is zero (the default),\nthe records-per-second limit is not applied.",
+                    "description": "Limits the number of records returned per second (RPS). Default is no limit.",
                     "type": "integer",
                     "example": 1000
                 },
                 "retention": {
-                    "description": "Specifies how long to retain full and incremental backups.\nCleanup runs asynchronously after each successful full backup, never deleting backups preemptively.\nUsers should ensure storage can hold one additional full backup beyond the configured retention.",
+                    "description": "Specifies how long to retain full and incremental backups.\nCleanup runs asynchronously after each successful full backup, never deleting backups preemptively.\nEnsure storage capacity for at least one extra full backup beyond the retention configuration.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetentionPolicy"
@@ -1921,9 +1920,8 @@ const docTemplate = `{
             ],
             "properties": {
                 "backup-policy": {
-                    "description": "The name of the corresponding backup policy.",
-                    "type": "string",
-                    "example": "keepAllPolicy"
+                    "description": "The name of the corresponding backup policy (optional).",
+                    "type": "string"
                 },
                 "bin-list": {
                     "description": "The list of backup bin names (optional, an empty list implies backing up all bins).",
@@ -1936,7 +1934,7 @@ const docTemplate = `{
                     ]
                 },
                 "disabled": {
-                    "description": "Whether this routine is disabled and should not run.",
+                    "description": "Whether this routine is disabled and should not run. Default: false.",
                     "type": "boolean"
                 },
                 "incr-interval-cron": {
@@ -1945,7 +1943,7 @@ const docTemplate = `{
                     "example": "*/10 * * * * *"
                 },
                 "interval-cron": {
-                    "description": "The interval for full backup as a cron expression string.",
+                    "description": "The interval for full backup as a cron expression string.\nCron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format",
                     "type": "string",
                     "example": "0 0 * * * *"
                 },
@@ -1960,24 +1958,18 @@ const docTemplate = `{
                     ]
                 },
                 "node-list": {
-                    "description": "NodeList contains a list of nodes to back up.\nBackup the given cluster nodes only.\nIf it is set, ParallelNodes automatically set to true.\nThis argument is mutually exclusive to partition-list/AfterDigest arguments.",
+                    "description": "NodeList specifies which Aerospike nodes to include in the backup.\nOnly the listed nodes will be backed up.\nEach node can be specified as one of the following:\n- \"\u003cIP address\u003e:\u003cport\u003e\"\n- \"\u003chostname\u003e:\u003cport\u003e\"\n- \"\u003cnode ID\u003e\"\nTo obtain node identifiers, run: ` + "`" + `asinfo -v \"service:\"` + "`" + `.\nIf using IP addresses or hostnames, ensure they match the values returned by the ` + "`" + `asinfo` + "`" + ` command.\nThis field is mutually exclusive with partition-list.\nParallelism is determined by the number of listed nodes unless ` + "`" + `BackupPolicy.Parallel` + "`" + ` is set to a lower value.",
                     "type": "array",
                     "items": {
                         "type": "string"
-                    },
-                    "example": [
-                        "\u003cIP addr 1\u003e:\u003cport 1\u003e[",
-                        "\u003cIP addr 2\u003e:\u003cport 2\u003e[",
-                        "...]]"
-                    ]
+                    }
                 },
                 "partition-list": {
-                    "description": "Back up list of partition filters. Partition filters can be ranges or individual partitions.\nRange is a pair of partition number and count.\nExample: \"0,100-50\" will backup partitions 0 and 50 partitions starting 100.\nDefault number of partitions to back up: 0 to 4095: all partitions.",
-                    "type": "string",
-                    "example": "0-1000"
+                    "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"\u003cstart\u003e,\u003ccount\u003e\" (e.g., \"100,50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nThis field is mutually exclusive with node-list.",
+                    "type": "string"
                 },
                 "prefer-racks": {
-                    "description": "A list of Aerospike Server rack IDs to prefer when reading records for a backup.",
+                    "description": "PreferRacks specifies a list of Aerospike Server rack IDs to prioritize when reading records during backup.\nThis is optional and can be used to optimize for rack-aware deployments.",
                     "type": "array",
                     "items": {
                         "type": "integer"
@@ -2495,12 +2487,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "destination": {
-                    "description": "Destination namespace name.",
+                    "description": "Name of the destination namespace to restore data into.",
                     "type": "string",
                     "example": "destination-ns"
                 },
                 "source": {
-                    "description": "Original namespace name.",
+                    "description": "Original namespace name.\nThis field is required as a safeguard to ensure intentional namespace remapping.",
                     "type": "string",
                     "example": "source-ns"
                 }
@@ -2516,7 +2508,7 @@ const docTemplate = `{
                     "example": 50000
                 },
                 "batch-size": {
-                    "description": "The max allowed number of records per an async batch write call.\nDefault is 128 with batch writes enabled, or 16 without batch writes.",
+                    "description": "The max allowed number of records per an async batch write call.\nOnly applicable when using batch writes.\nDefault: 128.",
                     "type": "integer",
                     "example": 128
                 },
@@ -2532,7 +2524,7 @@ const docTemplate = `{
                     ]
                 },
                 "compression": {
-                    "description": "Compression details.",
+                    "description": "Compression details (algorithm). Default is no compression.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.CompressionPolicy"
@@ -2544,7 +2536,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "encryption": {
-                    "description": "Encryption details.",
+                    "description": "Encryption details (algorithm and key). Default is not encryption.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.EncryptionPolicy"
@@ -2562,7 +2554,7 @@ const docTemplate = `{
                     "example": 32
                 },
                 "namespace": {
-                    "description": "Namespace details for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
+                    "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RestoreNamespace"
@@ -2578,7 +2570,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "no-records": {
-                    "description": "Do not restore any record data (metadata or bin data).\nBy default, record data, secondary index definitions, and UDF modules\nwill be restored.",
+                    "description": "Do not restore any record data (metadata or bin data).\nBy default, record data, secondary index definitions, and UDF modules will be restored.",
                     "type": "boolean"
                 },
                 "no-udfs": {
@@ -2586,7 +2578,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "parallel": {
-                    "description": "The number of concurrent record readers from backup files.",
+                    "description": "The number of concurrent record readers from backup files.\nThis value determines the number of threads the backup service will use.\nThe optimal value depends on hardware and network configuration.\nDefault: 8.",
                     "type": "integer",
                     "example": 8
                 },
@@ -2595,7 +2587,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "retry-policy": {
-                    "description": "Configuration of retries for each restore write operation.\nIf nil, default retry policy will be used.",
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -2614,7 +2606,7 @@ const docTemplate = `{
                     ]
                 },
                 "socket-timeout": {
-                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "example": 1000
                 },

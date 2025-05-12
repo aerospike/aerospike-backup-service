@@ -47,6 +47,8 @@ type BackupPolicy struct {
 	// Encryption details (algorithm and key). Default is not encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details (algorithm and mode). Default is no compression.
+	// Enabling compression reduces storage and network usage, but increases CPU usage during the backup.
+	// Depending on the system configuration, compression may improve or degrade overall performance.
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
 	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.

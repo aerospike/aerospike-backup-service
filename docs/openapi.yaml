@@ -1459,7 +1459,7 @@ components:
     dto.BackupPolicy:
       description: BackupPolicy represents a scheduled backup policy.
       example:
-        no-records: false
+        no-records: true
         no-udfs: true
         concurrent-incremental: true
         bandwidth: 10000
@@ -1479,14 +1479,17 @@ components:
       properties:
         bandwidth:
           description: |-
-            Throttles backup write operations to the backup file(s) to not exceed the given
-            bandwidth in MiB/s.
+            Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.
+            Default is no limit.
           example: 10000
           type: integer
         compression:
           allOf:
           - $ref: '#/components/schemas/dto.CompressionPolicy'
-          description: Compression details.
+          description: |-
+            Compression details (algorithm and mode). Default is no compression.
+            Enabling compression reduces storage and network usage, but increases CPU usage during the backup.
+            Depending on the system configuration, compression may improve or degrade overall performance.
           type: object
         concurrent-incremental:
           description: |-
@@ -1496,19 +1499,18 @@ components:
         encryption:
           allOf:
           - $ref: '#/components/schemas/dto.EncryptionPolicy'
-          description: Encryption details.
+          description: Encryption details (algorithm and key). Default is not encryption.
           type: object
         file-limit:
           description: |-
             File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
-            a new backup file will be created.
+            a new backup file will be created. Default is 250 MB.
           example: 1024
           type: integer
         no-indexes:
           description: "Do not back up any secondary index definitions. Default: false."
           type: boolean
         no-records:
-          default: false
           description: "Do not back up any record data (metadata or bin data). Default:\
             \ false."
           type: boolean
@@ -1523,9 +1525,8 @@ components:
           example: 1
           type: integer
         records-per-second:
-          description: |-
-            Limit total returned records per second (RPS). If RPS is zero (the default),
-            the records-per-second limit is not applied.
+          description: Limits the number of records returned per second (RPS). Default
+            is no limit.
           example: 1000
           type: integer
         retention:
@@ -1534,7 +1535,7 @@ components:
           description: |-
             Specifies how long to retain full and incremental backups.
             Cleanup runs asynchronously after each successful full backup, never deleting backups preemptively.
-            Users should ensure storage can hold one additional full backup beyond the configured retention.
+            Ensure storage capacity for at least one extra full backup beyond the retention configuration.
           type: object
         retry-policy:
           allOf:
@@ -1581,22 +1582,20 @@ components:
         set-list:
         - set1
         interval-cron: 0 0 * * * *
-        backup-policy: keepAllPolicy
+        backup-policy: backup-policy
         node-list:
-        - "<IP addr 1>:<port 1>["
-        - "<IP addr 2>:<port 2>["
-        - "...]]"
+        - node-list
+        - node-list
         prefer-racks:
         - 0
         source-cluster: testCluster
         disabled: true
-        partition-list: 0-1000
+        partition-list: partition-list
         namespaces:
         - source-ns1
       properties:
         backup-policy:
-          description: The name of the corresponding backup policy.
-          example: keepAllPolicy
+          description: The name of the corresponding backup policy (optional).
           type: string
         bin-list:
           description: "The list of backup bin names (optional, an empty list implies\
@@ -1607,7 +1606,8 @@ components:
             type: string
           type: array
         disabled:
-          description: Whether this routine is disabled and should not run.
+          description: "Whether this routine is disabled and should not run. Default:\
+            \ false."
           type: boolean
         incr-interval-cron:
           description: The interval for incremental backup as a cron expression string
@@ -1615,7 +1615,9 @@ components:
           example: '*/10 * * * * *'
           type: string
         interval-cron:
-          description: The interval for full backup as a cron expression string.
+          description: |-
+            The interval for full backup as a cron expression string.
+            Cron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format
           example: 0 0 * * * *
           type: string
         namespaces:
@@ -1628,28 +1630,33 @@ components:
           type: array
         node-list:
           description: |-
-            NodeList contains a list of nodes to back up.
-            Backup the given cluster nodes only.
-            If it is set, ParallelNodes automatically set to true.
-            This argument is mutually exclusive to partition-list/AfterDigest arguments.
-          example:
-          - "<IP addr 1>:<port 1>["
-          - "<IP addr 2>:<port 2>["
-          - "...]]"
+            NodeList specifies which Aerospike nodes to include in the backup.
+            Only the listed nodes will be backed up.
+            Each node can be specified as one of the following:
+            - "<IP address>:<port>"
+            - "<hostname>:<port>"
+            - "<node ID>"
+            To obtain node identifiers, run: `asinfo -v "service:"`.
+            If using IP addresses or hostnames, ensure they match the values returned by the `asinfo` command.
+            This field is mutually exclusive with partition-list.
+            Parallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.
           items:
             type: string
           type: array
         partition-list:
           description: |-
-            Back up list of partition filters. Partition filters can be ranges or individual partitions.
-            Range is a pair of partition number and count.
-            Example: "0,100-50" will backup partitions 0 and 50 partitions starting 100.
-            Default number of partitions to back up: 0 to 4095: all partitions.
-          example: 0-1000
+            PartitionList defines the list of partitions to include in the backup.
+            The format supports individual partitions or ranges.
+            - A range is specified as "<start>,<count>" (e.g., "100,50" backs up 50 partitions starting from 100).
+            - A single partition is specified as a number (e.g., "0").
+            Multiple entries can be comma-separated: e.g., "0,100,200,300,400,500".
+            By default, all partitions (0 to 4095) are backed up.
+            This field is mutually exclusive with node-list.
           type: string
         prefer-racks:
-          description: A list of Aerospike Server rack IDs to prefer when reading
-            records for a backup.
+          description: |-
+            PreferRacks specifies a list of Aerospike Server rack IDs to prioritize when reading records during backup.
+            This is optional and can be used to optimize for rack-aware deployments.
           example:
           - 0
           items:
@@ -1719,7 +1726,7 @@ components:
       example:
         backup-policies:
           key:
-            no-records: false
+            no-records: true
             no-udfs: true
             concurrent-incremental: true
             bandwidth: 10000
@@ -1778,16 +1785,15 @@ components:
             set-list:
             - set1
             interval-cron: 0 0 * * * *
-            backup-policy: keepAllPolicy
+            backup-policy: backup-policy
             node-list:
-            - "<IP addr 1>:<port 1>["
-            - "<IP addr 2>:<port 2>["
-            - "...]]"
+            - node-list
+            - node-list
             prefer-racks:
             - 0
             source-cluster: testCluster
             disabled: true
-            partition-list: 0-1000
+            partition-list: partition-list
             namespaces:
             - source-ns1
       properties:
@@ -2170,11 +2176,13 @@ components:
         restore operation.
       properties:
         destination:
-          description: Destination namespace name.
+          description: Name of the destination namespace to restore data into.
           example: destination-ns
           type: string
         source:
-          description: Original namespace name.
+          description: |-
+            Original namespace name.
+            This field is required as a safeguard to ensure intentional namespace remapping.
           example: source-ns
           type: string
       required:
@@ -2192,7 +2200,8 @@ components:
         batch-size:
           description: |-
             The max allowed number of records per an async batch write call.
-            Default is 128 with batch writes enabled, or 16 without batch writes.
+            Only applicable when using batch writes.
+            Default: 128.
           example: 128
           type: integer
         bin-list:
@@ -2207,7 +2216,7 @@ components:
         compression:
           allOf:
           - $ref: '#/components/schemas/dto.CompressionPolicy'
-          description: Compression details.
+          description: Compression details (algorithm). Default is no compression.
           type: object
         disable-batch-writes:
           description: |-
@@ -2217,7 +2226,7 @@ components:
         encryption:
           allOf:
           - $ref: '#/components/schemas/dto.EncryptionPolicy'
-          description: Encryption details.
+          description: Encryption details (algorithm and key). Default is not encryption.
           type: object
         extra-ttl:
           description: |-
@@ -2234,7 +2243,7 @@ components:
           allOf:
           - $ref: '#/components/schemas/dto.RestoreNamespace'
           description: |-
-            Namespace details for the restore operation.
+            Namespace optionally specifies an alternative namespace name for the restore operation.
             By default, the data is restored to the namespace from which it was taken.
           type: object
         no-generation:
@@ -2249,14 +2258,17 @@ components:
         no-records:
           description: |-
             Do not restore any record data (metadata or bin data).
-            By default, record data, secondary index definitions, and UDF modules
-            will be restored.
+            By default, record data, secondary index definitions, and UDF modules will be restored.
           type: boolean
         no-udfs:
           description: Do not restore any UDF modules.
           type: boolean
         parallel:
-          description: The number of concurrent record readers from backup files.
+          description: |-
+            The number of concurrent record readers from backup files.
+            This value determines the number of threads the backup service will use.
+            The optimal value depends on hardware and network configuration.
+            Default: 8.
           example: 8
           type: integer
         replace:
@@ -2270,7 +2282,7 @@ components:
           - $ref: '#/components/schemas/dto.RetryPolicy'
           description: |-
             Configuration of retries for each restore write operation.
-            If nil, default retry policy will be used.
+            If nil, the default policy is used (5 retries with a one-minute delay between attempts).
           type: object
         set-list:
           description: "The sets to restore (optional, an empty list implies restoring\
@@ -2284,7 +2296,7 @@ components:
         socket-timeout:
           description: |-
             Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.
-            Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
+            Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
             If both are 0, there is no socket idle time limit.
           example: 1000
           type: integer
