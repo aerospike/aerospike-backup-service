@@ -89,6 +89,7 @@ func makeBackupConfig(
 
 	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
 	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)
+	config.SecretAgentConfig = backupRoutine.SecretAgent.ToSecretAgentConfig()
 
 	config.PipelinesMode = pipeline.ModeParallel
 	config.MetricsEnabled = true
