@@ -7,7 +7,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -41,25 +40,6 @@ func (m *mockClientManager) GetClient(cluster *model.AerospikeCluster) (*backup.
 
 func (m *mockClientManager) Close(client *backup.Client) {
 	m.Called(client)
-}
-
-type mockBackupHandler struct {
-	mock.Mock
-}
-
-func (m *mockBackupHandler) GetMetrics() *models.Metrics {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (m *mockBackupHandler) GetStats() *models.BackupStats {
-	args := m.Called()
-	return args.Get(0).(*models.BackupStats)
-}
-
-func (m *mockBackupHandler) Wait(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
 }
 
 type mockClusterConfigWriter struct {
