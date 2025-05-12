@@ -18,8 +18,8 @@ import (
 //
 //nolint:lll
 type BackupRoutine struct {
-	// The name of the corresponding backup policy.
-	BackupPolicy string `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty" example:"keepAllPolicy"`
+	// The name of the corresponding backup policy (optional).
+	BackupPolicy string `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty"`
 	// The name of the corresponding source cluster.
 	SourceCluster string `yaml:"source-cluster,omitempty" json:"source-cluster,omitempty" example:"testCluster" validate:"required"`
 	// The name of the corresponding storage provider configuration.
@@ -27,6 +27,7 @@ type BackupRoutine struct {
 	// The Secret Agent configuration for the routine (optional).
 	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty" example:"sa"`
 	// The interval for full backup as a cron expression string.
+	// Cron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron" example:"0 0 * * * *" validate:"required"`
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string `yaml:"incr-interval-cron,omitempty" json:"incr-interval-cron,omitempty" example:"*/10 * * * * *"`
@@ -36,19 +37,32 @@ type BackupRoutine struct {
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1"`
 	// The list of backup bin names (optional, an empty list implies backing up all bins).
 	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty" example:"dataBin"`
-	// A list of Aerospike Server rack IDs to prefer when reading records for a backup.
+	// PreferRacks specifies a list of Aerospike Server rack IDs to prioritize when reading records during backup.
+	// This is optional and can be used to optimize for rack-aware deployments.
 	PreferRacks []int `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty" example:"0"`
-	// Back up list of partition filters. Partition filters can be ranges or individual partitions.
-	// Range is a pair of partition number and count.
-	// Example: "0,100-50" will backup partitions 0 and 50 partitions starting 100.
-	// Default number of partitions to back up: 0 to 4095: all partitions.
-	PartitionList string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" example:"0-1000"`
-	// NodeList contains a list of nodes to back up.
-	// Backup the given cluster nodes only.
-	// If it is set, ParallelNodes automatically set to true.
-	// This argument is mutually exclusive to partition-list/AfterDigest arguments.
-	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty" example:"<IP addr 1>:<port 1>[,<IP addr 2>:<port 2>[,...]]"`
-	// Whether this routine is disabled and should not run.
+
+	// PartitionList defines the list of partitions to include in the backup.
+	// The format supports individual partitions or ranges.
+	// - A range is specified as "<start>,<count>" (e.g., "100,50" backs up 50 partitions starting from 100).
+	// - A single partition is specified as a number (e.g., "0").
+	// Multiple entries can be comma-separated: e.g., "0,100,200,300,400,500".
+	// By default, all partitions (0 to 4095) are backed up.
+	// This field is mutually exclusive with node-list.
+	PartitionList string `yaml:"partition-list,omitempty" json:"partition-list,omitempty"`
+
+	// NodeList specifies which Aerospike nodes to include in the backup.
+	// Only the listed nodes will be backed up.
+	// Each node can be specified as one of the following:
+	// - "<IP address>:<port>"
+	// - "<hostname>:<port>"
+	// - "<node ID>"
+	// To obtain node identifiers, run: `asinfo -v "service:"`.
+	// If using IP addresses or hostnames, ensure they match the values returned by the `asinfo` command.
+	// This field is mutually exclusive with partition-list.
+	// Parallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.
+	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty"`
+
+	// Whether this routine is disabled and should not run. Default: false.
 	Disabled bool `json:"disabled,omitempty" yaml:"disabled,omitempty"`
 }
 
