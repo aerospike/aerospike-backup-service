@@ -1833,7 +1833,7 @@
             "type" : "object"
           },
           "label" : {
-            "description" : "The cluster name.",
+            "description" : "The cluster name. Optional: used only in logs and error messages.",
             "example" : "testCluster",
             "type" : "string"
           },
@@ -1861,6 +1861,7 @@
             "type" : "boolean"
           }
         },
+        "required" : [ "seed-nodes" ],
         "type" : "object"
       },
       "dto.AzureStorage" : {
@@ -3115,6 +3116,8 @@
           "port" : {
             "description" : "The port of the node.",
             "example" : 3000,
+            "maximum" : 65535,
+            "minimum" : 1,
             "type" : "integer"
           },
           "tls-name" : {

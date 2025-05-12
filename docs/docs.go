@@ -1600,6 +1600,9 @@ const docTemplate = `{
         "dto.AerospikeCluster": {
             "description": "AerospikeCluster represents the configuration for an Aerospike cluster for backup.",
             "type": "object",
+            "required": [
+                "seed-nodes"
+            ],
             "properties": {
                 "conn-timeout": {
                     "description": "The connection timeout in milliseconds.",
@@ -1615,7 +1618,7 @@ const docTemplate = `{
                     ]
                 },
                 "label": {
-                    "description": "The cluster name.",
+                    "description": "The cluster name. Optional: used only in logs and error messages.",
                     "type": "string",
                     "example": "testCluster"
                 },
@@ -3015,6 +3018,8 @@ const docTemplate = `{
                 "port": {
                     "description": "The port of the node.",
                     "type": "integer",
+                    "maximum": 65535,
+                    "minimum": 1,
                     "example": 3000
                 },
                 "tls-name": {

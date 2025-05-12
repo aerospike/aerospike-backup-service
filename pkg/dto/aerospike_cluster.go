@@ -14,10 +14,10 @@ import (
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 // @Description AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 type AerospikeCluster struct {
-	// The cluster name.
+	// The cluster name. Optional: used only in logs and error messages.
 	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster"`
 	// The seed nodes details.
-	SeedNodes []SeedNode `yaml:"seed-nodes,omitempty" json:"seed-nodes,omitempty"`
+	SeedNodes []SeedNode `yaml:"seed-nodes,omitempty" json:"seed-nodes,omitempty" validate:"required"`
 	// The connection timeout in milliseconds.
 	ConnTimeout *int64 `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty" example:"5000"`
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
@@ -27,7 +27,7 @@ type AerospikeCluster struct {
 	// The cluster TLS configuration.
 	TLS *TLS `yaml:"tls,omitempty" json:"tls,omitempty"`
 	// Specifies the maximum number of parallel scans per the cluster.
-	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100" validate:"optional"`
+	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100"`
 }
 
 // Validate validates the Aerospike cluster entity.
@@ -242,9 +242,9 @@ type SeedNode struct {
 	// The host name of the node.
 	HostName string `yaml:"host-name,omitempty" json:"host-name,omitempty" example:"localhost" validate:"required"`
 	// The port of the node.
-	Port Port `yaml:"port,omitempty" json:"port,omitempty" example:"3000" validate:"required"`
+	Port Port `yaml:"port,omitempty" json:"port,omitempty" example:"3000" validate:"required,min=1,max=65535"`
 	// TLS certificate name used for secure connections (if enabled).
-	TLSName string `yaml:"tls-name,omitempty" json:"tls-name,omitempty" example:"certName" validate:"optional"`
+	TLSName string `yaml:"tls-name,omitempty" json:"tls-name,omitempty" example:"certName"`
 }
 
 // Validate validates the SeedNode entity.

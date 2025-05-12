@@ -1277,7 +1277,7 @@ components:
           description: The authentication details to the Aerospike cluster.
           type: object
         label:
-          description: The cluster name.
+          description: "The cluster name. Optional: used only in logs and error messages."
           example: testCluster
           type: string
         max-parallel-scans:
@@ -1298,6 +1298,8 @@ components:
           description: Whether should use "services-alternate" instead of "services"
             in info request during cluster tending.
           type: boolean
+      required:
+      - seed-nodes
       type: object
     dto.AzureStorage:
       properties:
@@ -2662,6 +2664,8 @@ components:
         port:
           description: The port of the node.
           example: 3000
+          maximum: 65535
+          minimum: 1
           type: integer
         tls-name:
           description: TLS certificate name used for secure connections (if enabled).
