@@ -13,7 +13,7 @@ type RestoreNamespace struct {
 	// Original namespace name.
 	// This field is required as a safeguard to ensure intentional namespace remapping.
 	Source *string `json:"source,omitempty" example:"source-ns" validate:"required"`
-	// Destination Name of the destination namespace to restore data into.
+	// Name of the destination namespace to restore data into.
 	Destination *string `json:"destination,omitempty" example:"destination-ns" validate:"required"`
 }
 
