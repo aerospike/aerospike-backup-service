@@ -166,7 +166,6 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	require.NotNil(t, compressionPolicy)
 	assert.Equal(t, "ZSTD", compressionPolicy.Mode)
 	assert.Equal(t, 3, compressionPolicy.Level)
-
 }
 
 func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {
