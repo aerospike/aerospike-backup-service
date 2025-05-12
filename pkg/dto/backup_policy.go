@@ -26,7 +26,7 @@ type BackupPolicy struct {
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Specifies how long to retain full and incremental backups.
 	// Cleanup runs asynchronously after each successful full backup, never deleting backups preemptively.
-	// Users should ensure storage can hold one additional full backup beyond the configured retention.
+	// Ensure storage capacity for at least one extra full backup beyond the retention configuration.
 	RetentionPolicy *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty"`
 	// Do not back up any record data (metadata or bin data). Default: false.
 	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty"`
@@ -36,18 +36,17 @@ type BackupPolicy struct {
 	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty"`
 	// Back up Aerospike cluster configuration. Default: false.
 	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty"`
-	// Throttles backup write operations to the backup file(s) to not exceed the given
-	// bandwidth in MiB/s.
+	// Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.
+	// Default is no limit.
 	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
-	// Limit total returned records per second (RPS). If RPS is zero (the default),
-	// the records-per-second limit is not applied.
+	// Limits the number of records returned per second (RPS). Default is no limit.
 	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000"`
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
-	// a new backup file will be created.
+	// a new backup file will be created. Default is 250 MB.
 	FileLimit *int `yaml:"file-limit,omitempty" json:"file-limit,omitempty" example:"1024"`
-	// Encryption details.
+	// Encryption details (algorithm and key). Default is not encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
-	// Compression details.
+	// Compression details (algorithm and mode). Default is no compression.
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
 	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.
@@ -58,7 +57,7 @@ type BackupPolicy struct {
 	XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
-	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty"` //nolint:lll
+	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty"`
 }
 
 // NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.
