@@ -1850,14 +1850,15 @@ const docTemplate = `{
                 },
                 "no-records": {
                     "description": "Do not back up any record data (metadata or bin data). Default: false.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "no-udfs": {
                     "description": "Do not back up any UDF modules. Default: false.",
                     "type": "boolean"
                 },
                 "parallel": {
-                    "description": "Maximum number of scan calls to run in parallel.",
+                    "description": "Maximum number of scan calls to run in parallel. This value determines the number of threads\nthe backup service will use. The optimal value depends on hardware and network configuration.\nDefault: 8.",
                     "type": "integer",
                     "example": 1
                 },
@@ -1867,7 +1868,7 @@ const docTemplate = `{
                     "example": 1000
                 },
                 "retention": {
-                    "description": "Specifies how long to retain full and incremental backups.",
+                    "description": "Specifies how long to retain full and incremental backups.\nCleanup runs asynchronously after each successful full backup, never deleting backups preemptively.\nUsers should ensure storage can hold one additional full backup beyond the configured retention.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetentionPolicy"
@@ -1875,7 +1876,7 @@ const docTemplate = `{
                     ]
                 },
                 "retry-policy": {
-                    "description": "RetryPolicy defines the configuration for retry attempts in case of failures.\nIf nil, default policy is used.",
+                    "description": "RetryPolicy defines the configuration for database scan retry attempts in case of failures.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.RetryPolicy"
@@ -1887,7 +1888,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "socket-timeout": {
-                    "description": "Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "description": "Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
                     "example": 1000
                 },

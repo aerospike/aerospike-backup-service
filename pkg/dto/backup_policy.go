@@ -12,17 +12,21 @@ import (
 // BackupPolicy represents a scheduled backup policy.
 // @Description BackupPolicy represents a scheduled backup policy.
 type BackupPolicy struct {
-	// Maximum number of scan calls to run in parallel.
+	// Maximum number of scan calls to run in parallel. This value determines the number of threads
+	// the backup service will use. The optimal value depends on hardware and network configuration.
+	// Default: 8.
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
-	// Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
+	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
 	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
 	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`
-	// RetryPolicy defines the configuration for retry attempts in case of failures.
-	// If nil, default policy is used.
+	// RetryPolicy defines the configuration for database scan retry attempts in case of failures.
+	// If nil, the default policy is used (5 retries with a one-minute delay between attempts).
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Specifies how long to retain full and incremental backups.
+	// Cleanup runs asynchronously after each successful full backup, never deleting backups preemptively.
+	// Users should ensure storage can hold one additional full backup beyond the configured retention.
 	RetentionPolicy *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty"`
 	// Do not back up any record data (metadata or bin data). Default: false.
 	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty"`
