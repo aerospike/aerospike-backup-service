@@ -46,6 +46,7 @@ type BackupPolicy struct {
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
 	Sealed *bool
 	// XDR configuration for MRT backups.
+	// Commented out in dto.BackupPolicy, will always be nil.
 	XDRConfig *XDRConfig
 	// Allows incremental backups to run concurrently.
 	ConcurrentIncremental *bool
