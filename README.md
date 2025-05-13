@@ -33,14 +33,68 @@ under [releases](https://github.com/aerospike/aerospike-backup-service/releases)
 
 ## User guide
 
-### Entities
+### Configuration
+
+Configuration file example:
+
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.1.0/docs/config.schema.json
+
+aerospike-clusters:
+  abs-cluster: # <--- Custom cluster name
+    seed-nodes:
+      - host-name: "localhost"
+        port: 3000
+    credentials:
+      user: "tester"
+      password: "secret:asbackup:psw" # Password will be fetched from the secret agent
+      secret-agent-name: secret-agent  # <--- Refers to secret-agents
+
+secret-agents:
+  secret-agent: # <--- Custom secret agent name
+    address: localhost
+    port: 5000
+    connection-type: tcp
+
+storage:
+  s3: # <--- Custom storage name
+    s3-storage: # Storage type; can be one of "local-storage", "s3-storage", "azure-storage", "gcp-storage"
+      path: backups
+      bucket: as-backup-bucket
+      s3-region: eu-central-1
+      min-part-size: 50_000_000 # Upload chunk size in bytes (May affect performance)
+
+backup-policies:
+  dailyBackupPolicy: # <--- Custom policy name
+    parallel: 8 # Parallelism level (May affect performance)
+    file-limit: 1000 # Max backup file size in MB (May affect performance)
+    compression: # Backup files will be compressed before uploading (May affect performance)
+      mode: ZSTD
+      level: 1
+    retention:
+      full: 10 # Retain 10 full backups
+      incremental: 5 # Retain incremental backups for the 5 latest full backups
+
+backup-routines:
+  dailyLocalBackupRoutine: # <--- Custom routine name
+    interval-cron: "@daily" # Full backup will be triggered daily at midnight
+    incr-interval-cron: "0 */2 * * * *" # Incremental backups every 2 hours
+    source-cluster: abs-cluster         # <--- Refers to aerospike-clusters
+    storage: s3                         # <--- Refers to storage
+    backup-policy: dailyBackupPolicy    # <--- Refers to backup-policies
+ ```
+
+Several configuration fields in the YAML file are marked with “May affect performance” 
+These settings (such as parallel, file-limit, min-part-size, and compression) 
+can have a significant impact on backup throughput. 
+We recommend experimenting with different values in your environment to find the optimal balance.
 
 Each entity defined in the API specification has endpoints for reading and writing backup configurations at general or
 granular levels.
 
 For specifics and example values, see the [OpenAPI docs](https://aerospike.github.io/aerospike-backup-service/).
 
-#### Configuration
+#### Configuration with API
 
 The endpoints defined within the configuration section allow users to view or modify the configuration file.
 Endpoints ending with /config enable reading and modifying the entire file at once, while endpoints like
