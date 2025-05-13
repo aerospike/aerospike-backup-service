@@ -146,6 +146,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	assert.Nil(t, config.ModAfter)
 	assert.NotNil(t, config.ScanPolicy)
 	assert.Equal(t, 100, config.ScanPolicy.MaxRetries)
+	assert.Equal(t, config.MetricsEnabled, true)
 
 	assert.NotNil(t, config.SecretAgentConfig)
 	assert.Equal(t, *config.SecretAgentConfig.Address, "localhost")
