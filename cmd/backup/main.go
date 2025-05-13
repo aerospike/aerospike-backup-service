@@ -44,7 +44,7 @@ func run() int {
 	}
 
 	rootCmd := &cobra.Command{
-		Use:     "Use the following properties for service configuration",
+		Use:     "aerospike-backup-service",
 		Short:   "Aerospike Backup Service",
 		Version: backup.Version,
 		PreRunE: validateFlags,

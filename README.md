@@ -113,13 +113,13 @@ only on full backups.
 Aerospike Backup Service
 
 Usage:
-  Use the following properties for service configuration [flags]
+  aerospike-backup-service [flags]
 
 Flags:
   -c, --config string   configuration file path/URL
-  -h, --help            help for Use
+  -h, --help            help for aerospike-backup-service
   -r, --remote          use remote config file
-  -v, --version         version for Use
+  -v, --version         version for aerospike-backup-service
 ```
 
 Set the configuration file path with `-c`.
@@ -692,7 +692,8 @@ It specifies the amount of extra time-to-live (TTL) to add to records that have 
 The credential object has a new optional `secret-agent` property that points to a secret agent, one of those listed in
 the `secret-agents` configuration parameter.
 Secret agent is responsible for storing secrets like passwords and TLS certificates.
-`The password` field can contain either the password itself (recommended only for testing), or a path pointing to the password in the Aerospike Secret Agent (starts with `secrets:`).
+`The password` field can contain either the password itself (recommended only for testing), or a path pointing to the
+password in the Aerospike Secret Agent (starts with `secrets:`).
 
 The fields `password` and `password-path` are mutually exclusive.
 
