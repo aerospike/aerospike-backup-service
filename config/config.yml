@@ -104,13 +104,13 @@ backup-policies:
     no-udfs: true
     retention:
       full: 10
-  xdrBackup:
-    parallel: 8
-    retention:
-      full: 10
-      incremental: 10
-    xdr:
-      local-host: "localhost"
+#  xdrBackup:
+#    parallel: 8
+#    retention:
+#      full: 10
+#      incremental: 10
+#    xdr:
+#      local-host: "localhost"
 backup-routines:
   localStorageRemoveFiles:
     interval-cron: "@yearly"
@@ -280,13 +280,13 @@ backup-routines:
     namespaces:
       - source-ns20
     disabled: true
-  xdrBackup:
-    interval-cron: "@yearly"
-    incr-interval-cron: "0 */1 * * * *" # every minute incremental backup
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: [ "source-ns22" ]
-    backup-policy: xdrBackup
+#  xdrBackup:
+#    interval-cron: "@yearly"
+#    incr-interval-cron: "0 */1 * * * *" # every minute incremental backup
+#    source-cluster: absDefaultCluster
+#    storage: local
+#    namespaces: [ "source-ns22" ]
+#    backup-policy: xdrBackup
 
 service:
   logger:

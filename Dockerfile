@@ -13,6 +13,7 @@ COPY --from=xx / /
 
 WORKDIR /app/aerospike-backup-service
 COPY . .
+RUN echo "Listing files after COPY . ." && ls -R /app/aerospike-backup-service
 
 RUN <<-EOF
     xx-go --wrap
@@ -24,7 +25,7 @@ FROM ${RH_REGISTRY}/ubi9/ubi-minimal:latest
 ARG TARGETOS
 ARG TARGETARCH
 COPY --from=builder /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH} /usr/bin/aerospike-backup-service
-COPY --from=builder /app/aerospike-backup-service/config/config.yml /etc/aerospike-backup-service/aerospike-backup-service.yml
+COPY --from=builder /app/aerospike-backup-service/build/package/config/aerospike-backup-service.yml /etc/aerospike-backup-service/aerospike-backup-service.yml
 
 EXPOSE 8080
 

@@ -18,10 +18,6 @@ type retryableBackupHandler struct {
 	errCh   chan error
 }
 
-func (h *retryableBackupHandler) GetMetrics() *models.Metrics {
-	return h.handler.GetMetrics()
-}
-
 var _ backupexecutor.BackupHandler = (*retryableBackupHandler)(nil)
 
 func newRetryableBackupHandler(
@@ -96,6 +92,16 @@ func (h *retryableBackupHandler) GetStats() *models.BackupStats {
 	defer h.RUnlock()
 	if h.handler != nil {
 		return h.handler.GetStats()
+	}
+
+	return nil
+}
+
+func (h *retryableBackupHandler) GetMetrics() *models.Metrics {
+	h.RLock()
+	defer h.RUnlock()
+	if h.handler != nil {
+		return h.handler.GetMetrics()
 	}
 
 	return nil

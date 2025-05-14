@@ -56,7 +56,8 @@ type BackupPolicy struct {
 	// This parameter does not affect XDR backups (which always includes all keys).
 	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
 	// XDR configuration for MRT backups.
-	XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
+	// XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
+
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
 	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty"`
@@ -111,9 +112,9 @@ func (p *BackupPolicy) Validate() error {
 	if err := p.CompressionPolicy.Validate(); err != nil {
 		return err
 	}
-	if err := p.XDRConfig.Validate(); err != nil {
-		return fmt.Errorf("invalid xdr config: %w", err)
-	}
+	// if err := p.XDRConfig.Validate(); err != nil {
+	//	return fmt.Errorf("invalid xdr config: %w", err)
+	//}
 
 	return nil
 }
@@ -124,22 +125,22 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 	}
 
 	return &model.BackupPolicy{
-		Parallel:              p.Parallel,
-		SocketTimeout:         millisToDuration(p.SocketTimeout),
-		TotalTimeout:          millisToDuration(p.TotalTimeout),
-		RetryPolicy:           p.RetryPolicy.ToModel(),
-		RetentionPolicy:       p.RetentionPolicy.toModel(),
-		NoRecords:             p.NoRecords,
-		NoIndexes:             p.NoIndexes,
-		NoUdfs:                p.NoUdfs,
-		WithClusterConfig:     p.WithClusterConfig,
-		Bandwidth:             p.Bandwidth,
-		RecordsPerSecond:      p.RecordsPerSecond,
-		FileLimit:             p.FileLimit,
-		EncryptionPolicy:      p.EncryptionPolicy.ToModel(),
-		CompressionPolicy:     p.CompressionPolicy.ToModel(),
-		Sealed:                p.Sealed,
-		XDRConfig:             p.XDRConfig.ToModel(),
+		Parallel:          p.Parallel,
+		SocketTimeout:     millisToDuration(p.SocketTimeout),
+		TotalTimeout:      millisToDuration(p.TotalTimeout),
+		RetryPolicy:       p.RetryPolicy.ToModel(),
+		RetentionPolicy:   p.RetentionPolicy.toModel(),
+		NoRecords:         p.NoRecords,
+		NoIndexes:         p.NoIndexes,
+		NoUdfs:            p.NoUdfs,
+		WithClusterConfig: p.WithClusterConfig,
+		Bandwidth:         p.Bandwidth,
+		RecordsPerSecond:  p.RecordsPerSecond,
+		FileLimit:         p.FileLimit,
+		EncryptionPolicy:  p.EncryptionPolicy.ToModel(),
+		CompressionPolicy: p.CompressionPolicy.ToModel(),
+		Sealed:            p.Sealed,
+		//XDRConfig:             p.XDRConfig.ToModel(),
 		ConcurrentIncremental: p.ConcurrentIncremental,
 	}
 }
@@ -192,7 +193,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 		p.CompressionPolicy.fromModel(m.CompressionPolicy)
 	}
 	p.Sealed = m.Sealed
-	p.XDRConfig = newXDRConfigFromModel(m.XDRConfig)
+	// p.XDRConfig = newXDRConfigFromModel(m.XDRConfig)
 	p.ConcurrentIncremental = m.ConcurrentIncremental
 }
 

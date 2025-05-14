@@ -75,6 +75,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 	config.ExtraTTL = util.ValueOrZero(restoreRequest.Policy.ExtraTTL)
 
 	config.SecretAgentConfig = restoreRequest.SecretAgent.ToSecretAgentConfig()
+	config.MetricsEnabled = true
 
 	return config
 }
