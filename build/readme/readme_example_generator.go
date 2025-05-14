@@ -209,7 +209,7 @@ func updateDefaultConfigSection(readme []byte) []byte {
 		panic(fmt.Errorf("failed to parse default config YAML: %w", err))
 	}
 
-	return configRe.ReplaceAllFunc(readme, func(match []byte) []byte {
+	return configRe.ReplaceAllFunc(readme, func(_ []byte) []byte {
 		var buffer bytes.Buffer
 		buffer.WriteString("<!-- DefaultConfig -->\n\n```yaml\n")
 		buffer.Write(configContent)
