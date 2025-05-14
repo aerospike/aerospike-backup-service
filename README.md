@@ -37,9 +37,11 @@ under [releases](https://github.com/aerospike/aerospike-backup-service/releases)
 
 Configuration file example:
 
+<!-- DefaultConfig -->
+
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.1.0/docs/config.schema.json
-
+---
 aerospike-clusters:
   abs-cluster: # <--- Custom cluster name
     seed-nodes:
@@ -82,7 +84,7 @@ backup-routines:
     source-cluster: abs-cluster         # <--- Refers to aerospike-clusters
     storage: s3                         # <--- Refers to storage
     backup-policy: dailyBackupPolicy    # <--- Refers to backup-policies
- ```
+```
 
 Several configuration fields in the YAML file are marked with “May affect performance” 
 These settings (such as parallel, file-limit, min-part-size, and compression) 

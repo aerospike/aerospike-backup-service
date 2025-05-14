@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"gopkg.in/yaml.v3"
 )
@@ -186,10 +187,35 @@ func main() {
 
 		return buffer.Bytes()
 	})
+
+	updatedReadme = updateDefaultConfigSection(updatedReadme)
+
 	err = os.WriteFile("README.md", updatedReadme, 0600)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func updateDefaultConfigSection(readme []byte) []byte {
+	configRe := regexp.MustCompile("<!--\\s*DefaultConfig\\s*-->\\s*```yaml[\\s\\S]*?```")
+
+	configContent, err := os.ReadFile("build/package/config/aerospike-backup-service.yml")
+	if err != nil {
+		panic(fmt.Errorf("failed to read config YAML: %w", err))
+	}
+
+	_, err = dto.NewConfigFromReader(bytes.NewReader(configContent), decoder.YAML)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse default config YAML: %w", err))
+	}
+
+	return configRe.ReplaceAllFunc(readme, func(match []byte) []byte {
+		var buffer bytes.Buffer
+		buffer.WriteString("<!-- DefaultConfig -->\n\n```yaml\n")
+		buffer.Write(configContent)
+		buffer.WriteString("\n```")
+		return buffer.Bytes()
+	})
 }
 
 // MarshalYAML marshals the input into YAML and replaces 4-space indents with 2-space indents.
