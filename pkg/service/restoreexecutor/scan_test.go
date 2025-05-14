@@ -1,6 +1,7 @@
 package restoreexecutor
 
 import (
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -9,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMakeRestoreConfigWithFullParams(t *testing.T) {
+func TestMakeRestoreConfig(t *testing.T) {
 	restoreRequest := &model.RestoreRequest{
 		Policy: &model.RestorePolicy{
 			BinList:            []string{"bin1", "bin2"},
@@ -90,4 +91,66 @@ func TestMakeRestoreConfigWithFullParams(t *testing.T) {
 	assert.Equal(t, 2000, *config.SecretAgentConfig.TimeoutMillisecond)
 	assert.Equal(t, "ca-cert", *config.SecretAgentConfig.CaFile)
 	assert.Equal(t, true, *config.SecretAgentConfig.IsBase64)
+}
+
+func TestRecordExistsAction(t *testing.T) {
+	trueVal := true
+	falseVal := false
+
+	tests := []struct {
+		name     string
+		replace  *bool
+		unique   *bool
+		expected as.RecordExistsAction
+	}{
+		{
+			name:     "replace=true, unique=nil",
+			replace:  &trueVal,
+			unique:   nil,
+			expected: as.REPLACE,
+		},
+		{
+			name:     "replace=true, unique=false",
+			replace:  &trueVal,
+			unique:   &falseVal,
+			expected: as.REPLACE,
+		},
+		{
+			name:     "replace=false, unique=true",
+			replace:  &falseVal,
+			unique:   &trueVal,
+			expected: as.CREATE_ONLY,
+		},
+		{
+			name:     "replace=nil, unique=true",
+			replace:  nil,
+			unique:   &trueVal,
+			expected: as.CREATE_ONLY,
+		},
+		{
+			name:     "replace=nil, unique=nil",
+			replace:  nil,
+			unique:   nil,
+			expected: as.UPDATE,
+		},
+		{
+			name:     "replace=false, unique=false",
+			replace:  &falseVal,
+			unique:   &falseVal,
+			expected: as.UPDATE,
+		},
+		{
+			name:     "replace=false, unique=nil",
+			replace:  &falseVal,
+			unique:   nil,
+			expected: as.UPDATE,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := recordExistsAction(tt.replace, tt.unique)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
