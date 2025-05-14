@@ -7,3 +7,12 @@
 **/*.dylib
 **/*.so
 /examples/
+/build/*
+!build/package/config/aerospike-backup-service.yml
+/config/*
+/helm/*
+.covignore
+.gitignore
+.gitmodules
+.golangci.yml
+
