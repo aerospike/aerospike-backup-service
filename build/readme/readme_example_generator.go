@@ -133,6 +133,11 @@ var jsonExamples = map[string]any{
 		Time:    1704110400000,
 		Routine: "routine1",
 	},
+	"CurrentBackupResponse": dto.RoutineState{
+		Full: &dto.RunningJob{
+			TotalRecords: 100_000,
+		},
+	},
 }
 
 var yamlExamples = map[string]any{

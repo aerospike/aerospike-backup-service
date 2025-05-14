@@ -35,14 +35,18 @@ under [releases](https://github.com/aerospike/aerospike-backup-service/releases)
 
 ### Configuration
 
-The configuration system in the Aerospike Backup Service is designed around modular entities—clusters, storage, backup policies, secret agents and routines—that you define and then connect together.
+The configuration system in the Aerospike Backup Service is designed around modular entities—clusters, storage, backup
+policies, secret agents and routines—that you define and then connect together.
 
-A backup routine is the central piece of configuration: it ties together all the other entities to define how and when backups occur. When defining a routine, you reference:
- * A cluster to specify the Aerospike cluster to back up.
- * A storage configuration that defines where the backups are stored.
- * A backup policy that controls backup behavior.
+A backup routine is the central piece of configuration: it ties together all the other entities to define how and when
+backups occur. When defining a routine, you reference:
 
-Each of these referenced components must be created and named in the configuration before the routine can use them. This modular approach lets you reuse and combine policies, clusters, and storage setups across multiple routines.
+* A cluster to specify the Aerospike cluster to back up.
+* A storage configuration that defines where the backups are stored.
+* A backup policy that controls backup behavior.
+
+Each of these referenced components must be created and named in the configuration before the routine can use them. This
+modular approach lets you reuse and combine policies, clusters, and storage setups across multiple routines.
 
 Configuration file example:
 
@@ -96,14 +100,14 @@ backup-routines:
 ```
 
 Several configuration fields in the YAML file are marked with “May affect performance”.
-These settings (such as parallel, file-limit, min-part-size, and compression) 
-can have a significant impact on backup throughput. 
+These settings (such as parallel, file-limit, min-part-size, and compression)
+can have a significant impact on backup throughput.
 We recommend experimenting with different values in your environment to find the optimal balance.
 
 #### Configuration with API
 
 Each entity defined in the API specification has endpoints for reading and writing backup configurations at general or
-granular levels. While the API provides full control over the configuration, for most use cases, 
+granular levels. While the API provides full control over the configuration, for most use cases,
 it’s preferable to configure the service via the YAML configuration file, which is easier to maintain.
 
 For specifics and example values, see the [OpenAPI docs](https://aerospike.github.io/aerospike-backup-service/).
@@ -288,182 +292,55 @@ git tag "$(cat VERSION)"
 git push 
 ```
 
-## FAQ
-
-### What happens when a backup doesn’t finish before another starts (for the same routine)?
-
-- **Full Backups:**
-    - Full backups cannot overlap. If a scheduled full backup is due to start but the previous one is still running, the
-      new backup is skipped entirely. It is not queued but will wait for the next scheduled execution.
-    - Full backups always take priority over incremental backups. If an incremental backup is running when a full backup
-      is scheduled, the full backup will start as planned, and the incremental backup will continue running without
-      interruption.
-
-- **Incremental Backups:**
-    - Incremental backups are skipped if any other backup (full or incremental) is still running.
-    - Incremental backups will not run until at least one full backup has been successfully completed.
-
-### Can multiple backup routines be performed simultaneously?
-
-Yes, multiple backup routines can run in parallel. Furthermore, it is possible to back up different namespaces from the
-same cluster using separate routines with different schedules, all running simultaneously.
-
-To manage resource utilization, you can configure the `cluster.max-parallel-scans` property to limit the number of read
-threads operating on a single cluster.
-
-### Which storage providers are supported?
-
-The backup service supports the following storage providers:
-
-- **AWS S3** (or compatible services such as MinIO)
-- **Microsoft Azure**
-- **Google Cloud Storage**
-- **Local storage** (files stored on the same machine where the backup service is running)
-
 ## Example requests and responses
 
-### Read configurations
+The following sections provide example requests and responses for various operations.
+For full API documentation, refer to
+the [Aerospike Backup Service OpenAPI specification](https://aerospike.github.io/aerospike-backup-service).
 
-This section details how to fetch configurations for clusters, policies, and storage options. This is useful for setting
-up or verifying the configuration of your system.
+### Trigger On-Demand Backup
 
-#### Get cluster configuration
-
-This endpoint returns the configurations of existing clusters, including the default cluster setup with seed nodes and
-credentials.
+This request starts the backup operation for the specified routine, regardless of its configured schedule.
 
 Request:
 
 ```http
-GET {{baseUrl}}/v1/config/clusters
+POST {{baseUrl}}/v1/backups/schedule/<routineName>?delay=<timeout>
 ```
 
-<details>
-    <summary>Response:</summary>
+* routineName: The name of the backup routine to trigger.
+* delay (optional): Time in milliseconds to delay the start of the backup.
 
-<!-- ClustersResponse -->
+If the request is accepted, the server responds with Http 202 Accepted.
 
-```json
-[
-  {
-    "seed-nodes": [
-      {
-        "host-name": "host.docker.internal",
-        "port": 3000
-      }
-    ],
-    "credentials": {
-      "user": "user",
-      "password": "password"
-    }
-  }
-]
-```
+### Get Current Backup
 
-</details>
+This endpoint retrieves the current statistics for a backup in progress, identified by its routine name.
 
-#### Get routine configuration
-
-Retrieves the configured backup routines.
-
-Request:
+**Request:**
 
 ```http
-GET {{baseUrl}}/v1/config/routines
+GET {{baseUrl}}/v1/backups/currentBackup/{routineName}
 ```
 
-<details>
-    <summary>Response:</summary>
+* routineName: The name of the routine for which to retrieve current backup information.
 
-<!-- RoutinesResponse -->
+<!-- CurrentBackupResponse -->
 
 ```json
 {
-  "routine1": {
-    "backup-policy": "keepFilesPolicy",
-    "source-cluster": "absDefaultCluster",
-    "storage": "local",
-    "interval-cron": "@yearly",
-    "namespaces": [
-      "test-namespace"
-    ]
-  },
-  "routine2": {
-    "backup-policy": "removeFilesPolicy",
-    "source-cluster": "absDefaultCluster",
-    "storage": "local",
-    "interval-cron": "@monthly",
-    "incr-interval-cron": "@daily",
-    "namespaces": [
-      "test-namespace"
-    ],
-    "set-list": [
-      "backupSet"
-    ],
-    "bin-list": [
-      "backupBin"
-    ]
-  }
+  "status": "RUNNING",
+  "progress": 50,
+  "bytes-transferred": 100000,
+  "records-transferred": 100,
+  "start-time": "2024-01-01T12:00:00Z",
+  "end-time": null,
+  "error-message": "",
+  "job-id": "<jobId>"
 }
 ```
-
-</details>
-
-#### Get storage configuration
-
-Returns all the configured storage endpoints, including, if applicable, cloud storage endpoint information such as
-region and path.
-
-Request:
-
-```http
-GET {{baseUrl}}/v1/config/storage
-```
-
-<details>
-    <summary>Response:</summary>
-
-<!-- StorageResponse -->
-
-```json
-{
-  "aws-s3": {
-    "s3-storage": {
-      "bucket": "as-backup-bucket",
-      "path": "backups",
-      "s3-region": "eu-central-1"
-    }
-  },
-  "azure-blob-storage": {
-    "azure-storage": {
-      "endpoint": "http://127.0.0.1:6000/devstoreaccount1",
-      "container-name": "testcontainer",
-      "path": "backups",
-      "account-name": "devstoreaccount1",
-      "account-key": "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
-    }
-  },
-  "gcp-gcs": {
-    "gcp-storage": {
-      "key-file-path": "key-file.json",
-      "bucket-name": "gcp-backup-bucket",
-      "path": "backups",
-      "endpoint": "http://127.0.0.1:9020"
-    }
-  },
-  "local": {
-    "local-storage": {
-      "path": "backups"
-    }
-  }
-}
-```
-
-</details>
 
 ### Retrieve backup list
-
-#### Full backup list
 
 Provides a list of backups for each configured routine, including details such as creation time, namespace, and storage
 location.
@@ -625,6 +502,59 @@ Response:
 ```json
 123456789
 ```
+
+#### Cancel Restore Job
+
+Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
+
+- [
+  `POST {{baseUrl}}/v1/restore/cancel/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
+
+### Disable Routine
+
+New endpoints:
+
+- [
+  `POST {{baseUrl}}/v1/routines/:<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/disableRoutine)
+- [
+  `POST {{baseUrl}}/v1/routines/:<routineName>/enable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/enableRoutine)
+
+Set the disabled flag for the given routine to `true` or `false` (default is `false`).
+
+- Disabled routines will not schedule new jobs.
+- Running jobs will be canceled, similar to the `Cancel Backup Job` endpoint.
+
+## FAQ
+
+### What happens when a backup doesn’t finish before another starts (for the same routine)?
+
+- **Full Backups:**
+    - Full backups cannot overlap. If a scheduled full backup is due to start but the previous one is still running, the
+      new backup is skipped entirely. It is not queued but will wait for the next scheduled execution.
+    - Full backups always take priority over incremental backups. If an incremental backup is running when a full backup
+      is scheduled, the full backup will start as planned, and the incremental backup will continue running without
+      interruption.
+
+- **Incremental Backups:**
+    - Incremental backups are skipped if any other backup (full or incremental) is still running.
+    - Incremental backups will not run until at least one full backup has been successfully completed.
+
+### Can multiple backup routines be performed simultaneously?
+
+Yes, multiple backup routines can run in parallel. Furthermore, it is possible to back up different namespaces from the
+same cluster using separate routines with different schedules, all running simultaneously.
+
+To manage resource utilization, you can configure the `cluster.max-parallel-scans` property to limit the number of read
+threads operating on a single cluster.
+
+### Which storage providers are supported?
+
+The backup service supports the following storage providers:
+
+- **AWS S3** (or compatible services such as MinIO)
+- **Microsoft Azure**
+- **Google Cloud Storage**
+- **Local storage** (files stored on the same machine where the backup service is running)
 
 ## Breaking API Changes (v2 → v3):
 
@@ -801,36 +731,3 @@ dto.Credentials:
       type: string
   type: object
 ```
-
-### Cancel Restore Job
-
-New endpoint:
-
-- [
-  `POST {{baseUrl}}/v1/restore/cancel/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
-
-Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
-
-### Cancel Backup Job
-
-New endpoint:
-
-- [
-  `POST {{baseUrl}}/v1/backups/cancel/:<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancelCurrentBackup)
-
-Cancel all currently running backups (both full and incremental) for the specified routine. Partially created backups
-will be deleted.
-
-### Disable Routine
-
-New endpoints:
-
-- [
-  `POST {{baseUrl}}/v1/routines/:<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/disableRoutine)
-- [
-  `POST {{baseUrl}}/v1/routines/:<routineName>/enable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/enableRoutine)
-
-Set the disabled flag for the given routine to `true` or `false` (default is `false`).
-
-- Disabled routines will not schedule new jobs.
-- Running jobs will be canceled, similar to the `Cancel Backup Job` endpoint.
