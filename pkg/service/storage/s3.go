@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
@@ -10,6 +11,7 @@ import (
 	ioStorage "github.com/aerospike/backup-go/io/storage"
 	"github.com/aerospike/backup-go/io/storage/aws/s3"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
@@ -68,11 +70,25 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 	if err != nil {
 		return nil, err
 	}
+
 	cfg, err := config.LoadDefaultConfig(ctx,
 		credentialsProvider,
 		config.WithSharedConfigProfile(s.S3Profile),
 		config.WithRegion(s.S3Region),
+
+		// use an adaptive mode for more aggressive retries
+		config.WithRetryer(func() aws.Retryer {
+			return retry.NewAdaptiveMode(func(o *retry.AdaptiveModeOptions) {
+				o.StandardOptions = append(o.StandardOptions,
+					func(so *retry.StandardOptions) {
+						so.MaxAttempts = 100
+						so.MaxBackoff = 2 * time.Minute
+						so.Backoff = retry.NewExponentialJitterBackoff(2 * time.Minute)
+					})
+			})
+		}),
 	)
+
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +103,10 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 		if s.MaxConnsPerHost > 0 {
 			o.HTTPClient = &http.Client{
 				Transport: &http.Transport{
-					MaxConnsPerHost: s.MaxConnsPerHost,
+					MaxConnsPerHost:     s.MaxConnsPerHost,
+					IdleConnTimeout:     90 * time.Second,
+					TLSHandshakeTimeout: 10 * time.Second,
+					ReadBufferSize:      64 * 1024, // 64KB read buffer (default is 4KB)
 				},
 			}
 		}
