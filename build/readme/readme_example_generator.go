@@ -153,31 +153,29 @@ func main() {
 	updatedReadme := re.ReplaceAllFunc(readme, func(match []byte) []byte {
 		submatches := re.FindSubmatch(match)
 		if len(submatches) < 3 {
-			return match
+			panic(fmt.Errorf("failed to find submatch: %s", submatches))
 		}
 
 		name := string(submatches[1])
 		format := string(submatches[2])
 
-		var example any
-		var exists bool
 		var formattedExample []byte
 
 		switch format {
 		case "json":
-			example, exists = jsonExamples[name]
+			example, exists := jsonExamples[name]
 			if exists {
 				formattedExample, err = json.MarshalIndent(example, "", "  ")
 			}
 		case "yaml":
-			example, exists = yamlExamples[name]
+			example, exists := yamlExamples[name]
 			if exists {
 				formattedExample, err = marshalYAML(example)
 			}
 		}
 
-		if !exists || err != nil {
-			return match
+		if err != nil {
+			panic(fmt.Errorf("failed to parse: %w", err))
 		}
 
 		var buffer bytes.Buffer
