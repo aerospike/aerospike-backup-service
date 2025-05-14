@@ -90,9 +90,9 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 		BackupPolicy: &model.BackupPolicy{
 			Parallel:      util.Ptr(4),
 			FileLimit:     util.Ptr(100),
-			NoRecords:     util.Ptr(false),
-			NoIndexes:     util.Ptr(false),
-			NoUdfs:        util.Ptr(false),
+			NoRecords:     util.Ptr(true),
+			NoIndexes:     util.Ptr(true),
+			NoUdfs:        util.Ptr(true),
 			Bandwidth:     util.Ptr(10),
 			SocketTimeout: util.Ptr(5 * time.Minute),
 
@@ -138,14 +138,15 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	assert.Equal(t, 4, config.ParallelRead)
 	assert.Equal(t, 4, config.ParallelWrite)
 	assert.Equal(t, uint64(100*megabyte), config.FileLimit)
-	assert.Equal(t, false, config.NoRecords)
-	assert.Equal(t, false, config.NoIndexes)
-	assert.Equal(t, false, config.NoUDFs)
+	assert.Equal(t, true, config.NoRecords)
+	assert.Equal(t, true, config.NoIndexes)
+	assert.Equal(t, true, config.NoUDFs)
 	assert.Equal(t, 10*megabyte, config.Bandwidth)
 	assert.Equal(t, timeBounds.ToTime, config.ModBefore)
 	assert.Nil(t, config.ModAfter)
 	assert.NotNil(t, config.ScanPolicy)
 	assert.Equal(t, 100, config.ScanPolicy.MaxRetries)
+	assert.Equal(t, config.MetricsEnabled, true)
 
 	assert.NotNil(t, config.SecretAgentConfig)
 	assert.Equal(t, *config.SecretAgentConfig.Address, "localhost")
