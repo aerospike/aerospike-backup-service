@@ -140,7 +140,6 @@ var yamlExamples = map[string]any{
 }
 
 func main() {
-	_ = dto.AerospikeCluster{}
 	readme, err := os.ReadFile("README.md")
 	if err != nil {
 		panic(err)
