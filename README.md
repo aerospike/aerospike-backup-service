@@ -35,6 +35,15 @@ under [releases](https://github.com/aerospike/aerospike-backup-service/releases)
 
 ### Configuration
 
+The configuration system in the Aerospike Backup Service is designed around modular entities—clusters, storage, backup policies, secret agents and routines—that you define and then connect together.
+
+A backup routine is the central piece of configuration: it ties together all the other entities to define how and when backups occur. When defining a routine, you reference:
+ * A cluster to specify the Aerospike cluster to back up.
+ * A storage configuration that defines where the backups are stored.
+ * A backup policy that controls backup behavior.
+
+Each of these referenced components must be created and named in the configuration before the routine can use them. This modular approach lets you reuse and combine policies, clusters, and storage setups across multiple routines.
+
 Configuration file example:
 
 <!-- DefaultConfig -->
@@ -86,18 +95,18 @@ backup-routines:
     backup-policy: dailyBackupPolicy    # <--- Refers to backup-policies
 ```
 
-Several configuration fields in the YAML file are marked with “May affect performance” 
+Several configuration fields in the YAML file are marked with “May affect performance”.
 These settings (such as parallel, file-limit, min-part-size, and compression) 
 can have a significant impact on backup throughput. 
 We recommend experimenting with different values in your environment to find the optimal balance.
 
-Each entity defined in the API specification has endpoints for reading and writing backup configurations at general or
-granular levels.
-
-For specifics and example values, see the [OpenAPI docs](https://aerospike.github.io/aerospike-backup-service/).
-
 #### Configuration with API
 
+Each entity defined in the API specification has endpoints for reading and writing backup configurations at general or
+granular levels. While the API provides full control over the configuration, for most use cases, 
+it’s preferable to configure the service via the YAML configuration file, which is easier to maintain.
+
+For specifics and example values, see the [OpenAPI docs](https://aerospike.github.io/aerospike-backup-service/).
 The endpoints defined within the configuration section allow users to view or modify the configuration file.
 Endpoints ending with /config enable reading and modifying the entire file at once, while endpoints like
 `/config/clusters`, `/config/policies`, `/config/routines`, and `/config/storage` provide more granular control.
@@ -235,7 +244,7 @@ the [OpenAPI specification](https://aerospike.github.io/aerospike-backup-service
 
 ### Prerequisites
 
-- Go 1.22
+- Go 1.23
 
 ### Build the service
 
