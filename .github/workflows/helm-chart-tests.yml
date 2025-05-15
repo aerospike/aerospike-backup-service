@@ -4,9 +4,9 @@ permissions:
   pull-requests: write
 
 on:
-  pull_request:
-    paths:
-      - helm/aerospike-backup-service/**
+#  pull_request:
+#    paths:
+#      - helm/aerospike-backup-service/**
   workflow_dispatch:
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Set up Helm
         uses: azure/setup-helm@v4.3.0
