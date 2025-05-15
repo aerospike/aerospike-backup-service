@@ -60,7 +60,7 @@ type RestorePolicy struct {
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions
 	// per second.
 	Tps *int `json:"tps,omitempty" example:"4000"`
-	// Encryption details (algorithm and key). Default is not encryption.
+	// Encryption details (algorithm and key). Default is no encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details (algorithm). Default is no compression.
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
