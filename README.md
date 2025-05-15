@@ -18,18 +18,18 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
 
 - [Getting started](#getting-started)
 - [User guide](#user-guide)
-  * [Run](#run)
-  * [Configuration](#configuration)
-    + [Configuration File Format](#configuration-file-format)
-    + [Configuration with API](#configuration-with-api)
-  * [Monitoring](#monitoring)
-  * [Example requests and responses](#example-requests-and-responses)
-    + [Backup](#backup)
-    + [Restore](#restore)
+    * [Run](#run)
+    * [Configuration](#configuration)
+        + [Configuration File Format](#configuration-file-format)
+        + [Configuration with API](#configuration-with-api)
+    * [Monitoring](#monitoring)
+    * [Example requests and responses](#example-requests-and-responses)
+        + [Backup](#backup)
+        + [Restore](#restore)
 - [FAQ](#faq)
-  * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
-  * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
-  * [Which storage providers are supported?](#which-storage-providers-are-supported)
+    * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
+    * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
+    * [Which storage providers are supported?](#which-storage-providers-are-supported)
 - [Build from source](#build-from-source)
     + [Prerequisites](#prerequisites)
     + [Build the service](#build-the-service)
@@ -37,17 +37,17 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
     + [Build Linux packages](#build-linux-packages)
     + [Release](#release)
 - [Migration Guide](#migration-guide)
-  * [v3 -> v3.1](#v3---v31)
-  * [v2 -> v3](#v2---v3)
-    + [Storage Object](#storage-object)
-    + [Configuration Management Update](#configuration-management-update)
-    + [Apply Endpoint](#apply-endpoint)
-    + [Secret Agents](#secret-agents)
-    + [Restore Request](#restore-request)
-    + [Backup Retention Policy](#backup-retention-policy)
-  * [v2 -> v3](#v2---v3-1)
-    + [Node list](#node-list)
-    + [Secret Agent for cluster](#secret-agent-for-cluster)
+    * [v3 -> v3.1](#v3---v31)
+    * [v2 -> v3](#v2---v3)
+        + [Storage Object](#storage-object)
+        + [Configuration Management Update](#configuration-management-update)
+        + [Apply Endpoint](#apply-endpoint)
+        + [Secret Agents](#secret-agents)
+        + [Restore Request](#restore-request)
+        + [Backup Retention Policy](#backup-retention-policy)
+    * [v2 -> v3](#v2---v3-1)
+        + [Node list](#node-list)
+        + [Secret Agent for cluster](#secret-agent-for-cluster)
 
 <!-- tocstop -->
 
@@ -111,6 +111,7 @@ Run the server
 ```bash
 ./aerospike-backup-service g-c remote_config.yaml -r
 ```
+
 #### Docker
 
 Run in a container with a custom configuration file:
@@ -643,6 +644,53 @@ git push
 # Migration Guide
 
 ## v3 -> v3.1
+
+There is no breaking change in this release, but several new features have been introduced.
+
+### Strict validation
+
+The backup service performs strict validation of the configuration file during startup.
+Invalid configurations will result in errors preventing the service from starting. This will help prevent unexpected
+behavior caused by invalid configurations.
+
+### Filter by partition
+
+backup policy has new flag `partition-list`. When enabled, the backup service will back up only specific partitions of
+the
+cluster.
+The format supports individual partitions or ranges.
+
+- A range is specified as "<start>,<count>" (e.g., "100,50" backs up 50 partitions starting from 100).
+- A single partition is specified as a number (e.g., "0").
+- Multiple entries can be comma-separated: e.g., "0,100,200,300,400,500".
+
+By default, all partitions (0 to 4095) are backed up.
+This field is mutually exclusive with node-list.
+
+This feature can be used to parallelize backups across multiple instances. Each instance can be assigned a subset of
+partitions to back up, ensuring efficient distribution of workload.
+
+### Support for specifying object storage classes
+
+Every storage provider now supports specifying an object storage class
+
+* `STANDARD`, `GLACIER`, `DEEP_ARCHIVE`etc for S3
+* `Hot`, `Cool`, `Cold`, `Archive` for Azure Blob Storage
+* `Standard`, `Nearline`, `Coldline`, `Archive` for Google Cloud Storage
+
+Object storage classes define the durability and availability levels for objects within a bucket.
+Supported values depend on the chosen storage provider.
+
+### Concurrent incremental backups
+
+Backup policy has new flag `concurrent-incremental`.
+When false (default), incremental backups are skipped if another backup for same routine is in progress.
+When true, incremental backups can run concurrently with full backups for the same routine.
+
+### Skip cluster config backup
+
+Backup policy has new field `with-cluster-configuration`.
+When false (default), the backup service will exclude cluster configuration from the backup.
 
 ## v2 -> v3
 
