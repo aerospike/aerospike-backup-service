@@ -56,7 +56,7 @@ This section covers basic usage scenarios for the Aerospike Backup Service.
 
 ## Run
 
-### Binary
+#### Binary
 
 Run as a binary using a configuration file:
 
@@ -102,7 +102,7 @@ Run the server
 ./aerospike-backup-service -c remote_config.yaml -r
 ```
 
-### Docker
+#### Docker
 
 Run in a container with a custom configuration file:
 
@@ -110,7 +110,7 @@ Run in a container with a custom configuration file:
 docker run -d -p 8080:8080 -v config.yml:/app/config.yml --name backup-service backup-service
 ```
 
-### Service
+#### Service
 
 Run as service (default path for config is `/etc/aerospike-backup-service/aerospike-backup-service.yml`):
 
@@ -563,8 +563,10 @@ Cancel the restore job identified by `<jobId>`. Data that has already been resto
       interruption.
 
 - **Incremental Backups:**
-    - By default, incremental backups are skipped if any other backup (full or incremental) is still running. 
-      This behavior can be overridden using the [`backup-policy.concurrent-incremental`](#concurrent-incremental-backups) setting, which allows incremental backups to run concurrently.
+    - By default, incremental backups are skipped if any other backup (full or incremental) is still running.
+      This behavior can be overridden using the [
+      `backup-policy.concurrent-incremental`](#concurrent-incremental-backups) setting, which allows incremental backups
+      to run concurrently.
     - Incremental backups will not run until at least one full backup has been successfully completed.
 
 ## Can multiple backup routines be performed simultaneously?
