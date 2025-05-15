@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"gopkg.in/yaml.v3"
 )
@@ -124,22 +125,68 @@ var jsonExamples = map[string]any{
 	},
 	"RestoreTimestampRequest": dto.RestoreTimestampRequest{
 		DestinationClusterConfig: dto.DestinationClusterConfig{
-			Cluster: &cluster,
-		},
-		Policy: &dto.RestorePolicy{
-			NoGeneration: util.Ptr(true),
+			Name: "abs-cluster",
 		},
 		Time:    1704110400000,
 		Routine: "routine1",
+	},
+	"CurrentBackupResponse": dto.RoutineState{
+		Full: &dto.RunningJob{
+			TotalRecords:     100_000,
+			DoneRecords:      50_000,
+			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
+			FinishTime:       nil,
+			PercentageDone:   50,
+			EstimatedEndTime: util.Ptr(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			Metrics: dto.Metrics{
+				RecordsPerSecond:   1000,
+				KilobytesPerSecond: 30000,
+				Pipeline:           0,
+			},
+		},
+	},
+	"CurrentRestoreResponse": dto.RestoreJobStatus{
+		ReadRecords:     100_000,
+		TotalBytes:      30000000,
+		ExpiredRecords:  0,
+		SkippedRecords:  0,
+		IgnoredRecords:  0,
+		InsertedRecords: 5_000,
+		ExistedRecords:  0,
+		FresherRecords:  0,
+		IndexCount:      4,
+		UDFCount:        1,
+		ErrorsInDoubt:   0,
+		CurrentRestore: &dto.RunningJob{
+			TotalRecords:     100_000,
+			DoneRecords:      50_000,
+			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
+			FinishTime:       nil,
+			PercentageDone:   50,
+			EstimatedEndTime: util.Ptr(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			Metrics: dto.Metrics{
+				RecordsPerSecond:   1000,
+				KilobytesPerSecond: 30000,
+				Pipeline:           0,
+			},
+		},
+		Status: dto.JobStatusRunning,
+		Error:  "",
 	},
 }
 
 var yamlExamples = map[string]any{
 	"Storage": allStorageTypes,
+	"RemoteConfig": dto.Storage{
+		S3Storage: &dto.S3Storage{
+			Path:     "config.yml",
+			Bucket:   "as-backup-bucket",
+			S3Region: "eu-central-1",
+		},
+	},
 }
 
 func main() {
-	_ = dto.AerospikeCluster{}
 	readme, err := os.ReadFile("README.md")
 	if err != nil {
 		panic(err)
@@ -152,31 +199,29 @@ func main() {
 	updatedReadme := re.ReplaceAllFunc(readme, func(match []byte) []byte {
 		submatches := re.FindSubmatch(match)
 		if len(submatches) < 3 {
-			return match
+			panic(fmt.Errorf("failed to find submatch: %s", submatches))
 		}
 
 		name := string(submatches[1])
 		format := string(submatches[2])
 
-		var example any
-		var exists bool
 		var formattedExample []byte
 
 		switch format {
 		case "json":
-			example, exists = jsonExamples[name]
+			example, exists := jsonExamples[name]
 			if exists {
 				formattedExample, err = json.MarshalIndent(example, "", "  ")
 			}
 		case "yaml":
-			example, exists = yamlExamples[name]
+			example, exists := yamlExamples[name]
 			if exists {
 				formattedExample, err = marshalYAML(example)
 			}
 		}
 
-		if !exists || err != nil {
-			return match
+		if err != nil {
+			panic(fmt.Errorf("failed to parse: %w", err))
 		}
 
 		var buffer bytes.Buffer
@@ -186,10 +231,35 @@ func main() {
 
 		return buffer.Bytes()
 	})
+
+	updatedReadme = updateDefaultConfigSection(updatedReadme)
+
 	err = os.WriteFile("README.md", updatedReadme, 0600)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func updateDefaultConfigSection(readme []byte) []byte {
+	configRe := regexp.MustCompile("<!--\\s*DefaultConfig\\s*-->\\s*```yaml[\\s\\S]*?```")
+
+	configContent, err := os.ReadFile("build/package/config/aerospike-backup-service.yml")
+	if err != nil {
+		panic(fmt.Errorf("failed to read config YAML: %w", err))
+	}
+
+	_, err = dto.NewConfigFromReader(bytes.NewReader(configContent), decoder.YAML)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse default config YAML: %w", err))
+	}
+
+	return configRe.ReplaceAllFunc(readme, func(_ []byte) []byte {
+		var buffer bytes.Buffer
+		buffer.WriteString("<!-- DefaultConfig -->\n\n```yaml\n")
+		buffer.Write(configContent)
+		buffer.WriteString("\n```")
+		return buffer.Bytes()
+	})
 }
 
 // MarshalYAML marshals the input into YAML and replaces 4-space indents with 2-space indents.

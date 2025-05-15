@@ -12,17 +12,21 @@ import (
 // BackupPolicy represents a scheduled backup policy.
 // @Description BackupPolicy represents a scheduled backup policy.
 type BackupPolicy struct {
-	// Maximum number of scan calls to run in parallel.
+	// Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total
+	// data partitions. The optimal value depends on hardware and network configuration.
+	// Default: 8.
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
-	// Socket timeout in milliseconds. Default is 10 seconds. If this value is 0, it is set to total-timeout.
+	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
 	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
 	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`
-	// RetryPolicy defines the configuration for retry attempts in case of failures.
-	// If nil, default policy is used.
+	// RetryPolicy defines the configuration for database scan retry attempts in case of failures.
+	// If nil, the default policy is used (5 retries with a one-minute delay between attempts).
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
 	// Specifies how long to retain full and incremental backups.
+	// Cleanup runs asynchronously after each successful full backup, never deleting backups preemptively.
+	// Ensure storage capacity for at least one extra full backup beyond the retention configuration.
 	RetentionPolicy *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty"`
 	// Do not back up any record data (metadata or bin data). Default: false.
 	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty"`
@@ -32,18 +36,19 @@ type BackupPolicy struct {
 	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty"`
 	// Back up Aerospike cluster configuration. Default: false.
 	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty"`
-	// Throttles backup write operations to the backup file(s) to not exceed the given
-	// bandwidth in MiB/s.
+	// Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.
+	// Default is no limit.
 	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
-	// Limit total returned records per second (RPS). If RPS is zero (the default),
-	// the records-per-second limit is not applied.
+	// Limits the number of records returned per second (RPS). Default is no limit.
 	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000"`
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
-	// a new backup file will be created.
+	// a new backup file will be created. Default is 250 MB.
 	FileLimit *int `yaml:"file-limit,omitempty" json:"file-limit,omitempty" example:"1024"`
-	// Encryption details.
+	// Encryption details (algorithm and key). Default is no encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
-	// Compression details.
+	// Compression details (algorithm and mode). Default is no compression.
+	// Enabling compression reduces storage and network usage, but increases CPU usage during the backup.
+	// Depending on the system configuration, compression may improve or degrade overall performance.
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
 	// Sealed determines whether backup should include keys updated during the backup process.
 	// When true, the backup contains only records that last modified before backup started.
@@ -55,7 +60,7 @@ type BackupPolicy struct {
 
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
-	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty"` //nolint:lll
+	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty"`
 }
 
 // NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.

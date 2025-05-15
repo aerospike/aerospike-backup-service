@@ -11,10 +11,9 @@ import (
 
 // Config represents the service configuration file.
 // @Description Config represents the service configuration file.
-//
-//nolint:lll
 type Config struct {
-	ServiceConfig     BackupServiceConfig          `yaml:"service,omitempty" json:"service,omitempty"`
+	ServiceConfig BackupServiceConfig `yaml:"service,omitempty" json:"service,omitempty"`
+	//nolint:lll
 	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
 	Storage           map[string]*Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
 	BackupPolicies    map[string]*BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
