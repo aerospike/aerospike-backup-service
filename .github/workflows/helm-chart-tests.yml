@@ -4,9 +4,9 @@ permissions:
   pull-requests: write
 
 on:
-  pull_request:
-    paths:
-      - helm/aerospike-backup-service/**
+#  pull_request:
+#    paths:
+#      - helm/aerospike-backup-service/**
   workflow_dispatch:
 
 jobs:
