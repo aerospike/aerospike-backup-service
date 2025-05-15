@@ -37,15 +37,15 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
     + [Build Linux packages](#build-linux-packages)
     + [Release](#release)
 - [Migration Guide](#migration-guide)
-  * [v3 → v3.1](#v3-%E2%86%92-v31)
-  * [v2 → v3](#v2-%E2%86%92-v3)
+  * [v3 -> v3.1](#v3---v31)
+  * [v2 -> v3](#v2---v3)
     + [Storage Object](#storage-object)
     + [Configuration Management Update](#configuration-management-update)
     + [Apply Endpoint](#apply-endpoint)
     + [Secret Agents](#secret-agents)
     + [Restore Request](#restore-request)
     + [Backup Retention Policy](#backup-retention-policy)
-  * [v2 → v3](#v2-%E2%86%92-v3-1)
+  * [v2 -> v3](#v2---v3-1)
     + [Node list](#node-list)
     + [Secret Agent for cluster](#secret-agent-for-cluster)
 
@@ -537,14 +537,15 @@ endpoint
   }
 }
 ```
+
 </details>
 
 #### Cancel Restore Job
 
 Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
 
-- [
-  `POST {{baseUrl}}/v1/restore/cancel/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
+[
+`POST {{baseUrl}}/v1/restore/cancel/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
 
 # FAQ
 
@@ -628,9 +629,9 @@ git push
 
 # Migration Guide
 
-## v3 → v3.1
+## v3 -> v3.1
 
-## v2 → v3
+## v2 -> v3
 
 ### Storage Object
 
@@ -734,7 +735,7 @@ After each successfull full backup, all existing backups are scanned to count fu
 ABS then removes older full backups and their associated incremental backups as needed to retain only
 the last `full` backups and incremental backups for the most recent `incremental` backups.
 
-## v2 → v3
+## v2 -> v3
 
 ### Node list
 
