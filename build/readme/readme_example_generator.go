@@ -125,10 +125,7 @@ var jsonExamples = map[string]any{
 	},
 	"RestoreTimestampRequest": dto.RestoreTimestampRequest{
 		DestinationClusterConfig: dto.DestinationClusterConfig{
-			Cluster: &cluster,
-		},
-		Policy: &dto.RestorePolicy{
-			NoGeneration: util.Ptr(true),
+			Name: "abs-cluster",
 		},
 		Time:    1704110400000,
 		Routine: "routine1",

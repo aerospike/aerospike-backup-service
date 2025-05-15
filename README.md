@@ -14,12 +14,44 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
 
 ## Table of contents
 
-- [Getting Started](#getting-started)
-- [User Guide](#user-guide)
-- [Build From Source](#build-from-source)
+<!-- toc -->
+
+- [Getting started](#getting-started)
+- [User guide](#user-guide)
+  * [Configuration](#configuration)
+  * [Operations](#operations)
 - [Usage](#usage)
+  * [Service help](#service-help)
+  * [Run](#run)
 - [Monitoring](#monitoring)
+- [Build from source](#build-from-source)
+  * [Prerequisites](#prerequisites)
+  * [Build the service](#build-the-service)
+  * [Build Docker image](#build-docker-image)
+  * [Build Linux packages](#build-linux-packages)
+  * [Release](#release)
+- [Example requests and responses](#example-requests-and-responses)
+  * [Backup](#backup)
+  * [Restore](#restore)
+  * [Restore job status](#restore-job-status)
 - [FAQ](#faq)
+  * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
+  * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
+  * [Which storage providers are supported?](#which-storage-providers-are-supported)
+- [Breaking API Changes (v2 → v3):](#breaking-api-changes-v2-%E2%86%92-v3)
+  * [Storage Object](#storage-object)
+  * [**Example**](#example)
+  * [Configuration Management Update](#configuration-management-update)
+  * [Apply Endpoint](#apply-endpoint)
+  * [Secret Agents](#secret-agents)
+  * [Restore Request](#restore-request)
+  * [Backup Retention Policy](#backup-retention-policy)
+- [New API functions (v2 → v3):](#new-api-functions-v2-%E2%86%92-v3)
+  * [Node list](#node-list)
+  * [Extra ttl](#extra-ttl)
+  * [Secret Agent for cluster](#secret-agent-for-cluster)
+
+<!-- tocstop -->
 
 ## Getting started
 
@@ -298,7 +330,8 @@ The following sections provide example requests and responses for various operat
 For full API documentation, refer to
 the [Aerospike Backup Service OpenAPI specification](https://aerospike.github.io/aerospike-backup-service).
 
-### Trigger On-Demand Backup
+### Backup
+#### Trigger On-Demand Backup
 
 This request starts the backup operation for the specified routine, regardless of its configured schedule.
 
@@ -311,18 +344,18 @@ POST {{baseUrl}}/v1/backups/schedule/<routineName>?delay=<timeout>
 
 If the request is accepted, the server responds with Http 202 Accepted.
 
-### Get Current Backup
+#### Get Current Backup
 
 This endpoint retrieves the current statistics for a backup in progress, identified by its routine name.
 
 ```http
-GET {{baseUrl}}/v1/backups/currentBackup/{routineName}
+GET {{baseUrl}}/v1/backups/currentBackup/<routineName>
 ```
 
 * routineName: The name of the routine for which to retrieve current backup information.
 
 <details>
-    <summary>Response:</summary>
+    <summary>Response</summary>
 
 <!-- CurrentBackupResponse -->
 
@@ -357,9 +390,18 @@ This metric helps identify bottlenecks:
 
 </details>
 
-### Retrieve backup list
+#### Cancel Backup Job
 
-Provides a list of backups for each configured routine, including details such as creation time, namespace, and storage
+[
+`POST {{baseUrl}}/v1/backups/cancel/<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancelCurrentBackup)
+
+Cancel all currently running backups (both full and incremental) for the specified routine. Partially created backups
+will be deleted.
+
+#### Retrieve Backup List
+
+Provides a list of backups for each configured routine, including details such as creation time, duration, namespace,
+and storage
 location.
 
 ```http
@@ -367,7 +409,7 @@ GET {{baseUrl}}/v1/backups/full
 ```
 
 <details>
-    <summary>Response:</summary>
+    <summary>Response</summary>
 
 Response is a map of routine names to lists of backups.
 <!-- FullBackupsResponse -->
@@ -411,28 +453,30 @@ GET {{baseUrl}}/v1/backups/full/<name>?from=<from>&to=<to>
 ```
 
 where `name` is the routine name, `from` and `to` are timestamps in milliseconds since epoch.
+#### Disable Routine
 
-### Restore backup (direct restoration)
+[
+  `POST {{baseUrl}}/v1/routines/<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/disableRoutine)
+
+[
+  `POST {{baseUrl}}/v1/routines/<routineName>/enable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/enableRoutine)
+
+Set the disabled flag for the given routine to `true` or `false` (default is `false`).
+
+- Disabled routines will not schedule new jobs.
+- Running jobs will be canceled, similar to the `Cancel Backup Job` endpoint.
+### Restore
 
 #### Direct restore using a specific backup
 
-Destination field says where to restore to. It can be one of the clusters we read in 1st section, or any other Aerospike
-cluster.
-
 This request restores a backup from a specified path to a designated destination.
-The `no-generation` parameter allows overwriting of existing keys if set to `true`.
-
-In the `source` section, `path` is the `key` value returned as a response in the [Full Backup List](#full-backup-list)
-example. The `type` parameter under `source` denotes S3 storage if set to `1` and local storage if set to `0`.
-
-Request:
 
 ```http
 POST {{baseUrl}}/v1/restore/full
 ```
 
 <details>
-    <summary>Request body:</summary>
+    <summary>Request body</summary>
 
 <!-- RestoreFullRequest -->
 
@@ -464,52 +508,38 @@ POST {{baseUrl}}/v1/restore/full
 }
 ```
 
+The `no-generation` parameter allows overwriting of existing keys if set to `true`.
+
+In the `source` section, `path` is the `key` value returned as a response in the [Full Backup List](#full-backup-list)
+example. The `type` parameter under `source` denotes S3 storage if set to `1` and local storage if set to `0`.
+
+`destination` field says where to restore to. It can be any Aerospike cluster.
+
+Alternatively, you can use `destination-name` and `storage-name` instead of `destination` and `storage` respectively.
+They
+refer to the names of the corresponding entities in the configuration file.
+
 </details>
 
-The response is a job ID. You can get job status with the
-endpoint [
-`GET {{baseUrl}}/v1/restore/status/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
-
-Response:
-
-```json
-123456789
-```
+The response is a job ID. 
 
 #### Restore using routine name and timestamp
 
 This option restores the most recent full backup for the given timestamp and then applies all subsequent incremental
-backups up to that timestamp.
-In this example, the `destination` and `policy` fields are the same as in the previous example.
-
-Request:
+backups up to that timestamp. You don't need to specify the exact backup path or storage.
 
 ```http
 POST {{baseUrl}}/v1/restore/timestamp
 ```
 
 <details>
-    <summary>Response:</summary>
+    <summary>Request</summary>
 
 <!-- RestoreTimestampRequest -->
 
 ```json
 {
-  "destination": {
-    "seed-nodes": [
-      {
-        "host-name": "host.docker.internal",
-        "port": 3000
-      }
-    ],
-    "credentials": {
-      "user": "user",
-      "password": "password"
-    }
-  },
-  "policy": {
-    "no-generation": true
-  },
+  "destination-name": "abs-cluster",
   "time": 1704110400000,
   "routine": "routine1"
 }
@@ -517,9 +547,14 @@ POST {{baseUrl}}/v1/restore/timestamp
 
 </details>
 
-The response is a job ID. You can get job status with the
-endpoint [
-`GET {{baseUrl}}/v1/restore/status/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
+The response is a job ID.
+
+### Restore job status
+
+You can get job status with the
+endpoint 
+
+[`GET {{baseUrl}}/v1/restore/status/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
 
 Response:
 
@@ -532,21 +567,7 @@ Response:
 Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
 
 - [
-  `POST {{baseUrl}}/v1/restore/cancel/:<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
-
-### Disable Routine
-
-New endpoints:
-
-- [
-  `POST {{baseUrl}}/v1/routines/:<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/disableRoutine)
-- [
-  `POST {{baseUrl}}/v1/routines/:<routineName>/enable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/enableRoutine)
-
-Set the disabled flag for the given routine to `true` or `false` (default is `false`).
-
-- Disabled routines will not schedule new jobs.
-- Running jobs will be canceled, similar to the `Cancel Backup Job` endpoint.
+  `POST {{baseUrl}}/v1/restore/cancel/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
 
 ## FAQ
 
