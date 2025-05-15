@@ -12,8 +12,8 @@ import (
 // BackupPolicy represents a scheduled backup policy.
 // @Description BackupPolicy represents a scheduled backup policy.
 type BackupPolicy struct {
-	// Maximum number of scan calls to run in parallel. This value determines the number of threads
-	// the backup service will use. The optimal value depends on hardware and network configuration.
+	// Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total
+	// data partitions. The optimal value depends on hardware and network configuration.
 	// Default: 8.
 	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
 	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
