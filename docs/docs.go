@@ -1832,7 +1832,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "encryption": {
-                    "description": "Encryption details (algorithm and key). Default is not encryption.",
+                    "description": "Encryption details (algorithm and key). Default is no encryption.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.EncryptionPolicy"
@@ -1857,7 +1857,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "parallel": {
-                    "description": "Maximum number of scan calls to run in parallel. This value determines the number of threads\nthe backup service will use. The optimal value depends on hardware and network configuration.\nDefault: 8.",
+                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.\nDefault: 8.",
                     "type": "integer",
                     "example": 1
                 },
@@ -2514,7 +2514,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "encryption": {
-                    "description": "Encryption details (algorithm and key). Default is not encryption.",
+                    "description": "Encryption details (algorithm and key). Default is no encryption.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.EncryptionPolicy"
@@ -2556,7 +2556,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "parallel": {
-                    "description": "The number of concurrent record readers from backup files.\nThis value determines the number of threads the backup service will use.\nThe optimal value depends on hardware and network configuration.\nDefault: 8.",
+                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.\nDefault: 8.",
                     "type": "integer",
                     "example": 8
                 },

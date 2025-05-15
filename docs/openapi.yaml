@@ -1498,7 +1498,7 @@ components:
         encryption:
           allOf:
           - $ref: '#/components/schemas/dto.EncryptionPolicy'
-          description: Encryption details (algorithm and key). Default is not encryption.
+          description: Encryption details (algorithm and key). Default is no encryption.
           type: object
         file-limit:
           description: |-
@@ -1518,8 +1518,8 @@ components:
           type: boolean
         parallel:
           description: |-
-            Maximum number of scan calls to run in parallel. This value determines the number of threads
-            the backup service will use. The optimal value depends on hardware and network configuration.
+            Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total
+            data partitions. The optimal value depends on hardware and network configuration.
             Default: 8.
           example: 1
           type: integer
@@ -2209,7 +2209,7 @@ components:
         encryption:
           allOf:
           - $ref: '#/components/schemas/dto.EncryptionPolicy'
-          description: Encryption details (algorithm and key). Default is not encryption.
+          description: Encryption details (algorithm and key). Default is no encryption.
           type: object
         extra-ttl:
           description: |-
@@ -2249,7 +2249,8 @@ components:
         parallel:
           description: |-
             The number of concurrent record readers from backup files.
-            This value determines the number of threads the backup service will use.
+            This value controls the level of parallelism used by the backup service when
+            reading backup files.
             The optimal value depends on hardware and network configuration.
             Default: 8.
           example: 8
