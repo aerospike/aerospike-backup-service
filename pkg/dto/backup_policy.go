@@ -44,7 +44,7 @@ type BackupPolicy struct {
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created. Default is 250 MB.
 	FileLimit *int `yaml:"file-limit,omitempty" json:"file-limit,omitempty" example:"1024"`
-	// Encryption details (algorithm and key). Default is not encryption.
+	// Encryption details (algorithm and key). Default is no encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details (algorithm and mode). Default is no compression.
 	// Enabling compression reduces storage and network usage, but increases CPU usage during the backup.
