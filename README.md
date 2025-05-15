@@ -154,7 +154,7 @@ backups occur. When defining a routine, you reference:
 Each of these referenced components must be created and named in the configuration before the routine can use them. This
 modular approach lets you reuse and combine policies, clusters, and storage setups across multiple routines.
 
-Configuration file example:
+#### Configuration file example
 
 <!-- DefaultConfig -->
 
