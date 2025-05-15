@@ -18,18 +18,18 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
 
 - [Getting started](#getting-started)
 - [User guide](#user-guide)
-    * [Run](#run)
-    * [Configuration](#configuration)
-        + [Configuration File Format](#configuration-file-format)
-        + [Configuration with API](#configuration-with-api)
-    * [Monitoring](#monitoring)
-    * [Example requests and responses](#example-requests-and-responses)
-        + [Backup](#backup)
-        + [Restore](#restore)
+  * [Run](#run)
+  * [Configuration](#configuration)
+    + [Configuration File Format](#configuration-file-format)
+    + [Configuration with API](#configuration-with-api)
+  * [Monitoring](#monitoring)
+  * [Example requests and responses](#example-requests-and-responses)
+    + [Backup](#backup)
+    + [Restore](#restore)
 - [FAQ](#faq)
-    * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
-    * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
-    * [Which storage providers are supported?](#which-storage-providers-are-supported)
+  * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
+  * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
+  * [Which storage providers are supported?](#which-storage-providers-are-supported)
 - [Build from source](#build-from-source)
     + [Prerequisites](#prerequisites)
     + [Build the service](#build-the-service)
@@ -37,21 +37,8 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
     + [Build Linux packages](#build-linux-packages)
     + [Release](#release)
 - [Migration Guide](#migration-guide)
-    * [v3 -> v3.1](#v3---v31)
-        + [Strict validation](#strict-validation)
-        + [Filter by partition](#filter-by-partition)
-        + [Support for specifying object storage classes](#support-for-specifying-object-storage-classes)
-        + [Concurrent incremental backups](#concurrent-incremental-backups)
-        + [Skip cluster config backup](#skip-cluster-config-backup)
-    * [v2 -> v3](#v2---v3)
-        + [Storage Object](#storage-object)
-        + [Configuration Management Update](#configuration-management-update)
-        + [Apply Endpoint](#apply-endpoint)
-        + [Secret Agents](#secret-agents)
-        + [Restore Request](#restore-request)
-        + [Backup Retention Policy](#backup-retention-policy)
-        + [Node list](#node-list)
-        + [Secret Agent for cluster](#secret-agent-for-cluster)
+  * [v3 -> v3.1](#v3---v31)
+  * [v2 -> v3](#v2---v3)
 
 <!-- tocstop -->
 
@@ -576,7 +563,8 @@ Cancel the restore job identified by `<jobId>`. Data that has already been resto
       interruption.
 
 - **Incremental Backups:**
-    - Incremental backups are skipped if any other backup (full or incremental) is still running.
+    - By default, incremental backups are skipped if any other backup (full or incremental) is still running. 
+      This behavior can be overridden using the [`backup-policy.concurrent-incremental`](#concurrent-incremental-backups) setting, which allows incremental backups to run concurrently.
     - Incremental backups will not run until at least one full backup has been successfully completed.
 
 ## Can multiple backup routines be performed simultaneously?
@@ -650,13 +638,13 @@ git push
 
 There is no breaking change in this release, but several new features have been introduced.
 
-### Strict validation
+#### Strict validation
 
 The backup service performs strict validation of the configuration file during startup.
 Invalid configurations will result in errors preventing the service from starting. This will help prevent unexpected
 behavior caused by invalid configurations.
 
-### Filter by partition
+#### Filter by partition
 
 backup policy has new flag `partition-list`. When enabled, the backup service will back up only specific partitions of
 the
@@ -673,7 +661,7 @@ This field is mutually exclusive with node-list.
 This feature can be used to parallelize backups across multiple instances. Each instance can be assigned a subset of
 partitions to back up, ensuring efficient distribution of workload.
 
-### Support for specifying object storage classes
+#### Support for specifying object storage classes
 
 Every storage provider now supports specifying an object storage class
 
@@ -684,20 +672,22 @@ Every storage provider now supports specifying an object storage class
 Object storage classes define the durability and availability levels for objects within a bucket.
 Supported values depend on the chosen storage provider.
 
-### Concurrent incremental backups
+#### Concurrent incremental backups
 
 Backup policy has new flag `concurrent-incremental`.
-When false (default), incremental backups are skipped if another backup for same routine is in progress.
-When true, incremental backups can run concurrently with full backups for the same routine.
 
-### Skip cluster config backup
+* When false (default), incremental backups are skipped if another backup for same routine is in progress.
+
+* When true, incremental backups can run concurrently with full backups for the same routine.
+
+#### Skip cluster config backup
 
 Backup policy has new field `with-cluster-configuration`.
 When false (default), the backup service will exclude cluster configuration from the backup.
 
 ## v2 -> v3
 
-### Storage Object
+#### Storage Object
 
 The `Storage` object schema has been updated in **v3** to improve clarity, modularity, and support for additional
 storage types.
@@ -744,7 +734,7 @@ local:
 
 ```
 
-### Configuration Management Update
+#### Configuration Management Update
 
 Changes to the configuration API take effect immediately in version 3.0.
 
@@ -761,15 +751,15 @@ runtime configuration.
     - If a routine entry is absent in the updated configuration file, it will not be rescheduled.
     - If the routine entry is updated, it will be rescheduled with the new parameters.
 
-### Apply Endpoint
+#### Apply Endpoint
 
 The `apply` endpoint reads and applies the configuration from the file (after it was modified externally).
 
-### Secret Agents
+#### Secret Agents
 
 The `secret-agent` configuration field to store the list of secret agents is now named `secret-agents`.
 
-### Restore Request
+#### Restore Request
 
 In the new version (v3) of the API, the **`restore`** request (`/v1/restore/full` and `/v1/restore/incremental`)
 was changed to simplify and streamline the process.
@@ -779,7 +769,7 @@ was changed to simplify and streamline the process.
   The specific backup data location is now specified using a new required field: **`backup-data-path`**.
   This change allows you to reuse the same storage for different restore requests.
 
-### Backup Retention Policy
+#### Backup Retention Policy
 
 This release introduces a new, configurable **RetentionPolicy** for managing backup storage more effectively.
 The feature allows users to specify retention rules for both full and incremental backups, replacing the previous
@@ -799,7 +789,7 @@ After each successfull full backup, all existing backups are scanned to count fu
 ABS then removes older full backups and their associated incremental backups as needed to retain only
 the last `full` backups and incremental backups for the most recent `incremental` backups.
 
-### Node list
+#### Node list
 
 Backup routine has a new optional `node-list` property.
 
@@ -814,12 +804,12 @@ Back up the given cluster nodes only.
 This argument is mutually exclusive to partition-list/after-digest arguments.
 Default: back up all nodes in the cluster
 
-#### Extra ttl
+##### Extra ttl
 
 A new optional field, `extra-ttl`, has been added to the restore policy configuration.
 It specifies the amount of extra time-to-live (TTL) to add to records that have expirable void-times.
 
-### Secret Agent for cluster
+#### Secret Agent for cluster
 
 The credential object has a new optional `secret-agent` property that points to a secret agent, one of those listed in
 the `secret-agents` configuration parameter.
