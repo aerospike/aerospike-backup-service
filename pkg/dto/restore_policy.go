@@ -10,7 +10,8 @@ import (
 // @Description RestorePolicy represents a policy for the restore operation.
 type RestorePolicy struct {
 	// The number of concurrent record readers from backup files.
-	// This value determines the number of threads the backup service will use.
+	// This value controls the level of parallelism used by the backup service when
+        // reading backup files.
 	// The optimal value depends on hardware and network configuration.
 	// Default: 8.
 	Parallel *int `json:"parallel,omitempty" example:"8"`
