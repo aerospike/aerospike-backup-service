@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.12.0
-ARG GO_VERSION=1.23.4
+ARG GO_VERSION=1.23.9
 ARG REGISTRY="docker.io"
 ARG RH_REGISTRY="registry.access.redhat.com"
 
