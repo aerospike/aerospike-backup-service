@@ -8,7 +8,7 @@ aerospike-clusters:
     credentials:
       user: "tester"
       password: "secret:asbackup:psw" # Password will be fetched from the secret agent
-      secret-agent-name: secret-agent  # <--- Refers to secret-agents
+      secret-agent-name: secret-agent  # <--- Refers to the secret agent name under secret-agents
 
 secret-agents:
   secret-agent: # <--- Custom secret agent name
