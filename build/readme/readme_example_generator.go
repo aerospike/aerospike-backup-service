@@ -145,6 +145,34 @@ var jsonExamples = map[string]any{
 			},
 		},
 	},
+	"CurrentRestoreResponse": dto.RestoreJobStatus{
+		ReadRecords:     100_000,
+		TotalBytes:      30000000,
+		ExpiredRecords:  0,
+		SkippedRecords:  0,
+		IgnoredRecords:  0,
+		InsertedRecords: 5_000,
+		ExistedRecords:  0,
+		FresherRecords:  0,
+		IndexCount:      4,
+		UDFCount:        1,
+		ErrorsInDoubt:   0,
+		CurrentRestore: &dto.RunningJob{
+			TotalRecords:     100_000,
+			DoneRecords:      50_000,
+			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
+			FinishTime:       nil,
+			PercentageDone:   50,
+			EstimatedEndTime: util.Ptr(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			Metrics: dto.Metrics{
+				RecordsPerSecond:   1000,
+				KilobytesPerSecond: 30000,
+				Pipeline:           0,
+			},
+		},
+		Status: dto.JobStatusRunning,
+		Error:  "",
+	},
 }
 
 var yamlExamples = map[string]any{

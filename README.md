@@ -12,60 +12,117 @@ Use the [OpenAPI generation script](./scripts/generate-openapi.sh) to generate a
 A pre-built OpenAPI specification is available in Swagger
 format [here](https://aerospike.github.io/aerospike-backup-service/).
 
-## Table of contents
+# Table of contents
 
 <!-- toc -->
 
 - [Getting started](#getting-started)
 - [User guide](#user-guide)
-  * [Configuration](#configuration)
-  * [Operations](#operations)
-- [Usage](#usage)
-  * [Service help](#service-help)
   * [Run](#run)
-- [Monitoring](#monitoring)
-- [Build from source](#build-from-source)
-  * [Prerequisites](#prerequisites)
-  * [Build the service](#build-the-service)
-  * [Build Docker image](#build-docker-image)
-  * [Build Linux packages](#build-linux-packages)
-  * [Release](#release)
-- [Example requests and responses](#example-requests-and-responses)
-  * [Backup](#backup)
-  * [Restore](#restore)
-  * [Restore job status](#restore-job-status)
+  * [Configuration](#configuration)
+    + [Configuration File Format](#configuration-file-format)
+    + [Configuration with API](#configuration-with-api)
+  * [Monitoring](#monitoring)
+  * [Example requests and responses](#example-requests-and-responses)
+    + [Backup](#backup)
+    + [Restore](#restore)
 - [FAQ](#faq)
   * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
   * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
   * [Which storage providers are supported?](#which-storage-providers-are-supported)
-- [Breaking API Changes (v2 → v3):](#breaking-api-changes-v2-%E2%86%92-v3)
-  * [Storage Object](#storage-object)
-  * [**Example**](#example)
-  * [Configuration Management Update](#configuration-management-update)
-  * [Apply Endpoint](#apply-endpoint)
-  * [Secret Agents](#secret-agents)
-  * [Restore Request](#restore-request)
-  * [Backup Retention Policy](#backup-retention-policy)
-- [New API functions (v2 → v3):](#new-api-functions-v2-%E2%86%92-v3)
-  * [Node list](#node-list)
-  * [Extra ttl](#extra-ttl)
-  * [Secret Agent for cluster](#secret-agent-for-cluster)
+- [Build from source](#build-from-source)
+    + [Prerequisites](#prerequisites)
+    + [Build the service](#build-the-service)
+    + [Build Docker image](#build-docker-image)
+    + [Build Linux packages](#build-linux-packages)
+    + [Release](#release)
+- [Migration Guide](#migration-guide)
+  * [v3 → v3.1](#v3-%E2%86%92-v31)
+  * [v2 → v3](#v2-%E2%86%92-v3)
+    + [Storage Object](#storage-object)
+    + [Configuration Management Update](#configuration-management-update)
+    + [Apply Endpoint](#apply-endpoint)
+    + [Secret Agents](#secret-agents)
+    + [Restore Request](#restore-request)
+    + [Backup Retention Policy](#backup-retention-policy)
+  * [v2 → v3](#v2-%E2%86%92-v3-1)
+    + [Node list](#node-list)
+    + [Secret Agent for cluster](#secret-agent-for-cluster)
 
 <!-- tocstop -->
 
-## Getting started
+# Getting started
 
 Aerospike Backup Service reads configurations from a YAML file provided when the service is launched. See [Run](#run)
 for specific syntax.
-A sample configuration file and docker-compose script will help you get started testing the service.
-Follow the [docker-compose instructions](./docker-compose) to set up your test environment.
 
 Linux installation packages are available
 under [releases](https://github.com/aerospike/aerospike-backup-service/releases).
 
-## User guide
+# User guide
 
-### Configuration
+This section covers basic usage scenarios for the Aerospike Backup Service.
+
+## Run
+
+#### Binary
+
+Run as a binary using a configuration file:
+
+```bash
+./aerospike-backup-service -c config.yml
+```
+
+Help:
+
+```bash
+./aerospike-backup-service -h
+Aerospike Backup Service
+
+Usage:
+  aerospike-backup-service [flags]
+
+Flags:
+  -c, --config string   configuration file path/URL
+  -h, --help            help for aerospike-backup-service
+  -r, --remote          use remote config file
+  -v, --version         version for aerospike-backup-service
+```
+
+Set the configuration file path with `-c`.
+
+Without the `-r` flag, the file specified after `-c` is the actual configuration file.
+With the `-r` flag, the file specified after `-c` contains the path or URL to the actual configuration file.
+
+For example, you may store your configurations remotely, such as on AWS S3 storage.
+In this case, you could have a remote_config.yaml file containing S3 details, and you would run the server with
+`-c remote_config.yaml -r`.
+
+#### Docker
+
+Run in a container with a custom configuration file:
+
+```bash
+docker run -d -p 8080:8080 -v config.yml:/app/config.yml --name backup-service backup-service
+```
+
+#### Service
+
+Run as service (default path for config is `/etc/aerospike-backup-service/aerospike-backup-service.yml`):
+
+```bash
+sudo systemctl start aerospike-backup-service
+```
+
+view service logs:
+
+```bash
+sudo journalctl -u aerospike-backup-service -n 100 --no-page -f
+```
+
+## Configuration
+
+### Configuration File Format
 
 The configuration system in the Aerospike Backup Service is designed around modular entities—clusters, storage, backup
 policies, secret agents and routines—that you define and then connect together.
@@ -95,7 +152,7 @@ aerospike-clusters:
     credentials:
       user: "tester"
       password: "secret:asbackup:psw" # Password will be fetched from the secret agent
-      secret-agent-name: secret-agent  # <--- Refers to secret-agents
+      secret-agent-name: secret-agent  # <--- Refers to the secret agent name under secret-agents
 
 secret-agents:
   secret-agent: # <--- Custom secret agent name
@@ -126,17 +183,17 @@ backup-routines:
   dailyLocalBackupRoutine: # <--- Custom routine name
     interval-cron: "@daily" # Full backup will be triggered daily at midnight
     incr-interval-cron: "0 */2 * * * *" # Incremental backups every 2 hours
-    source-cluster: abs-cluster         # <--- Refers to aerospike-clusters
-    storage: s3                         # <--- Refers to storage
-    backup-policy: dailyBackupPolicy    # <--- Refers to backup-policies
+    source-cluster: abs-cluster         # <--- Refers to the cluster name under aerospike-clusters
+    storage: s3                         # <--- Refers to the storage name under storage
+    backup-policy: dailyBackupPolicy    # <--- Refers to the policy name under backup-policies
 ```
 
-Several configuration fields in the YAML file are marked with “May affect performance”.
+Several configuration fields in the YAML file are marked with `May affect performance`.
 These settings (such as parallel, file-limit, min-part-size, and compression)
 can have a significant impact on backup throughput.
 We recommend experimenting with different values in your environment to find the optimal balance.
 
-#### Configuration with API
+### Configuration with API
 
 Each entity defined in the API specification has endpoints for reading and writing backup configurations at general or
 granular levels. While the API provides full control over the configuration, for most use cases,
@@ -197,57 +254,6 @@ update an existing routine.
 :warning: Incremental backups are deleted if they are empty and after each full backup. System metadata is backed up
 only on full backups.
 
-### Operations
-
-- List backups: Returns the details of available backups. A time filter can be added to the request.
-- Restore from path: Starts a restore operation from a specified backup folder.
-- Restore from a timestamp: Given a routine name, searches for the closest full backup to the given timestamp and
-  applies the backup in the following order: full backup first, then incremental backups up to the given point in time,
-  if they exist.
-
-## Usage
-
-### Service help
-
-```
-% ./backup -h
-Aerospike Backup Service
-
-Usage:
-  aerospike-backup-service [flags]
-
-Flags:
-  -c, --config string   configuration file path/URL
-  -h, --help            help for aerospike-backup-service
-  -r, --remote          use remote config file
-  -v, --version         version for aerospike-backup-service
-```
-
-Set the configuration file path with `-c`.
-
-Without the `-r` flag, the file specified after `-c` is the actual configuration file.
-With the `-r` flag, the file specified after `-c` contains the path or URL to the actual configuration file.
-
-For example, you may store your configurations remotely, such as on AWS S3 storage.
-In this case, you could have a remote_config.yaml file containing S3 details, and you would run the server with
-`-c remote_config.yaml -r`.
-
-### Run
-
-Run as a binary using a configuration file:
-
-```bash
-./build/target/aerospike-backup-service -c config/config.yml
-```
-
-Run in a container with a custom configuration file:
-
-```bash
-docker run -d -p 8080:8080 -v custom_config.yml:/app/config.yml --name backup-service backup-service
-```
-
-Example configuration files can be found in the [config](./config/) folder.
-
 ## Monitoring
 
 The service exposes a wide variety of system metrics that [Prometheus](https://prometheus.io/) can scrape, including the
@@ -276,68 +282,24 @@ on liveness and readiness probes for more information.
 The HTTP metrics endpoint can be found on
 the [OpenAPI specification](https://aerospike.github.io/aerospike-backup-service/) page.
 
-## Build from source
-
-### Prerequisites
-
-- Go 1.23
-
-### Build the service
-
-The following command generates a binary under the `build/target` directory.
-
-```bash
-make build
-```
-
-### Build Docker image
-
-#### Multiplatform
-
-```bash
-DOCKER_USERNAME="<jforg-username>" DOCKER_PASSWORD="<jfrog-password>" TAG="<tag>" make docker-buildx 
-```
-
-#### For local use
-
-```bash
-TAG="<tag>" make docker-build
-```
-
-### Build Linux packages
-
-Run `make packages`.
-This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`linux/arm64`) with respective `sha256`
-checksum file in the `build/target` directory.
-See the quick [guide](build/package/README.md) on how to get started with the Linux packages.
-
-### Release
-
-Use the following commands before a release to update the version.
-
-```bash
-NEXT_VERSION="<version>"  make release
-NEXT_HELM_CHART_VERSION="<helm-chart-version>" make helm-chart-release
-git add --all
-git commit -m "Release: "$(cat VERSION)""
-git tag "$(cat VERSION)"
-git push 
-```
-
 ## Example requests and responses
 
 The following sections provide example requests and responses for various operations.
 For full API documentation, refer to
-the [Aerospike Backup Service OpenAPI specification](https://aerospike.github.io/aerospike-backup-service).
+the [Aerospike Backup Service OpenAPI specification](https://aerospike.github.io/aerospike-backup-service/#/System/metrics).
+
+While command-line tools such as curl, httpie, or wget work well for interacting with the API, a graphical
+interface (such as [Postman](https://www.postman.com/downloads/) or [Insomnia](https://insomnia.rest/)) is generally
+recommended for a more convenient and user-friendly experience.
 
 ### Backup
+
 #### Trigger On-Demand Backup
 
 This request starts the backup operation for the specified routine, regardless of its configured schedule.
 
-```http
-POST {{baseUrl}}/v1/backups/schedule/<routineName>?delay=<timeout>
-```
+[
+`POST {{baseUrl}}/v1/backups/schedule/<routineName>?delay=<timeout>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/scheduleFullBackup)
 
 * routineName: The name of the backup routine to trigger.
 * delay (optional): Time in milliseconds to delay the start of the backup.
@@ -348,9 +310,8 @@ If the request is accepted, the server responds with Http 202 Accepted.
 
 This endpoint retrieves the current statistics for a backup in progress, identified by its routine name.
 
-```http
-GET {{baseUrl}}/v1/backups/currentBackup/<routineName>
-```
+[
+`GET {{baseUrl}}/v1/backups/currentBackup/<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getCurrentBackup)
 
 * routineName: The name of the routine for which to retrieve current backup information.
 
@@ -404,9 +365,7 @@ Provides a list of backups for each configured routine, including details such a
 and storage
 location.
 
-```http
-GET {{baseUrl}}/v1/backups/full
-```
+[`GET {{baseUrl}}/v1/backups/full`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getFullBackups)
 
 <details>
     <summary>Response</summary>
@@ -448,32 +407,32 @@ Response is a map of routine names to lists of backups.
 
 It's possible to filter the results by adding query parameters:
 
-```http request
-GET {{baseUrl}}/v1/backups/full/<name>?from=<from>&to=<to>
-```
+[
+`GET {{baseUrl}}/v1/backups/full/<name>?from=<from>&to=<to>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getFullBackups)
 
 where `name` is the routine name, `from` and `to` are timestamps in milliseconds since epoch.
+
 #### Disable Routine
 
 [
-  `POST {{baseUrl}}/v1/routines/<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/disableRoutine)
+`POST {{baseUrl}}/v1/routines/<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/disableRoutine)
 
 [
-  `POST {{baseUrl}}/v1/routines/<routineName>/enable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/enableRoutine)
+`POST {{baseUrl}}/v1/routines/<routineName>/enable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/enableRoutine)
 
 Set the disabled flag for the given routine to `true` or `false` (default is `false`).
 
 - Disabled routines will not schedule new jobs.
 - Running jobs will be canceled, similar to the `Cancel Backup Job` endpoint.
+
 ### Restore
 
 #### Direct restore using a specific backup
 
 This request restores a backup from a specified path to a designated destination.
 
-```http
-POST {{baseUrl}}/v1/restore/full
-```
+[
+`POST {{baseUrl}}/v1/restore/full`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreFull)
 
 <details>
     <summary>Request body</summary>
@@ -521,16 +480,15 @@ refer to the names of the corresponding entities in the configuration file.
 
 </details>
 
-The response is a job ID. 
+The response is a job ID.
 
 #### Restore using routine name and timestamp
 
 This option restores the most recent full backup for the given timestamp and then applies all subsequent incremental
 backups up to that timestamp. You don't need to specify the exact backup path or storage.
 
-```http
-POST {{baseUrl}}/v1/restore/timestamp
-```
+[`
+POST {{baseUrl}}/v1/restore/timestamp`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreTimestamp)
 
 <details>
     <summary>Request</summary>
@@ -549,18 +507,37 @@ POST {{baseUrl}}/v1/restore/timestamp
 
 The response is a job ID.
 
-### Restore job status
+#### Restore job status
 
 You can get job status with the
-endpoint 
+endpoint
 
-[`GET {{baseUrl}}/v1/restore/status/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
+[
+`GET {{baseUrl}}/v1/restore/status/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
 
-Response:
+<details>
+    <summary>Request</summary>
+
+
+<!-- CurrentBackupResponse -->
 
 ```json
-123456789
+{
+  "full": {
+    "total-records": 100000,
+    "done-records": 50000,
+    "start-time": "2024-01-01T12:00:00Z",
+    "percentage-done": 50,
+    "estimated-end-time": "2024-01-01T13:00:00Z",
+    "metrics": {
+      "records-per-second": 1000,
+      "kilobytes-per-second": 30000,
+      "pipeline": 0
+    }
+  }
+}
 ```
+</details>
 
 #### Cancel Restore Job
 
@@ -569,9 +546,9 @@ Cancel the restore job identified by `<jobId>`. Data that has already been resto
 - [
   `POST {{baseUrl}}/v1/restore/cancel/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/cancelRestore)
 
-## FAQ
+# FAQ
 
-### What happens when a backup doesn’t finish before another starts (for the same routine)?
+## What happens when a backup doesn’t finish before another starts (for the same routine)?
 
 - **Full Backups:**
     - Full backups cannot overlap. If a scheduled full backup is due to start but the previous one is still running, the
@@ -584,7 +561,7 @@ Cancel the restore job identified by `<jobId>`. Data that has already been resto
     - Incremental backups are skipped if any other backup (full or incremental) is still running.
     - Incremental backups will not run until at least one full backup has been successfully completed.
 
-### Can multiple backup routines be performed simultaneously?
+## Can multiple backup routines be performed simultaneously?
 
 Yes, multiple backup routines can run in parallel. Furthermore, it is possible to back up different namespaces from the
 same cluster using separate routines with different schedules, all running simultaneously.
@@ -592,7 +569,7 @@ same cluster using separate routines with different schedules, all running simul
 To manage resource utilization, you can configure the `cluster.max-parallel-scans` property to limit the number of read
 threads operating on a single cluster.
 
-### Which storage providers are supported?
+## Which storage providers are supported?
 
 The backup service supports the following storage providers:
 
@@ -601,7 +578,59 @@ The backup service supports the following storage providers:
 - **Google Cloud Storage**
 - **Local storage** (files stored on the same machine where the backup service is running)
 
-## Breaking API Changes (v2 → v3):
+# Build from source
+
+### Prerequisites
+
+- Go 1.23
+
+### Build the service
+
+The following command generates a binary under the `build/target` directory.
+
+```bash
+make build
+```
+
+### Build Docker image
+
+#### Multiplatform
+
+```bash
+DOCKER_USERNAME="<jforg-username>" DOCKER_PASSWORD="<jfrog-password>" TAG="<tag>" make docker-buildx 
+```
+
+#### For local use
+
+```bash
+TAG="<tag>" make docker-build
+```
+
+### Build Linux packages
+
+Run `make packages`.
+This will generate a `rpm/deb` package for supported platforms (`linux/amd64`,`linux/arm64`) with respective `sha256`
+checksum file in the `build/target` directory.
+See the quick [guide](build/package/README.md) on how to get started with the Linux packages.
+
+### Release
+
+Use the following commands before a release to update the version.
+
+```bash
+NEXT_VERSION="<version>"  make release
+NEXT_HELM_CHART_VERSION="<helm-chart-version>" make helm-chart-release
+git add --all
+git commit -m "Release: "$(cat VERSION)""
+git tag "$(cat VERSION)"
+git push 
+```
+
+# Migration Guide
+
+## v3 → v3.1
+
+## v2 → v3
 
 ### Storage Object
 
@@ -621,7 +650,7 @@ storage types.
 - **v2**: S3 paths were constructed as `s3://<bucket>/<path>`.
 - **v3**: `bucket` and `path` are now separate fields in `dto.S3Storage`.
 
-### **Example**
+Example:
 
 <!-- Storage -->
 
@@ -657,7 +686,7 @@ Changes to the configuration API take effect immediately in version 3.0.
 Configuration changes in versions prior to 3.0 required an explicit "apply" step after CRUD operations to update the
 runtime configuration.
 
-#### Key Changes
+**Key Changes**
 
 - **Config Updates:** Each CRUD update now automatically saves the configuration to the file and applies it to the
   runtime system. No need for a separate "apply" operation.
@@ -705,7 +734,7 @@ After each successfull full backup, all existing backups are scanned to count fu
 ABS then removes older full backups and their associated incremental backups as needed to retain only
 the last `full` backups and incremental backups for the most recent `incremental` backups.
 
-## New API functions (v2 → v3):
+## v2 → v3
 
 ### Node list
 
@@ -722,7 +751,7 @@ Back up the given cluster nodes only.
 This argument is mutually exclusive to partition-list/after-digest arguments.
 Default: back up all nodes in the cluster
 
-### Extra ttl
+#### Extra ttl
 
 A new optional field, `extra-ttl`, has been added to the restore policy configuration.
 It specifies the amount of extra time-to-live (TTL) to add to records that have expirable void-times.
