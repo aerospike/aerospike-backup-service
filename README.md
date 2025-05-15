@@ -69,17 +69,17 @@ This section covers basic usage scenarios for the Aerospike Backup Service.
 
 ## Run
 
-#### Binary
+### Binary
 
 Run as a binary using a configuration file:
 
-```bash
+```console
 ./aerospike-backup-service -c config.yml
 ```
 
 Help:
 
-```bash
+```console
 ./aerospike-backup-service -h
 Aerospike Backup Service
 
@@ -107,7 +107,6 @@ s3-storage:
   bucket: as-backup-bucket
   path: config.yml
   s3-region: eu-central-1
-
 ```
 
 Run the server
@@ -116,7 +115,7 @@ Run the server
 ./aerospike-backup-service -c remote_config.yaml -r
 ```
 
-#### Docker
+### Docker
 
 Run in a container with a custom configuration file:
 
@@ -124,7 +123,7 @@ Run in a container with a custom configuration file:
 docker run -d -p 8080:8080 -v config.yml:/app/config.yml --name backup-service backup-service
 ```
 
-#### Service
+### Service
 
 Run as service (default path for config is `/etc/aerospike-backup-service/aerospike-backup-service.yml`):
 
