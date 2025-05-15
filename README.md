@@ -50,7 +50,6 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
         + [Secret Agents](#secret-agents)
         + [Restore Request](#restore-request)
         + [Backup Retention Policy](#backup-retention-policy)
-    * [v2 -> v3](#v2---v3-1)
         + [Node list](#node-list)
         + [Secret Agent for cluster](#secret-agent-for-cluster)
 
@@ -103,7 +102,7 @@ For example, you may store your configurations remotely, such as on AWS S3 stora
 In this case, you could have a `remote_config.yaml` file containing S3 details:
 <!-- RemoteConfig -->
 
-```yaml 
+```yaml
 s3-storage:
   bucket: as-backup-bucket
   path: config.yml
@@ -114,7 +113,7 @@ s3-storage:
 Run the server
 
 ```bash
-./aerospike-backup-service g-c remote_config.yaml -r
+./aerospike-backup-service -c remote_config.yaml -r
 ```
 
 #### Docker
@@ -166,11 +165,11 @@ Configuration file example:
 aerospike-clusters:
   abs-cluster: # <--- Custom cluster name
     seed-nodes:
-      - host-name: "localhost"
+      - host-name: localhost
         port: 3000
     credentials:
-      user: "tester"
-      password: "secret:asbackup:psw" # Password will be fetched from the secret agent
+      user: tester
+      password: secret:asbackup:psw # Password will be fetched from the secret agent
       secret-agent-name: secret-agent  # <--- Refers to the secret agent name under secret-agents
 
 secret-agents:
@@ -800,8 +799,6 @@ If no retention policy is specified, the system defaults to retaining all full a
 After each successfull full backup, all existing backups are scanned to count full and incremental backups.
 ABS then removes older full backups and their associated incremental backups as needed to retain only
 the last `full` backups and incremental backups for the most recent `incremental` backups.
-
-## v2 -> v3
 
 ### Node list
 
