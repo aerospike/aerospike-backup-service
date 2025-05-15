@@ -177,6 +177,13 @@ var jsonExamples = map[string]any{
 
 var yamlExamples = map[string]any{
 	"Storage": allStorageTypes,
+	"RemoteConfig": dto.Storage{
+		S3Storage: &dto.S3Storage{
+			Path:     "config.yml",
+			Bucket:   "as-backup-bucket",
+			S3Region: "eu-central-1",
+		},
+	},
 }
 
 func main() {

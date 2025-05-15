@@ -95,9 +95,22 @@ Without the `-r` flag, the file specified after `-c` is the actual configuration
 With the `-r` flag, the file specified after `-c` contains the path or URL to the actual configuration file.
 
 For example, you may store your configurations remotely, such as on AWS S3 storage.
-In this case, you could have a remote_config.yaml file containing S3 details, and you would run the server with
-`-c remote_config.yaml -r`.
+In this case, you could have a `remote_config.yaml` file containing S3 details:
+<!-- RemoteConfig -->
 
+```yaml 
+s3-storage:
+  bucket: as-backup-bucket
+  path: config.yml
+  s3-region: eu-central-1
+
+```
+
+Run the server
+
+```bash
+./aerospike-backup-service g-c remote_config.yaml -r
+```
 #### Docker
 
 Run in a container with a custom configuration file:

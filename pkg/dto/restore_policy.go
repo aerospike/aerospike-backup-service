@@ -11,7 +11,7 @@ import (
 type RestorePolicy struct {
 	// The number of concurrent record readers from backup files.
 	// This value controls the level of parallelism used by the backup service when
-        // reading backup files.
+	// reading backup files.
 	// The optimal value depends on hardware and network configuration.
 	// Default: 8.
 	Parallel *int `json:"parallel,omitempty" example:"8"`
