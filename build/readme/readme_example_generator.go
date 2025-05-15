@@ -135,7 +135,17 @@ var jsonExamples = map[string]any{
 	},
 	"CurrentBackupResponse": dto.RoutineState{
 		Full: &dto.RunningJob{
-			TotalRecords: 100_000,
+			TotalRecords:     100_000,
+			DoneRecords:      50_000,
+			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
+			FinishTime:       nil,
+			PercentageDone:   50,
+			EstimatedEndTime: util.Ptr(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			Metrics: dto.Metrics{
+				RecordsPerSecond:   1000,
+				KilobytesPerSecond: 30000,
+				Pipeline:           0,
+			},
 		},
 	},
 }

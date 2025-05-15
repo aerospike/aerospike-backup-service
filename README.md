@@ -302,8 +302,6 @@ the [Aerospike Backup Service OpenAPI specification](https://aerospike.github.io
 
 This request starts the backup operation for the specified routine, regardless of its configured schedule.
 
-Request:
-
 ```http
 POST {{baseUrl}}/v1/backups/schedule/<routineName>?delay=<timeout>
 ```
@@ -317,35 +315,52 @@ If the request is accepted, the server responds with Http 202 Accepted.
 
 This endpoint retrieves the current statistics for a backup in progress, identified by its routine name.
 
-**Request:**
-
 ```http
 GET {{baseUrl}}/v1/backups/currentBackup/{routineName}
 ```
 
 * routineName: The name of the routine for which to retrieve current backup information.
 
+<details>
+    <summary>Response:</summary>
+
 <!-- CurrentBackupResponse -->
 
 ```json
 {
-  "status": "RUNNING",
-  "progress": 50,
-  "bytes-transferred": 100000,
-  "records-transferred": 100,
-  "start-time": "2024-01-01T12:00:00Z",
-  "end-time": null,
-  "error-message": "",
-  "job-id": "<jobId>"
+  "full": {
+    "total-records": 100000,
+    "done-records": 50000,
+    "start-time": "2024-01-01T12:00:00Z",
+    "percentage-done": 50,
+    "estimated-end-time": "2024-01-01T13:00:00Z",
+    "metrics": {
+      "records-per-second": 1000,
+      "kilobytes-per-second": 30000,
+      "pipeline": 0
+    }
+  }
 }
 ```
+
+`estimated-end-time` an estimation, is calculated based on the current percentage done and duration.
+
+`records-per-second` and `kilobytes-per-second` show current speed, they are updated every second.
+
+`pipeline` represents the number of records that have been read from the source but not yet written to the
+destination.
+This metric helps identify bottlenecks:
+
+- if Pipeline is zero or fluctuates near zero, it means the destination (storage) is consuming data faster than the
+  source (Aerospike) can read.
+- If Pipeline grows large, it indicates that the source is producing data faster than the destination can consume.
+
+</details>
 
 ### Retrieve backup list
 
 Provides a list of backups for each configured routine, including details such as creation time, namespace, and storage
 location.
-
-Request:
 
 ```http
 GET {{baseUrl}}/v1/backups/full
@@ -354,6 +369,7 @@ GET {{baseUrl}}/v1/backups/full
 <details>
     <summary>Response:</summary>
 
+Response is a map of routine names to lists of backups.
 <!-- FullBackupsResponse -->
 
 ```json
@@ -387,6 +403,14 @@ GET {{baseUrl}}/v1/backups/full
 ```
 
 </details>
+
+It's possible to filter the results by adding query parameters:
+
+```http request
+GET {{baseUrl}}/v1/backups/full/<name>?from=<from>&to=<to>
+```
+
+where `name` is the routine name, `from` and `to` are timestamps in milliseconds since epoch.
 
 ### Restore backup (direct restoration)
 
