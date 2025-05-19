@@ -1,14 +1,18 @@
 package validation
 
 import (
+	"reflect"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/modules/schema"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/packages"
 )
 
+// This test ensures that package exposes to AKO (validate and dto) are not dependent on schema.
 func TestPackageDoesNotDependOnSchema(t *testing.T) {
-	const forbidden = "github.com/aerospike/aerospike-backup-service/v3/modules/schema"
+	// resolves to "github.com/aerospike/aerospike-backup-service/v3/modules/schema"
+	forbidden := reflect.TypeOf(schema.Schemas{}).PkgPath()
 
 	current := getCurrentPackage(t)
 	seen := map[string]bool{}
