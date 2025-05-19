@@ -9,7 +9,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-// This test ensures that the validate and dto packages are not dependent on schema.
+// This test ensures that the `validate` and `dto` packages are not dependent on schema.
 func TestPackageDoesNotDependOnSchema(t *testing.T) {
 	// resolves to "github.com/aerospike/aerospike-backup-service/v#/modules/schema"
 	forbidden := reflect.TypeOf(schema.Schemas{}).PkgPath()
