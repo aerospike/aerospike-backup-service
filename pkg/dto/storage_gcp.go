@@ -24,7 +24,7 @@ type GcpStorage struct {
 	// It is not recommended to use an alternate URL in a production environment.
 	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
 	// The minimum size in bytes of individual GCP storage chunks.
-	MinPartSize int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" example:"10" default:"5242880"`
+	MinPartSize int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880"`
 	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *GcpStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }

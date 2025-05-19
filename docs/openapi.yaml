@@ -1328,7 +1328,6 @@ components:
           type: string
         min-part-size:
           description: The minimum size in bytes of individual Azure Blob chunks.
-          example: 10
           type: integer
         path:
           description: |-
@@ -1930,7 +1929,6 @@ components:
           type: string
         min-part-size:
           description: The minimum size in bytes of individual GCP storage chunks.
-          example: 10
           type: integer
         path:
           description: "The root path for the backup repository. If not specified,\
@@ -2560,7 +2558,6 @@ components:
           type: integer
         min-part-size:
           description: The minimum size in bytes of individual S3 UploadParts.
-          example: 10
           type: integer
         path:
           description: |-

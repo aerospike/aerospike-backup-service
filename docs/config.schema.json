@@ -119,7 +119,6 @@
           },
           "min-part-size": {
             "description": "The minimum size in bytes of individual Azure Blob chunks.",
-            "example": 10,
             "type": "integer"
           },
           "path": {
@@ -615,7 +614,6 @@
           },
           "min-part-size": {
             "description": "The minimum size in bytes of individual GCP storage chunks.",
-            "example": 10,
             "type": "integer"
           },
           "path": {
@@ -1296,7 +1294,6 @@
           },
           "min-part-size": {
             "description": "The minimum size in bytes of individual S3 UploadParts.",
-            "example": 10,
             "type": "integer"
           },
           "path": {
