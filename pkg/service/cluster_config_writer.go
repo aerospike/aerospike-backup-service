@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike/clusterconfiguration"
 	"log/slog"
 	"time"
 
@@ -49,7 +50,7 @@ func (w *DefaultClusterConfigWriter) Write(
 
 	defer w.clientManager.Close(client)
 
-	infos := aerospike.ScanClusterConfiguration(client.AerospikeClient(), logger)
+	infos := clusterconfiguration.Scan(client.AerospikeClient(), logger)
 	if len(infos) == 0 {
 		return errors.New("could not read aerospike configuration")
 	}
