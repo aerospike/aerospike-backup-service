@@ -54,6 +54,7 @@ func (a *S3StorageAccessor) createWriter(
 	if err != nil {
 		return nil, err
 	}
+
 	if s3s.MinPartSize > 0 {
 		opts = append(opts, ioStorage.WithChunkSize(s3s.MinPartSize))
 	}

@@ -30,6 +30,8 @@ type AzureStorage struct {
 	// ClientSecret is the Azure Active Directory client secret for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty"`
+	// The minimum size in bytes of individual Azure Blob chunks.
+	MinPartSize int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" example:"10" default:"5242880"`
 	// StorageClass defines the storage tier for data and metadata objects.
 	StorageClass *AzureStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
@@ -70,6 +72,7 @@ func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
 		Path:          a.Path,
 		Auth:          getAzureAuth(a),
 		SecretAgent:   agent,
+		MinPartSize:   a.MinPartSize,
 		StorageClass:  a.StorageClass.ToModel(),
 	}, nil
 }
@@ -98,6 +101,7 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 		Endpoint:          s.Endpoint,
 		ContainerName:     s.ContainerName,
 		Path:              s.Path,
+		MinPartSize:       s.MinPartSize,
 		SecretAgentConfig: ResolveSecretAgentFromModel(s.SecretAgent, config),
 		StorageClass:      newAzureStorageClassFromModel(s.StorageClass),
 	}

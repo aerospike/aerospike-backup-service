@@ -117,6 +117,11 @@
             "description": "Endpoint is the Azure Blob service endpoint URL.",
             "type": "string"
           },
+          "min-part-size": {
+            "description": "The minimum size in bytes of individual Azure Blob chunks.",
+            "example": 10,
+            "type": "integer"
+          },
           "path": {
             "description": "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
             "example": "backups",
@@ -607,6 +612,11 @@
           "key-file-path": {
             "description": "Path to the file containing the service account key in JSON format.",
             "type": "string"
+          },
+          "min-part-size": {
+            "description": "The minimum size in bytes of individual GCP storage chunks.",
+            "example": 10,
+            "type": "integer"
           },
           "path": {
             "description": "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
