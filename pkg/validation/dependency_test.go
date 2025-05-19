@@ -1,9 +1,10 @@
 package validation
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"golang.org/x/tools/go/packages"
-	"testing"
 )
 
 func TestPackageDoesNotDependOnSchema(t *testing.T) {

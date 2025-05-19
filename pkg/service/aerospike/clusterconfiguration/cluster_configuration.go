@@ -1,10 +1,10 @@
 package clusterconfiguration
 
 import (
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"log/slog"
 
 	_ "github.com/aerospike/aerospike-backup-service/v3/modules/schema" // it's required to load configuration schemas in init method
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
