@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	"cloud.google.com/go/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -64,6 +65,7 @@ func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, er
 	if g.KeyFile != "" {
 		opts = append(opts, option.WithCredentialsFile(g.KeyFile))
 	}
+
 	if g.KeyJSON != "" {
 		key, err := g.SecretAgent.Read(g.KeyJSON)
 		if err != nil {
@@ -77,5 +79,14 @@ func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, er
 		opts = append(opts, option.WithEndpoint(g.Endpoint), option.WithoutAuthentication())
 	}
 
-	return storage.NewClient(ctx, opts...)
+	client, err := storage.NewClient(ctx, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GCP client: %w", err)
+	}
+
+	// Set finalizer for the client to release allocated resources.
+	// TODO: replace with runtime.AddCleanup when upgrading to go1.24
+	runtime.SetFinalizer(client, (*storage.Client).Close)
+
+	return client, nil
 }
