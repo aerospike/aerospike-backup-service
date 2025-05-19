@@ -573,6 +573,23 @@ same cluster using separate routines with different schedules, all running simul
 To manage resource utilization, you can configure the `cluster.max-parallel-scans` property to limit the number of read
 threads operating on a single cluster.
 
+## How does the backup service identify what data to back up during incremental backups?
+The Aerospike Backup Service uses Aerospike’s scan operation to identify and backup records, 
+with different behaviors for full and incremental backups:
+* **Full Backups:**
+  * Capture all records in the specified namespaces/sets without any time filter. 
+  The service uses a scan operation with no lower time boundary (modAfter = 0).
+
+* **Incremental Backups:**: 
+  * Only capture records that have been modified since the last successful backup (full or incremental). The service tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp becomes the lower time boundary (modAfter parameter) for the next incremental backup.
+  For the upper time boundary (modBefore), two approaches are available:
+
+    - **Default Behavior (Open-ended)**: No upper time boundary is set. This means records modified during the backup process itself might be included in the backup, but with unpredictable results. For example, if a backup starts at 12:00 and runs for 5 minutes, a record created at 12:01 might be included with either its new or old version—there’s no guarantee which state will be captured.
+    - **Sealed Backups**: When the sealed property in the backup policy is set to true, the backup service will only include records modified before the backup start time. While this creates a more precise point-in-time snapshot, there’s still unpredictability: if a record is updated during the backup process, it might be captured in its old state or excluded entirely from the backup.
+  
+Users should select the appropriate approach based on their recovery point objectives and consistency requirements. The default open-ended approach ensures better data coverage but with some state unpredictability, while sealed backups provide better point-in-time consistency but might miss records updated during the backup process.
+
+
 ## Which storage providers are supported?
 
 The backup service supports the following storage providers:
