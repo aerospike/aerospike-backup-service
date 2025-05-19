@@ -9,6 +9,11 @@ jobs:
   promote-to-jfrog-prod-env:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
       - name: Get Metadata
         run: |
           git fetch --tags --depth=1
@@ -33,6 +38,10 @@ jobs:
     needs:
       - promote-to-jfrog-prod-env
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Login to DockerHub
@@ -53,7 +62,31 @@ jobs:
           REPO_NAME: ${{env.REPO_NAME}}
           ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
         run: |
-          docker buildx imagetools create \
-          --tag "docker.io/aerospike/$REPO_NAME:$TAG" \
-          --tag "docker.io/aerospike/$REPO_NAME:latest" \
-          "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/$REPO_NAME:$TAG"
+          url="https://aerospike.jfrog.io/artifactory/$ARTIFACTORY_CONTAINER_PROD/$REPO_NAME/$TAG/list.manifest.json"
+          amd64_digest="$(curl -sSL "$url" | jq -r '.manifests[] | select(.platform.architecture == "amd64") | .digest')"
+          arm64_digest="$(curl -sSL "$url" | jq -r '.manifests[] | select(.platform.architecture == "arm64") | .digest')"
+          
+          if [[ -z "$amd64_digest" || -z "$arm64_digest" ]]; then
+            echo "Error: Could not resolve image digests."
+            exit 1
+          fi
+          
+          amd64_tag="aerospike/$REPO_NAME:$VERSION-amd64"
+          arm64_tag="aerospike/$REPO_NAME:$VERSION-arm64"
+          multiarch_tag="aerospike/$REPO_NAME:$VERSION"
+          
+          docker pull "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/$REPO_NAME@$amd64_digest"
+          docker pull "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/$REPO_NAME@$arm64_digest"
+          
+          docker tag "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/$REPO_NAME@$amd64_digest" "$amd64_tag"
+          docker tag "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/$REPO_NAME@$arm64_digest" "$arm64_tag"
+          
+          docker push "$amd64_tag"
+          docker push "$arm64_tag"
+          
+          docker manifest create "$multiarch_tag"  "$amd64_tag" "$arm64_tag"
+          
+          docker manifest annotate "$multiarch_tag" "$amd64_tag" --arch amd64
+          docker manifest annotate "$multiarch_tag" "$arm64_tag" --arch arm64
+          
+          docker manifest push "$multiarch_tag"
