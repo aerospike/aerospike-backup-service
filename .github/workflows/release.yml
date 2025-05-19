@@ -62,6 +62,8 @@ jobs:
           REPO_NAME: ${{env.REPO_NAME}}
           ARTIFACTORY_CONTAINER_PROD: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
         run: |
+          set -euo pipefail
+          
           url="https://aerospike.jfrog.io/artifactory/$ARTIFACTORY_CONTAINER_PROD/$REPO_NAME/$TAG/list.manifest.json"
           amd64_digest="$(curl -sSL "$url" | jq -r '.manifests[] | select(.platform.architecture == "amd64") | .digest')"
           arm64_digest="$(curl -sSL "$url" | jq -r '.manifests[] | select(.platform.architecture == "arm64") | .digest')"
@@ -71,9 +73,9 @@ jobs:
             exit 1
           fi
           
-          amd64_tag="aerospike/$REPO_NAME:$VERSION-amd64"
-          arm64_tag="aerospike/$REPO_NAME:$VERSION-arm64"
-          multiarch_tag="aerospike/$REPO_NAME:$VERSION"
+          amd64_tag="aerospike/$REPO_NAME:$TAG-amd64"
+          arm64_tag="aerospike/$REPO_NAME:$TAG-arm64"
+          multiarch_tag="aerospike/$REPO_NAME:$TAG"
           
           docker pull "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/$REPO_NAME@$amd64_digest"
           docker pull "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_PROD/$REPO_NAME@$arm64_digest"
