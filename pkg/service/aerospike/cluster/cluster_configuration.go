@@ -1,4 +1,4 @@
-package clusterconfiguration
+package cluster
 
 import (
 	"log/slog"
@@ -12,7 +12,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-func Scan(client aerospike.Cluster, logger *slog.Logger) []asconfig.DotConf {
+func ReadConfiguration(client aerospike.Cluster, logger *slog.Logger) []asconfig.DotConf {
 	activeHosts := getActiveHosts(client)
 
 	var outputs = make([]asconfig.DotConf, 0, len(activeHosts))
