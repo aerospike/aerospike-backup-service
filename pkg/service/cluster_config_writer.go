@@ -9,6 +9,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike/cluster"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
 
@@ -49,7 +50,7 @@ func (w *DefaultClusterConfigWriter) Write(
 
 	defer w.clientManager.Close(client)
 
-	infos := aerospike.ScanClusterConfiguration(client.AerospikeClient(), logger)
+	infos := cluster.ReadConfiguration(client.AerospikeClient(), logger)
 	if len(infos) == 0 {
 		return errors.New("could not read aerospike configuration")
 	}

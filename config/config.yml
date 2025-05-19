@@ -36,6 +36,7 @@ backup-policies:
     file-limit: 1
     parallel: 1
     sealed: true
+    with-cluster-configuration: true
     retry-policy:
       base-timeout: 1_000
       max-retries: 1
