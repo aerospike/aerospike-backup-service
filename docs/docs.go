@@ -1679,6 +1679,11 @@ const docTemplate = `{
                     "description": "Endpoint is the Azure Blob service endpoint URL.",
                     "type": "string"
                 },
+                "min-part-size": {
+                    "description": "The minimum size in bytes of individual Azure Blob chunks.",
+                    "type": "integer",
+                    "default": 5242880
+                },
                 "path": {
                     "description": "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
                     "type": "string",
@@ -2200,6 +2205,11 @@ const docTemplate = `{
                 "key-file-path": {
                     "description": "Path to the file containing the service account key in JSON format.",
                     "type": "string"
+                },
+                "min-part-size": {
+                    "description": "The minimum size in bytes of individual GCP storage chunks.",
+                    "type": "integer",
+                    "default": 5242880
                 },
                 "path": {
                     "description": "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
@@ -2866,8 +2876,7 @@ const docTemplate = `{
                 "min-part-size": {
                     "description": "The minimum size in bytes of individual S3 UploadParts.",
                     "type": "integer",
-                    "default": 5242880,
-                    "example": 10
+                    "default": 5242880
                 },
                 "path": {
                     "description": "The root path for the backup repository within the bucket.\nIf not specified, backups will be saved in the bucket's root.",

@@ -48,6 +48,10 @@ func (a *AzureStorageAccessor) createWriter(
 		return nil, err
 	}
 
+	if azures.MinPartSize > 0 {
+		opts = append(opts, ioStorage.WithChunkSize(azures.MinPartSize))
+	}
+
 	return azure.NewWriter(ctx, client, azures.ContainerName, opts...)
 }
 

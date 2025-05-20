@@ -23,6 +23,8 @@ type GcpStorage struct {
 	// Alternative url.
 	// It is not recommended to use an alternate URL in a production environment.
 	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
+	// The minimum size in bytes of individual GCP storage chunks.
+	MinPartSize int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880"`
 	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *GcpStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
@@ -56,6 +58,7 @@ func (s *GcpStorage) toModel(config *model.Config) (model.Storage, error) {
 		Endpoint:     s.Endpoint,
 		KeyJSON:      s.Key,
 		SecretAgent:  agent,
+		MinPartSize:  s.MinPartSize,
 		StorageClass: s.StorageClass.ToModel(),
 	}, nil
 }
@@ -67,6 +70,7 @@ func newGcpStorageFromModel(s *model.GcpStorage, config *model.BackupConfig) *Gc
 		Path:              s.Path,
 		Endpoint:          s.Endpoint,
 		Key:               s.KeyJSON,
+		MinPartSize:       s.MinPartSize,
 		SecretAgentConfig: ResolveSecretAgentFromModel(s.SecretAgent, config),
 		StorageClass:      newGcpStorageClassFromModel(s.StorageClass),
 	}
