@@ -42,7 +42,7 @@ func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routin
 	}
 
 	if len(backups) == 0 {
-		return nil, fmt.Errorf("no full backups found in the specified period of time")
+		return nil, fmt.Errorf("no full backups found before %v: %w", toTime, model.ErrNotFound)
 	}
 
 	path := getConfigurationPath(routine, backups[0].Created)
@@ -54,7 +54,7 @@ func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routin
 	}
 
 	if len(configBackups) == 0 {
-		return nil, fmt.Errorf("no configuration backups found for %s", path)
+		return nil, fmt.Errorf("no configuration backups found for %s: %w", path, model.ErrNotFound)
 	}
 
 	return packageFiles(configBackups)

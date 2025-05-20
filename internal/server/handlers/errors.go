@@ -52,13 +52,18 @@ func errNotFound(field string, name any) error {
 	return newErrorWithCode(fmt.Errorf("%s %q not found", field, name), http.StatusNotFound)
 }
 
+// httpError calls http.Error with the appropriate status code based on the error.
 func httpError(w http.ResponseWriter, err error) {
 	var httpErr *errorWithCode
-	if !errors.As(err, &httpErr) {
-		httpErr = newErrorWithCode(err, http.StatusInternalServerError)
-	}
 
-	http.Error(w, httpErr.Error(), httpErr.Code)
+	switch {
+	case errors.As(err, &httpErr):
+		http.Error(w, httpErr.Error(), httpErr.Code)
+	case errors.Is(err, model.ErrNotFound):
+		http.Error(w, err.Error(), http.StatusNotFound)
+	default:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // httpOK responds with a JSON-encoded success message and 200 status.
