@@ -94,6 +94,7 @@ s3-storage:
   bucket: as-backup-bucket
   path: config.yml
   s3-region: eu-central-1
+
 ```
 
 Run the server
@@ -263,6 +264,7 @@ only on full backups.
 The service exposes a wide variety of system metrics that [Prometheus](https://prometheus.io/) can scrape, including the
 following application metrics:
 
+<!-- Metrics -->
 | Name                                                   | Description                                 |
 |--------------------------------------------------------|---------------------------------------------|
 | `aerospike_backup_service_runs_total`                  | Successful backup runs counter              |
@@ -273,6 +275,8 @@ following application metrics:
 | `aerospike_backup_service_incremental_failure_total`   | Incremental backup failure counter          |
 | `aerospike_backup_service_duration_millis`             | Full backup duration in milliseconds        |
 | `aerospike_backup_service_incremental_duration_millis` | Incremental backup duration in milliseconds |
+| `aerospike_backup_service_backup_progress_pct`         | Progress of backup processes in percentage  |
+| `aerospike_backup_service_restore_progress_pct`        | Progress of restore processes in percentage |
 
 * `/metrics` exposes metrics for Prometheus to check performance of the backup service.
   See [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/getting_started/) for instructions.

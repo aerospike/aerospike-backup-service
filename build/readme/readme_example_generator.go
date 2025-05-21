@@ -11,7 +11,9 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -233,6 +235,7 @@ func main() {
 	})
 
 	updatedReadme = updateDefaultConfigSection(updatedReadme)
+	updatedReadme = updateMetrics(updatedReadme)
 
 	err = os.WriteFile("README.md", updatedReadme, 0600)
 	if err != nil {
@@ -273,4 +276,54 @@ func marshalYAML(v interface{}) ([]byte, error) {
 	formattedYAML := strings.ReplaceAll(string(rawYAML), "    ", "  ")
 
 	return []byte(formattedYAML), nil
+}
+
+func updateMetrics(readme []byte) []byte {
+	type Row struct {
+		Name string
+		Help string
+	}
+	var rows []Row
+
+	prometheusRE := regexp.MustCompile(`fqName: "([^"]+)", help: "([^"]+)"`)
+	for _, metric := range service.AllMetrics {
+		ch := make(chan *prometheus.Desc, 1)
+		metric.Describe(ch)
+		close(ch)
+		for desc := range ch {
+			matches := prometheusRE.FindStringSubmatch(desc.String())
+			if len(matches) == 3 {
+				rows = append(rows, Row{matches[1], matches[2]})
+			}
+		}
+	}
+
+	// Determine column widths
+	maxName := len("Name")
+	maxHelp := len("Description")
+	for _, r := range rows {
+		if len(r.Name) > maxName {
+			maxName = len(r.Name)
+		}
+		if len(r.Help) > maxHelp {
+			maxHelp = len(r.Help)
+		}
+	}
+
+	const quotes = 2
+
+	// Build Markdown table string
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("| %-*s | %-*s |\n", maxName+quotes, "Name", maxHelp, "Description"))
+	sb.WriteString(fmt.Sprintf("|-%s-|-%s-|\n", strings.Repeat("-", maxName+quotes), strings.Repeat("-", maxHelp)))
+	for _, r := range rows {
+		name := "`" + r.Name + "`"
+		sb.WriteString(fmt.Sprintf("| %-*s | %-*s |\n", maxName+quotes, name, maxHelp, r.Help))
+	}
+	table := sb.String()
+
+	// Replace section after <!-- Metrics -->
+	metricsRe := regexp.MustCompile(`(?s)(<!-- Metrics -->\n)(\|.*?\|\n)(\n)`)
+
+	return metricsRe.ReplaceAll(readme, []byte("${1}"+table+"${3}"))
 }
