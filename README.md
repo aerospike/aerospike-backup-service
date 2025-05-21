@@ -9,8 +9,7 @@ You can perform full and incremental backups and set different backup policies a
 There are also several monitoring endpoints to check backup information.
 
 Use the [OpenAPI generation script](./scripts/generate-openapi.sh) to generate an OpenAPI specification for the service.
-A pre-built OpenAPI specification is available in Swagger
-format [here](https://aerospike.github.io/aerospike-backup-service/).
+A pre-built OpenAPI specification is available in Swagger format [here](https://aerospike.github.io/aerospike-backup-service/).
 
 # Table of contents
 
@@ -29,6 +28,7 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
 - [FAQ](#faq)
   * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
   * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
+  * [How does the backup service identify what data to back up during incremental backups?](#how-does-the-backup-service-identify-what-data-to-back-up-during-incremental-backups)
   * [Which storage providers are supported?](#which-storage-providers-are-supported)
 - [Build from source](#build-from-source)
     + [Prerequisites](#prerequisites)
@@ -44,15 +44,15 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
 
 # Getting started
 
-Aerospike Backup Service reads configurations from a YAML file provided when the service is launched. See [Run](#run)
-for specific syntax.
+Aerospike Backup Service reads configurations from a YAML file that is provided when the service is launched. 
+See [Run](#run) for specific syntax.
 
 Linux installation packages are available
 under [releases](https://github.com/aerospike/aerospike-backup-service/releases).
 
 # User guide
 
-This section covers basic usage scenarios for the Aerospike Backup Service.
+This section covers basic usage scenarios for Aerospike Backup Service.
 
 ## Run
 
@@ -112,13 +112,13 @@ docker run -d -p 8080:8080 -v config.yml:/app/config.yml --name backup-service b
 
 #### Service
 
-Run as service (default path for config is `/etc/aerospike-backup-service/aerospike-backup-service.yml`):
+Run as a service. The default path for the configuration file is `/etc/aerospike-backup-service/aerospike-backup-service.yml`.
 
 ```bash
 sudo systemctl start aerospike-backup-service
 ```
 
-view service logs:
+View service logs:
 
 ```bash
 sudo journalctl -u aerospike-backup-service -n 100 --no-page -f
@@ -193,7 +193,7 @@ backup-routines:
 ```
 
 Several configuration fields in the YAML file are marked with `May affect performance`.
-These settings (such as parallel, file-limit, min-part-size, and compression)
+These settings, such as parallel, file-limit, min-part-size, and compression,
 can have a significant impact on backup throughput.
 We recommend experimenting with different values in your environment to find the optimal balance.
 
@@ -201,10 +201,11 @@ We recommend experimenting with different values in your environment to find the
 
 Each entity defined in the API specification has endpoints for reading and writing backup configurations at general or
 granular levels. While the API provides full control over the configuration, for most use cases,
-it’s preferable to configure the service via the YAML configuration file, which is easier to maintain.
+we recommend configuring the service with the YAML configuration file because it is easier to maintain.
 
 For specifics and example values, see the [OpenAPI docs](https://aerospike.github.io/aerospike-backup-service/).
-The endpoints defined within the configuration section allow users to view or modify the configuration file.
+The endpoints defined within the configuration section allow you to view or modify the configuration file.
+
 Endpoints ending with /config enable reading and modifying the entire file at once, while endpoints like
 `/config/clusters`, `/config/policies`, `/config/routines`, and `/config/storage` provide more granular control.
 Changes made through any of these endpoints are applied immediately.
@@ -212,8 +213,7 @@ However, backup processes already in progress will continue using the configurat
 
 #### Cluster connection
 
-Cluster configuration entities denote the configuration properties needed to establish connections to Aerospike
-clusters.
+Cluster configuration entities denote the configuration properties needed to establish connections to Aerospike clusters.
 These connections include the cluster IP address, port number, authentication information, and more.
 See [`POST: /config/clusters`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addCluster) for the
 full specification.
@@ -224,13 +224,13 @@ including secrets in your configuration.
 #### Storage connection
 
 This entity includes properties of connections to local or cloud storage, where the backup files are stored.
-You can get information about a specific configured storage option, for example to check the cloud storage location for
+You can get information about a specific configured storage option, such as checking the cloud storage location for
 a backup.
-You can also add, update, or remove a storage configuration. See
-the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities
+You can also add, update, or remove a storage configuration. 
+See the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities
 under `/config/storage` for detailed information.
 
-:warning: ABS currently supports AWS S3, GCP, Microsoft Azure cloud storage.
+:warning: ABS currently supports AWS S3, GCP, and Microsoft Azure cloud storage.
 
 #### Backup policy
 
@@ -248,8 +248,7 @@ to create a policy, ensure that you give your policy a name that will let you qu
 
 A backup routine is a set of procedures that actually perform backups based on the predefined backup policy.
 It includes configurations for the source cluster, storage destination, scheduling (separately for full and incremental
-backups),
-and the scope of data to back up (such as namespaces, sets, or bins).
+backups), and the scope of data to back up (such as namespaces, sets, or bins).
 
 See the [Routines](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readRoutines) section for
 command examples showing how to find all routines, get information about a specific named routine, and add, remove, or
@@ -349,9 +348,9 @@ This endpoint retrieves the current statistics for a backup in progress, identif
 destination.
 This metric helps identify bottlenecks:
 
-- if Pipeline is zero or fluctuates near zero, it means the destination (storage) is consuming data faster than the
+- if `pipeline` is zero or fluctuates near zero, it means the destination (storage) is consuming data faster than the
   source (Aerospike) can read.
-- If Pipeline grows large, it indicates that the source is producing data faster than the destination can consume.
+- If `pipeline` grows large, it indicates that the source is producing data faster than the destination can consume.
 
 </details>
 
@@ -366,15 +365,14 @@ will be deleted.
 #### Retrieve Backup List
 
 Provides a list of backups for each configured routine, including details such as creation time, duration, namespace,
-and storage
-location.
+and storage location.
 
 [`GET {{baseUrl}}/v1/backups/full`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getFullBackups)
 
 <details>
     <summary>Response</summary>
 
-Response is a map of routine names to lists of backups.
+The response is a map of routine names to lists of backups.
 <!-- FullBackupsResponse -->
 
 ```json
@@ -409,12 +407,12 @@ Response is a map of routine names to lists of backups.
 
 </details>
 
-It's possible to filter the results by adding query parameters:
+You can filter the results by adding query parameters:
 
 [
 `GET {{baseUrl}}/v1/backups/full/<name>?from=<from>&to=<to>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/getFullBackups)
 
-where `name` is the routine name, `from` and `to` are timestamps in milliseconds since epoch.
+Here, `name` is the routine name, `from` and `to` are timestamps in milliseconds since epoch.
 
 #### Disable Routine
 
@@ -476,11 +474,10 @@ The `no-generation` parameter allows overwriting of existing keys if set to `tru
 In the `source` section, `path` is the `key` value returned as a response in the [Full Backup List](#full-backup-list)
 example. The `type` parameter under `source` denotes S3 storage if set to `1` and local storage if set to `0`.
 
-`destination` field says where to restore to. It can be any Aerospike cluster.
+The `destination` field says where to restore to. It can be any Aerospike cluster.
 
-Alternatively, you can use `destination-name` and `storage-name` instead of `destination` and `storage` respectively.
-They
-refer to the names of the corresponding entities in the configuration file.
+You can also use `destination-name` and `storage-name` instead of `destination` and `storage` respectively.
+They refer to the names of the corresponding entities in the configuration file.
 
 </details>
 
@@ -576,6 +573,23 @@ same cluster using separate routines with different schedules, all running simul
 
 To manage resource utilization, you can configure the `cluster.max-parallel-scans` property to limit the number of read
 threads operating on a single cluster.
+
+## How does the backup service identify what data to back up during incremental backups?
+The Aerospike Backup Service uses Aerospike’s scan operation to identify and backup records, 
+with different behaviors for full and incremental backups:
+* **Full Backups:**
+  * Capture all records in the specified namespaces/sets without any time filter. 
+  The service uses a scan operation with no lower time boundary (modAfter = 0).
+
+* **Incremental Backups:**: 
+  * Only capture records that have been modified since the last successful backup (full or incremental). The service tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp becomes the lower time boundary (modAfter parameter) for the next incremental backup.
+  For the upper time boundary (modBefore), two approaches are available:
+
+    - **Default Behavior (Open-ended)**: No upper time boundary is set. This means records modified during the backup process itself might be included in the backup, but with unpredictable results. For example, if a backup starts at 12:00 and runs for 5 minutes, a record created at 12:01 might be included with either its new or old version—there’s no guarantee which state will be captured.
+    - **Sealed Backups**: When the sealed property in the backup policy is set to true, the backup service will only include records modified before the backup start time. While this creates a more precise point-in-time snapshot, there’s still unpredictability: if a record is updated during the backup process, it might be captured in its old state or excluded entirely from the backup.
+  
+Users should select the appropriate approach based on their recovery point objectives and consistency requirements. The default open-ended approach ensures better data coverage but with some state unpredictability, while sealed backups provide better point-in-time consistency but might miss records updated during the backup process.
+
 
 ## Which storage providers are supported?
 
