@@ -20,43 +20,43 @@ var (
 	incrBackupCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_incremental_runs_total",
-			Help: "Successful incremental backup runs counter.",
+			Help: "Successful incremental backup runs counter",
 		})
 	// A counter metric for backup skip number.
 	backupSkippedCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_skip_total",
-			Help: "Backup skip counter.",
+			Help: "Full backup skip counter",
 		})
 	// A counter metric for incremental backup skip number.
 	incrBackupSkippedCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_incremental_skip_total",
-			Help: "Incremental backup skip counter.",
+			Help: "Incremental backup skip counter",
 		})
 	// A counter metric for backup failure number.
 	backupFailureCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_failure_total",
-			Help: "Backup failure counter.",
+			Help: "Full backup failure counter",
 		})
 	// A counter metric for incremental backup failure number.
 	incrBackupFailureCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_incremental_failure_total",
-			Help: "Incremental backup failure counter.",
+			Help: "Incremental backup failure counter",
 		})
 	// A gauge metric for full backup duration.
 	backupDurationGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_duration_millis",
-			Help: "Full backup duration in milliseconds.",
+			Help: "Full backup duration in milliseconds",
 		})
 	// A gauge metric for incremental backup duration.
 	incrBackupDurationGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_incremental_duration_millis",
-			Help: "Incremental backup duration in milliseconds.",
+			Help: "Incremental backup duration in milliseconds",
 		})
 	// A gauge metrics for backup process, filter by name and type.
 	backupProgress = prometheus.NewGaugeVec(
@@ -76,16 +76,23 @@ var (
 	)
 )
 
+var AllMetrics []prometheus.Collector
+
 func init() {
-	prometheus.MustRegister(backupCounter)
-	prometheus.MustRegister(incrBackupCounter)
-	prometheus.MustRegister(backupSkippedCounter)
-	prometheus.MustRegister(incrBackupSkippedCounter)
-	prometheus.MustRegister(backupFailureCounter)
-	prometheus.MustRegister(incrBackupFailureCounter)
-	prometheus.MustRegister(backupDurationGauge)
-	prometheus.MustRegister(incrBackupDurationGauge)
-	prometheus.MustRegister(backupProgress, restoreProgress)
+	AllMetrics = []prometheus.Collector{
+		backupCounter,
+		incrBackupCounter,
+		backupSkippedCounter,
+		incrBackupSkippedCounter,
+		backupFailureCounter,
+		incrBackupFailureCounter,
+		backupDurationGauge,
+		incrBackupDurationGauge,
+		backupProgress,
+		restoreProgress,
+	}
+
+	prometheus.MustRegister(AllMetrics...)
 }
 
 type MetricsCollector struct {
