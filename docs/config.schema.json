@@ -388,7 +388,7 @@
             "type": "string"
           },
           "namespaces": {
-            "description": "The list of the namespaces to back up (optional, empty list implies backup up whole cluster).",
+            "description": "The list of the namespaces to back up (optional, empty list implies backup of the whole cluster).",
             "example": [
               "source-ns1"
             ],

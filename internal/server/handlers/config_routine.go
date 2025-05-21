@@ -74,7 +74,7 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Produce     json
 // @Success  	200 {object} dto.BackupRoutine
 // @Response    400 {string} string
-// @Failure     404 {string} string "The specified cluster could not be found"
+// @Failure     404 {string} string "The specified routine could not be found"
 func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 	routineName := r.PathValue("name")
 	if routineName == "" {
