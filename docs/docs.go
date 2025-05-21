@@ -960,7 +960,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "The specified cluster could not be found",
+                        "description": "The specified routine could not be found",
                         "schema": {
                             "type": "string"
                         }
@@ -1318,7 +1318,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/restore/cancel/{jobID}": {
+        "/v1/restore/cancel/{jobId}": {
             "post": {
                 "tags": [
                     "Restore"
@@ -1330,7 +1330,7 @@ const docTemplate = `{
                         "type": "integer",
                         "format": "int64",
                         "description": "Restore job ID",
-                        "name": "jobID",
+                        "name": "jobId",
                         "in": "path",
                         "required": true
                     }
@@ -1945,7 +1945,7 @@ const docTemplate = `{
                     "example": "0 0 * * * *"
                 },
                 "namespaces": {
-                    "description": "The list of the namespaces to back up (optional, empty list implies backup up whole cluster).",
+                    "description": "The list of the namespaces to back up (optional, empty list implies backup of the whole cluster).",
                     "type": "array",
                     "items": {
                         "type": "string"

@@ -189,8 +189,8 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 // @Summary     Cancel a running restore operation.
 // @ID          cancelRestore
 // @Tags        Restore
-// @Router      /v1/restore/cancel/{jobID} [post]
-// @Param       jobID path int true "Restore job ID" format(int64)
+// @Router      /v1/restore/cancel/{jobId} [post]
+// @Param       jobId path int true "Restore job ID" format(int64)
 // @Success     202 {string} string "Restore job canceled successfully"
 // @Failure     400 {string} string "Invalid job ID"
 // @Failure     404 {string} string "Job not found"

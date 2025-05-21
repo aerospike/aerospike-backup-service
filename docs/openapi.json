@@ -1113,7 +1113,7 @@
                 }
               }
             },
-            "description" : "The specified cluster could not be found"
+            "description" : "The specified routine could not be found"
           }
         },
         "summary" : "Reads a specific routine from the configuration given its name.",
@@ -1482,13 +1482,13 @@
         "x-codegen-request-body-name" : "storage"
       }
     },
-    "/v1/restore/cancel/{jobID}" : {
+    "/v1/restore/cancel/{jobId}" : {
       "post" : {
         "operationId" : "cancelRestore",
         "parameters" : [ {
           "description" : "Restore job ID",
           "in" : "path",
-          "name" : "jobID",
+          "name" : "jobId",
           "required" : true,
           "schema" : {
             "format" : "int64",
@@ -2142,7 +2142,7 @@
             "type" : "string"
           },
           "namespaces" : {
-            "description" : "The list of the namespaces to back up (optional, empty list implies backup up whole cluster).",
+            "description" : "The list of the namespaces to back up (optional, empty list implies backup of the whole cluster).",
             "example" : [ "source-ns1" ],
             "items" : {
               "type" : "string"
