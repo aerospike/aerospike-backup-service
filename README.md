@@ -9,7 +9,8 @@ You can perform full and incremental backups and set different backup policies a
 There are also several monitoring endpoints to check backup information.
 
 Use the [OpenAPI generation script](./scripts/generate-openapi.sh) to generate an OpenAPI specification for the service.
-A pre-built OpenAPI specification is available in Swagger format [here](https://aerospike.github.io/aerospike-backup-service/).
+A pre-built OpenAPI specification is available in Swagger
+format [here](https://aerospike.github.io/aerospike-backup-service/).
 
 # Table of contents
 
@@ -17,19 +18,19 @@ A pre-built OpenAPI specification is available in Swagger format [here](https://
 
 - [Getting started](#getting-started)
 - [User guide](#user-guide)
-  * [Run](#run)
-  * [Configuration](#configuration)
-    + [Configuration File Format](#configuration-file-format)
-    + [Configuration with API](#configuration-with-api)
-  * [Monitoring](#monitoring)
-  * [Example requests and responses](#example-requests-and-responses)
-    + [Backup](#backup)
-    + [Restore](#restore)
+    * [Run](#run)
+    * [Configuration](#configuration)
+        + [Configuration File Format](#configuration-file-format)
+        + [Configuration with API](#configuration-with-api)
+    * [Monitoring](#monitoring)
+    * [Example requests and responses](#example-requests-and-responses)
+        + [Backup](#backup)
+        + [Restore](#restore)
 - [FAQ](#faq)
-  * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
-  * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
-  * [How does the backup service identify what data to back up during incremental backups?](#how-does-the-backup-service-identify-what-data-to-back-up-during-incremental-backups)
-  * [Which storage providers are supported?](#which-storage-providers-are-supported)
+    * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
+    * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
+    * [How does the backup service identify what data to back up during incremental backups?](#how-does-the-backup-service-identify-what-data-to-back-up-during-incremental-backups)
+    * [Which storage providers are supported?](#which-storage-providers-are-supported)
 - [Build from source](#build-from-source)
     + [Prerequisites](#prerequisites)
     + [Build the service](#build-the-service)
@@ -37,14 +38,14 @@ A pre-built OpenAPI specification is available in Swagger format [here](https://
     + [Build Linux packages](#build-linux-packages)
     + [Release](#release)
 - [Migration Guide](#migration-guide)
-  * [v3 -> v3.1](#v3---v31)
-  * [v2 -> v3](#v2---v3)
+    * [v3 -> v3.1](#v3---v31)
+    * [v2 -> v3](#v2---v3)
 
 <!-- tocstop -->
 
 # Getting started
 
-Aerospike Backup Service reads configurations from a YAML file that is provided when the service is launched. 
+Aerospike Backup Service reads configurations from a YAML file that is provided when the service is launched.
 See [Run](#run) for specific syntax.
 
 Linux installation packages are available
@@ -113,7 +114,8 @@ docker run -d -p 8080:8080 -v config.yml:/app/config.yml --name backup-service b
 
 #### Service
 
-Run as a service. The default path for the configuration file is `/etc/aerospike-backup-service/aerospike-backup-service.yml`.
+Run as a service. The default path for the configuration file is
+`/etc/aerospike-backup-service/aerospike-backup-service.yml`.
 
 ```bash
 sudo systemctl start aerospike-backup-service
@@ -214,7 +216,8 @@ However, backup processes already in progress will continue using the configurat
 
 #### Cluster connection
 
-Cluster configuration entities denote the configuration properties needed to establish connections to Aerospike clusters.
+Cluster configuration entities denote the configuration properties needed to establish connections to Aerospike
+clusters.
 These connections include the cluster IP address, port number, authentication information, and more.
 See [`POST: /config/clusters`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addCluster) for the
 full specification.
@@ -227,7 +230,7 @@ including secrets in your configuration.
 This entity includes properties of connections to local or cloud storage, where the backup files are stored.
 You can get information about a specific configured storage option, such as checking the cloud storage location for
 a backup.
-You can also add, update, or remove a storage configuration. 
+You can also add, update, or remove a storage configuration.
 See the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities
 under `/config/storage` for detailed information.
 
@@ -264,6 +267,7 @@ The service exposes a wide variety of system metrics that [Prometheus](https://p
 following application metrics:
 
 <!-- Metrics -->
+
 | Name                                                   | Description                                 |
 |--------------------------------------------------------|---------------------------------------------|
 | `aerospike_backup_service_runs_total`                  | Successful backup runs counter              |
@@ -489,14 +493,57 @@ The response is a job ID.
 
 #### Restore using routine name and timestamp
 
-This option restores the most recent full backup for the given timestamp and then applies all subsequent incremental
-backups up to that timestamp. You don't need to specify the exact backup path or storage.
+This option automatically restores data by identifying and applying the
+appropriate backup sequence based on the specified timestamp.
+For each namespace defined in the backup routine, the system locates the most recent full backup
+prior to the given time and applies all incremental backups created after that full backup,
+up to the target timestamp.
+
+There is no need to specify individual backup paths or storage locations — the system handles this internally. The
+restore
+process requires a full backup as a foundation; incremental backups cannot be used on their own.
+
+By default, backups are applied in chronological order. However, when restoring to an empty namespace, the system may
+reverse the order of application and use the `CREATE_ONLY` policy. This optimization ensures that each record is written
+exactly once—applying only the latest version—thus reducing write load and generation noise. If needed, this
+optimization can be disabled using the `disable-reordering` flag in the `RestoreTimestampRequest`.
+
+Overall, the process is fully automated: users do not need to manually choose or arrange backups for the restore to
+succeed. The restore process runs in parallel for every namespace.
+
+**Example**
+
+```text
+Timeline ─────────────────────────────────────────────────────────────────────────────────────────▶
+
+Backups:
+   [Full A]──[Incr A1]──[Incr A2]──[Full B]──[Incr B1]──[Incr B2]──▶ T ◀──[Incr B3]──[Full C]──...
+                                                                     ↑
+                                                               Restore Point
+```
+
+What Gets Restored at T2:
+
+* Full backup: `Full B`
+* Incremental backups: `Incr B1`, `Incr B2`
+* Excluded: `Incr B3` and anything after T2
+
+Restore order (to empty namespace): `Incr B2`, `Incr B1`, `Full B`.
+
+- Backups are applied in reverse order. This ensures that the most recent version of each record is restored first. Any
+  earlier versions of the same record are skipped, by using CREATE_ONLY policy, reducing unnecessary writes.
+
+Restore order (to non-empty namespace or with `disable-reordering`): `Full B`, `Incr B1`, `Incr B2`.
+
+* Backups are applied in chronological order.
+  All versions of each record are restored step by step.
+  If a record was modified multiple times, each update is applied, with the final version appearing last.
 
 [`
 POST {{baseUrl}}/v1/restore/timestamp`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreTimestamp)
 
 <details>
-    <summary>Request</summary>
+    <summary>Request body</summary>
 
 <!-- RestoreTimestampRequest -->
 
@@ -521,7 +568,7 @@ endpoint
 `GET {{baseUrl}}/v1/restore/status/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
 
 <details>
-    <summary>Request</summary>
+    <summary>Request body</summary>
 
 
 <!-- CurrentBackupResponse -->
@@ -579,21 +626,32 @@ To manage resource utilization, you can configure the `cluster.max-parallel-scan
 threads operating on a single cluster.
 
 ## How does the backup service identify what data to back up during incremental backups?
-The Aerospike Backup Service uses Aerospike’s scan operation to identify and backup records, 
+
+The Aerospike Backup Service uses Aerospike’s scan operation to identify and backup records,
 with different behaviors for full and incremental backups:
+
 * **Full Backups:**
-  * Capture all records in the specified namespaces/sets without any time filter. 
-  The service uses a scan operation with no lower time boundary (modAfter = 0).
+    * Capture all records in the specified namespaces/sets without any time filter.
+      The service uses a scan operation with no lower time boundary (modAfter = 0).
 
-* **Incremental Backups:**: 
-  * Only capture records that have been modified since the last successful backup (full or incremental). The service tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp becomes the lower time boundary (modAfter parameter) for the next incremental backup.
-  For the upper time boundary (modBefore), two approaches are available:
+* **Incremental Backups:**:
+    * Only capture records that have been modified since the last successful backup (full or incremental). The service
+      tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp
+      becomes the lower time boundary (modAfter parameter) for the next incremental backup.
+      For the upper time boundary (modBefore), two approaches are available:
 
-    - **Default Behavior (Open-ended)**: No upper time boundary is set. This means records modified during the backup process itself might be included in the backup, but with unpredictable results. For example, if a backup starts at 12:00 and runs for 5 minutes, a record created at 12:01 might be included with either its new or old version—there’s no guarantee which state will be captured.
-    - **Sealed Backups**: When the sealed property in the backup policy is set to true, the backup service will only include records modified before the backup start time. While this creates a more precise point-in-time snapshot, there’s still unpredictability: if a record is updated during the backup process, it might be captured in its old state or excluded entirely from the backup.
-  
-Users should select the appropriate approach based on their recovery point objectives and consistency requirements. The default open-ended approach ensures better data coverage but with some state unpredictability, while sealed backups provide better point-in-time consistency but might miss records updated during the backup process.
+        - **Default Behavior (Open-ended)**: No upper time boundary is set. This means records modified during the
+          backup process itself might be included in the backup, but with unpredictable results. For example, if a
+          backup starts at 12:00 and runs for 5 minutes, a record created at 12:01 might be included with either its new
+          or old version—there’s no guarantee which state will be captured.
+        - **Sealed Backups**: When the sealed property in the backup policy is set to true, the backup service will only
+          include records modified before the backup start time. While this creates a more precise point-in-time
+          snapshot, there’s still unpredictability: if a record is updated during the backup process, it might be
+          captured in its old state or excluded entirely from the backup.
 
+Users should select the appropriate approach based on their recovery point objectives and consistency requirements. The
+default open-ended approach ensures better data coverage but with some state unpredictability, while sealed backups
+provide better point-in-time consistency but might miss records updated during the backup process.
 
 ## Which storage providers are supported?
 
