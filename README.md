@@ -9,7 +9,8 @@ You can perform full and incremental backups and set different backup policies a
 There are also several monitoring endpoints to check backup information.
 
 Use the [OpenAPI generation script](./scripts/generate-openapi.sh) to generate an OpenAPI specification for the service.
-A pre-built OpenAPI specification is available in Swagger format [here](https://aerospike.github.io/aerospike-backup-service/).
+A pre-built OpenAPI specification is available in Swagger
+format [here](https://aerospike.github.io/aerospike-backup-service/).
 
 # Table of contents
 
@@ -22,6 +23,8 @@ A pre-built OpenAPI specification is available in Swagger format [here](https://
     + [Configuration File Format](#configuration-file-format)
     + [Configuration with API](#configuration-with-api)
   * [Monitoring](#monitoring)
+    + [Backup Progress Monitoring](#backup-progress-monitoring)
+    + [Restore Progress Monitoring](#restore-progress-monitoring)
   * [Example requests and responses](#example-requests-and-responses)
     + [Backup](#backup)
     + [Restore](#restore)
@@ -44,7 +47,7 @@ A pre-built OpenAPI specification is available in Swagger format [here](https://
 
 # Getting started
 
-Aerospike Backup Service reads configurations from a YAML file that is provided when the service is launched. 
+Aerospike Backup Service reads configurations from a YAML file that is provided when the service is launched.
 See [Run](#run) for specific syntax.
 
 Linux installation packages are available
@@ -113,7 +116,8 @@ docker run -d -p 8080:8080 -v config.yml:/app/config.yml --name backup-service b
 
 #### Service
 
-Run as a service. The default path for the configuration file is `/etc/aerospike-backup-service/aerospike-backup-service.yml`.
+Run as a service. The default path for the configuration file is
+`/etc/aerospike-backup-service/aerospike-backup-service.yml`.
 
 ```bash
 sudo systemctl start aerospike-backup-service
@@ -214,7 +218,8 @@ However, backup processes already in progress will continue using the configurat
 
 #### Cluster connection
 
-Cluster configuration entities denote the configuration properties needed to establish connections to Aerospike clusters.
+Cluster configuration entities denote the configuration properties needed to establish connections to Aerospike
+clusters.
 These connections include the cluster IP address, port number, authentication information, and more.
 See [`POST: /config/clusters`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/addCluster) for the
 full specification.
@@ -227,7 +232,7 @@ including secrets in your configuration.
 This entity includes properties of connections to local or cloud storage, where the backup files are stored.
 You can get information about a specific configured storage option, such as checking the cloud storage location for
 a backup.
-You can also add, update, or remove a storage configuration. 
+You can also add, update, or remove a storage configuration.
 See the [Storage](https://aerospike.github.io/aerospike-backup-service/#/Configuration/readAllStorage) entities
 under `/config/storage` for detailed information.
 
@@ -264,6 +269,7 @@ The service exposes a wide variety of system metrics that [Prometheus](https://p
 following application metrics:
 
 <!-- Metrics -->
+
 | Name                                                   | Description                                 |
 |--------------------------------------------------------|---------------------------------------------|
 | `aerospike_backup_service_runs_total`                  | Successful backup runs counter              |
@@ -288,6 +294,64 @@ on liveness and readiness probes for more information.
 
 The HTTP metrics endpoint can be found on
 the [OpenAPI specification](https://aerospike.github.io/aerospike-backup-service/) page.
+
+### Backup Progress Monitoring
+
+The `aerospike_backup_service_backup_progress_pct` metric provides percentage completion for running backup processes.
+
+**Labels**
+
+* `routine`: Name of the backup routine
+* `type`: Backup type (Full or Incremental)
+
+#### How It's Calculated
+
+The progress percentage is calculated as:
+
+```
+Progress = (Records Processed / Total Estimated Records) × 100
+```
+
+**Total Records Estimation**
+
+At backup start ABS samples one partition (metadata scan only) and multiplies the sample count by total partition
+count (typically 4096).
+
+**Duration Estimation**
+
+Uses linear extrapolation based on current progress rate `Estimated Total Time = Elapsed Time / Progress Percentage`.
+Only available after 1% completion.
+
+**Usage Notes**
+
+This metric provides a reasonable estimate of backup progress and completion time,
+though accuracy may vary depending on actual record distribution and processing conditions.
+Early estimates should be interpreted with appropriate tolerance for variance.
+The metric is useful for monitoring backup status and getting approximate completion times,
+especially for longer-running backup operations.
+
+### Restore Progress Monitoring
+
+The `aerospike_backup_service_restore_progress_pct` metric provides percentage completion for running restore processes.
+
+**Label**
+
+* `job_id`: The restore job ID received at restore start
+
+#### How It's Calculated
+
+The progress percentage is calculated as: `Progress = (Records Processed / Total Records) × 100`
+
+**Total Records Count**
+
+- Read from backup metadata files (accurate count, not estimated)
+- For [timestamp-based restores](#restore-using-routine-name-and-timestamp): sum of full backup records plus all
+  applicable incremental backup records
+
+**Duration Estimation**
+
+Uses linear extrapolation based on current progress rate
+`Estimated Total Time = Elapsed Time / Progress Percentage`. Only available after 1% completion.
 
 ## Example requests and responses
 
@@ -579,21 +643,32 @@ To manage resource utilization, you can configure the `cluster.max-parallel-scan
 threads operating on a single cluster.
 
 ## How does the backup service identify what data to back up during incremental backups?
-The Aerospike Backup Service uses Aerospike’s scan operation to identify and backup records, 
+
+The Aerospike Backup Service uses Aerospike’s scan operation to identify and backup records,
 with different behaviors for full and incremental backups:
+
 * **Full Backups:**
-  * Capture all records in the specified namespaces/sets without any time filter. 
-  The service uses a scan operation with no lower time boundary (modAfter = 0).
+    * Capture all records in the specified namespaces/sets without any time filter.
+      The service uses a scan operation with no lower time boundary (modAfter = 0).
 
-* **Incremental Backups:**: 
-  * Only capture records that have been modified since the last successful backup (full or incremental). The service tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp becomes the lower time boundary (modAfter parameter) for the next incremental backup.
-  For the upper time boundary (modBefore), two approaches are available:
+* **Incremental Backups:**:
+    * Only capture records that have been modified since the last successful backup (full or incremental). The service
+      tracks the timestamp of the last backup in a metadata YAML file stored alongside the backup data. This timestamp
+      becomes the lower time boundary (modAfter parameter) for the next incremental backup.
+      For the upper time boundary (modBefore), two approaches are available:
 
-    - **Default Behavior (Open-ended)**: No upper time boundary is set. This means records modified during the backup process itself might be included in the backup, but with unpredictable results. For example, if a backup starts at 12:00 and runs for 5 minutes, a record created at 12:01 might be included with either its new or old version—there’s no guarantee which state will be captured.
-    - **Sealed Backups**: When the sealed property in the backup policy is set to true, the backup service will only include records modified before the backup start time. While this creates a more precise point-in-time snapshot, there’s still unpredictability: if a record is updated during the backup process, it might be captured in its old state or excluded entirely from the backup.
-  
-Users should select the appropriate approach based on their recovery point objectives and consistency requirements. The default open-ended approach ensures better data coverage but with some state unpredictability, while sealed backups provide better point-in-time consistency but might miss records updated during the backup process.
+        - **Default Behavior (Open-ended)**: No upper time boundary is set. This means records modified during the
+          backup process itself might be included in the backup, but with unpredictable results. For example, if a
+          backup starts at 12:00 and runs for 5 minutes, a record created at 12:01 might be included with either its new
+          or old version—there’s no guarantee which state will be captured.
+        - **Sealed Backups**: When the sealed property in the backup policy is set to true, the backup service will only
+          include records modified before the backup start time. While this creates a more precise point-in-time
+          snapshot, there’s still unpredictability: if a record is updated during the backup process, it might be
+          captured in its old state or excluded entirely from the backup.
 
+Users should select the appropriate approach based on their recovery point objectives and consistency requirements. The
+default open-ended approach ensures better data coverage but with some state unpredictability, while sealed backups
+provide better point-in-time consistency but might miss records updated during the backup process.
 
 ## Which storage providers are supported?
 
