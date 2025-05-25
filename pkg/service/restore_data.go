@@ -318,3 +318,25 @@ func (r *dataRestorer) CancelRestore(jobID model.RestoreJobID) error {
 
 	return nil
 }
+
+// GetFilteredJobs returns all jobs matching the given filters as a map of jobId -> RestoreJobStatus.
+func (r *dataRestorer) GetFilteredJobs(
+	timeBounds model.TimeBounds,
+	statusFilter model.StatusFilter,
+) map[model.RestoreJobID]*model.RestoreJobStatus {
+	results := make(map[model.RestoreJobID]*model.RestoreJobStatus)
+
+	r.restoreJobs.Iterate(func(id model.RestoreJobID, job *jobInfo) {
+		if !timeBounds.Contains(job.started) {
+			return
+		}
+
+		if !statusFilter.Matches(job.status) {
+			return
+		}
+
+		results[id] = RestoreJobStatus(job)
+	})
+
+	return results
+}

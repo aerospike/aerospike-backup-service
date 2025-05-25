@@ -11,6 +11,15 @@ const (
 	JobStatusCancelled JobStatus = "Cancelled"
 )
 
+func isValidStatus(status string) bool {
+	switch JobStatus(status) {
+	case JobStatusRunning, JobStatusDone, JobStatusFailed, JobStatusCancelled:
+		return true
+	default:
+		return false
+	}
+}
+
 // RestoreJobStatus represents a restore job status.
 // @Description RestoreJobStatus represents a restore job status.
 type RestoreJobStatus struct {

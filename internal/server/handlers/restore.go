@@ -147,6 +147,42 @@ func extractJobID(r *http.Request) (model.RestoreJobID, error) {
 	return model.RestoreJobID(jobID), nil
 }
 
+// GetAllRestoreJobs
+// @Summary  Get all restore jobs.
+// @ID       getRestoreJobs
+// @Tags     Restore
+// @Produce  json
+// @Param    from query int false "Lower bound timestamp filter" format(int64)
+// @Param    to query int false "Upper bound timestamp filter" format(int64)
+// @Param    status query string false "Comma-separated status filter (Running,Done,Failed,Cancelled). Use ! prefix to exclude (e.g., !Failed,!Cancelled)"
+// @Router   /v1/restore/jobs [get]
+// @Success  200 {object} []dto.RestoreJobDetails "Running restore jobs"
+// @Failure  400 {string} string
+// @Failure  500 {string} string
+//
+//nolint:lll
+func (s *Service) GetAllRestoreJobs(w http.ResponseWriter, r *http.Request) {
+	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
+	if err != nil {
+		httpError(w, errInvalidQueryParam(err, "time bounds"))
+		return
+	}
+
+	statusFilter, err := dto.NewStatusFilterFromString(r.URL.Query().Get("status"))
+	if err != nil {
+		httpError(w, errInvalidQueryParam(err, "status"))
+		return
+	}
+
+	jobs := s.restoreManager.GetFilteredJobs(timeBounds, statusFilter)
+	result := make(map[model.RestoreJobID]*dto.RestoreJobStatus, len(jobs))
+	for key, m := range jobs {
+		result[key] = dto.NewResultFromModel(m)
+	}
+
+	httpOK(w, result)
+}
+
 // RetrieveConfig
 // @Summary     Retrieve Aerospike cluster configuration backup
 // @ID	        retrieveConfiguration
