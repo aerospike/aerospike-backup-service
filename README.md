@@ -521,7 +521,7 @@ Backups:
                                                                Restore Point
 ```
 
-What Gets Restored at T2:
+What gets restored at T2:
 
 * Full backup: `Full B`
 * Incremental backups: `Incr B1`, `Incr B2`
