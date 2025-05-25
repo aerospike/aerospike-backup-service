@@ -500,8 +500,7 @@ prior to the given time and applies all incremental backups created after that f
 up to the target timestamp.
 
 There is no need to specify individual backup paths or storage locations — the system handles this internally. The
-restore
-process requires a full backup as a foundation; incremental backups cannot be used on their own.
+restore process requires a full backup as a foundation; incremental backups cannot be used on their own.
 
 By default, backups are applied in chronological order. However, when restoring to an empty namespace, the system may
 reverse the order of application and use the `CREATE_ONLY` policy. This optimization ensures that each record is written
