@@ -156,7 +156,7 @@ func extractJobID(r *http.Request) (model.RestoreJobID, error) {
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Param    status query string false "Comma-separated status filter (Running,Done,Failed,Cancelled). Use ! prefix to exclude (e.g., !Failed,!Cancelled)"
 // @Router   /v1/restore/jobs [get]
-// @Success  200 {object} []dto.RestoreJobDetails "Running restore jobs"
+// @Success  200 {object} map[string]dto.RestoreJobStatus "Running restore jobs"
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 //
@@ -175,9 +175,9 @@ func (s *Service) GetAllRestoreJobs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jobs := s.restoreManager.GetFilteredJobs(timeBounds, statusFilter)
-	result := make(map[model.RestoreJobID]*dto.RestoreJobStatus, len(jobs))
+	result := make(map[string]*dto.RestoreJobStatus, len(jobs))
 	for key, m := range jobs {
-		result[key] = dto.NewResultFromModel(m)
+		result[strconv.FormatInt(int64(key), 10)] = dto.NewResultFromModel(m)
 	}
 
 	httpOK(w, result)
