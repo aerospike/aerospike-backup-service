@@ -85,6 +85,7 @@ func registerRestoreRoutes(mux *http.ServeMux, apiPath string, service *handlers
 	mux.HandleFunc("POST "+apiPath+"/restore/incremental", service.RestoreIncrementalHandler)
 	mux.HandleFunc("POST "+apiPath+"/restore/timestamp", service.RestoreByTimeHandler)
 	mux.HandleFunc("GET "+apiPath+"/restore/status/{jobId}", service.RestoreStatusHandler)
+	mux.HandleFunc("GET "+apiPath+"/restore/jobs", service.GetAllRestoreJobs)
 	mux.HandleFunc("POST "+apiPath+"/restore/cancel/{jobId}", service.CancelRestoreHandler)
 
 	// Return backed up Aerospike configuration
