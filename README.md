@@ -310,7 +310,7 @@ The progress percentage is calculated as `Progress = (Records Processed / Total 
 
 **Total Records Estimation**
 
-At backup start ABS samples one partition (metadata scan only) and multiplies the sample count by total partition
+When a backup starts, ABS samples one partition (metadata scan only) and multiplies the sample count by total partition
 count (typically 4096).
 
 **Duration Estimation**
