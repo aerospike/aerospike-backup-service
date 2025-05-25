@@ -23,6 +23,8 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
         + [Configuration File Format](#configuration-file-format)
         + [Configuration with API](#configuration-with-api)
     * [Monitoring](#monitoring)
+        + [Backup Progress Monitoring](#backup-progress-monitoring)
+        + [Restore Progress Monitoring](#restore-progress-monitoring)
     * [Example requests and responses](#example-requests-and-responses)
         + [Backup](#backup)
         + [Restore](#restore)
@@ -292,6 +294,60 @@ on liveness and readiness probes for more information.
 
 The HTTP metrics endpoint can be found on
 the [OpenAPI specification](https://aerospike.github.io/aerospike-backup-service/) page.
+
+### Backup Progress Monitoring
+
+The `aerospike_backup_service_backup_progress_pct` metric provides percentage completion for running backup processes.
+
+**Labels**
+
+* `routine`: Name of the backup routine
+* `type`: Backup type (Full or Incremental)
+
+#### How It's Calculated
+
+The progress percentage is calculated as `Progress = (Records Processed / Total Estimated Records) × 100`.
+
+**Total Records Estimation**
+
+When a backup starts, ABS samples one partition (metadata scan only) and multiplies the sample count by total partition
+count (typically 4096).
+
+**Duration Estimation**
+
+Uses linear extrapolation based on current progress rate `Estimated Total Time = Elapsed Time / Progress Percentage`.
+Only available after 1% completion.
+
+**Usage Notes**
+
+This metric provides a reasonable estimate of backup progress and completion time,
+though accuracy may vary depending on actual record distribution and processing conditions.
+Early estimates should be interpreted with appropriate tolerance for variance.
+The metric is useful for monitoring backup status and getting approximate completion times,
+especially for longer-running backup operations.
+
+### Restore Progress Monitoring
+
+The `aerospike_backup_service_restore_progress_pct` metric provides percentage completion for running restore processes.
+
+**Label**
+
+* `job_id`: The restore job ID received at restore start
+
+#### How It's Calculated
+
+The progress percentage is calculated as: `Progress = (Records Processed / Total Records) × 100`
+
+**Total Records Count**
+
+- Read from backup metadata files (accurate count, not estimated)
+- For [timestamp-based restores](#restore-using-routine-name-and-timestamp): sum of full backup records plus all
+  applicable incremental backup records
+
+**Duration Estimation**
+
+Uses linear extrapolation based on current progress rate
+`Estimated Total Time = Elapsed Time / Progress Percentage`. Only available after 1% completion.
 
 ## Example requests and responses
 
