@@ -549,14 +549,56 @@ The response is a job ID.
 
 #### Restore using routine name and timestamp
 
-This option restores the most recent full backup for the given timestamp and then applies all subsequent incremental
-backups up to that timestamp. You don't need to specify the exact backup path or storage.
+This option automatically restores data by identifying and applying the
+appropriate backup sequence based on the specified timestamp.
+For each namespace defined in the backup routine, the system locates the most recent full backup
+prior to the given time and applies all incremental backups created after that full backup,
+up to the target timestamp.
+
+There is no need to specify individual backup paths or storage locations — the system handles this internally. The
+restore process requires a full backup as a foundation; incremental backups cannot be used on their own.
+
+By default, backups are applied in chronological order. However, when restoring to an empty namespace, the system may
+reverse the order of application and use the `CREATE_ONLY` policy. This optimization ensures that each record is written
+exactly once—applying only the latest version—thus reducing write load and generation noise. If needed, this
+optimization can be disabled using the `disable-reordering` flag in the `RestoreTimestampRequest`.
+
+Overall, the process is fully automated: users do not need to manually choose or arrange backups for the restore to
+succeed. The restore process runs in parallel for every namespace.
+
+**Example**
+
+```text
+Timeline ─────────────────────────────────────────────────────────────────────────────────────────▶
+
+Backups:
+   [Full A]──[Incr A1]──[Incr A2]──[Full B]──[Incr B1]──[Incr B2]──▶ T ◀──[Incr B3]──[Full C]──...
+                                                                     ↑
+                                                               Restore Point
+```
+
+What gets restored at T2:
+
+* Full backup: `Full B`
+* Incremental backups: `Incr B1`, `Incr B2`
+* Excluded: `Incr B3` and anything after T2
+
+Restore order (to empty namespace): `Incr B2`, `Incr B1`, `Full B`.
+
+- Backups are applied in reverse order. This ensures that the most recent version of each record is restored first. Any
+  earlier versions of the same record are skipped, by using `CREATE_ONLY` policy, reducing unnecessary writes.
+
+Restore order (to non-empty namespace or with `disable-reordering`): `Full B`, `Incr B1`, `Incr B2`.
+
+* Backups are applied in chronological order.
+  All versions of each record are restored step by step.
+  If a record was modified multiple times, each update is applied, with the final version appearing last.
 
 [`
 POST {{baseUrl}}/v1/restore/timestamp`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreTimestamp)
 
 <details>
-    <summary>Request</summary>
+    <summary>Request body</summary>
 
 <!-- RestoreTimestampRequest -->
 
@@ -581,7 +623,7 @@ endpoint
 `GET {{baseUrl}}/v1/restore/status/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
 
 <details>
-    <summary>Request</summary>
+    <summary>Request body</summary>
 
 
 <!-- CurrentBackupResponse -->
