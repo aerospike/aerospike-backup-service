@@ -530,7 +530,7 @@ What gets restored at T2:
 Restore order (to empty namespace): `Incr B2`, `Incr B1`, `Full B`.
 
 - Backups are applied in reverse order. This ensures that the most recent version of each record is restored first. Any
-  earlier versions of the same record are skipped, by using CREATE_ONLY policy, reducing unnecessary writes.
+  earlier versions of the same record are skipped, by using `CREATE_ONLY` policy, reducing unnecessary writes.
 
 Restore order (to non-empty namespace or with `disable-reordering`): `Full B`, `Incr B1`, `Incr B2`.
 
