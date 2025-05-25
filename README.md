@@ -18,21 +18,21 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
 
 - [Getting started](#getting-started)
 - [User guide](#user-guide)
-  * [Run](#run)
-  * [Configuration](#configuration)
-    + [Configuration File Format](#configuration-file-format)
-    + [Configuration with API](#configuration-with-api)
-  * [Monitoring](#monitoring)
-    + [Backup Progress Monitoring](#backup-progress-monitoring)
-    + [Restore Progress Monitoring](#restore-progress-monitoring)
-  * [Example requests and responses](#example-requests-and-responses)
-    + [Backup](#backup)
-    + [Restore](#restore)
+    * [Run](#run)
+    * [Configuration](#configuration)
+        + [Configuration File Format](#configuration-file-format)
+        + [Configuration with API](#configuration-with-api)
+    * [Monitoring](#monitoring)
+        + [Backup Progress Monitoring](#backup-progress-monitoring)
+        + [Restore Progress Monitoring](#restore-progress-monitoring)
+    * [Example requests and responses](#example-requests-and-responses)
+        + [Backup](#backup)
+        + [Restore](#restore)
 - [FAQ](#faq)
-  * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
-  * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
-  * [How does the backup service identify what data to back up during incremental backups?](#how-does-the-backup-service-identify-what-data-to-back-up-during-incremental-backups)
-  * [Which storage providers are supported?](#which-storage-providers-are-supported)
+    * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
+    * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
+    * [How does the backup service identify what data to back up during incremental backups?](#how-does-the-backup-service-identify-what-data-to-back-up-during-incremental-backups)
+    * [Which storage providers are supported?](#which-storage-providers-are-supported)
 - [Build from source](#build-from-source)
     + [Prerequisites](#prerequisites)
     + [Build the service](#build-the-service)
@@ -40,8 +40,8 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
     + [Build Linux packages](#build-linux-packages)
     + [Release](#release)
 - [Migration Guide](#migration-guide)
-  * [v3 -> v3.1](#v3---v31)
-  * [v2 -> v3](#v2---v3)
+    * [v3 -> v3.1](#v3---v31)
+    * [v2 -> v3](#v2---v3)
 
 <!-- tocstop -->
 
@@ -306,11 +306,7 @@ The `aerospike_backup_service_backup_progress_pct` metric provides percentage co
 
 #### How It's Calculated
 
-The progress percentage is calculated as:
-
-```
-Progress = (Records Processed / Total Estimated Records) × 100
-```
+The progress percentage is calculated as `Progress = (Records Processed / Total Estimated Records) × 100`.
 
 **Total Records Estimation**
 
