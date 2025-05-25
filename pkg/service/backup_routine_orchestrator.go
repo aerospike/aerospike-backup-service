@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"time"
 
@@ -75,6 +76,39 @@ func newOrchestrator(routineName string, config *model.Config, h *BackupComponen
 	}
 }
 
+type BackupOutcome string
+
+const (
+	BackupOutcomeSuccess BackupOutcome = "success"
+	BackupOutcomeFailure BackupOutcome = "failure"
+	BackupOutcomeRetry   BackupOutcome = "retry"
+)
+
+func ObserveBackupEvent(routine string, backupType jobType, outcome BackupOutcome, duration time.Duration) {
+	backupJobEvents.With(prometheus.Labels{
+		"routine": routine,
+		"type":    string(backupType),
+		"outcome": string(outcome),
+	}).Inc()
+
+	if outcome == BackupOutcomeFailure {
+		if backupType == jobTypeFull {
+			backupFailureCounter.Inc()
+		} else {
+			incrBackupFailureCounter.Inc()
+		}
+	}
+
+	if outcome == BackupOutcomeSuccess {
+		backupCounter.Inc()
+		if backupType == jobTypeFull {
+			backupDurationGauge.Set(float64(duration.Milliseconds()))
+		} else {
+			incrBackupDurationGauge.Set(float64(duration.Milliseconds()))
+		}
+	}
+}
+
 func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.Time) {
 	duration, err := util.MeasureDuration(func() error {
 		return h.runFullBackupInternal(ctx, now)
@@ -82,11 +116,10 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 
 	if err != nil {
 		h.logger.Error("Full backup failed", slog.Any("error", err))
-		backupFailureCounter.Inc()
+		ObserveBackupEvent(h.routineName, jobTypeFull, BackupOutcomeFailure, duration)
 	} else {
 		h.logger.Debug("Finished full backup", slog.Int64("time", now.UnixMilli()))
-		backupDurationGauge.Set(float64(duration.Milliseconds()))
-		backupCounter.Inc()
+		ObserveBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSuccess, duration)
 	}
 }
 
@@ -202,11 +235,10 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 		return h.runIncrementalBackupInternal(ctx, now)
 	})
 	if err != nil {
-		incrBackupFailureCounter.Inc()
+		ObserveBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeFailure, duration)
 		h.logger.Error("Incremental backup failed", slog.Any("error", err))
 	} else {
-		incrBackupCounter.Inc()
-		incrBackupDurationGauge.Set(float64(duration.Milliseconds()))
+		ObserveBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeFailure, duration)
 		h.logger.Debug("Finished incremental backup", slog.Int64("time", now.UnixMilli()))
 	}
 }

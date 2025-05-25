@@ -74,6 +74,19 @@ var (
 		},
 		[]string{"label"},
 	)
+
+	// A counter metric for backup job events.
+	// Labels:
+	//   - routine: name of the backup routine, e.g., "daily-ns1"
+	//   - type: "full" or "incremental"
+	//   - outcome: one of "success", "failure", or "retry"
+	backupJobEvents = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "aerospike_backup_service_job_events_total",
+			Help: "Backup service job events by routine, type, and outcome",
+		},
+		[]string{"routine", "type", "outcome"},
+	)
 )
 
 var AllMetrics []prometheus.Collector
@@ -90,6 +103,7 @@ func init() {
 		incrBackupDurationGauge,
 		backupProgress,
 		restoreProgress,
+		backupJobEvents,
 	}
 
 	prometheus.MustRegister(AllMetrics...)
