@@ -57,6 +57,20 @@ func (mr *MockRestoreManagerMockRecorder) CancelRestore(jobID any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelRestore", reflect.TypeOf((*MockRestoreManager)(nil).CancelRestore), jobID)
 }
 
+// GetFilteredJobs mocks base method.
+func (m *MockRestoreManager) GetFilteredJobs(timeBounds model.TimeBounds, statusFilter model.StatusFilter) map[model.RestoreJobID]*model.RestoreJobStatus {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFilteredJobs", timeBounds, statusFilter)
+	ret0, _ := ret[0].(map[model.RestoreJobID]*model.RestoreJobStatus)
+	return ret0
+}
+
+// GetFilteredJobs indicates an expected call of GetFilteredJobs.
+func (mr *MockRestoreManagerMockRecorder) GetFilteredJobs(timeBounds, statusFilter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFilteredJobs", reflect.TypeOf((*MockRestoreManager)(nil).GetFilteredJobs), timeBounds, statusFilter)
+}
+
 // JobStatus mocks base method.
 func (m *MockRestoreManager) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
 	m.ctrl.T.Helper()
