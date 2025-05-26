@@ -1,6 +1,9 @@
 package dto
 
-import "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+import (
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"strings"
+)
 
 type JobStatus string
 
@@ -11,13 +14,22 @@ const (
 	JobStatusCancelled JobStatus = "Cancelled"
 )
 
-func isValidStatus(status string) bool {
-	switch JobStatus(status) {
-	case JobStatusRunning, JobStatusDone, JobStatusFailed, JobStatusCancelled:
-		return true
-	default:
-		return false
+var allJobStatuses = []JobStatus{
+	JobStatusRunning,
+	JobStatusDone,
+	JobStatusFailed,
+	JobStatusCancelled,
+}
+
+func RestoreStatusFromString(s string) (JobStatus, bool) {
+	s = strings.ToLower(s)
+	for _, status := range allJobStatuses {
+		if strings.ToLower(string(status)) == s {
+			return status, true
+		}
 	}
+
+	return "", false
 }
 
 // RestoreJobStatus represents a restore job status.

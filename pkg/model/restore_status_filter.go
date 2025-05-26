@@ -1,24 +1,31 @@
 package model
 
 type StatusFilter struct {
-	include map[JobStatus]bool
-	exclude map[JobStatus]bool
+	isExclude bool
+	fields    map[JobStatus]struct{}
 }
 
-func NewStatusFilter(include, exclude map[JobStatus]bool) StatusFilter {
+func NewStatusFilter(statuses []JobStatus, isExclude bool) StatusFilter {
+	fieldMap := make(map[JobStatus]struct{}, len(statuses))
+	for _, s := range statuses {
+		fieldMap[s] = struct{}{}
+	}
+
 	return StatusFilter{
-		include: include,
-		exclude: exclude,
+		fields:    fieldMap,
+		isExclude: isExclude,
 	}
 }
 
 func (sf StatusFilter) Matches(status JobStatus) bool {
-	if sf.exclude[status] {
-		return false
-	}
-	if len(sf.include) > 0 {
-		return sf.include[status]
+	_, found := sf.fields[status]
+
+	// If the filter is in "exclude" mode, we match if the status is NOT in the excluded set.
+	if sf.isExclude {
+		// true if the status is NOT excluded
+		return !found
 	}
 
-	return true
+	// true if the status IS included
+	return found
 }
