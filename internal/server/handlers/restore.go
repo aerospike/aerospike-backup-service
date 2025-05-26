@@ -147,21 +147,21 @@ func extractJobID(r *http.Request) (model.RestoreJobID, error) {
 	return model.RestoreJobID(jobID), nil
 }
 
-// GetAllRestoreJobs
-// @Summary  Get all restore jobs.
-// @ID       getRestoreJobs
+// RetrieveRestoreJobs
+// @Summary  Retrieve restore jobs.
+// @ID       retrieveRestoreJobs
 // @Tags     Restore
 // @Produce  json
 // @Param    from query int false "Lower bound timestamp filter" format(int64)
 // @Param    to query int false "Upper bound timestamp filter" format(int64)
 // @Param    status query string false "Comma-separated status filter (Running,Done,Failed,Cancelled). Use ! prefix for exclude filter (e.g., !Failed,Cancelled)"
 // @Router   /v1/restore/jobs [get]
-// @Success  200 {object} map[string]dto.RestoreJobStatus "Running restore jobs"
+// @Success  200 {object} map[string]dto.RestoreJobStatus "Restore jobs"
 // @Failure  400 {string} string
 // @Failure  500 {string} string
 //
 //nolint:lll
-func (s *Service) GetAllRestoreJobs(w http.ResponseWriter, r *http.Request) {
+func (s *Service) RetrieveRestoreJobs(w http.ResponseWriter, r *http.Request) {
 	timeBounds, err := dto.NewTimeBoundsFromString(r.URL.Query().Get("from"), r.URL.Query().Get("to"))
 	if err != nil {
 		httpError(w, errInvalidQueryParam(err, "time bounds"))

@@ -1647,7 +1647,7 @@
     },
     "/v1/restore/jobs" : {
       "get" : {
-        "operationId" : "getRestoreJobs",
+        "operationId" : "retrieveRestoreJobs",
         "parameters" : [ {
           "description" : "Lower bound timestamp filter",
           "in" : "query",
@@ -1684,7 +1684,7 @@
                 }
               }
             },
-            "description" : "Running restore jobs"
+            "description" : "Restore jobs"
           },
           "400" : {
             "content" : {
@@ -1707,7 +1707,7 @@
             "description" : "Internal Server Error"
           }
         },
-        "summary" : "Get all restore jobs.",
+        "summary" : "Retrieve restore jobs.",
         "tags" : [ "Restore" ]
       }
     },

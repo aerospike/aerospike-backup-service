@@ -1457,8 +1457,8 @@ const docTemplate = `{
                 "tags": [
                     "Restore"
                 ],
-                "summary": "Get all restore jobs.",
-                "operationId": "getRestoreJobs",
+                "summary": "Retrieve restore jobs.",
+                "operationId": "retrieveRestoreJobs",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1483,7 +1483,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Running restore jobs",
+                        "description": "Restore jobs",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {

@@ -1134,7 +1134,7 @@ paths:
       x-codegen-request-body-name: request
   /v1/restore/jobs:
     get:
-      operationId: getRestoreJobs
+      operationId: retrieveRestoreJobs
       parameters:
       - description: Lower bound timestamp filter
         in: query
@@ -1162,7 +1162,7 @@ paths:
                 additionalProperties:
                   $ref: '#/components/schemas/dto.RestoreJobStatus'
                 type: object
-          description: Running restore jobs
+          description: Restore jobs
         "400":
           content:
             application/json:
@@ -1175,7 +1175,7 @@ paths:
               schema:
                 type: string
           description: Internal Server Error
-      summary: Get all restore jobs.
+      summary: Retrieve restore jobs.
       tags:
       - Restore
   /v1/restore/status/{jobId}:

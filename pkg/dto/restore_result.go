@@ -22,7 +22,8 @@ var allJobStatuses = []JobStatus{
 	JobStatusCancelled,
 }
 
-func RestoreStatusFromString(s string) (JobStatus, bool) {
+// RestoreStatusFromString returns the corresponding JobStatus enum for string representation.
+func RestoreStatusFromString(s string) (value JobStatus, ok bool) {
 	s = strings.ToLower(s)
 	for _, status := range allJobStatuses {
 		if strings.ToLower(string(status)) == s {
