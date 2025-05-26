@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"time"
 
@@ -73,39 +72,6 @@ func newOrchestrator(routineName string, config *model.Config, h *BackupComponen
 		registry:            h.registry,
 		retentionManager:    h.retentionManager,
 		logger:              logger,
-	}
-}
-
-type BackupOutcome string
-
-const (
-	BackupOutcomeSuccess BackupOutcome = "success"
-	BackupOutcomeFailure BackupOutcome = "failure"
-	BackupOutcomeRetry   BackupOutcome = "retry"
-)
-
-func ObserveBackupEvent(routine string, backupType jobType, outcome BackupOutcome, duration time.Duration) {
-	backupJobEvents.With(prometheus.Labels{
-		"routine": routine,
-		"type":    string(backupType),
-		"outcome": string(outcome),
-	}).Inc()
-
-	if outcome == BackupOutcomeFailure {
-		if backupType == jobTypeFull {
-			backupFailureCounter.Inc()
-		} else {
-			incrBackupFailureCounter.Inc()
-		}
-	}
-
-	if outcome == BackupOutcomeSuccess {
-		backupCounter.Inc()
-		if backupType == jobTypeFull {
-			backupDurationGauge.Set(float64(duration.Milliseconds()))
-		} else {
-			incrBackupDurationGauge.Set(float64(duration.Milliseconds()))
-		}
 	}
 }
 
