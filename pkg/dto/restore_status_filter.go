@@ -7,7 +7,7 @@ import (
 )
 
 func NewStatusFilterFromString(statusParam string) (model.StatusFilter, error) {
-	var fields []model.JobStatus
+	fields := make([]model.JobStatus, 0)
 
 	if statusParam == "" {
 		return model.NewStatusFilter(fields, false), nil
