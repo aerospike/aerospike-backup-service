@@ -20,7 +20,7 @@ func NewStatusFilterFromString(statusParam string) (model.StatusFilter, error) {
 			continue
 		}
 
-		status, ok := RestoreStatusFromString(s)
+		status, ok := restoreStatusFromString(s)
 		if !ok {
 			return model.StatusFilter{}, errValidationInvalidValue("status", s, allJobStatuses)
 		}
