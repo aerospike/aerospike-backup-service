@@ -84,7 +84,7 @@ checksums:
 
 .PHONY: docker-build
 docker-build:
-	 docker build --progress=plain --tag aerospike/aerospike-backup-service:$(TAG) --build-arg REGISTRY=$(REGISTRY) --build-arg RH_REGISTRY=$(RH_REGISTRY) --file $(WORKSPACE)/Dockerfile .
+	 DOCKER_BUILDKIT=1  docker build --progress=plain --tag aerospike/aerospike-backup-service:$(TAG) --build-arg REGISTRY=$(REGISTRY) --build-arg RH_REGISTRY=$(RH_REGISTRY) --file $(WORKSPACE)/Dockerfile .
 
 .PHONY: docker-buildx
 docker-buildx:
