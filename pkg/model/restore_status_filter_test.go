@@ -24,11 +24,10 @@ func TestStatusFilter_Matches(t *testing.T) {
 	assert.False(t, exclusiveFilter.Matches(JobStatusDone))
 	assert.True(t, exclusiveFilter.Matches(JobStatusFailed))
 
-	// will not match any job status
+	// will match all job statuses regardless of isExclude value
 	emptyInclude := NewStatusFilter([]JobStatus{}, false)
-	assert.False(t, emptyInclude.Matches(JobStatusRunning))
+	assert.True(t, emptyInclude.Matches(JobStatusRunning))
 
-	// will match all job statuses
 	emptyExclude := NewStatusFilter([]JobStatus{}, true)
 	assert.True(t, emptyExclude.Matches(JobStatusRunning))
 }
