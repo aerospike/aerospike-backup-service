@@ -9,10 +9,6 @@ import (
 func NewStatusFilterFromString(statusParam string) (model.StatusFilter, error) {
 	fields := make([]model.JobStatus, 0)
 
-	if statusParam == "" {
-		return model.NewStatusFilter(fields, false), nil
-	}
-
 	isExclude := strings.HasPrefix(statusParam, "!")
 	if isExclude {
 		statusParam = statusParam[1:]

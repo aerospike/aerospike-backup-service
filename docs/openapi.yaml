@@ -1149,7 +1149,7 @@ paths:
           format: int64
           type: integer
       - description: "Comma-separated status filter (Running,Done,Failed,Cancelled).\
-          \ Use ! prefix to exclude (e.g., !Failed,!Cancelled)"
+          \ Use ! prefix for exclude filter (e.g., !Failed,Cancelled)"
         in: query
         name: status
         schema:

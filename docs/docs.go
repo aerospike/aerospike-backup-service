@@ -1476,7 +1476,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Comma-separated status filter (Running,Done,Failed,Cancelled). Use ! prefix to exclude (e.g., !Failed,!Cancelled)",
+                        "description": "Comma-separated status filter (Running,Done,Failed,Cancelled). Use ! prefix for exclude filter (e.g., !Failed,Cancelled)",
                         "name": "status",
                         "in": "query"
                     }
