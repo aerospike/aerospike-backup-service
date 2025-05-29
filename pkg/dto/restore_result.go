@@ -1,6 +1,10 @@
 package dto
 
-import "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+import (
+	"strings"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+)
 
 type JobStatus string
 
@@ -10,6 +14,24 @@ const (
 	JobStatusFailed    JobStatus = "Failed"
 	JobStatusCancelled JobStatus = "Cancelled"
 )
+
+var allJobStatuses = []JobStatus{
+	JobStatusRunning,
+	JobStatusDone,
+	JobStatusFailed,
+	JobStatusCancelled,
+}
+
+// restoreStatusFromString returns the corresponding JobStatus enum for string representation.
+func restoreStatusFromString(s string) (value JobStatus, ok bool) {
+	for _, status := range allJobStatuses {
+		if strings.EqualFold(s, string(status)) {
+			return status, true
+		}
+	}
+
+	return "", false
+}
 
 // RestoreJobStatus represents a restore job status.
 // @Description RestoreJobStatus represents a restore job status.

@@ -1645,6 +1645,72 @@
         "x-codegen-request-body-name" : "request"
       }
     },
+    "/v1/restore/jobs" : {
+      "get" : {
+        "operationId" : "retrieveRestoreJobs",
+        "parameters" : [ {
+          "description" : "Lower bound timestamp filter",
+          "in" : "query",
+          "name" : "from",
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "Upper bound timestamp filter",
+          "in" : "query",
+          "name" : "to",
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        }, {
+          "description" : "Comma-separated status filter (Running,Done,Failed,Cancelled). Use ! prefix for exclude filter (e.g., !Failed,Cancelled)",
+          "in" : "query",
+          "name" : "status",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "$ref" : "#/components/schemas/dto.RestoreJobStatus"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Restore jobs"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Bad Request"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Internal Server Error"
+          }
+        },
+        "summary" : "Retrieve restore jobs.",
+        "tags" : [ "Restore" ]
+      }
+    },
     "/v1/restore/status/{jobId}" : {
       "get" : {
         "operationId" : "restoreStatus",

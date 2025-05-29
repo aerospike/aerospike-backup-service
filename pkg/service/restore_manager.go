@@ -20,4 +20,10 @@ type RestoreManager interface {
 
 	// CancelRestore cancels an ongoing restore.
 	CancelRestore(jobID model.RestoreJobID) error
+
+	// GetFilteredJobs returns all jobs matching the given filters as a map of jobId -> RestoreJobStatus.
+	GetFilteredJobs(
+		timeBounds model.TimeBounds,
+		statusFilter model.StatusFilter,
+	) map[model.RestoreJobID]*model.RestoreJobStatus
 }
