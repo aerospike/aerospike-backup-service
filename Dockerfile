@@ -28,7 +28,7 @@ RUN microdnf install -y shadow-utils && \
     microdnf update -y && \
     microdnf -y clean all && rm -rf /var/cache/yum && \
     groupadd --system --gid 65532 nonroot && \
-    useradd --no-log-init --no-user-group --system --uid 65532 --gid 65532 nonroot
+    useradd --no-log-init --no-user-group --system --uid 65532 --gid 65532 --create-home nonroot
 
 COPY --chown=nonroot:65532 --chmod=0755 --from=builder \
     /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH} \
