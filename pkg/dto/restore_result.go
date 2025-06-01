@@ -47,7 +47,7 @@ type RestoreJobStatus struct {
 	// The number of records dropped because they didn't contain any of the
 	// selected bins or didn't belong to any of the selected sets.
 	SkippedRecords uint64 `yaml:"skipped-records,omitempty" json:"skipped-records,omitempty" format:"int64" example:"4"`
-	// The number of records ignored because of record level permanent error while restoring.
+	// The number of records ignored because of a record-level permanent error while restoring.
 	IgnoredRecords uint64 `yaml:"ignored-records,omitempty" json:"ignored-records,omitempty" format:"int64" example:"12"`
 	// The number of successfully restored records.
 	InsertedRecords uint64 `yaml:"inserted-records,omitempty" json:"inserted-records,omitempty" format:"int64" example:"8"`
