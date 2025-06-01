@@ -22,7 +22,7 @@ type Config struct {
 	Storage map[string]*Storage `yaml:"storage,omitempty" json:"storage,omitempty"`
 	// BackupPolicies is a map of backup policies that can be used by backup routines.
 	BackupPolicies map[string]*BackupPolicy `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
-	// SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication)
+	// SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication).
 	SecretAgents map[string]*SecretAgent `yaml:"secret-agents,omitempty" json:"secret-agents,omitempty"`
 	// BackupRoutines is a map of backup routines.
 	BackupRoutines map[string]*BackupRoutine `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
