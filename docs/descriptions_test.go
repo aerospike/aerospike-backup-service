@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -19,7 +21,7 @@ func TestOpenAPIDescriptions(t *testing.T) {
 	schemas := readSchemas(t, filePath)
 
 	for schemaName, rawSchema := range schemas {
-		schema, ok := rawSchema.(map[string]interface{})
+		schema, ok := rawSchema.(map[string]any)
 		if !ok {
 			t.Errorf("Invalid schema format for: %s", schemaName)
 			continue
@@ -33,42 +35,43 @@ func TestOpenAPIDescriptions(t *testing.T) {
 	}
 }
 
-func readSchemas(t *testing.T, filePath string) map[string]interface{} {
+func readSchemas(t *testing.T, filePath string) map[string]any {
+	t.Helper()
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Fatalf("Failed to read OpenAPI file: %v", err)
 	}
 
-	var openapi map[string]interface{}
+	var openapi map[string]any
 	if err := json.Unmarshal(data, &openapi); err != nil {
 		t.Fatalf("Failed to parse OpenAPI JSON: %v", err)
 	}
 
-	components, ok := openapi[componentsTag].(map[string]interface{})
+	components, ok := openapi[componentsTag].(map[string]any)
 	if !ok {
 		t.Fatalf("Missing 'components' in OpenAPI file")
 	}
 
-	schemas, ok := components[schemasTag].(map[string]interface{})
+	schemas, ok := components[schemasTag].(map[string]any)
 	if !ok {
 		t.Fatalf("Missing 'schemas' in OpenAPI components")
 	}
 	return schemas
 }
 
-func assertAllPropertiesHaveDescription(t *testing.T, schema map[string]interface{}, schemaName string) {
-	properties, hasProps := schema[propertiesTag].(map[string]interface{})
+func assertAllPropertiesHaveDescription(t *testing.T, schema map[string]any, schemaName string) {
+	properties, hasProps := schema[propertiesTag].(map[string]any)
 	if hasProps {
 		for propName, rawProp := range properties {
-			prop, ok := rawProp.(map[string]interface{})
+			prop, ok := rawProp.(map[string]any)
 			if !ok {
 				t.Errorf("Invalid property format: %s.%s", schemaName, propName)
 				continue
 			}
 
-			if _, ok := prop[descriptionTag]; !ok {
-				t.Errorf("Property '%s' in '%s' is missing a description", propName, schemaName)
-			}
+			_, ok = prop[descriptionTag]
+			assert.True(t, ok, "Property '%s' in '%s' is missing a description", propName, schemaName)
 		}
 	}
 }
