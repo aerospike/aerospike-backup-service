@@ -61,6 +61,8 @@ func readSchemas(t *testing.T, filePath string) map[string]any {
 }
 
 func assertAllPropertiesHaveDescription(t *testing.T, schema map[string]any, schemaName string) {
+	t.Helper()
+
 	properties, hasProps := schema[propertiesTag].(map[string]any)
 	if hasProps {
 		for propName, rawProp := range properties {
