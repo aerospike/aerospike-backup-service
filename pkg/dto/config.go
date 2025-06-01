@@ -11,14 +11,21 @@ import (
 
 // Config represents the service configuration file.
 // @Description Config represents the service configuration file.
+//
+//nolint:lll
 type Config struct {
+	// ServiceConfig contains general service settings.
 	ServiceConfig BackupServiceConfig `yaml:"service,omitempty" json:"service,omitempty"`
-	//nolint:lll
+	// AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.
 	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
-	Storage           map[string]*Storage          `yaml:"storage,omitempty" json:"storage,omitempty"`
-	BackupPolicies    map[string]*BackupPolicy     `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
-	BackupRoutines    map[string]*BackupRoutine    `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
-	SecretAgents      map[string]*SecretAgent      `yaml:"secret-agents,omitempty" json:"secret-agents,omitempty"`
+	// Storage is a map of storages that can be used by backup routines.
+	Storage map[string]*Storage `yaml:"storage,omitempty" json:"storage,omitempty"`
+	// BackupPolicies is a map of backup policies that can be used by backup routines.
+	BackupPolicies map[string]*BackupPolicy `yaml:"backup-policies,omitempty" json:"backup-policies,omitempty"`
+	// SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication).
+	SecretAgents map[string]*SecretAgent `yaml:"secret-agents,omitempty" json:"secret-agents,omitempty"`
+	// BackupRoutines is a map of backup routines.
+	BackupRoutines map[string]*BackupRoutine `yaml:"backup-routines,omitempty" json:"backup-routines,omitempty"`
 }
 
 func NewConfigFromModel(m *model.Config) *Config {

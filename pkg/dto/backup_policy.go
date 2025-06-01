@@ -198,6 +198,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 }
 
 // RetentionPolicy specifies how many full and incremental backups to keep.
+// @Description RetentionPolicy specifies how many full and incremental backups to keep.
 type RetentionPolicy struct {
 	// Number of full backups to store:
 	// - If nil, retain all full backups.

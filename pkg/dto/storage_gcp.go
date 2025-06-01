@@ -9,6 +9,7 @@ import (
 )
 
 // GcpStorage represents the configuration for GCP storage.
+// @Description GcpStorage represents the configuration for GCP storage.
 type GcpStorage struct {
 	SecretAgentConfig `yaml:",inline"`
 	// Path to the file containing the service account key in JSON format.
@@ -95,6 +96,7 @@ var gcpDataClasses = []string{
 }
 
 // GcpStorageClass represents the configuration for GCP Storage Class.
+// @Description GcpStorageClass represents the configuration for GCP Storage Class.
 type GcpStorageClass struct {
 	// DataClass specifies the storage class for object data.
 	DataClass string `json:"data" yaml:"data"`
