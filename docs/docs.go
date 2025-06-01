@@ -2035,7 +2035,7 @@ const docTemplate = `{
                     ]
                 },
                 "secret-agent": {
-                    "description": "The name of a Secret Agent read secrets from (optional).",
+                    "description": "The name of a Secret Agent to read secrets from (optional).",
                     "type": "string",
                     "example": "sa"
                 },
@@ -2128,7 +2128,7 @@ const docTemplate = `{
                     }
                 },
                 "secret-agents": {
-                    "description": "SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication)",
+                    "description": "SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication).",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.SecretAgent"
@@ -2469,7 +2469,7 @@ const docTemplate = `{
             }
         },
         "dto.RestoreJobStatus": {
-            "description": "RestoreJobStatus represents current restore job status.",
+            "description": "RestoreJobStatus represents restore job status.",
             "type": "object",
             "properties": {
                 "current-job": {
@@ -2509,7 +2509,7 @@ const docTemplate = `{
                     "example": 5
                 },
                 "ignored-records": {
-                    "description": "The number of records ignored because of record level permanent error while restoring.",
+                    "description": "The number of records ignored because of a record-level permanent error while restoring.",
                     "type": "integer",
                     "format": "int64",
                     "example": 12

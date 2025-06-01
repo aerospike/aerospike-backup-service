@@ -1709,7 +1709,7 @@ components:
             type: integer
           type: array
         secret-agent:
-          description: The name of a Secret Agent read secrets from (optional).
+          description: The name of a Secret Agent to read secrets from (optional).
           example: sa
           type: string
         set-list:
@@ -1859,7 +1859,7 @@ components:
             $ref: '#/components/schemas/dto.SecretAgent'
           description: "SecretAgents is a map of secret agents used by backup routines\
             \ (for encryption keys), clusters (for credentials), and storage (for\
-            \ authentication)"
+            \ authentication)."
           type: object
         service:
           allOf:
@@ -2138,7 +2138,7 @@ components:
           type: array
       type: object
     dto.RestoreJobStatus:
-      description: RestoreJobStatus represents current restore job status.
+      description: RestoreJobStatus represents restore job status.
       example:
         expired-records: 2
         read-records: 10
@@ -2192,7 +2192,7 @@ components:
           format: int64
           type: integer
         ignored-records:
-          description: The number of records ignored because of record level permanent
+          description: The number of records ignored because of a record-level permanent
             error while restoring.
           example: 12
           format: int64

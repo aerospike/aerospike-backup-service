@@ -35,8 +35,8 @@ func restoreStatusFromString(s string) (value JobStatus, ok bool) {
 	return "", false
 }
 
-// RestoreJobStatus represents current restore job status.
-// @Description RestoreJobStatus represents current restore job status.
+// RestoreJobStatus represents restore job status.
+// @Description RestoreJobStatus represents restore job status.
 type RestoreJobStatus struct {
 	// Number of records read from backup.
 	ReadRecords uint64 `yaml:"read-records,omitempty" json:"read-records,omitempty" format:"int64" example:"10"`
