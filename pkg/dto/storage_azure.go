@@ -9,6 +9,7 @@ import (
 )
 
 // AzureStorage represents the configuration for Azure Blob storage.
+// @Description AzureStorage represents the configuration for Azure Blob storage.
 type AzureStorage struct {
 	SecretAgentConfig `yaml:",inline"`
 	// Endpoint is the Azure Blob service endpoint URL.
@@ -146,6 +147,7 @@ var azureDataTiers = []string{
 }
 
 // AzureStorageClass represents the configuration for Azure Blob Storage access tiers.
+// @Description AzureStorageClass represents the configuration for Azure Blob Storage access tiers.
 type AzureStorageClass struct {
 	// DataClass specifies the storage tier for object data.
 	DataClass string `json:"data" yaml:"data"`

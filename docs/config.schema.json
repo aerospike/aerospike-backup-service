@@ -6,33 +6,44 @@
       "additionalProperties": {
         "$ref": "#/components/schemas/dto.AerospikeCluster"
       },
+      "description": "AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.",
       "type": "object"
     },
     "backup-policies": {
       "additionalProperties": {
         "$ref": "#/components/schemas/dto.BackupPolicy"
       },
+      "description": "BackupPolicies is a map of backup policies that can be used by backup routines.",
       "type": "object"
     },
     "backup-routines": {
       "additionalProperties": {
         "$ref": "#/components/schemas/dto.BackupRoutine"
       },
+      "description": "BackupRoutines is a map of backup routines.",
       "type": "object"
     },
     "secret-agents": {
       "additionalProperties": {
         "$ref": "#/components/schemas/dto.SecretAgent"
       },
+      "description": "SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication)",
       "type": "object"
     },
     "service": {
-      "$ref": "#/components/schemas/dto.BackupServiceConfig"
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/dto.BackupServiceConfig"
+        }
+      ],
+      "description": "ServiceConfig contains general service settings.",
+      "type": "object"
     },
     "storage": {
       "additionalProperties": {
         "$ref": "#/components/schemas/dto.Storage"
       },
+      "description": "Storage is a map of storages that can be used by backup routines.",
       "type": "object"
     }
   },
@@ -92,6 +103,7 @@
         "type": "object"
       },
       "dto.AzureStorage": {
+        "description": "AzureStorage represents the configuration for Azure Blob storage.",
         "properties": {
           "account-key": {
             "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
@@ -160,6 +172,7 @@
         "type": "object"
       },
       "dto.AzureStorageClass": {
+        "description": "AzureStorageClass represents the configuration for Azure Blob Storage access tiers.",
         "properties": {
           "data": {
             "description": "DataClass specifies the storage tier for object data.",
@@ -419,7 +432,7 @@
             "type": "array"
           },
           "secret-agent": {
-            "description": "The Secret Agent configuration for the routine (optional).",
+            "description": "The name of a Secret Agent read secrets from (optional).",
             "example": "sa",
             "type": "string"
           },
@@ -595,6 +608,7 @@
         "type": "object"
       },
       "dto.GcpStorage": {
+        "description": "GcpStorage represents the configuration for GCP storage.",
         "properties": {
           "bucket-name": {
             "description": "GCP storage bucket name.",
@@ -650,6 +664,7 @@
         "type": "object"
       },
       "dto.GcpStorageClass": {
+        "description": "GcpStorageClass represents the configuration for GCP Storage Class.",
         "properties": {
           "data": {
             "description": "DataClass specifies the storage class for object data.",
@@ -694,6 +709,7 @@
         "type": "object"
       },
       "dto.JobStatus": {
+        "description": "JobStatus represents possible states of restore jobs.",
         "enum": [
           "Running",
           "Done",
@@ -709,6 +725,7 @@
         ]
       },
       "dto.LocalStorage": {
+        "description": "LocalStorage represents the configuration for local storage.",
         "properties": {
           "path": {
             "description": "The root path for the backup repository.",
@@ -805,12 +822,19 @@
         "type": "object"
       },
       "dto.RestoreJobStatus": {
-        "description": "RestoreJobStatus represents a restore job status.",
+        "description": "RestoreJobStatus represents current restore job status.",
         "properties": {
           "current-job": {
-            "$ref": "#/components/schemas/dto.RunningJob"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/dto.RunningJob"
+              }
+            ],
+            "description": "Speed related metrics of the restore process.",
+            "type": "object"
           },
           "error": {
+            "description": "Error message if any.",
             "type": "string"
           },
           "errors-in-doubt": {
@@ -820,54 +844,70 @@
             "type": "integer"
           },
           "existed-records": {
+            "description": "The number of records dropped because they already existed in the database.",
             "example": 15,
             "format": "int64",
             "type": "integer"
           },
           "expired-records": {
+            "description": "The number of records dropped because they were expired.",
             "example": 2,
             "format": "int64",
             "type": "integer"
           },
           "fresher-records": {
+            "description": "The number of records dropped because the database already contained the records with a higher generation count.",
             "example": 5,
             "format": "int64",
             "type": "integer"
           },
           "ignored-records": {
+            "description": "The number of records ignored because of record level permanent error while restoring.",
             "example": 12,
             "format": "int64",
             "type": "integer"
           },
           "index-count": {
+            "description": "The number of successfully created secondary indexes.",
             "example": 3,
             "format": "int64",
             "type": "integer"
           },
           "inserted-records": {
+            "description": "The number of successfully restored records.",
             "example": 8,
             "format": "int64",
             "type": "integer"
           },
           "read-records": {
+            "description": "Number of records read from backup.",
             "example": 10,
             "format": "int64",
             "type": "integer"
           },
           "skipped-records": {
+            "description": "The number of records dropped because they didn't contain any of the\nselected bins or didn't belong to any of the selected sets.",
             "example": 4,
             "format": "int64",
             "type": "integer"
           },
           "status": {
-            "$ref": "#/components/schemas/dto.JobStatus"
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/dto.JobStatus"
+              }
+            ],
+            "description": "Status of the restore job.",
+            "type": "object"
           },
           "total-bytes": {
+            "description": "Total bytes read from backup.",
             "example": 2000,
             "format": "int64",
             "type": "integer"
           },
           "udf-count": {
+            "description": "The number of successfully stored UDF files.",
             "example": 1,
             "format": "int64",
             "type": "integer"
@@ -1162,6 +1202,7 @@
         "type": "object"
       },
       "dto.RetentionPolicy": {
+        "description": "RetentionPolicy specifies how many full and incremental backups to keep.",
         "properties": {
           "full": {
             "description": "Number of full backups to store:\n- If nil, retain all full backups.\n- If N is specified, retain the last N full backups.\n- The minimum value is 1.",
@@ -1278,6 +1319,7 @@
         "type": "object"
       },
       "dto.S3Storage": {
+        "description": "S3Storage represents the configuration for S3 storage.",
         "properties": {
           "access-key-id": {
             "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",

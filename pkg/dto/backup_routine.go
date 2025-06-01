@@ -24,7 +24,7 @@ type BackupRoutine struct {
 	SourceCluster string `yaml:"source-cluster,omitempty" json:"source-cluster,omitempty" example:"testCluster" validate:"required"`
 	// The name of the corresponding storage provider configuration.
 	Storage string `yaml:"storage,omitempty" json:"storage,omitempty" example:"aws" validate:"required"`
-	// The Secret Agent configuration for the routine (optional).
+	// The name of a Secret Agent read secrets from (optional).
 	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty" example:"sa"`
 	// The interval for full backup as a cron expression string.
 	// Cron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format

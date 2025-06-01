@@ -1706,6 +1706,7 @@ const docTemplate = `{
             }
         },
         "dto.AzureStorage": {
+            "description": "AzureStorage represents the configuration for Azure Blob storage.",
             "type": "object",
             "required": [
                 "container-name",
@@ -1773,6 +1774,7 @@ const docTemplate = `{
             }
         },
         "dto.AzureStorageClass": {
+            "description": "AzureStorageClass represents the configuration for Azure Blob Storage access tiers.",
             "type": "object",
             "properties": {
                 "data": {
@@ -2033,7 +2035,7 @@ const docTemplate = `{
                     ]
                 },
                 "secret-agent": {
-                    "description": "The Secret Agent configuration for the routine (optional).",
+                    "description": "The name of a Secret Agent read secrets from (optional).",
                     "type": "string",
                     "example": "sa"
                 },
@@ -2105,33 +2107,43 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "aerospike-clusters": {
+                    "description": "AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.AerospikeCluster"
                     }
                 },
                 "backup-policies": {
+                    "description": "BackupPolicies is a map of backup policies that can be used by backup routines.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.BackupPolicy"
                     }
                 },
                 "backup-routines": {
+                    "description": "BackupRoutines is a map of backup routines.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.BackupRoutine"
                     }
                 },
                 "secret-agents": {
+                    "description": "SecretAgents is a map of secret agents used by backup routines (for encryption keys), clusters (for credentials), and storage (for authentication)",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.SecretAgent"
                     }
                 },
                 "service": {
-                    "$ref": "#/definitions/dto.BackupServiceConfig"
+                    "description": "ServiceConfig contains general service settings.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.BackupServiceConfig"
+                        }
+                    ]
                 },
                 "storage": {
+                    "description": "Storage is a map of storages that can be used by backup routines.",
                     "type": "object",
                     "additionalProperties": {
                         "$ref": "#/definitions/dto.Storage"
@@ -2242,6 +2254,7 @@ const docTemplate = `{
             }
         },
         "dto.GcpStorage": {
+            "description": "GcpStorage represents the configuration for GCP storage.",
             "type": "object",
             "required": [
                 "bucket-name"
@@ -2296,6 +2309,7 @@ const docTemplate = `{
             }
         },
         "dto.GcpStorageClass": {
+            "description": "GcpStorageClass represents the configuration for GCP Storage Class.",
             "type": "object",
             "properties": {
                 "data": {
@@ -2341,6 +2355,7 @@ const docTemplate = `{
             }
         },
         "dto.JobStatus": {
+            "description": "JobStatus represents possible states of restore jobs.",
             "type": "string",
             "enum": [
                 "Running",
@@ -2356,6 +2371,7 @@ const docTemplate = `{
             ]
         },
         "dto.LocalStorage": {
+            "description": "LocalStorage represents the configuration for local storage.",
             "type": "object",
             "required": [
                 "path"
@@ -2453,13 +2469,19 @@ const docTemplate = `{
             }
         },
         "dto.RestoreJobStatus": {
-            "description": "RestoreJobStatus represents a restore job status.",
+            "description": "RestoreJobStatus represents current restore job status.",
             "type": "object",
             "properties": {
                 "current-job": {
-                    "$ref": "#/definitions/dto.RunningJob"
+                    "description": "Speed related metrics of the restore process.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RunningJob"
+                        }
+                    ]
                 },
                 "error": {
+                    "description": "Error message if any.",
                     "type": "string"
                 },
                 "errors-in-doubt": {
@@ -2469,54 +2491,69 @@ const docTemplate = `{
                     "example": 7
                 },
                 "existed-records": {
+                    "description": "The number of records dropped because they already existed in the database.",
                     "type": "integer",
                     "format": "int64",
                     "example": 15
                 },
                 "expired-records": {
+                    "description": "The number of records dropped because they were expired.",
                     "type": "integer",
                     "format": "int64",
                     "example": 2
                 },
                 "fresher-records": {
+                    "description": "The number of records dropped because the database already contained the records with a higher generation count.",
                     "type": "integer",
                     "format": "int64",
                     "example": 5
                 },
                 "ignored-records": {
+                    "description": "The number of records ignored because of record level permanent error while restoring.",
                     "type": "integer",
                     "format": "int64",
                     "example": 12
                 },
                 "index-count": {
+                    "description": "The number of successfully created secondary indexes.",
                     "type": "integer",
                     "format": "int64",
                     "example": 3
                 },
                 "inserted-records": {
+                    "description": "The number of successfully restored records.",
                     "type": "integer",
                     "format": "int64",
                     "example": 8
                 },
                 "read-records": {
+                    "description": "Number of records read from backup.",
                     "type": "integer",
                     "format": "int64",
                     "example": 10
                 },
                 "skipped-records": {
+                    "description": "The number of records dropped because they didn't contain any of the\nselected bins or didn't belong to any of the selected sets.",
                     "type": "integer",
                     "format": "int64",
                     "example": 4
                 },
                 "status": {
-                    "$ref": "#/definitions/dto.JobStatus"
+                    "description": "Status of the restore job.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.JobStatus"
+                        }
+                    ]
                 },
                 "total-bytes": {
+                    "description": "Total bytes read from backup.",
                     "type": "integer",
                     "format": "int64",
                     "example": 2000
                 },
                 "udf-count": {
+                    "description": "The number of successfully stored UDF files.",
                     "type": "integer",
                     "format": "int64",
                     "example": 1
@@ -2798,6 +2835,7 @@ const docTemplate = `{
             }
         },
         "dto.RetentionPolicy": {
+            "description": "RetentionPolicy specifies how many full and incremental backups to keep.",
             "type": "object",
             "properties": {
                 "full": {
@@ -2911,6 +2949,7 @@ const docTemplate = `{
             }
         },
         "dto.S3Storage": {
+            "description": "S3Storage represents the configuration for S3 storage.",
             "type": "object",
             "required": [
                 "bucket",

@@ -7,6 +7,7 @@ import (
 )
 
 // LocalStorage represents the configuration for local storage.
+// @Description LocalStorage represents the configuration for local storage.
 type LocalStorage struct {
 	// The root path for the backup repository.
 	Path string `yaml:"path" json:"path" example:"backups" validate:"required"`
