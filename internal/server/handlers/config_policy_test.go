@@ -240,7 +240,6 @@ func TestDeletePolicy(t *testing.T) {
 // Helper function to setup test service with mocked dependencies.
 func setupTestService() *Service {
 	mockScheduler := &MockScheduler{}
-	mockRestoreManager := &MockRestoreManager{}
 	mockConfigApplier := &MockConfigApplier{}
 	mockNsValidator := &aerospike.NoopNamespaceValidator{}
 	mockConfigurationManager := &configurationManagerMock{}
@@ -251,7 +250,7 @@ func setupTestService() *Service {
 		model.NewConfig(),
 		mockConfigApplier,
 		mockScheduler,
-		mockRestoreManager,
+		nil,
 		nil,
 		nil,
 		mockRegistry,

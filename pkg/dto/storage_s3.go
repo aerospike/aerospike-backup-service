@@ -8,6 +8,7 @@ import (
 )
 
 // S3Storage represents the configuration for S3 storage.
+// @Description S3Storage represents the configuration for S3 storage.
 //
 //nolint:lll
 type S3Storage struct {
