@@ -323,7 +323,7 @@ func updateMetrics(readme []byte) []byte {
 	table := sb.String()
 
 	// Replace section after <!-- Metrics -->
-	metricsRe := regexp.MustCompile(`(?s)(<!-- Metrics -->\n)(\|.*?\|\n)(\n)`)
+	metricsRe := regexp.MustCompile(`(?s)(<!-- Metrics -->\n\n)(\|.*?\|\n)(\n)`)
 
 	return metricsRe.ReplaceAll(readme, []byte("${1}"+table+"${3}"))
 }

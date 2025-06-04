@@ -15,49 +15,49 @@ var (
 	backupCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_runs_total",
-			Help: "Successful backup runs counter (Deprecated, use aerospike_backup_service_backup_events_total)",
+			Help: "Successful backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
 		})
 	// A counter metric for incremental backup run number.
 	incrBackupCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_incremental_runs_total",
-			Help: "Successful incremental backup runs counter (Deprecated, use aerospike_backup_service_backup_events_total)",
+			Help: "Successful incremental backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
 		})
 	// A counter metric for backup skip number.
 	backupSkippedCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_skip_total",
-			Help: "Full backup skip counter (Deprecated, use aerospike_backup_service_backup_events_total)",
+			Help: "Full backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
 		})
 	// A counter metric for incremental backup skip number.
 	incrBackupSkippedCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_incremental_skip_total",
-			Help: "Incremental backup skip counter",
+			Help: "Incremental backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
 		})
 	// A counter metric for backup failure number.
 	backupFailureCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_failure_total",
-			Help: "Full backup failure counter (Deprecated, use aerospike_backup_service_backup_events_total)",
+			Help: "Full backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
 		})
 	// A counter metric for incremental backup failure number.
 	incrBackupFailureCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_incremental_failure_total",
-			Help: "Incremental backup failure counter (Deprecated, use aerospike_backup_service_backup_events_total)",
+			Help: "Incremental backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)",
 		})
 	// A gauge metric for full backup duration.
 	backupDurationGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_duration_millis",
-			Help: "Full backup duration in milliseconds (Deprecated, use aerospike_backup_service_backup_duration_seconds)",
+			Help: "Full backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)",
 		})
 	// A gauge metric for incremental backup duration.
 	incrBackupDurationGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_incremental_duration_millis",
-			Help: "Incremental backup duration in milliseconds (Deprecated, use aerospike_backup_service_backup_duration_seconds)",
+			Help: "Incremental backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)",
 		})
 	// A gauge metrics for backup process, filter by name and type.
 	backupProgress = prometheus.NewGaugeVec(
