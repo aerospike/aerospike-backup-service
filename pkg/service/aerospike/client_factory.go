@@ -122,8 +122,6 @@ func initTLS(t *model.TLS, clusterLabel *string) *tls.Config {
 		serverPool.AppendCertsFromPEM(caCert)
 	}
 
-	// if path != nil add all
-
 	var clientPool []tls.Certificate
 	if (t.Certfile != nil && len(*t.Certfile) > 0) ||
 		t.Keyfile != nil && len(*t.Keyfile) > 0 {
