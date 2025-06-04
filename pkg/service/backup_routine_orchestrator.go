@@ -82,16 +82,16 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 
 	if err != nil {
 		h.logger.Error("Full backup failed", slog.Any("error", err))
-		ObserveBackupEvent(h.routineName, jobTypeFull, BackupOutcomeFailure, duration)
+		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeFailure, duration)
 	} else {
 		h.logger.Debug("Finished full backup", slog.Int64("time", now.UnixMilli()))
-		ObserveBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSuccess, duration)
+		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSuccess, duration)
 	}
 }
 
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
 	if h.skipFullBackup() {
-		backupSkippedCounter.Inc()
+		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSkipped, 0)
 		return nil
 	}
 
@@ -193,7 +193,7 @@ func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.T
 
 func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, now time.Time) {
 	if h.skipIncrementalBackup() {
-		incrBackupSkippedCounter.Inc()
+		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeSkipped, 0)
 		return
 	}
 
@@ -201,10 +201,10 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 		return h.runIncrementalBackupInternal(ctx, now)
 	})
 	if err != nil {
-		ObserveBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeFailure, duration)
+		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeFailure, duration)
 		h.logger.Error("Incremental backup failed", slog.Any("error", err))
 	} else {
-		ObserveBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeFailure, duration)
+		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeFailure, duration)
 		h.logger.Debug("Finished incremental backup", slog.Int64("time", now.UnixMilli()))
 	}
 }

@@ -9,24 +9,25 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+//nolint:lll
 var (
 	// A counter metric for backup run number.
 	backupCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_runs_total",
-			Help: "Successful backup runs counter",
+			Help: "Successful backup runs counter (Deprecated, use aerospike_backup_service_backup_events_total)",
 		})
 	// A counter metric for incremental backup run number.
 	incrBackupCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_incremental_runs_total",
-			Help: "Successful incremental backup runs counter",
+			Help: "Successful incremental backup runs counter (Deprecated, use aerospike_backup_service_backup_events_total)",
 		})
 	// A counter metric for backup skip number.
 	backupSkippedCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_skip_total",
-			Help: "Full backup skip counter",
+			Help: "Full backup skip counter (Deprecated, use aerospike_backup_service_backup_events_total)",
 		})
 	// A counter metric for incremental backup skip number.
 	incrBackupSkippedCounter = prometheus.NewCounter(
@@ -38,25 +39,25 @@ var (
 	backupFailureCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_failure_total",
-			Help: "Full backup failure counter",
+			Help: "Full backup failure counter (Deprecated, use aerospike_backup_service_backup_events_total)",
 		})
 	// A counter metric for incremental backup failure number.
 	incrBackupFailureCounter = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_incremental_failure_total",
-			Help: "Incremental backup failure counter",
+			Help: "Incremental backup failure counter (Deprecated, use aerospike_backup_service_backup_events_total)",
 		})
 	// A gauge metric for full backup duration.
 	backupDurationGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_duration_millis",
-			Help: "Full backup duration in milliseconds",
+			Help: "Full backup duration in milliseconds (Deprecated, use aerospike_backup_service_backup_duration_seconds)",
 		})
 	// A gauge metric for incremental backup duration.
 	incrBackupDurationGauge = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_incremental_duration_millis",
-			Help: "Incremental backup duration in milliseconds",
+			Help: "Incremental backup duration in milliseconds (Deprecated, use aerospike_backup_service_backup_duration_seconds)",
 		})
 	// A gauge metrics for backup process, filter by name and type.
 	backupProgress = prometheus.NewGaugeVec(
@@ -79,13 +80,26 @@ var (
 	// Labels:
 	//   - routine: name of the backup routine, e.g., "daily-ns1"
 	//   - type: "full" or "incremental"
-	//   - outcome: one of "success", "failure", or "retry"
-	backupJobEvents = prometheus.NewCounterVec(
+	//   - outcome: one of "success", "failure", "skip" or "retry"
+	backupCounters = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "aerospike_backup_service_job_events_total",
+			Name: "aerospike_backup_service_backup_events_total",
 			Help: "Backup service job events by routine, type, and outcome",
 		},
 		[]string{"routine", "type", "outcome"},
+	)
+
+	// A histogram metric for backup job durations (in seconds).
+	// Labels:
+	//   - routine: name of the backup routine, e.g., "daily-ns1"
+	//   - type: "full" or "incremental"
+	backupDurations = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "aerospike_backup_service_backup_duration_seconds",
+			Help:    "Duration of backups by routine and type (in seconds)",
+			Buckets: prometheus.ExponentialBuckets(60, 1.5, 16), // 1 min to 10 hours
+		},
+		[]string{"routine", "type"},
 	)
 )
 
@@ -103,7 +117,8 @@ func init() {
 		incrBackupDurationGauge,
 		backupProgress,
 		restoreProgress,
-		backupJobEvents,
+		backupCounters,
+		backupDurations,
 	}
 
 	prometheus.MustRegister(AllMetrics...)
@@ -182,15 +197,22 @@ const (
 	BackupOutcomeSuccess BackupOutcome = "success"
 	BackupOutcomeFailure BackupOutcome = "failure"
 	BackupOutcomeRetry   BackupOutcome = "retry"
+	BackupOutcomeSkipped BackupOutcome = "skip"
 )
 
-func ObserveBackupEvent(routine string, backupType jobType, outcome BackupOutcome, duration time.Duration) {
-	backupJobEvents.With(prometheus.Labels{
+func observeBackupEvent(routine string, backupType jobType, outcome BackupOutcome, duration time.Duration) {
+	backupCounters.With(prometheus.Labels{
 		"routine": routine,
 		"type":    string(backupType),
 		"outcome": string(outcome),
 	}).Inc()
 
+	backupDurations.With(prometheus.Labels{
+		"routine": routine,
+		"type":    string(backupType),
+	}).Observe(duration.Seconds())
+
+	// update deprecated counters
 	if outcome == BackupOutcomeFailure {
 		if backupType == jobTypeFull {
 			backupFailureCounter.Inc()
@@ -200,11 +222,20 @@ func ObserveBackupEvent(routine string, backupType jobType, outcome BackupOutcom
 	}
 
 	if outcome == BackupOutcomeSuccess {
-		backupCounter.Inc()
 		if backupType == jobTypeFull {
+			backupCounter.Inc()
 			backupDurationGauge.Set(float64(duration.Milliseconds()))
 		} else {
+			incrBackupCounter.Inc()
 			incrBackupDurationGauge.Set(float64(duration.Milliseconds()))
+		}
+	}
+
+	if outcome == BackupOutcomeSkipped {
+		if backupType == jobTypeFull {
+			backupSkippedCounter.Inc()
+		} else {
+			incrBackupSkippedCounter.Inc()
 		}
 	}
 }

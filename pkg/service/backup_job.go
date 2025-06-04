@@ -46,18 +46,9 @@ func (j *backupJob) Execute(ctx context.Context) error {
 	}
 
 	j.logger.Debug("Backup is currently in progress, skipping it")
-	incrementSkippedCounters(j.jobType)
+	observeBackupEvent(j.routineName, j.jobType, BackupOutcomeSkipped, 0)
 
 	return nil
-}
-
-func incrementSkippedCounters(jobType jobType) {
-	switch jobType {
-	case jobTypeFull:
-		backupSkippedCounter.Inc()
-	case jobTypeIncremental:
-		incrBackupSkippedCounter.Inc()
-	}
 }
 
 // Description returns the description of the backup job.
