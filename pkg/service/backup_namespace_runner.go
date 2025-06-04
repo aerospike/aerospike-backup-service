@@ -65,13 +65,13 @@ func (op *BackupNamespaceRunner) Run(
 	return newRetryableBackupHandler(
 		ctx,
 		op.retry,
-		func(ctx context.Context) (backupexecutor.BackupHandler, error) {
+		func(ctx context.Context) (backupexecutor.BackupHandler, error) { // start
 			return op.backupExecutor.Run(ctx, client, backupRoutine, timeBounds, namespace, backupFolder)
 		},
-		func(ctx context.Context) {
+		func(ctx context.Context) { // on fail
 			op.deleteFolder(ctx, getTimestampPath(op.routineName, startTime, backupType))
 		},
-		func(ctx context.Context, stats *models.BackupStats) error {
+		func(ctx context.Context, stats *models.BackupStats) error { // on success
 			// For incremental backups, skip metadata for empty backups
 			if backupType == jobTypeIncremental && stats.IsEmpty() {
 				return nil
@@ -80,6 +80,9 @@ func (op *BackupNamespaceRunner) Run(
 				stats, namespace, util.ValueOrZero(timeBounds.FromTime), startTime, backupRoutine.BackupPolicy,
 			)
 			return op.writeBackupMetadata(ctx, metadata, backupFolder)
+		},
+		func() { // on retry
+			observeBackupEvent(op.routineName, backupType, BackupOutcomeRetry, 0)
 		},
 	)
 }

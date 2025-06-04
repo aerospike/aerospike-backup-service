@@ -12,13 +12,14 @@ import (
 
 // executor defines an interface for executing functions with retries.
 // label defines a job, it is only used in logs and error messages.
+// onRetry is called for side effects when a retry occurs.
 type executor interface {
-	run(label string, f func() error) error
+	run(label string, f func() error, onRetry func()) error
 }
 
 type simpleExecutor struct{}
 
-func (e *simpleExecutor) run(_ string, f func() error) error {
+func (e *simpleExecutor) run(_ string, f func() error, _ func()) error {
 	return f()
 }
 
@@ -39,7 +40,7 @@ func newRetryExecutor(policy models.RetryPolicy, logger *slog.Logger) executor {
 
 // retry attempts to execute the given function up to maxAttempts with the specified retryInterval.
 // If all attempts fail, it returns an error.
-func (r *retryExecutor) run(label string, f func() error) error {
+func (r *retryExecutor) run(label string, f func() error, onRetry func()) error {
 	var (
 		lastErr       error
 		retryInterval = r.policy.BaseTimeout
@@ -53,6 +54,7 @@ func (r *retryExecutor) run(label string, f func() error) error {
 		}
 
 		if attempt < r.policy.MaxRetries { // Log and wait only if there are attempts left
+			onRetry()
 			r.logger.Info("Execution failed, retrying...",
 				slog.String("label", label),
 				slog.Any("attempt", attempt),

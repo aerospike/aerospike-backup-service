@@ -46,7 +46,7 @@ func (j *backupJob) Execute(ctx context.Context) error {
 	}
 
 	j.logger.Debug("Backup is currently in progress, skipping it")
-	observeBackupEvent(j.routineName, j.jobType, BackupOutcomeSkipped, 0)
+	observeBackupEvent(j.routineName, j.jobType, BackupOutcomeSkip, 0)
 
 	return nil
 }

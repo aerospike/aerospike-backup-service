@@ -197,7 +197,7 @@ const (
 	BackupOutcomeSuccess BackupOutcome = "success"
 	BackupOutcomeFailure BackupOutcome = "failure"
 	BackupOutcomeRetry   BackupOutcome = "retry"
-	BackupOutcomeSkipped BackupOutcome = "skip"
+	BackupOutcomeSkip    BackupOutcome = "skip"
 )
 
 func observeBackupEvent(routine string, backupType jobType, outcome BackupOutcome, duration time.Duration) {
@@ -215,15 +215,8 @@ func observeBackupEvent(routine string, backupType jobType, outcome BackupOutcom
 	}
 
 	// update deprecated counters
-	if outcome == BackupOutcomeFailure {
-		if backupType == jobTypeFull {
-			backupFailureCounter.Inc()
-		} else {
-			incrBackupFailureCounter.Inc()
-		}
-	}
-
-	if outcome == BackupOutcomeSuccess {
+	switch outcome {
+	case BackupOutcomeSuccess:
 		if backupType == jobTypeFull {
 			backupCounter.Inc()
 			backupDurationGauge.Set(float64(duration.Milliseconds()))
@@ -231,9 +224,13 @@ func observeBackupEvent(routine string, backupType jobType, outcome BackupOutcom
 			incrBackupCounter.Inc()
 			incrBackupDurationGauge.Set(float64(duration.Milliseconds()))
 		}
-	}
-
-	if outcome == BackupOutcomeSkipped {
+	case BackupOutcomeFailure:
+		if backupType == jobTypeFull {
+			backupFailureCounter.Inc()
+		} else {
+			incrBackupFailureCounter.Inc()
+		}
+	case BackupOutcomeSkip:
 		if backupType == jobTypeFull {
 			backupSkippedCounter.Inc()
 		} else {

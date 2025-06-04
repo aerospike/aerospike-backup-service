@@ -91,7 +91,7 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
 	if h.skipFullBackup() {
-		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSkipped, 0)
+		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSkip, 0)
 		return nil
 	}
 
@@ -156,20 +156,23 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 		namespaces []string
 	)
 
-	err := retry.run("cluster connection", func() error {
-		var err error
-		client, err = h.clientManager.GetClient(h.routine.SourceCluster)
-		if err != nil {
-			return fmt.Errorf("cannot get backup client: %w", err)
-		}
-		namespaces, err = aerospike.ResolveNamespaces(h.routine.Namespaces, client.AerospikeClient())
-		if err != nil {
-			h.clientManager.Close(client)
-			return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
-		}
+	err := retry.run("cluster connection",
+		func() error {
+			var err error
+			client, err = h.clientManager.GetClient(h.routine.SourceCluster)
+			if err != nil {
+				return fmt.Errorf("cannot get backup client: %w", err)
+			}
+			namespaces, err = aerospike.ResolveNamespaces(h.routine.Namespaces, client.AerospikeClient())
+			if err != nil {
+				h.clientManager.Close(client)
+				return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
+			}
 
-		return nil
-	})
+			return nil
+		},
+		func() {},
+	)
 
 	return client, namespaces, err
 }
@@ -193,7 +196,7 @@ func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.T
 
 func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, now time.Time) {
 	if h.skipIncrementalBackup() {
-		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeSkipped, 0)
+		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeSkip, 0)
 		return
 	}
 
