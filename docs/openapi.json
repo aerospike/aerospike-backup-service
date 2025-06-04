@@ -3187,7 +3187,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "address" ],
+        "required" : [ "address", "connection-type" ],
         "type" : "object"
       },
       "dto.SeedNode" : {

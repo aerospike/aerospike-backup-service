@@ -3043,7 +3043,8 @@ const docTemplate = `{
             "description": "SecretAgent represents the configuration of an Aerospike Secret Agent.",
             "type": "object",
             "required": [
-                "address"
+                "address",
+                "connection-type"
             ],
             "properties": {
                 "address": {
