@@ -156,23 +156,20 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 		namespaces []string
 	)
 
-	err := retry.run("cluster connection",
-		func() error {
-			var err error
-			client, err = h.clientManager.GetClient(h.routine.SourceCluster)
-			if err != nil {
-				return fmt.Errorf("cannot get backup client: %w", err)
-			}
-			namespaces, err = aerospike.ResolveNamespaces(h.routine.Namespaces, client.AerospikeClient())
-			if err != nil {
-				h.clientManager.Close(client)
-				return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
-			}
+	err := retry.run("cluster connection", func() error {
+		var err error
+		client, err = h.clientManager.GetClient(h.routine.SourceCluster)
+		if err != nil {
+			return fmt.Errorf("cannot get backup client: %w", err)
+		}
+		namespaces, err = aerospike.ResolveNamespaces(h.routine.Namespaces, client.AerospikeClient())
+		if err != nil {
+			h.clientManager.Close(client)
+			return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
+		}
 
-			return nil
-		},
-		func() {},
-	)
+		return nil
+	}, func() {})
 
 	return client, namespaces, err
 }
