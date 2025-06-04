@@ -207,10 +207,12 @@ func observeBackupEvent(routine string, backupType jobType, outcome BackupOutcom
 		"outcome": string(outcome),
 	}).Inc()
 
-	backupDurations.With(prometheus.Labels{
-		"routine": routine,
-		"type":    string(backupType),
-	}).Observe(duration.Seconds())
+	if duration > 0 {
+		backupDurations.With(prometheus.Labels{
+			"routine": routine,
+			"type":    string(backupType),
+		}).Observe(duration.Seconds())
+	}
 
 	// update deprecated counters
 	if outcome == BackupOutcomeFailure {
