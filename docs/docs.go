@@ -2827,9 +2827,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "time": {
-                    "description": "Required epoch time for recovery. The closest backup before the timestamp will be applied.",
+                    "description": "Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.",
                     "type": "integer",
                     "format": "int64",
+                    "minimum": 1000000000000,
                     "example": 1739538000000
                 }
             }
