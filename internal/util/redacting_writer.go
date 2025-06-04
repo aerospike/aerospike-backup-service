@@ -5,6 +5,8 @@ import (
 	"regexp"
 )
 
+const redactedPlaceholder = "[REDACTED]"
+
 var privateKeyRegex = regexp.MustCompile(`-----BEGIN PRIVATE KEY-----[\s\S]+?-----END PRIVATE KEY-----`)
 
 var patterns = []*regexp.Regexp{
@@ -24,7 +26,7 @@ func newRedactingWriter(w io.Writer) io.Writer {
 func (rw *redactingWriter) Write(p []byte) (int, error) {
 	output := p
 	for _, re := range patterns {
-		output = re.ReplaceAll(output, []byte("[REDACTED]"))
+		output = re.ReplaceAll(output, []byte(redactedPlaceholder))
 	}
 	return rw.underlying.Write(output)
 }

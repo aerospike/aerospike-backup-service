@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,7 +14,7 @@ func TestRedactingWriter(t *testing.T) {
 	writer := newRedactingWriter(&buf)
 
 	input := `{"user":"alice","privateKey":"-----BEGIN PRIVATE KEY-----abc123-----END PRIVATE KEY-----"}`
-	expected := `{"user":"alice","privateKey":"[REDACTED]"}`
+	expected := fmt.Sprintf(`{"user":"alice","privateKey":"%s"}`, redactedPlaceholder)
 
 	_, err := writer.Write([]byte(input))
 	assert.NoError(t, err)
