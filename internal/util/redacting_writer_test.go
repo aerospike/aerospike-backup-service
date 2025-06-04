@@ -3,6 +3,8 @@ package util
 import (
 	"bytes"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRedactingWriter(t *testing.T) {
@@ -14,12 +16,17 @@ func TestRedactingWriter(t *testing.T) {
 	expected := `{"user":"alice","privateKey":"[REDACTED]"}`
 
 	_, err := writer.Write([]byte(input))
-	if err != nil {
-		t.Fatalf("unexpected write error: %v", err)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, expected, buf.String())
+}
 
-	output := buf.String()
-	if output != expected {
-		t.Errorf("expected:\n%s\ngot:\n%s", expected, output)
-	}
+func TestRedactingWriter_NoRedactionNeeded(t *testing.T) {
+	var buf bytes.Buffer
+	writer := newRedactingWriter(&buf)
+
+	input := `{"user":"alice","role":"admin"}`
+
+	_, err := writer.Write([]byte(input))
+	assert.NoError(t, err)
+	assert.Equal(t, input, buf.String())
 }
