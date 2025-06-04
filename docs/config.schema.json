@@ -1445,7 +1445,8 @@
           }
         },
         "required": [
-          "address"
+          "address",
+          "connection-type"
         ],
         "type": "object"
       },

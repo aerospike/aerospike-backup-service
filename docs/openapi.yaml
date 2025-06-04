@@ -2727,6 +2727,7 @@ components:
           type: string
       required:
       - address
+      - connection-type
       type: object
     dto.SeedNode:
       description: SeedNode represents details of a node in the Aerospike cluster.
