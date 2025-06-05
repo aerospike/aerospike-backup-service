@@ -210,9 +210,9 @@ These settings, such as parallel, file-limit, min-part-size, and compression,
 can have a significant impact on backup throughput.
 We recommend experimenting with different values in your environment to find the optimal balance.
 
-The service configuration `service` section configures core behaviors of the Aerospike Backup Service itself,
-such as how it exposes its HTTP interface and how it logs internal operations. See the `dto.BackupServiceConfig` section
-in [specification](https://aerospike.github.io/aerospike-backup-service/)  for details.
+The `service` section configures the operation settings of the Aerospike Backup Service,
+which include logging and HTTP endpoint. See the `dto.BackupServiceConfig` schema
+in [OpenAPI specification](https://aerospike.github.io/aerospike-backup-service/) for details.
 
 ### Configuration with API
 
