@@ -48,8 +48,8 @@ func BenchmarkLoggerComparison(b *testing.B) {
 }
 
 //nolint:lll
-func generateLogLine(i int, redact bool) []byte {
-	if redact {
+func generateLogLine(i int) []byte {
+	if i%redactEveryNthLine == 0 {
 		return []byte(fmt.Sprintf("WARN %d: key found -----BEGIN PRIVATE KEY-----\nKEY_%d\n-----END PRIVATE KEY-----\n", i, i))
 	}
 	switch i % 5 {
@@ -81,8 +81,8 @@ func runLineByLineLogging(b *testing.B, name string, wrapWriter func(io.Writer) 
 
 			writer := wrapWriter(f)
 
-			for j := 0; j < totalLogLines; j++ {
-				line := generateLogLine(j, j%redactEveryNthLine == 0)
+			for line := 0; line < totalLogLines; line++ {
+				line := generateLogLine(line)
 				_, err := writer.Write(line)
 				if err != nil {
 					b.Fatal(err)
