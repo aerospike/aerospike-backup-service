@@ -23,6 +23,20 @@ func TestRedactingWriter(t *testing.T) {
 	assert.Equal(t, expected, buf.String())
 }
 
+func TestRedactingWriter_MultilineKey(t *testing.T) {
+	var buf bytes.Buffer
+	writer := newRedactingWriter(&buf)
+
+	input := `{"user":"alice","privateKey":"-----BEGIN PRIVATE KEY-----
+abc123
+-----END PRIVATE KEY-----"}`
+	expected := fmt.Sprintf(`{"user":"alice","privateKey":"%s"}`, redactedPlaceholder)
+
+	_, err := writer.Write([]byte(input))
+	assert.NoError(t, err)
+	assert.Equal(t, expected, buf.String())
+}
+
 func TestRedactingWriter_NoRedactionNeeded(t *testing.T) {
 	var buf bytes.Buffer
 	writer := newRedactingWriter(&buf)
