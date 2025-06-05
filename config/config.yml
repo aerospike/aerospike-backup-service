@@ -27,7 +27,7 @@ backup-policies:
     sealed: true
     retry-policy:
       base-timeout: 3_000
-      max-retries: 1
+      max-retries: 10
       multiplier: 1
     retention:
       full: 10
@@ -272,15 +272,15 @@ backup-routines:
     storage: local
     namespaces: [ "source-ns20" ]
     backup-policy: removeFilesPolicy
-  every5SecondBackup:
+  everySecondBackup:
     backup-policy: defaultPolicy
     source-cluster: absDefaultCluster
     storage: local
-    interval-cron: '*/5 * * * * *'
+    interval-cron: '* * * * * *'
     incr-interval-cron: ""
     namespaces:
       - source-ns20
-    disabled: false
+    disabled: true
 #  xdrBackup:
 #    interval-cron: "@yearly"
 #    incr-interval-cron: "0 */1 * * * *" # every minute incremental backup
