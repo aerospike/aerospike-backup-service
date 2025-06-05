@@ -35,9 +35,7 @@ func TestRedactingWriter_NoRedactionNeeded(t *testing.T) {
 }
 
 func BenchmarkLoggerComparison(b *testing.B) {
-	runLineByLineLogging(b, "RedactingWriter_LineByLine", func(w io.Writer) io.Writer {
-		return newRedactingWriter(w)
-	})
+	runLineByLineLogging(b, "RedactingWriter_LineByLine", newRedactingWriter)
 
 	runLineByLineLogging(b, "PlainWriter_LineByLine", func(w io.Writer) io.Writer {
 		return w
@@ -71,6 +69,8 @@ const (
 )
 
 func runLineByLineLogging(b *testing.B, name string, wrapWriter func(io.Writer) io.Writer) {
+	b.Helper()
+
 	b.Run(name, func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			f, err := os.CreateTemp("", name+"_*.log")
