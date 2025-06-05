@@ -195,12 +195,24 @@ backup-routines:
     source-cluster: abs-cluster         # <--- Refers to the cluster name under aerospike-clusters
     storage: s3                         # <--- Refers to the storage name under storage
     backup-policy: dailyBackupPolicy    # <--- Refers to the policy name under backup-policies
+
+service:
+  http:
+    port: 9000
+  logger:
+    level: INFO
+    file-writer:
+      filename: /var/log/aerospike-backup-service.log
 ```
 
 Several configuration fields in the YAML file are marked with `May affect performance`.
 These settings, such as parallel, file-limit, min-part-size, and compression,
 can have a significant impact on backup throughput.
 We recommend experimenting with different values in your environment to find the optimal balance.
+
+The service configuration `service` section configures core behaviors of the Aerospike Backup Service itself,
+such as how it exposes its HTTP interface and how it logs internal operations. See the `dto.BackupServiceConfig` section
+in [specification](https://aerospike.github.io/aerospike-backup-service/)  for details.
 
 ### Configuration with API
 
