@@ -34,10 +34,15 @@ func TestRedactingWriter_NoRedactionNeeded(t *testing.T) {
 	assert.Equal(t, input, buf.String())
 }
 
-func BenchmarkLoggerComparison(b *testing.B) {
-	runLineByLineLogging(b, "RedactingWriter_LineByLine", newRedactingWriter)
+const (
+	totalLogLines      = 100_000 // total log calls per benchmark iteration
+	redactEveryNthLine = 100     // redact pattern every N lines
+)
 
-	runLineByLineLogging(b, "PlainWriter_LineByLine", func(w io.Writer) io.Writer {
+func BenchmarkLoggerComparison(b *testing.B) {
+	runLineByLineLogging(b, "RedactingWriter", newRedactingWriter)
+
+	runLineByLineLogging(b, "PlainWriter", func(w io.Writer) io.Writer {
 		return w
 	})
 }
@@ -62,11 +67,6 @@ func generateLogLine(i int, redact bool) []byte {
 		return []byte(fmt.Sprintf("line %d: fallback log line\n", i))
 	}
 }
-
-const (
-	totalLogLines      = 100_000 // total log calls per benchmark iteration
-	redactEveryNthLine = 100     // redact pattern every N lines
-)
 
 func runLineByLineLogging(b *testing.B, name string, wrapWriter func(io.Writer) io.Writer) {
 	b.Helper()
