@@ -44,9 +44,10 @@ func BenchmarkLoggerComparison(b *testing.B) {
 	})
 }
 
+//nolint:lll
 func generateLogLine(i int, redact bool) []byte {
 	if redact {
-		return []byte(fmt.Sprintf("WARN %d: key found -----BEGIN PRIVATE KEY-----\nKEY_%d\n-----END PRIVATE KEY-----\n", i, i)) //nolint:lll
+		return []byte(fmt.Sprintf("WARN %d: key found -----BEGIN PRIVATE KEY-----\nKEY_%d\n-----END PRIVATE KEY-----\n", i, i))
 	}
 	switch i % 5 {
 	case 0:
