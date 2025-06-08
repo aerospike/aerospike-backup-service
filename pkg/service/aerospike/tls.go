@@ -1,6 +1,7 @@
 package aerospike
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -44,7 +45,7 @@ func NewTLSConfig(t *model.TLS) (*tls.Config, error) {
 		return nil, err
 	}
 
-	// Load client certificates for mutual authentication.
+	// Load client certificates.
 	clientCerts, err := loadClientCerts(t)
 	if err != nil {
 		return nil, err
@@ -112,9 +113,9 @@ func loadCertPool(caFile, caPath *string) (*x509.CertPool, error) {
 
 // appendCertFile reads a PEM file and appends its certificates to the given CertPool.
 func appendCertFile(pool *x509.CertPool, path string) error {
-	pemBytes, err := os.ReadFile(path)
+	pemBytes, err := readFromFile(path)
 	if err != nil {
-		return fmt.Errorf("failed to read CA file %s: %w", path, err)
+		return err
 	}
 
 	if !pool.AppendCertsFromPEM(pemBytes) {
@@ -124,7 +125,7 @@ func appendCertFile(pool *x509.CertPool, path string) error {
 	return nil
 }
 
-// loadClientCerts loads the client certificate and key for mTLS.
+// loadClientCerts loads the client certificate and key.
 func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 	certFile := util.ValueOrZero(t.Certfile)
 	keyFile := util.ValueOrZero(t.Keyfile)
@@ -133,39 +134,47 @@ func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 		return nil, nil // Not an error, just no client certs provided.
 	}
 
-	certPEM, err := os.ReadFile(certFile)
+	// Read cert file
+	certFileBytes, err := readFromFile(certFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read client certificate file %s: %w", certFile, err)
 	}
 
-	keyPEM, err := os.ReadFile(keyFile)
+	// Read key file
+	keyFileBytes, err := readFromFile(keyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read client key file %s: %w", keyFile, err)
 	}
 
-	// Decrypt the key if it's encrypted and a password is provided.
-	keyBlock, _ := pem.Decode(keyPEM)
-	if keyBlock == nil {
+	keyBlock, _ := pem.Decode(keyFileBytes)
+	certBlock, _ := pem.Decode(certFileBytes)
+
+	if keyBlock == nil || certBlock == nil {
 		return nil, fmt.Errorf("failed to decode PEM block from key file %s", keyFile)
 	}
 
+	// Check and Decrypt the Key Block using passphrase
 	if t.KeyfilePassword != nil && x509.IsEncryptedPEMBlock(keyBlock) { //nolint:staticcheck
-		keyPassword := util.ValueOrZero(t.KeyfilePassword)
-		if keyPassword == "" {
-			return nil, fmt.Errorf("client key %s is encrypted but no password was provided", keyFile)
-		}
-
-		decryptedBytes, err := x509.DecryptPEMBlock(keyBlock, []byte(keyPassword)) //nolint:staticcheck
+		decryptedDERBytes, err := x509.DecryptPEMBlock(keyBlock, []byte(*t.KeyfilePassword)) //nolint:staticcheck
 		if err != nil {
 			return nil, fmt.Errorf("failed to decrypt client key file %s: %w", keyFile, err)
 		}
 
-		keyPEM = pem.EncodeToMemory(&pem.Block{Type: keyBlock.Type, Bytes: decryptedBytes})
+		keyBlock.Bytes = decryptedDERBytes
+		keyBlock.Headers = nil
+	}
+
+	// Encode PEM data
+	keyPEM := pem.EncodeToMemory(keyBlock)
+	certPEM := pem.EncodeToMemory(certBlock)
+
+	if keyPEM == nil || certPEM == nil {
+		return nil, fmt.Errorf("failed to encode PEM data for key or certificate")
 	}
 
 	cert, err := tls.X509KeyPair(certPEM, keyPEM)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create client key pair: %w", err)
+		return nil, fmt.Errorf("failed to add client certificate and key to the pool: %w", err)
 	}
 
 	return []tls.Certificate{cert}, nil
@@ -235,4 +244,14 @@ func parseCipherSuites(cipherSuiteStr *string) ([]uint16, error) {
 	}
 
 	return suites, nil
+}
+
+func readFromFile(filePath string) ([]byte, error) {
+	dataBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read from file %s: %w", filePath, err)
+	}
+	data := bytes.TrimSuffix(dataBytes, []byte("\n"))
+
+	return data, nil
 }
