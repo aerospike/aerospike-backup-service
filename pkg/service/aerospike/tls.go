@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,22 +76,17 @@ func NewTLSConfig(t *model.TLS) (*tls.Config, error) {
 
 // loadCertPool creates a new x509.CertPool and populates it from a file and a directory.
 func loadCertPool(caFile, caPath *string) (*x509.CertPool, error) {
-	// Get system CA certs, or create an empty pool if that fails.
+	// Try to load system CA certs, otherwise just make an empty pool
 	pool, err := x509.SystemCertPool()
-	if err != nil {
-		// This error is not critical, we can proceed with an empty pool.
-		// slog.Warn("Failed to load system CA certificates", "err", err)
+	if pool == nil || err != nil {
+		slog.Warn("Failed to load system CA certificates", "err", err)
 		pool = x509.NewCertPool()
 	}
 
 	// Load from CAFile if provided.
 	if caFile != nil && *caFile != "" {
-		pemBytes, err := os.ReadFile(*caFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read CA file %s: %w", *caFile, err)
-		}
-		if !pool.AppendCertsFromPEM(pemBytes) {
-			return nil, fmt.Errorf("failed to append certificates from CA file %s", *caFile)
+		if err := appendCertFile(pool, *caFile); err != nil {
+			return nil, err
 		}
 	}
 
@@ -100,22 +96,32 @@ func loadCertPool(caFile, caPath *string) (*x509.CertPool, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to read CA path directory %s: %w", *caPath, err)
 		}
+
 		for _, file := range files {
 			if file.IsDir() {
 				continue
 			}
-			filePath := filepath.Join(*caPath, file.Name())
-			pemBytes, err := os.ReadFile(filePath)
-			if err != nil {
-				// Log a warning and continue, as some files in the dir might not be certs.
-				// slog.Warn("Failed to read file in CAPath", "file", filePath, "err", err)
-				continue
+			if err := appendCertFile(pool, filepath.Join(*caPath, file.Name())); err != nil {
+				return nil, err
 			}
-			pool.AppendCertsFromPEM(pemBytes)
 		}
 	}
 
 	return pool, nil
+}
+
+// appendCertFile reads a PEM file and appends its certificates to the given CertPool.
+func appendCertFile(pool *x509.CertPool, path string) error {
+	pemBytes, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed to read CA file %s: %w", path, err)
+	}
+
+	if !pool.AppendCertsFromPEM(pemBytes) {
+		return fmt.Errorf("failed to append certificates from CA file %s", path)
+	}
+
+	return nil
 }
 
 // loadClientCerts loads the client certificate and key for mTLS.
@@ -143,7 +149,7 @@ func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 		return nil, fmt.Errorf("failed to decode PEM block from key file %s", keyFile)
 	}
 
-	if x509.IsEncryptedPEMBlock(keyBlock) { //nolint:staticcheck
+	if t.KeyfilePassword != nil && x509.IsEncryptedPEMBlock(keyBlock) { //nolint:staticcheck
 		keyPassword := util.ValueOrZero(t.KeyfilePassword)
 		if keyPassword == "" {
 			return nil, fmt.Errorf("client key %s is encrypted but no password was provided", keyFile)
@@ -154,7 +160,6 @@ func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 			return nil, fmt.Errorf("failed to decrypt client key file %s: %w", keyFile, err)
 		}
 
-		// Re-encode the decrypted key back to PEM format for X509KeyPair.
 		keyPEM = pem.EncodeToMemory(&pem.Block{Type: keyBlock.Type, Bytes: decryptedBytes})
 	}
 
