@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -146,11 +147,12 @@ func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 		return nil, fmt.Errorf("failed to read client key file %s: %w", keyFile, err)
 	}
 
+	// Decode PEM data
 	keyBlock, _ := pem.Decode(keyFileBytes)
 	certBlock, _ := pem.Decode(certFileBytes)
 
 	if keyBlock == nil || certBlock == nil {
-		return nil, fmt.Errorf("failed to decode PEM block from key file %s", keyFile)
+		return nil, errors.New("failed to decode PEM data for key or certificate")
 	}
 
 	// Check and Decrypt the Key Block using passphrase
