@@ -70,3 +70,15 @@ var defaultConfig = struct {
 		},
 	},
 }
+
+var StorageRetryPolicy = struct {
+	models.RetryPolicy
+	MaxDuration time.Duration
+}{
+	RetryPolicy: models.RetryPolicy{
+		BaseTimeout: 1 * time.Second,
+		MaxRetries:  100,
+		Multiplier:  1.1,
+	},
+	MaxDuration: 2 * time.Minute,
+}
