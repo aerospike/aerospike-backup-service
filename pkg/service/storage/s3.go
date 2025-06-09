@@ -84,7 +84,7 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 					func(so *retry.StandardOptions) {
 						so.MaxAttempts = int(model.StorageRetryPolicy.MaxRetries)
 						so.MaxBackoff = model.StorageRetryPolicy.MaxDuration
-						so.Backoff = retry.NewExponentialJitterBackoff(2 * time.Minute)
+						so.Backoff = retry.NewExponentialJitterBackoff(model.StorageRetryPolicy.MaxDuration)
 					})
 			})
 		}),
