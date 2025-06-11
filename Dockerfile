@@ -27,18 +27,18 @@ ARG TARGETARCH
 RUN microdnf install -y shadow-utils && \
     microdnf update -y && \
     microdnf -y clean all && rm -rf /var/cache/yum && \
-    groupadd --system --gid 65532 nonroot && \
-    useradd --no-log-init --no-user-group --system --uid 65532 --gid 65532 --create-home nonroot
+    groupadd --system --gid 65532 absgroup && \
+    useradd --no-log-init --system --uid 65532 --gid 65532 --create-home absuser
 
-COPY --chown=nonroot:65532 --chmod=0755 --from=builder \
+COPY --chown=absuser:absgroup --chmod=0755 --from=builder \
     /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH} \
     /usr/bin/aerospike-backup-service
 
-COPY --chown=nonroot:65532 --from=builder \
+COPY --chown=absuser:absgroup --from=builder \
     /app/aerospike-backup-service/build/package/config/aerospike-backup-service.yml \
     /etc/aerospike-backup-service/aerospike-backup-service.yml
 
-USER nonroot
+USER absuser
 EXPOSE 8080
 
 ENTRYPOINT ["aerospike-backup-service"]
