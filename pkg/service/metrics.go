@@ -73,7 +73,7 @@ var (
 			Name: "aerospike_backup_service_restore_progress_pct",
 			Help: "Progress of restore processes in percentage",
 		},
-		[]string{"label"},
+		[]string{"job_id"},
 	)
 
 	// A counter metric for backup job events.

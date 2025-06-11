@@ -280,27 +280,34 @@ func marshalYAML(v interface{}) ([]byte, error) {
 
 func updateMetrics(readme []byte) []byte {
 	type Row struct {
-		Name string
-		Help string
+		Name   string
+		Help   string
+		Labels string
 	}
 	var rows []Row
 
-	prometheusRE := regexp.MustCompile(`fqName: "([^"]+)", help: "([^"]+)"`)
+	prometheusRE := regexp.MustCompile(
+		`Desc{fqName:\s*"([^"]+)",\s*help:\s*"([^"]+)",\s*constLabels:\s*{[^}]*},\s*variableLabels:\s*{([^}]*)}}`)
+
 	for _, metric := range service.AllMetrics {
 		ch := make(chan *prometheus.Desc, 1)
 		metric.Describe(ch)
 		close(ch)
 		for desc := range ch {
-			matches := prometheusRE.FindStringSubmatch(desc.String())
-			if len(matches) == 3 {
-				rows = append(rows, Row{matches[1], matches[2]})
+			str := desc.String()
+			matches := prometheusRE.FindStringSubmatch(str)
+			if len(matches) != 4 {
+				panic("Failed to match Prometheus description: " + str)
 			}
+			labels := strings.ReplaceAll(matches[3], ",", ", ")
+			rows = append(rows, Row{matches[1], matches[2], labels})
 		}
 	}
 
 	// Determine column widths
 	maxName := len("Name")
 	maxHelp := len("Description")
+	maxLabels := len("Labels")
 	for _, r := range rows {
 		if len(r.Name) > maxName {
 			maxName = len(r.Name)
@@ -308,17 +315,23 @@ func updateMetrics(readme []byte) []byte {
 		if len(r.Help) > maxHelp {
 			maxHelp = len(r.Help)
 		}
+		if len(r.Labels) > maxLabels {
+			maxLabels = len(r.Labels)
+		}
 	}
 
 	const quotes = 2
 
 	// Build Markdown table string
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("| %-*s | %-*s |\n", maxName+quotes, "Name", maxHelp, "Description"))
-	sb.WriteString(fmt.Sprintf("|-%s-|-%s-|\n", strings.Repeat("-", maxName+quotes), strings.Repeat("-", maxHelp)))
+	sb.WriteString(fmt.Sprintf("| %-*s | %-*s | %-*s |\n",
+		maxName+quotes, "Name", maxHelp, "Description", maxLabels, "Labels"))
+	sb.WriteString(fmt.Sprintf("|-%s-|-%s-|-%s-|\n",
+		strings.Repeat("-", maxName+quotes), strings.Repeat("-", maxHelp), strings.Repeat("-", maxLabels)))
 	for _, r := range rows {
 		name := "`" + r.Name + "`"
-		sb.WriteString(fmt.Sprintf("| %-*s | %-*s |\n", maxName+quotes, name, maxHelp, r.Help))
+		sb.WriteString(fmt.Sprintf("| %-*s | %-*s | %-*s |\n",
+			maxName+quotes, name, maxHelp, r.Help, maxLabels, r.Labels))
 	}
 	table := sb.String()
 
