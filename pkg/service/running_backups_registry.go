@@ -149,6 +149,10 @@ func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string) {
 		slog.String("routine", routineName),
 		slog.String("lastRun", lastRun.String()))
 
+	// set last successful backup time for backups done before ABS started
+	if lastRun.LatestRun() != nil {
+		lastBackupTimestamp.WithLabelValues(routineName).Set(float64(lastRun.LatestRun().Unix()))
+	}
 	r.lastSuccessful.Store(routineName, lastRun)
 }
 
@@ -184,6 +188,8 @@ func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType
 		}
 	}
 
+	// set last successful backup time for just finished backup
+	lastBackupTimestamp.WithLabelValues(routineName).Set(float64(timestamp.Unix()))
 	r.lastSuccessful.ApplyOrCreate(
 		routineName,
 		updateLastTimestamp,

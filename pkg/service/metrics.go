@@ -101,6 +101,14 @@ var (
 		},
 		[]string{"routine", "type"},
 	)
+	// A gauge metric for unix timestamp of the last successful backup per routine.
+	lastBackupTimestamp = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "aerospike_backup_service_last_successful_backup_timestamp",
+			Help: "Unix timestamp of the last successful backup per routine",
+		},
+		[]string{"routine"},
+	)
 )
 
 var AllMetrics []prometheus.Collector
@@ -119,6 +127,7 @@ func init() {
 		restoreProgress,
 		backupCounters,
 		backupDurations,
+		lastBackupTimestamp,
 	}
 
 	prometheus.MustRegister(AllMetrics...)
