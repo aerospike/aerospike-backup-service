@@ -1189,9 +1189,10 @@
             "type": "string"
           },
           "time": {
-            "description": "Required epoch time for recovery. The closest backup before the timestamp will be applied.",
+            "description": "Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.",
             "example": 1739538000000,
             "format": "int64",
+            "minimum": 1000000000000,
             "type": "integer"
           }
         },
@@ -1445,7 +1446,8 @@
           }
         },
         "required": [
-          "address"
+          "address",
+          "connection-type"
         ],
         "type": "object"
       },

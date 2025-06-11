@@ -40,8 +40,8 @@ type RestoreTimestampRequest struct {
 	StorageConfig
 	// Restore policy to use in the operation.
 	Policy *RestorePolicy `json:"policy,omitempty"`
-	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
-	Time int64 `json:"time" format:"int64" example:"1739538000000" validate:"required"`
+	// Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.
+	Time int64 `json:"time" format:"int64" example:"1739538000000" validate:"required" minimum:"1000000000000"`
 	// The backup routine name.
 	Routine string `json:"routine" example:"daily" validate:"required"`
 	// Disable reverse order of incremental backups optimisation.
@@ -84,8 +84,14 @@ func (r *RestoreTimestampRequest) Validate() error {
 	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
-	if r.Time <= 0 {
-		return errValidationNonPositive("time", r.Time)
+	if r.Time == 0 {
+		return errValidationEmptyField("time")
+	}
+	if r.Time < 0 {
+		return errValidationNegative("time", r.Time)
+	}
+	if r.Time < 1_000_000_000_000 { // 13 digits for unix timestamp
+		return fmt.Errorf("%w: restore timestamp must be in milliseconds", errValidation)
 	}
 	if r.Routine == "" {
 		return errValidationEmptyField("routine")

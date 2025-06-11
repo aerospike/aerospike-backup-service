@@ -269,7 +269,31 @@ func TestRestoreTimestampRequest_Validate(t *testing.T) {
 				Policy:  validPolicy,
 				Routine: "daily",
 			},
-			err: errNonPositive,
+			err: errEmpty,
+		},
+		{
+			name: "negative time",
+			request: RestoreTimestampRequest{
+				Time: -100,
+				DestinationClusterConfig: DestinationClusterConfig{
+					Cluster: validCluster,
+				},
+				Policy:  validPolicy,
+				Routine: "daily",
+			},
+			err: errNegative,
+		},
+		{
+			name: "small time",
+			request: RestoreTimestampRequest{
+				Time: 100,
+				DestinationClusterConfig: DestinationClusterConfig{
+					Cluster: validCluster,
+				},
+				Policy:  validPolicy,
+				Routine: "daily",
+			},
+			err: errValidation,
 		},
 		{
 			name: "missing routine",

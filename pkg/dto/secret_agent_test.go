@@ -3,6 +3,7 @@ package dto
 import (
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,6 +67,16 @@ func TestSecretAgentConfig_Empty(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestNoConnectionType(t *testing.T) {
+	agent := &SecretAgent{
+		Address: "localhost",
+	}
+
+	err := agent.validate()
+	assert.Error(t, err)
+	assert.EqualError(t, err, errValidationEmptyField("connection-type").Error())
+}
+
 func TestInvalidConnectionType(t *testing.T) {
 	agent := &SecretAgent{
 		ConnectionType: "invalid",
@@ -74,7 +85,8 @@ func TestInvalidConnectionType(t *testing.T) {
 
 	err := agent.validate()
 	assert.Error(t, err)
-	assert.EqualError(t, err, "unsupported connection type: invalid")
+	assert.EqualError(t, err,
+		"invalid value validation error: 'invalid' is not a valid connection-type. Allowed values: [tcp unix]")
 }
 
 func TestMissingAddress(t *testing.T) {
@@ -98,6 +110,18 @@ func TestInvalidTimeout(t *testing.T) {
 	err := agent.validate()
 	assert.Error(t, err)
 	assert.EqualError(t, err, errValidationNegative("timeout", -100).Error())
+}
+
+func TestInvalidCertFile(t *testing.T) {
+	agent := &SecretAgent{
+		Address:        "localhost",
+		ConnectionType: "tcp",
+		TLSCAString:    util.Ptr("invalid-cert-file"),
+	}
+
+	err := agent.validate()
+	assert.Error(t, err)
+	assert.EqualError(t, err, "not found validation error: tls-ca-file \"invalid-cert-file\"")
 }
 
 func TestSecretAgent_Nil(t *testing.T) {

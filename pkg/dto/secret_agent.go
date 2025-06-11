@@ -2,6 +2,7 @@ package dto
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
@@ -57,7 +58,8 @@ func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, e
 // @Description SecretAgent represents the configuration of an Aerospike Secret Agent.
 type SecretAgent struct {
 	// Connection type: tcp, unix.
-	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp"`
+	//nolint:lll
+	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp" validate:"required"`
 	// Address of the Secret Agent.
 	Address string `yaml:"address" json:"address" example:"localhost" validate:"required"`
 	// Port the Secret Agent is running on.
@@ -131,8 +133,20 @@ func (s *SecretAgent) validate() error {
 		return errValidationNegative("timeout", *s.Timeout)
 	}
 
+	if s.TLSCAString != nil {
+		_, err := os.Stat(*s.TLSCAString)
+		if err != nil {
+			return errValidationNotFound("tls-ca-file", *s.TLSCAString)
+		}
+	}
+
+	if s.ConnectionType == "" {
+		return errValidationEmptyField("connection-type")
+	}
+
 	if s.ConnectionType != saClient.ConnectionTypeTCP && s.ConnectionType != saClient.ConnectionTypeUDS {
-		return fmt.Errorf("unsupported connection type: %s", s.ConnectionType)
+		return errValidationInvalidValue("connection-type", s.ConnectionType,
+			[]string{saClient.ConnectionTypeTCP, saClient.ConnectionTypeUDS})
 	}
 
 	if err := s.Port.Validate(); err != nil {
