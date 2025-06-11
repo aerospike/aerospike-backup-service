@@ -278,17 +278,24 @@ func marshalYAML(v interface{}) ([]byte, error) {
 	return []byte(formattedYAML), nil
 }
 
+type Row struct {
+	Name   string
+	Type   string
+	Help   string
+	Labels string
+}
+
+// updateMetrics generates a Markdown table from a list of Prometheus collectors
+// and replaces a placeholder section in a given README file.
 func updateMetrics(readme []byte) []byte {
-	type Row struct {
-		Name   string
-		Help   string
-		Labels string
-	}
 	var rows []Row
 
+	// This regex extracts the name, help text, and variable labels from the
+	// description string of a Prometheus metric.
 	prometheusRE := regexp.MustCompile(
 		`Desc{fqName:\s*"([^"]+)",\s*help:\s*"([^"]+)",\s*constLabels:\s*{[^}]*},\s*variableLabels:\s*{([^}]*)}}`)
 
+	// Iterate over all registered metrics.
 	for _, metric := range service.AllMetrics {
 		ch := make(chan *prometheus.Desc, 1)
 		metric.Describe(ch)
@@ -300,17 +307,20 @@ func updateMetrics(readme []byte) []byte {
 				panic("Failed to match Prometheus description: " + str)
 			}
 			labels := strings.ReplaceAll(matches[3], ",", ", ")
-			rows = append(rows, Row{matches[1], matches[2], labels})
+			rows = append(rows, Row{matches[1], metricsType(metric), matches[2], labels})
 		}
 	}
 
-	// Determine column widths
 	maxName := len("Name")
+	maxType := len("Type")
 	maxHelp := len("Description")
 	maxLabels := len("Labels")
 	for _, r := range rows {
 		if len(r.Name) > maxName {
 			maxName = len(r.Name)
+		}
+		if len(r.Type) > maxType {
+			maxType = len(r.Type)
 		}
 		if len(r.Help) > maxHelp {
 			maxHelp = len(r.Help)
@@ -320,18 +330,24 @@ func updateMetrics(readme []byte) []byte {
 		}
 	}
 
+	// Adding 2 for the backticks `` around the name
 	const quotes = 2
 
-	// Build Markdown table string
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("| %-*s | %-*s | %-*s |\n",
-		maxName+quotes, "Name", maxHelp, "Description", maxLabels, "Labels"))
-	sb.WriteString(fmt.Sprintf("|-%s-|-%s-|-%s-|\n",
-		strings.Repeat("-", maxName+quotes), strings.Repeat("-", maxHelp), strings.Repeat("-", maxLabels)))
+	// Header
+	sb.WriteString(fmt.Sprintf("| %-*s | %-*s | %-*s | %-*s |\n",
+		maxName+quotes, "Name", maxType, "Type", maxHelp, "Description", maxLabels, "Labels"))
+	// Separator
+	sb.WriteString(fmt.Sprintf("|-%s-|-%s-|-%s-|-%s-|\n",
+		strings.Repeat("-", maxName+quotes),
+		strings.Repeat("-", maxType),
+		strings.Repeat("-", maxHelp),
+		strings.Repeat("-", maxLabels)))
+	// Body
 	for _, r := range rows {
 		name := "`" + r.Name + "`"
-		sb.WriteString(fmt.Sprintf("| %-*s | %-*s | %-*s |\n",
-			maxName+quotes, name, maxHelp, r.Help, maxLabels, r.Labels))
+		sb.WriteString(fmt.Sprintf("| %-*s | %-*s | %-*s | %-*s |\n",
+			maxName+quotes, name, maxType, r.Type, maxHelp, r.Help, maxLabels, r.Labels))
 	}
 	table := sb.String()
 
@@ -339,4 +355,19 @@ func updateMetrics(readme []byte) []byte {
 	metricsRe := regexp.MustCompile(`(?s)(<!-- Metrics -->\n\n)(\|.*?\|\n)(\n)`)
 
 	return metricsRe.ReplaceAll(readme, []byte("${1}"+table+"${3}"))
+}
+
+func metricsType(metric prometheus.Collector) string {
+	switch metric.(type) {
+	case *prometheus.CounterVec, prometheus.Counter:
+		return "Counter"
+	case *prometheus.GaugeVec:
+		return "Gauge"
+	case *prometheus.HistogramVec:
+		return "Histogram"
+	case *prometheus.SummaryVec:
+		return "Summary"
+	default:
+		return ""
+	}
 }
