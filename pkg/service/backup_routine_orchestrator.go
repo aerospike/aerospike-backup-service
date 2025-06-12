@@ -26,6 +26,8 @@ type BackupRoutineOrchestrator struct {
 	clientManager       aerospike.ClientManager
 	registry            RunningBackupsRegistry
 	retentionManager    RetentionManager
+
+	routineLocks sync.Map
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
@@ -91,10 +93,8 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 	}
 }
 
-var routineLocks sync.Map
-
-func getRoutineLock(routine string) *sync.Mutex {
-	actual, _ := routineLocks.LoadOrStore(routine, &sync.Mutex{})
+func (h *BackupRoutineOrchestrator) getRoutineLock(routine string) *sync.Mutex {
+	actual, _ := h.routineLocks.LoadOrStore(routine, &sync.Mutex{})
 	return actual.(*sync.Mutex)
 }
 
@@ -105,7 +105,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	}
 	defer h.clientManager.Close(client)
 
-	lock := getRoutineLock(h.routineName)
+	lock := h.getRoutineLock(h.routineName)
 	lock.Lock()
 	if h.skipFullBackup() {
 		lock.Unlock()
