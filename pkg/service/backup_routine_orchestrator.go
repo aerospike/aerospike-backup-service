@@ -91,7 +91,12 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 	}
 }
 
-var startFullBackupLock = &sync.Mutex{}
+var routineLocks sync.Map
+
+func getRoutineLock(routine string) *sync.Mutex {
+	actual, _ := routineLocks.LoadOrStore(routine, &sync.Mutex{})
+	return actual.(*sync.Mutex)
+}
 
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
 	client, namespaces, err := h.prepareCluster(h.retry)
@@ -100,9 +105,10 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	}
 	defer h.clientManager.Close(client)
 
-	startFullBackupLock.Lock()
+	lock := getRoutineLock(h.routineName)
+	lock.Lock()
 	if h.skipFullBackup() {
-		startFullBackupLock.Unlock()
+		lock.Unlock()
 
 		backupSkippedCounter.Inc()
 		return nil
@@ -112,7 +118,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	backupHandler := startNamespacesBackup(ctx, h.runner, client, namespaces, timeBounds, now, h.routine, jobTypeFull)
 
 	h.registry.register(h.routineName, jobTypeFull, backupHandler)
-	startFullBackupLock.Unlock()
+	lock.Unlock()
 
 	h.backupClusterConfiguration(ctx, now)
 
