@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -27,7 +26,7 @@ type BackupRoutineOrchestrator struct {
 	registry            RunningBackupsRegistry
 	retentionManager    RetentionManager
 
-	routineLocks sync.Map
+	routineLocks util.LockMap
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
@@ -93,11 +92,6 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 	}
 }
 
-func (h *BackupRoutineOrchestrator) getRoutineLock(routine string) *sync.Mutex {
-	actual, _ := h.routineLocks.LoadOrStore(routine, &sync.Mutex{})
-	return actual.(*sync.Mutex)
-}
-
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
 	client, namespaces, err := h.prepareCluster(h.retry)
 	if err != nil {
@@ -105,7 +99,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	}
 	defer h.clientManager.Close(client)
 
-	lock := h.getRoutineLock(h.routineName)
+	lock := h.routineLocks.Get(h.routineName)
 	lock.Lock()
 	if h.skipFullBackup() {
 		lock.Unlock()
