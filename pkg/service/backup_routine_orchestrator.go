@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -90,25 +91,30 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 	}
 }
 
-func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
-	if h.skipFullBackup() {
-		backupSkippedCounter.Inc()
-		return nil
-	}
+var startFullBackupLock = &sync.Mutex{}
 
+func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
 	client, namespaces, err := h.prepareCluster(h.retry)
 	if err != nil {
 		return err
 	}
 	defer h.clientManager.Close(client)
 
-	h.backupClusterConfiguration(ctx, now)
+	startFullBackupLock.Lock()
+	if h.skipFullBackup() {
+		startFullBackupLock.Unlock()
+
+		backupSkippedCounter.Inc()
+		return nil
+	}
 
 	timeBounds := h.createTimeBounds(jobTypeFull, now)
-	backupHandler := startNamespacesBackup(ctx,
-		h.runner, client, namespaces, timeBounds, now, h.routine, jobTypeFull)
+	backupHandler := startNamespacesBackup(ctx, h.runner, client, namespaces, timeBounds, now, h.routine, jobTypeFull)
 
 	h.registry.register(h.routineName, jobTypeFull, backupHandler)
+	startFullBackupLock.Unlock()
+
+	h.backupClusterConfiguration(ctx, now)
 
 	if err = backupHandler.Wait(ctx); err != nil {
 		h.registry.remove(h.routineName, jobTypeFull)
@@ -135,9 +141,7 @@ func (h *BackupRoutineOrchestrator) backupClusterConfiguration(ctx context.Conte
 func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
 	currentStat := h.registry.GetRoutineState(h.routineName)
 	if currentStat.Full != nil {
-		// This can happen in rare scenario, when user re-applied config
-		// while backup is running and started same routine backup.
-		h.logger.Debug("Full backup is currently in progress, skipping another full backup")
+		h.logger.Info("Full backup is currently in progress, skipping another full backup")
 		return true
 	}
 
