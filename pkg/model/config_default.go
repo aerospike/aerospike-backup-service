@@ -71,6 +71,8 @@ var defaultConfig = struct {
 	},
 }
 
+// StorageRetryPolicy defines the global retry policy for storage operations.
+// It is used in GCP, Azure and S3 client configurations.
 var StorageRetryPolicy = struct {
 	models.RetryPolicy
 	MaxDuration time.Duration
