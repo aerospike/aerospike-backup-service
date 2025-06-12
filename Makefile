@@ -24,11 +24,11 @@ VERSION:=$(shell cat VERSION)
 # Go parameters
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
 NFPM ?= $(shell which nfpm)
-OS ?= $($(GO) env GOOS)
-ARCH ?= $($(GO) env GOARCH)
+OS ?= $(shell $(GO) env GOOS)
+ARCH ?= $(shell $(GO) env GOARCH)
 REGISTRY ?= "docker.io"
 RH_REGISTRY ?= "registry.access.redhat.com"
-GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) $(GO) build \
+GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 $(GO) build \
 -ldflags="-X main.commit=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
 GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
