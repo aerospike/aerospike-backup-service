@@ -13,13 +13,14 @@ import (
 )
 
 type jobInfo struct {
-	handlers     []*restoreexecutor.RestoreHandlerWithCancel // Each handler restores one namespace.
+	handlers     []restoreexecutor.RestoreHandler // Each handler restores one namespace.
 	status       model.JobStatus
 	err          error
 	totalRecords uint64
 	started      time.Time
 	finished     *time.Time
 	label        string
+	cancel       context.CancelFunc
 }
 
 type RestoreJobsHolder struct {
@@ -34,13 +35,14 @@ func NewRestoreJobsHolder() *RestoreJobsHolder {
 }
 
 // newJob creates a new restore job and return its id.
-func (h *RestoreJobsHolder) newJob(label string) model.RestoreJobID {
+func (h *RestoreJobsHolder) newJob(label string, cancel context.CancelFunc) model.RestoreJobID {
 	// #nosec G404
 	id := model.RestoreJobID(rand.Int63())
 	h.Store(id, &jobInfo{
 		status:  model.JobStatusRunning,
 		started: time.Now(),
 		label:   label,
+		cancel:  cancel,
 	},
 	)
 
@@ -48,7 +50,7 @@ func (h *RestoreJobsHolder) newJob(label string) model.RestoreJobID {
 }
 
 // addHandler should be called for each backup (full or incremental) handler.
-func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler *restoreexecutor.RestoreHandlerWithCancel) {
+func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler restoreexecutor.RestoreHandler) {
 	h.Apply(id, func(job *jobInfo) {
 		job.handlers = append(job.handlers, handler)
 	})

@@ -45,7 +45,7 @@ func TestRestoreOK(t *testing.T) {
 		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(request)
+	jobID, err := env.restoreManager.Restore(context.Background(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -87,7 +87,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	// Expect Run to start the process
 	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(mockRestoreHandler, nil)
 
-	jobID, err := env.restoreManager.Restore(request)
+	jobID, err := env.restoreManager.Restore(context.Background(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -130,7 +130,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 		Return(nil, clientErr)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(request)
+	jobID, err := env.restoreManager.Restore(context.Background(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -163,7 +163,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 		Return([]string{destinationNS})
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(request)
+	jobID, err := env.restoreManager.Restore(context.Background(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -199,7 +199,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(backups, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(request)
+	jobID, err := env.restoreManager.Restore(context.Background(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -231,7 +231,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(request)
+	jobID, err := env.restoreManager.Restore(context.Background(), request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
