@@ -312,7 +312,6 @@ func (r *dataRestorer) CancelRestore(jobID model.RestoreJobID) error {
 		return err
 	}
 
-	slog.Debug("Canceling restore job", slog.Any("job ID", jobID))
 	job.cancel()
 
 	return nil
