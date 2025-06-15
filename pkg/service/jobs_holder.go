@@ -73,6 +73,7 @@ func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
 		}
 		if errors.Is(err, context.Canceled) {
 			job.status = model.JobStatusCancelled
+			job.err = err
 			return
 		}
 		job.status = model.JobStatusFailed
