@@ -80,3 +80,16 @@ func Test_timerRunTwice(t *testing.T) {
 		t.Errorf("Expected retryCounter 0, got %d", retryCounter)
 	}
 }
+
+func Test_retry_attempts_expected_count(t *testing.T) {
+	attempts := 0
+	expectedAttempts := 3 // MaxRetries=2 + 1 initial attempt
+
+	err := r.run("retry-test", func() error {
+		attempts++
+		return errors.New("still failing")
+	})
+
+	require.Error(t, err)
+	require.Equal(t, expectedAttempts, attempts, "Function was not retried the expected number of times")
+}
