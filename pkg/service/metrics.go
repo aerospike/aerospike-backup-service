@@ -154,7 +154,7 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 func (mc *MetricsCollector) collectRestoreMetrics() {
 	restoreProgress.Reset()
 
-	mc.restores.Iterate(func(_ model.RestoreJobID, job *jobInfo) {
+	mc.restores.Iterate(func(_ model.RestoreJobID, job *restoreJob) {
 		restore := RestoreJobStatus(job).CurrentRestore // CurrentRestore exists only for running jobs
 		if restore != nil {
 			restoreProgress.WithLabelValues(job.label).Set(float64(restore.PercentageDone))

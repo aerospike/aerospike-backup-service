@@ -324,7 +324,7 @@ func (r *dataRestorer) GetFilteredJobs(
 ) map[model.RestoreJobID]*model.RestoreJobStatus {
 	results := make(map[model.RestoreJobID]*model.RestoreJobStatus)
 
-	r.restoreJobs.Iterate(func(id model.RestoreJobID, job *jobInfo) {
+	r.restoreJobs.Iterate(func(id model.RestoreJobID, job *restoreJob) {
 		if !timeBounds.Contains(job.started) {
 			return
 		}

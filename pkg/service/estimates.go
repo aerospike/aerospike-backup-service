@@ -28,7 +28,7 @@ func currentBackupStatus(handlers CancelableBackupHandler) *model.RunningJob {
 //   - model.JobStatusRunning -> current statistics and estimation.
 //   - model.JobStatusDone -> statistics.
 //   - status model.JobStatusFailed -> error.
-func RestoreJobStatus(job *jobInfo) *model.RestoreJobStatus {
+func RestoreJobStatus(job *restoreJob) *model.RestoreJobStatus {
 	metrics := make([]*models.Metrics, 0, len(job.handlers))
 	stats := make([]*models.RestoreStats, 0, len(job.handlers))
 	for _, handler := range job.handlers {
