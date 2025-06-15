@@ -43,8 +43,7 @@ func (h *RestoreJobsHolder) newJob(label string, cancel context.CancelFunc) mode
 		started: time.Now(),
 		label:   label,
 		cancel:  cancel,
-	},
-	)
+	})
 
 	return id
 }
