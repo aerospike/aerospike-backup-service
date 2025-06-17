@@ -17,6 +17,7 @@ const (
 	schemasTag     = "schemas"
 )
 
+// TestOpenAPIDescriptions verifies that every dto and every field has a description string.
 func TestOpenAPIDescriptions(t *testing.T) {
 	schemas := readSchemas(t, filePath)
 

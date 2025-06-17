@@ -236,6 +236,7 @@ func main() {
 
 	updatedReadme = updateDefaultConfigSection(updatedReadme)
 	updatedReadme = updateMetrics(updatedReadme)
+	updatedReadme = updateDtoDescription(updatedReadme)
 
 	err = os.WriteFile("README.md", updatedReadme, 0600)
 	if err != nil {
@@ -278,11 +279,12 @@ func marshalYAML(v interface{}) ([]byte, error) {
 	return []byte(formattedYAML), nil
 }
 
+type Row struct {
+	Name string
+	Help string
+}
+
 func updateMetrics(readme []byte) []byte {
-	type Row struct {
-		Name string
-		Help string
-	}
 	var rows []Row
 
 	prometheusRE := regexp.MustCompile(`fqName: "([^"]+)", help: "([^"]+)"`)
@@ -323,7 +325,19 @@ func updateMetrics(readme []byte) []byte {
 	table := sb.String()
 
 	// Replace section after <!-- Metrics -->
-	metricsRe := regexp.MustCompile(`(?s)(<!-- Metrics -->\n)(\|.*?\|\n)(\n)`)
+	metricsRe := regexp.MustCompile(`(?s)(<!-- Metrics -->\n\n)(\|.*?\|\n)(\n)`)
 
+	return metricsRe.ReplaceAll(readme, []byte("${1}"+table+"${3}"))
+}
+
+func updateDtoDescription(readme []byte) []byte {
+
+	table, err := generateMarkdownTable("docs/openapi.json", "dto.RestoreJobStatus")
+	if err != nil {
+		panic(err)
+	}
+
+	// Replace section after <!-- RestoreJobStatus -->
+	metricsRe := regexp.MustCompile(`(?s)(<!-- RestoreJobStatus -->\n\n)(\|.*?\|\n)(\n)`)
 	return metricsRe.ReplaceAll(readme, []byte("${1}"+table+"${3}"))
 }

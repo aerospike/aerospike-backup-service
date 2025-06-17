@@ -628,21 +628,32 @@ The response is a job ID.
 
 #### Restore job status
 
-You can get job status with the
-endpoint
+You can get job status with the endpoint
 
 [
 `GET {{baseUrl}}/v1/restore/status/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
 
+It works identical for both restore types.
 <details>
-    <summary>Request body</summary>
+    <summary>Response body</summary>
 
 
-<!-- CurrentBackupResponse -->
+<!-- CurrentRestoreResponse -->
 
 ```json
 {
-  "full": {
+  "read-records": 100000,
+  "total-bytes": 30000000,
+  "expired-records": 0,
+  "skipped-records": 0,
+  "ignored-records": 0,
+  "inserted-records": 5000,
+  "existed-records": 0,
+  "fresher-records": 0,
+  "index-count": 4,
+  "udf-count": 1,
+  "errors-in-doubt": 0,
+  "current-job": {
     "total-records": 100000,
     "done-records": 50000,
     "start-time": "2024-01-01T12:00:00Z",
@@ -653,9 +664,36 @@ endpoint
       "kilobytes-per-second": 30000,
       "pipeline": 0
     }
-  }
+  },
+  "status": "Running"
 }
 ```
+
+<!-- RestoreJobStatus -->
+
+| Field                                      | Description                                                                                                                                                                                                                                                                                                                                                                                                                    |
+|--------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `expired-records`                          | The number of records dropped because they were expired.                                                                                                                                                                                                                                                                                                                                                                       |
+| `fresher-records`                          | The number of records dropped because the database already contained the records with a higher generation count.                                                                                                                                                                                                                                                                                                               |
+| `index-count`                              | The number of successfully created secondary indexes.                                                                                                                                                                                                                                                                                                                                                                          |
+| `inserted-records`                         | The number of successfully restored records.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `ignored-records`                          | The number of records ignored because of a record-level permanent error while restoring.                                                                                                                                                                                                                                                                                                                                       |
+| `read-records`                             | Number of records read from backup.                                                                                                                                                                                                                                                                                                                                                                                            |
+| `skipped-records`                          | The number of records dropped because they didn't contain any of the<br>selected bins or didn't belong to any of the selected sets.                                                                                                                                                                                                                                                                                            |
+| `total-bytes`                              | Total bytes read from backup.                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `udf-count`                                | The number of successfully stored UDF files.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `error`                                    | Error message if any.                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `errors-in-doubt`                          | The number of errors in doubt while restoring.<br>(IsInDoubt signifies that the write operation may have gone through on the server<br>but the client is not able to confirm that due an error.)<br>Non zero value indicates that there are might be unexpected side effects during restore, like<br>* Generation counter greater than expected for some records.<br>* Fresher records counter greater than expected.          |
+| `existed-records`                          | The number of records dropped because they already existed in the database.                                                                                                                                                                                                                                                                                                                                                    |
+| `current-job.finish-time`                  | FinishTime: the time when the operation finished                                                                                                                                                                                                                                                                                                                                                                               |
+| `current-job.percentage-done`              | PercentageDone: the progress of the backup operation as a percentage.                                                                                                                                                                                                                                                                                                                                                          |
+| `current-job.start-time`                   | StartTime: the time when the operation started.                                                                                                                                                                                                                                                                                                                                                                                |
+| `current-job.total-records`                | TotalRecords: the total number of records to be processed.                                                                                                                                                                                                                                                                                                                                                                     |
+| `current-job.done-records`                 | DoneRecords: the number of records that have been successfully done.                                                                                                                                                                                                                                                                                                                                                           |
+| `current-job.estimated-end-time`           | EstimatedEndTime: the estimated time when the backup operation will be completed.<br>A nil value indicates that the estimation is not available yet.                                                                                                                                                                                                                                                                           |
+| `current-job.metrics.pipeline`             | Pipeline represents the number of records that have been read from the source<br>but not yet written to the destination. This metric helps identify bottlenecks:<br>- If Pipeline is zero or fluctuates near zero, it means the destination is consuming data<br>  faster than the source can read.<br>- If Pipeline grows large, it indicates that the source is producing data faster<br>  than the destination can consume. |
+| `current-job.metrics.records-per-second`   | RecordsPerSecond indicates the number of records processed per second.                                                                                                                                                                                                                                                                                                                                                         |
+| `current-job.metrics.kilobytes-per-second` | KilobytesPerSecond indicates the amount of data processed per second, in kilobytes.                                                                                                                                                                                                                                                                                                                                            |
 
 </details>
 
