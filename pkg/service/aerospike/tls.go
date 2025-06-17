@@ -141,18 +141,16 @@ func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 		return nil, fmt.Errorf("failed to read client certificate file %s: %w", certFile, err)
 	}
 
-	// Read key file
+	// Read and potentially decrypt key
 	keyFileBytes, err := readFromFile(keyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read client key file %s: %w", keyFile, err)
 	}
 
-	// Decode PEM data
+	// Try to decode and decrypt PEM if password is set
 	keyBlock, _ := pem.Decode(keyFileBytes)
-	certBlock, _ := pem.Decode(certFileBytes)
-
-	if keyBlock == nil || certBlock == nil {
-		return nil, errors.New("failed to decode PEM data for key or certificate")
+	if keyBlock == nil {
+		return nil, errors.New("failed to decode PEM block in client key file")
 	}
 
 	// Check and Decrypt the Key Block using passphrase
@@ -161,22 +159,15 @@ func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to decrypt client key file %s: %w", keyFile, err)
 		}
-
 		keyBlock.Bytes = decryptedDERBytes
 		keyBlock.Headers = nil
+		keyFileBytes = pem.EncodeToMemory(keyBlock)
 	}
 
-	// Encode PEM data
-	keyPEM := pem.EncodeToMemory(keyBlock)
-	certPEM := pem.EncodeToMemory(certBlock)
-
-	if keyPEM == nil || certPEM == nil {
-		return nil, fmt.Errorf("failed to encode PEM data for key or certificate")
-	}
-
-	cert, err := tls.X509KeyPair(certPEM, keyPEM)
+	// Use full cert PEM + decrypted (or raw) key PEM
+	cert, err := tls.X509KeyPair(certFileBytes, keyFileBytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to add client certificate and key to the pool: %w", err)
+		return nil, fmt.Errorf("failed to create X509 key pair from cert and key files: %w", err)
 	}
 
 	return []tls.Certificate{cert}, nil
