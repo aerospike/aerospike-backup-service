@@ -19,7 +19,7 @@ type RestorePolicy struct {
 	// By default, record data, secondary index definitions, and UDF modules will be restored.
 	NoRecords *bool `json:"no-records,omitempty"`
 	// Do not restore any secondary index definitions.
-	NoIndexes *bool `json:"no-indexes,omitempty"`
+	NoIndexes *bool `json:"no-indexes,omitempty" default:"false"`
 	// Do not restore any UDF modules.
 	NoUdfs *bool `json:"no-udfs,omitempty"`
 	// Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.

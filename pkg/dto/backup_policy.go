@@ -31,7 +31,7 @@ type BackupPolicy struct {
 	// Do not back up any record data (metadata or bin data). Default: false.
 	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty"`
 	// Do not back up any secondary index definitions. Default: false.
-	NoIndexes *bool `yaml:"no-indexes,omitempty" json:"no-indexes,omitempty"`
+	NoIndexes *bool `yaml:"no-indexes,omitempty" json:"no-indexes,omitempty" default:"false"`
 	// Do not back up any UDF modules. Default: false.
 	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty"`
 	// Back up Aerospike cluster configuration. Default: false.
