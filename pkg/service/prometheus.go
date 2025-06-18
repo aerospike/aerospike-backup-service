@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -68,12 +67,11 @@ var (
 		[]string{"routine", "type"},
 	)
 	// A gauge metrics for restore processes.
-	restoreProgress = prometheus.NewGaugeVec(
+	restoreInProgress = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_restore_progress_pct",
-			Help: "Progress of restore processes in percentage",
+			Help: "Number of restore processes running",
 		},
-		[]string{"job_id"},
 	)
 
 	// A counter metric for backup job events.
@@ -135,7 +133,7 @@ func init() {
 		backupDurationGauge,
 		incrBackupDurationGauge,
 		backupProgress,
-		restoreProgress,
+		restoreInProgress,
 		backupCounters,
 		backupDurations,
 		lastBackupTimestamp,
@@ -202,14 +200,7 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 }
 
 func (mc *MetricsCollector) collectRestoreMetrics() {
-	restoreProgress.Reset()
-
-	mc.restores.Iterate(func(_ model.RestoreJobID, job *jobInfo) {
-		restore := RestoreJobStatus(job).CurrentRestore // CurrentRestore exists only for running jobs
-		if restore != nil {
-			restoreProgress.WithLabelValues(job.label).Set(float64(restore.PercentageDone))
-		}
-	})
+	restoreInProgress.Set(float64(mc.restores.Size()))
 }
 
 type BackupOutcome string
