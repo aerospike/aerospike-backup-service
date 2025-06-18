@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -25,6 +26,7 @@ type Property struct {
 	Description string      `json:"description,omitempty"`
 	Type        string      `json:"type,omitempty"`
 	AllOf       []Reference `json:"allOf"`
+	Items       Reference   `json:"items"`
 }
 
 type Reference struct {
@@ -40,6 +42,15 @@ func generateMarkdownTable(openapiPath, dtoName string) (string, error) {
 	var api OpenAPI
 	if err := json.Unmarshal(data, &api); err != nil {
 		return "", fmt.Errorf("failed to unmarshal JSON: %w", err)
+	}
+
+	for _, x := range jsonExamples {
+		annotatedJSON, err := GenerateAnnotatedJSON(x, api)
+		if err != nil {
+			panic(err)
+		}
+
+		println(annotatedJSON)
 	}
 
 	schema, ok := api.Components.Schemas[dtoName]
@@ -129,4 +140,116 @@ func collectFields(schemas map[string]Schema, schema Schema, prefix string, out 
 func extractRefName(ref string) string {
 	parts := strings.Split(ref, "/")
 	return parts[len(parts)-1]
+}
+
+// GenerateAnnotatedJSON creates JSON with comments before fields
+func GenerateAnnotatedJSON(dto interface{}, openAPI OpenAPI) (string, error) {
+	// Get the struct type name
+	structType := reflect.TypeOf(dto)
+	if structType.Kind() == reflect.Ptr {
+		structType = structType.Elem()
+	}
+	structName := structType.String()
+
+	// Find the corresponding schema in OpenAPI
+	schema, exists := openAPI.Components.Schemas[structName]
+	if !exists {
+		return "", fmt.Errorf("schema not found for struct: %s", structName)
+	}
+
+	// Serialize struct directly to JSON
+	jsonBytes, err := json.MarshalIndent(dto, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	// Add comments before fields
+	result := addCommentsBeforeFields(string(jsonBytes), schema, openAPI)
+
+	return result, nil
+}
+
+// addCommentsBeforeFields adds comment lines before field definitions
+func addCommentsBeforeFields(jsonStr string, schema Schema, openAPI OpenAPI) string {
+	lines := strings.Split(jsonStr, "\n")
+	var result []string
+	var currentPath []string
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		indent := strings.Repeat(" ", len(line)-len(strings.TrimLeft(line, " ")))
+
+		// Handle opening braces
+		if trimmed == "{" {
+			result = append(result, line)
+			continue
+		}
+
+		// Handle closing braces
+		if trimmed == "}" || trimmed == "}," {
+			result = append(result, line)
+			// Pop from path when closing an object
+			if len(currentPath) > 0 {
+				currentPath = currentPath[:len(currentPath)-1]
+			}
+			continue
+		}
+
+		// Handle field lines
+		if strings.Contains(trimmed, ":") {
+			parts := strings.SplitN(trimmed, ":", 2)
+			fieldName := strings.Trim(strings.TrimSpace(parts[0]), "\"")
+			value := strings.TrimSpace(parts[1])
+
+			// Get the appropriate schema for current nesting level
+			currentSchema := getSchemaForPath(schema, currentPath, openAPI)
+
+			// Add comment before the field if description exists
+			if prop, exists := currentSchema.Properties[fieldName]; exists && prop.Description != "" {
+				commentLine := indent + "// " + prop.Description
+				result = append(result, commentLine)
+			}
+
+			// Add the original field line
+			result = append(result, line)
+
+			// If this field's value is an object (starts with {), add to path
+			if strings.HasPrefix(value, "{") {
+				currentPath = append(currentPath, fieldName)
+			}
+		} else {
+			// Non-field lines (like array elements)
+			result = append(result, line)
+		}
+	}
+
+	return strings.Join(result, "\n")
+}
+
+// getSchemaForPath traverses the schema based on the current JSON path
+func getSchemaForPath(rootSchema Schema, path []string, openAPI OpenAPI) Schema {
+	currentSchema := rootSchema
+
+	for _, fieldName := range path {
+		if prop, exists := currentSchema.Properties[fieldName]; exists {
+			// Handle $ref references
+			if len(prop.AllOf) != 0 {
+				schemaName := extractSchemaNameFromRef(prop.AllOf[0].Ref)
+				if nestedSchema, found := openAPI.Components.Schemas[schemaName]; found {
+					currentSchema = nestedSchema
+				}
+			}
+		}
+	}
+
+	return currentSchema
+}
+
+// extractSchemaNameFromRef extracts schema name from $ref like "#/components/schemas/JobDetails"
+func extractSchemaNameFromRef(ref string) string {
+	parts := strings.Split(ref, "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return ""
 }
