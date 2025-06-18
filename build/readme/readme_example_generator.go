@@ -275,7 +275,7 @@ func updateDefaultConfigSection(readme []byte) []byte {
 
 // MarshalYAML marshals the input into YAML and replaces 4-space indents with 2-space indents.
 // we need this to be in sync with Goland's markdown formatter.
-func marshalYAML(v interface{}) ([]byte, error) {
+func marshalYAML(v any) ([]byte, error) {
 	rawYAML, err := yaml.Marshal(v)
 	if err != nil {
 		return nil, err
@@ -339,35 +339,24 @@ func updateMetrics(readme []byte) []byte {
 
 const openapi = "docs/openapi.json"
 
+var schemas = readSchemas()
+
 func updateDtoDescription(readme []byte) []byte {
-	table, err := generateMarkdownTable(openapi, "dto.RestoreJobStatus")
-	if err != nil {
-		panic(err)
-	}
+	table := generateMarkdownTable("dto.RestoreJobStatus")
 
 	// Replace section after <!-- RestoreJobStatus -->
 	metricsRe := regexp.MustCompile(`(?s)(<!-- RestoreJobStatus -->\n\n)(\|.*?\|\n)(\n)`)
 	return metricsRe.ReplaceAll(readme, []byte("${1}"+table+"${3}"))
 }
 
-func generateMarkdownTable(openapiPath, dtoName string) (string, error) {
-	data, err := os.ReadFile(openapiPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read file: %w", err)
-	}
-
-	var api OpenAPI
-	if err := json.Unmarshal(data, &api); err != nil {
-		return "", fmt.Errorf("failed to unmarshal JSON: %w", err)
-	}
-
-	schema, ok := api.Components.Schemas[dtoName]
+func generateMarkdownTable(dtoName string) string {
+	schema, ok := schemas[dtoName]
 	if !ok {
-		return "", fmt.Errorf("schema %q not found", dtoName)
+		panic(fmt.Errorf("schema %q not found", dtoName))
 	}
 
 	// Flatten properties recursively
-	rows := dtoToRows(api.Components.Schemas, schema)
+	rows := dtoToRows(schema)
 
 	// Determine column widths
 	maxName := len("Field")
@@ -397,7 +386,21 @@ func generateMarkdownTable(openapiPath, dtoName string) (string, error) {
 		sb.WriteString(fmt.Sprintf("| %-*s | %-*s |\n", maxName+quotes, name, maxHelp, desc))
 	}
 
-	return sb.String(), nil
+	return sb.String()
+}
+
+func readSchemas() map[string]Schema {
+	data, err := os.ReadFile(openapi)
+	if err != nil {
+		panic(fmt.Errorf("failed to read file: %w", err))
+	}
+
+	var api OpenAPI
+	if err := json.Unmarshal(data, &api); err != nil {
+		panic(fmt.Errorf("failed to unmarshal JSON: %w", err))
+	}
+
+	return api.Components.Schemas
 }
 
 type OpenAPI struct {
@@ -424,9 +427,9 @@ type Reference struct {
 	Ref string `json:"$ref,omitempty"`
 }
 
-func dtoToRows(all map[string]Schema, input Schema) []Row {
+func dtoToRows(input Schema) []Row {
 	var rows []Row
-	collectFields(all, input, "", &rows)
+	collectFields(input, "", &rows)
 	sort.SliceStable(rows, func(i, j int) bool {
 		depthI := strings.Count(rows[i].Name, ".")
 		depthJ := strings.Count(rows[j].Name, ".")
@@ -434,13 +437,13 @@ func dtoToRows(all map[string]Schema, input Schema) []Row {
 			return depthI < depthJ
 		}
 
-		return false
+		return strings.Compare(rows[i].Name, rows[j].Name) < 0
 	})
 
 	return rows
 }
 
-func collectFields(schemas map[string]Schema, schema Schema, prefix string, out *[]Row) {
+func collectFields(schema Schema, prefix string, out *[]Row) {
 	for fieldName, prop := range schema.Properties {
 		fullName := fieldName
 		if prefix != "" {
@@ -453,7 +456,7 @@ func collectFields(schemas map[string]Schema, schema Schema, prefix string, out 
 				if ref.Ref != "" {
 					refName := extractRefName(ref.Ref)
 					if refSchema, ok := schemas[refName]; ok {
-						collectFields(schemas, refSchema, fullName, out)
+						collectFields(refSchema, fullName, out)
 					}
 				}
 			}
