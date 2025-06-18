@@ -1910,7 +1910,8 @@ const docTemplate = `{
                 },
                 "no-indexes": {
                     "description": "Do not back up any secondary index definitions. Default: false.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "no-records": {
                     "description": "Do not back up any record data (metadata or bin data). Default: false.",
@@ -2649,7 +2650,8 @@ const docTemplate = `{
                 },
                 "no-indexes": {
                     "description": "Do not restore any secondary index definitions.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "no-records": {
                     "description": "Do not restore any record data (metadata or bin data).\nBy default, record data, secondary index definitions, and UDF modules will be restored.",
