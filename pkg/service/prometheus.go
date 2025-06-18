@@ -82,7 +82,7 @@ var (
 	backupCounters = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "aerospike_backup_service_backup_events_total",
-			Help: "Backup service job events by routine, type, and outcome",
+			Help: "Backup service job events by routine, type (full/incremental), and outcome (success, failure, retry, skip)",
 		},
 		[]string{"routine", "type", "outcome"},
 	)
@@ -94,7 +94,7 @@ var (
 	backupDurations = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "aerospike_backup_service_backup_duration_seconds",
-			Help:    "Duration of backups by routine and type (in seconds)",
+			Help:    "Duration in seconds of finished backups by routine and type (full/incremental)",
 			Buckets: prometheus.ExponentialBuckets(60, 1.5, 16), // 1 min to 10 hours
 		},
 		[]string{"routine", "type"},
