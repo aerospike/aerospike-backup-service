@@ -342,11 +342,29 @@ const openapi = "docs/openapi.json"
 var schemas = readSchemas()
 
 func updateDtoDescription(readme []byte) []byte {
-	table := generateMarkdownTable("dto.RestoreJobStatus")
+	re := regexp.MustCompile(`<!--\s*table\s+([\w.]+)\s*-->\s*\n+(?:(\|(?:.*\|.*\n)+?)\n)?`)
 
-	// Replace section after <!-- RestoreJobStatus -->
-	metricsRe := regexp.MustCompile(`(?s)(<!-- RestoreJobStatus -->\n\n)(\|.*?\|\n)(\n)`)
-	return metricsRe.ReplaceAll(readme, []byte("${1}"+table+"${3}"))
+	updatedReadme := re.ReplaceAllFunc(readme, func(match []byte) []byte {
+		submatches := re.FindSubmatch(match)
+		if len(submatches) < 2 {
+			return match // not enough groups
+		}
+		name := string(submatches[1]) // group 1: table name
+		newTable := []byte(generateMarkdownTable(name))
+
+		// submatches[2] = old table (may be nil)
+		// Replace old table (group 2) with newTable
+		if len(submatches) >= 3 && len(submatches[2]) > 0 {
+			prefix := bytes.Split(match, submatches[2])[0]
+			return append(append(bytes.TrimRight(prefix, "\n"), []byte("\n\n")...), append(newTable, '\n')...)
+		}
+
+		// No table previously → just append new one
+		return append(bytes.TrimRight(match, "\n"), append([]byte("\n\n"), append(newTable, '\n')...)...)
+	})
+
+	return updatedReadme
+
 }
 
 func generateMarkdownTable(dtoName string) string {
