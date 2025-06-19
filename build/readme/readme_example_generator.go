@@ -439,6 +439,7 @@ type Property struct {
 	Type        string      `json:"type,omitempty"`
 	AllOf       []Reference `json:"allOf"`
 	Items       Reference   `json:"items"`
+	Enum        []string    `json:"enum"`
 }
 
 type Reference struct {
