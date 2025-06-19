@@ -297,7 +297,6 @@ following application metrics:
 | `aerospike_backup_service_backup_events_total`              | Counter   | Backup service job events by routine, type (full/incremental), and outcome (success, failure, retry, skip)       | routine, type, outcome |
 | `aerospike_backup_service_backup_duration_seconds`          | Histogram | Duration in seconds of finished backups by routine and type (full/incremental)                                   | routine, type          |
 | `aerospike_backup_service_last_successful_backup_timestamp` | Gauge     | Unix timestamp of the last successful backup per routine                                                         | routine                |
-| `aerospike_backup_service_backups_number`                   | Gauge     | total number of backups for routine                                                                              | routine, type          |
 
 **Example PromQL Queries**
 

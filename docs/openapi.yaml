@@ -111,7 +111,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dto.RoutineState'
+                $ref: "#/components/schemas/dto.RoutineState"
           description: Current backup statistics
         "400":
           content:
@@ -157,7 +157,7 @@ paths:
               schema:
                 additionalProperties:
                   items:
-                    $ref: '#/components/schemas/dto.BackupDetails'
+                    $ref: "#/components/schemas/dto.BackupDetails"
                   type: array
                 type: object
           description: Full backups by routine
@@ -204,7 +204,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/dto.BackupDetails'
+                  $ref: "#/components/schemas/dto.BackupDetails"
                 type: array
           description: Full backups for routine
         "400":
@@ -245,7 +245,7 @@ paths:
               schema:
                 additionalProperties:
                   items:
-                    $ref: '#/components/schemas/dto.BackupDetails'
+                    $ref: "#/components/schemas/dto.BackupDetails"
                   type: array
                 type: object
           description: Incremental backups by routine
@@ -292,7 +292,7 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/dto.BackupDetails'
+                  $ref: "#/components/schemas/dto.BackupDetails"
                 type: array
           description: Incremental backups for routine
         "400":
@@ -358,7 +358,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dto.Config'
+                $ref: "#/components/schemas/dto.Config"
           description: OK
         "500":
           content:
@@ -375,7 +375,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.Config'
+              $ref: "#/components/schemas/dto.Config"
         description: Configuration details
         required: true
       responses:
@@ -417,7 +417,7 @@ paths:
             application/json:
               schema:
                 additionalProperties:
-                  $ref: '#/components/schemas/dto.AerospikeCluster'
+                  $ref: "#/components/schemas/dto.AerospikeCluster"
                 type: object
           description: OK
         "500":
@@ -466,7 +466,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dto.AerospikeCluster'
+                $ref: "#/components/schemas/dto.AerospikeCluster"
           description: OK
         "400":
           content:
@@ -503,7 +503,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.AerospikeCluster'
+              $ref: "#/components/schemas/dto.AerospikeCluster"
         description: Aerospike cluster details
         required: true
       responses:
@@ -539,7 +539,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.AerospikeCluster'
+              $ref: "#/components/schemas/dto.AerospikeCluster"
         description: Aerospike cluster details
         required: true
       responses:
@@ -565,7 +565,7 @@ paths:
             application/json:
               schema:
                 additionalProperties:
-                  $ref: '#/components/schemas/dto.BackupPolicy'
+                  $ref: "#/components/schemas/dto.BackupPolicy"
                 type: object
           description: OK
         "500":
@@ -614,7 +614,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dto.BackupPolicy'
+                $ref: "#/components/schemas/dto.BackupPolicy"
           description: OK
         "400":
           content:
@@ -650,7 +650,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.BackupPolicy'
+              $ref: "#/components/schemas/dto.BackupPolicy"
         description: Backup policy details
         required: true
       responses:
@@ -680,7 +680,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.BackupPolicy'
+              $ref: "#/components/schemas/dto.BackupPolicy"
         description: Backup policy details
         required: true
       responses:
@@ -706,7 +706,7 @@ paths:
             application/json:
               schema:
                 additionalProperties:
-                  $ref: '#/components/schemas/dto.BackupRoutine'
+                  $ref: "#/components/schemas/dto.BackupRoutine"
                 type: object
           description: OK
         "400":
@@ -755,7 +755,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dto.BackupRoutine'
+                $ref: "#/components/schemas/dto.BackupRoutine"
           description: OK
         "400":
           content:
@@ -785,7 +785,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.BackupRoutine'
+              $ref: "#/components/schemas/dto.BackupRoutine"
         description: Backup routine details
         required: true
       responses:
@@ -815,7 +815,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.BackupRoutine'
+              $ref: "#/components/schemas/dto.BackupRoutine"
         description: Backup routine details
         required: true
       responses:
@@ -893,7 +893,7 @@ paths:
             application/json:
               schema:
                 additionalProperties:
-                  $ref: '#/components/schemas/dto.Storage'
+                  $ref: "#/components/schemas/dto.Storage"
                 type: object
           description: OK
         "500":
@@ -942,7 +942,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dto.Storage'
+                $ref: "#/components/schemas/dto.Storage"
           description: OK
         "400":
           content:
@@ -978,7 +978,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.Storage'
+              $ref: "#/components/schemas/dto.Storage"
         description: Backup storage details
         required: true
       responses:
@@ -1008,7 +1008,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.Storage'
+              $ref: "#/components/schemas/dto.Storage"
         description: Backup storage details
         required: true
       responses:
@@ -1071,7 +1071,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.RestoreRequest'
+              $ref: "#/components/schemas/dto.RestoreRequest"
         description: Restore request details
         required: true
       responses:
@@ -1105,7 +1105,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.RestoreRequest'
+              $ref: "#/components/schemas/dto.RestoreRequest"
         description: Restore request details
         required: true
       responses:
@@ -1160,7 +1160,7 @@ paths:
             application/json:
               schema:
                 additionalProperties:
-                  $ref: '#/components/schemas/dto.RestoreJobStatus'
+                  $ref: "#/components/schemas/dto.RestoreJobStatus"
                 type: object
           description: Restore jobs
         "400":
@@ -1194,7 +1194,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/dto.RestoreJobStatus'
+                $ref: "#/components/schemas/dto.RestoreJobStatus"
           description: Restore job status details
         "400":
           content:
@@ -1213,7 +1213,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/dto.RestoreTimestampRequest'
+              $ref: "#/components/schemas/dto.RestoreTimestampRequest"
         description: Restore request details
         required: true
       responses:
@@ -1319,7 +1319,7 @@ components:
           type: integer
         credentials:
           allOf:
-          - $ref: '#/components/schemas/dto.Credentials'
+          - $ref: "#/components/schemas/dto.Credentials"
           description: The authentication details to the Aerospike cluster.
           type: object
         label:
@@ -1333,11 +1333,11 @@ components:
         seed-nodes:
           description: The seed nodes details.
           items:
-            $ref: '#/components/schemas/dto.SeedNode'
+            $ref: "#/components/schemas/dto.SeedNode"
           type: array
         tls:
           allOf:
-          - $ref: '#/components/schemas/dto.TLS'
+          - $ref: "#/components/schemas/dto.TLS"
           description: The cluster TLS configuration.
           type: object
         use-services-alternate:
@@ -1384,7 +1384,7 @@ components:
           type: string
         secret-agent:
           allOf:
-          - $ref: '#/components/schemas/dto.SecretAgent'
+          - $ref: "#/components/schemas/dto.SecretAgent"
           description: |-
             Secret Agent configuration (optional).
             Mutually exclusive with 'secret-agent-name'.
@@ -1396,7 +1396,7 @@ components:
           type: string
         storage-class:
           allOf:
-          - $ref: '#/components/schemas/dto.AzureStorageClass'
+          - $ref: "#/components/schemas/dto.AzureStorageClass"
           description: StorageClass defines the storage tier for data and metadata
             objects.
           type: object
@@ -1493,7 +1493,7 @@ components:
           type: integer
         storage:
           allOf:
-          - $ref: '#/components/schemas/dto.Storage'
+          - $ref: "#/components/schemas/dto.Storage"
           description: Storage specifies the details of the storage location where
             the backup is stored.
           type: object
@@ -1536,7 +1536,7 @@ components:
           type: integer
         compression:
           allOf:
-          - $ref: '#/components/schemas/dto.CompressionPolicy'
+          - $ref: "#/components/schemas/dto.CompressionPolicy"
           description: |-
             Compression details (algorithm and mode). Default is no compression.
             Enabling compression reduces storage and network usage, but increases CPU usage during the backup.
@@ -1549,7 +1549,7 @@ components:
           type: boolean
         encryption:
           allOf:
-          - $ref: '#/components/schemas/dto.EncryptionPolicy'
+          - $ref: "#/components/schemas/dto.EncryptionPolicy"
           description: Encryption details (algorithm and key). Default is no encryption.
           type: object
         file-limit:
@@ -1582,7 +1582,7 @@ components:
           type: integer
         retention:
           allOf:
-          - $ref: '#/components/schemas/dto.RetentionPolicy'
+          - $ref: "#/components/schemas/dto.RetentionPolicy"
           description: |-
             Specifies how long to retain full and incremental backups.
             Cleanup runs asynchronously after each successful full backup, never deleting backups preemptively.
@@ -1590,7 +1590,7 @@ components:
           type: object
         retry-policy:
           allOf:
-          - $ref: '#/components/schemas/dto.RetryPolicy'
+          - $ref: "#/components/schemas/dto.RetryPolicy"
           description: |-
             RetryPolicy defines the configuration for database scan retry attempts in case of failures.
             If nil, the default policy is used (5 retries with a one-minute delay between attempts).
@@ -1739,12 +1739,12 @@ components:
       properties:
         http:
           allOf:
-          - $ref: '#/components/schemas/dto.HTTPServerConfig'
+          - $ref: "#/components/schemas/dto.HTTPServerConfig"
           description: HTTPServer is the backup service HTTP server configuration.
           type: object
         logger:
           allOf:
-          - $ref: '#/components/schemas/dto.LoggerConfig'
+          - $ref: "#/components/schemas/dto.LoggerConfig"
           description: Logger is the backup service logger configuration.
           type: object
       type: object
@@ -1839,36 +1839,36 @@ components:
       properties:
         aerospike-clusters:
           additionalProperties:
-            $ref: '#/components/schemas/dto.AerospikeCluster'
+            $ref: "#/components/schemas/dto.AerospikeCluster"
           description: AerospikeClusters is a map of Aerospike clusters that can be
             used by backup routines.
           type: object
         backup-policies:
           additionalProperties:
-            $ref: '#/components/schemas/dto.BackupPolicy'
+            $ref: "#/components/schemas/dto.BackupPolicy"
           description: BackupPolicies is a map of backup policies that can be used
             by backup routines.
           type: object
         backup-routines:
           additionalProperties:
-            $ref: '#/components/schemas/dto.BackupRoutine'
+            $ref: "#/components/schemas/dto.BackupRoutine"
           description: BackupRoutines is a map of backup routines.
           type: object
         secret-agents:
           additionalProperties:
-            $ref: '#/components/schemas/dto.SecretAgent'
+            $ref: "#/components/schemas/dto.SecretAgent"
           description: "SecretAgents is a map of secret agents used by backup routines\
             \ (for encryption keys), clusters (for credentials), and storage (for\
             \ authentication)."
           type: object
         service:
           allOf:
-          - $ref: '#/components/schemas/dto.BackupServiceConfig'
+          - $ref: "#/components/schemas/dto.BackupServiceConfig"
           description: ServiceConfig contains general service settings.
           type: object
         storage:
           additionalProperties:
-            $ref: '#/components/schemas/dto.Storage'
+            $ref: "#/components/schemas/dto.Storage"
           description: Storage is a map of storages that can be used by backup routines.
           type: object
       type: object
@@ -1895,7 +1895,7 @@ components:
           type: string
         secret-agent:
           allOf:
-          - $ref: '#/components/schemas/dto.SecretAgent'
+          - $ref: "#/components/schemas/dto.SecretAgent"
           description: |-
             Secret Agent configuration (optional).
             Mutually exclusive with 'secret-agent-name'.
@@ -1994,7 +1994,7 @@ components:
           type: string
         secret-agent:
           allOf:
-          - $ref: '#/components/schemas/dto.SecretAgent'
+          - $ref: "#/components/schemas/dto.SecretAgent"
           description: |-
             Secret Agent configuration (optional).
             Mutually exclusive with 'secret-agent-name'.
@@ -2006,7 +2006,7 @@ components:
           type: string
         storage-class:
           allOf:
-          - $ref: '#/components/schemas/dto.GcpStorageClass'
+          - $ref: "#/components/schemas/dto.GcpStorageClass"
           description: StorageClass defines the storage class for data and metadata
             objects.
           type: object
@@ -2038,7 +2038,7 @@ components:
           type: integer
         rate:
           allOf:
-          - $ref: '#/components/schemas/dto.RateLimiterConfig'
+          - $ref: "#/components/schemas/dto.RateLimiterConfig"
           description: HTTP rate limiter configuration.
           type: object
         timeout:
@@ -2073,7 +2073,7 @@ components:
       properties:
         file-writer:
           allOf:
-          - $ref: '#/components/schemas/dto.FileLoggerConfig'
+          - $ref: "#/components/schemas/dto.FileLoggerConfig"
           description: File writer logging configuration.
           type: object
         format:
@@ -2157,7 +2157,7 @@ components:
       properties:
         current-job:
           allOf:
-          - $ref: '#/components/schemas/dto.RunningJob'
+          - $ref: "#/components/schemas/dto.RunningJob"
           description: Speed related metrics of the restore process.
           type: object
         error:
@@ -2221,7 +2221,7 @@ components:
           type: integer
         status:
           allOf:
-          - $ref: '#/components/schemas/dto.JobStatus'
+          - $ref: "#/components/schemas/dto.JobStatus"
           description: Status of the restore job.
           type: object
         total-bytes:
@@ -2279,7 +2279,7 @@ components:
           type: array
         compression:
           allOf:
-          - $ref: '#/components/schemas/dto.CompressionPolicy'
+          - $ref: "#/components/schemas/dto.CompressionPolicy"
           description: Compression details (algorithm). Default is no compression.
           type: object
         disable-batch-writes:
@@ -2289,7 +2289,7 @@ components:
           type: boolean
         encryption:
           allOf:
-          - $ref: '#/components/schemas/dto.EncryptionPolicy'
+          - $ref: "#/components/schemas/dto.EncryptionPolicy"
           description: Encryption details (algorithm and key). Default is no encryption.
           type: object
         extra-ttl:
@@ -2305,7 +2305,7 @@ components:
           type: integer
         namespace:
           allOf:
-          - $ref: '#/components/schemas/dto.RestoreNamespace'
+          - $ref: "#/components/schemas/dto.RestoreNamespace"
           description: |-
             Namespace optionally specifies an alternative namespace name for the restore operation.
             By default, the data is restored to the namespace from which it was taken.
@@ -2344,7 +2344,7 @@ components:
           type: boolean
         retry-policy:
           allOf:
-          - $ref: '#/components/schemas/dto.RetryPolicy'
+          - $ref: "#/components/schemas/dto.RetryPolicy"
           description: |-
             Configuration of retries for each restore write operation.
             If nil, the default policy is used (5 retries with a one-minute delay between attempts).
@@ -2391,7 +2391,7 @@ components:
           type: string
         destination:
           allOf:
-          - $ref: '#/components/schemas/dto.AerospikeCluster'
+          - $ref: "#/components/schemas/dto.AerospikeCluster"
           description: |-
             The details of the Aerospike destination cluster.
             Mutually exclusive with 'destination-name'.
@@ -2403,12 +2403,12 @@ components:
           type: string
         policy:
           allOf:
-          - $ref: '#/components/schemas/dto.RestorePolicy'
+          - $ref: "#/components/schemas/dto.RestorePolicy"
           description: Restore policy to use in the operation.
           type: object
         secret-agent:
           allOf:
-          - $ref: '#/components/schemas/dto.SecretAgent'
+          - $ref: "#/components/schemas/dto.SecretAgent"
           description: |-
             Secret Agent configuration (optional).
             Mutually exclusive with 'secret-agent-name'.
@@ -2420,7 +2420,7 @@ components:
           type: string
         source:
           allOf:
-          - $ref: '#/components/schemas/dto.Storage'
+          - $ref: "#/components/schemas/dto.Storage"
           description: |-
             The details of the storage configuration.
             Mutually exclusive with 'source-name'.
@@ -2439,7 +2439,7 @@ components:
       properties:
         destination:
           allOf:
-          - $ref: '#/components/schemas/dto.AerospikeCluster'
+          - $ref: "#/components/schemas/dto.AerospikeCluster"
           description: |-
             The details of the Aerospike destination cluster.
             Mutually exclusive with 'destination-name'.
@@ -2454,7 +2454,7 @@ components:
           type: boolean
         policy:
           allOf:
-          - $ref: '#/components/schemas/dto.RestorePolicy'
+          - $ref: "#/components/schemas/dto.RestorePolicy"
           description: Restore policy to use in the operation.
           type: object
         routine:
@@ -2463,7 +2463,7 @@ components:
           type: string
         secret-agent:
           allOf:
-          - $ref: '#/components/schemas/dto.SecretAgent'
+          - $ref: "#/components/schemas/dto.SecretAgent"
           description: |-
             Secret Agent configuration (optional).
             Mutually exclusive with 'secret-agent-name'.
@@ -2475,7 +2475,7 @@ components:
           type: string
         source:
           allOf:
-          - $ref: '#/components/schemas/dto.Storage'
+          - $ref: "#/components/schemas/dto.Storage"
           description: |-
             The details of the storage configuration.
             Mutually exclusive with 'source-name'.
@@ -2547,13 +2547,13 @@ components:
       properties:
         full:
           allOf:
-          - $ref: '#/components/schemas/dto.RunningJob'
+          - $ref: "#/components/schemas/dto.RunningJob"
           description: Full represents the state of a full backup. Nil if no full
             backup is running.
           type: object
         incremental:
           allOf:
-          - $ref: '#/components/schemas/dto.RunningJob'
+          - $ref: "#/components/schemas/dto.RunningJob"
           description: Incremental represents the state of an incremental backup.
             Nil if no incremental backup is running.
           type: object
@@ -2595,7 +2595,7 @@ components:
           type: string
         metrics:
           allOf:
-          - $ref: '#/components/schemas/dto.Metrics'
+          - $ref: "#/components/schemas/dto.Metrics"
           description: Metrics provides real-time information about data flow performance.
           type: object
         percentage-done:
@@ -2660,7 +2660,7 @@ components:
           type: string
         secret-agent:
           allOf:
-          - $ref: '#/components/schemas/dto.SecretAgent'
+          - $ref: "#/components/schemas/dto.SecretAgent"
           description: |-
             Secret Agent configuration (optional).
             Mutually exclusive with 'secret-agent-name'.
@@ -2672,7 +2672,7 @@ components:
           type: string
         storage-class:
           allOf:
-          - $ref: '#/components/schemas/dto.S3StorageClass'
+          - $ref: "#/components/schemas/dto.S3StorageClass"
           description: StorageClass defines the storage class for data and metadata
             objects.
           type: object
@@ -2765,22 +2765,22 @@ components:
       properties:
         azure-storage:
           allOf:
-          - $ref: '#/components/schemas/dto.AzureStorage'
+          - $ref: "#/components/schemas/dto.AzureStorage"
           description: "AzureStorage configuration, set if using Azure storage."
           type: object
         gcp-storage:
           allOf:
-          - $ref: '#/components/schemas/dto.GcpStorage'
+          - $ref: "#/components/schemas/dto.GcpStorage"
           description: "GcpStorage configuration, set if using GCP storage."
           type: object
         local-storage:
           allOf:
-          - $ref: '#/components/schemas/dto.LocalStorage'
+          - $ref: "#/components/schemas/dto.LocalStorage"
           description: "LocalStorage configuration, set if using local storage."
           type: object
         s3-storage:
           allOf:
-          - $ref: '#/components/schemas/dto.S3Storage'
+          - $ref: "#/components/schemas/dto.S3Storage"
           description: "S3Storage configuration, set if using S3 storage."
           type: object
       type: object

@@ -88,7 +88,7 @@ func Test_retry_attempts_expected_count(t *testing.T) {
 	err := r.run("retry-test", func() error {
 		attempts++
 		return errors.New("still failing")
-	})
+	}, func() {})
 
 	require.Error(t, err)
 	require.Equal(t, expectedAttempts, attempts, "Function was not retried the expected number of times")
