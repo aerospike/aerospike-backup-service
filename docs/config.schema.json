@@ -653,15 +653,18 @@
           },
           "endpoint": {
             "description": "Alternative url.\nIt is not recommended to use an alternate URL in a production environment.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "key": {
             "description": "Key is the service account key in JSON format.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "key-file-path": {
             "description": "Path to the file containing the service account key in JSON format.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "min-part-size": {
             "description": "The minimum size in bytes of individual GCP storage chunks.",
@@ -671,7 +674,8 @@
           "path": {
             "description": "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
             "type": "string",
-            "example": "backups"
+            "example": "backups",
+            "nullable": true
           },
           "secret-agent": {
             "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
@@ -692,7 +696,8 @@
               {
                 "$ref": "#/components/schemas/dto.GcpStorageClass"
               }
-            ]
+            ],
+            "nullable": true
           }
         }
       },
@@ -849,11 +854,12 @@
             "example": 1024
           },
           "white-list": {
-            "description": "The list of ips to whitelist in rate limiting.",
+            "description": "The list of ips to whitelist in rate limiting (optional).\nDefault: allow all.",
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "nullable": true
           }
         }
       },
@@ -1455,11 +1461,13 @@
         "properties": {
           "data": {
             "description": "DataClass specifies the storage class for object data.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "metadata": {
             "description": "MetadataClass specifies the storage class for metadata.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           }
         }
       },

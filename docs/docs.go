@@ -2308,15 +2308,18 @@ const docTemplate = `{
                 },
                 "endpoint": {
                     "description": "Alternative url.\nIt is not recommended to use an alternate URL in a production environment.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "key": {
                     "description": "Key is the service account key in JSON format.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "key-file-path": {
                     "description": "Path to the file containing the service account key in JSON format.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "min-part-size": {
                     "description": "The minimum size in bytes of individual GCP storage chunks.",
@@ -2326,6 +2329,7 @@ const docTemplate = `{
                 "path": {
                     "description": "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "backups"
                 },
                 "secret-agent": {
@@ -2347,7 +2351,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.GcpStorageClass"
                         }
-                    ]
+                    ],
+                    "x-nullable": true
                 }
             }
         },
@@ -2504,11 +2509,12 @@ const docTemplate = `{
                     "example": 1024
                 },
                 "white-list": {
-                    "description": "The list of ips to whitelist in rate limiting.",
+                    "description": "The list of ips to whitelist in rate limiting (optional).\nDefault: allow all.",
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "x-nullable": true
                 }
             }
         },
@@ -3110,11 +3116,13 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage class for object data.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "metadata": {
                     "description": "MetadataClass specifies the storage class for metadata.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 }
             }
         },
