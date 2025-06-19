@@ -2219,15 +2219,18 @@ const docTemplate = `{
             "properties": {
                 "key-env": {
                     "description": "The name of the environment variable containing the encryption key.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "key-file": {
                     "description": "The path to the file containing the encryption key.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "key-secret": {
                     "description": "The secret keyword in Aerospike Secret Agent containing the encryption key.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "mode": {
                     "description": "The encryption mode to be used (NONE, AES128, AES256)",
@@ -2244,6 +2247,9 @@ const docTemplate = `{
         "dto.FileLoggerConfig": {
             "description": "FileLoggerConfig represents the configuration for the file logger writer.",
             "type": "object",
+            "required": [
+                "filename"
+            ],
             "properties": {
                 "compress": {
                     "description": "Compress determines if the rotated log files should be compressed\nusing gzip. The default is not to perform compression.",
@@ -2258,17 +2264,17 @@ const docTemplate = `{
                 "maxage": {
                     "description": "MaxAge is the maximum number of days to retain old log files based on the\ntimestamp encoded in their filename. The default is not to remove old log files\nbased on age.",
                     "type": "integer",
-                    "default": 0
+                    "x-nullable": true
                 },
                 "maxbackups": {
                     "description": "MaxBackups is the maximum number of old log files to retain. The default\nis to retain all old log files.",
                     "type": "integer",
-                    "default": 0
+                    "x-nullable": true
                 },
                 "maxsize": {
                     "description": "MaxSize is the maximum size in megabytes of the log file before it gets rotated.",
                     "type": "integer",
-                    "default": 100,
+                    "x-nullable": true,
                     "example": 100
                 }
             }
@@ -2767,7 +2773,8 @@ const docTemplate = `{
                 },
                 "destination-name": {
                     "description": "Link to one of preconfigured clusters.\nMutually exclusive with 'destination'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "policy": {
                     "description": "Restore policy to use in the operation.",
@@ -2800,7 +2807,8 @@ const docTemplate = `{
                 },
                 "source-name": {
                     "description": "Link to one of preconfigured storages.\nMutually exclusive with 'source'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 }
             }
         },
@@ -2822,11 +2830,13 @@ const docTemplate = `{
                 },
                 "destination-name": {
                     "description": "Link to one of preconfigured clusters.\nMutually exclusive with 'destination'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "disable-reordering": {
                     "description": "Disable reverse order of incremental backups optimisation.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "policy": {
                     "description": "Restore policy to use in the operation.",
@@ -2864,7 +2874,8 @@ const docTemplate = `{
                 },
                 "source-name": {
                     "description": "Link to one of preconfigured storages.\nMutually exclusive with 'source'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "time": {
                     "description": "Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.",
@@ -3029,6 +3040,7 @@ const docTemplate = `{
                 "s3-endpoint-override": {
                     "description": "An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "http://host.docker.internal:9000"
                 },
                 "s3-log-level": {
