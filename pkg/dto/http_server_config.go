@@ -100,8 +100,9 @@ type RateLimiterConfig struct {
 	Tps *int `yaml:"tps,omitempty" json:"tps,omitempty" default:"1024" example:"1024"`
 	// Rate limiter token bucket size (bursts threshold).
 	Size *int `yaml:"size,omitempty" json:"size,omitempty" default:"1024" example:"1024"`
-	// The list of ips to whitelist in rate limiting.
-	WhiteList []string `yaml:"white-list,omitempty" json:"white-list,omitempty" default:""`
+	// The list of ips to whitelist in rate limiting (optional).
+	// Default: allow all.
+	WhiteList []string `yaml:"white-list,omitempty" json:"white-list,omitempty" extensions:"x-nullable"`
 }
 
 func (r *RateLimiterConfig) ToModel() *model.RateLimiterConfig {
