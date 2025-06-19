@@ -18,19 +18,19 @@ type AzureStorage struct {
 	ContainerName string `yaml:"container-name" json:"container-name" validate:"required"`
 	// Path is the root path for the backup repository within the container.
 	// If not specified, backups will be saved in the container's root.
-	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups"`
+	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
 	// AccountName is the Azure storage account name for Shared Key authentication.
-	AccountName string `yaml:"account-name,omitempty" json:"account-name,omitempty"`
+	AccountName string `yaml:"account-name,omitempty" json:"account-name,omitempty" extensions:"x-nullable"`
 	// AccountKey is the Azure storage account key for Shared Key authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	AccountKey string `yaml:"account-key,omitempty" json:"account-key,omitempty"`
+	AccountKey string `yaml:"account-key,omitempty" json:"account-key,omitempty" extensions:"x-nullable"`
 	// TenantID is the Azure Active Directory tenant ID for AAD authentication.
-	TenantID string `yaml:"tenant-id,omitempty" json:"tenant-id,omitempty"`
+	TenantID string `yaml:"tenant-id,omitempty" json:"tenant-id,omitempty" extensions:"x-nullable"`
 	// ClientID is the Azure Active Directory client ID for AAD authentication.
-	ClientID string `yaml:"client-id,omitempty" json:"client-id,omitempty"`
+	ClientID string `yaml:"client-id,omitempty" json:"client-id,omitempty" extensions:"x-nullable"`
 	// ClientSecret is the Azure Active Directory client secret for AAD authentication.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty"`
+	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty" extensions:"x-nullable"`
 	// The minimum size in bytes of individual Azure Blob chunks.
 	MinPartSize int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880"`
 	// StorageClass defines the storage tier for data and metadata objects.
@@ -150,10 +150,10 @@ var azureDataTiers = []string{
 // @Description AzureStorageClass represents the configuration for Azure Blob Storage access tiers.
 type AzureStorageClass struct {
 	// DataClass specifies the storage tier for object data.
-	DataClass string `json:"data" yaml:"data"`
+	DataClass string `json:"data" yaml:"data" extensions:"x-nullable"`
 
 	// MetadataClass specifies the storage tier for metadata.
-	MetadataClass string `json:"metadata" yaml:"metadata"`
+	MetadataClass string `json:"metadata" yaml:"metadata" extensions:"x-nullable"`
 }
 
 func (s *AzureStorageClass) Validate() error {

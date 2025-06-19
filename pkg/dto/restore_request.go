@@ -45,7 +45,7 @@ type RestoreTimestampRequest struct {
 	// The backup routine name.
 	Routine string `json:"routine" example:"daily" validate:"required"`
 	// Disable reverse order of incremental backups optimisation.
-	DisableReordering bool `json:"disable-reordering,omitempty"`
+	DisableReordering bool `json:"disable-reordering,omitempty" default:"false"`
 }
 
 // NewRestoreTimestampRequestFromReader reads and deserializes the restore by timestamp request from reader.
@@ -157,7 +157,7 @@ type DestinationClusterConfig struct {
 	Cluster *AerospikeCluster `json:"destination,omitempty"`
 	// Link to one of preconfigured clusters.
 	// Mutually exclusive with 'destination'.
-	Name string `json:"destination-name,omitempty"`
+	Name string `json:"destination-name,omitempty" extensions:"x-nullable"`
 }
 
 func (c *DestinationClusterConfig) Validate() error {
@@ -197,7 +197,7 @@ type StorageConfig struct {
 	Storage *Storage `json:"source,omitempty"`
 	// Link to one of preconfigured storages.
 	// Mutually exclusive with 'source'.
-	Name string `json:"source-name,omitempty"`
+	Name string `json:"source-name,omitempty" extensions:"x-nullable"`
 }
 
 func (c *StorageConfig) Validate() error {
