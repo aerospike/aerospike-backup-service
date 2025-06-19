@@ -183,7 +183,7 @@ type Credentials struct {
 	// The file path with the password string.
 	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
 	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
-	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL "`
+	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {

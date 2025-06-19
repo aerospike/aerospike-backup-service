@@ -2189,7 +2189,7 @@ const docTemplate = `{
                 "auth-mode": {
                     "description": "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
                     "type": "string",
-                    "default": "INTERNAL ",
+                    "default": "INTERNAL",
                     "enum": [
                         "INTERNAL",
                         "EXTERNAL",
