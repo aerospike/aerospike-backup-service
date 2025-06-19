@@ -34,6 +34,7 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 
 	successCount := 0
 	failureCount := 0
+	retryCount := 0
 
 	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		return mockHandler, nil
@@ -48,12 +49,17 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess)
+	onRetry := func() {
+		retryCount++
+	}
+
+	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, onRetry)
 	err := handler.Wait(ctx)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 0, failureCount)
 	assert.Equal(t, 1, successCount)
+	assert.Equal(t, 0, retryCount)
 }
 
 func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
@@ -72,6 +78,7 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	attemptCount := 0
 	successCount := 0
 	failureCount := 0
+	retryCount := 0
 
 	start := func(_ context.Context) (backupexecutor.BackupHandler, error) {
 		attemptCount++
@@ -90,12 +97,17 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess)
+	onRetry := func() {
+		retryCount++
+	}
+
+	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, onRetry)
 	err := handler.Wait(ctx)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 1, failureCount)
 	assert.Equal(t, 1, successCount)
+	assert.Equal(t, 1, retryCount)
 }
 
 func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
@@ -131,7 +143,7 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess)
+	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, func() {})
 
 	<-waitCalled
 
@@ -171,7 +183,7 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess)
+	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, func() {})
 	err := handler.Wait(ctx)
 
 	assert.Error(t, err)
@@ -198,7 +210,7 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess)
+	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, func() {})
 	err := handler.Wait(ctx)
 
 	assert.Error(t, err)
@@ -240,7 +252,7 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess)
+	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, func() {})
 	var err error
 	var wg sync.WaitGroup
 	wg.Add(1)

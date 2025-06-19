@@ -28,7 +28,7 @@ func Test_timer(t *testing.T) {
 			return errors.New("mock error")
 		}
 		return nil
-	})
+	}, func() {})
 	require.NoError(t, err)
 
 	time.Sleep(1 * time.Second)
@@ -48,7 +48,7 @@ func Test_timer_expires(t *testing.T) {
 		defer counterLock.Unlock()
 		retryCounter++
 		return errors.New("mock error")
-	})
+	}, func() {})
 
 	time.Sleep(1 * time.Second)
 	counterLock.Lock()
@@ -70,8 +70,8 @@ func Test_timerRunTwice(t *testing.T) {
 		}
 		return nil
 	}
-	_ = r.run("test", f)
-	_ = r.run("test", f)
+	_ = r.run("test", f, func() {})
+	_ = r.run("test", f, func() {})
 
 	time.Sleep(1 * time.Second)
 	counterLock.Lock()
@@ -88,7 +88,7 @@ func Test_retry_attempts_expected_count(t *testing.T) {
 	err := r.run("retry-test", func() error {
 		attempts++
 		return errors.New("still failing")
-	})
+	}, func() {})
 
 	require.Error(t, err)
 	require.Equal(t, expectedAttempts, attempts, "Function was not retried the expected number of times")
