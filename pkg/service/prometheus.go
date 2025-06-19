@@ -107,17 +107,6 @@ var (
 		},
 		[]string{"routine"},
 	)
-
-	// Labels:
-	//   - routine: name of the backup routine, e.g., "daily-ns1"
-	//   - withIncremental: "true" or "false"
-	backupsNumber = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_backups_number",
-			Help: "total number of backups for routine",
-		},
-		[]string{"routine", "withIncremental"},
-	)
 )
 
 var AllMetrics []prometheus.Collector
@@ -137,7 +126,6 @@ func init() {
 		backupCounters,
 		backupDurations,
 		lastBackupTimestamp,
-		backupsNumber,
 	}
 
 	prometheus.MustRegister(AllMetrics...)
