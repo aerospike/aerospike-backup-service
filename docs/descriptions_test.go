@@ -17,6 +17,7 @@ const (
 	defaultTag     = "default"
 	allOfTag       = "allOf"
 	nullableTag    = "nullable"
+	typeTag        = "type"
 )
 
 // TestOpenAPIDescriptions verifies that every DTO and field has a description,
@@ -64,7 +65,9 @@ func readSchemas(t *testing.T, filePath string) map[string]any {
 	return schemas
 }
 
-var outputDTOs = map[string]bool{
+var skipValidation = map[string]bool{
+	"dto.RetryPolicy": true, // retry policy has different values for different use-cases
+	// output DTOs:
 	"dto.RestoreJobStatus": true,
 	"dto.RoutineState":     true,
 	"dto.Metrics":          true,
@@ -105,7 +108,11 @@ func assertAllPropertiesValid(t *testing.T, schema map[string]any, schemaName st
 			continue // this is an object
 		}
 
-		if outputDTOs[schemaName] {
+		if prop[typeTag] == "object" {
+			continue // this is a map
+		}
+
+		if skipValidation[schemaName] {
 			continue // produced objects don't have defaults
 		}
 
