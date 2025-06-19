@@ -17,11 +17,11 @@ type S3Storage struct {
 	Bucket string `yaml:"bucket" json:"bucket" validate:"required"`
 	// The root path for the backup repository within the bucket.
 	// If not specified, backups will be saved in the bucket's root.
-	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups"`
+	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
 	// The S3 region string.
 	S3Region string `yaml:"s3-region" json:"s3-region" example:"eu-central-1" validate:"required"`
 	// The S3 profile name (AWS S3 optional).
-	S3Profile string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty" example:"default"`
+	S3Profile string `yaml:"s3-profile,omitempty" json:"s3-profile,omitempty" example:"default" extensions:"x-nullable"`
 	// An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).
 	S3EndpointOverride *string `yaml:"s3-endpoint-override,omitempty" json:"s3-endpoint-override,omitempty" example:"http://host.docker.internal:9000"`
 	// The log level of the AWS S3 SDK (AWS S3 optional).
@@ -29,13 +29,14 @@ type S3Storage struct {
 	// The minimum size in bytes of individual S3 UploadParts.
 	MinPartSize int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880"`
 	// The maximum number of simultaneous requests from S3.
-	MaxConnsPerHost int `yaml:"max-async-connections,omitempty" json:"max-async-connections,omitempty" example:"16"`
+	// Zero means no limit.
+	MaxConnsPerHost int `yaml:"max-async-connections,omitempty" json:"max-async-connections,omitempty" example:"16" default:"0"`
 	// Access Key ID for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	AccessKeyID *string `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty"`
+	AccessKeyID *string `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty" extensions:"x-nullable"`
 	// Secret Access Key for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	SecretAccessKey *string `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty"`
+	SecretAccessKey *string `yaml:"secret-access-key,omitempty" json:"secret-access-key,omitempty" extensions:"x-nullable"`
 	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *S3StorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }

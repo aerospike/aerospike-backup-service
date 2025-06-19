@@ -16,6 +16,7 @@ const (
 	requiredTag    = "required"
 	defaultTag     = "default"
 	allOfTag       = "allOf"
+	nullableTag    = "nullable"
 )
 
 // TestOpenAPIDescriptions verifies that every DTO and field has a description,
@@ -111,7 +112,9 @@ func assertAllPropertiesValid(t *testing.T, schema map[string]any, schemaName st
 		// Check for required or default
 		_, isRequired := requiredSet[propName]
 		_, hasDefault := prop[defaultTag]
-		if !isRequired && !hasDefault {
+		_, isNullable := prop[nullableTag] // nullable fields means that default value is nil
+
+		if !(isRequired || hasDefault || isNullable) {
 			t.Errorf("Property '%s.%s' is neither required nor has a default value", schemaName, propName)
 		}
 	}

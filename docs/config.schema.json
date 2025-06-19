@@ -492,7 +492,8 @@
         "properties": {
           "level": {
             "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).",
-            "type": "integer"
+            "type": "integer",
+            "default": 0
           },
           "mode": {
             "description": "The compression mode to be used (default is NONE).",
@@ -939,14 +940,16 @@
         "type": "object",
         "properties": {
           "bandwidth": {
-            "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.",
+            "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.\nDefault: no limit.",
             "type": "integer",
-            "example": 50000
+            "example": 50000,
+            "nullable": true
           },
           "batch-size": {
-            "description": "The max allowed number of records per an async batch write call.\nOnly applicable when using batch writes.\nDefault: 128.",
+            "description": "The max allowed number of records per an async batch write call.\nOnly applicable when using batch writes.",
             "type": "integer",
-            "example": 128
+            "default": 128,
+            "example": 32
           },
           "bin-list": {
             "description": "The bins to restore (optional, an empty list implies restoring all bins).",
@@ -957,7 +960,8 @@
             "example": [
               "bin1",
               "bin2"
-            ]
+            ],
+            "nullable": true
           },
           "compression": {
             "description": "Compression details (algorithm). Default is no compression.",
@@ -969,7 +973,8 @@
           },
           "disable-batch-writes": {
             "description": "Disables the use of batch writes when restoring records to the Aerospike cluster.\nBy default, the cluster is checked for batch write support.",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           },
           "encryption": {
             "description": "Encryption details (algorithm and key). Default is no encryption.",
@@ -982,11 +987,13 @@
           "extra-ttl": {
             "description": "Amount of extra time-to-live to add to records that have expirable void-times.\nMust be set in seconds.",
             "type": "integer",
+            "default": 0,
             "example": 86400
           },
           "max-async-batches": {
             "description": "The max number of outstanding async record batch write calls at a time.",
             "type": "integer",
+            "default": 128,
             "example": 32
           },
           "namespace": {
@@ -999,7 +1006,8 @@
           },
           "no-generation": {
             "description": "Records from backups take precedence. This option disables the generation check.\nWith this option, records from the backup always overwrite records that already exist in\nthe namespace, regardless of generation numbers.",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           },
           "no-indexes": {
             "description": "Do not restore any secondary index definitions.",
@@ -1008,20 +1016,24 @@
           },
           "no-records": {
             "description": "Do not restore any record data (metadata or bin data).\nBy default, record data, secondary index definitions, and UDF modules will be restored.",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           },
           "no-udfs": {
             "description": "Do not restore any UDF modules.",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           },
           "parallel": {
-            "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.\nDefault: 8.",
+            "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.",
             "type": "integer",
+            "default": 8,
             "example": 8
           },
           "replace": {
             "description": "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           },
           "retry-policy": {
             "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
@@ -1040,26 +1052,31 @@
             "example": [
               "set1",
               "set2"
-            ]
+            ],
+            "nullable": true
           },
           "socket-timeout": {
             "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
             "type": "integer",
+            "default": 60000,
             "example": 1000
           },
           "total-timeout": {
             "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
             "type": "integer",
+            "default": 0,
             "example": 2000
           },
           "tps": {
-            "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions\nper second.",
+            "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.\nDefault: no limit.",
             "type": "integer",
-            "example": 4000
+            "example": 4000,
+            "nullable": true
           },
           "unique": {
             "description": "Existing records take precedence. With this option, only records that do not exist in\nthe namespace are restored, regardless of generation numbers. If a record exists in\nthe namespace, the record from the backup is ignored.",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           }
         }
       },
