@@ -15,6 +15,7 @@ const (
 	schemasTag     = "schemas"
 	requiredTag    = "required"
 	defaultTag     = "default"
+	allOfTag       = "allOf"
 )
 
 // TestOpenAPIDescriptions verifies that every DTO and field has a description,
@@ -62,6 +63,14 @@ func readSchemas(t *testing.T, filePath string) map[string]any {
 	return schemas
 }
 
+var outputDTOs = map[string]bool{
+	"dto.RestoreJobStatus": true,
+	"dto.RoutineState":     true,
+	"dto.Metrics":          true,
+	"dto.BackupDetails":    true,
+	"dto.RunningJob":       true,
+}
+
 func assertAllPropertiesValid(t *testing.T, schema map[string]any, schemaName string) {
 	t.Helper()
 
@@ -91,11 +100,19 @@ func assertAllPropertiesValid(t *testing.T, schema map[string]any, schemaName st
 			t.Errorf("Property '%s.%s' is missing a description", schemaName, propName)
 		}
 
+		if _, ok := prop[allOfTag]; ok {
+			continue // this is an object
+		}
+
+		if outputDTOs[schemaName] {
+			continue // produced objects don't have defaults
+		}
+
 		// Check for required or default
-		if _, isRequired := requiredSet[propName]; !isRequired {
-			if _, hasDefault := prop[defaultTag]; !hasDefault {
-				t.Errorf("Property '%s.%s' is neither required nor has a default value", schemaName, propName)
-			}
+		_, isRequired := requiredSet[propName]
+		_, hasDefault := prop[defaultTag]
+		if !isRequired && !hasDefault {
+			t.Errorf("Property '%s.%s' is neither required nor has a default value", schemaName, propName)
 		}
 	}
 }

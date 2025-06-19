@@ -11,16 +11,17 @@ import (
 
 // BackupPolicy represents a scheduled backup policy.
 // @Description BackupPolicy represents a scheduled backup policy.
+//
+//nolint:lll
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total
 	// data partitions. The optimal value depends on hardware and network configuration.
-	// Default: 8.
-	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1"`
+	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1" default:"8"`
 	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
-	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" example:"1000"`
+	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" default:"60000"`
 	// Total socket timeout in milliseconds. Default is 0, that is, no timeout.
-	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" example:"2000"`
+	TotalTimeout *int64 `yaml:"total-timeout,omitempty" json:"total-timeout,omitempty" default:"0"`
 	// RetryPolicy defines the configuration for database scan retry attempts in case of failures.
 	// If nil, the default policy is used (5 retries with a one-minute delay between attempts).
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
@@ -28,22 +29,22 @@ type BackupPolicy struct {
 	// Cleanup runs asynchronously after each successful full backup, never deleting backups preemptively.
 	// Ensure storage capacity for at least one extra full backup beyond the retention configuration.
 	RetentionPolicy *RetentionPolicy `yaml:"retention,omitempty" json:"retention,omitempty"`
-	// Do not back up any record data (metadata or bin data). Default: false.
-	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty"`
-	// Do not back up any secondary index definitions. Default: false.
+	// Do not back up any record data (metadata or bin data).
+	NoRecords *bool `yaml:"no-records,omitempty" json:"no-records,omitempty" default:"false"`
+	// Do not back up any secondary index definitions.
 	NoIndexes *bool `yaml:"no-indexes,omitempty" json:"no-indexes,omitempty" default:"false"`
-	// Do not back up any UDF modules. Default: false.
-	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty"`
-	// Back up Aerospike cluster configuration. Default: false.
-	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty"`
+	// Do not back up any UDF modules.
+	NoUdfs *bool `yaml:"no-udfs,omitempty" json:"no-udfs,omitempty" default:"false"`
+	// Back up Aerospike cluster configuration.
+	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty" default:"false"`
 	// Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.
 	// Default is no limit.
-	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000"`
+	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" default:"0"`
 	// Limits the number of records returned per second (RPS). Default is no limit.
-	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000"`
+	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000" default:"0"`
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
-	// a new backup file will be created. Default is 250 MB.
-	FileLimit *int `yaml:"file-limit,omitempty" json:"file-limit,omitempty" example:"1024"`
+	// a new backup file will be created.
+	FileLimit *int `yaml:"file-limit,omitempty" json:"file-limit,omitempty" default:"250"`
 	// Encryption details (algorithm and key). Default is no encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details (algorithm and mode). Default is no compression.
@@ -54,13 +55,13 @@ type BackupPolicy struct {
 	// When true, the backup contains only records that last modified before backup started.
 	// When false (default), records updated during backup might be included in the backup, but it's not guaranteed.
 	// This parameter does not affect XDR backups (which always includes all keys).
-	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty"`
+	Sealed *bool `yaml:"sealed,omitempty" json:"sealed,omitempty" default:"false"`
 	// XDR configuration for MRT backups.
 	// XDRConfig *XDRConfig `yaml:"xdr,omitempty" json:"xdr,omitempty"`
 
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
-	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty"`
+	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty" default:"false"`
 }
 
 // NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.
@@ -204,14 +205,14 @@ type RetentionPolicy struct {
 	// - If nil, retain all full backups.
 	// - If N is specified, retain the last N full backups.
 	// - The minimum value is 1.
-	FullBackups *int `json:"full,omitempty" yaml:"full,omitempty"`
+	FullBackups *int `json:"full,omitempty" yaml:"full,omitempty"  minimum:"1" extensions:"x-nullable"`
 
 	// Number of full backups to store incremental backups for:
 	// - If nil, retain all incremental backups.
 	// - If N is specified, retain incremental backups for the last N full backups.
 	// - If set to 0, do not retain any incremental backups.
 	// - Must not exceed the value of FullBackups.
-	IncrBackups *int `json:"incremental,omitempty" yaml:"incremental,omitempty"`
+	IncrBackups *int `json:"incremental,omitempty" yaml:"incremental,omitempty" extensions:"x-nullable"`
 }
 
 func (rp *RetentionPolicy) Validate() error {

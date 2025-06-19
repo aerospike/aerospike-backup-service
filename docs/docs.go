@@ -1881,6 +1881,7 @@ const docTemplate = `{
                 "bandwidth": {
                     "description": "Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.\nDefault is no limit.",
                     "type": "integer",
+                    "default": 0,
                     "example": 10000
                 },
                 "compression": {
@@ -1893,7 +1894,8 @@ const docTemplate = `{
                 },
                 "concurrent-incremental": {
                     "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "encryption": {
                     "description": "Encryption details (algorithm and key). Default is no encryption.",
@@ -1904,31 +1906,35 @@ const docTemplate = `{
                     ]
                 },
                 "file-limit": {
-                    "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created. Default is 250 MB.",
+                    "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created.",
                     "type": "integer",
-                    "example": 1024
+                    "default": 250
                 },
                 "no-indexes": {
-                    "description": "Do not back up any secondary index definitions. Default: false.",
+                    "description": "Do not back up any secondary index definitions.",
                     "type": "boolean",
                     "default": false
                 },
                 "no-records": {
-                    "description": "Do not back up any record data (metadata or bin data). Default: false.",
-                    "type": "boolean"
+                    "description": "Do not back up any record data (metadata or bin data).",
+                    "type": "boolean",
+                    "default": false
                 },
                 "no-udfs": {
-                    "description": "Do not back up any UDF modules. Default: false.",
-                    "type": "boolean"
+                    "description": "Do not back up any UDF modules.",
+                    "type": "boolean",
+                    "default": false
                 },
                 "parallel": {
-                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.\nDefault: 8.",
+                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.",
                     "type": "integer",
+                    "default": 8,
                     "example": 1
                 },
                 "records-per-second": {
                     "description": "Limits the number of records returned per second (RPS). Default is no limit.",
                     "type": "integer",
+                    "default": 0,
                     "example": 1000
                 },
                 "retention": {
@@ -1949,21 +1955,23 @@ const docTemplate = `{
                 },
                 "sealed": {
                     "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.\nThis parameter does not affect XDR backups (which always includes all keys).",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "socket-timeout": {
                     "description": "Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "example": 1000
+                    "default": 60000
                 },
                 "total-timeout": {
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
                     "type": "integer",
-                    "example": 2000
+                    "default": 0
                 },
                 "with-cluster-configuration": {
-                    "description": "Back up Aerospike cluster configuration. Default: false.",
-                    "type": "boolean"
+                    "description": "Back up Aerospike cluster configuration.",
+                    "type": "boolean",
+                    "default": false
                 }
             }
         },
@@ -2843,11 +2851,14 @@ const docTemplate = `{
             "properties": {
                 "full": {
                     "description": "Number of full backups to store:\n- If nil, retain all full backups.\n- If N is specified, retain the last N full backups.\n- The minimum value is 1.",
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 1,
+                    "x-nullable": true
                 },
                 "incremental": {
                     "description": "Number of full backups to store incremental backups for:\n- If nil, retain all incremental backups.\n- If N is specified, retain incremental backups for the last N full backups.\n- If set to 0, do not retain any incremental backups.\n- Must not exceed the value of FullBackups.",
-                    "type": "integer"
+                    "type": "integer",
+                    "x-nullable": true
                 }
             }
         },
