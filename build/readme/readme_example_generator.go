@@ -364,7 +364,6 @@ func updateDtoDescription(readme []byte) []byte {
 	})
 
 	return updatedReadme
-
 }
 
 func generateMarkdownTable(dtoName string) string {
@@ -437,7 +436,7 @@ type Schema struct {
 type Property struct {
 	Description string      `json:"description,omitempty"`
 	Type        string      `json:"type,omitempty"`
-	AllOf       []Reference `json:"allOf"`
+	AllOf       []Reference `json:"allOf"` //nolint:tagliatelle
 	Items       Reference   `json:"items"`
 	Enum        []string    `json:"enum"`
 }
@@ -490,7 +489,7 @@ func collectFields(schema Schema, prefix string, out *[]Row) {
 	}
 }
 
-// Example: "#/components/schemas/dto.RunningJob" → "dto.RunningJob"
+// Example: "#/components/schemas/dto.RunningJob" → "dto.RunningJob".
 func extractRefName(ref string) string {
 	parts := strings.Split(ref, "/")
 	return parts[len(parts)-1]

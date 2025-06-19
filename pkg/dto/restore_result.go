@@ -39,7 +39,8 @@ func restoreStatusFromString(s string) (value JobStatus, ok bool) {
 // @Description RestoreJobStatus represents restore job status.
 type RestoreJobStatus struct {
 	// Number of records read from backup.
-	// When backup is finished, `read-records` =  `inserted-records` + `fresher-records` + `existed-records` + `ignored-records` + `skipped-records` + `expired-records`
+	// When backup is finished, `read-records` =  `inserted-records` + `fresher-records` +
+	// `existed-records` + `ignored-records` + `skipped-records` + `expired-records`
 	ReadRecords uint64 `yaml:"read-records" json:"read-records" format:"int64" example:"10"`
 	// Total bytes read from backup.
 	TotalBytes uint64 `yaml:"total-bytes" json:"total-bytes" format:"int64" example:"2000"`

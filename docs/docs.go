@@ -2527,7 +2527,7 @@ const docTemplate = `{
                     "example": 8
                 },
                 "read-records": {
-                    "description": "Number of records read from backup.",
+                    "description": "Number of records read from backup.\nWhen backup is finished, ` + "`" + `read-records` + "`" + ` =  ` + "`" + `inserted-records` + "`" + ` + ` + "`" + `fresher-records` + "`" + ` +\n` + "`" + `existed-records` + "`" + ` + ` + "`" + `ignored-records` + "`" + ` + ` + "`" + `skipped-records` + "`" + ` + ` + "`" + `expired-records` + "`" + `",
                     "type": "integer",
                     "format": "int64",
                     "example": 10
@@ -2920,7 +2920,7 @@ const docTemplate = `{
                     "example": "2006-01-02T15:04:05Z07:00"
                 },
                 "finish-time": {
-                    "description": "FinishTime: the time when the operation finished",
+                    "description": "FinishTime: the time when the operation finished.\nA nil value indicates that the operation is still running.",
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z07:00"
                 },
