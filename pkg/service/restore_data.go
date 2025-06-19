@@ -56,10 +56,11 @@ func NewRestoreManager(
 	}
 }
 
-func (r *dataRestorer) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
-	ctx := context.TODO()
+func (r *dataRestorer) Restore(ctx context.Context, request *model.RestoreRequest) (model.RestoreJobID, error) {
+	// Create a cancellable context for this specific job.
+	ctx, cancel := context.WithCancel(ctx)
 
-	jobID := r.restoreJobs.newJob(request.BackupDataPath)
+	jobID := r.restoreJobs.newJob(request.BackupDataPath, cancel)
 	go func() {
 		err := r.executeRestore(ctx, request, jobID)
 		r.restoreJobs.finishJob(jobID, err)
@@ -96,10 +97,9 @@ func (r *dataRestorer) executeRestore(
 	if err != nil {
 		return fmt.Errorf("failed to start restore operation: %w", err)
 	}
-	ctx, cancel := context.WithCancel(ctx)
 
 	r.restoreJobs.addTotalRecords(jobID, r.recordsInBackup(backups))
-	r.restoreJobs.addHandler(jobID, restoreexecutor.NewRestoreHandlerWithCancel(handler, cancel))
+	r.restoreJobs.addHandler(jobID, handler)
 
 	// Wait for the restore operation to complete
 	return handler.Wait(ctx)
@@ -147,7 +147,8 @@ func (r *dataRestorer) RestoreByTime(
 		return 0, err
 	}
 
-	jobID := r.restoreJobs.newJob(request.RoutineName)
+	ctx, cancel := context.WithCancel(ctx)
+	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
 	go r.restoreByTimeSync(ctx, request, jobID, fullBackupsByNamespace)
 
 	return jobID, nil
@@ -266,8 +267,7 @@ func (r *dataRestorer) restoreNamespace(
 			return err
 		}
 
-		ctx, cancel := context.WithCancel(ctx)
-		r.restoreJobs.addHandler(jobID, restoreexecutor.NewRestoreHandlerWithCancel(handler, cancel))
+		r.restoreJobs.addHandler(jobID, handler)
 
 		err = handler.Wait(ctx)
 		if err != nil {
@@ -311,10 +311,8 @@ func (r *dataRestorer) CancelRestore(jobID model.RestoreJobID) error {
 	if err != nil {
 		return err
 	}
-	slog.Debug("Canceling restore job", slog.Any("job ID", jobID))
-	for _, h := range job.handlers {
-		h.Cancel()
-	}
+
+	job.cancel()
 
 	return nil
 }
@@ -326,7 +324,7 @@ func (r *dataRestorer) GetFilteredJobs(
 ) map[model.RestoreJobID]*model.RestoreJobStatus {
 	results := make(map[model.RestoreJobID]*model.RestoreJobStatus)
 
-	r.restoreJobs.Iterate(func(id model.RestoreJobID, job *jobInfo) {
+	r.restoreJobs.Iterate(func(id model.RestoreJobID, job *restoreJob) {
 		if !timeBounds.Contains(job.started) {
 			return
 		}

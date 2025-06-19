@@ -21,7 +21,7 @@ func init() {
 // configured level.
 func LogHandler(config *model.LoggerConfig) slog.Handler {
 	const addSource = true
-	writer := logWriter(config)
+	writer := newRedactingWriter(logWriter(config))
 	switch strings.ToUpper(config.GetFormatOrDefault()) {
 	case "PLAIN":
 		return slog.NewTextHandler(writer, &slog.HandlerOptions{

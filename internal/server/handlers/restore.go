@@ -58,7 +58,7 @@ func (s *Service) restoreByPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobID, err := s.restoreManager.Restore(restoreRequest)
+	jobID, err := s.restoreManager.Restore(s.ctx, restoreRequest)
 	if err != nil {
 		httpError(w, err)
 		return

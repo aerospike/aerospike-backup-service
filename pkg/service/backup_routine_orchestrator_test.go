@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/prometheus/client_golang/prometheus"
 	p "github.com/prometheus/client_model/go"
@@ -24,7 +27,7 @@ func setupBaseConfig() *model.Config {
 		SourceCluster: &model.AerospikeCluster{},
 		BackupPolicy: &model.BackupPolicy{
 			RetryPolicy: &models.RetryPolicy{
-				BaseTimeout: 1 * time.Millisecond,
+				BaseTimeout: 100 * time.Millisecond,
 				MaxRetries:  1,
 				Multiplier:  1,
 			},
@@ -129,6 +132,9 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		},
 	})
 
+	mockClientManager.EXPECT().GetClient(gomock.Any()).Return(mockClient, nil)
+	mockClientManager.EXPECT().Close(mockClient)
+
 	o := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
@@ -160,7 +166,6 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 
 	connectionError := errors.New("connection failed")
 	mockClientManager.EXPECT().GetClient(gomock.Any()).Return(nil, connectionError).Times(2) // retries
-	mockRegistry.EXPECT().GetRoutineState(routineName).Return(&model.RoutineState{})
 
 	o := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
@@ -178,6 +183,87 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 
 	assert.Error(t, err, "Should return error on client connection failure")
 	assert.Contains(t, err.Error(), "cannot get backup client")
+}
+
+// TestRunFullBackupInternal_RaceCondition tests the race condition scenario where:
+// 1. First call to runFullBackupInternal fails to get client on first try (network error).
+// 2. Second call starts and successfully gets client and starts backup.
+// 3. First call retries, gets client and tries to start backup but should skip it.
+func TestBackupRoutineOrchestrator_runFullBackup_RaceCondition(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockClientManager := aerospike.NewMockClientManager(ctrl)
+	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
+	mockRetentionManager := NewMockRetentionManager(ctrl)
+	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
+	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
+	mockClient = &backup.Client{}
+	mockBackupHandler := backupexecutor.NewMockBackupHandler(ctrl)
+
+	config := setupBaseConfig()
+	registry := NewRunningBackupsRegistry(ctx, mockBackupBackend, config)
+	orchestrator := newOrchestrator(routineName, config, NewBackupComponents(
+		mockClientManager,
+		mockBackupExecutor,
+		registry,
+		mockRetentionManager,
+		mockBackupBackend,
+		mockClusterConfigWriter,
+	))
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	var notFirstCall atomic.Bool
+
+	// Mock GetClient to simulate the race condition
+	// The first call (from Process A) will fail.
+	// The second call (from Process B) will succeed.
+	// The third call (from Process A's retry) will succeed after B has started.
+	mockClientManager.EXPECT().GetClient(gomock.Any()).
+		DoAndReturn(func(_ *model.AerospikeCluster) (*backup.Client, error) {
+			if !notFirstCall.Swap(true) { // Process A fails
+				return nil, errors.New("network error")
+			}
+			return mockClient, nil
+		}).Times(3)
+
+	// Expect the backup to be run twice due to the race
+	mockBackupExecutor.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(mockBackupHandler, nil).Times(2)
+
+	firstBackupTime := time.Unix(1, 0)
+	secondBackupTime := time.Unix(999, 0)
+
+	mockClientManager.EXPECT().Close(mockClient).Times(2) // both calls create a client, but only one of them runs backups
+	mockClusterConfigWriter.EXPECT().Write(gomock.Any(), routineName, newTimeMatcher(secondBackupTime)).Return(nil)
+	mockBackupHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
+	mockBackupHandler.EXPECT().GetMetrics().Return(models.NewMetrics(0, 0, 0, 0)).AnyTimes()
+	mockBackupHandler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(_ context.Context) error {
+		time.Sleep(1 * time.Second)
+		return nil
+	}).Times(2) // for ns1 and ns2
+	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).Times(2)
+	mockRetentionManager.EXPECT().deleteOldBackups(gomock.Any(), gomock.Any()).Return(nil)
+
+	// Run two backup routines concurrently
+	go func() {
+		defer wg.Done()
+		err := orchestrator.runFullBackupInternal(context.Background(), firstBackupTime)
+		assert.NoError(t, err)
+	}()
+
+	go func() {
+		defer wg.Done()
+		// give the first goroutine a slight head start
+		time.Sleep(10 * time.Millisecond)
+		err := orchestrator.runFullBackupInternal(context.Background(), secondBackupTime)
+		assert.NoError(t, err)
+	}()
+
+	wg.Wait()
+	time.Sleep(10 * time.Millisecond) // time to unregister routine.
 }
 
 func TestRunIncrementalBackup_SkipWhenNoFullBackup(t *testing.T) {

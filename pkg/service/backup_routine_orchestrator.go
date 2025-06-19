@@ -25,6 +25,8 @@ type BackupRoutineOrchestrator struct {
 	clientManager       aerospike.ClientManager
 	registry            RunningBackupsRegistry
 	retentionManager    RetentionManager
+
+	routineLocks util.LockMap
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
@@ -90,24 +92,28 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 }
 
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
-	if h.skipFullBackup() {
-		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSkip, 0)
-		return nil
-	}
-
 	client, namespaces, err := h.prepareCluster(h.retry)
 	if err != nil {
 		return err
 	}
 	defer h.clientManager.Close(client)
 
-	h.backupClusterConfiguration(ctx, now)
+	lock := h.routineLocks.Get(h.routineName)
+	lock.Lock()
+	if h.skipFullBackup() {
+		lock.Unlock()
+
+		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSkip, 0)
+		return nil
+	}
 
 	timeBounds := h.createTimeBounds(jobTypeFull, now)
-	backupHandler := startNamespacesBackup(ctx,
-		h.runner, client, namespaces, timeBounds, now, h.routine, jobTypeFull)
+	backupHandler := startNamespacesBackup(ctx, h.runner, client, namespaces, timeBounds, now, h.routine, jobTypeFull)
 
 	h.registry.register(h.routineName, jobTypeFull, backupHandler)
+	lock.Unlock()
+
+	h.backupClusterConfiguration(ctx, now)
 
 	if err = backupHandler.Wait(ctx); err != nil {
 		h.registry.remove(h.routineName, jobTypeFull)
@@ -134,9 +140,7 @@ func (h *BackupRoutineOrchestrator) backupClusterConfiguration(ctx context.Conte
 func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
 	currentStat := h.registry.GetRoutineState(h.routineName)
 	if currentStat.Full != nil {
-		// This can happen in rare scenario, when user re-applied config
-		// while backup is running and started same routine backup.
-		h.logger.Debug("Full backup is currently in progress, skipping another full backup")
+		h.logger.Info("Full backup is currently in progress, skipping another full backup")
 		return true
 	}
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -108,7 +110,15 @@ func clientFromAD(endpoint string, auth model.AzureADAuth, sa *model.SecretAgent
 		return nil, fmt.Errorf("failed to create Azure AAD credentials: %w", err)
 	}
 
-	client, err := azblob.NewClient(endpoint, cred, nil)
+	client, err := azblob.NewClient(endpoint, cred, &azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Retry: policy.RetryOptions{
+				MaxRetries:    int32(model.StorageRetryPolicy.MaxRetries),
+				RetryDelay:    model.StorageRetryPolicy.BaseTimeout,
+				MaxRetryDelay: model.StorageRetryPolicy.MaxDuration,
+			},
+		},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob client with AAD: %w", err)
 	}

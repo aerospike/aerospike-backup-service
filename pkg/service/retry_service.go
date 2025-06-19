@@ -53,7 +53,7 @@ func (r *retryExecutor) run(label string, f func() error, onRetry func()) error 
 			return lastErr // success
 		}
 
-		if attempt < r.policy.MaxRetries { // Log and wait only if there are attempts left
+		if attempt < totalAttempts { // Log and wait only if there are attempts left
 			onRetry()
 			r.logger.Info("Execution failed, retrying...",
 				slog.String("label", label),
