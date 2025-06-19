@@ -1664,6 +1664,7 @@ const docTemplate = `{
                 "conn-timeout": {
                     "description": "The connection timeout in milliseconds.",
                     "type": "integer",
+                    "default": 30000,
                     "example": 5000
                 },
                 "credentials": {
@@ -1677,11 +1678,13 @@ const docTemplate = `{
                 "label": {
                     "description": "The cluster name. Optional: used only in logs and error messages.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "testCluster"
                 },
                 "max-parallel-scans": {
                     "description": "Specifies the maximum number of parallel scans per the cluster.",
                     "type": "integer",
+                    "x-nullable": true,
                     "example": 100
                 },
                 "seed-nodes": {
@@ -1701,7 +1704,8 @@ const docTemplate = `{
                 },
                 "use-services-alternate": {
                     "description": "Whether should use \"services-alternate\" instead of \"services\" in info request during cluster tending.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 }
             }
         },
@@ -2989,15 +2993,17 @@ const docTemplate = `{
             "properties": {
                 "access-key-id": {
                     "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "bucket": {
                     "description": "The S3 bucket name.",
                     "type": "string"
                 },
                 "max-async-connections": {
-                    "description": "The maximum number of simultaneous requests from S3.",
+                    "description": "The maximum number of simultaneous requests from S3.\nZero means no limit.",
                     "type": "integer",
+                    "default": 0,
                     "example": 16
                 },
                 "min-part-size": {
@@ -3008,6 +3014,7 @@ const docTemplate = `{
                 "path": {
                     "description": "The root path for the backup repository within the bucket.\nIf not specified, backups will be saved in the bucket's root.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "backups"
                 },
                 "s3-endpoint-override": {
@@ -3023,6 +3030,7 @@ const docTemplate = `{
                 "s3-profile": {
                     "description": "The S3 profile name (AWS S3 optional).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "default"
                 },
                 "s3-region": {
@@ -3032,7 +3040,8 @@ const docTemplate = `{
                 },
                 "secret-access-key": {
                     "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "secret-agent": {
                     "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",

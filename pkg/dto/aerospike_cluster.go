@@ -13,21 +13,23 @@ import (
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 // @Description AerospikeCluster represents the configuration for an Aerospike cluster for backup.
+//
+//nolint:lll
 type AerospikeCluster struct {
 	// The cluster name. Optional: used only in logs and error messages.
-	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster"`
+	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster" extensions:"x-nullable"`
 	// The seed nodes details.
 	SeedNodes []SeedNode `yaml:"seed-nodes,omitempty" json:"seed-nodes,omitempty" validate:"required"`
 	// The connection timeout in milliseconds.
-	ConnTimeout *int64 `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty" example:"5000"`
+	ConnTimeout *int64 `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty" example:"5000" default:"30000"`
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
-	UseServicesAlternate *bool `yaml:"use-services-alternate,omitempty" json:"use-services-alternate,omitempty"`
+	UseServicesAlternate *bool `yaml:"use-services-alternate,omitempty" json:"use-services-alternate,omitempty" default:"false"`
 	// The authentication details to the Aerospike cluster.
 	Credentials *Credentials `yaml:"credentials,omitempty" json:"credentials,omitempty"`
 	// The cluster TLS configuration.
 	TLS *TLS `yaml:"tls,omitempty" json:"tls,omitempty"`
 	// Specifies the maximum number of parallel scans per the cluster.
-	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100"`
+	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100" extensions:"x-nullable"`
 }
 
 // Validate validates the Aerospike cluster entity.

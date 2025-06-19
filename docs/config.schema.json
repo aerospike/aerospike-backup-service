@@ -58,6 +58,7 @@
           "conn-timeout": {
             "description": "The connection timeout in milliseconds.",
             "type": "integer",
+            "default": 30000,
             "example": 5000
           },
           "credentials": {
@@ -71,12 +72,14 @@
           "label": {
             "description": "The cluster name. Optional: used only in logs and error messages.",
             "type": "string",
-            "example": "testCluster"
+            "example": "testCluster",
+            "nullable": true
           },
           "max-parallel-scans": {
             "description": "Specifies the maximum number of parallel scans per the cluster.",
             "type": "integer",
-            "example": 100
+            "example": 100,
+            "nullable": true
           },
           "seed-nodes": {
             "description": "The seed nodes details.",
@@ -95,7 +98,8 @@
           },
           "use-services-alternate": {
             "description": "Whether should use \"services-alternate\" instead of \"services\" in info request during cluster tending.",
-            "type": "boolean"
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -1334,15 +1338,17 @@
         "properties": {
           "access-key-id": {
             "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "bucket": {
             "description": "The S3 bucket name.",
             "type": "string"
           },
           "max-async-connections": {
-            "description": "The maximum number of simultaneous requests from S3.",
+            "description": "The maximum number of simultaneous requests from S3.\nZero means no limit.",
             "type": "integer",
+            "default": 0,
             "example": 16
           },
           "min-part-size": {
@@ -1353,7 +1359,8 @@
           "path": {
             "description": "The root path for the backup repository within the bucket.\nIf not specified, backups will be saved in the bucket's root.",
             "type": "string",
-            "example": "backups"
+            "example": "backups",
+            "nullable": true
           },
           "s3-endpoint-override": {
             "description": "An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).",
@@ -1368,7 +1375,8 @@
           "s3-profile": {
             "description": "The S3 profile name (AWS S3 optional).",
             "type": "string",
-            "example": "default"
+            "example": "default",
+            "nullable": true
           },
           "s3-region": {
             "description": "The S3 region string.",
@@ -1377,7 +1385,8 @@
           },
           "secret-access-key": {
             "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "secret-agent": {
             "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
