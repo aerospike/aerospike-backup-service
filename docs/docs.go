@@ -1761,7 +1761,8 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "storage-class": {
                     "description": "StorageClass defines the storage tier for data and metadata objects.",
@@ -2172,6 +2173,7 @@ const docTemplate = `{
                 "auth-mode": {
                     "description": "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
                     "type": "string",
+                    "default": "INTERNAL ",
                     "enum": [
                         "INTERNAL",
                         "EXTERNAL",
@@ -2181,11 +2183,13 @@ const docTemplate = `{
                 "password": {
                     "description": "The password for the cluster authentication.\nIt can be either plain text or path into the secret agent.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "testPswd"
                 },
                 "password-path": {
                     "description": "The file path with the password string.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/pass.txt"
                 },
                 "secret-agent": {
@@ -2198,11 +2202,13 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "user": {
                     "description": "The username for the cluster authentication.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "testUser"
                 }
             }
@@ -2310,7 +2316,8 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "storage-class": {
                     "description": "StorageClass defines the storage class for data and metadata objects.",
@@ -2780,7 +2787,8 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "source": {
                     "description": "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
@@ -2843,7 +2851,8 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "source": {
                     "description": "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
@@ -3053,7 +3062,8 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "storage-class": {
                     "description": "StorageClass defines the storage class for data and metadata objects.",
@@ -3100,21 +3110,23 @@ const docTemplate = `{
                 "is-base64": {
                     "description": "Flag that shows if secret agent responses are encrypted with base64.",
                     "type": "boolean",
-                    "example": false
+                    "default": false
                 },
                 "port": {
                     "description": "Port the Secret Agent is running on.",
                     "type": "integer",
+                    "x-nullable": true,
                     "example": 8080
                 },
                 "timeout": {
                     "description": "Timeout in milliseconds.",
                     "type": "integer",
-                    "example": 5000
+                    "default": 1000
                 },
                 "tls-ca-file": {
                     "description": "The path to a trusted CA certificate file in PEM format.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/ca.pem"
                 }
             }

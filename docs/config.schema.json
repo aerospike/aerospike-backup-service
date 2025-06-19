@@ -155,7 +155,8 @@
           },
           "secret-agent-name": {
             "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "storage-class": {
             "description": "StorageClass defines the storage tier for data and metadata objects.",
@@ -517,6 +518,7 @@
           "auth-mode": {
             "description": "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
             "type": "string",
+            "default": "INTERNAL ",
             "enum": [
               "INTERNAL",
               "EXTERNAL",
@@ -526,12 +528,14 @@
           "password": {
             "description": "The password for the cluster authentication.\nIt can be either plain text or path into the secret agent.",
             "type": "string",
-            "example": "testPswd"
+            "example": "testPswd",
+            "nullable": true
           },
           "password-path": {
             "description": "The file path with the password string.",
             "type": "string",
-            "example": "/path/to/pass.txt"
+            "example": "/path/to/pass.txt",
+            "nullable": true
           },
           "secret-agent": {
             "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
@@ -543,12 +547,14 @@
           },
           "secret-agent-name": {
             "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "user": {
             "description": "The username for the cluster authentication.",
             "type": "string",
-            "example": "testUser"
+            "example": "testUser",
+            "nullable": true
           }
         }
       },
@@ -655,7 +661,8 @@
           },
           "secret-agent-name": {
             "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "storage-class": {
             "description": "StorageClass defines the storage class for data and metadata objects.",
@@ -1125,7 +1132,8 @@
           },
           "secret-agent-name": {
             "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "source": {
             "description": "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
@@ -1188,7 +1196,8 @@
           },
           "secret-agent-name": {
             "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "source": {
             "description": "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
@@ -1398,7 +1407,8 @@
           },
           "secret-agent-name": {
             "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "storage-class": {
             "description": "StorageClass defines the storage class for data and metadata objects.",
@@ -1445,22 +1455,24 @@
           "is-base64": {
             "description": "Flag that shows if secret agent responses are encrypted with base64.",
             "type": "boolean",
-            "example": false
+            "default": false
           },
           "port": {
             "description": "Port the Secret Agent is running on.",
             "type": "integer",
-            "example": 8080
+            "example": 8080,
+            "nullable": true
           },
           "timeout": {
             "description": "Timeout in milliseconds.",
             "type": "integer",
-            "example": 5000
+            "default": 1000
           },
           "tls-ca-file": {
             "description": "The path to a trusted CA certificate file in PEM format.",
             "type": "string",
-            "example": "/path/to/ca.pem"
+            "example": "/path/to/ca.pem",
+            "nullable": true
           }
         }
       },

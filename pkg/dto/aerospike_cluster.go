@@ -174,14 +174,14 @@ func (t *TLS) toModel() *model.TLS {
 type Credentials struct {
 	SecretAgentConfig `yaml:",inline"`
 	// The username for the cluster authentication.
-	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"`
+	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"  extensions:"x-nullable"`
 	// The password for the cluster authentication.
 	// It can be either plain text or path into the secret agent.
-	Password *string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"`
+	Password *string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"  extensions:"x-nullable"`
 	// The file path with the password string.
-	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"`
+	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
 	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
-	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI"`
+	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL "`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
