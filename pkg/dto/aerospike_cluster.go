@@ -122,23 +122,25 @@ func (a *AerospikeCluster) seedNodesToModel() []model.SeedNode {
 
 // TLS represents the Aerospike cluster TLS configuration options.
 // @Description TLS represents the Aerospike cluster TLS configuration options.
+//
+//nolint:lll
 type TLS struct {
 	// Path to a trusted CA certificate file.
-	CAFile *string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/cafile.pem"`
+	CAFile *string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/cafile.pem" extensions:"x-nullable"`
 	// Path to a directory of trusted CA certificates.
-	CAPath *string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca"`
+	CAPath *string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
 	// The default TLS name used to authenticate each TLS socket connection.
-	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name"`
+	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name" extensions:"x-nullable"`
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
-	Protocols *string `yaml:"protocols,omitempty" json:"protocols,omitempty" example:"TLSv1.2"`
+	Protocols *string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
-	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"ECDHE-ECDSA-AES256-GCM-SHA384"`
+	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"ECDHE-ECDSA-AES256-GCM-SHA384" extensions:"x-nullable"`
 	// Path to the key for mutual authentication (if Aerospike cluster supports it).
-	Keyfile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/keyfile.pem"`
+	Keyfile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/keyfile.pem" extensions:"x-nullable"`
 	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
-	KeyfilePassword *string `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" example:"file:/path/to/password"`
+	KeyfilePassword *string `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" example:"file:/path/to/password" extensions:"x-nullable"`
 	// Path to the chain file for mutual authentication (if Aerospike Cluster supports it).
-	Certfile *string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/certfile.pem"`
+	Certfile *string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/certfile.pem" extensions:"x-nullable"`
 }
 
 func (t *TLS) fromModel(m *model.TLS) {

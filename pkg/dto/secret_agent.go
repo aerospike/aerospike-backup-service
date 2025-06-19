@@ -56,6 +56,8 @@ func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, e
 // external secrets management services, fetching secrets on behalf of the server.
 //
 // @Description SecretAgent represents the configuration of an Aerospike Secret Agent.
+//
+//nolint:lll
 type SecretAgent struct {
 	// Connection type: tcp, unix.
 	//nolint:lll

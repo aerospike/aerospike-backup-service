@@ -1548,42 +1548,49 @@
           "ca-file": {
             "description": "Path to a trusted CA certificate file.",
             "type": "string",
-            "example": "/path/to/cafile.pem"
+            "example": "/path/to/cafile.pem",
+            "nullable": true
           },
           "ca-path": {
             "description": "Path to a directory of trusted CA certificates.",
             "type": "string",
-            "example": "/path/to/ca"
+            "example": "/path/to/ca",
+            "nullable": true
           },
           "cert-file": {
             "description": "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
             "type": "string",
-            "example": "/path/to/certfile.pem"
+            "example": "/path/to/certfile.pem",
+            "nullable": true
           },
           "cipher-suite": {
             "description": "TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.",
             "type": "string",
-            "example": "ECDHE-ECDSA-AES256-GCM-SHA384"
+            "example": "ECDHE-ECDSA-AES256-GCM-SHA384",
+            "nullable": true
           },
           "key-file": {
             "description": "Path to the key for mutual authentication (if Aerospike cluster supports it).",
             "type": "string",
-            "example": "/path/to/keyfile.pem"
+            "example": "/path/to/keyfile.pem",
+            "nullable": true
           },
           "key-file-password": {
             "description": "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
             "type": "string",
-            "example": "file:/path/to/password"
+            "example": "file:/path/to/password",
+            "nullable": true
           },
           "name": {
             "description": "The default TLS name used to authenticate each TLS socket connection.",
             "type": "string",
-            "example": "tls-name"
+            "example": "tls-name",
+            "nullable": true
           },
           "protocols": {
             "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
             "type": "string",
-            "example": "TLSv1.2"
+            "default": "TLSv1.2"
           }
         }
       }

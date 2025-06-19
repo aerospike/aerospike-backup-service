@@ -3203,42 +3203,49 @@ const docTemplate = `{
                 "ca-file": {
                     "description": "Path to a trusted CA certificate file.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/cafile.pem"
                 },
                 "ca-path": {
                     "description": "Path to a directory of trusted CA certificates.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/ca"
                 },
                 "cert-file": {
                     "description": "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/certfile.pem"
                 },
                 "cipher-suite": {
                     "description": "TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "ECDHE-ECDSA-AES256-GCM-SHA384"
                 },
                 "key-file": {
                     "description": "Path to the key for mutual authentication (if Aerospike cluster supports it).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/keyfile.pem"
                 },
                 "key-file-password": {
                     "description": "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "file:/path/to/password"
                 },
                 "name": {
                     "description": "The default TLS name used to authenticate each TLS socket connection.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "tls-name"
                 },
                 "protocols": {
                     "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
                     "type": "string",
-                    "example": "TLSv1.2"
+                    "default": "TLSv1.2"
                 }
             }
         }
