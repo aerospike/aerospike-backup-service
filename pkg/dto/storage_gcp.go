@@ -99,7 +99,7 @@ var gcpDataClasses = []string{
 // @Description GcpStorageClass represents the configuration for GCP Storage Class.
 type GcpStorageClass struct {
 	// DataClass specifies the storage class for object data.
-	DataClass string `json:"data" yaml:"data"`
+	DataClass string `json:"data" yaml:"data" extensions:"x-nullable"`
 }
 
 func (s *GcpStorageClass) Validate() error {
@@ -121,7 +121,7 @@ func (s *GcpStorageClass) ToModel() *model.StorageClass {
 
 	return &model.StorageClass{
 		DataClass:     s.DataClass,
-		MetadataClass: "", // GCP metadata always uses STANDARD class
+		MetadataClass: "", // GCP metadata always uses STANDARD class because it's the only one without retrieval fees.
 	}
 }
 

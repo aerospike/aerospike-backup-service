@@ -248,7 +248,7 @@ type SeedNode struct {
 	// The port of the node.
 	Port Port `yaml:"port,omitempty" json:"port,omitempty" example:"3000" validate:"required,min=1,max=65535"`
 	// TLS certificate name used for secure connections (if enabled).
-	TLSName string `yaml:"tls-name,omitempty" json:"tls-name,omitempty" example:"certName"`
+	TLSName string `yaml:"tls-name,omitempty" json:"tls-name,omitempty" example:"certName" extensions:"x-nullable"`
 }
 
 // Validate validates the SeedNode entity.

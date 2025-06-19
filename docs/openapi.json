@@ -2051,19 +2051,23 @@
                 "properties": {
                     "account-key": {
                         "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "account-name": {
                         "description": "AccountName is the Azure storage account name for Shared Key authentication.",
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "client-id": {
                         "description": "ClientID is the Azure Active Directory client ID for AAD authentication.",
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "client-secret": {
                         "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "container-name": {
                         "description": "ContainerName is the name of the Azure Blob container.",
@@ -2081,7 +2085,8 @@
                     "path": {
                         "description": "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
                         "type": "string",
-                        "example": "backups"
+                        "example": "backups",
+                        "nullable": true
                     },
                     "secret-agent": {
                         "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
@@ -2106,7 +2111,8 @@
                     },
                     "tenant-id": {
                         "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.",
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     }
                 }
             },
@@ -2116,11 +2122,13 @@
                 "properties": {
                     "data": {
                         "description": "DataClass specifies the storage tier for object data.",
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "metadata": {
                         "description": "MetadataClass specifies the storage tier for metadata.",
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     }
                 }
             },
@@ -2322,27 +2330,31 @@
                 ],
                 "properties": {
                     "backup-policy": {
-                        "description": "The name of the corresponding backup policy (optional).",
-                        "type": "string"
+                        "description": "The name of the corresponding backup policy, one of defined in `config.backup-policies` (optional).",
+                        "type": "string",
+                        "nullable": true
                     },
                     "bin-list": {
-                        "description": "The list of backup bin names (optional, an empty list implies backing up all bins).",
+                        "description": "The list of backup bin names (optional, an empty list implies backing up all bins) extensions:\"x-nullable\".",
                         "type": "array",
                         "items": {
                             "type": "string"
                         },
                         "example": [
                             "dataBin"
-                        ]
+                        ],
+                        "nullable": true
                     },
                     "disabled": {
                         "description": "Whether this routine is disabled and should not run. Default: false.",
-                        "type": "boolean"
+                        "type": "boolean",
+                        "default": false
                     },
                     "incr-interval-cron": {
                         "description": "The interval for incremental backup as a cron expression string (optional).",
                         "type": "string",
-                        "example": "*/10 * * * * *"
+                        "example": "*/10 * * * * *",
+                        "nullable": true
                     },
                     "interval-cron": {
                         "description": "The interval for full backup as a cron expression string.\nCron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format",
@@ -2357,33 +2369,37 @@
                         },
                         "example": [
                             "source-ns1"
-                        ]
+                        ],
+                        "nullable": true
                     },
                     "node-list": {
                         "description": "NodeList specifies which Aerospike nodes to include in the backup.\nOnly the listed nodes will be backed up.\nEach node can be specified as one of the following:\n- \"<IP address>:<port>\"\n- \"<hostname>:<port>\"\n- \"<node ID>\"\nTo obtain node identifiers, run: `asinfo -v \"service:\"`.\nIf using IP addresses or hostnames, ensure they match the values returned by the `asinfo` command.\nThis field is mutually exclusive with partition-list.\nParallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.",
                         "type": "array",
                         "items": {
                             "type": "string"
-                        }
+                        },
+                        "nullable": true
                     },
                     "partition-list": {
                         "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"<start>,<count>\" (e.g., \"100,50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nThis field is mutually exclusive with node-list.",
-                        "type": "string"
+                        "type": "string",
+                        "default": "0-4096"
                     },
                     "prefer-racks": {
-                        "description": "PreferRacks specifies a list of Aerospike Server rack IDs to prioritize when reading records during backup.\nThis is optional and can be used to optimize for rack-aware deployments.",
+                        "description": "The list of Aerospike Server rack IDs to prioritize when reading records during backup.\nThis is optional and can be used to optimize for rack-aware deployments.",
                         "type": "array",
                         "items": {
                             "type": "integer"
                         },
                         "example": [
                             0
-                        ]
+                        ],
+                        "nullable": true
                     },
                     "secret-agent": {
                         "description": "The name of a Secret Agent to read secrets from (optional).",
                         "type": "string",
-                        "example": "sa"
+                        "nullable": true
                     },
                     "set-list": {
                         "description": "The list of backup set names (optional, an empty list implies backing up all sets).",
@@ -2393,7 +2409,8 @@
                         },
                         "example": [
                             "set1"
-                        ]
+                        ],
+                        "nullable": true
                     },
                     "source-cluster": {
                         "description": "The name of the corresponding source cluster.",
@@ -2402,8 +2419,7 @@
                     },
                     "storage": {
                         "description": "The name of the corresponding storage provider configuration.",
-                        "type": "string",
-                        "example": "aws"
+                        "type": "string"
                     }
                 }
             },
@@ -2673,7 +2689,8 @@
                 "properties": {
                     "data": {
                         "description": "DataClass specifies the storage class for object data.",
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     }
                 }
             },
@@ -3498,7 +3515,8 @@
                     "tls-name": {
                         "description": "TLS certificate name used for secure connections (if enabled).",
                         "type": "string",
-                        "example": "certName"
+                        "example": "certName",
+                        "nullable": true
                     }
                 }
             },

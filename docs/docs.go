@@ -1719,19 +1719,23 @@ const docTemplate = `{
             "properties": {
                 "account-key": {
                     "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "account-name": {
                     "description": "AccountName is the Azure storage account name for Shared Key authentication.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "client-id": {
                     "description": "ClientID is the Azure Active Directory client ID for AAD authentication.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "client-secret": {
                     "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "container-name": {
                     "description": "ContainerName is the name of the Azure Blob container.",
@@ -1749,6 +1753,7 @@ const docTemplate = `{
                 "path": {
                     "description": "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "backups"
                 },
                 "secret-agent": {
@@ -1774,7 +1779,8 @@ const docTemplate = `{
                 },
                 "tenant-id": {
                     "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 }
             }
         },
@@ -1784,11 +1790,13 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage tier for object data.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "metadata": {
                     "description": "MetadataClass specifies the storage tier for metadata.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 }
             }
         },
@@ -1990,26 +1998,30 @@ const docTemplate = `{
             ],
             "properties": {
                 "backup-policy": {
-                    "description": "The name of the corresponding backup policy (optional).",
-                    "type": "string"
+                    "description": "The name of the corresponding backup policy, one of defined in ` + "`" + `config.backup-policies` + "`" + ` (optional).",
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "bin-list": {
-                    "description": "The list of backup bin names (optional, an empty list implies backing up all bins).",
+                    "description": "The list of backup bin names (optional, an empty list implies backing up all bins) extensions:\"x-nullable\".",
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
+                    "x-nullable": true,
                     "example": [
                         "dataBin"
                     ]
                 },
                 "disabled": {
                     "description": "Whether this routine is disabled and should not run. Default: false.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "incr-interval-cron": {
                     "description": "The interval for incremental backup as a cron expression string (optional).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "*/10 * * * * *"
                 },
                 "interval-cron": {
@@ -2023,6 +2035,7 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     },
+                    "x-nullable": true,
                     "example": [
                         "source-ns1"
                     ]
@@ -2032,18 +2045,21 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "x-nullable": true
                 },
                 "partition-list": {
                     "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"\u003cstart\u003e,\u003ccount\u003e\" (e.g., \"100,50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nThis field is mutually exclusive with node-list.",
-                    "type": "string"
+                    "type": "string",
+                    "default": "0-4096"
                 },
                 "prefer-racks": {
-                    "description": "PreferRacks specifies a list of Aerospike Server rack IDs to prioritize when reading records during backup.\nThis is optional and can be used to optimize for rack-aware deployments.",
+                    "description": "The list of Aerospike Server rack IDs to prioritize when reading records during backup.\nThis is optional and can be used to optimize for rack-aware deployments.",
                     "type": "array",
                     "items": {
                         "type": "integer"
                     },
+                    "x-nullable": true,
                     "example": [
                         0
                     ]
@@ -2051,7 +2067,7 @@ const docTemplate = `{
                 "secret-agent": {
                     "description": "The name of a Secret Agent to read secrets from (optional).",
                     "type": "string",
-                    "example": "sa"
+                    "x-nullable": true
                 },
                 "set-list": {
                     "description": "The list of backup set names (optional, an empty list implies backing up all sets).",
@@ -2059,6 +2075,7 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     },
+                    "x-nullable": true,
                     "example": [
                         "set1"
                     ]
@@ -2070,8 +2087,7 @@ const docTemplate = `{
                 },
                 "storage": {
                     "description": "The name of the corresponding storage provider configuration.",
-                    "type": "string",
-                    "example": "aws"
+                    "type": "string"
                 }
             }
         },
@@ -2341,7 +2357,8 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage class for object data.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 }
             }
         },
@@ -3166,6 +3183,7 @@ const docTemplate = `{
                 "tls-name": {
                     "description": "TLS certificate name used for secure connections (if enabled).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "certName"
                 }
             }
