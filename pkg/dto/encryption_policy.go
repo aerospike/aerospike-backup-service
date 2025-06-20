@@ -20,11 +20,11 @@ type EncryptionPolicy struct {
 	// The encryption mode to be used (NONE, AES128, AES256)
 	Mode string `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE" enums:"NONE,AES128,AES256"`
 	// The path to the file containing the encryption key.
-	KeyFile *string `yaml:"key-file,omitempty" json:"key-file,omitempty"`
+	KeyFile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" extensions:"x-nullable"`
 	// The name of the environment variable containing the encryption key.
-	KeyEnv *string `yaml:"key-env,omitempty" json:"key-env,omitempty"`
+	KeyEnv *string `yaml:"key-env,omitempty" json:"key-env,omitempty" extensions:"x-nullable"`
 	// The secret keyword in Aerospike Secret Agent containing the encryption key.
-	KeySecret *string `yaml:"key-secret,omitempty" json:"key-secret,omitempty"`
+	KeySecret *string `yaml:"key-secret,omitempty" json:"key-secret,omitempty" extensions:"x-nullable"`
 }
 
 // Validate validates the encryption policy.

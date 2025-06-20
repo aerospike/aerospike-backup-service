@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -198,7 +197,6 @@ func main() {
 	updatedReadme := updateDtoExamples(readme)
 	updatedReadme = updateDefaultConfigSection(updatedReadme)
 	updatedReadme = updateMetrics(updatedReadme)
-	updatedReadme = updateDtoDescription(updatedReadme)
 
 	err = os.WriteFile("README.md", updatedReadme, 0600)
 	if err != nil {
@@ -287,47 +285,75 @@ func marshalYAML(v any) ([]byte, error) {
 }
 
 type Row struct {
-	Name string
-	Help string
+	Name   string
+	Type   string
+	Help   string
+	Labels string
 }
 
+// updateMetrics generates a Markdown table from a list of Prometheus collectors
+// and replaces a placeholder section in a given README file.
 func updateMetrics(readme []byte) []byte {
 	var rows []Row
 
-	prometheusRE := regexp.MustCompile(`fqName: "([^"]+)", help: "([^"]+)"`)
+	// This regex extracts the name, help text, and variable labels from the
+	// description string of a Prometheus metric.
+	prometheusRE := regexp.MustCompile(
+		`Desc{fqName:\s*"([^"]+)",\s*help:\s*"([^"]+)",\s*constLabels:\s*{[^}]*},\s*variableLabels:\s*{([^}]*)}}`)
+
+	// Iterate over all registered metrics.
 	for _, metric := range service.AllMetrics {
 		ch := make(chan *prometheus.Desc, 1)
 		metric.Describe(ch)
 		close(ch)
 		for desc := range ch {
-			matches := prometheusRE.FindStringSubmatch(desc.String())
-			if len(matches) == 3 {
-				rows = append(rows, Row{matches[1], matches[2]})
+			str := desc.String()
+			matches := prometheusRE.FindStringSubmatch(str)
+			if len(matches) != 4 {
+				panic("Failed to match Prometheus description: " + str)
 			}
+			labels := strings.ReplaceAll(matches[3], ",", ", ")
+			rows = append(rows, Row{matches[1], metricsType(metric), matches[2], labels})
 		}
 	}
 
-	// Determine column widths
 	maxName := len("Name")
+	maxType := len("Type")
 	maxHelp := len("Description")
+	maxLabels := len("Labels")
 	for _, r := range rows {
 		if len(r.Name) > maxName {
 			maxName = len(r.Name)
 		}
+		if len(r.Type) > maxType {
+			maxType = len(r.Type)
+		}
 		if len(r.Help) > maxHelp {
 			maxHelp = len(r.Help)
 		}
+		if len(r.Labels) > maxLabels {
+			maxLabels = len(r.Labels)
+		}
 	}
 
+	// Adding 2 for the backticks `` around the name
 	const quotes = 2
 
-	// Build Markdown table string
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("| %-*s | %-*s |\n", maxName+quotes, "Name", maxHelp, "Description"))
-	sb.WriteString(fmt.Sprintf("|-%s-|-%s-|\n", strings.Repeat("-", maxName+quotes), strings.Repeat("-", maxHelp)))
+	// Header
+	sb.WriteString(fmt.Sprintf("| %-*s | %-*s | %-*s | %-*s |\n",
+		maxName+quotes, "Name", maxType, "Type", maxHelp, "Description", maxLabels, "Labels"))
+	// Separator
+	sb.WriteString(fmt.Sprintf("|-%s-|-%s-|-%s-|-%s-|\n",
+		strings.Repeat("-", maxName+quotes),
+		strings.Repeat("-", maxType),
+		strings.Repeat("-", maxHelp),
+		strings.Repeat("-", maxLabels)))
+	// Body
 	for _, r := range rows {
 		name := "`" + r.Name + "`"
-		sb.WriteString(fmt.Sprintf("| %-*s | %-*s |\n", maxName+quotes, name, maxHelp, r.Help))
+		sb.WriteString(fmt.Sprintf("| %-*s | %-*s | %-*s | %-*s |\n",
+			maxName+quotes, name, maxType, r.Type, maxHelp, r.Help, maxLabels, r.Labels))
 	}
 	table := sb.String()
 
@@ -337,160 +363,17 @@ func updateMetrics(readme []byte) []byte {
 	return metricsRe.ReplaceAll(readme, []byte("${1}"+table+"${3}"))
 }
 
-const openapi = "docs/openapi.json"
-
-var schemas = readSchemas()
-
-func updateDtoDescription(readme []byte) []byte {
-	re := regexp.MustCompile(`<!--\s*table\s+([\w.]+)\s*-->\s*\n+(?:(\|(?:.*\|.*\n)+?)\n)?`)
-
-	updatedReadme := re.ReplaceAllFunc(readme, func(match []byte) []byte {
-		submatches := re.FindSubmatch(match)
-		if len(submatches) < 2 {
-			return match // not enough groups
-		}
-		name := string(submatches[1]) // group 1: table name
-		newTable := []byte(generateMarkdownTable(name))
-
-		// submatches[2] = old table (may be nil)
-		// Replace old table (group 2) with newTable
-		if len(submatches) >= 3 && len(submatches[2]) > 0 {
-			prefix := bytes.Split(match, submatches[2])[0]
-			return append(append(bytes.TrimRight(prefix, "\n"), []byte("\n\n")...), append(newTable, '\n')...)
-		}
-
-		// No table previously → just append new one
-		return append(bytes.TrimRight(match, "\n"), append([]byte("\n\n"), append(newTable, '\n')...)...)
-	})
-
-	return updatedReadme
-}
-
-func generateMarkdownTable(dtoName string) string {
-	schema, ok := schemas[dtoName]
-	if !ok {
-		panic(fmt.Errorf("schema %q not found", dtoName))
+func metricsType(metric prometheus.Collector) string {
+	switch metric.(type) {
+	case *prometheus.CounterVec, prometheus.Counter:
+		return "Counter"
+	case *prometheus.GaugeVec:
+		return "Gauge"
+	case *prometheus.HistogramVec:
+		return "Histogram"
+	case *prometheus.SummaryVec:
+		return "Summary"
+	default:
+		return ""
 	}
-
-	// Flatten properties recursively
-	rows := dtoToRows(schema)
-
-	// Determine column widths
-	maxName := len("Field")
-	maxHelp := len("Description")
-	for _, r := range rows {
-		if len(r.Name) > maxName {
-			maxName = len(r.Name)
-		}
-		for _, line := range strings.Split(r.Help, "\n") {
-			if len(line) > maxHelp {
-				maxHelp = len(line)
-			}
-		}
-	}
-
-	const quotes = 2
-	var sb strings.Builder
-
-	// Write header
-	sb.WriteString(fmt.Sprintf("| %-*s | %-*s |\n", maxName+quotes, "Field", maxHelp, "Description"))
-	sb.WriteString(fmt.Sprintf("|-%s-|-%s-|\n", strings.Repeat("-", maxName+quotes), strings.Repeat("-", maxHelp)))
-
-	// Write rows
-	for _, r := range rows {
-		name := "`" + r.Name + "`"
-		desc := strings.ReplaceAll(r.Help, "\n", "<br>")
-		sb.WriteString(fmt.Sprintf("| %-*s | %-*s |\n", maxName+quotes, name, maxHelp, desc))
-	}
-
-	return sb.String()
-}
-
-func readSchemas() map[string]Schema {
-	data, err := os.ReadFile(openapi)
-	if err != nil {
-		panic(fmt.Errorf("failed to read file: %w", err))
-	}
-
-	var api OpenAPI
-	if err := json.Unmarshal(data, &api); err != nil {
-		panic(fmt.Errorf("failed to unmarshal JSON: %w", err))
-	}
-
-	return api.Components.Schemas
-}
-
-type OpenAPI struct {
-	Components Components `json:"components"`
-}
-
-type Components struct {
-	Schemas map[string]Schema `json:"schemas"`
-}
-
-type Schema struct {
-	Type       string              `json:"type"`
-	Properties map[string]Property `json:"properties"`
-}
-
-type Property struct {
-	Description string      `json:"description,omitempty"`
-	Type        string      `json:"type,omitempty"`
-	AllOf       []Reference `json:"allOf"` //nolint:tagliatelle
-	Items       Reference   `json:"items"`
-	Enum        []string    `json:"enum"`
-}
-
-type Reference struct {
-	Ref string `json:"$ref,omitempty"`
-}
-
-func dtoToRows(input Schema) []Row {
-	var rows []Row
-	collectFields(input, "", &rows)
-	sort.SliceStable(rows, func(i, j int) bool {
-		depthI := strings.Count(rows[i].Name, ".")
-		depthJ := strings.Count(rows[j].Name, ".")
-		if depthI != depthJ {
-			return depthI < depthJ
-		}
-
-		return strings.Compare(rows[i].Name, rows[j].Name) < 0
-	})
-
-	return rows
-}
-
-func collectFields(schema Schema, prefix string, out *[]Row) {
-	for fieldName, prop := range schema.Properties {
-		fullName := fieldName
-		if prefix != "" {
-			fullName = prefix + "." + fieldName
-		}
-
-		if prop.Type == "object" {
-			// Check if it's a reference via allOf
-			for _, ref := range prop.AllOf {
-				if ref.Ref != "" {
-					refName := extractRefName(ref.Ref)
-					if refSchema, ok := schemas[refName]; ok {
-						collectFields(refSchema, fullName, out)
-					}
-				}
-			}
-			continue // Don't print the top-level object
-		}
-
-		// Normal field
-		*out = append(*out, Row{
-			Name: fullName,
-			Help: strings.ReplaceAll(prop.Description, "\n", "<br>"),
-		})
-	}
-}
-
-// Example: "#/components/schemas/dto.RunningJob" → "dto.RunningJob".
-func extractRefName(ref string) string {
-	parts := strings.Split(ref, "/")
-	return parts[len(parts)-1]
 }

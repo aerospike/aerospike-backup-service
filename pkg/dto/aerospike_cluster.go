@@ -13,21 +13,23 @@ import (
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
 // @Description AerospikeCluster represents the configuration for an Aerospike cluster for backup.
+//
+//nolint:lll
 type AerospikeCluster struct {
 	// The cluster name. Optional: used only in logs and error messages.
-	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster"`
+	ClusterLabel *string `yaml:"label,omitempty" json:"label,omitempty" example:"testCluster" extensions:"x-nullable"`
 	// The seed nodes details.
 	SeedNodes []SeedNode `yaml:"seed-nodes,omitempty" json:"seed-nodes,omitempty" validate:"required"`
 	// The connection timeout in milliseconds.
-	ConnTimeout *int64 `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty" example:"5000"`
+	ConnTimeout *int64 `yaml:"conn-timeout,omitempty" json:"conn-timeout,omitempty" example:"5000" default:"30000"`
 	// Whether should use "services-alternate" instead of "services" in info request during cluster tending.
-	UseServicesAlternate *bool `yaml:"use-services-alternate,omitempty" json:"use-services-alternate,omitempty"`
+	UseServicesAlternate *bool `yaml:"use-services-alternate,omitempty" json:"use-services-alternate,omitempty" default:"false"`
 	// The authentication details to the Aerospike cluster.
 	Credentials *Credentials `yaml:"credentials,omitempty" json:"credentials,omitempty"`
 	// The cluster TLS configuration.
 	TLS *TLS `yaml:"tls,omitempty" json:"tls,omitempty"`
 	// Specifies the maximum number of parallel scans per the cluster.
-	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100"`
+	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100" extensions:"x-nullable"`
 }
 
 // Validate validates the Aerospike cluster entity.
@@ -120,23 +122,25 @@ func (a *AerospikeCluster) seedNodesToModel() []model.SeedNode {
 
 // TLS represents the Aerospike cluster TLS configuration options.
 // @Description TLS represents the Aerospike cluster TLS configuration options.
+//
+//nolint:lll
 type TLS struct {
 	// Path to a trusted CA certificate file.
-	CAFile *string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/cafile.pem"`
+	CAFile *string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/cafile.pem" extensions:"x-nullable"`
 	// Path to a directory of trusted CA certificates.
-	CAPath *string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca"`
+	CAPath *string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
 	// The default TLS name used to authenticate each TLS socket connection.
-	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name"`
+	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name" extensions:"x-nullable"`
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
-	Protocols *string `yaml:"protocols,omitempty" json:"protocols,omitempty" example:"TLSv1.2"`
+	Protocols *string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
-	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"ECDHE-ECDSA-AES256-GCM-SHA384"`
+	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"ECDHE-ECDSA-AES256-GCM-SHA384" extensions:"x-nullable"`
 	// Path to the key for mutual authentication (if Aerospike cluster supports it).
-	Keyfile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/keyfile.pem"`
+	Keyfile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/keyfile.pem" extensions:"x-nullable"`
 	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
-	KeyfilePassword *string `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" example:"file:/path/to/password"`
+	KeyfilePassword *string `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" example:"file:/path/to/password" extensions:"x-nullable"`
 	// Path to the chain file for mutual authentication (if Aerospike Cluster supports it).
-	Certfile *string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/certfile.pem"`
+	Certfile *string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/certfile.pem" extensions:"x-nullable"`
 }
 
 func (t *TLS) fromModel(m *model.TLS) {
@@ -172,14 +176,14 @@ func (t *TLS) toModel() *model.TLS {
 type Credentials struct {
 	SecretAgentConfig `yaml:",inline"`
 	// The username for the cluster authentication.
-	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"`
+	User *string `yaml:"user,omitempty" json:"user,omitempty" example:"testUser"  extensions:"x-nullable"`
 	// The password for the cluster authentication.
 	// It can be either plain text or path into the secret agent.
-	Password *string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"`
+	Password *string `yaml:"password,omitempty" json:"password,omitempty" example:"testPswd"  extensions:"x-nullable"`
 	// The file path with the password string.
-	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"`
+	PasswordPath *string `yaml:"password-path,omitempty" json:"password-path,omitempty" example:"/path/to/pass.txt"  extensions:"x-nullable"`
 	// The authentication mode string (INTERNAL, EXTERNAL, PKI).
-	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI"`
+	AuthMode *string `yaml:"auth-mode,omitempty" json:"auth-mode,omitempty" enums:"INTERNAL,EXTERNAL,PKI" default:"INTERNAL"`
 }
 
 func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig) {
@@ -244,7 +248,7 @@ type SeedNode struct {
 	// The port of the node.
 	Port Port `yaml:"port,omitempty" json:"port,omitempty" example:"3000" validate:"required,min=1,max=65535"`
 	// TLS certificate name used for secure connections (if enabled).
-	TLSName string `yaml:"tls-name,omitempty" json:"tls-name,omitempty" example:"certName"`
+	TLSName string `yaml:"tls-name,omitempty" json:"tls-name,omitempty" example:"certName" extensions:"x-nullable"`
 }
 
 // Validate validates the SeedNode entity.
