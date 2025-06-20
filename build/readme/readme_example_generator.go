@@ -194,11 +194,11 @@ func main() {
 		panic(err)
 	}
 
-	updatedReadme := updateDtoExamples(readme)
-	updatedReadme = updateDefaultConfigSection(updatedReadme)
-	updatedReadme = updateMetrics(updatedReadme)
+	readme = updateDtoExamples(readme)
+	readme = updateDefaultConfigSection(readme)
+	readme = updateMetrics(readme)
 
-	err = os.WriteFile("README.md", updatedReadme, 0600)
+	err = os.WriteFile("README.md", readme, 0600)
 	if err != nil {
 		panic(err)
 	}
