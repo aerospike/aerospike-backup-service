@@ -66,10 +66,10 @@ var (
 		},
 		[]string{"routine", "type"},
 	)
-	// A gauge metrics for restore processes.
+	// A gauge metric for restore processes.
 	restoreInProgress = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_restore_progress_pct",
+			Name: "aerospike_backup_service_restore_in_progress",
 			Help: "Number of restore processes running",
 		},
 	)
