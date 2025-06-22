@@ -16,7 +16,7 @@ type SecretAgentConfig struct {
 	SecretAgent *SecretAgent `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty"`
 	// Secret Agent configuration (optional). Link to one of preconfigured agents.
 	// Mutually exclusive with 'secret-agent'.
-	SecretAgentName string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty"`
+	SecretAgentName string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty" extensions:"x-nullable"`
 }
 
 func (c SecretAgentConfig) validate() error {
@@ -56,6 +56,8 @@ func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, e
 // external secrets management services, fetching secrets on behalf of the server.
 //
 // @Description SecretAgent represents the configuration of an Aerospike Secret Agent.
+//
+//nolint:lll
 type SecretAgent struct {
 	// Connection type: tcp, unix.
 	//nolint:lll
@@ -63,13 +65,13 @@ type SecretAgent struct {
 	// Address of the Secret Agent.
 	Address string `yaml:"address" json:"address" example:"localhost" validate:"required"`
 	// Port the Secret Agent is running on.
-	Port *Port `yaml:"port,omitempty" json:"port,omitempty" example:"8080"`
+	Port *Port `yaml:"port,omitempty" json:"port,omitempty" example:"8080" extensions:"x-nullable"`
 	// Timeout in milliseconds.
-	Timeout *int `yaml:"timeout,omitempty" json:"timeout,omitempty" example:"5000"`
+	Timeout *int `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"1000"`
 	// The path to a trusted CA certificate file in PEM format.
-	TLSCAString *string `yaml:"tls-ca-file,omitempty" json:"tls-ca-file,omitempty" example:"/path/to/ca.pem"`
+	TLSCAString *string `yaml:"tls-ca-file,omitempty" json:"tls-ca-file,omitempty" example:"/path/to/ca.pem" extensions:"x-nullable"`
 	// Flag that shows if secret agent responses are encrypted with base64.
-	IsBase64 *bool `yaml:"is-base64,omitempty" json:"is-base64,omitempty" example:"false"`
+	IsBase64 *bool `yaml:"is-base64,omitempty" json:"is-base64,omitempty" default:"false"`
 }
 
 func (s *SecretAgent) ToModel() *model.SecretAgent {

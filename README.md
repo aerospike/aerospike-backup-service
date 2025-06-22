@@ -282,18 +282,71 @@ following application metrics:
 
 <!-- Metrics -->
 
-| Name                                                   | Description                                 |
-|--------------------------------------------------------|---------------------------------------------|
-| `aerospike_backup_service_runs_total`                  | Successful backup runs counter              |
-| `aerospike_backup_service_incremental_runs_total`      | Successful incremental backup runs counter  |
-| `aerospike_backup_service_skip_total`                  | Full backup skip counter                    |
-| `aerospike_backup_service_incremental_skip_total`      | Incremental backup skip counter             |
-| `aerospike_backup_service_failure_total`               | Full backup failure counter                 |
-| `aerospike_backup_service_incremental_failure_total`   | Incremental backup failure counter          |
-| `aerospike_backup_service_duration_millis`             | Full backup duration in milliseconds        |
-| `aerospike_backup_service_incremental_duration_millis` | Incremental backup duration in milliseconds |
-| `aerospike_backup_service_backup_progress_pct`         | Progress of backup processes in percentage  |
-| `aerospike_backup_service_restore_progress_pct`        | Progress of restore processes in percentage |
+| Name                                                        | Type      | Description                                                                                                      | Labels                 |
+|-------------------------------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------|------------------------|
+| `aerospike_backup_service_runs_total`                       | Counter   | Successful backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                  |                        |
+| `aerospike_backup_service_incremental_runs_total`           | Counter   | Successful incremental backup runs counter (Deprecated, use `aerospike_backup_service_backup_events_total`)      |                        |
+| `aerospike_backup_service_skip_total`                       | Counter   | Full backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                        |                        |
+| `aerospike_backup_service_incremental_skip_total`           | Counter   | Incremental backup skip counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                 |                        |
+| `aerospike_backup_service_failure_total`                    | Counter   | Full backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)                     |                        |
+| `aerospike_backup_service_incremental_failure_total`        | Counter   | Incremental backup failure counter (Deprecated, use `aerospike_backup_service_backup_events_total`)              |                        |
+| `aerospike_backup_service_duration_millis`                  | Counter   | Full backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)        |                        |
+| `aerospike_backup_service_incremental_duration_millis`      | Counter   | Incremental backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`) |                        |
+| `aerospike_backup_service_backup_progress_pct`              | Gauge     | Progress of backup processes in percentage                                                                       | routine, type          |
+| `aerospike_backup_service_restore_progress_pct`             | Counter   | Number of restore processes running                                                                              |                        |
+| `aerospike_backup_service_backup_events_total`              | Counter   | Backup service job events by routine, type (full/incremental), and outcome (success, failure, retry, skip)       | routine, type, outcome |
+| `aerospike_backup_service_backup_duration_seconds`          | Histogram | Duration in seconds of finished backups by routine and type (full/incremental)                                   | routine, type          |
+| `aerospike_backup_service_last_successful_backup_timestamp` | Gauge     | Unix timestamp of the last successful backup per routine                                                         | routine                |
+
+**Example PromQL Queries**
+
+Use these queries in Grafana panels or the Prometheus expression browser to monitor and alert on backup performance.
+
+- ✅ Number of successful full and incremental backups for a specific routine (e.g., daily-ns1):
+
+  `sum by (type) ( aerospike_backup_service_backup_events_total{routine="daily-ns1", outcome="success"} )`
+
+- 🔁 Number of backup retry attempts in the past hour:
+  `increase(aerospike_backup_service_backup_events_total{outcome="retry"}[1h])`
+
+- ❌ Total number of failed backups across all routines and types:
+
+  `sum( aerospike_backup_service_backup_events_total{outcome="failure"} )`
+
+- 🚫 Total number of cancelled backups:
+  `sum(aerospike_backup_service_backup_events_total{outcome="cancel"})`
+
+- ⏰ Time since last backup for routine
+
+  `time() - aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1"}`
+
+**Example Prometheus Alert**
+
+- This alert fires if any backup job failure has been recorded in the last 15 minutes:
+
+```yaml
+- alert: BackupJobFailureDetected
+  expr: increase(aerospike_backup_service_backup_events_total{outcome="failure"}[15m]) > 0
+  labels:
+    severity: warning
+  annotations:
+    summary: "Backup job failure detected"
+    description: "At least one backup job has failed in the last 15 minutes."
+```
+
+- Alert if no successful backup in the last 24h for a specific routine (e.g., daily-ns1):
+
+```yaml
+- alert: BackupTooOld
+  expr: (time() - aerospike_backup_service_last_successful_backup_timestamp{routine="daily-ns1"}) > 86400
+  labels:
+    severity: critical
+  annotations:
+    summary: "No recent backup for routine daily-ns1"
+    description: "The last successful backup for routine daily-ns1 was more than 24 hours ago."
+```
+
+**Endpoints**
 
 * `/metrics` exposes metrics for Prometheus to check performance of the backup service.
   See [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/getting_started/) for instructions.

@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/backup-go"
 	ioStorage "github.com/aerospike/backup-go/io/storage"
 	gcp "github.com/aerospike/backup-go/io/storage/gcp/storage"
+	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/option"
 )
 
@@ -87,6 +88,16 @@ func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GCP client: %w", err)
 	}
+
+	client.SetRetry(
+		storage.WithPolicy(storage.RetryAlways),
+		storage.WithMaxAttempts(int(model.StorageRetryPolicy.MaxRetries)),
+		storage.WithBackoff(gax.Backoff{
+			Initial:    model.StorageRetryPolicy.BaseTimeout,
+			Multiplier: model.StorageRetryPolicy.Multiplier,
+			Max:        model.StorageRetryPolicy.MaxDuration,
+		}),
+	)
 
 	// Set finalizer for the client to release allocated resources.
 	// TODO: replace with runtime.AddCleanup when upgrading to go1.24

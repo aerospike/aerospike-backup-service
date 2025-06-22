@@ -26,6 +26,7 @@ func newRetryableBackupHandler(
 	start func(ctx context.Context) (backupexecutor.BackupHandler, error),
 	onFail func(ctx context.Context),
 	onSuccess func(ctx context.Context, stats *models.BackupStats) error,
+	onRetry func(),
 ) *retryableBackupHandler {
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	h := &retryableBackupHandler{
@@ -37,7 +38,7 @@ func newRetryableBackupHandler(
 	retryOnSuccess := func(handler backupexecutor.BackupHandler) error {
 		err := retry.run("write metadata", func() error {
 			return onSuccess(ctx, handler.GetStats())
-		})
+		}, func() {})
 		if err != nil {
 			// Trigger onFail if onSuccess ultimately fails
 			onFail(ctx)
@@ -66,7 +67,7 @@ func newRetryableBackupHandler(
 
 	// Start the backup process with retries
 	go func() {
-		h.errCh <- retry.run("backup", processBackup)
+		h.errCh <- retry.run("backup", processBackup, onRetry)
 	}()
 
 	return h

@@ -13,21 +13,21 @@ import (
 type GcpStorage struct {
 	SecretAgentConfig `yaml:",inline"`
 	// Path to the file containing the service account key in JSON format.
-	KeyFile string `yaml:"key-file-path,omitempty" json:"key-file-path,omitempty"`
+	KeyFile string `yaml:"key-file-path,omitempty" json:"key-file-path,omitempty" extensions:"x-nullable"`
 	// Key is the service account key in JSON format.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
-	Key string `yaml:"key,omitempty" json:"key,omitempty"`
+	Key string `yaml:"key,omitempty" json:"key,omitempty" extensions:"x-nullable"`
 	// GCP storage bucket name.
 	BucketName string `yaml:"bucket-name" json:"bucket-name" validate:"required"`
 	// The root path for the backup repository. If not specified, backups will be saved in the bucket's root.
-	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups"`
+	Path string `yaml:"path,omitempty" json:"path,omitempty" example:"backups" extensions:"x-nullable"`
 	// Alternative url.
 	// It is not recommended to use an alternate URL in a production environment.
-	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty"`
+	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty" extensions:"x-nullable"`
 	// The minimum size in bytes of individual GCP storage chunks.
 	MinPartSize int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880"`
 	// StorageClass defines the storage class for data and metadata objects.
-	StorageClass *GcpStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
+	StorageClass *GcpStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty" extensions:"x-nullable"`
 }
 
 // Validate checks if the GcpStorage is valid.
@@ -99,7 +99,7 @@ var gcpDataClasses = []string{
 // @Description GcpStorageClass represents the configuration for GCP Storage Class.
 type GcpStorageClass struct {
 	// DataClass specifies the storage class for object data.
-	DataClass string `json:"data" yaml:"data"`
+	DataClass string `json:"data" yaml:"data" extensions:"x-nullable"`
 }
 
 func (s *GcpStorageClass) Validate() error {
@@ -121,7 +121,7 @@ func (s *GcpStorageClass) ToModel() *model.StorageClass {
 
 	return &model.StorageClass{
 		DataClass:     s.DataClass,
-		MetadataClass: "", // GCP metadata always uses STANDARD class
+		MetadataClass: "", // GCP metadata always uses STANDARD class because it's the only one without retrieval fees.
 	}
 }
 
