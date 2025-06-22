@@ -1,8 +1,10 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -14,8 +16,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
-	"github.com/prometheus/client_golang/prometheus"
-	p "github.com/prometheus/client_model/go"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -104,12 +105,15 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mockClusterConfigWriter,
 	))
 
-	ctx := context.Background()
-	err := o.runFullBackupInternal(ctx, now)
-	time.Sleep(10 * time.Millisecond) // time to unregister routine.
+	counter := backupCounters.WithLabelValues(routineName, string(jobTypeFull), string(BackupOutcomeSuccess))
+	counterValueBefore := testutil.ToFloat64(counter)
+	o.runFullBackup(context.Background(), now)
 
-	assert.NoError(t, err)
+	time.Sleep(10 * time.Millisecond) // time to unregister routine.
 	assert.Equal(t, uint64(10), stats.TotalRecords.Load(), "Backup stats should be correct")
+
+	counterValueAfter := testutil.ToFloat64(counter)
+	assert.Equal(t, counterValueBefore+1, counterValueAfter)
 }
 
 func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
@@ -147,11 +151,29 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 
+	counter := backupCounters.WithLabelValues(routineName, string(jobTypeFull), string(BackupOutcomeSkip))
+	counterValueBefore := testutil.ToFloat64(counter)
+
 	err := o.runFullBackupInternal(ctx, now)
 	assert.NoError(t, err)
+
+	counterValueAfter := testutil.ToFloat64(counter)
+	assert.Equal(t, counterValueBefore+1, counterValueAfter)
 }
 
 func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
+	// setup test logger
+	defer func(old *slog.Logger) {
+		slog.SetDefault(old)
+	}(slog.Default())
+
+	var buf bytes.Buffer
+	handler := slog.NewTextHandler(&buf, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
+
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -176,13 +198,13 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 		mockClusterConfigWriter,
 	))
 
-	ctx := context.Background()
-	now := time.Now()
+	counter := backupCounters.WithLabelValues(routineName, string(jobTypeFull), string(BackupOutcomeFailure))
+	counterValueBefore := testutil.ToFloat64(counter)
+	o.runFullBackup(context.Background(), time.Now())
 
-	err := o.runFullBackupInternal(ctx, now)
-
-	assert.Error(t, err, "Should return error on client connection failure")
-	assert.Contains(t, err.Error(), "cannot get backup client")
+	counterValueAfter := testutil.ToFloat64(counter)
+	assert.Equal(t, counterValueBefore+1, counterValueAfter)
+	assert.Contains(t, buf.String(), connectionError.Error())
 }
 
 // TestRunFullBackupInternal_RaceCondition tests the race condition scenario where:
@@ -295,17 +317,12 @@ func TestRunIncrementalBackup_SkipWhenNoFullBackup(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 
-	skippedBefore := getCounterValue(incrBackupSkippedCounter)
+	counter := backupCounters.WithLabelValues(routineName, string(jobTypeIncremental), string(BackupOutcomeSkip))
+	counterValueBefore := testutil.ToFloat64(counter)
 	o.runIncrementalBackup(ctx, now)
 
-	skipped := getCounterValue(incrBackupSkippedCounter)
-	assert.Equal(t, skippedBefore+1, skipped)
-}
-
-func getCounterValue(c prometheus.Counter) int {
-	m := &p.Metric{}
-	_ = c.Write(m)
-	return int(m.GetCounter().GetValue())
+	counterValueAfter := testutil.ToFloat64(counter)
+	assert.Equal(t, counterValueBefore+1, counterValueAfter)
 }
 
 func TestRunIncrementalBackup_SkipWhenFullBackupInProgress(t *testing.T) {
@@ -342,11 +359,12 @@ func TestRunIncrementalBackup_SkipWhenFullBackupInProgress(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 
-	skippedBefore := getCounterValue(incrBackupSkippedCounter)
+	counter := backupCounters.WithLabelValues(routineName, string(jobTypeIncremental), string(BackupOutcomeSkip))
+	counterValueBefore := testutil.ToFloat64(counter)
 	o.runIncrementalBackup(ctx, now)
 
-	skipped := getCounterValue(incrBackupSkippedCounter)
-	assert.Equal(t, skippedBefore+1, skipped)
+	counterValueAfter := testutil.ToFloat64(counter)
+	assert.Equal(t, counterValueBefore+1, counterValueAfter)
 }
 
 func TestRunIncrementalBackup_Success(t *testing.T) {
@@ -355,7 +373,13 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 		LastRunTime: model.NewFullBackupTime(time.Now()),
 	}
 
+	counter := backupCounters.WithLabelValues(routineName, string(jobTypeIncremental), string(BackupOutcomeSuccess))
+	counterValueBefore := testutil.ToFloat64(counter)
+
 	runIncrementalBackup(t, routineState, setupBaseConfig())
+
+	counterValueAfter := testutil.ToFloat64(counter)
+	assert.Equal(t, counterValueBefore+1, counterValueAfter)
 }
 
 func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
@@ -445,9 +469,13 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 
 	ctx := context.Background()
 	now := time.Now()
+	counter := backupCounters.WithLabelValues(routineName, string(jobTypeIncremental), string(BackupOutcomeSuccess))
+	counterValueBefore := testutil.ToFloat64(counter)
 
 	o.runIncrementalBackup(ctx, now)
 	time.Sleep(10 * time.Millisecond) // time to unregister routine.
 
 	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")
+	counterValueAfter := testutil.ToFloat64(counter)
+	assert.Equal(t, counterValueBefore+1, counterValueAfter)
 }
