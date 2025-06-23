@@ -37,7 +37,9 @@ type AzureStorage struct {
 	StorageClass *AzureStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
 
-const AzureMinUploadChunkSize = 1024 * 1024 // 1 MiB
+// azureMinUploadBlockSize minimum block size for Azure.
+// see https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/storage/azblob/blockblob/models.go#L246 for details.
+const azureMinUploadBlockSize = 1024 * 1024 // 1 MiB
 
 // Validate checks if the AzureStorage is valid.
 func (a *AzureStorage) Validate() error {
@@ -60,7 +62,7 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 		return fmt.Errorf("invalid storage class: %w", err)
 	}
 
-	if a.MinPartSize != nil && *a.MinPartSize < AzureMinUploadChunkSize {
+	if a.MinPartSize != nil && *a.MinPartSize < azureMinUploadBlockSize {
 		return errValidationInvalidValue("min-part-size", *a.MinPartSize, "at least 1MiB")
 	}
 
