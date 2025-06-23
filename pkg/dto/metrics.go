@@ -7,10 +7,10 @@ import (
 // Metrics represents the current job speed.
 // @Description Metrics represents the current job speed.
 type Metrics struct {
-	// RecordsPerSecond indicates the number of records processed per second.
+	// RecordsPerSecond indicates the number of records processed by Aerospike per second.
 	RecordsPerSecond uint64 `json:"records-per-second"`
 
-	// KilobytesPerSecond indicates the amount of data processed per second, in kilobytes.
+	// KilobytesPerSecond indicates the amount of data processed by storage per second, in kilobytes.
 	KilobytesPerSecond uint64 `json:"kilobytes-per-second"`
 
 	// Pipeline represents the number of records that have been read from the source
