@@ -27,10 +27,9 @@ type S3Storage struct {
 	// The log level of the AWS S3 SDK (AWS S3 optional).
 	S3LogLevel *string `yaml:"s3-log-level,omitempty" json:"s3-log-level,omitempty" default:"FATAL" enum:"OFF,FATAL,ERROR,WARN,INFO,DEBUG,TRACE"`
 	// The minimum size in bytes of individual S3 UploadParts.
-	MinPartSize int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880"`
+	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880" extensions:"x-nullable" minimum:"5242880"`
 	// The maximum number of simultaneous requests from S3.
-	// Zero means no limit.
-	MaxConnsPerHost int `yaml:"max-async-connections,omitempty" json:"max-async-connections,omitempty" example:"16" default:"0"`
+	MaxConnsPerHost *int `yaml:"max-async-connections,omitempty" json:"max-async-connections,omitempty" example:"16" extensions:"x-nullable"`
 	// Access Key ID for authentication with S3 StaticCredentialsProvider.
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	AccessKeyID *string `yaml:"access-key-id,omitempty" json:"access-key-id,omitempty" extensions:"x-nullable"`
@@ -40,6 +39,9 @@ type S3Storage struct {
 	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *S3StorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
+
+// s3MinUploadPartSize is the AWS-enforced minimum size of a multipart upload part (except the last one).
+const s3MinUploadPartSize = 5 * 1024 * 1024 // 5 MiB
 
 // Validate checks if the S3Storage is valid.
 func (s *S3Storage) Validate() error {
@@ -55,6 +57,12 @@ func (s *S3Storage) Validate() error {
 	}
 	if s.AccessKeyID == nil && s.SecretAccessKey != nil {
 		return fmt.Errorf("secret-access-key is set but access-key-id is missing")
+	}
+	if s.MinPartSize != nil && *s.MinPartSize < s3MinUploadPartSize {
+		return errValidationInvalidValue("min-part-size", s.MinPartSize, "at least 5MiB")
+	}
+	if s.MaxConnsPerHost != nil && *s.MaxConnsPerHost < 0 {
+		return errValidationNegative("max-async-connections", *s.MaxConnsPerHost)
 	}
 	if err := s.StorageClass.Validate(); err != nil {
 		return fmt.Errorf("invalid storage class: %w", err)
