@@ -3044,15 +3044,16 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "max-async-connections": {
-                    "description": "The maximum number of simultaneous requests from S3.\nZero means no limit.",
+                    "description": "The maximum number of simultaneous requests from S3.",
                     "type": "integer",
-                    "default": 0,
+                    "x-nullable": true,
                     "example": 16
                 },
                 "min-part-size": {
                     "description": "The minimum size in bytes of individual S3 UploadParts.",
                     "type": "integer",
-                    "default": 5242880
+                    "default": 5242880,
+                    "x-nullable": true
                 },
                 "path": {
                     "description": "The root path for the backup repository within the bucket.\nIf not specified, backups will be saved in the bucket's root.",

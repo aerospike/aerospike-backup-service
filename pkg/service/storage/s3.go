@@ -55,8 +55,8 @@ func (a *S3StorageAccessor) createWriter(
 		return nil, err
 	}
 
-	if s3s.MinPartSize > 0 {
-		opts = append(opts, ioStorage.WithChunkSize(s3s.MinPartSize))
+	if s3s.MinPartSize != nil {
+		opts = append(opts, ioStorage.WithChunkSize(*s3s.MinPartSize))
 	}
 
 	return s3.NewWriter(ctx, client, s3s.Bucket, opts...)
@@ -101,10 +101,10 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 
 		o.UsePathStyle = true
 
-		if s.MaxConnsPerHost > 0 {
+		if s.MaxConnsPerHost != nil {
 			o.HTTPClient = &http.Client{
 				Transport: &http.Transport{
-					MaxConnsPerHost:     s.MaxConnsPerHost,
+					MaxConnsPerHost:     *s.MaxConnsPerHost,
 					IdleConnTimeout:     90 * time.Second,
 					TLSHandshakeTimeout: 10 * time.Second,
 					ReadBufferSize:      64 * 1024, // 64KB read buffer (default is 4KB)

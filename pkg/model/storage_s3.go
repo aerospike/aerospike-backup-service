@@ -20,9 +20,9 @@ type S3Storage struct {
 	// Valid values are: OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE.
 	S3LogLevel *string
 	// MinPartSize is the minimum size in bytes for multipart upload parts.
-	MinPartSize int
+	MinPartSize *int
 	// MaxConnsPerHost limits the number of concurrent connections to S3.
-	MaxConnsPerHost int
+	MaxConnsPerHost *int
 	// Optional authentication.
 	Auth *S3Authentication
 	// StorageClass defines the storage class for data and metadata objects.
