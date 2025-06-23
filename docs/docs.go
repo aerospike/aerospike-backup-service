@@ -3283,6 +3283,7 @@ const docTemplate = `{
                 "name": {
                     "description": "The default TLS name used to authenticate each TLS socket connection.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "tls-name"
                 }
             }

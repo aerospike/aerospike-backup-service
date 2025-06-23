@@ -135,7 +135,7 @@ type TLS struct {
 	// Path to a directory of trusted CA certificates.
 	CAPath *string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
 	// The default TLS name used to authenticate each TLS socket connection.
-	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name"`
+	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name" extensions:"x-nullable"`
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
 	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"ECDHE-ECDSA-AES256-GCM-SHA384" extensions:"x-nullable"`
 	// Path to the key for mutual authentication (if Aerospike cluster supports it).
