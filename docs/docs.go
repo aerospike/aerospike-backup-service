@@ -1748,7 +1748,8 @@ const docTemplate = `{
                 "min-part-size": {
                     "description": "The minimum size in bytes of individual Azure Blob chunks.",
                     "type": "integer",
-                    "default": 5242880
+                    "default": 5242880,
+                    "minimum": 1048576
                 },
                 "path": {
                     "description": "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
@@ -2120,7 +2121,9 @@ const docTemplate = `{
                 "level": {
                     "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).",
                     "type": "integer",
-                    "default": 0
+                    "default": 0,
+                    "maximum": 22,
+                    "minimum": -1
                 },
                 "mode": {
                     "description": "The compression mode to be used (default is NONE).",
@@ -2324,7 +2327,8 @@ const docTemplate = `{
                 "min-part-size": {
                     "description": "The minimum size in bytes of individual GCP storage chunks.",
                     "type": "integer",
-                    "default": 5242880
+                    "default": 5242880,
+                    "minimum": 262144
                 },
                 "path": {
                     "description": "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
@@ -3053,6 +3057,7 @@ const docTemplate = `{
                     "description": "The minimum size in bytes of individual S3 UploadParts.",
                     "type": "integer",
                     "default": 5242880,
+                    "minimum": 5242880,
                     "x-nullable": true
                 },
                 "path": {

@@ -32,7 +32,7 @@ type AzureStorage struct {
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty" extensions:"x-nullable"`
 	// The minimum size in bytes of individual Azure Blob chunks.
-	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880"`
+	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880" minimum:"1048576"`
 	// StorageClass defines the storage tier for data and metadata objects.
 	StorageClass *AzureStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
