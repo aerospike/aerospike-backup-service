@@ -52,7 +52,7 @@ type RunningBackupsRegistryImpl struct {
 	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
 	lastSuccessful *util.SafeMap[string, *model.BackupTime]
 
-	routineLocks  *util.SafeMap[string, *sync.RWMutex] // Protects individual routines during synchronization
+	routineLocks  util.LockMap // Protects individual routines during synchronization
 	ctx           context.Context
 	config        *model.Config
 	backupReader  BackupReader
@@ -73,13 +73,8 @@ func NewRunningBackupsRegistry(
 		backupReader:   backupReader,
 		handlers:       util.NewSafeMap[registryKey, CancelableBackupHandler](),
 		lastSuccessful: util.NewSafeMap[string, *model.BackupTime](),
-		routineLocks:   util.NewSafeMap[string, *sync.RWMutex](),
 		routineCancel:  util.NewSafeMap[string, context.CancelFunc](),
 	}
-}
-
-func (r *RunningBackupsRegistryImpl) getRoutineLock(routineName string) *sync.RWMutex {
-	return r.routineLocks.LoadOrStore(routineName, &sync.RWMutex{})
 }
 
 // SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
@@ -120,7 +115,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 }
 
 func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string) {
-	routineLock := r.getRoutineLock(routineName)
+	routineLock := r.routineLocks.Get(routineName)
 	routineLock.Lock()
 	defer routineLock.Unlock()
 
@@ -149,6 +144,10 @@ func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string) {
 		slog.String("routine", routineName),
 		slog.String("lastRun", lastRun.String()))
 
+	// set last successful backup time for backups done before ABS started
+	if lastRun.LatestRun() != nil {
+		lastBackupTimestamp.WithLabelValues(routineName).Set(float64(lastRun.LatestRun().Unix()))
+	}
 	r.lastSuccessful.Store(routineName, lastRun)
 }
 
@@ -165,7 +164,7 @@ func (r *RunningBackupsRegistryImpl) unregister(routineName string, job jobType,
 }
 
 func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType, timestamp time.Time) {
-	routineLock := r.getRoutineLock(routineName)
+	routineLock := r.routineLocks.Get(routineName)
 	routineLock.Lock()
 	defer routineLock.Unlock()
 
@@ -184,6 +183,8 @@ func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType
 		}
 	}
 
+	// set last successful backup time for just finished backup
+	lastBackupTimestamp.WithLabelValues(routineName).Set(float64(timestamp.Unix()))
 	r.lastSuccessful.ApplyOrCreate(
 		routineName,
 		updateLastTimestamp,
@@ -202,7 +203,7 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
 	incrBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeIncremental))
 
-	routineLock := r.getRoutineLock(routineName)
+	routineLock := r.routineLocks.Get(routineName)
 	routineLock.RLock()
 	defer routineLock.RUnlock()
 

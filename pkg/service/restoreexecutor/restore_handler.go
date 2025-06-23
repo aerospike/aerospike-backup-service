@@ -15,27 +15,3 @@ type RestoreHandler interface {
 	// GetMetrics returns the performance metrics of the restore job.
 	GetMetrics() *models.Metrics
 }
-
-// RestoreHandlerWithCancel is a wrapper around a RestoreHandler that adds a cancel function.
-type RestoreHandlerWithCancel struct {
-	RestoreHandler
-	cancel func()
-}
-
-// NewRestoreHandlerWithCancel creates a new RestoreHandlerWithCancel.
-func NewRestoreHandlerWithCancel(handler RestoreHandler, cancelFunc func()) *RestoreHandlerWithCancel {
-	return &RestoreHandlerWithCancel{
-		RestoreHandler: handler,
-		cancel:         cancelFunc,
-	}
-}
-
-// Cancel cancels the restore job.
-func (rj *RestoreHandlerWithCancel) Cancel() {
-	rj.cancel()
-}
-
-// GetStats returns the statistics of the restore job.
-func (rj *RestoreHandlerWithCancel) GetStats() *models.RestoreStats {
-	return rj.RestoreHandler.GetStats()
-}

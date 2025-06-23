@@ -1664,6 +1664,7 @@ const docTemplate = `{
                 "conn-timeout": {
                     "description": "The connection timeout in milliseconds.",
                     "type": "integer",
+                    "default": 30000,
                     "example": 5000
                 },
                 "credentials": {
@@ -1677,11 +1678,13 @@ const docTemplate = `{
                 "label": {
                     "description": "The cluster name. Optional: used only in logs and error messages.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "testCluster"
                 },
                 "max-parallel-scans": {
                     "description": "Specifies the maximum number of parallel scans per the cluster.",
                     "type": "integer",
+                    "x-nullable": true,
                     "example": 100
                 },
                 "seed-nodes": {
@@ -1701,7 +1704,8 @@ const docTemplate = `{
                 },
                 "use-services-alternate": {
                     "description": "Whether should use \"services-alternate\" instead of \"services\" in info request during cluster tending.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 }
             }
         },
@@ -1715,19 +1719,23 @@ const docTemplate = `{
             "properties": {
                 "account-key": {
                     "description": "AccountKey is the Azure storage account key for Shared Key authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "account-name": {
                     "description": "AccountName is the Azure storage account name for Shared Key authentication.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "client-id": {
                     "description": "ClientID is the Azure Active Directory client ID for AAD authentication.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "client-secret": {
                     "description": "ClientSecret is the Azure Active Directory client secret for AAD authentication.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "container-name": {
                     "description": "ContainerName is the name of the Azure Blob container.",
@@ -1740,11 +1748,13 @@ const docTemplate = `{
                 "min-part-size": {
                     "description": "The minimum size in bytes of individual Azure Blob chunks.",
                     "type": "integer",
-                    "default": 5242880
+                    "default": 5242880,
+                    "minimum": 1048576
                 },
                 "path": {
                     "description": "Path is the root path for the backup repository within the container.\nIf not specified, backups will be saved in the container's root.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "backups"
                 },
                 "secret-agent": {
@@ -1757,7 +1767,8 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "storage-class": {
                     "description": "StorageClass defines the storage tier for data and metadata objects.",
@@ -1769,7 +1780,8 @@ const docTemplate = `{
                 },
                 "tenant-id": {
                     "description": "TenantID is the Azure Active Directory tenant ID for AAD authentication.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 }
             }
         },
@@ -1779,11 +1791,13 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage tier for object data.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "metadata": {
                     "description": "MetadataClass specifies the storage tier for metadata.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 }
             }
         },
@@ -1881,6 +1895,7 @@ const docTemplate = `{
                 "bandwidth": {
                     "description": "Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.\nDefault is no limit.",
                     "type": "integer",
+                    "default": 0,
                     "example": 10000
                 },
                 "compression": {
@@ -1893,7 +1908,8 @@ const docTemplate = `{
                 },
                 "concurrent-incremental": {
                     "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "encryption": {
                     "description": "Encryption details (algorithm and key). Default is no encryption.",
@@ -1904,30 +1920,35 @@ const docTemplate = `{
                     ]
                 },
                 "file-limit": {
-                    "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created. Default is 250 MB.",
+                    "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created.",
                     "type": "integer",
-                    "example": 1024
+                    "default": 250
                 },
                 "no-indexes": {
-                    "description": "Do not back up any secondary index definitions. Default: false.",
-                    "type": "boolean"
+                    "description": "Do not back up any secondary index definitions.",
+                    "type": "boolean",
+                    "default": false
                 },
                 "no-records": {
-                    "description": "Do not back up any record data (metadata or bin data). Default: false.",
-                    "type": "boolean"
+                    "description": "Do not back up any record data (metadata or bin data).",
+                    "type": "boolean",
+                    "default": false
                 },
                 "no-udfs": {
-                    "description": "Do not back up any UDF modules. Default: false.",
-                    "type": "boolean"
+                    "description": "Do not back up any UDF modules.",
+                    "type": "boolean",
+                    "default": false
                 },
                 "parallel": {
-                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.\nDefault: 8.",
+                    "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.",
                     "type": "integer",
+                    "default": 8,
                     "example": 1
                 },
                 "records-per-second": {
                     "description": "Limits the number of records returned per second (RPS). Default is no limit.",
                     "type": "integer",
+                    "default": 0,
                     "example": 1000
                 },
                 "retention": {
@@ -1948,21 +1969,23 @@ const docTemplate = `{
                 },
                 "sealed": {
                     "description": "Sealed determines whether backup should include keys updated during the backup process.\nWhen true, the backup contains only records that last modified before backup started.\nWhen false (default), records updated during backup might be included in the backup, but it's not guaranteed.\nThis parameter does not affect XDR backups (which always includes all keys).",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "socket-timeout": {
                     "description": "Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
-                    "example": 1000
+                    "default": 60000
                 },
                 "total-timeout": {
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
                     "type": "integer",
-                    "example": 2000
+                    "default": 0
                 },
                 "with-cluster-configuration": {
-                    "description": "Back up Aerospike cluster configuration. Default: false.",
-                    "type": "boolean"
+                    "description": "Back up Aerospike cluster configuration.",
+                    "type": "boolean",
+                    "default": false
                 }
             }
         },
@@ -1976,26 +1999,30 @@ const docTemplate = `{
             ],
             "properties": {
                 "backup-policy": {
-                    "description": "The name of the corresponding backup policy (optional).",
-                    "type": "string"
+                    "description": "The name of the corresponding backup policy, one of defined in ` + "`" + `config.backup-policies` + "`" + ` (optional).",
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "bin-list": {
-                    "description": "The list of backup bin names (optional, an empty list implies backing up all bins).",
+                    "description": "The list of backup bin names (optional, an empty list implies backing up all bins) extensions:\"x-nullable\".",
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
+                    "x-nullable": true,
                     "example": [
                         "dataBin"
                     ]
                 },
                 "disabled": {
                     "description": "Whether this routine is disabled and should not run. Default: false.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "incr-interval-cron": {
                     "description": "The interval for incremental backup as a cron expression string (optional).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "*/10 * * * * *"
                 },
                 "interval-cron": {
@@ -2009,6 +2036,7 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     },
+                    "x-nullable": true,
                     "example": [
                         "source-ns1"
                     ]
@@ -2018,18 +2046,21 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "x-nullable": true
                 },
                 "partition-list": {
                     "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"\u003cstart\u003e,\u003ccount\u003e\" (e.g., \"100,50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nThis field is mutually exclusive with node-list.",
-                    "type": "string"
+                    "type": "string",
+                    "default": "0-4096"
                 },
                 "prefer-racks": {
-                    "description": "PreferRacks specifies a list of Aerospike Server rack IDs to prioritize when reading records during backup.\nThis is optional and can be used to optimize for rack-aware deployments.",
+                    "description": "The list of Aerospike Server rack IDs to prioritize when reading records during backup.\nThis is optional and can be used to optimize for rack-aware deployments.",
                     "type": "array",
                     "items": {
                         "type": "integer"
                     },
+                    "x-nullable": true,
                     "example": [
                         0
                     ]
@@ -2037,7 +2068,7 @@ const docTemplate = `{
                 "secret-agent": {
                     "description": "The name of a Secret Agent to read secrets from (optional).",
                     "type": "string",
-                    "example": "sa"
+                    "x-nullable": true
                 },
                 "set-list": {
                     "description": "The list of backup set names (optional, an empty list implies backing up all sets).",
@@ -2045,6 +2076,7 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     },
+                    "x-nullable": true,
                     "example": [
                         "set1"
                     ]
@@ -2056,8 +2088,7 @@ const docTemplate = `{
                 },
                 "storage": {
                     "description": "The name of the corresponding storage provider configuration.",
-                    "type": "string",
-                    "example": "aws"
+                    "type": "string"
                 }
             }
         },
@@ -2089,7 +2120,10 @@ const docTemplate = `{
             "properties": {
                 "level": {
                     "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).",
-                    "type": "integer"
+                    "type": "integer",
+                    "default": 0,
+                    "maximum": 22,
+                    "minimum": -1
                 },
                 "mode": {
                     "description": "The compression mode to be used (default is NONE).",
@@ -2158,6 +2192,7 @@ const docTemplate = `{
                 "auth-mode": {
                     "description": "The authentication mode string (INTERNAL, EXTERNAL, PKI).",
                     "type": "string",
+                    "default": "INTERNAL",
                     "enum": [
                         "INTERNAL",
                         "EXTERNAL",
@@ -2167,11 +2202,13 @@ const docTemplate = `{
                 "password": {
                     "description": "The password for the cluster authentication.\nIt can be either plain text or path into the secret agent.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "testPswd"
                 },
                 "password-path": {
                     "description": "The file path with the password string.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/pass.txt"
                 },
                 "secret-agent": {
@@ -2184,11 +2221,13 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "user": {
                     "description": "The username for the cluster authentication.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "testUser"
                 }
             }
@@ -2199,15 +2238,18 @@ const docTemplate = `{
             "properties": {
                 "key-env": {
                     "description": "The name of the environment variable containing the encryption key.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "key-file": {
                     "description": "The path to the file containing the encryption key.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "key-secret": {
                     "description": "The secret keyword in Aerospike Secret Agent containing the encryption key.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "mode": {
                     "description": "The encryption mode to be used (NONE, AES128, AES256)",
@@ -2224,6 +2266,9 @@ const docTemplate = `{
         "dto.FileLoggerConfig": {
             "description": "FileLoggerConfig represents the configuration for the file logger writer.",
             "type": "object",
+            "required": [
+                "filename"
+            ],
             "properties": {
                 "compress": {
                     "description": "Compress determines if the rotated log files should be compressed\nusing gzip. The default is not to perform compression.",
@@ -2238,17 +2283,17 @@ const docTemplate = `{
                 "maxage": {
                     "description": "MaxAge is the maximum number of days to retain old log files based on the\ntimestamp encoded in their filename. The default is not to remove old log files\nbased on age.",
                     "type": "integer",
-                    "default": 0
+                    "x-nullable": true
                 },
                 "maxbackups": {
                     "description": "MaxBackups is the maximum number of old log files to retain. The default\nis to retain all old log files.",
                     "type": "integer",
-                    "default": 0
+                    "x-nullable": true
                 },
                 "maxsize": {
                     "description": "MaxSize is the maximum size in megabytes of the log file before it gets rotated.",
                     "type": "integer",
-                    "default": 100,
+                    "x-nullable": true,
                     "example": 100
                 }
             }
@@ -2266,24 +2311,29 @@ const docTemplate = `{
                 },
                 "endpoint": {
                     "description": "Alternative url.\nIt is not recommended to use an alternate URL in a production environment.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "key": {
                     "description": "Key is the service account key in JSON format.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "key-file-path": {
                     "description": "Path to the file containing the service account key in JSON format.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "min-part-size": {
                     "description": "The minimum size in bytes of individual GCP storage chunks.",
                     "type": "integer",
-                    "default": 5242880
+                    "default": 5242880,
+                    "minimum": 262144
                 },
                 "path": {
                     "description": "The root path for the backup repository. If not specified, backups will be saved in the bucket's root.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "backups"
                 },
                 "secret-agent": {
@@ -2296,7 +2346,8 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "storage-class": {
                     "description": "StorageClass defines the storage class for data and metadata objects.",
@@ -2304,7 +2355,8 @@ const docTemplate = `{
                         {
                             "$ref": "#/definitions/dto.GcpStorageClass"
                         }
-                    ]
+                    ],
+                    "x-nullable": true
                 }
             }
         },
@@ -2314,7 +2366,8 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage class for object data.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 }
             }
         },
@@ -2430,7 +2483,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "kilobytes-per-second": {
-                    "description": "KilobytesPerSecond indicates the amount of data processed per second, in kilobytes.",
+                    "description": "KilobytesPerSecond indicates the amount of data processed by storage per second, in kilobytes.",
                     "type": "integer"
                 },
                 "pipeline": {
@@ -2438,7 +2491,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "records-per-second": {
-                    "description": "RecordsPerSecond indicates the number of records processed per second.",
+                    "description": "RecordsPerSecond indicates the number of records processed by Aerospike per second.",
                     "type": "integer"
                 }
             }
@@ -2460,11 +2513,12 @@ const docTemplate = `{
                     "example": 1024
                 },
                 "white-list": {
-                    "description": "The list of ips to whitelist in rate limiting.",
+                    "description": "The list of ips to whitelist in rate limiting (optional).\nDefault: allow all.",
                     "type": "array",
                     "items": {
                         "type": "string"
-                    }
+                    },
+                    "x-nullable": true
                 }
             }
         },
@@ -2585,14 +2639,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bandwidth": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.\nDefault: no limit.",
                     "type": "integer",
+                    "x-nullable": true,
                     "example": 50000
                 },
                 "batch-size": {
-                    "description": "The max allowed number of records per an async batch write call.\nOnly applicable when using batch writes.\nDefault: 128.",
+                    "description": "The max allowed number of records per an async batch write call.\nOnly applicable when using batch writes.",
                     "type": "integer",
-                    "example": 128
+                    "default": 128,
+                    "example": 32
                 },
                 "bin-list": {
                     "description": "The bins to restore (optional, an empty list implies restoring all bins).",
@@ -2600,6 +2656,7 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     },
+                    "x-nullable": true,
                     "example": [
                         "bin1",
                         "bin2"
@@ -2615,7 +2672,8 @@ const docTemplate = `{
                 },
                 "disable-batch-writes": {
                     "description": "Disables the use of batch writes when restoring records to the Aerospike cluster.\nBy default, the cluster is checked for batch write support.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "encryption": {
                     "description": "Encryption details (algorithm and key). Default is no encryption.",
@@ -2628,11 +2686,13 @@ const docTemplate = `{
                 "extra-ttl": {
                     "description": "Amount of extra time-to-live to add to records that have expirable void-times.\nMust be set in seconds.",
                     "type": "integer",
+                    "default": 0,
                     "example": 86400
                 },
                 "max-async-batches": {
                     "description": "The max number of outstanding async record batch write calls at a time.",
                     "type": "integer",
+                    "default": 128,
                     "example": 32
                 },
                 "namespace": {
@@ -2645,28 +2705,34 @@ const docTemplate = `{
                 },
                 "no-generation": {
                     "description": "Records from backups take precedence. This option disables the generation check.\nWith this option, records from the backup always overwrite records that already exist in\nthe namespace, regardless of generation numbers.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "no-indexes": {
                     "description": "Do not restore any secondary index definitions.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "no-records": {
                     "description": "Do not restore any record data (metadata or bin data).\nBy default, record data, secondary index definitions, and UDF modules will be restored.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "no-udfs": {
                     "description": "Do not restore any UDF modules.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "parallel": {
-                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.\nDefault: 8.",
+                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.",
                     "type": "integer",
+                    "default": 8,
                     "example": 8
                 },
                 "replace": {
                     "description": "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "retry-policy": {
                     "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
@@ -2682,6 +2748,7 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     },
+                    "x-nullable": true,
                     "example": [
                         "set1",
                         "set2"
@@ -2690,21 +2757,25 @@ const docTemplate = `{
                 "socket-timeout": {
                     "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
                     "type": "integer",
+                    "default": 60000,
                     "example": 1000
                 },
                 "total-timeout": {
                     "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
                     "type": "integer",
+                    "default": 0,
                     "example": 2000
                 },
                 "tps": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions\nper second.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.\nDefault: no limit.",
                     "type": "integer",
+                    "x-nullable": true,
                     "example": 4000
                 },
                 "unique": {
                     "description": "Existing records take precedence. With this option, only records that do not exist in\nthe namespace are restored, regardless of generation numbers. If a record exists in\nthe namespace, the record from the backup is ignored.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 }
             }
         },
@@ -2729,7 +2800,8 @@ const docTemplate = `{
                 },
                 "destination-name": {
                     "description": "Link to one of preconfigured clusters.\nMutually exclusive with 'destination'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "policy": {
                     "description": "Restore policy to use in the operation.",
@@ -2749,7 +2821,8 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "source": {
                     "description": "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
@@ -2761,7 +2834,8 @@ const docTemplate = `{
                 },
                 "source-name": {
                     "description": "Link to one of preconfigured storages.\nMutually exclusive with 'source'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 }
             }
         },
@@ -2783,11 +2857,13 @@ const docTemplate = `{
                 },
                 "destination-name": {
                     "description": "Link to one of preconfigured clusters.\nMutually exclusive with 'destination'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "disable-reordering": {
                     "description": "Disable reverse order of incremental backups optimisation.",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "default": false
                 },
                 "policy": {
                     "description": "Restore policy to use in the operation.",
@@ -2812,7 +2888,8 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "source": {
                     "description": "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
@@ -2824,7 +2901,8 @@ const docTemplate = `{
                 },
                 "source-name": {
                     "description": "Link to one of preconfigured storages.\nMutually exclusive with 'source'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "time": {
                     "description": "Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.",
@@ -2841,11 +2919,14 @@ const docTemplate = `{
             "properties": {
                 "full": {
                     "description": "Number of full backups to store:\n- If nil, retain all full backups.\n- If N is specified, retain the last N full backups.\n- The minimum value is 1.",
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 1,
+                    "x-nullable": true
                 },
                 "incremental": {
                     "description": "Number of full backups to store incremental backups for:\n- If nil, retain all incremental backups.\n- If N is specified, retain incremental backups for the last N full backups.\n- If set to 0, do not retain any incremental backups.\n- Must not exceed the value of FullBackups.",
-                    "type": "integer"
+                    "type": "integer",
+                    "x-nullable": true
                 }
             }
         },
@@ -2959,7 +3040,8 @@ const docTemplate = `{
             "properties": {
                 "access-key-id": {
                     "description": "Access Key ID for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "bucket": {
                     "description": "The S3 bucket name.",
@@ -2968,21 +3050,26 @@ const docTemplate = `{
                 "max-async-connections": {
                     "description": "The maximum number of simultaneous requests from S3.",
                     "type": "integer",
+                    "x-nullable": true,
                     "example": 16
                 },
                 "min-part-size": {
                     "description": "The minimum size in bytes of individual S3 UploadParts.",
                     "type": "integer",
-                    "default": 5242880
+                    "default": 5242880,
+                    "minimum": 5242880,
+                    "x-nullable": true
                 },
                 "path": {
                     "description": "The root path for the backup repository within the bucket.\nIf not specified, backups will be saved in the bucket's root.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "backups"
                 },
                 "s3-endpoint-override": {
                     "description": "An alternative endpoint for the S3 SDK to communicate (AWS S3 optional).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "http://host.docker.internal:9000"
                 },
                 "s3-log-level": {
@@ -2993,6 +3080,7 @@ const docTemplate = `{
                 "s3-profile": {
                     "description": "The S3 profile name (AWS S3 optional).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "default"
                 },
                 "s3-region": {
@@ -3002,7 +3090,8 @@ const docTemplate = `{
                 },
                 "secret-access-key": {
                     "description": "Secret Access Key for authentication with S3 StaticCredentialsProvider.\nThis is sensitive information. Can be a path in secret agent or an actual value.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "secret-agent": {
                     "description": "Secret Agent configuration (optional).\nMutually exclusive with 'secret-agent-name'.",
@@ -3014,7 +3103,8 @@ const docTemplate = `{
                 },
                 "secret-agent-name": {
                     "description": "Secret Agent configuration (optional). Link to one of preconfigured agents.\nMutually exclusive with 'secret-agent'.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "storage-class": {
                     "description": "StorageClass defines the storage class for data and metadata objects.",
@@ -3032,11 +3122,13 @@ const docTemplate = `{
             "properties": {
                 "data": {
                     "description": "DataClass specifies the storage class for object data.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 },
                 "metadata": {
                     "description": "MetadataClass specifies the storage class for metadata.",
-                    "type": "string"
+                    "type": "string",
+                    "x-nullable": true
                 }
             }
         },
@@ -3061,21 +3153,23 @@ const docTemplate = `{
                 "is-base64": {
                     "description": "Flag that shows if secret agent responses are encrypted with base64.",
                     "type": "boolean",
-                    "example": false
+                    "default": false
                 },
                 "port": {
                     "description": "Port the Secret Agent is running on.",
                     "type": "integer",
+                    "x-nullable": true,
                     "example": 8080
                 },
                 "timeout": {
                     "description": "Timeout in milliseconds.",
                     "type": "integer",
-                    "example": 5000
+                    "default": 1000
                 },
                 "tls-ca-file": {
                     "description": "The path to a trusted CA certificate file in PEM format.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/ca.pem"
                 }
             }
@@ -3103,6 +3197,7 @@ const docTemplate = `{
                 "tls-name": {
                     "description": "TLS certificate name used for secure connections (if enabled).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "certName"
                 }
             }
@@ -3152,42 +3247,49 @@ const docTemplate = `{
                 "ca-file": {
                     "description": "Path to a trusted CA certificate file.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/cafile.pem"
                 },
                 "ca-path": {
                     "description": "Path to a directory of trusted CA certificates.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/ca"
                 },
                 "cert-file": {
                     "description": "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/certfile.pem"
                 },
                 "cipher-suite": {
                     "description": "TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "ECDHE-ECDSA-AES256-GCM-SHA384"
                 },
                 "key-file": {
                     "description": "Path to the key for mutual authentication (if Aerospike cluster supports it).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "/path/to/keyfile.pem"
                 },
                 "key-file-password": {
                     "description": "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "file:/path/to/password"
                 },
                 "name": {
                     "description": "The default TLS name used to authenticate each TLS socket connection.",
                     "type": "string",
+                    "x-nullable": true,
                     "example": "tls-name"
                 },
                 "protocols": {
                     "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
                     "type": "string",
-                    "example": "TLSv1.2"
+                    "default": "TLSv1.2"
                 }
             }
         }

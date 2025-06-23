@@ -18,28 +18,28 @@ import (
 //
 //nolint:lll
 type BackupRoutine struct {
-	// The name of the corresponding backup policy (optional).
-	BackupPolicy string `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty"`
+	// The name of the corresponding backup policy, one of defined in `config.backup-policies` (optional).
+	BackupPolicy string `yaml:"backup-policy,omitempty" json:"backup-policy,omitempty" extensions:"x-nullable"`
 	// The name of the corresponding source cluster.
 	SourceCluster string `yaml:"source-cluster,omitempty" json:"source-cluster,omitempty" example:"testCluster" validate:"required"`
 	// The name of the corresponding storage provider configuration.
-	Storage string `yaml:"storage,omitempty" json:"storage,omitempty" example:"aws" validate:"required"`
+	Storage string `yaml:"storage,omitempty" json:"storage,omitempty" validate:"required"`
 	// The name of a Secret Agent to read secrets from (optional).
-	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty" example:"sa"`
+	SecretAgent *string `yaml:"secret-agent,omitempty" json:"secret-agent,omitempty" extensions:"x-nullable"`
 	// The interval for full backup as a cron expression string.
 	// Cron expression format: https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron" example:"0 0 * * * *" validate:"required"`
 	// The interval for incremental backup as a cron expression string (optional).
-	IncrIntervalCron string `yaml:"incr-interval-cron,omitempty" json:"incr-interval-cron,omitempty" example:"*/10 * * * * *"`
+	IncrIntervalCron string `yaml:"incr-interval-cron,omitempty" json:"incr-interval-cron,omitempty" example:"*/10 * * * * *" extensions:"x-nullable"`
 	// The list of the namespaces to back up (optional, empty list implies backup of the whole cluster).
-	Namespaces []string `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"source-ns1"`
+	Namespaces []string `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"source-ns1" extensions:"x-nullable"`
 	// The list of backup set names (optional, an empty list implies backing up all sets).
-	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1"`
-	// The list of backup bin names (optional, an empty list implies backing up all bins).
-	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty" example:"dataBin"`
-	// PreferRacks specifies a list of Aerospike Server rack IDs to prioritize when reading records during backup.
+	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1" extensions:"x-nullable"`
+	// The list of backup bin names (optional, an empty list implies backing up all bins) extensions:"x-nullable".
+	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty" example:"dataBin" extensions:"x-nullable"`
+	// The list of Aerospike Server rack IDs to prioritize when reading records during backup.
 	// This is optional and can be used to optimize for rack-aware deployments.
-	PreferRacks []int `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty" example:"0"`
+	PreferRacks []int `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty" example:"0" extensions:"x-nullable"`
 
 	// PartitionList defines the list of partitions to include in the backup.
 	// The format supports individual partitions or ranges.
@@ -48,7 +48,7 @@ type BackupRoutine struct {
 	// Multiple entries can be comma-separated: e.g., "0,100,200,300,400,500".
 	// By default, all partitions (0 to 4095) are backed up.
 	// This field is mutually exclusive with node-list.
-	PartitionList string `yaml:"partition-list,omitempty" json:"partition-list,omitempty"`
+	PartitionList string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" default:"0-4096"`
 
 	// NodeList specifies which Aerospike nodes to include in the backup.
 	// Only the listed nodes will be backed up.
@@ -60,10 +60,10 @@ type BackupRoutine struct {
 	// If using IP addresses or hostnames, ensure they match the values returned by the `asinfo` command.
 	// This field is mutually exclusive with partition-list.
 	// Parallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.
-	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty"`
+	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty" extensions:"x-nullable"`
 
 	// Whether this routine is disabled and should not run. Default: false.
-	Disabled bool `json:"disabled,omitempty" yaml:"disabled,omitempty"`
+	Disabled bool `json:"disabled,omitempty" yaml:"disabled,omitempty" default:"false"`
 }
 
 // Validate validates the backup routine configuration.

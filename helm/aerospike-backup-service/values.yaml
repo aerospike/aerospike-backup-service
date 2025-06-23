@@ -11,6 +11,12 @@ image:
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
+
+xdr:
+  enabled: false
+  exposeExternally: false
+
+
 configmap:
   # Specifies whether a configmap should be created with the backupServiceConfig.
   # When false the backupServiceConfig will get created in the deployment init container.

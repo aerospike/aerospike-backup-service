@@ -16,7 +16,7 @@ type AzureStorage struct {
 	// SecretAgent configuration to fetch keyfile from a secret store (optional).
 	SecretAgent *SecretAgent
 	// MinPartSize is the minimum size in bytes of individual Azure Blob chunks.
-	MinPartSize int
+	MinPartSize *int
 	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *StorageClass
 }

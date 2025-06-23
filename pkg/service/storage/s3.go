@@ -55,8 +55,8 @@ func (a *S3StorageAccessor) createWriter(
 		return nil, err
 	}
 
-	if s3s.MinPartSize > 0 {
-		opts = append(opts, ioStorage.WithChunkSize(s3s.MinPartSize))
+	if s3s.MinPartSize != nil {
+		opts = append(opts, ioStorage.WithChunkSize(*s3s.MinPartSize))
 	}
 
 	return s3.NewWriter(ctx, client, s3s.Bucket, opts...)
@@ -82,9 +82,9 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 			return retry.NewAdaptiveMode(func(o *retry.AdaptiveModeOptions) {
 				o.StandardOptions = append(o.StandardOptions,
 					func(so *retry.StandardOptions) {
-						so.MaxAttempts = 100
-						so.MaxBackoff = 2 * time.Minute
-						so.Backoff = retry.NewExponentialJitterBackoff(2 * time.Minute)
+						so.MaxAttempts = int(model.StorageRetryPolicy.MaxRetries)
+						so.MaxBackoff = model.StorageRetryPolicy.MaxDuration
+						so.Backoff = retry.NewExponentialJitterBackoff(model.StorageRetryPolicy.MaxDuration)
 					})
 			})
 		}),
@@ -101,10 +101,10 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 
 		o.UsePathStyle = true
 
-		if s.MaxConnsPerHost > 0 {
+		if s.MaxConnsPerHost != nil {
 			o.HTTPClient = &http.Client{
 				Transport: &http.Transport{
-					MaxConnsPerHost:     s.MaxConnsPerHost,
+					MaxConnsPerHost:     *s.MaxConnsPerHost,
 					IdleConnTimeout:     90 * time.Second,
 					TLSHandshakeTimeout: 10 * time.Second,
 					ReadBufferSize:      64 * 1024, // 64KB read buffer (default is 4KB)
