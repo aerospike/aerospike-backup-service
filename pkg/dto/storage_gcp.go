@@ -44,7 +44,7 @@ func (s *GcpStorage) Validate() error {
 		return fmt.Errorf("invalid storage class: %w", err)
 	}
 	if s.MinPartSize != nil && *s.MinPartSize < GCSMinUploadChunkSize {
-		return errValidationInvalidValue("min-part-size", s.MinPartSize, "at least 256KiB")
+		return errValidationInvalidValue("min-part-size", *s.MinPartSize, "at least 256KiB")
 	}
 
 	return nil
