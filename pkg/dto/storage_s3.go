@@ -40,10 +40,8 @@ type S3Storage struct {
 	StorageClass *S3StorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
 
-const (
-	// S3MinUploadPartSize is the AWS-enforced minimum size of a multipart upload part (except the last one).
-	S3MinUploadPartSize = 5 * 1024 * 1024 // 5 MiB
-)
+// S3MinUploadPartSize is the AWS-enforced minimum size of a multipart upload part (except the last one).
+const S3MinUploadPartSize = 5 * 1024 * 1024 // 5 MiB
 
 // Validate checks if the S3Storage is valid.
 func (s *S3Storage) Validate() error {
@@ -61,7 +59,7 @@ func (s *S3Storage) Validate() error {
 		return fmt.Errorf("secret-access-key is set but access-key-id is missing")
 	}
 	if s.MinPartSize != nil && *s.MinPartSize < S3MinUploadPartSize {
-		return errValidationInvalidValue("min-part-size", s.MinPartSize, "at least 5MB")
+		return errValidationInvalidValue("min-part-size", s.MinPartSize, "at least 5MiB")
 	}
 	if s.MaxConnsPerHost != nil && *s.MaxConnsPerHost < 0 {
 		return errValidationNegative("max-async-connections", *s.MaxConnsPerHost)
