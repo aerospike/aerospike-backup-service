@@ -116,8 +116,8 @@ func (p *RestorePolicy) Validate() error {
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retry policy invalid: %w", err)
 	}
-	if p.ExtraTTL != nil && *p.ExtraTTL <= 0 {
-		return errValidationNonPositive("extra-ttl", *p.ExtraTTL)
+	if p.ExtraTTL != nil && *p.ExtraTTL < 0 {
+		return errValidationNegative("extra-ttl", *p.ExtraTTL)
 	}
 
 	return nil

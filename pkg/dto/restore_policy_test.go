@@ -128,10 +128,10 @@ func TestRestorePolicy_MutuallyExclusiveReplaceUnique(t *testing.T) {
 
 func TestRestorePolicy_InvalidExtraTTL(t *testing.T) {
 	policy := &RestorePolicy{
-		ExtraTTL: util.Ptr(int64(0)),
+		ExtraTTL: util.Ptr(int64(-1)),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "extra-ttl")
-	assert.Contains(t, err.Error(), "should be positive number")
+	assert.Contains(t, err.Error(), "should not be negative")
 }

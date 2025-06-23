@@ -2479,7 +2479,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "kilobytes-per-second": {
-                    "description": "KilobytesPerSecond indicates the amount of data processed per second, in kilobytes.",
+                    "description": "KilobytesPerSecond indicates the amount of data processed by storage per second, in kilobytes.",
                     "type": "integer"
                 },
                 "pipeline": {
@@ -2487,7 +2487,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "records-per-second": {
-                    "description": "RecordsPerSecond indicates the number of records processed per second.",
+                    "description": "RecordsPerSecond indicates the number of records processed by Aerospike per second.",
                     "type": "integer"
                 }
             }

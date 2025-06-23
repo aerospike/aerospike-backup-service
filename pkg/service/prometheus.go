@@ -58,7 +58,7 @@ var (
 			Name: "aerospike_backup_service_incremental_duration_millis",
 			Help: "Incremental backup duration in milliseconds (Deprecated, use `aerospike_backup_service_backup_duration_seconds`)",
 		})
-	// A gauge metrics for backup process, filter by name and type.
+	// A gauge metric for backup process, filter by name and type.
 	backupProgress = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "aerospike_backup_service_backup_progress_pct",
@@ -66,10 +66,10 @@ var (
 		},
 		[]string{"routine", "type"},
 	)
-	// A gauge metrics for restore processes.
+	// A gauge metric for number of restore processes.
 	restoreInProgress = prometheus.NewGauge(
 		prometheus.GaugeOpts{
-			Name: "aerospike_backup_service_restore_progress_pct",
+			Name: "aerospike_backup_service_restore_in_progress",
 			Help: "Number of restore processes running",
 		},
 	)
