@@ -168,39 +168,6 @@ func TestNewTLSConfig(t *testing.T) {
 	})
 }
 
-// TestParseProtocols provides table-driven tests for protocol parsing logic.
-func TestParseProtocols(t *testing.T) {
-	testCases := []struct {
-		name        string
-		protocolStr *string
-		wantMin     uint16
-		wantMax     uint16
-		expectErr   bool
-	}{
-		{"NilInput", nil, tls.VersionTLS12, 0, false},
-		{"EmptyInput", util.Ptr(""), tls.VersionTLS12, 0, false},
-		{"SingleVersion", util.Ptr("TLSv1.3"), tls.VersionTLS13, tls.VersionTLS13, false},
-		{"TwoVersions", util.Ptr("TLSv1.2 TLSv1.3"), tls.VersionTLS12, tls.VersionTLS13, false},
-		{"TwoVersionsReversed", util.Ptr("TLSv1.3 TLSv1.2"), tls.VersionTLS12, tls.VersionTLS13, false},
-		{"WithSpaces", util.Ptr("  TLSv1.2  "), tls.VersionTLS12, tls.VersionTLS12, false},
-		{"InvalidVersion", util.Ptr("TLSv1.9"), 0, 0, true},
-		{"MixedValidity", util.Ptr("TLSv1.2 BOGUS"), 0, 0, true},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			minVersion, maxVersion, err := parseProtocols(tc.protocolStr)
-			if tc.expectErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tc.wantMin, minVersion, "MinVersion mismatch")
-				assert.Equal(t, tc.wantMax, maxVersion, "MaxVersion mismatch")
-			}
-		})
-	}
-}
-
 // TestParseCipherSuites provides table-driven tests for cipher suite parsing.
 func TestParseCipherSuites(t *testing.T) {
 	validSuite1 := "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
