@@ -32,6 +32,7 @@ type BackupDetails struct {
 	// The number of UDF files backed up.
 	UDFCount uint64 `yaml:"udf-count" json:"udf-count" format:"int64" example:"2"`
 	// Key is the path to the backup files within the configured storage location.
+	// This values is used as `backup-data-path` in dto.RestoreRequest
 	Key string `yaml:"key" json:"key" example:"daily/backup/1707915600000/source-ns1"`
 	// Storage specifies the details of the storage location where the backup is stored.
 	Storage *Storage `yaml:"storage" json:"storage"`

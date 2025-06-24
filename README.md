@@ -534,6 +534,8 @@ The response is a map of routine names to lists of backups.
 }
 ```
 
+For fields description see [fields description](docs/md/dto.backupdetails.md)
+
 </details>
 
 You can filter the results by adding query parameters:
@@ -678,11 +680,7 @@ Request is almost identical to [restore by path](#direct-restore-using-a-specifi
 `backup-data-path`
 should provide a pair `time` and `routine`.
 
-| Field                | Description                                                                                               |
-|----------------------|-----------------------------------------------------------------------------------------------------------|
-| `disable-reordering` | Disable reverse order of incremental backups optimisation.                                                |
-| `routine`            | The backup routine name.                                                                                  |
-| `time`               | Required epoch time (in millis) for recovery.<br>The closest backup before the timestamp will be applied. |
+For more details see [fields description](docs/md/dto.restoretimestamprequest.md)
 
 The response is a job ID.
 
@@ -726,6 +724,8 @@ Response example:
   "status": "Running"
 }
 ```
+
+For fields description see [fields description](docs/md/dto.restorejobstatus.md)
 
 #### Cancel Restore Job
 

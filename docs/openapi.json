@@ -2177,7 +2177,7 @@
                         "example": "2023-03-19T14:50:00Z"
                     },
                     "key": {
-                        "description": "Key is the path to the backup files within the configured storage location.",
+                        "description": "Key is the path to the backup files within the configured storage location.\nThis values is used as `backup-data-path` in dto.RestoreRequest",
                         "type": "string",
                         "example": "daily/backup/1707915600000/source-ns1"
                     },
