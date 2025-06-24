@@ -1,4 +1,5 @@
 ## dto.CompressionPolicy
+CompressionPolicy contains backup compression information.
 
 | Field   | Description                                                                                                | Default Value | Possible Values |
 |---------|------------------------------------------------------------------------------------------------------------|---------------|-----------------|

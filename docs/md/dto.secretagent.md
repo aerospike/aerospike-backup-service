@@ -1,4 +1,5 @@
 ## dto.SecretAgent
+SecretAgent represents the configuration of an Aerospike Secret Agent.
 
 | Field                                             | Description                                                          | Default Value |
 |---------------------------------------------------|----------------------------------------------------------------------|---------------|

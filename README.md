@@ -608,6 +608,8 @@ The `destination` field says where to restore to. It can be any Aerospike cluste
 You can also use `destination-name` and `storage-name` instead of `destination` and `storage` respectively.
 They refer to the names of the corresponding entities in the configuration file.
 
+For more details see [fields description](docs/md/dto.restorerequest.md)
+
 </details>
 
 The response is a job ID.

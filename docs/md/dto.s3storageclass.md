@@ -1,4 +1,5 @@
 ## dto.S3StorageClass
+S3StorageClass represents the configuration for S3 Storage Class.
 
 | Field      | Description                                             |
 |------------|---------------------------------------------------------|

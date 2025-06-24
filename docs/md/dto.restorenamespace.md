@@ -1,4 +1,5 @@
 ## dto.RestoreNamespace
+RestoreNamespace specifies an alternative namespace name for the restore operation.
 
 | Field                                         | Description                                                                                                  |
 |-----------------------------------------------|--------------------------------------------------------------------------------------------------------------|

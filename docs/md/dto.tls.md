@@ -1,4 +1,5 @@
 ## dto.TLS
+TLS represents the Aerospike cluster TLS configuration options.
 
 | Field               | Description                                                                            | Default Value |
 |---------------------|----------------------------------------------------------------------------------------|---------------|

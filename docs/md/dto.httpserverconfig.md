@@ -1,4 +1,5 @@
 ## dto.HTTPServerConfig
+HTTPServerConfig represents the service's HTTP server configuration.
 
 | Field          | Description                                                                                | Default Value |
 |----------------|--------------------------------------------------------------------------------------------|---------------|

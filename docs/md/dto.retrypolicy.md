@@ -1,4 +1,5 @@
 ## dto.RetryPolicy
+RetryPolicy defines the configuration for retry attempts in case of failures.
 
 | Field          | Description                                                                                                                                                  |
 |----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|

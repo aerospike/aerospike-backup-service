@@ -1,4 +1,5 @@
 ## dto.Credentials
+Credentials represents authentication details to the Aerospike cluster.
 
 | Field               | Description                                                                                                                          | Default Value | Possible Values               |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------|---------------|-------------------------------|

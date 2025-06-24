@@ -1,4 +1,5 @@
 ## dto.RestoreTimestampRequest
+RestoreTimestampRequest represents a restore by timestamp operation request.
 
 | Field                                     | Description                                                                                                                                              | Default Value |
 |-------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|

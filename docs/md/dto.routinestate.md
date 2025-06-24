@@ -1,4 +1,5 @@
 ## dto.RoutineState
+RoutineState represent the current state of backups (full and incremental).
 
 | Field              | Description                                                                                                                                     |
 |--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|

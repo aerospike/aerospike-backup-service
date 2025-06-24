@@ -1,4 +1,5 @@
 ## dto.LocalStorage
+LocalStorage represents the configuration for local storage.
 
 | Field                                  | Description                              |
 |----------------------------------------|------------------------------------------|

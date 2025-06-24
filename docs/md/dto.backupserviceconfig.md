@@ -1,4 +1,5 @@
 ## dto.BackupServiceConfig
+BackupServiceConfig represents the backup service configuration properties.
 
 | Field    | Description                                                                                                         |
 |----------|---------------------------------------------------------------------------------------------------------------------|

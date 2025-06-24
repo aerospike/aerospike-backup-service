@@ -66,7 +66,7 @@ func generateMarkdownTable(dtoName string) string {
 	var sb strings.Builder
 
 	// Add header for the DTO
-	sb.WriteString(fmt.Sprintf("## %s\n\n", dtoName))
+	sb.WriteString(fmt.Sprintf("## %s\n%s\n\n", dtoName, schema.Description))
 
 	// Write header
 	sb.WriteString(fmt.Sprintf("| %-*s | %-*s ", maxName+quotes, "Field", maxHelp, "Description"))
@@ -151,9 +151,10 @@ type Components struct {
 }
 
 type Schema struct {
-	Type       string              `json:"type"`
-	Properties map[string]Property `json:"properties"`
-	Required   []string            `json:"required"`
+	Description string              `json:"description"`
+	Type        string              `json:"type"`
+	Properties  map[string]Property `json:"properties"`
+	Required    []string            `json:"required"`
 }
 
 type Property struct {

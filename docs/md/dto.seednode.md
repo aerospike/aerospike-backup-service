@@ -1,4 +1,5 @@
 ## dto.SeedNode
+SeedNode represents details of a node in the Aerospike cluster.
 
 | Field                                       | Description                                                    |
 |---------------------------------------------|----------------------------------------------------------------|

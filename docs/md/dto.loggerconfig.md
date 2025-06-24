@@ -1,4 +1,5 @@
 ## dto.LoggerConfig
+LoggerConfig represents the backup service logger configuration.
 
 | Field           | Description                                                                                | Default Value | Possible Values                                      |
 |-----------------|--------------------------------------------------------------------------------------------|---------------|------------------------------------------------------|

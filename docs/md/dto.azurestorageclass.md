@@ -1,4 +1,5 @@
 ## dto.AzureStorageClass
+AzureStorageClass represents the configuration for Azure Blob Storage access tiers.
 
 | Field      | Description                                            |
 |------------|--------------------------------------------------------|

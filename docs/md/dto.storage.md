@@ -1,4 +1,5 @@
 ## dto.Storage
+Storage represents the configuration for a backup storage details.
 
 | Field           | Description                                                                                             |
 |-----------------|---------------------------------------------------------------------------------------------------------|

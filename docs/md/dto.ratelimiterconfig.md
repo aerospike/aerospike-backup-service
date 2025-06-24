@@ -1,4 +1,5 @@
 ## dto.RateLimiterConfig
+RateLimiterConfig is the HTTP server rate limiter configuration.
 
 | Field        | Description                                                                      | Default Value |
 |--------------|----------------------------------------------------------------------------------|---------------|

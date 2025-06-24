@@ -1,4 +1,5 @@
 ## dto.EncryptionPolicy
+EncryptionPolicy contains backup encryption information.
 
 | Field        | Description                                                                 | Default Value | Possible Values            |
 |--------------|-----------------------------------------------------------------------------|---------------|----------------------------|
