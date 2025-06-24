@@ -179,9 +179,6 @@ func TestParseProtocols(t *testing.T) {
 	}{
 		{"NilInput", nil, tls.VersionTLS12, 0, false},
 		{"EmptyInput", util.Ptr(""), tls.VersionTLS12, 0, false},
-		{"SingleVersion", util.Ptr("TLSv1.3"), tls.VersionTLS13, tls.VersionTLS13, false},
-		{"TwoVersions", util.Ptr("TLSv1.2 TLSv1.3"), tls.VersionTLS12, tls.VersionTLS13, false},
-		{"TwoVersionsReversed", util.Ptr("TLSv1.3 TLSv1.2"), tls.VersionTLS12, tls.VersionTLS13, false},
 		{"WithSpaces", util.Ptr("  TLSv1.2  "), tls.VersionTLS12, tls.VersionTLS12, false},
 		{"InvalidVersion", util.Ptr("TLSv1.9"), 0, 0, true},
 		{"MixedValidity", util.Ptr("TLSv1.2 BOGUS"), 0, 0, true},

@@ -17,10 +17,8 @@ import (
 )
 
 var protocolMap = map[string]uint16{
-	"TLSv1.0": tls.VersionTLS10,
-	"TLSv1.1": tls.VersionTLS11,
 	"TLSv1.2": tls.VersionTLS12,
-	"TLSv1.3": tls.VersionTLS13,
+	// "TLSv1.3": tls.VersionTLS13, //uncomment when server supports 1.3
 }
 
 var cipherSuiteMap = func() map[string]uint16 {
@@ -193,7 +191,7 @@ func parseProtocols(protocols *string) (minVersion, maxVersion uint16, err error
 	for _, vStr := range versionStrs {
 		version, ok := protocolMap[strings.TrimSpace(vStr)]
 		if !ok {
-			return 0, 0, fmt.Errorf("unknown TLS protocol: %s", vStr)
+			return 0, 0, fmt.Errorf("unsupported TLS protocol: %s", vStr)
 		}
 		if version < minVersion {
 			minVersion = version
