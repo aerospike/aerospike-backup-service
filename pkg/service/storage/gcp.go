@@ -53,8 +53,8 @@ func (a *GcpStorageAccessor) createWriter(
 		return nil, fmt.Errorf("writer failed to create GCP client: %w", err)
 	}
 
-	if gcps.MinPartSize > 0 {
-		opts = append(opts, ioStorage.WithChunkSize(gcps.MinPartSize))
+	if gcps.MinPartSize != nil {
+		opts = append(opts, ioStorage.WithChunkSize(*gcps.MinPartSize))
 	}
 
 	return gcp.NewWriter(ctx, client, gcps.BucketName, opts...)

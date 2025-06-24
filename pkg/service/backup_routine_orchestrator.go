@@ -208,7 +208,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeFailure, duration)
 		h.logger.Error("Incremental backup failed", slog.Any("error", err))
 	} else {
-		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeFailure, duration)
+		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeSuccess, duration)
 		h.logger.Debug("Finished incremental backup", slog.Int64("time", now.UnixMilli()))
 	}
 }

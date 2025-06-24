@@ -32,10 +32,14 @@ type AzureStorage struct {
 	// This is sensitive information. Can be a path in secret agent or an actual value.
 	ClientSecret string `yaml:"client-secret,omitempty" json:"client-secret,omitempty" extensions:"x-nullable"`
 	// The minimum size in bytes of individual Azure Blob chunks.
-	MinPartSize int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880"`
+	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880" minimum:"1048576"`
 	// StorageClass defines the storage tier for data and metadata objects.
 	StorageClass *AzureStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty"`
 }
+
+// azureMinUploadBlockSize minimum block size for Azure.
+// see https://github.com/Azure/azure-sdk-for-go/blob/main/sdk/storage/azblob/blockblob/models.go#L246 for details.
+const azureMinUploadBlockSize = 1024 * 1024 // 1 MiB
 
 // Validate checks if the AzureStorage is valid.
 func (a *AzureStorage) Validate() error {
@@ -56,6 +60,10 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 	}
 	if err := a.StorageClass.Validate(); err != nil {
 		return fmt.Errorf("invalid storage class: %w", err)
+	}
+
+	if a.MinPartSize != nil && *a.MinPartSize < azureMinUploadBlockSize {
+		return errValidationInvalidValue("min-part-size", *a.MinPartSize, "at least 1MiB")
 	}
 
 	return nil

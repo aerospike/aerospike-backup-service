@@ -25,10 +25,14 @@ type GcpStorage struct {
 	// It is not recommended to use an alternate URL in a production environment.
 	Endpoint string `yaml:"endpoint,omitempty" json:"endpoint,omitempty" extensions:"x-nullable"`
 	// The minimum size in bytes of individual GCP storage chunks.
-	MinPartSize int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880"`
+	MinPartSize *int `yaml:"min-part-size,omitempty" json:"min-part-size,omitempty" default:"5242880" minimum:"262144"`
 	// StorageClass defines the storage class for data and metadata objects.
 	StorageClass *GcpStorageClass `yaml:"storage-class,omitempty" json:"storage-class,omitempty" extensions:"x-nullable"`
 }
+
+// gcsMinUploadChunkSize minimum size of multipart upload.
+// see https://cloud.google.com/storage/docs/resumable-uploads#go for details.
+const gcsMinUploadChunkSize = 256 * 1024 // 256 KiB
 
 // Validate checks if the GcpStorage is valid.
 func (s *GcpStorage) Validate() error {
@@ -40,6 +44,9 @@ func (s *GcpStorage) Validate() error {
 	}
 	if err := s.StorageClass.Validate(); err != nil {
 		return fmt.Errorf("invalid storage class: %w", err)
+	}
+	if s.MinPartSize != nil && *s.MinPartSize < gcsMinUploadChunkSize {
+		return errValidationInvalidValue("min-part-size", *s.MinPartSize, "at least 256KiB")
 	}
 
 	return nil
