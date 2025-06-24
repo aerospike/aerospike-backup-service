@@ -1682,7 +1682,7 @@ const docTemplate = `{
                     "example": "testCluster"
                 },
                 "max-parallel-scans": {
-                    "description": "Specifies the maximum number of parallel scans per the cluster.",
+                    "description": "Specifies the maximum number of parallel scans allowed across the cluster.\nThis property helps reduce the load on the cluster and is shared among all backups using the cluster.\nDefault: unlimited.",
                     "type": "integer",
                     "x-nullable": true,
                     "example": 100

@@ -2014,7 +2014,7 @@
                         "nullable": true
                     },
                     "max-parallel-scans": {
-                        "description": "Specifies the maximum number of parallel scans per the cluster.",
+                        "description": "Specifies the maximum number of parallel scans allowed across the cluster.\nThis property helps reduce the load on the cluster and is shared among all backups using the cluster.\nDefault: unlimited.",
                         "type": "integer",
                         "example": 100,
                         "nullable": true
@@ -2913,7 +2913,7 @@
                         "example": 8
                     },
                     "read-records": {
-                        "description": "Number of records read from backup.",
+                        "description": "Number of records read from backup.\nWhen backup is finished, `read-records` =  `inserted-records` + `fresher-records` +\n`existed-records` + `ignored-records` + `skipped-records` + `expired-records`",
                         "type": "integer",
                         "format": "int64",
                         "example": 10
@@ -3333,7 +3333,7 @@
                         "example": "2006-01-02T15:04:05Z07:00"
                     },
                     "finish-time": {
-                        "description": "FinishTime: the time when the operation finished",
+                        "description": "FinishTime: the time when the operation finished.\nA nil value indicates that the operation is still running.",
                         "type": "string",
                         "example": "2006-01-02T15:04:05Z07:00"
                     },

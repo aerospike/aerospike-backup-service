@@ -21,7 +21,7 @@ func generateMarkdownFiles() {
 		fileName := filepath.Join(docFolder, strings.ToLower(dtoName)+".md")
 		fileContent := generateMarkdownTable(dtoName)
 
-		err := os.WriteFile(fileName, []byte(fileContent), 0644)
+		err := os.WriteFile(fileName, []byte(fileContent), 0600)
 		if err != nil {
 			panic(fmt.Errorf("failed to write markdown file %q: %w", fileName, err))
 		}
@@ -60,28 +60,7 @@ func generateMarkdownTable(dtoName string) string {
 		}
 	}
 
-	// Determine column widths
-	maxName := len("Field")
-	maxHelp := len("Description")
-	maxDefault := len("Default Value")
-	maxPossibleValues := len("Possible Values")
-
-	for _, r := range rows {
-		if len(r.Name) > maxName {
-			maxName = len(r.Name)
-		}
-		for _, line := range strings.Split(r.Help, "\n") {
-			if len(line) > maxHelp {
-				maxHelp = len(line)
-			}
-		}
-		if len(r.Default) > maxDefault {
-			maxDefault = len(r.Default)
-		}
-		if len(r.PossibleValues) > maxPossibleValues {
-			maxPossibleValues = len(r.PossibleValues)
-		}
-	}
+	maxName, maxHelp, maxDefault, maxPossibleValues := determineColumsWidth(rows)
 
 	const quotes = 0
 	var sb strings.Builder
@@ -122,6 +101,32 @@ func generateMarkdownTable(dtoName string) string {
 	}
 
 	return sb.String()
+}
+
+func determineColumsWidth(rows []Row) (int, int, int, int) {
+	maxName := len("Field")
+	maxHelp := len("Description")
+	maxDefault := len("Default Value")
+	maxPossibleValues := len("Possible Values")
+
+	for _, r := range rows {
+		if len(r.Name) > maxName {
+			maxName = len(r.Name)
+		}
+		for _, line := range strings.Split(r.Help, "\n") {
+			if len(line) > maxHelp {
+				maxHelp = len(line)
+			}
+		}
+		if len(r.Default) > maxDefault {
+			maxDefault = len(r.Default)
+		}
+		if len(r.PossibleValues) > maxPossibleValues {
+			maxPossibleValues = len(r.PossibleValues)
+		}
+	}
+
+	return maxName, maxHelp, maxDefault, maxPossibleValues
 }
 func readSchemas() map[string]Schema {
 	data, err := os.ReadFile(openapi)
@@ -166,7 +171,7 @@ type Reference struct {
 
 // schemaToRows generates rows for a single schema, adding links for referenced objects and marking required fields.
 func schemaToRows(input Schema) []Row {
-	var rows []Row
+	var rows = make([]Row, 0, len(input.Properties))
 
 	// Create a map for quick lookup of required fields
 	requiredFields := make(map[string]bool)
@@ -175,15 +180,10 @@ func schemaToRows(input Schema) []Row {
 	}
 
 	// Collect field names and create initial rows
-	var fieldProps []struct {
-		Name string
-		Prop Property
-	}
+	var fieldProps = make([]FieldProperty, 0, len(input.Properties))
+
 	for fieldName, prop := range input.Properties {
-		fieldProps = append(fieldProps, struct {
-			Name string
-			Prop Property
-		}{Name: fieldName, Prop: prop})
+		fieldProps = append(fieldProps, FieldProperty{Name: fieldName, Prop: prop})
 	}
 
 	// Sort fields: required first, then alphabetically
@@ -198,50 +198,62 @@ func schemaToRows(input Schema) []Row {
 	})
 
 	for _, fp := range fieldProps {
-		fieldName := fp.Name
-		prop := fp.Prop
-		description := strings.ReplaceAll(prop.Description, "\n", "<br>")
-		defaultValue := ""
-		possibleValues := ""
-
-		// Check if it's a reference via allOf first, as this is the primary indicator for linked objects
-		if len(prop.AllOf) > 0 {
-			for _, ref := range prop.AllOf {
-				if ref.Ref != "" {
-					refName := extractRefName(ref.Ref)
-					linkedFileName := strings.ToLower(refName) + ".md"
-					description = fmt.Sprintf("%s<br>See: [%s](%s)", description, refName, linkedFileName)
-					break // Assume only one reference in allOf for simplicity
-				}
-			}
-		} else if prop.Type == "array" && prop.Items.Ref != "" {
-			// Handle arrays of referenced objects
-			refName := extractRefName(prop.Items.Ref)
-			linkedFileName := strings.ToLower(refName) + ".md"
-			description = fmt.Sprintf("%s<br>Array of: [%s](%s)", description, refName, linkedFileName)
-		}
-
-		defaultValue = formatValue(prop.Default)
-
-		// Handle enum values
-		if len(prop.Enum) > 0 {
-			possibleValues = "`" + strings.Join(prop.Enum, "`, `") + "`"
-		}
-
-		nameWithAsterisk := "`" + fieldName + "`"
-		if requiredFields[fieldName] {
-			// Add a red asterisk using HTML span
-			nameWithAsterisk = fmt.Sprintf("%s<span style=\"color:red\">*</span>", nameWithAsterisk)
-		}
-
-		rows = append(rows, Row{
-			Name:           nameWithAsterisk,
-			Help:           description,
-			Default:        defaultValue,
-			PossibleValues: possibleValues,
-		})
+		rows = append(rows, makeRow(fp, requiredFields))
 	}
+
 	return rows
+}
+
+type FieldProperty struct {
+	Name string
+	Prop Property
+}
+
+func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
+	fieldName := fp.Name
+	prop := fp.Prop
+	description := strings.ReplaceAll(prop.Description, "\n", "<br>")
+	defaultValue := ""
+	possibleValues := ""
+
+	// Check if it's a reference via allOf first, as this is the primary indicator for linked objects
+	if len(prop.AllOf) > 0 {
+		for _, ref := range prop.AllOf {
+			if ref.Ref != "" {
+				refName := extractRefName(ref.Ref)
+				linkedFileName := strings.ToLower(refName) + ".md"
+				description = fmt.Sprintf("%s<br>See: [%s](%s)", description, refName, linkedFileName)
+				break // Assume only one reference in allOf for simplicity
+			}
+		}
+	} else if prop.Type == "array" && prop.Items.Ref != "" {
+		// Handle arrays of referenced objects
+		refName := extractRefName(prop.Items.Ref)
+		linkedFileName := strings.ToLower(refName) + ".md"
+		description = fmt.Sprintf("%s<br>Array of: [%s](%s)", description, refName, linkedFileName)
+	}
+
+	defaultValue = formatValue(prop.Default)
+
+	// Handle enum values
+	if len(prop.Enum) > 0 {
+		possibleValues = "`" + strings.Join(prop.Enum, "`, `") + "`"
+	}
+
+	nameWithAsterisk := "`" + fieldName + "`"
+	if requiredFields[fieldName] {
+		// Add a red asterisk using HTML span
+		nameWithAsterisk = fmt.Sprintf("%s<span style=\"color:red\">*</span>", nameWithAsterisk)
+	}
+
+	row := Row{
+		Name:           nameWithAsterisk,
+		Help:           description,
+		Default:        defaultValue,
+		PossibleValues: possibleValues,
+	}
+
+	return row
 }
 
 // Example: "#/components/schemas/dto.RunningJob" → "dto.RunningJob".
