@@ -666,7 +666,8 @@ Restore order (to non-empty namespace or with `disable-reordering`): `Full B`, `
 [`
 POST {{baseUrl}}/v1/restore/timestamp`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreTimestamp)
 
-Request body:
+<details>
+    <summary>Request body</summary>
 
 ```json
 {
@@ -681,6 +682,7 @@ Request is almost identical to [restore by path](#direct-restore-using-a-specifi
 should provide a pair `time` and `routine`.
 
 For more details see [fields description](docs/md/dto.restoretimestamprequest.md)
+</details>
 
 The response is a job ID.
 
@@ -693,7 +695,8 @@ You can get job status with the endpoint
 
 It works identical for both restore types.
 
-Response example:
+<details>
+    <summary>Response example</summary>
 <!-- CurrentRestoreResponse -->
 
 ```json
@@ -726,6 +729,7 @@ Response example:
 ```
 
 For fields description see [fields description](docs/md/dto.restorejobstatus.md)
+</details>
 
 #### Cancel Restore Job
 
