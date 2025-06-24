@@ -9,6 +9,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -47,6 +48,10 @@ func (a *AerospikeCluster) Validate() error {
 	}
 	if err := a.Credentials.Validate(); err != nil {
 		return fmt.Errorf("credentials validation error: %w", err)
+	}
+
+	if err := a.TLS.Validate(); err != nil {
+		return fmt.Errorf("tls validation error: %w", err)
 	}
 
 	return nil
@@ -169,6 +174,13 @@ func (t *TLS) toModel() *model.TLS {
 		KeyfilePassword: t.KeyfilePassword,
 		Certfile:        t.Certfile,
 	}
+}
+
+func (t *TLS) Validate() error {
+	// try to parse tls config to verify all parameters are valid
+	_, err := aerospike.NewTLSConfig(t.toModel())
+
+	return err
 }
 
 // Credentials represents authentication details to the Aerospike cluster.
