@@ -13,7 +13,4 @@ var deprecatedFields = map[string]map[string]string{
 	"dto.Storage": {
 		"type": "is deprecated, use nested storage objects instead (see https://aerospike.com/docs/tools/backup-service/release-notes/3.0.0-abs-release-notes#storage )",
 	},
-	"dto.TLS": {
-		"protocols": "is deprecated, tls1.2 is always enabled.",
-	},
 }
