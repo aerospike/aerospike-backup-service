@@ -95,8 +95,8 @@ func (p *BackupPolicy) Validate() error {
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retryPolicy validation failed: %w", err)
 	}
-	if p.Bandwidth != nil && *p.Bandwidth <= 0 {
-		return errValidationNonPositive("bandwidth", *p.Bandwidth)
+	if p.Bandwidth != nil && *p.Bandwidth < 0 {
+		return errValidationNegative("bandwidth", *p.Bandwidth)
 	}
 	if p.RecordsPerSecond != nil && *p.RecordsPerSecond <= 0 {
 		return errValidationNonPositive("records-per-second", *p.RecordsPerSecond)
