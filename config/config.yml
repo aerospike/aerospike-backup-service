@@ -7,8 +7,6 @@ aerospike-clusters:
     credentials:
       user: "tester"
       password: "psw"
-    tls:
-      protocols: TLSv1.2
     max-parallel-scans: 20
 
 storage:
