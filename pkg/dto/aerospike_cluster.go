@@ -136,6 +136,8 @@ type TLS struct {
 	CAPath *string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
 	// The default TLS name used to authenticate each TLS socket connection.
 	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name" extensions:"x-nullable"`
+	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
+	Protocols *string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
 	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"ECDHE-ECDSA-AES256-GCM-SHA384" extensions:"x-nullable"`
 	// Path to the key for mutual authentication (if Aerospike cluster supports it).
@@ -150,6 +152,7 @@ func (t *TLS) fromModel(m *model.TLS) {
 	t.CAFile = m.CAFile
 	t.CAPath = m.CAPath
 	t.Name = m.Name
+	t.Protocols = m.Protocols
 	t.CipherSuite = m.CipherSuite
 	t.Keyfile = m.Keyfile
 	t.KeyfilePassword = m.KeyfilePassword
@@ -165,6 +168,7 @@ func (t *TLS) toModel() *model.TLS {
 		CAFile:          t.CAFile,
 		CAPath:          t.CAPath,
 		Name:            t.Name,
+		Protocols:       t.Protocols,
 		CipherSuite:     t.CipherSuite,
 		Keyfile:         t.Keyfile,
 		KeyfilePassword: t.KeyfilePassword,

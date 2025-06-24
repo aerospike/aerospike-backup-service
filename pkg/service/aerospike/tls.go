@@ -16,6 +16,13 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
+var protocolMap = map[string]uint16{
+	"TLSv1.0": tls.VersionTLS10,
+	"TLSv1.1": tls.VersionTLS11,
+	"TLSv1.2": tls.VersionTLS12,
+	"TLSv1.3": tls.VersionTLS13,
+}
+
 var cipherSuiteMap = func() map[string]uint16 {
 	m := make(map[string]uint16)
 	for _, suite := range tls.CipherSuites() {
@@ -45,6 +52,12 @@ func NewTLSConfig(t *model.TLS) (*tls.Config, error) {
 		return nil, err
 	}
 
+	// Parse protocol versions.
+	minVersion, maxVersion, err := parseProtocols(t.Protocols)
+	if err != nil {
+		return nil, err
+	}
+
 	// Parse cipher suites.
 	cipherSuites, err := parseCipherSuites(t.CipherSuite)
 	if err != nil {
@@ -55,8 +68,8 @@ func NewTLSConfig(t *model.TLS) (*tls.Config, error) {
 		ServerName:   util.ValueOrZero(t.Name),
 		Certificates: clientCerts,
 		RootCAs:      rootCAs,
-		MinVersion:   tls.VersionTLS12,
-		MaxVersion:   tls.VersionTLS12,
+		MinVersion:   minVersion,
+		MaxVersion:   maxVersion,
 		CipherSuites: cipherSuites,
 	}
 
@@ -158,6 +171,44 @@ func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 	}
 
 	return []tls.Certificate{cert}, nil
+}
+
+// parseProtocols parses a space-separated string of TLS protocol versions.
+func parseProtocols(protocols *string) (minVersion, maxVersion uint16, err error) {
+	// Default to TLS 1.2 as the minimum if nothing is specified.
+	// A maxVersion of 0 means "use the highest supported version".
+	minVersion, maxVersion = tls.VersionTLS12, 0
+	if protocols == nil || *protocols == "" {
+		return minVersion, maxVersion, nil
+	}
+
+	minVersion = 0xFFFF // Set to maxVersion value to find the true minimum.
+	maxVersion = 0
+
+	versionStrs := strings.Fields(*protocols)
+	if len(versionStrs) == 0 {
+		return tls.VersionTLS12, 0, nil
+	}
+
+	for _, vStr := range versionStrs {
+		version, ok := protocolMap[strings.TrimSpace(vStr)]
+		if !ok {
+			return 0, 0, fmt.Errorf("unknown TLS protocol: %s", vStr)
+		}
+		if version < minVersion {
+			minVersion = version
+		}
+		if version > maxVersion {
+			maxVersion = version
+		}
+	}
+
+	// If only one version is specified, it serves as both minVersion and maxVersion.
+	if len(versionStrs) == 1 {
+		maxVersion = minVersion
+	}
+
+	return minVersion, maxVersion, nil
 }
 
 // parseCipherSuites parses a colon-separated string of IANA cipher suite names.

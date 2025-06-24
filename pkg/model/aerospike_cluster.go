@@ -162,6 +162,8 @@ type TLS struct {
 	CAPath *string
 	// The default TLS name used to authenticate each TLS socket connection.
 	Name *string
+	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
+	Protocols *string
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
 	CipherSuite *string
 	// Path to the key for mutual authentication (if Aerospike cluster supports it).
@@ -178,10 +180,11 @@ func (tls *TLS) String() string {
 		return nilString
 	}
 	return fmt.Sprintf(
-		"%v:%v:%v:%v:%v:%v:%v",
+		"%v:%v:%v:%v:%v:%v:%v:%v",
 		util.ValueOrZero(tls.CAFile),
 		util.ValueOrZero(tls.CAPath),
 		util.ValueOrZero(tls.Name),
+		util.ValueOrZero(tls.Protocols),
 		util.ValueOrZero(tls.CipherSuite),
 		util.ValueOrZero(tls.Keyfile),
 		util.ValueOrZero(tls.KeyfilePassword),
