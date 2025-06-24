@@ -189,6 +189,8 @@ var yamlExamples = map[string]any{
 }
 
 func main() {
+	generateMarkdownFiles()
+
 	readme, err := os.ReadFile("README.md")
 	if err != nil {
 		panic(err)
@@ -284,7 +286,7 @@ func marshalYAML(v any) ([]byte, error) {
 	return []byte(formattedYAML), nil
 }
 
-type Row struct {
+type MetricRow struct {
 	Name   string
 	Type   string
 	Help   string
@@ -294,7 +296,7 @@ type Row struct {
 // updateMetrics generates a Markdown table from a list of Prometheus collectors
 // and replaces a placeholder section in a given README file.
 func updateMetrics(readme []byte) []byte {
-	var rows []Row
+	var rows []MetricRow
 
 	// This regex extracts the name, help text, and variable labels from the
 	// description string of a Prometheus metric.
@@ -313,7 +315,7 @@ func updateMetrics(readme []byte) []byte {
 				panic("Failed to match Prometheus description: " + str)
 			}
 			labels := strings.ReplaceAll(matches[3], ",", ", ")
-			rows = append(rows, Row{matches[1], metricsType(metric), matches[2], labels})
+			rows = append(rows, MetricRow{matches[1], metricsType(metric), matches[2], labels})
 		}
 	}
 

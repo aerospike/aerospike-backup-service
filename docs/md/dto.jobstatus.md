@@ -1,0 +1,4 @@
+## dto.JobStatus
+
+| Field | Description |
+|-------|-------------|
