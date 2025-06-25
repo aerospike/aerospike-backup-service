@@ -1,5 +1,4 @@
 ## dto.BackupDetails
-
 BackupDetails contains information about a backup.
 
 | Field                   | Description                                                                                                                                    |
