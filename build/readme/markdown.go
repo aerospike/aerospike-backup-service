@@ -297,9 +297,7 @@ func formatValue(x any) string {
 		return ""
 	}
 	switch v := x.(type) {
-	case float32:
-		return fmt.Sprintf("`%g`", v)
-	case float64:
+	case float32, float64:
 		return fmt.Sprintf("`%g`", v)
 	case int, int8, int16, int32, int64:
 		return fmt.Sprintf("`%d`", v)
