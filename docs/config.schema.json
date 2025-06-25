@@ -76,7 +76,7 @@
             "nullable": true
           },
           "max-parallel-scans": {
-            "description": "Specifies the maximum number of parallel scans per the cluster.",
+            "description": "Specifies the maximum number of parallel scans allowed across the cluster.\nThis property helps reduce the load on the cluster and is shared among all backups using the cluster.\nDefault: unlimited.",
             "type": "integer",
             "example": 100,
             "nullable": true
@@ -239,7 +239,7 @@
             "example": "2023-03-19T14:50:00Z"
           },
           "key": {
-            "description": "Key is the path to the backup files within the configured storage location.",
+            "description": "Key is the path to the backup files within the configured storage location.\nThis value can be used as `backup-data-path` in dto.RestoreRequest.",
             "type": "string",
             "example": "daily/backup/1707915600000/source-ns1"
           },
@@ -828,15 +828,15 @@
         "type": "object",
         "properties": {
           "kilobytes-per-second": {
-            "description": "KilobytesPerSecond indicates the amount of data processed by storage per second, in kilobytes.",
+            "description": "Current speed as the amount of data processed by storage per second, in kilobytes.",
             "type": "integer"
           },
           "pipeline": {
-            "description": "Pipeline represents the number of records that have been read from the source\nbut not yet written to the destination. This metric helps identify bottlenecks:\n- If Pipeline is zero or fluctuates near zero, it means the destination is consuming data\n  faster than the source can read.\n- If Pipeline grows large, it indicates that the source is producing data faster\n  than the destination can consume.",
+            "description": "The number of records that have been read from the source, but not yet written to the destination.\nThis metric helps identify bottlenecks:\n- If Pipeline is zero or fluctuates near zero, it means the destination is consuming data\n  faster than the source can read.\n- If Pipeline grows large, it indicates that the source is producing data faster\n  than the destination can consume.",
             "type": "integer"
           },
           "records-per-second": {
-            "description": "RecordsPerSecond indicates the number of records processed by Aerospike per second.",
+            "description": "Current speed as the number of records processed by Aerospike per second.",
             "type": "integer"
           }
         }
@@ -926,7 +926,7 @@
             "example": 8
           },
           "read-records": {
-            "description": "Number of records read from backup.",
+            "description": "Number of records read from backup.\nWhen backup is finished, `read-records` =  `inserted-records` + `fresher-records` +\n`existed-records` + `ignored-records` + `skipped-records` + `expired-records`",
             "type": "integer",
             "format": "int64",
             "example": 10
@@ -1132,7 +1132,7 @@
         ],
         "properties": {
           "backup-data-path": {
-            "description": "Path to the data from storage root.",
+            "description": "Path to the data from storage root.\nYou can obtain this value by:\n- Browsing the storage UI, or\n- Reading the `key` field in the response from GET `v1/backups/full/{routine}`",
             "type": "string"
           },
           "destination": {
@@ -1336,17 +1336,17 @@
         "type": "object",
         "properties": {
           "done-records": {
-            "description": "DoneRecords: the number of records that have been successfully done.",
+            "description": "The number of records that have been successfully done.",
             "type": "integer",
             "example": 50
           },
           "estimated-end-time": {
-            "description": "EstimatedEndTime: the estimated time when the backup operation will be completed.\nA nil value indicates that the estimation is not available yet.",
+            "description": "The estimated time when the backup operation will be completed.\nIt is calculated based on the current percentage done and duration.\nA nil value indicates that the estimation is not available yet.",
             "type": "string",
             "example": "2006-01-02T15:04:05Z07:00"
           },
           "finish-time": {
-            "description": "FinishTime: the time when the operation finished",
+            "description": "The time when the operation finished.\nA nil value indicates that the operation is still running.",
             "type": "string",
             "example": "2006-01-02T15:04:05Z07:00"
           },
@@ -1359,17 +1359,17 @@
             ]
           },
           "percentage-done": {
-            "description": "PercentageDone: the progress of the backup operation as a percentage.",
+            "description": "The progress of the backup operation as a percentage.",
             "type": "integer",
             "example": 50
           },
           "start-time": {
-            "description": "StartTime: the time when the operation started.",
+            "description": "The time when the operation started.",
             "type": "string",
             "example": "2006-01-02T15:04:05Z07:00"
           },
           "total-records": {
-            "description": "TotalRecords: the total number of records to be processed.",
+            "description": "The total number of records to be processed.",
             "type": "integer",
             "example": 100
           }

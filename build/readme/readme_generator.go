@@ -189,11 +189,28 @@ var yamlExamples = map[string]any{
 }
 
 func main() {
+	// generate markdown dto descriptions from open-api
+	generateMarkdownFiles()
+
 	readme, err := os.ReadFile("README.md")
 	if err != nil {
 		panic(err)
 	}
 
+	// replace every <!-- DTONAME --> comment with a real example from jsonExamples and yamlExamples
+	readme = updateDtoExamples(readme)
+	// copy example configuration (with explanatory comments) to a <!-- DefaultConfig --> section
+	readme = updateDefaultConfigSection(readme)
+	// add Prometheus metrics explanation table after <!-- Metrics -->
+	readme = updateMetrics(readme)
+
+	err = os.WriteFile("README.md", readme, 0600)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func updateDtoExamples(readme []byte) []byte {
 	// comment containing an example name (e.g.,key from jsonExamples)
 	// followed by ```json/```yaml and the example code block.
 	re := regexp.MustCompile("<!--\\s*(\\w+)\\s*-->\\s*```(json|yaml)[\\s\\S]*?```")
@@ -209,6 +226,7 @@ func main() {
 
 		var formattedExample []byte
 
+		var err error
 		switch format {
 		case "json":
 			example, exists := jsonExamples[name]
@@ -234,13 +252,7 @@ func main() {
 		return buffer.Bytes()
 	})
 
-	updatedReadme = updateDefaultConfigSection(updatedReadme)
-	updatedReadme = updateMetrics(updatedReadme)
-
-	err = os.WriteFile("README.md", updatedReadme, 0600)
-	if err != nil {
-		panic(err)
-	}
+	return updatedReadme
 }
 
 func updateDefaultConfigSection(readme []byte) []byte {
@@ -267,7 +279,7 @@ func updateDefaultConfigSection(readme []byte) []byte {
 
 // MarshalYAML marshals the input into YAML and replaces 4-space indents with 2-space indents.
 // we need this to be in sync with Goland's markdown formatter.
-func marshalYAML(v interface{}) ([]byte, error) {
+func marshalYAML(v any) ([]byte, error) {
 	rawYAML, err := yaml.Marshal(v)
 	if err != nil {
 		return nil, err
@@ -278,7 +290,7 @@ func marshalYAML(v interface{}) ([]byte, error) {
 	return []byte(formattedYAML), nil
 }
 
-type Row struct {
+type MetricRow struct {
 	Name   string
 	Type   string
 	Help   string
@@ -288,7 +300,7 @@ type Row struct {
 // updateMetrics generates a Markdown table from a list of Prometheus collectors
 // and replaces a placeholder section in a given README file.
 func updateMetrics(readme []byte) []byte {
-	var rows []Row
+	var rows []MetricRow
 
 	// This regex extracts the name, help text, and variable labels from the
 	// description string of a Prometheus metric.
@@ -307,7 +319,7 @@ func updateMetrics(readme []byte) []byte {
 				panic("Failed to match Prometheus description: " + str)
 			}
 			labels := strings.ReplaceAll(matches[3], ",", ", ")
-			rows = append(rows, Row{matches[1], metricsType(metric), matches[2], labels})
+			rows = append(rows, MetricRow{matches[1], metricsType(metric), matches[2], labels})
 		}
 	}
 
