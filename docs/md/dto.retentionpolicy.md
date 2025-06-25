@@ -1,7 +1,0 @@
-## dto.RetentionPolicy
-RetentionPolicy specifies how many full and incremental backups to keep.
-
-| Field         | Description                                                                                                                                                                                                                                                                                   |
-|---------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `full`        | Number of full backups to store:<br>- If nil, retain all full backups.<br>- If N is specified, retain the last N full backups.<br>- The minimum value is 1.                                                                                                                                   |
-| `incremental` | Number of full backups to store incremental backups for:<br>- If nil, retain all incremental backups.<br>- If N is specified, retain incremental backups for the last N full backups.<br>- If set to 0, do not retain any incremental backups.<br>- Must not exceed the value of FullBackups. |

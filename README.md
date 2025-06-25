@@ -205,14 +205,14 @@ service:
       filename: /var/log/aerospike-backup-service.log
 ```
 
-See the [`dto.Config`](docs/md/dto.config.md) for details.
+See the [`dto.Config`](docs/readme/dto/dto.config.md) for details.
 Several configuration fields in the YAML file are marked with `May affect performance`.
 These settings, such as parallel, file-limit, min-part-size, and compression,
 can have a significant impact on backup throughput.
 We recommend experimenting with different values in your environment to find the optimal balance.
 
 The `service` section configures the operation settings of the Aerospike Backup Service,
-which include logging and HTTP endpoint. See the [`dto.BackupServiceConfig`](docs/md/dto.backupserviceconfig.md) for
+which include logging and HTTP endpoint. See the [`dto.BackupServiceConfig`](docs/readme/dto/dto.backupserviceconfig.md) for
 details.
 
 ### Configuration with API
@@ -470,7 +470,7 @@ This endpoint retrieves the current statistics for a backup in progress, identif
 }
 ```
 
-See [fields description](docs/md/dto.runningjob.md) for details.
+See [fields description](docs/readme/dto/dto.runningjob.md) for details.
 
 </details>
 
@@ -525,7 +525,7 @@ The response is a map of routine names to lists of backups.
 }
 ```
 
-For fields description see [fields description](docs/md/dto.backupdetails.md)
+For fields description see [fields description](docs/readme/dto/dto.backupdetails.md)
 
 </details>
 
@@ -601,7 +601,7 @@ The `destination` field says where to restore to. It can be any Aerospike cluste
 You can also use `destination-name` and `storage-name` instead of `destination` and `storage` respectively.
 They refer to the names of the corresponding entities in the configuration file.
 
-For more details see [fields description](docs/md/dto.restorerequest.md)
+For more details see [fields description](docs/readme/dto/dto.restorerequest.md)
 
 </details>
 
@@ -672,7 +672,7 @@ Request is almost identical to [restore by path](#direct-restore-using-a-specifi
 `backup-data-path`
 should provide a pair `time` and `routine`.
 
-For more details see [fields description](docs/md/dto.restoretimestamprequest.md)
+For more details see [fields description](docs/readme/dto/dto.restoretimestamprequest.md)
 </details>
 
 The response is a job ID.
@@ -719,7 +719,7 @@ It works identical for both restore types.
 }
 ```
 
-For fields description see [fields description](docs/md/dto.restorejobstatus.md)
+For fields description see [fields description](docs/readme/dto/dto.restorejobstatus.md)
 </details>
 
 #### Cancel Restore Job

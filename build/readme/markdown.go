@@ -10,7 +10,7 @@ import (
 )
 
 const openapi = "docs/openapi.json"
-const docFolder = "docs/md"
+const docFolder = "docs/readme/dto"
 
 var schemas = readSchemas()
 
@@ -46,19 +46,7 @@ func generateMarkdownTable(dtoName string) string {
 	rows := schemaToRows(schema)
 
 	// Determine if 'Default Value' or 'Possible Values' columns are needed
-	hasDefaultColumn := false
-	hasPossibleValuesColumn := false
-	for _, r := range rows {
-		if r.Default != "" {
-			hasDefaultColumn = true
-		}
-		if r.PossibleValues != "" {
-			hasPossibleValuesColumn = true
-		}
-		if hasDefaultColumn && hasPossibleValuesColumn {
-			break // Both columns are needed, no need to check further
-		}
-	}
+	hasDefaultColumn, hasPossibleValuesColumn := hasOptionalColumns(rows)
 
 	maxName, maxHelp, maxDefault, maxPossibleValues := determineColumsWidth(rows)
 
@@ -100,7 +88,29 @@ func generateMarkdownTable(dtoName string) string {
 		sb.WriteString("|\n")
 	}
 
+	if len(schema.Required) > 0 {
+		sb.WriteString("\n🔴 = Required field")
+	}
+
 	return sb.String()
+}
+
+func hasOptionalColumns(rows []Row) (bool, bool) {
+	hasDefaultColumn := false
+	hasPossibleValuesColumn := false
+	for _, r := range rows {
+		if r.Default != "" {
+			hasDefaultColumn = true
+		}
+		if r.PossibleValues != "" {
+			hasPossibleValuesColumn = true
+		}
+		if hasDefaultColumn && hasPossibleValuesColumn {
+			break // Both columns are needed, no need to check further
+		}
+	}
+
+	return hasDefaultColumn, hasPossibleValuesColumn
 }
 
 func determineColumsWidth(rows []Row) (int, int, int, int) {
@@ -244,7 +254,7 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 	nameWithAsterisk := "`" + fieldName + "`"
 	if requiredFields[fieldName] {
 		// Add a red asterisk using HTML span
-		nameWithAsterisk = fmt.Sprintf("%s<span style=\"color:red\">*</span>", nameWithAsterisk)
+		nameWithAsterisk = fmt.Sprintf("🔴 %s", nameWithAsterisk)
 	}
 
 	row := Row{
