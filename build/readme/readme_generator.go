@@ -189,6 +189,7 @@ var yamlExamples = map[string]any{
 }
 
 func main() {
+	// generate markdown dto descriptions from open-api
 	generateMarkdownFiles()
 
 	readme, err := os.ReadFile("README.md")
@@ -196,8 +197,11 @@ func main() {
 		panic(err)
 	}
 
+	// replace every <!-- DTONAME --> comment with a real example from jsonExamples and yamlExamples
 	readme = updateDtoExamples(readme)
+	// copy example configuration (with explanatory comments) to a <!-- DefaultConfig --> section
 	readme = updateDefaultConfigSection(readme)
+	// add Prometheus metrics explanation table after <!-- Metrics -->
 	readme = updateMetrics(readme)
 
 	err = os.WriteFile("README.md", readme, 0600)

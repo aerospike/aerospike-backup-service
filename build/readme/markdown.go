@@ -266,14 +266,14 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 		possibleValues = joinEnumValues(prop.Enum)
 	}
 
-	nameWithAsterisk := "`" + fieldName + "`"
+	printName := "`" + fieldName + "`"
+	// Add a required filed marker
 	if requiredFields[fieldName] {
-		// Add a red asterisk using HTML span
-		nameWithAsterisk = fmt.Sprintf("%s %s", requiredMarker, nameWithAsterisk)
+		printName = fmt.Sprintf("%s %s", requiredMarker, printName)
 	}
 
 	row := Row{
-		Name:           nameWithAsterisk,
+		Name:           printName,
 		Help:           description,
 		Default:        defaultValue,
 		PossibleValues: possibleValues,
