@@ -47,18 +47,19 @@ func (c *RoutineState) fromModel(m *model.RoutineState) {
 // RunningJob tracks progress of currently running job.
 // @Description RunningJob tracks progress of currently running job.
 type RunningJob struct {
-	// TotalRecords: the total number of records to be processed.
+	// The total number of records to be processed.
 	TotalRecords uint64 `json:"total-records" example:"100"`
-	// DoneRecords: the number of records that have been successfully done.
+	// The number of records that have been successfully done.
 	DoneRecords uint64 `json:"done-records" example:"50"`
-	// StartTime: the time when the operation started.
+	// The time when the operation started.
 	StartTime time.Time `json:"start-time" example:"2006-01-02T15:04:05Z07:00"`
-	// FinishTime: the time when the operation finished.
+	// The time when the operation finished.
 	// A nil value indicates that the operation is still running.
 	FinishTime *time.Time `json:"finish-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
-	// PercentageDone: the progress of the backup operation as a percentage.
+	// The progress of the backup operation as a percentage.
 	PercentageDone uint `json:"percentage-done" example:"50"`
-	// EstimatedEndTime: the estimated time when the backup operation will be completed.
+	// The estimated time when the backup operation will be completed.
+	// It is calculated based on the current percentage done and duration.
 	// A nil value indicates that the estimation is not available yet.
 	EstimatedEndTime *time.Time `json:"estimated-end-time" example:"2006-01-02T15:04:05Z07:00"`
 	// Metrics provides real-time information about data flow performance.

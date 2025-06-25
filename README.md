@@ -205,14 +205,15 @@ service:
       filename: /var/log/aerospike-backup-service.log
 ```
 
+See the [`dto.Config`](docs/md/dto.config.md) for details.
 Several configuration fields in the YAML file are marked with `May affect performance`.
 These settings, such as parallel, file-limit, min-part-size, and compression,
 can have a significant impact on backup throughput.
 We recommend experimenting with different values in your environment to find the optimal balance.
 
 The `service` section configures the operation settings of the Aerospike Backup Service,
-which include logging and HTTP endpoint. See the `dto.BackupServiceConfig` schema
-in [OpenAPI specification](https://aerospike.github.io/aerospike-backup-service/) for details.
+which include logging and HTTP endpoint. See the [`dto.BackupServiceConfig`](docs/md/dto.backupserviceconfig.md) for
+details.
 
 ### Configuration with API
 
@@ -469,17 +470,7 @@ This endpoint retrieves the current statistics for a backup in progress, identif
 }
 ```
 
-`estimated-end-time` an estimation, is calculated based on the current percentage done and duration.
-
-`records-per-second` and `kilobytes-per-second` show current speed, they are updated every second.
-
-`pipeline` represents the number of records that have been read from the source but not yet written to the
-destination.
-This metric helps identify bottlenecks:
-
-- if `pipeline` is zero or fluctuates near zero, it means the destination (storage) is consuming data faster than the
-  source (Aerospike) can read.
-- If `pipeline` grows large, it indicates that the source is producing data faster than the destination can consume.
+See [fields description](docs/md/dto.runningjob.md) for details.
 
 </details>
 
