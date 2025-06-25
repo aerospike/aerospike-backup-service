@@ -3,8 +3,8 @@ RestoreTimestampRequest represents a restore by timestamp operation request.
 
 | Field                | Description                                                                                                                                              | Default Value |
 |----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
-| 🔴 `routine`          | The backup routine name.                                                                                                                                 |               |
-| 🔴 `time`             | Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.                                                   |               |
+| 📍 `routine`          | The backup routine name.                                                                                                                                 |               |
+| 📍 `time`             | Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.                                                   |               |
 | `destination`        | The details of the Aerospike destination cluster.<br>Mutually exclusive with 'destination-name'.<br>See: [dto.AerospikeCluster](dto.aerospikecluster.md) |               |
 | `destination-name`   | Link to one of preconfigured clusters.<br>Mutually exclusive with 'destination'.                                                                         |               |
 | `disable-reordering` | Disable reverse order of incremental backups optimisation.                                                                                               | `false`       |
@@ -14,4 +14,4 @@ RestoreTimestampRequest represents a restore by timestamp operation request.
 | `source`             | The details of the storage configuration.<br>Mutually exclusive with 'source-name'.<br>See: [dto.Storage](dto.storage.md)                                |               |
 | `source-name`        | Link to one of preconfigured storages.<br>Mutually exclusive with 'source'.                                                                              |               |
 
-🔴 = Required field
+📍 = Required field

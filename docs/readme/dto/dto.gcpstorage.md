@@ -3,7 +3,7 @@ GcpStorage represents the configuration for GCP storage.
 
 | Field               | Description                                                                                                                          | Default Value |
 |---------------------|--------------------------------------------------------------------------------------------------------------------------------------|---------------|
-| 🔴 `bucket-name`     | GCP storage bucket name.                                                                                                             |               |
+| 📍 `bucket-name`     | GCP storage bucket name.                                                                                                             |               |
 | `endpoint`          | Alternative url.<br>It is not recommended to use an alternate URL in a production environment.                                       |               |
 | `key`               | Key is the service account key in JSON format.<br>This is sensitive information. Can be a path in secret agent or an actual value.   |               |
 | `key-file-path`     | Path to the file containing the service account key in JSON format.                                                                  |               |
@@ -13,4 +13,4 @@ GcpStorage represents the configuration for GCP storage.
 | `secret-agent-name` | Secret Agent configuration (optional). Link to one of preconfigured agents.<br>Mutually exclusive with 'secret-agent'.               |               |
 | `storage-class`     | StorageClass defines the storage class for data and metadata objects.<br>See: [dto.GcpStorageClass](dto.gcpstorageclass.md)          |               |
 
-🔴 = Required field
+📍 = Required field

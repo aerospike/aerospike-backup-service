@@ -9,8 +9,11 @@ import (
 	"strings"
 )
 
-const openapi = "docs/openapi.json"
-const docFolder = "docs/readme/dto"
+const (
+	openapi        = "docs/openapi.json"
+	docFolder      = "docs/readme/dto"
+	requiredMarker = "📍"
+)
 
 var schemas = readSchemas()
 
@@ -45,19 +48,34 @@ func generateMarkdownTable(dtoName string) string {
 
 	rows := schemaToRows(schema)
 
-	// Determine if 'Default Value' or 'Possible Values' columns are needed
-	hasDefaultColumn, hasPossibleValuesColumn := hasOptionalColumns(rows)
-
-	maxName, maxHelp, maxDefault, maxPossibleValues := determineColumsWidth(rows)
-
-	const quotes = 0
 	var sb strings.Builder
 
 	// Add header for the DTO
 	sb.WriteString(fmt.Sprintf("## %s\n%s\n\n", dtoName, schema.Description))
 
+	if len(rows) > 0 {
+		sb.WriteString(writeRows(rows))
+	}
+
+	if len(schema.Required) > 0 {
+		sb.WriteString(fmt.Sprintf("\n%s = Required field", requiredMarker))
+	}
+
+	if len(schema.Enum) > 0 {
+		sb.WriteString(fmt.Sprintf("Possible values: %s.\n", joinEnumValues(schema.Enum)))
+	}
+
+	return sb.String()
+}
+
+func writeRows(rows []Row) string {
+	var sb strings.Builder
+	// Determine if 'Default Value' or 'Possible Values' columns are needed
+	hasDefaultColumn, hasPossibleValuesColumn := hasOptionalColumns(rows)
+
+	maxName, maxHelp, maxDefault, maxPossibleValues := determineColumsWidth(rows)
 	// Write header
-	sb.WriteString(fmt.Sprintf("| %-*s | %-*s ", maxName+quotes, "Field", maxHelp, "Description"))
+	sb.WriteString(fmt.Sprintf("| %-*s | %-*s ", maxName, "Field", maxHelp, "Description"))
 	if hasDefaultColumn {
 		sb.WriteString(fmt.Sprintf("| %-*s ", maxDefault, "Default Value"))
 	}
@@ -67,7 +85,7 @@ func generateMarkdownTable(dtoName string) string {
 	sb.WriteString("|\n")
 
 	// Write separator
-	sb.WriteString(fmt.Sprintf("|-%s-|-%s-", strings.Repeat("-", maxName+quotes), strings.Repeat("-", maxHelp)))
+	sb.WriteString(fmt.Sprintf("|-%s-|-%s-", strings.Repeat("-", maxName), strings.Repeat("-", maxHelp)))
 	if hasDefaultColumn {
 		sb.WriteString(fmt.Sprintf("|-%s-", strings.Repeat("-", maxDefault)))
 	}
@@ -78,7 +96,7 @@ func generateMarkdownTable(dtoName string) string {
 
 	// Write rows
 	for _, r := range rows {
-		sb.WriteString(fmt.Sprintf("| %-*s | %-*s ", maxName+quotes, r.Name, maxHelp, r.Help))
+		sb.WriteString(fmt.Sprintf("| %-*s | %-*s ", maxName, r.Name, maxHelp, r.Help))
 		if hasDefaultColumn {
 			sb.WriteString(fmt.Sprintf("| %-*s ", maxDefault, r.Default))
 		}
@@ -86,10 +104,6 @@ func generateMarkdownTable(dtoName string) string {
 			sb.WriteString(fmt.Sprintf("| %-*s ", maxPossibleValues, r.PossibleValues))
 		}
 		sb.WriteString("|\n")
-	}
-
-	if len(schema.Required) > 0 {
-		sb.WriteString("\n🔴 = Required field")
 	}
 
 	return sb.String()
@@ -165,6 +179,7 @@ type Schema struct {
 	Type        string              `json:"type"`
 	Properties  map[string]Property `json:"properties"`
 	Required    []string            `json:"required"`
+	Enum        []string            `json:"enum"`
 }
 
 type Property struct {
@@ -248,13 +263,13 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 
 	// Handle enum values
 	if len(prop.Enum) > 0 {
-		possibleValues = "`" + strings.Join(prop.Enum, "`, `") + "`"
+		possibleValues = joinEnumValues(prop.Enum)
 	}
 
 	nameWithAsterisk := "`" + fieldName + "`"
 	if requiredFields[fieldName] {
 		// Add a red asterisk using HTML span
-		nameWithAsterisk = fmt.Sprintf("🔴 %s", nameWithAsterisk)
+		nameWithAsterisk = fmt.Sprintf("%s %s", requiredMarker, nameWithAsterisk)
 	}
 
 	row := Row{
@@ -265,6 +280,10 @@ func makeRow(fp FieldProperty, requiredFields map[string]bool) Row {
 	}
 
 	return row
+}
+
+func joinEnumValues(enum []string) string {
+	return "`" + strings.Join(enum, "`, `") + "`"
 }
 
 // Example: "#/components/schemas/dto.RunningJob" → "dto.RunningJob".

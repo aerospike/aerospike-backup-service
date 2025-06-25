@@ -3,8 +3,8 @@ AzureStorage represents the configuration for Azure Blob storage.
 
 | Field                 | Description                                                                                                                                                          | Default Value |
 |-----------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
-| 🔴 `container-name`    | ContainerName is the name of the Azure Blob container.                                                                                                               |               |
-| 🔴 `endpoint`          | Endpoint is the Azure Blob service endpoint URL.                                                                                                                     |               |
+| 📍 `container-name`    | ContainerName is the name of the Azure Blob container.                                                                                                               |               |
+| 📍 `endpoint`          | Endpoint is the Azure Blob service endpoint URL.                                                                                                                     |               |
 | `account-key`         | AccountKey is the Azure storage account key for Shared Key authentication.<br>This is sensitive information. Can be a path in secret agent or an actual value.       |               |
 | `account-name`        | AccountName is the Azure storage account name for Shared Key authentication.                                                                                         |               |
 | `client-id`           | ClientID is the Azure Active Directory client ID for AAD authentication.                                                                                             |               |
@@ -16,4 +16,4 @@ AzureStorage represents the configuration for Azure Blob storage.
 | `storage-class`       | StorageClass defines the storage tier for data and metadata objects.<br>See: [dto.AzureStorageClass](dto.azurestorageclass.md)                                       |               |
 | `tenant-id`           | TenantID is the Azure Active Directory tenant ID for AAD authentication.                                                                                             |               |
 
-🔴 = Required field
+📍 = Required field

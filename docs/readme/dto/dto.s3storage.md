@@ -3,8 +3,8 @@ S3Storage represents the configuration for S3 storage.
 
 | Field                   | Description                                                                                                                                                 | Default Value |
 |-------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
-| 🔴 `bucket`              | The S3 bucket name.                                                                                                                                         |               |
-| 🔴 `s3-region`           | The S3 region string.                                                                                                                                       |               |
+| 📍 `bucket`              | The S3 bucket name.                                                                                                                                         |               |
+| 📍 `s3-region`           | The S3 region string.                                                                                                                                       |               |
 | `access-key-id`         | Access Key ID for authentication with S3 StaticCredentialsProvider.<br>This is sensitive information. Can be a path in secret agent or an actual value.     |               |
 | `max-async-connections` | The maximum number of simultaneous requests from S3.                                                                                                        |               |
 | `min-part-size`         | The minimum size in bytes of individual S3 UploadParts.                                                                                                     | `5.24288e+06` |
@@ -17,4 +17,4 @@ S3Storage represents the configuration for S3 storage.
 | `secret-agent-name`     | Secret Agent configuration (optional). Link to one of preconfigured agents.<br>Mutually exclusive with 'secret-agent'.                                      |               |
 | `storage-class`         | StorageClass defines the storage class for data and metadata objects.<br>See: [dto.S3StorageClass](dto.s3storageclass.md)                                   |               |
 
-🔴 = Required field
+📍 = Required field

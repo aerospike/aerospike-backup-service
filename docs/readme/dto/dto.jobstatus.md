@@ -1,5 +1,4 @@
 ## dto.JobStatus
 JobStatus represents possible states of restore jobs.
 
-| Field | Description |
-|-------|-------------|
+Possible values: `Running`, `Done`, `Failed`, `Cancelled`.
