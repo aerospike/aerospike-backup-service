@@ -16,7 +16,7 @@ import (
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total
 	// data partitions. The optimal value depends on hardware and network configuration.
-	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1" default:"8"`
+	Parallel *int `yaml:"parallel,omitempty" json:"parallel,omitempty" example:"1" default:"8" minimum:"1"`
 	// Socket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
 	SocketTimeout *int64 `yaml:"socket-timeout,omitempty" json:"socket-timeout,omitempty" default:"60000"`
@@ -39,9 +39,10 @@ type BackupPolicy struct {
 	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty" default:"false"`
 	// Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.
 	// Default is no limit.
-	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" default:"0"`
-	// Limits the number of records returned per second (RPS). Default is no limit.
-	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000" default:"0"`
+	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" extensions:"x-nullable"`
+	// Limits the number of records returned per second (RPS).
+	// Default is no limit.
+	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000" extensions:"x-nullable"`
 	// File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,
 	// a new backup file will be created.
 	FileLimit *int `yaml:"file-limit,omitempty" json:"file-limit,omitempty" default:"250"`
@@ -98,8 +99,8 @@ func (p *BackupPolicy) Validate() error {
 	if p.Bandwidth != nil && *p.Bandwidth < 0 {
 		return errValidationNegative("bandwidth", *p.Bandwidth)
 	}
-	if p.RecordsPerSecond != nil && *p.RecordsPerSecond <= 0 {
-		return errValidationNonPositive("records-per-second", *p.RecordsPerSecond)
+	if p.RecordsPerSecond != nil && *p.RecordsPerSecond < 0 {
+		return errValidationNegative("records-per-second", *p.RecordsPerSecond)
 	}
 	if p.FileLimit != nil && *p.FileLimit < 0 {
 		return errValidationNegative("file-limit", *p.FileLimit)
