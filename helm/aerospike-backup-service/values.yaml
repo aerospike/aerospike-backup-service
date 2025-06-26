@@ -7,16 +7,13 @@ image:
   repository: aerospike/aerospike-backup-service
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "3.1.0"
+  tag: "0.0.0"
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
-
 xdr:
   enabled: false
   exposeExternally: false
-
-
 configmap:
   # Specifies whether a configmap should be created with the backupServiceConfig.
   # When false the backupServiceConfig will get created in the deployment init container.
