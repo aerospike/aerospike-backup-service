@@ -14,12 +14,14 @@ PACKAGE_DIR = $(BUILD_DIR)/package
 
 ARCHS=linux/amd64 linux/arm64
 PACKAGERS=deb rpm
+
 TARGET=$(TARGET_DIR)/$(BINARY_NAME)
 ifneq ($(strip $(OS))$(strip $(ARCH)),)
 	TARGET=$(TARGET_DIR)/$(BINARY_NAME)_$(OS)_$(ARCH)
 endif
-GIT_COMMIT:=$(shell git rev-parse HEAD)
-VERSION:=$(shell cat VERSION)
+
+GIT_COMMIT := $(shell git rev-parse HEAD)
+VERSION := $(shell cat VERSION)
 
 # Go parameters
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
@@ -27,36 +29,35 @@ NFPM ?= $(shell which nfpm)
 OS ?= $(shell $(GO) env GOOS)
 ARCH ?= $(shell $(GO) env GOARCH)
 REGISTRY ?= "docker.io"
-RH_REGISTRY ?= "registry.access.redhat.com"
+
 GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 $(GO) build \
 -ldflags="-X main.commit=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
 GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
 
-
 .PHONY: submodules
 submodules:
 	git submodule update --init --recursive
-
-.PHONY: buildx
-buildx:
-	@for arch in $(ARCHS); do \
-  		OS=$$(echo $$arch | cut -d/ -f1); \
-  		ARCH=$$(echo $$arch | cut -d/ -f2); \
-  		OS=$$OS ARCH=$$ARCH $(MAKE) build; \
-  	done
 
 .PHONY: build
 build: submodules
 	mkdir -p $(TARGET_DIR)
 	$(GOBUILD) -o $(TARGET) ./$(CMD_DIR)
 
+.PHONY: buildx
+buildx:
+	@for arch in $(ARCHS); do \
+		OS=$$(echo $$arch | cut -d/ -f1); \
+		ARCH=$$(echo $$arch | cut -d/ -f2); \
+		OS=$$OS ARCH=$$ARCH $(MAKE) build; \
+	done
+
 .PHONY: packages
 packages: buildx
 	@for arch in $(ARCHS); do \
-  		OS=$$(echo $$arch | cut -d/ -f1); \
-  		ARCH=$$(echo $$arch | cut -d/ -f2); \
+		OS=$$(echo $$arch | cut -d/ -f1); \
+		ARCH=$$(echo $$arch | cut -d/ -f2); \
 		OS=$$OS ARCH=$$ARCH \
 		NAME=$(BINARY_NAME) \
 		VERSION=$(VERSION) \
@@ -71,10 +72,10 @@ packages: buildx
 		for packager in $(PACKAGERS); do \
 			$(NFPM) package \
 			--config $(PACKAGE_DIR)/nfpm-$$OS-$$ARCH.yaml \
-			--packager $$(echo $$packager) \
+			--packager $$packager \
 			--target $(TARGET_DIR); \
-			done; \
-  	done; \
+		done; \
+	done
 
 .PHONY: checksums
 checksums:
@@ -84,11 +85,14 @@ checksums:
 
 .PHONY: docker-build
 docker-build:
-	 DOCKER_BUILDKIT=1  docker build --progress=plain --tag aerospike/aerospike-backup-service:$(TAG) --build-arg REGISTRY=$(REGISTRY) --build-arg RH_REGISTRY=$(RH_REGISTRY) --file $(WORKSPACE)/Dockerfile .
+	DOCKER_BUILDKIT=1 docker build --progress=plain \
+	--tag aerospike/aerospike-backup-service:$(TAG) \
+	--build-arg REGISTRY=$(REGISTRY) \
+	--file $(WORKSPACE)/Dockerfile .
 
 .PHONY: docker-buildx
 docker-buildx:
-	cd ./build/scripts && ./docker-buildx.sh --tag $(TAG) --registry $(REGISTRY) --rh-registry $(RH_REGISTRY)
+	cd ./build/scripts && ./docker-buildx.sh --tag $(TAG) --registry $(REGISTRY)
 
 .PHONY: test
 test:
@@ -108,7 +112,7 @@ helm-chart-release:
 .PHONY: clean
 clean:
 	$(GOCLEAN)
-	rm $(TARGET_DIR)/*
+	rm -rf $(TARGET_DIR)/*
 	@find . -type f -name 'nfpm-*-*.yaml' -exec rm -f {} +
 	git submodule foreach --recursive git clean -fd; \
-    git submodule deinit --all -f
+	git submodule deinit --all -f

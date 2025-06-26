@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1.12.0
-ARG GO_VERSION=1.23.9
+ARG GO_VERSION=1.23.10
 ARG REGISTRY="docker.io"
-ARG RH_REGISTRY="registry.access.redhat.com"
 
 FROM --platform=$BUILDPLATFORM ${REGISTRY}/tonistiigi/xx AS xx
 FROM --platform=$BUILDPLATFORM ${REGISTRY}/golang:${GO_VERSION} AS builder
@@ -20,15 +19,16 @@ RUN <<-EOF
     xx-verify /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH}
 EOF
 
-FROM ${RH_REGISTRY}/ubi9/ubi-minimal:latest
+FROM ${REGISTRY}/alpine:latest
 ARG TARGETOS
 ARG TARGETARCH
 
-RUN microdnf install -y shadow-utils && \
-    microdnf update -y && \
-    microdnf -y clean all && rm -rf /var/cache/yum && \
-    groupadd --system --gid 65532 absgroup && \
-    useradd --no-log-init --system --uid 65532 --gid 65532 --create-home absuser
+RUN apk update &&  \
+    apk upgrade --no-cache
+
+RUN apk add --no-cache shadow && \
+    addgroup -g 65532 -S abgroup && \
+    adduser -S -u 65532 -G abgroup -h /home/abuser abuser
 
 COPY --chown=absuser:absgroup --chmod=0755 --from=builder \
     /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH} \
@@ -39,7 +39,7 @@ COPY --chown=absuser:absgroup --from=builder \
     /etc/aerospike-backup-service/aerospike-backup-service.yml
 
 USER absuser
-EXPOSE 8080
 
+EXPOSE 8080
 ENTRYPOINT ["aerospike-backup-service"]
 CMD ["-c", "/etc/aerospike-backup-service/aerospike-backup-service.yml"]
