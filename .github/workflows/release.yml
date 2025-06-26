@@ -5,10 +5,10 @@ name: Promote Images to DockerHub
 #      - published
 #  workflow_dispatch:
 
-on:
-  push:
-    branches:
-      - align-actions-with-cli-tools
+#on:
+#  push:
+#    branches:
+#      - align-actions-with-cli-tools
 
 jobs:
   promote-to-jfrog-prod-env:
