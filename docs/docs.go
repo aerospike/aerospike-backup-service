@@ -1895,7 +1895,7 @@ const docTemplate = `{
                 "bandwidth": {
                     "description": "Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.\nDefault is no limit.",
                     "type": "integer",
-                    "default": 0,
+                    "x-nullable": true,
                     "example": 10000
                 },
                 "compression": {
@@ -1943,12 +1943,13 @@ const docTemplate = `{
                     "description": "Maximum number of scan calls to run in parallel. Each scan call processes a subset of the total\ndata partitions. The optimal value depends on hardware and network configuration.",
                     "type": "integer",
                     "default": 8,
+                    "minimum": 1,
                     "example": 1
                 },
                 "records-per-second": {
-                    "description": "Limits the number of records returned per second (RPS). Default is no limit.",
+                    "description": "Limits the number of records returned per second (RPS).\nDefault is no limit.",
                     "type": "integer",
-                    "default": 0,
+                    "x-nullable": true,
                     "example": 1000
                 },
                 "retention": {
