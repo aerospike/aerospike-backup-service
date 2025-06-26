@@ -10,6 +10,6 @@ maintainers:
   - name: Aerospike
     email: developers@aerospike.com
 # The helm chart version
-version: 0.0.1
+version: 2.0.4
 # The default version of Aerospike Backup Service
-appVersion: "0.0.0"
+appVersion: "3.1.0"
