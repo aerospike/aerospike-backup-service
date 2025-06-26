@@ -7,14 +7,14 @@ import (
 // Metrics represents the current job speed.
 // @Description Metrics represents the current job speed.
 type Metrics struct {
-	// RecordsPerSecond indicates the number of records processed by Aerospike per second.
+	// Current speed as the number of records processed by Aerospike per second.
 	RecordsPerSecond uint64 `json:"records-per-second"`
 
-	// KilobytesPerSecond indicates the amount of data processed by storage per second, in kilobytes.
+	// Current speed as the amount of data processed by storage per second, in kilobytes.
 	KilobytesPerSecond uint64 `json:"kilobytes-per-second"`
 
-	// Pipeline represents the number of records that have been read from the source
-	// but not yet written to the destination. This metric helps identify bottlenecks:
+	// The number of records that have been read from the source, but not yet written to the destination.
+	// This metric helps identify bottlenecks:
 	// - If Pipeline is zero or fluctuates near zero, it means the destination is consuming data
 	//   faster than the source can read.
 	// - If Pipeline grows large, it indicates that the source is producing data faster

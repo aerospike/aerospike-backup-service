@@ -205,14 +205,15 @@ service:
       filename: /var/log/aerospike-backup-service.log
 ```
 
+See the [`dto.Config`](docs/readme/dto/dto.config.md) for details.
 Several configuration fields in the YAML file are marked with `May affect performance`.
 These settings, such as parallel, file-limit, min-part-size, and compression,
 can have a significant impact on backup throughput.
 We recommend experimenting with different values in your environment to find the optimal balance.
 
 The `service` section configures the operation settings of the Aerospike Backup Service,
-which include logging and HTTP endpoint. See the `dto.BackupServiceConfig` schema
-in [OpenAPI specification](https://aerospike.github.io/aerospike-backup-service/) for details.
+which include logging and HTTP endpoint. See the [`dto.BackupServiceConfig`](docs/readme/dto/dto.backupserviceconfig.md) for
+details.
 
 ### Configuration with API
 
@@ -469,17 +470,7 @@ This endpoint retrieves the current statistics for a backup in progress, identif
 }
 ```
 
-`estimated-end-time` an estimation, is calculated based on the current percentage done and duration.
-
-`records-per-second` and `kilobytes-per-second` show current speed, they are updated every second.
-
-`pipeline` represents the number of records that have been read from the source but not yet written to the
-destination.
-This metric helps identify bottlenecks:
-
-- if `pipeline` is zero or fluctuates near zero, it means the destination (storage) is consuming data faster than the
-  source (Aerospike) can read.
-- If `pipeline` grows large, it indicates that the source is producing data faster than the destination can consume.
+See [fields description](docs/readme/dto/dto.runningjob.md) for details.
 
 </details>
 
@@ -533,6 +524,8 @@ The response is a map of routine names to lists of backups.
   ]
 }
 ```
+
+For fields description see [fields description](docs/readme/dto/dto.backupdetails.md)
 
 </details>
 
@@ -608,6 +601,8 @@ The `destination` field says where to restore to. It can be any Aerospike cluste
 You can also use `destination-name` and `storage-name` instead of `destination` and `storage` respectively.
 They refer to the names of the corresponding entities in the configuration file.
 
+For more details see [fields description](docs/readme/dto/dto.restorerequest.md)
+
 </details>
 
 The response is a job ID.
@@ -665,8 +660,6 @@ POST {{baseUrl}}/v1/restore/timestamp`](https://aerospike.github.io/aerospike-ba
 <details>
     <summary>Request body</summary>
 
-<!-- RestoreTimestampRequest -->
-
 ```json
 {
   "destination-name": "abs-cluster",
@@ -675,27 +668,42 @@ POST {{baseUrl}}/v1/restore/timestamp`](https://aerospike.github.io/aerospike-ba
 }
 ```
 
+Request is almost identical to [restore by path](#direct-restore-using-a-specific-backup), but instead of
+`backup-data-path`
+should provide a pair `time` and `routine`.
+
+For more details see [fields description](docs/readme/dto/dto.restoretimestamprequest.md)
 </details>
 
 The response is a job ID.
 
 #### Restore job status
 
-You can get job status with the
-endpoint
+You can get job status with the endpoint
 
 [
 `GET {{baseUrl}}/v1/restore/status/<jobId>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/restoreStatus).
 
+It works identical for both restore types.
+
 <details>
-    <summary>Request body</summary>
-
-
-<!-- CurrentBackupResponse -->
+    <summary>Response example</summary>
+<!-- CurrentRestoreResponse -->
 
 ```json
 {
-  "full": {
+  "read-records": 100000,
+  "total-bytes": 30000000,
+  "expired-records": 0,
+  "skipped-records": 0,
+  "ignored-records": 0,
+  "inserted-records": 5000,
+  "existed-records": 0,
+  "fresher-records": 0,
+  "index-count": 4,
+  "udf-count": 1,
+  "errors-in-doubt": 0,
+  "current-job": {
     "total-records": 100000,
     "done-records": 50000,
     "start-time": "2024-01-01T12:00:00Z",
@@ -706,10 +714,12 @@ endpoint
       "kilobytes-per-second": 30000,
       "pipeline": 0
     }
-  }
+  },
+  "status": "Running"
 }
 ```
 
+For fields description see [fields description](docs/readme/dto/dto.restorejobstatus.md)
 </details>
 
 #### Cancel Restore Job
