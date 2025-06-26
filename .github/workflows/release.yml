@@ -28,10 +28,10 @@ jobs:
           JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
           JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
 
-      - name: Promote to JFrog PROD Environment
+      - name: Promote to JFrog STAGE Environment
         run: |
           jfrog release-bundle-promote "$BUNDLE_NAME" "$BUNDLE_VERSION" \
-          --signing-key="aerospike" --project="ecosystem" PROD
+          --signing-key="aerospike" --project="ecosystem" STAGE
 
   promote-to-dockerhub:
     runs-on: ubuntu-24.04
@@ -95,8 +95,8 @@ jobs:
         run: |
           set -euo pipefail
           
-          amd64_tag="aerospike/$REPO_NAME:$TAG-amd64"
-          arm64_tag="aerospike/$REPO_NAME:$TAG-arm64"
+          amd64_tag="davi17g/$REPO_NAME:$TAG-amd64"
+          arm64_tag="davi17g/$REPO_NAME:$TAG-arm64"
           multiarch_tag="aerospike/$REPO_NAME:$TAG"
           
           docker tag "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_DEV/$REPO_NAME@$AMD64_DIGEST" "$amd64_tag"
