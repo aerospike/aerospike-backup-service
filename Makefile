@@ -116,3 +116,15 @@ clean:
 	@find . -type f -name 'nfpm-*-*.yaml' -exec rm -f {} +
 	git submodule foreach --recursive git clean -fd; \
 	git submodule deinit --all -f
+
+.PHONY: vulnerability-scan
+vulnerability-scan:
+	snyk test --all-projects --policy-path=$(WORKSPACE)/.snyk --severity-threshold=high
+
+.PHONY: vulnerability-scan-container
+vulnerability-scan-container:
+	TAG="latest" $(MAKE) docker-build
+	snyk container test aerospike/aerospike-backup-service:latest \
+	--policy-path=$(WORKSPACE)/.snyk \
+	--file=Dockerfile \
+	--severity-threshold=high
