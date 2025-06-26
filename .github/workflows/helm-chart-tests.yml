@@ -183,7 +183,7 @@ jobs:
                 optional: false
           extraSecretVolumeMounts:
             - name: minio-credentials
-              mountPath: /root/.aws/credentials
+              mountPath: /home/absuser/.aws/credentials
               readOnly: true
           image:
             pullPolicy: IfNotPresent

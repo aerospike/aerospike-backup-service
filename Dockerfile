@@ -28,7 +28,7 @@ RUN apk update &&  \
 
 RUN apk add --no-cache shadow && \
     addgroup -g 65532 -S abgroup && \
-    adduser -S -u 65532 -G abgroup -h /home/abuser abuser
+    adduser -S -u 65532 -G abgroup -h /home/absuser absuser
 
 COPY --chown=absuser:absgroup --chmod=0755 --from=builder \
     /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH} \
