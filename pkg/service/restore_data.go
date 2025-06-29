@@ -61,6 +61,7 @@ func (r *dataRestorer) Restore(ctx context.Context, request *model.RestoreReques
 	ctx, cancel := context.WithCancel(ctx)
 
 	jobID := r.restoreJobs.newJob(request.BackupDataPath, cancel)
+	slog.Info("new restore job", slog.Any("jobID", jobID), slog.Any("request", *request))
 	go func() {
 		err := r.executeRestore(ctx, request, jobID)
 		r.restoreJobs.finishJob(jobID, err)
@@ -102,6 +103,7 @@ func (r *dataRestorer) executeRestore(
 	r.restoreJobs.addHandler(jobID, handler)
 
 	// Wait for the restore operation to complete
+	slog.Info("wait", slog.Any("jobID", jobID))
 	return handler.Wait(ctx)
 }
 
