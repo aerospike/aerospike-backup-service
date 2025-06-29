@@ -49,7 +49,7 @@ type RestorePolicy struct {
 	// With this option, records from the backup always overwrite records that already exist in
 	// the namespace, regardless of generation numbers.
 	NoGeneration *bool
-	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.
+	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in MiB/s.
 	Bandwidth *int
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions
 	// per second.

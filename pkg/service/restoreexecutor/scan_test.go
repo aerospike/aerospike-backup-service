@@ -62,7 +62,7 @@ func TestMakeRestoreConfig(t *testing.T) {
 	assert.Equal(t, false, config.NoIndexes)
 	assert.Equal(t, false, config.NoUDFs)
 	assert.Equal(t, 500, config.RecordsPerSecond)
-	assert.Equal(t, 1024, config.Bandwidth)
+	assert.Equal(t, 1024*megabyte, config.Bandwidth)
 	assert.Equal(t, int64(3600), config.ExtraTTL)
 	assert.Equal(t, 8, config.Parallel)
 	assert.Equal(t, 128, config.BatchSize)

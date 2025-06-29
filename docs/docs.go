@@ -2640,7 +2640,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bandwidth": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.\nDefault: no limit.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in MiB/s.\nDefault: no limit.",
                     "type": "integer",
                     "x-nullable": true,
                     "example": 50000

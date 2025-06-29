@@ -96,9 +96,11 @@ func (p *BackupPolicy) Validate() error {
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retryPolicy validation failed: %w", err)
 	}
-	if p.Bandwidth != nil && *p.Bandwidth < 0 {
-		return errValidationNegative("bandwidth", *p.Bandwidth)
+
+	if err := validateBandwidth(p.Bandwidth); err != nil {
+		return err
 	}
+
 	if p.RecordsPerSecond != nil && *p.RecordsPerSecond < 0 {
 		return errValidationNegative("records-per-second", *p.RecordsPerSecond)
 	}
@@ -119,6 +121,23 @@ func (p *BackupPolicy) Validate() error {
 	//}
 
 	return nil
+}
+
+func validateBandwidth(bandwidth *int) error {
+	if bandwidth == nil {
+		return nil
+	}
+
+	bw := *bandwidth
+	if bw == 0 || bw > minBandwidth { // 0 means unlimited bandwidth
+		return nil
+	}
+
+	return errValidationInvalidValue(
+		"bandwidth",
+		bw,
+		"must be 0 (unlimited) or greater than 8 MiB/s",
+	)
 }
 
 func (p *BackupPolicy) ToModel() *model.BackupPolicy {
