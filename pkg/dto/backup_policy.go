@@ -136,7 +136,7 @@ func validateBandwidth(bandwidth *int) error {
 	return errValidationInvalidValue(
 		"bandwidth",
 		bw,
-		"must be 0 (unlimited) or greater than 8 MiB/s",
+		"0 (unlimited) or greater than 8 MiB/s",
 	)
 }
 
