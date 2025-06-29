@@ -112,12 +112,10 @@ jobs:
           for file in "${asset_array[@]}"; do
             echo "file is: ${file}"
             rpm --addsign "${file}"
-            echo "here"
             OUTPUT=$(rpm --checksig "${file}")
             if [[ "$OUTPUT" =~ 'digests signatures OK' ]]; then
               echo "Successfully GPG Signed $file"
             else
-              echo "$OUTPUT"
               echo "GPG Signing $file has failed."
               exit 1
             fi
@@ -134,7 +132,6 @@ jobs:
             if [[ "$OUTPUT" =~ 'GOODSIG _gpgbuilder' ]]; then
               echo "Successfully GPG Signed $file"
             else
-              echo "$OUTPUT"
               echo "GPG Signing $file has failed."
               exit 1
             fi
