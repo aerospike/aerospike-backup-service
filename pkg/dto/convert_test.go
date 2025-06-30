@@ -147,6 +147,7 @@ var originalConfig = &Config{
 		SourceCluster: "cluster1",
 		Storage:       "aws 1",
 		IntervalCron:  "@daily",
+		Namespaces:    util.Ptr([]string{}),
 	}},
 	SecretAgents: map[string]*SecretAgent{"agent1": {
 		Address:        "host",
