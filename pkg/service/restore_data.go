@@ -104,6 +104,7 @@ func (r *dataRestorer) executeRestore(
 
 	// Wait for the restore operation to complete
 	slog.Info("wait", slog.Any("jobID", jobID))
+
 	return handler.Wait(ctx)
 }
 
