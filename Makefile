@@ -12,8 +12,11 @@ BUILD_DIR = build
 TARGET_DIR = $(BUILD_DIR)/target
 PACKAGE_DIR = $(BUILD_DIR)/package
 
-ARCHS=linux/amd64 linux/arm64
-PACKAGERS=deb rpm
+ARCHS ?= linux/amd64 linux/arm64
+PACKAGERS ?= deb rpm
+
+IMAGE_TAG ?= test
+IMAGE_REPO ?= aerospike/aerospike-backup-service
 
 TARGET=$(TARGET_DIR)/$(BINARY_NAME)
 ifneq ($(strip $(OS))$(strip $(ARCH)),)
@@ -86,13 +89,13 @@ checksums:
 .PHONY: docker-build
 docker-build:
 	DOCKER_BUILDKIT=1 docker build --progress=plain \
-	--tag aerospike/aerospike-backup-service:$(TAG) \
+	--tag $(IMAGE_REPO):$(IMAGE_TAG) \
 	--build-arg REGISTRY=$(REGISTRY) \
 	--file $(WORKSPACE)/Dockerfile .
 
 .PHONY: docker-buildx
 docker-buildx:
-	cd ./build/scripts && ./docker-buildx.sh --tag $(TAG) --registry $(REGISTRY)
+	cd ./build/scripts && ./docker-buildx.sh --tag $(IMAGE_TAG) --registry $(REGISTRY) --platforms "$(ARCHS)"
 
 .PHONY: test
 test:
@@ -123,8 +126,7 @@ vulnerability-scan:
 
 .PHONY: vulnerability-scan-container
 vulnerability-scan-container:
-	TAG="latest" $(MAKE) docker-build
-	snyk container test aerospike/aerospike-backup-service:latest \
+	snyk container test $(IMAGE_REPO):$(IMAGE_TAG) \
 	--policy-path=$(WORKSPACE)/.snyk \
 	--file=Dockerfile \
 	--severity-threshold=high

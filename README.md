@@ -811,13 +811,13 @@ make build
 #### Multiplatform
 
 ```bash
-DOCKER_USERNAME="<jforg-username>" DOCKER_PASSWORD="<jfrog-password>" TAG="<tag>" make docker-buildx 
+DOCKER_USERNAME="<jforg-username>" DOCKER_PASSWORD="<jfrog-password>" IMAGE_TAG="<tag>" make docker-buildx 
 ```
 
 #### For local use
 
 ```bash
-TAG="<tag>" make docker-build
+IMAGE_TAG="<tag>" make docker-build
 ```
 
 ### Build Linux packages
