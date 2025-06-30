@@ -39,7 +39,7 @@ type BackupPolicy struct {
 	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty" default:"false"`
 	// Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.
 	// Default is no limit.
-	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" extensions:"x-nullable"`
+	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" extensions:"x-nullable" minimum:"8"`
 	// Limits the number of records returned per second (RPS).
 	// Default is no limit.
 	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000" extensions:"x-nullable"`
@@ -129,7 +129,7 @@ func validateBandwidth(bandwidth *int) error {
 	}
 
 	bw := *bandwidth
-	if bw == 0 || bw > minBandwidth { // 0 means unlimited bandwidth
+	if bw == 0 || bw >= minBandwidth { // 0 means unlimited bandwidth
 		return nil
 	}
 

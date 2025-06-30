@@ -103,7 +103,7 @@ func (r *dataRestorer) executeRestore(
 	r.restoreJobs.addHandler(jobID, handler)
 
 	// Wait for the restore operation to complete
-	slog.Info("wait", slog.Any("jobID", jobID))
+	slog.Info("Wait for the restore job completion", slog.Any("jobID", jobID))
 
 	return handler.Wait(ctx)
 }
