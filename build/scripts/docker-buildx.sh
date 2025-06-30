@@ -28,6 +28,10 @@ while [[ $# -gt 0 ]]; do
     ;;
   --platforms)
     PLATFORMS="$2"
+    PLATFORMS="$(echo "$PLATFORMS" | xargs)"
+    if [[ "$PLATFORMS" == *" "* ]]; then
+        PLATFORMS="${PLATFORMS// /,}"
+    fi
     shift
     shift
     ;;

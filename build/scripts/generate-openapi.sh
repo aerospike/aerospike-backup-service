@@ -16,7 +16,7 @@ cat <<< "$(docker run --rm --volume "$WORKSPACE/docs/swagger.json":/local/docs/s
 mkdir -p "$WORKSPACE"/tmp
 
 # convert swagger to open-api using swagger2openapi
-npx swagger2openapi "$WORKSPACE"/docs/swagger.json -o "$WORKSPACE"/docs/openapi.json
+yes | npx swagger2openapi "$WORKSPACE"/docs/swagger.json -o "$WORKSPACE"/docs/openapi.json
 
 rm -rf "$WORKSPACE"/tmp "$WORKSPACE"/docs/swagger.yaml "$WORKSPACE"/docs/swagger.json
 
