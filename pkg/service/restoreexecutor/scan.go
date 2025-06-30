@@ -14,6 +14,8 @@ import (
 	ioStorage "github.com/aerospike/backup-go/io/storage"
 )
 
+const megabyte = 1_048_576
+
 func runScanRestore(ctx context.Context, client *backup.Client, request *model.RestoreRequest) (RestoreHandler, error) {
 	reader, err := storage.CreateDirReader(ctx,
 		request.SourceStorage, request.BackupDataPath, ioStorage.WithValidator(asb.NewValidator()))
@@ -51,7 +53,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 	}
 
 	config.RecordsPerSecond = util.ValueOrZero(restoreRequest.Policy.Tps)
-	config.Bandwidth = util.ValueOrZero(restoreRequest.Policy.Bandwidth)
+	config.Bandwidth = util.ValueOrZero(restoreRequest.Policy.Bandwidth) * megabyte
 	config.Parallel = restoreRequest.Policy.GetParallelOrDefault()
 	config.MaxAsyncBatches = restoreRequest.Policy.GetMaxAsyncBatchesOrDefault()
 	config.BatchSize = restoreRequest.Policy.GetBatchSizeOrDefault()

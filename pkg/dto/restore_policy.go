@@ -54,9 +54,9 @@ type RestorePolicy struct {
 	// With this option, records from the backup always overwrite records that already exist in
 	// the namespace, regardless of generation numbers.
 	NoGeneration *bool `json:"no-generation,omitempty" default:"false"`
-	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.
+	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in MiB/s.
 	// Default: no limit.
-	Bandwidth *int `json:"bandwidth,omitempty" example:"50000" extensions:"x-nullable"`
+	Bandwidth *int `json:"bandwidth,omitempty" example:"50000" extensions:"x-nullable" minimum:"8"`
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.
 	// Default: no limit.
 	Tps *int `json:"tps,omitempty" example:"4000" extensions:"x-nullable"`
@@ -77,6 +77,9 @@ func (p *RestorePolicy) Validate() error {
 	if p == nil {
 		return nil
 	}
+	if err := validateBandwidth(p.Bandwidth); err != nil {
+		return err
+	}
 	if p.Parallel != nil && *p.Parallel <= 0 {
 		return errValidationNonPositive("parallel", *p.Parallel)
 	}
@@ -91,9 +94,6 @@ func (p *RestorePolicy) Validate() error {
 	}
 	if p.BatchSize != nil && *p.BatchSize <= 0 {
 		return errValidationNonPositive("batch-size", *p.BatchSize)
-	}
-	if p.Bandwidth != nil && *p.Bandwidth <= 0 {
-		return errValidationNonPositive("bandwidth", *p.Bandwidth)
 	}
 	if p.Tps != nil && *p.Tps <= 0 {
 		return errValidationNonPositive("tps", *p.Tps)

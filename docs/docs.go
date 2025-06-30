@@ -1895,6 +1895,7 @@ const docTemplate = `{
                 "bandwidth": {
                     "description": "Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.\nDefault is no limit.",
                     "type": "integer",
+                    "minimum": 8,
                     "x-nullable": true,
                     "example": 10000
                 },
@@ -2640,8 +2641,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bandwidth": {
-                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in bytes/sec.\nDefault: no limit.",
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in MiB/s.\nDefault: no limit.",
                     "type": "integer",
+                    "minimum": 8,
                     "x-nullable": true,
                     "example": 50000
                 },

@@ -45,7 +45,7 @@ backup-policies:
       full: 10
       incremental: 10
   withBandwidthLimit:
-    bandwidth: 1
+    bandwidth: 10
     parallel: 1
     sealed: true
     retry-policy:

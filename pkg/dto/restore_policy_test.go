@@ -96,12 +96,12 @@ func TestRestorePolicy_InvalidBatchSize(t *testing.T) {
 
 func TestRestorePolicy_InvalidBandwidth(t *testing.T) {
 	policy := &RestorePolicy{
-		Bandwidth: util.Ptr(0),
+		Bandwidth: util.Ptr(1),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "bandwidth")
-	assert.Contains(t, err.Error(), "should be positive number")
+	assert.Contains(t, err.Error(), "'1' is not a valid bandwidth")
 }
 
 func TestRestorePolicy_InvalidTps(t *testing.T) {
