@@ -24,7 +24,7 @@ ifneq ($(strip $(OS))$(strip $(ARCH)),)
 endif
 
 GIT_COMMIT := $(shell git rev-parse HEAD)
-VERSION := $(shell cat VERSION)
+VERSION ?= $(shell cat VERSION)
 
 # Go parameters
 GO ?= $(shell which go || echo "/usr/local/go/bin/go")
