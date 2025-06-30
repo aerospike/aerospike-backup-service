@@ -67,7 +67,7 @@ var jsonExamples = map[string]any{
 			SourceCluster: "absDefaultCluster",
 			Storage:       "local",
 			IntervalCron:  "@yearly",
-			Namespaces:    []string{"test-namespace"},
+			Namespaces:    util.Ptr([]string{"test-namespace"}),
 		},
 		"routine2": {
 			BackupPolicy:     "removeFilesPolicy",
@@ -75,7 +75,7 @@ var jsonExamples = map[string]any{
 			Storage:          "local",
 			IntervalCron:     "@monthly",
 			IncrIntervalCron: "@daily",
-			Namespaces:       []string{"test-namespace"},
+			Namespaces:       util.Ptr([]string{"test-namespace"}),
 			SetList:          []string{"backupSet"},
 			BinList:          []string{"backupBin"},
 		},

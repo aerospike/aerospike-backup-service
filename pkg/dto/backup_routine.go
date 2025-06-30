@@ -31,8 +31,8 @@ type BackupRoutine struct {
 	IntervalCron string `yaml:"interval-cron" json:"interval-cron" example:"0 0 * * * *" validate:"required"`
 	// The interval for incremental backup as a cron expression string (optional).
 	IncrIntervalCron string `yaml:"incr-interval-cron,omitempty" json:"incr-interval-cron,omitempty" example:"*/10 * * * * *" extensions:"x-nullable"`
-	// The list of the namespaces to back up (optional, empty list implies backup of the whole cluster).
-	Namespaces []string `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"source-ns1" extensions:"x-nullable"`
+	// The list of the namespaces to back up (empty list implies backup of the whole cluster).
+	Namespaces *[]string `yaml:"namespaces,omitempty" json:"namespaces,omitempty" example:"[\"source-ns1\"]" validate:"required"`
 	// The list of backup set names (optional, an empty list implies backing up all sets).
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1" extensions:"x-nullable"`
 	// The list of backup bin names (optional, an empty list implies backing up all bins) extensions:"x-nullable".
@@ -97,6 +97,9 @@ func (r *BackupRoutine) Validate() error {
 	}
 	if err := validatePartitionList(r.PartitionList); err != nil {
 		return fmt.Errorf("invalid partition list: %q", r.PartitionList)
+	}
+	if r.Namespaces == nil {
+		return errValidationEmptyField("namespaces")
 	}
 
 	return nil
@@ -191,7 +194,7 @@ func (r *BackupRoutine) ToModel(
 		}
 	}
 
-	missingNSs := nsValidator.MissingNamespaces(cluster, r.Namespaces)
+	missingNSs := nsValidator.MissingNamespaces(cluster, *r.Namespaces)
 	if len(missingNSs) > 0 {
 		return nil, fmt.Errorf("the following namespaces are missing in the cluster: %v", missingNSs)
 	}
@@ -203,7 +206,7 @@ func (r *BackupRoutine) ToModel(
 		SecretAgent:      secretAgent,
 		IntervalCron:     r.IntervalCron,
 		IncrIntervalCron: r.IncrIntervalCron,
-		Namespaces:       r.Namespaces,
+		Namespaces:       *r.Namespaces,
 		SetList:          r.SetList,
 		BinList:          r.BinList,
 		PreferRacks:      r.PreferRacks,
@@ -259,7 +262,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	}
 	r.IntervalCron = m.IntervalCron
 	r.IncrIntervalCron = m.IncrIntervalCron
-	r.Namespaces = m.Namespaces
+	r.Namespaces = &m.Namespaces
 	r.SetList = m.SetList
 	r.BinList = m.BinList
 	r.PreferRacks = m.PreferRacks

@@ -1995,6 +1995,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "interval-cron",
+                "namespaces",
                 "source-cluster",
                 "storage"
             ],
@@ -2032,14 +2033,13 @@ const docTemplate = `{
                     "example": "0 0 * * * *"
                 },
                 "namespaces": {
-                    "description": "The list of the namespaces to back up (optional, empty list implies backup of the whole cluster).",
+                    "description": "The list of the namespaces to back up (empty list implies backup of the whole cluster).",
                     "type": "array",
                     "items": {
                         "type": "string"
                     },
-                    "x-nullable": true,
                     "example": [
-                        "source-ns1"
+                        "[\"source-ns1\"]"
                     ]
                 },
                 "node-list": {

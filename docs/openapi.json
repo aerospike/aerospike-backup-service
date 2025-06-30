@@ -2327,6 +2327,7 @@
                 "type": "object",
                 "required": [
                     "interval-cron",
+                    "namespaces",
                     "source-cluster",
                     "storage"
                 ],
@@ -2364,15 +2365,14 @@
                         "example": "0 0 * * * *"
                     },
                     "namespaces": {
-                        "description": "The list of the namespaces to back up (optional, empty list implies backup of the whole cluster).",
+                        "description": "The list of the namespaces to back up (empty list implies backup of the whole cluster).",
                         "type": "array",
                         "items": {
                             "type": "string"
                         },
                         "example": [
-                            "source-ns1"
-                        ],
-                        "nullable": true
+                            "[\"source-ns1\"]"
+                        ]
                     },
                     "node-list": {
                         "description": "NodeList specifies which Aerospike nodes to include in the backup.\nOnly the listed nodes will be backed up.\nEach node can be specified as one of the following:\n- \"<IP address>:<port>\"\n- \"<hostname>:<port>\"\n- \"<node ID>\"\nTo obtain node identifiers, run: `asinfo -v \"service:\"`.\nIf using IP addresses or hostnames, ensure they match the values returned by the `asinfo` command.\nThis field is mutually exclusive with partition-list.\nParallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.",
