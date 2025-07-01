@@ -167,7 +167,6 @@ jobs:
             backup-policies:
               keepFilesPolicy:
                 parallel: 1
-                remove-files: KeepAll
             backup-routines:
               minioKeepFilesRoutine:
                 interval-cron: "@daily"
