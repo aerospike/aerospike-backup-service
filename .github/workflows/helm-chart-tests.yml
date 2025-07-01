@@ -66,7 +66,7 @@ jobs:
 
       - name: Build ABS Docker Container and Load to Kind Cluster
         run: |
-          TAG="chart-testing" make docker-build
+          IMAGE_TAG="chart-testing" make docker-build
           kind load docker-image aerospike/aerospike-backup-service:chart-testing --name chart-testing
 
       - name: Setup Prerequisites
