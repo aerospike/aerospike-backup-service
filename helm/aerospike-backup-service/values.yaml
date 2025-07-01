@@ -71,8 +71,8 @@ backupServiceConfig: {}
 #     seed-nodes:
 #       - host-name: <cluster ip/dns-name> # Mandatory
 #         port: 3000 # Mandatory
-#         tls-name: <tls-socket-connection-name> # mandatiry if TLS is enabled
-#     conn-timeout: <conection-timeout> # optional example: 5000
+#         tls-name: <tls-socket-connection-name> # mandatory if TLS is enabled
+#     conn-timeout: <connection-timeout> # optional example: 5000
 #     use-services-alternate: <true/false> # optional default: false
 #     credentials:
 #       user: <cluster username> # Mandatory
@@ -84,18 +84,18 @@ backupServiceConfig: {}
 #         connection-type: <tcp/udp> # required
 #         address: <address> # Optional Address of the Secret Agent defaultL localhost
 #         port: <port> # Optional Secret Agent port default: 8080
-#         timeout: <timeout> # Optional timeout in miliseconds default: 0
+#         timeout: <timeout> # Optional timeout in milliseconds default: 0
 #         tls-ca-file: <path-to-ca-file> # Optional default: ""
 #         is-base64: <true/false> # Flag that shows if secret agent responses are encrypted with base64.
 #     tls:
-#       cafile: <path-to-ca-file> # Mandatory if TLS enabled and capath is empty
-#       capath: <path-to-ca-dorectory> # Mandatory if TLS enabled and cafile if empty
+#       ca-file: <path-to-ca-file> # Mandatory if TLS enabled and capath is empty
+#       ca-path: <path-to-ca-directory> # Mandatory if TLS enabled and ca-file if empty
 #       name: <tls-socket-connection-name> # Mandatory if TLS enabled
 #       protocols: <protocols> # Optional
 #       cipher-suite: <cipher-suite> # Optional
-#       keyfile: <path-to-key-file> # Optional
-#       keyfile-password: <keyfile-password> # Optional
-#       certfile: <path-to-certfile> # Optional
+#       key-file: <path-to-key-file> # Optional
+#       key-file-password: <keyfile-password> # Optional
+#       cert-file: <path-to-cert-file> # Optional
 #
 # storage:
 #   local-storage:
@@ -107,8 +107,8 @@ backupServiceConfig: {}
 #     s3-profile: <s3-profile> # Optional. AWS profile name (e.g., default).
 #     s3-endpoint-override: <s3-endpoint> # Optional. Alternative endpoint for the S3 SDK to communicate (e.g., http://host.docker.internal:9000).
 #     s3-log-level: <s3-log-level> # Optional. Log level of the AWS S3 SDK (OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE). Default: FATAL.
-#     min_part_size: <min-part-size> # Optional. Minimum size in bytes of individual S3 UploadParts. Default: 5242880.
-#     max_async_connections: <max-connections> # Optional. Maximum number of simultaneous requests to S3. Default: 16.
+#     min-part-size: <min-part-size> # Optional. Minimum size in bytes of individual S3 UploadParts. Default: 5242880.
+#     max-async-connections: <max-connections> # Optional. Maximum number of simultaneous requests to S3. Default: 16.
 #     access-key-id: <access-key-id> # Optional. Access Key ID for S3 StaticCredentialsProvider.
 #     secret-access-key: <secret-access-key> # Optional. Secret Access Key for S3 StaticCredentialsProvider.
 #     secret-agent-name: <secret-agent-name> # Optional
