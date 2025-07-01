@@ -59,9 +59,9 @@ func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, e
 //
 //nolint:lll
 type SecretAgent struct {
-	// Connection type: tcp, unix.
+	// Connection type.
 	//nolint:lll
-	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp" validate:"required"`
+	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp" validate:"required" enums:"tcp,unix"`
 	// Address of the Secret Agent.
 	Address string `yaml:"address" json:"address" example:"localhost" validate:"required"`
 	// Port the Secret Agent is running on.

@@ -291,5 +291,6 @@ backup-routines:
 
 service:
   logger:
+    level: INFO
     file-writer:
       filename: "log/backup-service.log"

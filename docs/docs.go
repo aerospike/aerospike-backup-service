@@ -3149,8 +3149,12 @@ const docTemplate = `{
                     "example": "localhost"
                 },
                 "connection-type": {
-                    "description": "Connection type: tcp, unix.",
+                    "description": "Connection type.",
                     "type": "string",
+                    "enum": [
+                        "tcp",
+                        "unix"
+                    ],
                     "example": "tcp"
                 },
                 "is-base64": {

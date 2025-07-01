@@ -101,6 +101,9 @@ func (p *RestorePolicy) Validate() error {
 	if p.Replace != nil && *p.Replace && p.Unique != nil && *p.Unique {
 		return errValidationMutuallyExclusive("replace", "unique")
 	}
+	if p.NoGeneration != nil && *p.NoGeneration && p.Unique != nil && *p.Unique {
+		return errValidationMutuallyExclusive("no-generation", "unique")
+	}
 
 	if p.Namespace != nil { // namespace is optional.
 		if err := p.Namespace.Validate(); err != nil {
