@@ -98,6 +98,9 @@ func (r *BackupRoutine) Validate() error {
 	if err := validatePartitionList(r.PartitionList); err != nil {
 		return fmt.Errorf("invalid partition list: %q", r.PartitionList)
 	}
+	if len(r.PartitionList) > 0 && len(r.NodeList) > 0 {
+		return errValidationMutuallyExclusive("partition-list", "node-list")
+	}
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
 	}

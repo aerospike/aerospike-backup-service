@@ -1792,11 +1792,22 @@ const docTemplate = `{
                 "data": {
                     "description": "DataClass specifies the storage tier for object data.",
                     "type": "string",
+                    "enum": [
+                        "Hot",
+                        "Cool",
+                        "Cold",
+                        "Archive"
+                    ],
                     "x-nullable": true
                 },
                 "metadata": {
                     "description": "MetadataClass specifies the storage tier for metadata.",
                     "type": "string",
+                    "enum": [
+                        "Hot",
+                        "Cool",
+                        "Cold"
+                    ],
                     "x-nullable": true
                 }
             }
@@ -2369,6 +2380,12 @@ const docTemplate = `{
                 "data": {
                     "description": "DataClass specifies the storage class for object data.",
                     "type": "string",
+                    "enum": [
+                        "STANDARD",
+                        "NEARLINE",
+                        "COLDLINE",
+                        "ARCHIVE"
+                    ],
                     "x-nullable": true
                 }
             }
@@ -3078,7 +3095,16 @@ const docTemplate = `{
                 "s3-log-level": {
                     "description": "The log level of the AWS S3 SDK (AWS S3 optional).",
                     "type": "string",
-                    "default": "FATAL"
+                    "default": "FATAL",
+                    "enum": [
+                        "OFF",
+                        "FATAL",
+                        "ERROR",
+                        "WARN",
+                        "INFO",
+                        "DEBUG",
+                        "TRACE"
+                    ]
                 },
                 "s3-profile": {
                     "description": "The S3 profile name (AWS S3 optional).",
@@ -3126,11 +3152,31 @@ const docTemplate = `{
                 "data": {
                     "description": "DataClass specifies the storage class for object data.",
                     "type": "string",
+                    "enum": [
+                        "STANDARD",
+                        "GLACIER",
+                        "STANDARD_IA",
+                        "ONEZONE_IA",
+                        "INTELLIGENT_TIERING",
+                        "DEEP_ARCHIVE",
+                        "OUTPOSTS",
+                        "GLACIER_IR",
+                        "SNOW",
+                        "EXPRESS_ONEZONE"
+                    ],
                     "x-nullable": true
                 },
                 "metadata": {
                     "description": "MetadataClass specifies the storage class for metadata.",
                     "type": "string",
+                    "enum": [
+                        "STANDARD",
+                        "STANDARD_IA",
+                        "INTELLIGENT_TIERING",
+                        "EXPRESS_ONEZONE",
+                        "ONEZONE_IA",
+                        "OUTPOSTS"
+                    ],
                     "x-nullable": true
                 }
             }
@@ -3149,8 +3195,12 @@ const docTemplate = `{
                     "example": "localhost"
                 },
                 "connection-type": {
-                    "description": "Connection type: tcp, unix.",
+                    "description": "Connection type.",
                     "type": "string",
+                    "enum": [
+                        "tcp",
+                        "unix"
+                    ],
                     "example": "tcp"
                 },
                 "is-base64": {

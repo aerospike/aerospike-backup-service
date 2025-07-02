@@ -158,10 +158,10 @@ var azureDataTiers = []string{
 // @Description AzureStorageClass represents the configuration for Azure Blob Storage access tiers.
 type AzureStorageClass struct {
 	// DataClass specifies the storage tier for object data.
-	DataClass string `json:"data" yaml:"data" extensions:"x-nullable"`
+	DataClass string `json:"data" yaml:"data" extensions:"x-nullable" enums:"Hot,Cool,Cold,Archive"`
 
 	// MetadataClass specifies the storage tier for metadata.
-	MetadataClass string `json:"metadata" yaml:"metadata" extensions:"x-nullable"`
+	MetadataClass string `json:"metadata" yaml:"metadata" extensions:"x-nullable" enums:"Hot,Cool,Cold"`
 }
 
 func (s *AzureStorageClass) Validate() error {
