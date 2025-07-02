@@ -131,9 +131,6 @@ func (p *RestorePolicy) validateExistingRecordPolicy() error {
 	if p.NoGeneration != nil && *p.NoGeneration && p.Unique != nil && *p.Unique {
 		return errValidationMutuallyExclusive("no-generation", "unique")
 	}
-	if p.NoGeneration != nil && *p.NoGeneration && p.Replace != nil && *p.Replace {
-		return errValidationMutuallyExclusive("no-generation", "replace")
-	}
 
 	return nil
 }
