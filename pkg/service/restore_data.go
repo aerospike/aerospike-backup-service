@@ -64,6 +64,9 @@ func (r *dataRestorer) Restore(ctx context.Context, request *model.RestoreReques
 	slog.Info("new restore job", slog.Any("jobID", jobID), slog.Any("request", *request))
 	go func() {
 		err := r.executeRestore(ctx, request, jobID)
+		if err != nil { // if some of restore sub-operations failed, we need to cancel the rest.
+			cancel()
+		}
 		r.restoreJobs.finishJob(jobID, err)
 	}()
 
