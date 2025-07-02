@@ -7,37 +7,47 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
-// CombinedRestoreHandler combines two restore handlers into one.
+// CombinedRestoreHandler combines multiple restore handlers into one.
 type CombinedRestoreHandler struct {
-	streamHandler RestoreHandler
-	xdrHandler    RestoreHandler
+	handlers []RestoreHandler
 }
 
-func NewCombinedRestoreHandler(streamHandler RestoreHandler, xdrHandler RestoreHandler) *CombinedRestoreHandler {
+func NewCombinedRestoreHandler(handlers ...RestoreHandler) *CombinedRestoreHandler {
+	validHandlers := make([]RestoreHandler, 0, len(handlers))
+	for _, h := range handlers {
+		if h != nil {
+			validHandlers = append(validHandlers, h)
+		}
+	}
+
 	return &CombinedRestoreHandler{
-		streamHandler: streamHandler,
-		xdrHandler:    xdrHandler,
+		handlers: validHandlers,
 	}
 }
 
 var _ RestoreHandler = (*CombinedRestoreHandler)(nil)
 
 func (h *CombinedRestoreHandler) Wait(ctx context.Context) error {
-	if err := h.streamHandler.Wait(ctx); err != nil {
-		return fmt.Errorf("streaming restore failed: %w", err)
+	for _, handler := range h.handlers {
+		if err := handler.Wait(ctx); err != nil {
+			return fmt.Errorf("restore failed: %w", err)
+		}
 	}
-
-	if err := h.xdrHandler.Wait(ctx); err != nil {
-		return fmt.Errorf("XDR restore failed: %w", err)
-	}
-
 	return nil
 }
 
 func (h *CombinedRestoreHandler) GetStats() *models.RestoreStats {
-	return models.SumRestoreStats(h.streamHandler.GetStats(), h.xdrHandler.GetStats())
+	stats := make([]*models.RestoreStats, 0, len(h.handlers))
+	for _, handler := range h.handlers {
+		stats = append(stats, handler.GetStats())
+	}
+	return models.SumRestoreStats(stats...)
 }
 
 func (h *CombinedRestoreHandler) GetMetrics() *models.Metrics {
-	return models.SumMetrics(h.streamHandler.GetMetrics(), h.xdrHandler.GetMetrics())
+	metrics := make([]*models.Metrics, 0, len(h.handlers))
+	for _, handler := range h.handlers {
+		metrics = append(metrics, handler.GetMetrics())
+	}
+	return models.SumMetrics(metrics...)
 }
