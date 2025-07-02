@@ -106,7 +106,7 @@ var gcpDataClasses = []string{
 // @Description GcpStorageClass represents the configuration for GCP Storage Class.
 type GcpStorageClass struct {
 	// DataClass specifies the storage class for object data.
-	DataClass string `json:"data" yaml:"data" extensions:"x-nullable"`
+	DataClass string `json:"data" yaml:"data" extensions:"x-nullable" enums:"STANDARD,NEARLINE,COLDLINE,ARCHIVE"`
 }
 
 func (s *GcpStorageClass) Validate() error {
