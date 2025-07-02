@@ -34,35 +34,40 @@ func (r *DefaultRestoreExecutor) Run(
 	client *backup.Client,
 	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
-	scanHandler, errScan := runScanRestore(ctx, client, request)
-	xdrHandler, errXdr := runXDRRestore(ctx, client, request)
-
-	// Error handling logic:
-	// We treat [storage.ErrEmptyStorage] as a non-fatal.
-	// Any other error causes the whole operation to fail immediately.
-	// If at least one restore starts successfully, a CombinedRestoreHandler is returned.
-	// Otherwise, [storage.ErrEmptyStorage] is returned.
-	var successHandlers []RestoreHandler
-
-	// Scan result
-	switch {
-	case errScan == nil:
-		successHandlers = append(successHandlers, scanHandler)
-	case !errors.Is(errScan, storage.ErrEmptyStorage):
-		return nil, errScan
+	restoreTasks := []func() (RestoreHandler, error){
+		func() (RestoreHandler, error) { return runScanRestore(ctx, client, request) },
+		func() (RestoreHandler, error) { return runXDRRestore(ctx, client, request) },
 	}
 
-	// XDR result
-	switch {
-	case errXdr == nil:
-		successHandlers = append(successHandlers, xdrHandler)
-	case !errors.Is(errXdr, storage.ErrEmptyStorage):
-		return nil, errXdr
+	var (
+		successHandlers []RestoreHandler
+		firstEmptyErr   error
+	)
+
+	for _, task := range restoreTasks {
+		handler, err := task()
+
+		if err == nil {
+			successHandlers = append(successHandlers, handler)
+			continue
+		}
+
+		// A real error fails the whole operation immediately.
+		if !errors.Is(err, storage.ErrEmptyStorage) {
+			return nil, err
+		}
+
+		// We treat ErrEmptyStorage as non-fatal but record the first one.
+		if firstEmptyErr == nil {
+			firstEmptyErr = err
+		}
 	}
 
-	if len(successHandlers) == 0 {
-		return nil, storage.ErrEmptyStorage
+	// If at least one restore started, return a combined handler.
+	if len(successHandlers) > 0 {
+		return NewCombinedRestoreHandler(successHandlers...), nil
 	}
 
-	return NewCombinedRestoreHandler(successHandlers...), nil
+	// Otherwise, all restores returned ErrEmptyStorage, so we return that error.
+	return nil, firstEmptyErr
 }
