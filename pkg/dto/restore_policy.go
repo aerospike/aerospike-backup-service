@@ -98,14 +98,9 @@ func (p *RestorePolicy) Validate() error {
 	if p.Tps != nil && *p.Tps <= 0 {
 		return errValidationNonPositive("tps", *p.Tps)
 	}
-	if p.Replace != nil && *p.Replace && p.Unique != nil && *p.Unique {
-		return errValidationMutuallyExclusive("replace", "unique")
-	}
-	if p.NoGeneration != nil && *p.NoGeneration && p.Unique != nil && *p.Unique {
-		return errValidationMutuallyExclusive("no-generation", "unique")
-	}
-	if p.NoGeneration != nil && *p.NoGeneration && p.Replace != nil && *p.Replace {
-		return errValidationMutuallyExclusive("no-generation", "replace")
+
+	if err := p.validateExistingRecordPolicy(); err != nil {
+		return err
 	}
 
 	if p.Namespace != nil { // namespace is optional.
@@ -124,6 +119,20 @@ func (p *RestorePolicy) Validate() error {
 	}
 	if p.ExtraTTL != nil && *p.ExtraTTL < 0 {
 		return errValidationNegative("extra-ttl", *p.ExtraTTL)
+	}
+
+	return nil
+}
+
+func (p *RestorePolicy) validateExistingRecordPolicy() error {
+	if p.Replace != nil && *p.Replace && p.Unique != nil && *p.Unique {
+		return errValidationMutuallyExclusive("replace", "unique")
+	}
+	if p.NoGeneration != nil && *p.NoGeneration && p.Unique != nil && *p.Unique {
+		return errValidationMutuallyExclusive("no-generation", "unique")
+	}
+	if p.NoGeneration != nil && *p.NoGeneration && p.Replace != nil && *p.Replace {
+		return errValidationMutuallyExclusive("no-generation", "replace")
 	}
 
 	return nil
