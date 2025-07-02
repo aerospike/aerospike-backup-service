@@ -37,24 +37,18 @@ func (r *DefaultRestoreExecutor) Run(
 	scanHandler, errScan := runScanRestore(ctx, client, request)
 	xdrHandler, errXdr := runXDRRestore(ctx, client, request)
 
-	var (
-		successHandlers []RestoreHandler
-		emptyErr        error
-	)
-
-	// Logic:
-	// We treat ErrEmptyStorage as a non-fatal.
-	// A real error from any restore (not ErrEmptyStorage) fails the whole operation immediately.
-	// If at least one restore starts successfully, we return a CombinedRestoreHandler.
-	// If all restores return ErrEmptyStorage, we return the first such error.
+	// Error handling logic:
+	// We treat [storage.ErrEmptyStorage] as a non-fatal.
+	// Any other error causes the whole operation to fail immediately.
+	// If at least one restore starts successfully, a CombinedRestoreHandler is returned.
+	// Otherwise, [storage.ErrEmptyStorage] is returned.
+	var successHandlers []RestoreHandler
 
 	// Scan result
 	switch {
 	case errScan == nil:
 		successHandlers = append(successHandlers, scanHandler)
-	case errors.Is(errScan, storage.ErrEmptyStorage):
-		emptyErr = errScan
-	default:
+	case !errors.Is(errScan, storage.ErrEmptyStorage):
 		return nil, errScan
 	}
 
@@ -62,16 +56,12 @@ func (r *DefaultRestoreExecutor) Run(
 	switch {
 	case errXdr == nil:
 		successHandlers = append(successHandlers, xdrHandler)
-	case errors.Is(errXdr, storage.ErrEmptyStorage):
-		if emptyErr == nil {
-			emptyErr = errXdr
-		}
-	default:
+	case !errors.Is(errXdr, storage.ErrEmptyStorage):
 		return nil, errXdr
 	}
 
 	if len(successHandlers) == 0 {
-		return nil, emptyErr
+		return nil, storage.ErrEmptyStorage
 	}
 
 	return NewCombinedRestoreHandler(successHandlers...), nil
