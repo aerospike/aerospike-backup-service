@@ -34,40 +34,34 @@ func (r *DefaultRestoreExecutor) Run(
 	client *backup.Client,
 	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
-	restoreTasks := []func() (RestoreHandler, error){
+	ops := []func() (RestoreHandler, error){
 		func() (RestoreHandler, error) { return runScanRestore(ctx, client, request) },
 		func() (RestoreHandler, error) { return runXDRRestore(ctx, client, request) },
 	}
 
 	var (
-		successHandlers []RestoreHandler
-		firstEmptyErr   error
+		handlers = make([]RestoreHandler, 0, len(ops))
+		errs     error
 	)
 
-	for _, task := range restoreTasks {
-		handler, err := task()
-
-		if err == nil {
-			successHandlers = append(successHandlers, handler)
-			continue
-		}
-
-		// A real error fails the whole operation immediately.
-		if !errors.Is(err, storage.ErrEmptyStorage) {
+	// Error handling logic:
+	// We treat [storage.ErrEmptyStorage] as a non-fatal.
+	// Any other error causes the whole operation to fail immediately.
+	// If at least one restore starts successfully, a CombinedRestoreHandler is returned.
+	// Otherwise, a joined [storage.ErrEmptyStorage] is returned.
+	for _, op := range ops {
+		handler, err := op()
+		if err != nil && !errors.Is(err, storage.ErrEmptyStorage) {
 			return nil, err
 		}
 
-		// We treat ErrEmptyStorage as non-fatal but record the first one.
-		if firstEmptyErr == nil {
-			firstEmptyErr = err
-		}
+		handlers = append(handlers, handler)
+		errs = errors.Join(errs, err)
 	}
 
-	// If at least one restore started, return a combined handler.
-	if len(successHandlers) > 0 {
-		return NewCombinedRestoreHandler(successHandlers...), nil
+	if len(handlers) > 0 {
+		return NewCombinedRestoreHandler(handlers...), nil
 	}
 
-	// Otherwise, all restores returned ErrEmptyStorage, so we return that error.
-	return nil, firstEmptyErr
+	return nil, errs
 }
