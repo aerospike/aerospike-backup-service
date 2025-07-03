@@ -212,7 +212,8 @@ can have a significant impact on backup throughput.
 We recommend experimenting with different values in your environment to find the optimal balance.
 
 The `service` section configures the operation settings of the Aerospike Backup Service,
-which include logging and HTTP endpoint. See the [`dto.BackupServiceConfig`](docs/readme/dto/dto.backupserviceconfig.md) for
+which include logging and HTTP endpoint. See the [`dto.BackupServiceConfig`](docs/readme/dto/dto.backupserviceconfig.md)
+for
 details.
 
 ### Configuration with API
@@ -391,29 +392,6 @@ though accuracy may vary depending on actual record distribution and processing 
 Early estimates should be interpreted with appropriate tolerance for variance.
 The metric is useful for monitoring backup status and getting approximate completion times,
 especially for longer-running backup operations.
-
-### Restore Progress Monitoring
-
-The `aerospike_backup_service_restore_progress_pct` metric provides percentage completion for running restore processes.
-
-**Label**
-
-* `job_id`: The restore job ID received at restore start
-
-#### How It's Calculated
-
-The progress percentage is calculated as: `Progress = (Records Processed / Total Records) × 100`
-
-**Total Records Count**
-
-- Read from backup metadata files (accurate count, not estimated)
-- For [timestamp-based restores](#restore-using-routine-name-and-timestamp): sum of full backup records plus all
-  applicable incremental backup records
-
-**Duration Estimation**
-
-Uses linear extrapolation based on current progress rate
-`Estimated Total Time = Elapsed Time / Progress Percentage`. Only available after 1% completion.
 
 ## Example requests and responses
 
@@ -726,11 +704,13 @@ For fields description see [fields description](docs/readme/dto/dto.restorejobst
 
 Provides a list of all restore jobs, with optional filtering by time range and status.
 
-[`GET {{baseUrl}}/v1/restore/jobs?from=<from>&to=<to>&status=<status>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/retrieveRestoreJobs)
+[
+`GET {{baseUrl}}/v1/restore/jobs?from=<from>&to=<to>&status=<status>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/retrieveRestoreJobs)
 
 - `from` (optional): Lower bound timestamp filter in milliseconds since epoch.
 - `to` (optional): Upper bound timestamp filter in milliseconds since epoch.
-- `status` (optional): Comma-separated status filter (e.g., `Running,Done,Failed,Cancelled`). Use `!` prefix to exclude statuses (e.g., `!Failed,Cancelled`).
+- `status` (optional): Comma-separated status filter (e.g., `Running,Done,Failed,Cancelled`). Use `!` prefix to exclude
+  statuses (e.g., `!Failed,Cancelled`).
 
 <details>
     <summary>Response example</summary>
@@ -767,6 +747,7 @@ Provides a list of all restore jobs, with optional filtering by time range and s
   }
 }
 ```
+
 </details>
 
 #### Cancel Restore Job
@@ -888,6 +869,45 @@ git push
 ```
 
 # Migration Guide
+
+## v3.1 -> v.3.2
+
+This release introduces minor breaking changes and new features.
+
+#### Breaking Changes
+
+- The `namespaces` field in a [backup routine](docs/readme/dto/dto.backuproutine.md) entry is now mandatory.
+  Previously, omitting this field would default to backing up all namespaces.
+  To achieve the same behavior now, you must explicitly provide an empty list (`namespaces: []`).
+  This change prevents accidental backups of all namespaces if the field is forgotten.
+
+- The `bandwidth` field in the [restore policy](docs/readme/dto/dto.restorepolicy.md) is now specified in MiB/s instead
+  of bytes per second.
+  This aligns its unit with the equivalent property in the [backup policy](docs/readme/dto/dto.backuppolicy.md) and
+  other Aerospike tools.
+
+#### Prometheus Metrics Update
+
+New metrics have been added to provide more detailed monitoring of backup and restore operations:
+
+- `aerospike_backup_service_backup_events_total`: A counter for backup events, labeled by routine, type, and outcome.
+- `aerospike_backup_service_backup_duration_seconds`: A histogram of backup durations.
+- `aerospike_backup_service_last_successful_backup_timestamp`: A gauge for the timestamp of the last successful backup.
+- `aerospike_backup_service_restore_in_progress`: A counter for the number of restore processes currently running.
+
+The `aerospike_backup_service_restore_progress_pct` metric has been removed as it created a new time series for each
+restore job, leading to high cardinality issues in Prometheus. Restore progress can now be monitored via the [
+`/v1/restore/status/{jobId}`](#restore-job-status) endpoint.
+
+See [monitoring](#Monitoring) section for details.
+
+#### New Features
+
+- **Add min-part-size to Azure and GCP**:
+  The `min-part-size` property, previously available only for S3 storage,
+  is now supported for both [Azure](docs/readme/dto/dto.azurestorage.md) and [GCP](docs/readme/dto/dto.gcpstorage.md)
+  storage. This property allows you to configure the minimum size of individual upload chunks, which can help optimize
+  performance for large backups.
 
 ## v3 -> v3.1
 
