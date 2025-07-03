@@ -906,8 +906,8 @@ New metrics have been added to provide more detailed monitoring of backup and re
 - `aerospike_backup_service_restore_in_progress`: A counter for the number of restore processes currently running.
 
 The `aerospike_backup_service_restore_progress_pct` metric has been removed as it created a new time series for each
-restore job, leading to high cardinality issues in Prometheus. Restore progress can now be monitored via the [
-`/v1/restore/status/{jobId}`](#restore-job-status) endpoint.
+restore job, leading to high cardinality issues in Prometheus. Restore progress can now be monitored via the
+[`/v1/restore/status/{jobId}`](#restore-job-status) endpoint.
 
 See [monitoring](#Monitoring) section for details.
 
