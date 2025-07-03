@@ -888,6 +888,8 @@ It is focused on stability and bug fixes, and includes an updated, faster versio
 
 #### New Features
 
+- **Restore Jobs Endpoint**: A new endpoint [`GET /v1/restore/jobs`](#retrieve-restore-jobs)
+  has been added to retrieve a list of all restore jobs, with options to filter by time range and status.
 - **Add min-part-size to Azure and GCP**:
   The `min-part-size` property, previously available only for S3 storage,
   is now supported for both [Azure](docs/readme/dto/dto.azurestorage.md) and [GCP](docs/readme/dto/dto.gcpstorage.md)
