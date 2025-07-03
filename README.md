@@ -18,21 +18,20 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
 
 - [Getting started](#getting-started)
 - [User guide](#user-guide)
-    * [Run](#run)
-    * [Configuration](#configuration)
-        + [Configuration File Format](#configuration-file-format)
-        + [Configuration with API](#configuration-with-api)
-    * [Monitoring](#monitoring)
-        + [Backup Progress Monitoring](#backup-progress-monitoring)
-        + [Restore Progress Monitoring](#restore-progress-monitoring)
-    * [Example requests and responses](#example-requests-and-responses)
-        + [Backup](#backup)
-        + [Restore](#restore)
+  * [Run](#run)
+  * [Configuration](#configuration)
+    + [Configuration File Format](#configuration-file-format)
+    + [Configuration with API](#configuration-with-api)
+  * [Monitoring](#monitoring)
+    + [Backup Progress Monitoring](#backup-progress-monitoring)
+  * [Example requests and responses](#example-requests-and-responses)
+    + [Backup](#backup)
+    + [Restore](#restore)
 - [FAQ](#faq)
-    * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
-    * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
-    * [How does the backup service identify what data to back up during incremental backups?](#how-does-the-backup-service-identify-what-data-to-back-up-during-incremental-backups)
-    * [Which storage providers are supported?](#which-storage-providers-are-supported)
+  * [What happens when a backup doesn’t finish before another starts (for the same routine)?](#what-happens-when-a-backup-doesnt-finish-before-another-starts-for-the-same-routine)
+  * [Can multiple backup routines be performed simultaneously?](#can-multiple-backup-routines-be-performed-simultaneously)
+  * [How does the backup service identify what data to back up during incremental backups?](#how-does-the-backup-service-identify-what-data-to-back-up-during-incremental-backups)
+  * [Which storage providers are supported?](#which-storage-providers-are-supported)
 - [Build from source](#build-from-source)
     + [Prerequisites](#prerequisites)
     + [Build the service](#build-the-service)
@@ -40,8 +39,9 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
     + [Build Linux packages](#build-linux-packages)
     + [Release](#release)
 - [Migration Guide](#migration-guide)
-    * [v3 -> v3.1](#v3---v31)
-    * [v2 -> v3](#v2---v3)
+  * [v3.1 -> v3.2](#v31---v32)
+  * [v3 -> v3.1](#v3---v31)
+  * [v2 -> v3](#v2---v3)
 
 <!-- tocstop -->
 
@@ -870,9 +870,10 @@ git push
 
 # Migration Guide
 
-## v3.1 -> v.3.2
+## v3.1 -> v3.2
 
 This release introduces minor breaking changes and new features.
+It is focused on stability and bug fixes, and includes an updated, faster version of the underlying backup library.
 
 #### Breaking Changes
 
@@ -882,9 +883,19 @@ This release introduces minor breaking changes and new features.
   This change prevents accidental backups of all namespaces if the field is forgotten.
 
 - The `bandwidth` field in the [restore policy](docs/readme/dto/dto.restorepolicy.md) is now specified in MiB/s instead
-  of bytes per second.
+  of bytes per second. The minimum value for this property is 8 MiB/s.
   This aligns its unit with the equivalent property in the [backup policy](docs/readme/dto/dto.backuppolicy.md) and
   other Aerospike tools.
+
+#### New Features
+
+- **Add min-part-size to Azure and GCP**:
+  The `min-part-size` property, previously available only for S3 storage,
+  is now supported for both [Azure](docs/readme/dto/dto.azurestorage.md) and [GCP](docs/readme/dto/dto.gcpstorage.md)
+  storage. This property allows you to configure the minimum size of individual upload chunks, which can help optimize
+  performance for large backups.
+- **Removed Root Permissions Requirement**: The backup service no longer requires root permissions to run. It can now be
+  run as a non-root user, enhancing security.
 
 #### Prometheus Metrics Update
 
@@ -900,14 +911,6 @@ restore job, leading to high cardinality issues in Prometheus. Restore progress 
 `/v1/restore/status/{jobId}`](#restore-job-status) endpoint.
 
 See [monitoring](#Monitoring) section for details.
-
-#### New Features
-
-- **Add min-part-size to Azure and GCP**:
-  The `min-part-size` property, previously available only for S3 storage,
-  is now supported for both [Azure](docs/readme/dto/dto.azurestorage.md) and [GCP](docs/readme/dto/dto.gcpstorage.md)
-  storage. This property allows you to configure the minimum size of individual upload chunks, which can help optimize
-  performance for large backups.
 
 ## v3 -> v3.1
 
