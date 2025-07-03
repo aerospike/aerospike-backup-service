@@ -894,8 +894,8 @@ It is focused on stability and bug fixes, and includes an updated, faster versio
   is now supported for both [Azure](docs/readme/dto/dto.azurestorage.md) and [GCP](docs/readme/dto/dto.gcpstorage.md)
   storage. This property allows you to configure the minimum size of individual upload chunks, which can help optimize
   performance for large backups.
-- **Removed Root Permissions Requirement**: The backup service no longer requires root permissions to run. It can now be
-  run as a non-root user, enhancing security.
+- **Removed Root Permissions Requirement**: The backup service no longer requires root permissions to run.
+- **Mask Sensitive Data**: The service now automatically masks private keys in the, logs to prevent accidental exposure.
 
 #### Prometheus Metrics Update
 
