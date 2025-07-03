@@ -894,7 +894,7 @@ It is focused on stability and bug fixes, and includes an updated, faster versio
   storage. This property allows you to configure the minimum size of individual upload chunks, which can help optimize
   performance for large backups.
 - **Removed Root Permissions Requirement**: The backup service no longer requires root permissions to run.
-- **Mask Sensitive Data**: The service now automatically masks private keys in the, logs to prevent accidental exposure.
+- **Mask Sensitive Data**: The service now automatically masks private keys in the logs, to prevent accidental exposure.
 
 #### Prometheus Metrics Update
 
