@@ -697,7 +697,7 @@ It works identical for both restore types.
   "expired-records": 0,
   "skipped-records": 0,
   "ignored-records": 0,
-  "inserted-records": 5000,
+  "inserted-records": 50000,
   "existed-records": 0,
   "fresher-records": 0,
   "index-count": 4,
@@ -720,6 +720,53 @@ It works identical for both restore types.
 ```
 
 For fields description see [fields description](docs/readme/dto/dto.restorejobstatus.md)
+</details>
+
+#### Retrieve Restore Jobs
+
+Provides a list of all restore jobs, with optional filtering by time range and status.
+
+[`GET {{baseUrl}}/v1/restore/jobs?from=<from>&to=<to>&status=<status>`](https://aerospike.github.io/aerospike-backup-service/#/Restore/retrieveRestoreJobs)
+
+- `from` (optional): Lower bound timestamp filter in milliseconds since epoch.
+- `to` (optional): Upper bound timestamp filter in milliseconds since epoch.
+- `status` (optional): Comma-separated status filter (e.g., `Running,Done,Failed,Cancelled`). Use `!` prefix to exclude statuses (e.g., `!Failed,Cancelled`).
+
+<details>
+    <summary>Response example</summary>
+
+<!-- CurrentRestoresResponse -->
+
+```json
+{
+  "12345678": {
+    "read-records": 100000,
+    "total-bytes": 30000000,
+    "expired-records": 0,
+    "skipped-records": 0,
+    "ignored-records": 0,
+    "inserted-records": 50000,
+    "existed-records": 0,
+    "fresher-records": 0,
+    "index-count": 4,
+    "udf-count": 1,
+    "errors-in-doubt": 0,
+    "current-job": {
+      "total-records": 100000,
+      "done-records": 50000,
+      "start-time": "2024-01-01T12:00:00Z",
+      "percentage-done": 50,
+      "estimated-end-time": "2024-01-01T13:00:00Z",
+      "metrics": {
+        "records-per-second": 1000,
+        "kilobytes-per-second": 30000,
+        "pipeline": 0
+      }
+    },
+    "status": "Running"
+  }
+}
+```
 </details>
 
 #### Cancel Restore Job
