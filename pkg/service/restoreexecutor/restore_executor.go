@@ -51,12 +51,16 @@ func (r *DefaultRestoreExecutor) Run(
 	// Otherwise, a joined [storage.ErrEmptyStorage] is returned.
 	for _, op := range ops {
 		handler, err := op()
-		if err != nil && !errors.Is(err, storage.ErrEmptyStorage) {
-			return nil, err
+		if err != nil {
+			if !errors.Is(err, storage.ErrEmptyStorage) {
+				return nil, err
+			}
+
+			errs = errors.Join(errs, err)
+			continue
 		}
 
 		handlers = append(handlers, handler)
-		errs = errors.Join(errs, err)
 	}
 
 	if len(handlers) > 0 {
