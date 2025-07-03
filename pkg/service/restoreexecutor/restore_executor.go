@@ -34,27 +34,38 @@ func (r *DefaultRestoreExecutor) Run(
 	client *backup.Client,
 	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
-	scanHandler, errScan := runScanRestore(ctx, client, request)
-	xdrHandler, errXdr := runXDRRestore(ctx, client, request)
-
-	// Case 1: Both succeed
-	if errScan == nil && errXdr == nil {
-		return NewCombinedRestoreHandler(scanHandler, xdrHandler), nil
+	ops := []func() (RestoreHandler, error){
+		func() (RestoreHandler, error) { return runScanRestore(ctx, client, request) },
+		func() (RestoreHandler, error) { return runXDRRestore(ctx, client, request) },
 	}
 
-	// Case 2: One returns ErrEmptyStorage, return the other
-	if errors.Is(errScan, storage.ErrEmptyStorage) && errXdr == nil {
-		return xdrHandler, nil
-	}
-	if errors.Is(errXdr, storage.ErrEmptyStorage) && errScan == nil {
-		return scanHandler, nil
+	var (
+		handlers = make([]RestoreHandler, 0, len(ops))
+		errs     error
+	)
+
+	// Error handling logic:
+	// We treat [storage.ErrEmptyStorage] as a non-fatal.
+	// Any other error causes the whole operation to fail immediately.
+	// If at least one restore starts successfully, a CombinedRestoreHandler is returned.
+	// Otherwise, a joined [storage.ErrEmptyStorage] is returned.
+	for _, op := range ops {
+		handler, err := op()
+		if err != nil {
+			if !errors.Is(err, storage.ErrEmptyStorage) {
+				return nil, err
+			}
+
+			errs = errors.Join(errs, err)
+			continue
+		}
+
+		handlers = append(handlers, handler)
 	}
 
-	// Case 3: Both return ErrEmptyStorage
-	if errors.Is(errScan, storage.ErrEmptyStorage) && errors.Is(errXdr, storage.ErrEmptyStorage) {
-		return nil, storage.ErrEmptyStorage
+	if len(handlers) > 0 {
+		return NewCombinedRestoreHandler(handlers...), nil
 	}
 
-	// Case 4: One or both have real errors → return joined errors
-	return nil, errors.Join(errScan, errXdr)
+	return nil, errs
 }
