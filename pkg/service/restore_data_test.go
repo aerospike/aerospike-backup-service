@@ -41,7 +41,7 @@ func TestRestoreOK(t *testing.T) {
 		Run(gomock.Any(), client, request).
 		Return(mockRestoreHandler, nil)
 
-	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now()}}
+	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now(), FileCount: 1}}
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
 		[]model.BackupDetails{detailsDetails}, nil)
 
@@ -81,7 +81,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	})
 	mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
-	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now()}}
+	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now(), FileCount: 1}}
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
 		[]model.BackupDetails{detailsDetails}, nil)
 
@@ -194,8 +194,8 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 
 	// BackupReader returns backups with different creation times, which is invalid
 	backups := []model.BackupDetails{
-		{BackupMetadata: model.BackupMetadata{Created: time.Now().Add(-time.Hour)}},
-		{BackupMetadata: model.BackupMetadata{Created: time.Now()}},
+		{BackupMetadata: model.BackupMetadata{Created: time.Now().Add(-time.Hour), FileCount: 1}},
+		{BackupMetadata: model.BackupMetadata{Created: time.Now(), FileCount: 1}},
 	}
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(backups, nil)
 
@@ -227,7 +227,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 		Run(gomock.Any(), client, request).
 		Return(nil, restoreErr)
 
-	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now()}}
+	detailsDetails := model.BackupDetails{BackupMetadata: model.BackupMetadata{Created: time.Now(), FileCount: 1}}
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
 		[]model.BackupDetails{detailsDetails}, nil)
 
@@ -254,7 +254,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 
 	client := env.expectSuccessfulClientInteraction(t, cluster)
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(
-		[]model.BackupDetails{{BackupMetadata: model.BackupMetadata{Created: time.Now()}}}, nil)
+		[]model.BackupDetails{{BackupMetadata: model.BackupMetadata{Created: time.Now(), FileCount: 1}}}, nil)
 
 	var runStarted sync.WaitGroup
 	runStarted.Add(1)
