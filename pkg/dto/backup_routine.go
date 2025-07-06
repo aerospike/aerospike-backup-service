@@ -48,7 +48,7 @@ type BackupRoutine struct {
 	// Multiple entries can be comma-separated: e.g., "0,100,200,300,400,500".
 	// By default, all partitions (0 to 4095) are backed up.
 	// This field is mutually exclusive with node-list.
-	PartitionList string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" default:"0-4096"`
+	PartitionList string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" extensions:"x-nullable"`
 
 	// NodeList specifies which Aerospike nodes to include in the backup.
 	// Only the listed nodes will be backed up.
