@@ -93,7 +93,15 @@ func (r *dataRestorer) executeRestore(
 		return fmt.Errorf("failed to read backups: %w", err)
 	}
 
-	if err := r.validateBackupData(backups); err != nil {
+	if len(backups) > 0 && r.allBackupsEmpty(backups) {
+		// edge case: backups exist but are empty — nothing to restore.
+		// If no backups found, we still attempt restore, as CLI-created files may exist without metadata.
+		r.restoreJobs.finishJob(jobID, nil)
+		slog.Info("Empty backup found, nothing to restore", slog.Any("jobID", jobID))
+		return nil
+	}
+
+	if err := r.validateBackupsCreatedAtTheSameTime(backups); err != nil {
 		return err
 	}
 
@@ -111,7 +119,7 @@ func (r *dataRestorer) executeRestore(
 	return handler.Wait(ctx)
 }
 
-func (r *dataRestorer) validateBackupData(backups []model.BackupDetails) error {
+func (r *dataRestorer) validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
 	for _, b := range backups {
 		if b.Created != backups[0].Created {
 			return fmt.Errorf("backups from different times were found: %s and %s",
@@ -120,6 +128,16 @@ func (r *dataRestorer) validateBackupData(backups []model.BackupDetails) error {
 	}
 
 	return nil
+}
+
+func (r *dataRestorer) allBackupsEmpty(backups []model.BackupDetails) bool {
+	for _, b := range backups {
+		if b.FileCount > 0 {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (r *dataRestorer) recordsInBackup(backups []model.BackupDetails) uint64 {
@@ -148,14 +166,14 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 func (r *dataRestorer) RestoreByTime(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
-	fullBackupsByNamespace, err := r.findBackupsToRestore(ctx, request)
+	backupsByNamespace, err := r.findBackupsToRestore(ctx, request)
 	if err != nil {
 		return 0, err
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
-	go r.restoreByTimeSync(ctx, request, jobID, fullBackupsByNamespace)
+	go r.restoreByTimeSync(ctx, request, jobID, backupsByNamespace)
 
 	return jobID, nil
 }
