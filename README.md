@@ -405,6 +405,7 @@ recommended for a more convenient and user-friendly experience.
 ### Backup
 
 #### Trigger On-Demand Backup
+ℹ️ *Available since v1.0*
 
 This request starts the backup operation for the specified routine, regardless of its configured schedule.
 
@@ -417,6 +418,7 @@ This request starts the backup operation for the specified routine, regardless o
 If the request is accepted, the server responds with Http 202 Accepted.
 
 #### Get Current Backup
+ℹ️ *Available since v1.0*
 
 This endpoint retrieves the current statistics for a backup in progress, identified by its routine name.
 
@@ -452,6 +454,7 @@ See [fields description](docs/readme/dto/dto.runningjob.md) for details.
 </details>
 
 #### Cancel Backup Job
+ℹ️ *Available since v3.0*
 
 [
 `POST {{baseUrl}}/v1/backups/cancel/<routineName>`](https://aerospike.github.io/aerospike-backup-service/#/Backup/cancelCurrentBackup)
@@ -460,6 +463,7 @@ Cancel all currently running backups (both full and incremental) for the specifi
 will be deleted.
 
 #### Retrieve Backup List
+ℹ️ *Available since v1.0*
 
 Provides a list of backups for each configured routine, including details such as creation time, duration, namespace,
 and storage location.
@@ -514,6 +518,7 @@ You can filter the results by adding query parameters:
 Here, `name` is the routine name, `from` and `to` are timestamps in milliseconds since epoch.
 
 #### Disable Routine
+ℹ️ *Available since v3.0*
 
 [
 `POST {{baseUrl}}/v1/routines/<routineName>/disable/`](https://aerospike.github.io/aerospike-backup-service/#/Configuration/disableRoutine)
@@ -529,6 +534,7 @@ Set the disabled flag for the given routine to `true` or `false` (default is `fa
 ### Restore
 
 #### Direct restore using a specific backup
+ℹ️ *Available since v1.0*
 
 This request restores a backup from a specified path to a designated destination.
 
@@ -585,6 +591,7 @@ For more details see [fields description](docs/readme/dto/dto.restorerequest.md)
 The response is a job ID.
 
 #### Restore using routine name and timestamp
+ℹ️ *Available since v1.0*
 
 This option automatically restores data by identifying and applying the
 appropriate backup sequence based on the specified timestamp.
@@ -655,6 +662,7 @@ For more details see [fields description](docs/readme/dto/dto.restoretimestampre
 The response is a job ID.
 
 #### Restore job status
+ℹ️ *Available since v1.0*
 
 You can get job status with the endpoint
 
@@ -700,6 +708,7 @@ For fields description see [fields description](docs/readme/dto/dto.restorejobst
 </details>
 
 #### Retrieve Restore Jobs
+ℹ️ *Available since v3.2*
 
 Provides a list of all restore jobs, with optional filtering by time range and status.
 
@@ -750,6 +759,7 @@ Provides a list of all restore jobs, with optional filtering by time range and s
 </details>
 
 #### Cancel Restore Job
+ℹ️ *Available since v3.0*
 
 Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
 
