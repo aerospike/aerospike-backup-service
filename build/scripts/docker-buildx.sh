@@ -7,7 +7,6 @@ TAG_LATEST=false
 TAG=""
 PLATFORMS="linux/amd64,linux/arm64"
 
-
 POSITIONAL_ARGS=()
 
 while [[ $# -gt 0 ]]; do
@@ -85,6 +84,7 @@ TAG="$TAG" \
 HUB="$HUB" \
 REGISTRY="$REGISTRY" \
 RH_REGISTRY="$RH_REGISTRY" \
+GOPROXY="$GOPROXY" \
 LATEST="$TAG_LATEST" \
 GIT_BRANCH="$(git rev-parse --abbrev-ref HEAD)" \
 GIT_COMMIT_SHA="$(git rev-parse HEAD)" \

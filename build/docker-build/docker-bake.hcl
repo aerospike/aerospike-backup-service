@@ -81,6 +81,9 @@ target aerospike-backup-service {
     RH_REGISTRY = "${RH_REGISTRY}"
   }
 
+  secret = [
+    "id=GOPROXY,env=GOPROXY"
+  ]
   context    = "${CONTEXT}"
   dockerfile = "Dockerfile"
   platforms = split(",", "${PLATFORMS}")
