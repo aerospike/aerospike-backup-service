@@ -102,7 +102,7 @@ func (op *BackupNamespaceRunner) writeBackupMetadata(
 		return fmt.Errorf("could not write backup metadata to %q: %w", backupFolder, err)
 	}
 
-	op.logger.Info("Write backup metadata",
+	op.logger.Info("Wrote backup metadata",
 		slog.Any("folder", backupFolder),
 		slog.Any("metadata", metadata))
 

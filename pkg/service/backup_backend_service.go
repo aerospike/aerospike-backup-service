@@ -307,12 +307,17 @@ func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName strin
 		return fmt.Errorf("routine not found: %q", routineName)
 	}
 
-	slog.Debug("Delete folder", slog.String("path", path), slog.String("routine", routineName))
 	lock := b.locks.LoadOrStore(routineName, &sync.RWMutex{})
 	lock.Lock()
 	defer lock.Unlock()
 
-	return storage.DeleteFolder(ctx, routine.Storage, path)
+	err := storage.DeleteFolder(ctx, routine.Storage, path)
+	if err != nil {
+		return fmt.Errorf("failed to delete folder: %w", err)
+	}
+
+	slog.Debug("Deleted folder", slog.String("path", path), slog.String("routine", routineName))
+	return err
 }
 
 func (b *BackupBackendServiceImpl) getPathBackups(
