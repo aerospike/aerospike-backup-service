@@ -93,8 +93,6 @@ func (op *BackupNamespaceRunner) deleteFolder(ctx context.Context, path string) 
 		op.logger.Error("Could not delete folder", slog.Any("err", err))
 		return
 	}
-
-	op.logger.Debug("Deleted folder", slog.String("path", path))
 }
 
 func (op *BackupNamespaceRunner) writeBackupMetadata(

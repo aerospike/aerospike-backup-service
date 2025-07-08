@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -306,6 +307,7 @@ func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName strin
 		return fmt.Errorf("routine not found: %q", routineName)
 	}
 
+	slog.Debug("Delete folder", slog.String("path", path), slog.String("routine", routineName))
 	lock := b.locks.LoadOrStore(routineName, &sync.RWMutex{})
 	lock.Lock()
 	defer lock.Unlock()
