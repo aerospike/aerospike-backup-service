@@ -317,6 +317,7 @@ func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName strin
 	}
 
 	slog.Debug("Deleted folder", slog.String("path", path), slog.String("routine", routineName))
+
 	return err
 }
 
