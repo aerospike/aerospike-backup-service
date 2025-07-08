@@ -89,7 +89,7 @@ func setupCertificates(t *testing.T) {
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
 	}
-
+	//nolint:staticcheck // DEK-Info is deprecated but needed for testing password-protected keys
 	encryptedBlock, err := x509.EncryptPEMBlock(
 		rand.Reader, pemBlock.Type, pemBlock.Bytes, []byte(encKeyPassword), x509.PEMCipherAES256)
 	require.NoError(t, err, "Failed to encrypt PEM block")
@@ -125,7 +125,7 @@ func TestNewTLSConfig(t *testing.T) {
 
 		cfg, err := NewTLSConfig(&model.TLS{CAFile: &caCertFile, CAPath: &caSubDir})
 		require.NoError(t, err)
-		assert.NotEmpty(t, cfg.RootCAs.Subjects(), "RootCAs should be populated")
+		assert.NotEmpty(t, cfg.RootCAs.Subjects(), "RootCAs should be populated") //nolint:staticcheck
 	})
 
 	t.Run("With Client Certs", func(t *testing.T) {
