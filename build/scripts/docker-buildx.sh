@@ -96,4 +96,5 @@ docker buildx bake \
 --allow=fs.read="$WORKSPACE" \
 default \
 --progress plain \
---file "$WORKSPACE/build/docker-build/docker-bake.hcl"
+--file "$WORKSPACE/build/docker-build/docker-bake.hcl" \
+--metadata-file "$WORKSPACE/image-metadata.json"

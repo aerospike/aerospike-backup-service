@@ -122,6 +122,7 @@ clean:
 	@find . -type f -name 'nfpm-*-*.yaml' -exec rm -f {} +
 	git submodule foreach --recursive git clean -fd; \
 	git submodule deinit --all -f
+	@find . -type f -name "image-metadata.json" -exec rm -f {} +
 
 .PHONY: vulnerability-scan
 vulnerability-scan:
