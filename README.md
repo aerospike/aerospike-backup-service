@@ -151,7 +151,7 @@ modular approach lets you reuse and combine policies, clusters, and storage setu
 <!-- DefaultConfig -->
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.1.0/docs/config.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/tags/v3.2.0/docs/config.schema.json
 ---
 aerospike-clusters:
   abs-cluster: # <--- Custom cluster name
@@ -195,6 +195,7 @@ backup-routines:
     source-cluster: abs-cluster         # <--- Refers to the cluster name under aerospike-clusters
     storage: s3                         # <--- Refers to the storage name under storage
     backup-policy: dailyBackupPolicy    # <--- Refers to the policy name under backup-policies
+    namespaces: []                      # <--- An empty list is used to configure a backup of the whole cluster
 
 service:
   http:

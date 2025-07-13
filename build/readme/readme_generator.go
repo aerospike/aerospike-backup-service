@@ -292,9 +292,12 @@ func updateDefaultConfigSection(readme []byte) []byte {
 		panic(fmt.Errorf("failed to read config YAML: %w", err))
 	}
 
-	_, err = dto.NewConfigFromReader(bytes.NewReader(configContent), decoder.YAML)
+	config, err := dto.NewConfigFromReader(bytes.NewReader(configContent), decoder.YAML)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse default config YAML: %w", err))
+	}
+	if err = config.Validate(); err != nil {
+		panic(fmt.Errorf("failed to validate default config YAML: %w", err))
 	}
 
 	return configRe.ReplaceAllFunc(readme, func(_ []byte) []byte {
