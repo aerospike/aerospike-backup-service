@@ -13,6 +13,7 @@ var (
 	errNonPositive       = fmt.Errorf("non-positive value %w", errValidation)
 	errNegative          = fmt.Errorf("negative value %w", errValidation)
 	errInvalidValue      = fmt.Errorf("invalid value %w", errValidation)
+	errMissingDependency = fmt.Errorf("missing dependent field %w", errValidation)
 )
 
 func errValidationRequiredEither(field1, field2 string) error {
@@ -42,4 +43,8 @@ func errValidationNegative[T ~int | ~int8 | ~int16 | ~int32 | ~int64](field stri
 func errValidationInvalidValue(field, value any, allowed any) error {
 	return fmt.Errorf("%w: '%v' is not a valid %s. Allowed values: %v",
 		errInvalidValue, value, field, allowed)
+}
+
+func errValidationMissingDependency(field1, field2 string) error {
+	return fmt.Errorf("%w: %q requires %q to be set", errMissingDependency, field1, field2)
 }
