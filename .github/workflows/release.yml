@@ -5,6 +5,9 @@ on:
       - published
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   promote-to-jfrog-prod-env:
     runs-on: ubuntu-24.04
