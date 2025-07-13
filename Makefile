@@ -96,6 +96,7 @@ docker-build:
 .PHONY: docker-buildx
 docker-buildx:
 	cd ./build/scripts && ./docker-buildx.sh \
+	--repo $(IMAGE_REPO) \
 	--tag $(IMAGE_TAG) \
 	--registry $(REGISTRY) \
 	--platforms "$(ARCHS)"

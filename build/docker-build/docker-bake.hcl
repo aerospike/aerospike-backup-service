@@ -32,8 +32,8 @@ variable ISO8601 {
   default = null
 }
 
-variable HUB {
-  default = "aerospike.jfrog.io/ecosystem-container-dev-local"
+variable REPO {
+  default = "aerospike/aerospike-backup-service"
 }
 
 variable PLATFORMS {
@@ -48,16 +48,13 @@ variable GO_VERSION {
   default = "1.23.4"
 }
 
-variable RH_REGISTRY {
-  default = "registry.access.redhat.com"
-}
 
 function tags {
   params = [service]
   result = LATEST == true ? [
-    "${HUB}/${service}:${TAG}",
-    "${HUB}/${service}:latest"
-  ] : ["${HUB}/${service}:${TAG}"]
+    "${REPO}/${service}:${TAG}",
+    "${REPO}/${service}:latest"
+  ] : ["${REPO}/${service}:${TAG}"]
 }
 
 target aerospike-backup-service {
@@ -78,7 +75,6 @@ target aerospike-backup-service {
   args = {
     GO_VERSION = "${GO_VERSION}"
     REGISTRY = "${REGISTRY}"
-    RH_REGISTRY = "${RH_REGISTRY}"
   }
 
   secret = [

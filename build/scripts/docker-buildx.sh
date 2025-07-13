@@ -2,7 +2,7 @@
 WORKSPACE="$(git rev-parse --show-toplevel)"
 CHANNEL="dev"
 REGISTRY="docker.io"
-RH_REGISTRY="registry.access.redhat.com"
+REPO="aerospike/aerospike-backup-service"
 TAG_LATEST=false
 TAG=""
 PLATFORMS="linux/amd64,linux/arm64"
@@ -11,8 +11,8 @@ POSITIONAL_ARGS=()
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-  --channel)
-    CHANNEL="$2"
+  --repo)
+    REPO="$2"
     shift
     shift
     ;;
@@ -39,11 +39,6 @@ while [[ $# -gt 0 ]]; do
     shift
     shift
     ;;
-  --rh-registry)
-    RH_REGISTRY="$2"
-    shift
-    shift
-    ;;
   -* | --*)
     echo "Unknown option $1"
     exit 1
@@ -58,17 +53,6 @@ done
 set -- "${POSITIONAL_ARGS[@]}"
 
 
-if [ "$CHANNEL" == "dev" ]; then
-  HUB="aerospike.jfrog.io/ecosystem-container-dev-local"
-elif [ "$CHANNEL" == "stage" ]; then
-  HUB="aerospike.jfrog.io/ecosystem-container-stage-local"
-elif [ "$CHANNEL" == "prod" ]; then
-  HUB="aerospike.jfrog.io/ecosystem-container-prod-local"
-else
-  echo "Unknown channel"
-  exit 1
-fi
-
 docker login aerospike.jfrog.io -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 
 GO_VERSION="$(curl -s 'https://go.dev/dl/?mode=json' | \
@@ -81,9 +65,8 @@ GO_VERSION="$(curl -s 'https://go.dev/dl/?mode=json' | \
 
 PLATFORMS="$PLATFORMS" \
 TAG="$TAG" \
-HUB="$HUB" \
+REPO="$REPO" \
 REGISTRY="$REGISTRY" \
-RH_REGISTRY="$RH_REGISTRY" \
 GOPROXY="$GOPROXY" \
 LATEST="$TAG_LATEST" \
 GIT_BRANCH="$(git rev-parse --abbrev-ref HEAD)" \
@@ -96,5 +79,4 @@ docker buildx bake \
 --allow=fs.read="$WORKSPACE" \
 default \
 --progress plain \
---file "$WORKSPACE/build/docker-build/docker-bake.hcl" \
---metadata-file "$WORKSPACE/image-metadata.json"
+--file "$WORKSPACE/build/docker-build/docker-bake.hcl"
