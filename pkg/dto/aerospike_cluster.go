@@ -44,7 +44,7 @@ func (a *AerospikeCluster) Validate() error {
 		return errors.New("seed nodes are not specified")
 	}
 	for _, node := range a.SeedNodes {
-		if err := node.Validate(); err != nil {
+		if err := node.Validate(a.TLS != nil); err != nil {
 			return err
 		}
 	}
@@ -136,12 +136,14 @@ type TLS struct {
 	CAFile *string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/cafile.pem" extensions:"x-nullable"`
 	// Path to a directory of trusted CA certificates.
 	CAPath *string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
-	// The default TLS name used to authenticate each TLS socket connection.
-	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name" extensions:"x-nullable"`
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
 	Protocols *string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
 	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"ECDHE-ECDSA-AES256-GCM-SHA384" extensions:"x-nullable"`
+
+	//mTLS configuration
+	// The default TLS name used to authenticate each TLS socket connection.
+	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name" extensions:"x-nullable"` // what's the difference with ceed node's tls name???
 	// Path to the key for mutual authentication (if Aerospike cluster supports it).
 	Keyfile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/keyfile.pem" extensions:"x-nullable"`
 	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
@@ -179,12 +181,44 @@ func (t *TLS) toModel() *model.TLS {
 }
 
 func (t *TLS) Validate() error {
-	// try to parse tls config to verify all parameters are valid
-	_, err := aerospike.NewTLSConfig(t.toModel())
+	if t == nil {
+		return nil // TLS is optional
+	}
 
-	return err
+	// Check for mutually exclusive CAFile and CAPath
+	if t.CAFile != nil && *t.CAFile != "" && t.CAPath != nil && *t.CAPath != "" {
+		return errors.New("tls: 'ca-file' and 'ca-path' are mutually exclusive")
+	}
+
+	// Check mTLS fields: if any mTLS field is set, all are required
+	mTLSFieldsSet := (t.Name != nil && *t.Name != "") ||
+		(t.Certfile != nil && *t.Certfile != "") ||
+		(t.Keyfile != nil && *t.Keyfile != "")
+
+	if mTLSFieldsSet {
+		if t.Name == nil || *t.Name == "" {
+			return errors.New("tls: 'name' is required for mTLS when 'cert-file' or 'key-file' is set")
+		}
+		if t.Certfile == nil || *t.Certfile == "" {
+			return errors.New("tls: 'cert-file' is required for mTLS")
+		}
+		if t.Keyfile == nil || *t.Keyfile == "" {
+			return errors.New("tls: 'key-file' is required for mTLS")
+		}
+	}
+
+	if t.KeyfilePassword != nil && *t.KeyfilePassword != "" && (t.Keyfile == nil || *t.Keyfile == "") {
+		return errors.New("tls: 'key-file-password' is set, but 'key-file' is missing")
+	}
+
+	if _, err := aerospike.NewTLSConfig(t.toModel()); err != nil {
+		return fmt.Errorf("tls: invalid configuration: %w", err)
+	}
+
+	return nil
 }
 
+// Credentials represents authentication details to the Aerospike cluster
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
@@ -266,7 +300,10 @@ type SeedNode struct {
 }
 
 // Validate validates the SeedNode entity.
-func (node *SeedNode) Validate() error {
+func (node *SeedNode) Validate(withTls bool) error {
+	if withTls && node.TLSName == "" {
+		return errValidationEmptyField("tls-name")
+	}
 	if node.HostName == "" {
 		return errValidationEmptyField("hostname")
 	}

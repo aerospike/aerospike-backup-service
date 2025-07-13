@@ -45,6 +45,6 @@ func errValidationInvalidValue(field, value any, allowed any) error {
 		errInvalidValue, value, field, allowed)
 }
 
-func errValidationMissingDependency(field1, field2 string) error {
-	return fmt.Errorf("%w: %q requires %q to be set", errMissingDependency, field1, field2)
+func errValidationRequires(setField, requiredField string) error {
+	return fmt.Errorf("%w: %q requires %q to be set", errMissingDependency, setField, requiredField)
 }
