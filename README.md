@@ -195,7 +195,7 @@ backup-routines:
     source-cluster: abs-cluster         # <--- Refers to the cluster name under aerospike-clusters
     storage: s3                         # <--- Refers to the storage name under storage
     backup-policy: dailyBackupPolicy    # <--- Refers to the policy name under backup-policies
-    namespaces: []                                  # <--- An empty list is used to configure a backup of the whole cluster 
+    namespaces: []                      # <--- An empty list is used to configure a backup of the whole cluster
 
 service:
   http:
