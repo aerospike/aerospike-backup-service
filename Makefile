@@ -132,6 +132,6 @@ vulnerability-scan:
 .PHONY: vulnerability-scan-container
 vulnerability-scan-container:
 	snyk container test $(IMAGE_REPO):$(IMAGE_TAG) \
-	--policy-path=$(WORKSPACE)/.snyk \
+	--policy-path=.snyk \
 	--file=Dockerfile \
 	--severity-threshold=high
