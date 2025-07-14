@@ -123,11 +123,10 @@ clean:
 	@find . -type f -name 'nfpm-*-*.yaml' -exec rm -f {} +
 	git submodule foreach --recursive git clean -fd; \
 	git submodule deinit --all -f
-	@find . -type f -name "image-metadata.json" -exec rm -f {} +
 
 .PHONY: vulnerability-scan
 vulnerability-scan:
-	DEBUG=*snyk* snyk test --policy-path=.snyk --severity-threshold=high
+	snyk test --policy-path=.snyk --severity-threshold=high
 
 .PHONY: vulnerability-scan-container
 vulnerability-scan-container:
