@@ -3319,7 +3319,7 @@ const docTemplate = `{
                     "description": "TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.",
                     "type": "string",
                     "x-nullable": true,
-                    "example": "ECDHE-ECDSA-AES256-GCM-SHA384"
+                    "example": "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA"
                 },
                 "key-file": {
                     "description": "Path to the key for mutual authentication (if Aerospike cluster supports it).",
