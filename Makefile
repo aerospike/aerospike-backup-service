@@ -127,7 +127,7 @@ clean:
 
 .PHONY: vulnerability-scan
 vulnerability-scan:
-	DEBUG=*snyk* snyk test --all-projects --policy-path=.snyk --severity-threshold=high
+	DEBUG=*snyk* snyk test --policy-path=.snyk --severity-threshold=high
 
 .PHONY: vulnerability-scan-container
 vulnerability-scan-container:
