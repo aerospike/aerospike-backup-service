@@ -48,13 +48,38 @@ variable GO_VERSION {
   default = "1.23.4"
 }
 
+variable CACHE_FROM {
+  default = null
+}
+
+variable CACHE_TO {
+  default = null
+}
+
+variable OUTPUT {
+  default = "type=image,push=true"
+}
+
+function norm {
+  params = [value]
+
+  result = (
+    value == null || value == "" ?
+    null :
+    (
+      contains(value, " ") ?
+      split(" ", value) :
+      [value]
+    )
+  )
+}
 
 function tags {
   params = [service]
   result = LATEST == true ? [
-    "${REPO}/${service}:${TAG}",
-    "${REPO}/${service}:latest"
-  ] : ["${REPO}/${service}:${TAG}"]
+    "${HUB}/${service}:${TAG}",
+    "${HUB}/${service}:latest"
+  ] : ["${HUB}/${service}:${TAG}"]
 }
 
 target aerospike-backup-service {
@@ -82,8 +107,10 @@ target aerospike-backup-service {
   ]
   context    = "${CONTEXT}"
   dockerfile = "Dockerfile"
-  platforms = split(",", "${PLATFORMS}")
+  platforms = split(",", replace("${PLATFORMS}"), " ", ",")
+  cache-to = norm("${CACHE_TO}")
+  cache-from = norm("${CACHE_FROM}")
 
   tags = tags("aerospike-backup-service")
-  output = ["type=image,push=true"]
+  output = norm("${OUTPUT}")
 }

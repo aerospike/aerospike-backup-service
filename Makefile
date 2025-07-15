@@ -17,7 +17,9 @@ PACKAGERS ?= deb rpm
 
 IMAGE_TAG ?= test
 IMAGE_REPO ?= aerospike/aerospike-backup-service
-
+IMAGE_CACHE_FROM ?=
+IMAGE_CACHE_TO ?=
+IMAGE_OUTPUT ?= type=image,push=true
 TARGET=$(TARGET_DIR)/$(BINARY_NAME)
 ifneq ($(strip $(OS))$(strip $(ARCH)),)
 	TARGET=$(TARGET_DIR)/$(BINARY_NAME)_$(OS)_$(ARCH)
@@ -99,7 +101,10 @@ docker-buildx:
 	--repo $(IMAGE_REPO) \
 	--tag $(IMAGE_TAG) \
 	--registry $(REGISTRY) \
-	--platforms "$(ARCHS)"
+	--platforms "$(ARCHS)" \
+	--cache-to "$(IMAGE_CACHE_TO)" \
+	--cache-from "$(IMAGE_CACHE_FROM)" \
+	--output "$(IMAGE_OUTPUT)"
 
 .PHONY: test
 test:
