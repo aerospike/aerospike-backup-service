@@ -77,9 +77,9 @@ function norm {
 function tags {
   params = [service]
   result = LATEST == true ? [
-    "${HUB}/${service}:${TAG}",
-    "${HUB}/${service}:latest"
-  ] : ["${HUB}/${service}:${TAG}"]
+    "${REPO}/${service}:${TAG}",
+    "${REPO}/${service}:latest"
+  ] : ["${REPO}/${service}:${TAG}"]
 }
 
 target aerospike-backup-service {
