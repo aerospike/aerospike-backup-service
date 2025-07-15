@@ -1,0 +1,76 @@
+name: Validate aerospike-backup-service configuration against JSON Schema
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate-abs-config-file:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install check-jsonschema
+
+      - name: Install yq
+        uses: dcarbone/install-yq-action@4075b4dca348d74bd83f2bf82d30f25d7c54539b #v1.3.1
+        with:
+          version: "v4.45.4"
+
+      - name: Validate aerospike-backup-service.yml files against config.schema.json
+        run: |
+          echo "Starting JSON Schema validation using check-jsonschema"
+          echo "Using schema: ./docs/config.schema.json"
+          echo "------------------------------------------------------------"
+          
+          SCHEMA=./docs/config.schema.json
+          EXIT_CODE=0
+          
+          echo "Searching for all aerospike-backup-service.yml files..."
+          find . -type f -name 'aerospike-backup-service.yml' | while read -r file; do
+            echo ""
+            echo "Validating dynamically discovered file: $file"
+            if check-jsonschema --verbose --schemafile "$SCHEMA" "$file"; then
+              echo "PASSED: $file"
+            else
+              echo "FAILED: $file"
+              EXIT_CODE=1
+            fi
+          done
+          
+          echo ""
+          echo "Validating additional explicitly listed files..."
+          
+          for file in \
+            .github/samples/test-chart-abs-conf.yaml \
+            ./config/config.yml \
+            ./config/minio_config.yml
+          do
+            echo ""
+            echo "Validating file: $file"
+            if check-jsonschema --verbose --schemafile "$SCHEMA" "$file"; then
+              echo "PASSED: $file"
+            else
+              echo "FAILED: $file"
+              EXIT_CODE=1
+            fi
+          done
+          
+          echo ""
+          echo "------------------------------------------------------------"
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "One or more files failed schema validation"
+          else
+            echo "All files passed schema validation"
+          fi
+          
+          exit $EXIT_CODE
