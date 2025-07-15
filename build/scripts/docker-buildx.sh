@@ -49,7 +49,7 @@ while [[ $# -gt 0 ]]; do
     shift
     ;;
   --output)
-    CACHE_FROM="$2"
+    OUTPUT="$2"
     shift
     shift
     ;;
