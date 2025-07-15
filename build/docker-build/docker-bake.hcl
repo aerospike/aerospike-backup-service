@@ -99,7 +99,7 @@ target aerospike-backup-service {
   ]
   context    = "${CONTEXT}"
   dockerfile = "Dockerfile"
-  platforms = platforms = split(",", replace("${PLATFORMS}", " ", ","))
+  platforms = split(",", replace("${PLATFORMS}", " ", ","))
   cache-to = norm("${CACHE_TO}")
   cache-from = norm("${CACHE_FROM}")
 
