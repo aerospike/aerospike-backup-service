@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -15,6 +16,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -25,8 +27,8 @@ import (
 )
 
 var (
-	commit    string
-	buildTime string
+	commitHash string
+	buildTime  string
 )
 
 // run parses the CLI parameters and executes backup.
@@ -84,6 +86,7 @@ func startService(configFile string, remote bool) error {
 	return err
 }
 
+//nolint:funlen
 func initComponents(ctx context.Context, configFile string, remote bool) (
 	*model.Config, quartz.Scheduler, *handlers.Service, *slog.Logger, error,
 ) {
@@ -96,7 +99,13 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	}
 
 	appLogger := setDefaultLogger(config.ServiceConfig.GetLoggerOrDefault())
-	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
+
+	configStr, _ := json.Marshal(dto.NewConfigFromModel(config))
+	slog.Info("Aerospike Backup Service",
+		slog.String("commit", commitHash),
+		slog.String("buildTime", buildTime),
+		slog.String("config", string(configStr)))
+
 	clientManager.SetLogger(appLogger)
 
 	// schedule all configured backup routines
