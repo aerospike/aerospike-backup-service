@@ -1,13 +1,13 @@
 name: Test Chart Install and Tests
-permissions:
-  contents: read
-  pull-requests: write
-
 on:
   pull_request:
     paths:
       - helm/aerospike-backup-service/**
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   lint-charts:
