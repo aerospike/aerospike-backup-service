@@ -16,7 +16,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -31,8 +30,8 @@ jobs:
         run: |
           find . -type f -name 'aerospike-backup-service.yml' | while read -r file; do
             echo "Validating $file"
-            check-jsonschema --verbose --schemafile /docs/config.schema.json $file 
+            check-jsonschema --verbose --schemafile ./docs/config.schema.json $file 
           done
-          check-jsonschema --verbose --schemafile /docs/config.schema.json .github/samples/test-chart-abs-conf.yaml
-          check-jsonschema --verbose --schemafile /docs/config.schema.json config/config.yml
-          check-jsonschema --verbose --schemafile /docs/config.schema.json config/minio_config.yml
+          check-jsonschema --verbose --schemafile ./docs/config.schema.json .github/samples/test-chart-abs-conf.yaml
+          check-jsonschema --verbose --schemafile ./docs/config.schema.json ./config/config.yml
+          check-jsonschema --verbose --schemafile ./docs/config.schema.json ./config/minio_config.yml
