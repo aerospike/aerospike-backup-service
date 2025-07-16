@@ -63,7 +63,7 @@ variable OUTPUT {
 function norm {
   params = [value]
 
-  result = value == null || value == "" ? null : length(regexall(" ", value)) > 0 ? split(" ", value) : [value]
+  result = value == null || value == "" ? [] : length(regexall(" ", value)) > 0 ? split(" ", value) : [value]
 }
 
 function tags {

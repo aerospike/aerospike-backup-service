@@ -2,7 +2,7 @@ name: Promote Images to DockerHub
 on:
   release:
     types:
-      - published
+      - released
   workflow_dispatch:
 
 permissions:
@@ -15,14 +15,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 1
-
-      - name: Get Metadata
-        run: |
-          git fetch --tags --depth=1
-          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
-          echo "BUNDLE_VERSION=$LATEST_TAG" >> $GITHUB_ENV
-          echo "BUNDLE_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Login to JFrog
         uses: jfrog/setup-jfrog-cli@ff5cb544114ffc152db9cea1cd3d5978d5074946 # v4.5.11
@@ -31,56 +25,8 @@ jobs:
           JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
           JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
 
-      - name: Promote to JFrog PROD Environment
-        run: |
-          jfrog release-bundle-promote "$BUNDLE_NAME" "$BUNDLE_VERSION" \
-          --signing-key="aerospike" --project="ecosystem" PROD
-
-  promote-to-dockerhub:
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          fetch-depth: 1
-      - name: Get Metadata
-        run: |
-          git fetch --tags --depth=1
-          LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
-          echo "TAG=${LATEST_TAG#v}" >> $GITHUB_ENV
-          echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@18ce135bb5112fa8ce4ed6c17ab05699d7f3a5e0 # v3.11.0
-      - name: Login to JFrog Artifactory
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
-        with:
-          registry: aerospike.jfrog.io
-          username: ${{ secrets.ARTIFACTORY_USER }}
-          password: ${{ secrets.ARTIFACTORY_TOKEN }}
-      - name: Pull Images from JFrog
-        env:
-          TAG: ${{env.TAG}}
-          REPO_NAME: ${{env.REPO_NAME}}
-          ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
-          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
-          JF_USERNAME: ${{ secrets.ARTIFACTORY_USER }}
-        run: |
-          set -euo pipefail
-          
-          url="https://aerospike.jfrog.io/artifactory/$ARTIFACTORY_CONTAINER_DEV/$REPO_NAME/$TAG/list.manifest.json"
-          amd64_digest="$(curl -sSL -u$JF_USERNAME:$JF_ACCESS_TOKEN "$url" | jq -r '.manifests[] | select(.platform.architecture == "amd64") | .digest')"
-          arm64_digest="$(curl -sSL -u$JF_USERNAME:$JF_ACCESS_TOKEN "$url" | jq -r '.manifests[] | select(.platform.architecture == "arm64") | .digest')"
-          
-          if [[ -z "$amd64_digest" || -z "$arm64_digest" ]]; then
-          echo "Error: Could not resolve image digests."
-          exit 1
-          fi
-          
-          docker pull "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_DEV/$REPO_NAME@$amd64_digest"
-          docker pull "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_DEV/$REPO_NAME@$arm64_digest"
-          
-          echo "AMD64_DIGEST=$amd64_digest" >> $GITHUB_ENV
-          echo "ARM64_DIGEST=$arm64_digest" >> $GITHUB_ENV
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Login to DockerHub
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
@@ -89,28 +35,189 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Promote to DockerHub
+      - name: Get Metadata
+        run: |
+          echo "Getting latest Git tag..."
+          TAG_COMMIT=$(git rev-list --tags --max-count=1 || true)
+
+          if [ -n "$TAG_COMMIT" ]; then
+            LATEST_TAG=$(git describe --tags "$TAG_COMMIT" 2>/dev/null || true)
+          fi
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No Git tag found. Trying to read VERSION file..."
+            if [ -f VERSION ]; then
+              LATEST_TAG=$(cat VERSION)
+              echo "Read version from VERSION file: $LATEST_TAG"
+            fi
+          fi
+
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No valid version found"
+            exit 1
+          fi
+          
+          
+          BUNDLE_NAME="${GITHUB_REPOSITORY##*/}"
+          echo "Setting BUNDLE_NAME=$BUNDLE_NAME"
+          echo "BUNDLE_NAME=$BUNDLE_NAME" >> $GITHUB_ENV
+          echo "Setting BUNDLE_VERSION=$LATEST_TAG"
+          echo "BUNDLE_VERSION=$LATEST_TAG" >> $GITHUB_ENV
+          echo "Setting IMAGE_TAG=${LATEST_TAG#v}"
+          echo "IMAGE_TAG=${LATEST_TAG#v}" >> $GITHUB_ENV
+      - name: Check Bundle was successfully created in JFrog
         env:
-          TAG: ${{env.TAG}}
-          REPO_NAME: ${{env.REPO_NAME}}
-          ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
+          BUNDLE_NAME: ${{ env.BUNDLE_NAME }}
+          BUNDLE_VERSION: ${{ env.BUNDLE_VERSION }}
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+          JF_URL: ${{ vars.ARTIFACTORY_URL }}
+        run: |
+          echo "Checking if the release bundle exists in JFrog..."
+
+          URL="$JF_URL/lifecycle/api/v2/release_bundle/signatures/${BUNDLE_NAME}/${BUNDLE_VERSION}?project=${JF_PROJECT}"
+          echo "Querying URL: $URL"
+
+          HTTP_STATUS=$(curl --request GET \
+            --header "Authorization: Bearer ${JF_ACCESS_TOKEN}" \
+            --silent \
+            --show-error \
+            --output /dev/null \
+            --write-out "%{http_code}" \
+            "$URL")
+
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Bundle not found or request failed with HTTP status $HTTP_STATUS"
+            exit 1
+          else
+            echo "Release bundle $BUNDLE_NAME:$BUNDLE_VERSION exists in JFrog (HTTP $HTTP_STATUS)"
+          fi
+
+      - name: Promote to JFrog PROD Environment
+        env:
+          BUNDLE_NAME: ${{ env.BUNDLE_NAME }}
+          BUNDLE_VERSION: ${{ env.BUNDLE_VERSION }}
+          JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
+          JF_ACCESS_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
+        run: |
+          
+          TARGET_ENV="PROD"
+          
+          echo "Starting promotion of release bundle to JFrog $TARGET_ENV environment..."
+          
+          jfrog release-bundle-promote "$BUNDLE_NAME" "$BUNDLE_VERSION" \
+            --signing-key="aerospike" \
+            --project="$JF_PROJECT" \
+            "$TARGET_ENV"
+          
+          if [ $? -ne 0 ]; then
+            echo "Failed to promote $BUNDLE_NAME:$BUNDLE_VERSION release bundle to $TARGET_ENV"
+            exit 1
+          else
+            echo "Successfully promoted $BUNDLE_NAME:$BUNDLE_VERSION to $TARGET_ENV"
+          fi
+
+      - name: Wait for Docker image to be available in JFrog registry
+        env:
+          JF_REGISTRY: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
+          IMAGE_REPO: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
+          IMAGE_NAME: ${{ env.BUNDLE_NAME }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
 
         run: |
-          set -euo pipefail
+          IMAGE="$JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG"
+          MAX_RETRIES=12
+          RETRY_DELAY=15
+      
+          echo "Checking for Docker image: $IMAGE"
+          for i in $(seq 1 $MAX_RETRIES); do
+            if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
+              echo "Image found on attempt $i"
+              exit 0
+            else
+              echo "Attempt $i failed. Image not found or unreachable."
+              if [ "$i" -lt "$MAX_RETRIES" ]; then
+                echo "Retrying in $RETRY_DELAY seconds..."
+                sleep $RETRY_DELAY
+              fi
+            fi
+          done
+      
+          echo "Image $IMAGE not found after $MAX_RETRIES attempts over $((MAX_RETRIES * RETRY_DELAY)) seconds."
+          exit 1
+      
+      - name: Promote to DockerHub using docker image tools
+        id: promote-to-dockerhub
+        env:
+          JF_REGISTRY: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
+          IMAGE_REPO: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
+          IMAGE_NAME: ${{ env.BUNDLE_NAME }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          ORG: "aerospike"
+        run: |
           
-          amd64_tag="aerospike/$REPO_NAME:$TAG-amd64"
-          arm64_tag="aerospike/$REPO_NAME:$TAG-arm64"
-          multiarch_tag="aerospike/$REPO_NAME:$TAG"
+          SOURCE_IMAGE="$JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG"
+          TARGET_IMAGE_VERSION_TAG="$ORG/$IMAGE_NAME:$IMAGE_TAG"
+          TARGET_IMAGE_LATEST_TAG-"$ORG/$IMAGE_NAME:latest"
+          echo "Promoting image from: $FULL_SOURCE_IMAGE"
+          echo "Target tags: $TARGET_IMAGE_VERSION_TAG, $TARGET_IMAGE_LATEST_TAG"
           
-          docker tag "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_DEV/$REPO_NAME@$AMD64_DIGEST" "$amd64_tag"
-          docker tag "aerospike.jfrog.io/$ARTIFACTORY_CONTAINER_DEV/$REPO_NAME@$ARM64_DIGEST" "$arm64_tag"
+          echo "Creating promoted image manifest..."
+          docker buildx imagetools create $JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG \
+          --tag $ORG/$IMAGE_NAME:$IMAGE_TAG \
+          --tag $ORG/$IMAGE_NAME:latest
           
-          docker push "$amd64_tag"
-          docker push "$arm64_tag"
+          if docker buildx imagetools create "$FULL_SOURCE_IMAGE" \
+            --tag "$TARGET_IMAGE_VERSION_TAG" \
+            --tag "$TARGET_IMAGE_LATEST_TAG"; then
           
-          docker manifest create "$multiarch_tag"  "$amd64_tag" "$arm64_tag"
+                echo "Promotion succeeded."
+                echo "status=success" >> "$GITHUB_OUTPUT"
+          else
+                echo "Promotion failed."
+                echo "status=failure" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get Tag Commit
+        if: steps.promote-to-dockerhub.outputs.status == 'failure'
+        env:
+          TAG: ${{ env.BUNDLE_VERSION }}
+        run: |
+          TAG_COMMIT=$(git rev-list -n 1 $TAG)
+          if [ -z "$TAG_COMMIT" ]; then
+            echo "No valid commit hash for a tag"
+            exit 1
+          fi
           
-          docker manifest annotate "$multiarch_tag" "$amd64_tag" --arch amd64
-          docker manifest annotate "$multiarch_tag" "$arm64_tag" --arch arm64
-          
-          docker manifest push "$multiarch_tag"
+          echo "Setting TAG_COMMIT=$TAG_COMMIT"
+          echo "TAG_COMMIT=$TAG_COMMIT" >> $GITHUB_ENV
+
+      - name: Download Aerospike Backup Service OCI Archive
+        if: steps.promote-to-dockerhub.outputs.status == 'failure'
+        uses: dawidd6/action-download-artifact@ac66b43f0e6a346234dd65d4d0c8fbb31cb316e5 # v11
+        with:
+          workflow: pre-release.yml
+          name: abs-image
+          path: ./abs-image.tar
+          branch: main
+          commit: ${{ env.TAG_COMMIT }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Skopeo
+        if: steps.promote-to-dockerhub.outputs.status == 'failure'
+        uses: warjiang/setup-skopeo@71776e03c10d767c04af8924fe5a67763f9b3d34 # v0.1.3
+        with:
+          version: v1.19.0
+
+      - name: Push OCI Archive to DockerHub
+        if: steps.promote-to-dockerhub.outputs.status == 'failure'
+        env:
+          IMAGE_NAME: ${{ env.BUNDLE_NAME }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          skopeo copy --all \
+          --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
+            oci-archive:abs-image.tar \
+            docker://docker.io/aerospike/$IMAGE_NAME:$IMAGE_TAG

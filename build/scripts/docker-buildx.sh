@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 WORKSPACE="$(git rev-parse --show-toplevel)"
 CHANNEL="dev"
 REGISTRY="docker.io"
