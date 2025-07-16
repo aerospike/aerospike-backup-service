@@ -41,6 +41,7 @@ func run() int {
 	// Log commit information as the first log entry, ensuring it appears at the top
 	// regardless of subsequent errors or execution flow.
 	slog.Info("Aerospike Backup Service",
+		slog.String("version", backup.Version),
 		slog.String("commit", commitHash),
 		slog.String("buildTime", buildTime))
 
@@ -110,6 +111,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	// Duplication with the bootstrap log is intentional.
 	configStr, _ := json.Marshal(dto.NewConfigFromModel(config))
 	slog.Info("Aerospike Backup Service",
+		slog.String("version", backup.Version),
 		slog.String("commit", commitHash),
 		slog.String("buildTime", buildTime),
 		slog.String("config", string(configStr)))
