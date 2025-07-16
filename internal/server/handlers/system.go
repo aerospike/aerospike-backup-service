@@ -89,13 +89,11 @@ func APIDocsActionHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestedPath := r.URL.Path
 
+		//if not specified, return index.html
 		if strings.HasSuffix(requestedPath, "/api-docs/") {
-			redirectURL := strings.TrimSuffix(requestedPath, "/") + "/index.html"
-			http.Redirect(w, r, redirectURL, http.StatusMovedPermanently)
-			return
+			r.URL.Path = strings.TrimSuffix(requestedPath, "/") + "/index.html"
 		}
 
-		// For all other cases, delegate to the original swagger handler
 		httpSwagger.Handler().ServeHTTP(w, r)
 	})
 }
