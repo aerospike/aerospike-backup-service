@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	_ "github.com/aerospike/aerospike-backup-service/v3/docs" // auto-generated Swagger spec
@@ -85,5 +86,16 @@ func MetricsActionHandler() http.Handler {
 // @Produce     html
 // @Success 	200 {string} string
 func APIDocsActionHandler() http.Handler {
-	return httpSwagger.Handler()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedPath := r.URL.Path
+
+		if strings.HasSuffix(requestedPath, "/api-docs/") {
+			redirectURL := strings.TrimSuffix(requestedPath, "/") + "/index.html"
+			http.Redirect(w, r, redirectURL, http.StatusMovedPermanently)
+			return
+		}
+
+		// For all other cases, delegate to the original swagger handler
+		httpSwagger.Handler().ServeHTTP(w, r)
+	})
 }
