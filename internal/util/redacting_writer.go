@@ -7,7 +7,7 @@ import (
 
 const redactedPlaceholder = "[REDACTED]"
 
-var privateKeyRegex = regexp.MustCompile(`(?s)-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----`)
+var privateKeyRegex = regexp.MustCompile(`(?s)-----BEGIN PRIVATE KEY.*?END PRIVATE KEY-----`)
 var patterns = []*regexp.Regexp{
 	privateKeyRegex,
 }

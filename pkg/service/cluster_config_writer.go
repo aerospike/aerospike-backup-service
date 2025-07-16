@@ -60,7 +60,7 @@ func (w *DefaultClusterConfigWriter) Write(
 		err := storage.WriteDataFile(ctx, routine.Storage, confFilePath, []byte(info))
 		if err != nil {
 			logger.Error("Failed to write cluster configuration backup",
-				slog.Any("err", err))
+				slog.Any("error", err))
 		}
 		logger.Debug("Wrote cluster configuration backup", slog.String("path", confFilePath))
 	}

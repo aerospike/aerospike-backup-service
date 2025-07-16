@@ -66,7 +66,7 @@ func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 func enhanceJSONError(jsonError error) error {
 	field, err := parseJSONError(jsonError.Error())
 	if err != nil {
-		slog.Warn("Failed to parse JSON error message", slog.Any("err", err))
+		slog.Warn("Failed to parse JSON error message", slog.Any("error", err))
 		return jsonError // Can't enhance this error, so keep the original error as-is
 	}
 
@@ -117,7 +117,7 @@ func enhanceYamlErrors(err error) error {
 func processYamlError(errMsg string) error {
 	line, field, dtoName, err := parseYamlErrorMessage(errMsg)
 	if err != nil {
-		slog.Warn("Failed to parse YAML error message", slog.String("errMsg", errMsg), slog.Any("err", err))
+		slog.Warn("Failed to parse YAML error message", slog.String("errMsg", errMsg), slog.Any("error", err))
 		return err // Cannot enhance this error, so keep the original error as-is
 	}
 

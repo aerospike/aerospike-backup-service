@@ -133,7 +133,7 @@ func (h *BackupRoutineOrchestrator) backupClusterConfiguration(ctx context.Conte
 	}
 
 	if err := h.clusterConfigWriter.Write(ctx, h.routineName, now); err != nil {
-		slog.Warn("Failed to backup cluster configuration", slog.Any("err", err))
+		slog.Warn("Failed to backup cluster configuration", slog.Any("error", err))
 	}
 }
 

@@ -83,7 +83,7 @@ func clientPolicy(c *model.AerospikeCluster) *as.ClientPolicy {
 	if err != nil {
 		slog.Error("Failed to initialize tls.Config",
 			slog.String("cluster", util.ValueOrZero(c.ClusterLabel)),
-			slog.Any("err", err))
+			slog.Any("error", err))
 	}
 
 	policy.ConnectionQueueSize = 256
