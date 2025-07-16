@@ -38,6 +38,12 @@ func run() int {
 		remote     bool
 	)
 
+	// Log commit information as the first log entry, ensuring it appears at the top
+	// regardless of subsequent errors or execution flow.
+	slog.Info("Aerospike Backup Service",
+		slog.String("commit", commitHash),
+		slog.String("buildTime", buildTime))
+
 	validateFlags := func(_ *cobra.Command, _ []string) error {
 		if len(configFile) == 0 {
 			return errors.New("--config is required")
@@ -61,7 +67,7 @@ func run() int {
 
 	err := rootCmd.Execute()
 	if err != nil {
-		slog.Error("Error in rootCmd.Execute", "err", err)
+		slog.Error("Error in rootCmd.Execute", slog.Any("error", err))
 	}
 
 	return util.ToExitVal(err)
@@ -100,6 +106,8 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 
 	appLogger := setDefaultLogger(config.ServiceConfig.GetLoggerOrDefault())
 
+	// Re-log build metadata now that the app-logger is active.
+	// Duplication with the bootstrap log is intentional.
 	configStr, _ := json.Marshal(dto.NewConfigFromModel(config))
 	slog.Info("Aerospike Backup Service",
 		slog.String("commit", commitHash),
@@ -186,7 +194,7 @@ func runHTTPServer(
 	time.Sleep(time.Millisecond * 100) // wait for other goroutines to exit
 	// shutdown the HTTP server gracefully
 	if err := httpServer.Shutdown(); err != nil {
-		slog.Error("HTTP server shutdown failed", "error", err)
+		slog.Error("HTTP server shutdown failed", slog.Any("error", err))
 		return err
 	}
 

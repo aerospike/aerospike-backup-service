@@ -23,7 +23,7 @@ func RootActionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err := fmt.Fprintf(w, "")
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		slog.Error("failed to write response", slog.Any("error", err))
 	}
 }
 
@@ -36,7 +36,7 @@ func RootActionHandler(w http.ResponseWriter, r *http.Request) {
 func HealthActionHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := fmt.Fprintf(w, "Ok")
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		slog.Error("failed to write response", slog.Any("error", err))
 	}
 }
 
@@ -49,7 +49,7 @@ func HealthActionHandler(w http.ResponseWriter, _ *http.Request) {
 func ReadyActionHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := fmt.Fprintf(w, "Ok")
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		slog.Error("failed to write response", slog.Any("error", err))
 	}
 }
 
@@ -62,7 +62,7 @@ func ReadyActionHandler(w http.ResponseWriter, _ *http.Request) {
 func VersionActionHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := fmt.Fprint(w, backup.Version)
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		slog.Error("failed to write response", slog.Any("error", err))
 	}
 }
 
