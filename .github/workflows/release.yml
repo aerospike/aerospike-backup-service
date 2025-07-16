@@ -199,7 +199,6 @@ jobs:
           workflow: pre-release.yml
           name: abs-image
           path: ./abs-image.tar
-          branch: main
           commit: ${{ env.TAG_COMMIT }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 

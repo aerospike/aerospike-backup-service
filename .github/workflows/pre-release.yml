@@ -21,6 +21,7 @@ jobs:
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
+            console.log("Checking if release exists for tag: ${{ github.ref_name }}");
             let release;
             try {
               release = await github.rest.repos.getReleaseByTag({
@@ -29,18 +30,19 @@ jobs:
                 tag: "${{ github.ref_name }}"
               });
               core.setOutput('release-exists', 'true');
+              console.log("Release already exists.");
             } catch (error) {
               if (error.status === 404) {
                 core.setOutput('release-exists', 'false');
+                console.log("Release not found. Will create a new one.");
               } else {
                 throw error;
               }
             }
-  
+            
             if (release) {
               core.setOutput('upload_url', release.data.upload_url);
             }
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create new release if it does not exist
         if: ${{ steps.check-release.outputs.release-exists == 'false' }}
@@ -96,16 +98,54 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          echo "Installing nfpm..."
           go install "github.com/goreleaser/nfpm/v2/cmd/nfpm@latest"
-          sudo apt-get update && sudo apt-get install -y dpkg-dev dpkg-sig
+          if [ $? -eq 0 ]; then
+            echo "nfpm installed successfully."
+          else
+            echo "Failed to install nfpm." >&2
+            exit 1
+          fi
+          
+          echo "🔄 Updating apt repositories..."
+          sudo apt-get update
+          if [ $? -eq 0 ]; then
+            echo "apt update completed."
+          else
+            echo "apt update failed." >&2
+            exit 1
+          fi
+          
+          echo "Installing dpkg-dev and dpkg-sig..."
+          sudo apt-get install -y dpkg-dev dpkg-sig
+          if [ $? -eq 0 ]; then
+            echo "dpkg-dev and dpkg-sig installed."
+          else
+            echo "Failed to install dpkg dependencies." >&2
+            exit 1
+          fi
 
       - name: Get Metadata
         id: metadata
         run: |
+          echo "Starting metadata extraction..."
+          
+          if [ ! -f VERSION ]; then
+            echo "VERSION file not found. Exiting." >&2
+            exit 1
+          fi
+          
           PACKAGE_VERSION=$(cat VERSION)
+          PACKAGE_NAME="${GITHUB_REPOSITORY##*/}"
+          
+          echo "Read VERSION: $PACKAGE_VERSION"
+          echo "Determined package name: $PACKAGE_NAME"
+          
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
           echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
-          echo "PACKAGE_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+          echo "PACKAGE_NAME=$PACKAGE_NAME" >> $GITHUB_ENV
+          
+          echo "Metadata extraction completed successfully."
 
       - name: Login to JFrog
         uses: jfrog/setup-jfrog-cli@ff5cb544114ffc152db9cea1cd3d5978d5074946 #v4.5.11
@@ -116,131 +156,345 @@ jobs:
 
       - name: Build Packages
         run: |
+          echo "Starting package build using 'make packages'..."
+          
+          if [ ! -f Makefile ]; then
+            echo "Makefile not found. Cannot run 'make packages'." >&2
+            exit 1
+          fi
+          
           make packages
+          BUILD_RESULT=$?
+          
+          if [ $BUILD_RESULT -eq 0 ]; then
+            echo "Package build completed successfully."
+          else
+            echo "Package build failed with exit code $BUILD_RESULT." >&2
+            exit $BUILD_RESULT
+          fi
 
-      - name: Find files matching "*.rpm" "*.deb""
+      - name: Find files matching "*.rpm" "*.deb"
         run: |
+          echo "Searching for .rpm and .deb package files..."
+          
           RPM_ASSET_LIST=$(find . -type f \( -name "*.rpm" \) | tr '\n' ',')
           DEB_ASSET_LIST=$(find . -type f \( -name "*.deb" \) | tr '\n' ',')
+          
+          echo "RPM files found:"
+          echo "$RPM_ASSET_LIST" | tr ',' '\n'
+          
+          echo "DEB files found:"
+          echo "$DEB_ASSET_LIST" | tr ',' '\n'
+          
           echo "RPM_ASSET_LIST=$RPM_ASSET_LIST" >> $GITHUB_ENV
           echo "DEB_ASSET_LIST=$DEB_ASSET_LIST" >> $GITHUB_ENV
+          
+          if [ -z "$RPM_ASSET_LIST" ] && [ -z "$DEB_ASSET_LIST" ]; then
+            echo "No .rpm or .deb files found." >&2
+          else
+            echo "File discovery completed."
+          fi
 
       - name: Sign RPM Packages
         env:
           GPG_TTY: no-tty
-
         run: |
+          echo "Starting GPG signing process for RPM packages..."
+          
+          if [ -z "$RPM_ASSET_LIST" ]; then
+            echo "RPM_ASSET_LIST is empty. No RPM packages to sign." >&2
+            exit 1
+          fi
+          
           IFS=',' read -r -a asset_array <<< "$RPM_ASSET_LIST"
           for file in "${asset_array[@]}"; do
-            echo "file is: ${file}"
+            if [ -z "$file" ]; then
+              continue
+            fi
+          
+            echo "Signing file: ${file}"
             rpm --addsign "${file}"
+            if [ $? -ne 0 ]; then
+              echo "Failed to sign ${file} with rpm --addsign." >&2
+              exit 1
+            fi
+          
             OUTPUT=$(rpm --checksig "${file}")
+            echo "🔎 Signature check output: $OUTPUT"
+          
             if [[ "$OUTPUT" =~ 'digests signatures OK' ]]; then
-              echo "Successfully GPG Signed $file"
+              echo "Successfully GPG Signed: $file"
             else
-              echo "GPG Signing $file has failed."
+              echo "GPG Signing failed verification for: $file" >&2
               exit 1
             fi
           done
+          
+          echo "All RPM packages signed and verified successfully."
+
 
       - name: Sign DEB Packages
         env:
           GPG_TTY: no-tty
         run: |
+          echo "Starting GPG signing process for DEB packages..."
+          
+          if [ -z "$DEB_ASSET_LIST" ]; then
+            echo "DEB_ASSET_LIST is empty. No DEB packages to sign." >&2
+            exit 1
+          fi
+          
           IFS=',' read -r -a asset_array <<< "$DEB_ASSET_LIST"
           for file in "${asset_array[@]}"; do
+            if [ -z "$file" ]; then
+              continue
+            fi
+          
+            echo "Signing file: ${file}"
             dpkg-sig --sign builder "${file}"
-            OUTPUT=$(dpkg-sig --verify "${file}")
-            if [[ "$OUTPUT" =~ 'GOODSIG _gpgbuilder' ]]; then
-              echo "Successfully GPG Signed $file"
-            else
-              echo "GPG Signing $file has failed."
+            if [ $? -ne 0 ]; then
+              echo "Failed to sign ${file} with dpkg-sig." >&2
               exit 1
             fi
-           done
+          
+            OUTPUT=$(dpkg-sig --verify "${file}")
+            echo "Signature check output for ${file}:"
+            echo "$OUTPUT"
+          
+            if [[ "$OUTPUT" =~ 'GOODSIG _gpgbuilder' ]]; then
+              echo "Successfully GPG Signed: $file"
+            else
+              echo "GPG Signing failed verification for: $file" >&2
+              exit 1
+            fi
+          done
+          
+          echo "All DEB packages signed and verified successfully."
 
       - name: Create checksums
         run: |
+          echo "Starting checksum generation with 'make checksums'..."
+          
           make checksums
+          if [ $? -ne 0 ]; then
+            echo "Checksum generation failed during 'make checksums'." >&2
+            exit 1
+          fi
+          
+          echo "Searching for .sha256 files..."
           CHECKSUMS_ASSET_LIST=$(find . -type f \( -name "*.sha256" \) | tr '\n' ',')
+          
+          if [ -z "$CHECKSUMS_ASSET_LIST" ]; then
+            echo "No .sha256 checksum files found." >&2
+            exit 1
+          else
+            echo "Found checksum files:"
+            echo "$CHECKSUMS_ASSET_LIST" | tr ',' '\n'
+          fi
+          
           echo "CHECKSUMS_ASSET_LIST=$CHECKSUMS_ASSET_LIST" >> $GITHUB_ENV
+          
+          echo "Checksum creation and discovery completed.
 
       - name: Sign checksums
         env:
           GPG_TTY: no-tty
           GPG_PASSPHRASE: ${{ secrets.GPG_PASS }}
         run: |
+          echo "Starting GPG signing process for checksum files."
+          
+          if [ -z "$CHECKSUMS_ASSET_LIST" ]; then
+            echo "CHECKSUMS_ASSET_LIST is empty. No checksum files to sign."
+            exit 1
+          fi
+          
           IFS=',' read -r -a asset_array <<< "$CHECKSUMS_ASSET_LIST"
           for file in "${asset_array[@]}"; do
+            if [ -z "$file" ]; then
+              continue
+            fi
+          
+            echo "Signing file: ${file}"
             gpg --detach-sign --no-tty --batch --yes --output "${file}.asc" --passphrase "$GPG_PASSPHRASE" "${file}"
+            if [ $? -ne 0 ]; then
+              echo "Failed to sign ${file}"
+              exit 1
+            fi
+          
             gpg --verify "${file}.asc" "${file}" &>/dev/null
             RETURN_CODE=$?
-            if [ ! "$RETURN_CODE" = 0 ]; then
-              echo "GPG Signing of $file has failed."
+            if [ "$RETURN_CODE" -ne 0 ]; then
+              echo "Signature verification failed for ${file}"
               exit 1
             else
-              echo "Successfully GPG Signed $file"
+              echo "Successfully signed and verified ${file}"
             fi
           done
+          
+          echo "Searching for .asc signature files..."
           ASC_ASSET_LIST=$(find . -type f \( -name "*.asc" \) | tr '\n' ',')
+          if [ -z "$ASC_ASSET_LIST" ]; then
+            echo "No .asc files found after signing."
+            exit 1
+          fi
+          
+          echo "Found the following signature files:"
+          echo "$ASC_ASSET_LIST" | tr ',' '\n'
+          
           echo "ASC_ASSET_LIST=$ASC_ASSET_LIST" >> $GITHUB_ENV
+          echo "Checksum signing process completed successfully."
 
       - name: Upload Assets to Github Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo "Preparing to upload assets to GitHub Release."
+          
           upload_url="$(echo "${{ needs.create-release.outputs.upload_url }}" | sed 's/\(assets\).*/\1/')"
+          echo "Resolved upload URL: $upload_url"
+          
           ASSET_LIST="${RPM_ASSET_LIST%,},${DEB_ASSET_LIST%,},${CHECKSUMS_ASSET_LIST%,},${ASC_ASSET_LIST%,}"
           ASSET_LIST="${ASSET_LIST#,}"
+          
+          if [ -z "$ASSET_LIST" ]; then
+            echo "No assets found to upload."
+            exit 1
+          fi
+          
+          echo "Uploading the following files to GitHub Release:"
+          echo "$ASSET_LIST" | tr ',' '\n'
+          
           IFS=',' read -r -a asset_array <<< "$ASSET_LIST"
           for file in "${asset_array[@]}"; do
-            curl -L \
-            -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -H "Content-Type: $(file -b --mime-type $file)" \
-            "$upload_url?name=$(basename $file)" \
-            --data-binary "@$file"
+            if [ -z "$file" ]; then
+              continue
+            fi
+          
+            if [ ! -f "$file" ]; then
+              echo "File not found: $file"
+              exit 1
+            fi
+          
+            echo "Uploading file: $file"
+            RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null -L \
+              -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              -H "Content-Type: $(file -b --mime-type $file)" \
+              "$upload_url?name=$(basename $file)" \
+              --data-binary "@$file")
+          
+            if [ "$RESPONSE" -ge 200 ] && [ "$RESPONSE" -lt 300 ]; then
+              echo "Successfully uploaded $file (HTTP $RESPONSE)"
+            else
+              echo "Failed to upload $file (HTTP $RESPONSE)"
+              exit 1
+            fi
           done
+          
+          echo "All assets have been uploaded to the GitHub Release."
 
       - name: Upload RPM Packages to Jfrog
         env:
           JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
           ARTIFACTORY_RPM_DEV: ${{ vars.ARTIFACTORY_RPM_DEV }}
-
         run: |
+          echo "Starting upload of RPM packages to JFrog."
+          
+          if [ -z "$RPM_ASSET_LIST" ]; then
+            echo "RPM_ASSET_LIST is empty. No RPM packages to upload."
+            exit 1
+          fi
+          
           IFS=',' read -r -a asset_array <<< "$RPM_ASSET_LIST"
           for file in "${asset_array[@]}"; do
+            if [ -z "$file" ] || [ ! -f "$file" ]; then
+              echo "File not found or empty entry: $file"
+              exit 1
+            fi
+          
             arch=$(rpm -q --qf "%{ARCH}" -p "$file")
-
-            jfrog rt upload "$file" "$ARTIFACTORY_RPM_DEV/$PACKAGE_NAME/$PACKAGE_VERSION/$(basename $file)" \
-            --build-name=$PACKAGE_NAME-rpm --build-number=$PACKAGE_VERSION \
-            --target-props "rpm.distribution=stable;rpm.component=main;rpm.architecture=$arch"
+            target_path="$ARTIFACTORY_RPM_DEV/$PACKAGE_NAME/$PACKAGE_VERSION/$(basename $file)"
+          
+            echo "Uploading RPM: $file"
+            echo "Target path: $target_path"
+            echo "Architecture: $arch"
+          
+            jfrog rt upload "$file" "$target_path" \
+              --build-name=$PACKAGE_NAME-rpm \
+              --build-number=$PACKAGE_VERSION \
+              --target-props "rpm.distribution=stable;rpm.component=main;rpm.architecture=$arch"
+          
+            if [ $? -ne 0 ]; then
+              echo "Failed to upload $file to JFrog."
+              exit 1
+            else
+              echo "Successfully uploaded $file to JFrog."
+            fi
           done
-
+          
+          echo "Collecting environment variables for build info."
           jfrog rt build-collect-env "$PACKAGE_NAME-rpm" "$PACKAGE_VERSION"
-          jfrog rt build-add-git  "$PACKAGE_NAME-rpm" "$PACKAGE_VERSION"
-          jfrog rt build-publish  "$PACKAGE_NAME-rpm" "$PACKAGE_VERSION"
+          
+          echo "Adding Git metadata to build info."
+          jfrog rt build-add-git "$PACKAGE_NAME-rpm" "$PACKAGE_VERSION"
+          
+          echo "Publishing RPM build info to JFrog."
+          jfrog rt build-publish "$PACKAGE_NAME-rpm" "$PACKAGE_VERSION"
+          
+          echo "RPM package upload and build info publication completed."
 
       - name: Upload DEB Packages to Jfrog
         env:
           JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
           ARTIFACTORY_DEB_DEV: ${{ vars.ARTIFACTORY_DEB_DEV }}
         run: |
+          echo "Starting upload of DEB packages to JFrog."
+          
+          if [ -z "$DEB_ASSET_LIST" ]; then
+            echo "DEB_ASSET_LIST is empty. No DEB packages to upload."
+            exit 1
+          fi
+          
           IFS=',' read -r -a asset_array <<< "$DEB_ASSET_LIST"
           for file in "${asset_array[@]}"; do
+            if [ -z "$file" ] || [ ! -f "$file" ]; then
+              echo "File not found or empty entry: $file"
+              exit 1
+            fi
+          
             arch=$(dpkg --info "$file" | grep 'Architecture' | awk '{print $2}')
-            jfrog rt upload "$file" "$ARTIFACTORY_DEB_DEV/$PACKAGE_NAME/$PACKAGE_VERSION/$(basename $file)" \
-            --build-name=$PACKAGE_NAME-deb \
-            --build-number=$PACKAGE_VERSION \
-            --target-props "deb.distribution=stable;deb.component=main;deb.architecture=${arch}" \
-            --deb "stable/main/${arch}"
+            target_path="$ARTIFACTORY_DEB_DEV/$PACKAGE_NAME/$PACKAGE_VERSION/$(basename $file)"
+          
+            echo "Uploading DEB: $file"
+            echo "Target path: $target_path"
+            echo "Architecture: $arch"
+          
+            jfrog rt upload "$file" "$target_path" \
+              --build-name=$PACKAGE_NAME-deb \
+              --build-number=$PACKAGE_VERSION \
+              --target-props "deb.distribution=stable;deb.component=main;deb.architecture=${arch}" \
+              --deb "stable/main/${arch}"
+          
+            if [ $? -ne 0 ]; then
+              echo "Failed to upload $file to JFrog."
+              exit 1
+            else
+              echo "Successfully uploaded $file to JFrog."
+            fi
           done
-
+          
+          echo "Collecting environment variables for DEB build info."
           jfrog rt build-collect-env "$PACKAGE_NAME-deb" "$PACKAGE_VERSION"
-          jfrog rt build-add-git  "$PACKAGE_NAME-deb" "$PACKAGE_VERSION"
-          jfrog rt build-publish  "$PACKAGE_NAME-deb" "$PACKAGE_VERSION"
+          
+          echo "Adding Git metadata to DEB build info."
+          jfrog rt build-add-git "$PACKAGE_NAME-deb" "$PACKAGE_VERSION"
+          
+          echo "Publishing DEB build info to JFrog."
+          jfrog rt build-publish "$PACKAGE_NAME-deb" "$PACKAGE_VERSION"
+          
+          echo "DEB package upload and build info publication completed."
 
   build-docker-image:
     needs:
@@ -255,9 +509,27 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 1
+
       - name: Get Metadata
         id: metadata
         run: |
+          echo "Starting metadata extraction for Docker image build."
+          
+          if [ ! -f VERSION ]; then
+            echo "VERSION file not found."
+            exit 1
+          fi
+          
+          if [ ! -f go.mod ]; then
+            echo "go.mod file not found. Cannot determine Go version."
+            exit 1
+          fi
+          
+          echo "Reading version from VERSION file."
+          IMAGE_VERSION=$(cat VERSION | cut -c 2-)
+          RAW_VERSION=$(cat VERSION)
+          
+          echo "Determining appropriate Go version based on go.mod."
           GO_VERSION="$(curl -s 'https://go.dev/dl/?mode=json' | \
             jq -r --arg ver "go$(grep '^go ' go.mod | cut -d ' ' -f2 | cut -d. -f1,2)" \
               '.[] | select(.version | startswith($ver)) | .version' | \
@@ -266,13 +538,29 @@ jobs:
             cut -c3- | \
             tr -d '\n')"
           
-          IMAGE_VERSION=$(cat VERSION | cut -c 2-)
+          if [ -z "$GO_VERSION" ]; then
+            echo "Failed to resolve Go version."
+            exit 1
+          fi
+          
+          ISO8601=$(LC_TIME=en_US.UTF-8 date "+%Y-%m-%dT%H:%M:%S%z")
+          IMAGE_NAME="${GITHUB_REPOSITORY##*/}"
+          
+          echo "Resolved metadata values:"
+          echo "  VERSION: $RAW_VERSION"
+          echo "  IMAGE_VERSION: $IMAGE_VERSION"
+          echo "  GO_VERSION: $GO_VERSION"
+          echo "  ISO8601: $ISO8601"
+          echo "  IMAGE_NAME: $IMAGE_NAME"
+          
           echo "IMAGE_VERSION=$IMAGE_VERSION" >> $GITHUB_ENV
           echo "IMAGE_VERSION=$IMAGE_VERSION" >> $GITHUB_OUTPUT
           echo "GO_VERSION=$GO_VERSION" >> "$GITHUB_ENV"
-          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
-          echo "ISO8601=$(LC_TIME=en_US.UTF-8 date "+%Y-%m-%dT%H:%M:%S%z")" >> $GITHUB_ENV
-          echo "IMAGE_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+          echo "VERSION=$RAW_VERSION" >> $GITHUB_ENV
+          echo "ISO8601=$ISO8601" >> $GITHUB_ENV
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          
+          echo "Metadata extraction completed."
 
       - name: Login to JFrog
         uses: jfrog/setup-jfrog-cli@ff5cb544114ffc152db9cea1cd3d5978d5074946 # v4.5.11
@@ -301,35 +589,65 @@ jobs:
           GO_VERSION: ${{env.GO_VERSION}}
           OUTPUT: "type=image,push=true type=tar,dest=./abs-image.tar"
           REPO: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
-
         run: |
-          jfrog docker buildx bake  \
-          --file ${{ github.workspace }}/build/docker-build/docker-bake.hcl \
-          --metadata-file=build-metadata \
-          --progress plain \
-          --no-cache \
-          --push
-
+          echo "Starting Docker image build and push process."
+          echo "Image Name: $IMAGE_NAME"
+          echo "Image Tag: $TAG"
+          echo "Go Version: $GO_VERSION"
+          echo "Git Commit SHA: $GIT_COMMIT_SHA"
+          echo "Git Branch: $GIT_BRANCH"
+          echo "Context Directory: $CONTEXT"
+          
+          echo "Building Docker image with buildx bake."
+          jfrog docker buildx bake \
+            --file ${{ github.workspace }}/build/docker-build/docker-bake.hcl \
+            --metadata-file=build-metadata \
+            --progress plain \
+            --no-cache \
+            --push
+          
+          if [ $? -ne 0 ]; then
+            echo "Docker image build failed."
+            exit 1
+          fi
+          
+          echo "Parsing build metadata to extract image digest."
           jq -r '
-          .[] |
-          {
-            digest: .["containerimage.digest"],
-            names: (.["image.name"] | split(","))
-                     } |
-                     .digest
-            ' build-metadata > sha
-
-          echo $ARTIFACTORY_REGISTRY_URL/$ARTIFACTORY_CONTAINER_DEV/$IMAGE_NAME:$TAG@$(cat sha) > meta-info
-
+            .[] |
+            {
+              digest: .["containerimage.digest"],
+              names: (.["image.name"] | split(","))
+            } |
+            .digest
+          ' build-metadata > sha
+          
+          if [ ! -s sha ]; then
+            echo "Failed to extract image digest. File 'sha' is empty or missing."
+            exit 1
+          fi
+          
+          FULL_IMAGE_REFERENCE="$ARTIFACTORY_REGISTRY_URL/$ARTIFACTORY_CONTAINER_DEV/$IMAGE_NAME:$TAG@$(cat sha)"
+          echo "Resolved full image reference:"
+          echo "$FULL_IMAGE_REFERENCE"
+          echo "$FULL_IMAGE_REFERENCE" > meta-info
+          
+          echo "Creating Docker build info in JFrog."
           jfrog rt build-docker-create \
-          --build-name=$IMAGE_NAME-container \
-          --build-number=$TAG \
-          --image-file ./meta-info \
-          $ARTIFACTORY_CONTAINER_DEV
-
+            --build-name=$IMAGE_NAME-container \
+            --build-number=$TAG \
+            --image-file ./meta-info \
+            $ARTIFACTORY_CONTAINER_DEV
+          
+          echo "Collecting environment data for Docker build."
           jfrog rt build-collect-env $IMAGE_NAME-container $TAG
+          
+          echo "Adding Git metadata to Docker build info."
           jfrog rt build-add-git $IMAGE_NAME-container $TAG
+          
+          echo "Publishing Docker build info to JFrog."
           jfrog rt build-publish --detailed-summary $IMAGE_NAME-container $TAG
+          
+          echo "Docker image build and publication completed."
 
       - name: Upload tarball to GitHub Artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -357,10 +675,34 @@ jobs:
       - name: Get Metadata
         id: metadata
         run: |
-          HELM_VERSION=$(yq '.version' helm/aerospike-backup-service/Chart.yaml | tr -d '\n')
+          echo "Starting Helm chart metadata extraction."
+          
+          CHART_FILE="helm/aerospike-backup-service/Chart.yaml"
+          
+          if [ ! -f "$CHART_FILE" ]; then
+            echo "Chart file not found at $CHART_FILE"
+            exit 1
+          fi
+          
+          echo "Reading Helm chart version from $CHART_FILE"
+          HELM_VERSION=$(yq '.version' "$CHART_FILE" | tr -d '\n')
+          
+          if [ -z "$HELM_VERSION" ]; then
+            echo "Failed to extract Helm chart version."
+            exit 1
+          fi
+          
+          HELM_CHART_NAME="${GITHUB_REPOSITORY##*/}"
+          
+          echo "Extracted metadata:"
+          echo "  HELM_VERSION: $HELM_VERSION"
+          echo "  HELM_CHART_NAME: $HELM_CHART_NAME"
+          
           echo "HELM_VERSION=$HELM_VERSION" >> $GITHUB_OUTPUT
           echo "HELM_CHART_VERSION=$HELM_VERSION" >> $GITHUB_ENV
-          echo "HELM_CHART_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+          echo "HELM_CHART_NAME=$HELM_CHART_NAME" >> $GITHUB_ENV
+          
+          echo "Helm chart metadata extraction completed."
 
       - name: setup GPG
         uses: aerospike/shared-workflows/.github/actions/setup-gpg@dda8173aca1f1e73f95267572a7d3849cd00f1b8 # v1.0.0
@@ -369,7 +711,6 @@ jobs:
           gpg-public-key: ${{ secrets.GPG_PUBLIC_KEY }}
           gpg-key-pass: ${{ secrets.GPG_PASS }}
           gpg-key-name: 'aerospike-inc'
-
 
       - name: Login to JFrog
         uses: jfrog/setup-jfrog-cli@ff5cb544114ffc152db9cea1cd3d5978d5074946 # v4.5.11
@@ -385,25 +726,58 @@ jobs:
           ARTIFACTORY_HELM_DEV: ${{ vars.ARTIFACTORY_HELM_DEV }}
         working-directory: helm
         run: |
-          gpg --export --no-tty  --passphrase "$GPG_PASSPHRASE" > $HOME/.gnupg/pubring.gpg
-          gpg --export-secret-keys --no-tty  --passphrase "$GPG_PASSPHRASE" > $HOME/.gnupg/secring.gpg
-          echo $GPG_PASSPHRASE > passphrase.txt
-
+          echo "Preparing to sign and push Helm chart."
+          
+          if [ -z "$HELM_CHART_NAME" ] || [ -z "$HELM_CHART_VERSION" ]; then
+            echo "HELM_CHART_NAME or HELM_CHART_VERSION is not set."
+            exit 1
+          fi
+          
+          echo "Exporting GPG public and private keys."
+          gpg --export --no-tty --passphrase "$GPG_PASSPHRASE" > $HOME/.gnupg/pubring.gpg
+          gpg --export-secret-keys --no-tty --passphrase "$GPG_PASSPHRASE" > $HOME/.gnupg/secring.gpg
+          echo "$GPG_PASSPHRASE" > passphrase.txt
+          
+          echo "Signing and packaging Helm chart: $HELM_CHART_NAME"
           helm \
-          --sign \
-          --key=aerospike-inc \
-          --keyring=$HOME/.gnupg/secring.gpg \
-          --passphrase-file passphrase.txt package $HELM_CHART_NAME 
+            --sign \
+            --key=aerospike-inc \
+            --keyring=$HOME/.gnupg/secring.gpg \
+            --passphrase-file passphrase.txt \
+            package "$HELM_CHART_NAME"
+          
+          PACKAGE_FILE="$HELM_CHART_NAME-$HELM_CHART_VERSION.tgz"
+          if [ ! -f "$PACKAGE_FILE" ]; then
+            echo "Helm chart package not found: $PACKAGE_FILE"
+            exit 1
+          fi
+          
+          echo "Uploading Helm chart package and signature to JFrog:"
+          echo "  Package: $PACKAGE_FILE"
+          echo "  Destination: $ARTIFACTORY_HELM_DEV/$HELM_CHART_NAME/$HELM_CHART_VERSION/"
           
           jfrog rt upload \
-          "$HELM_CHART_NAME-$HELM_CHART_VERSION.tgz*" \
-          "$ARTIFACTORY_HELM_DEV/$HELM_CHART_NAME/$HELM_CHART_VERSION/" \
-          --build-name=$HELM_CHART_NAME-helm --build-number=$HELM_CHART_VERSION
+            "$PACKAGE_FILE*" \
+            "$ARTIFACTORY_HELM_DEV/$HELM_CHART_NAME/$HELM_CHART_VERSION/" \
+            --build-name="$HELM_CHART_NAME-helm" \
+            --build-number="$HELM_CHART_VERSION"
+          
+          if [ $? -ne 0 ]; then
+            echo "Failed to upload Helm chart to JFrog."
+            exit 1
+          fi
+          
+          echo "Collecting environment information for Helm chart build."
+          jfrog rt build-collect-env "$HELM_CHART_NAME-helm" "$HELM_CHART_VERSION"
+          
+          echo "Adding Git metadata to Helm chart build."
+          jfrog rt build-add-git "$HELM_CHART_NAME-helm" "$HELM_CHART_VERSION"
+          
+          echo "Publishing Helm chart build information to JFrog."
+          jfrog rt build-publish "$HELM_CHART_NAME-helm" "$HELM_CHART_VERSION"
+          
+          echo "Helm chart signing and publishing process completed."
 
-          jfrog rt build-collect-env $HELM_CHART_NAME-helm $HELM_CHART_VERSION
-          jfrog rt build-add-git $HELM_CHART_NAME-helm $HELM_CHART_VERSION
-          jfrog rt build-publish $HELM_CHART_NAME-helm $HELM_CHART_VERSION
-        
   create-release-bundle:
     needs:
       - create-release
@@ -421,41 +795,74 @@ jobs:
 
       - name: Get Metadata
         run: |
-          echo "BUNDLE_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+          echo "Starting metadata extraction for release bundle."
+          
+          BUNDLE_NAME="${GITHUB_REPOSITORY##*/}"
+          
+          if [ -z "$BUNDLE_NAME" ]; then
+            echo "Failed to determine BUNDLE_NAME from GITHUB_REPOSITORY."
+            exit 1
+          fi
+          
+          echo "BUNDLE_NAME resolved as: $BUNDLE_NAME"
+          echo "BUNDLE_NAME=$BUNDLE_NAME" >> $GITHUB_ENV
+          
+          echo "Metadata extraction for release bundle completed."
 
       - name: Create release bundle
         env:
-          BUNDLE_NAME: ${{env.BUNDLE_NAME}}
+          BUNDLE_NAME: ${{ env.BUNDLE_NAME }}
           BUNDLE_VERSION: ${{ needs.build-packages.outputs.package_version }}
           PACKAGE_VERSION: ${{ needs.build-packages.outputs.package_version }}
           HELM_VERSION: ${{ needs.build-helm-chart.outputs.helm_version }}
           IMAGE_VERSION: ${{ needs.build-docker-image.outputs.image_version }}
           JF_PROJECT: ${{ vars.JFROG_CLI_BUILD_PROJECT }}
         run: |
-          echo '{
-            "name": "'"$BUNDLE_NAME"'",
-            "version": "'"$BUNDLE_VERSION"'",
+          echo "Preparing release bundle specification."
+          echo "Bundle Name: $BUNDLE_NAME"
+          echo "Bundle Version: $BUNDLE_VERSION"
+          echo "Package Version: $PACKAGE_VERSION"
+          echo "Helm Chart Version: $HELM_VERSION"
+          echo "Docker Image Version: $IMAGE_VERSION"
+          echo "JFrog Project: $JF_PROJECT"
+          
+          cat <<EOF > release-bundle-spec.json
+          {
+            "name": "$BUNDLE_NAME",
+            "version": "$BUNDLE_VERSION",
             "files": [
               {
-                "project": "'"$JF_PROJECT"'",
-                "build": "'"$BUNDLE_NAME"'-container/'"$IMAGE_VERSION"'"
+                "project": "$JF_PROJECT",
+                "build": "$BUNDLE_NAME-container/$IMAGE_VERSION"
               },
               {
-                "project": "'"$JF_PROJECT"'",
-                "build": "'"$BUNDLE_NAME"'-helm/'"$HELM_VERSION"'"
+                "project": "$JF_PROJECT",
+                "build": "$BUNDLE_NAME-helm/$HELM_VERSION"
               },
               {
-                "project": "'"$JF_PROJECT"'",
-                "build": "'"$BUNDLE_NAME"'-rpm/'"$PACKAGE_VERSION"'"
+                "project": "$JF_PROJECT",
+                "build": "$BUNDLE_NAME-rpm/$PACKAGE_VERSION"
               },
               {
-                "project": "'"$JF_PROJECT"'",
-                "build": "'"$BUNDLE_NAME"'-deb/'"$PACKAGE_VERSION"'"
+                "project": "$JF_PROJECT",
+                "build": "$BUNDLE_NAME-deb/$PACKAGE_VERSION"
               }
             ]
-          }' > release-bundle-spec.json
-
+          }
+          EOF
+      
+          echo "Generated release bundle specification:"
           cat release-bundle-spec.json
-
+          
+          echo "Creating release bundle in JFrog..."
           jfrog release-bundle-create "$BUNDLE_NAME" "$BUNDLE_VERSION" \
-          --spec release-bundle-spec.json --project="$JF_PROJECT" --signing-key="aerospike"
+          --spec release-bundle-spec.json \
+          --project="$JF_PROJECT" \
+          --signing-key="aerospike"
+          
+          if [ $? -ne 0 ]; then
+          echo "Release bundle creation failed."
+          exit 1
+          fi
+          
+          echo "Release bundle created successfully."
