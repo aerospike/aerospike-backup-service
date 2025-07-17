@@ -786,7 +786,7 @@ jobs:
       - build-packages
       - build-docker-image
       - build-helm-chart
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Login to JFrog
         uses: jfrog/setup-jfrog-cli@ff5cb544114ffc152db9cea1cd3d5978d5074946 # v4.5.11
