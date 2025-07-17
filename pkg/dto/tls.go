@@ -58,6 +58,9 @@ func (t *TLS) validateCACertificates() error {
 	if hasText(t.CAFile) && hasText(t.CAPath) {
 		return errValidationMutuallyExclusive("ca-file", "ca-path")
 	}
+	if !hasText(t.CAFile) && !hasText(t.CAPath) {
+		return errValidationRequiredEither("ca-file", "ca-path")
+	}
 
 	return nil
 }
