@@ -344,56 +344,14 @@ jobs:
           echo "ASC_ASSET_LIST=$ASC_ASSET_LIST" >> $GITHUB_ENV
           echo "Checksum signing process completed successfully."
 
-      - name: Upload Assets to Github Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Preparing to upload assets to GitHub Release."
-          
-          upload_url="$(echo "${{ needs.create-release.outputs.upload_url }}" | sed 's/\(assets\).*/\1/')"
-          echo "Resolved upload URL: $upload_url"
-          
-          ASSET_LIST="${RPM_ASSET_LIST%,},${DEB_ASSET_LIST%,},${CHECKSUMS_ASSET_LIST%,},${ASC_ASSET_LIST%,}"
-          ASSET_LIST="${ASSET_LIST#,}"
-          
-          if [ -z "$ASSET_LIST" ]; then
-            echo "No assets found to upload."
-            exit 1
-          fi
-          
-          echo "Uploading the following files to GitHub Release:"
-          echo "$ASSET_LIST" | tr ',' '\n'
-          
-          IFS=',' read -r -a asset_array <<< "$ASSET_LIST"
-          for file in "${asset_array[@]}"; do
-            if [ -z "$file" ]; then
-              continue
-            fi
-          
-            if [ ! -f "$file" ]; then
-              echo "File not found: $file"
-              exit 1
-            fi
-          
-            echo "Uploading file: $file"
-            RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null -L \
-              -X POST \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              -H "Content-Type: $(file -b --mime-type $file)" \
-              "$upload_url?name=$(basename $file)" \
-              --data-binary "@$file")
-          
-            if [ "$RESPONSE" -ge 200 ] && [ "$RESPONSE" -lt 300 ]; then
-              echo "Successfully uploaded $file (HTTP $RESPONSE)"
-            else
-              echo "Failed to upload $file (HTTP $RESPONSE)"
-              exit 1
-            fi
-          done
-          
-          echo "All assets have been uploaded to the GitHub Release."
+      - name: Upload Assets to GitHub Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: "*.rpm *.deb *.sha256 *.asc"
+          tag: ${{ github.ref }}
+          overwrite: true
+          file_glob: true
 
       - name: Upload RPM Packages to Jfrog
         env:
@@ -573,7 +531,7 @@ jobs:
       - name: Login to JFrog Artifactory
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
-          registry: aerospike.jfrog.io
+          registry: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
           username: ${{ secrets.ARTIFACTORY_USER }}
           password: ${{ secrets.ARTIFACTORY_TOKEN }}
 
@@ -589,7 +547,7 @@ jobs:
           IMAGE_NAME: ${{env.IMAGE_NAME}}
           GO_VERSION: ${{env.GO_VERSION}}
           OUTPUT: "type=image,push=true type=tar,dest=./abs-image.tar"
-          REPO: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
+          REPO: ${{ vars.ARTIFACTORY_REGISTRY_URL }}/${{ vars.ARTIFACTORY_CONTAINER_DEV }}
         run: |
           echo "Starting Docker image build and push process."
           echo "Image Name: $IMAGE_NAME"
