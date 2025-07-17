@@ -90,10 +90,10 @@ jobs:
 
           if [ "$HTTP_STATUS" -ne 200 ]; then
             echo "Bundle not found or request failed with HTTP status $HTTP_STATUS"
-            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "found=false" >> "$GITHUB_OUTPUT"
           else
             echo "Release bundle $BUNDLE_NAME:$BUNDLE_VERSION exists in JFrog (HTTP $HTTP_STATUS)"
-            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "found=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Promote to JFrog PROD Environment
