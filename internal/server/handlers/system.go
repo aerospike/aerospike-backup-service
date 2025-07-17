@@ -87,13 +87,21 @@ func MetricsActionHandler() http.Handler {
 // @Success 	200 {string} string
 func APIDocsActionHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestedPath := r.URL.Path
+		slog.Info(r.URL.Path)
+		handler := httpSwagger.Handler()
+		if strings.HasSuffix(r.URL.Path, "/api-docs/") {
+			// When the user requests "/api-docs/", we need to serve "index.html".
+			// We cannot use http.Redirect because the reverse proxy may strip path components or block redirects.
+			// The Swagger handler extracts the file path from `RequestURI` using regex,
+			// so we must rewrite `RequestURI` directly to point to "/api-docs/index.html".
+			newReq := r.Clone(r.Context())
+			newReq.RequestURI = strings.TrimSuffix(r.URL.Path, "/") + "/index.html"
 
-		//if not specified, return index.html
-		if strings.HasSuffix(requestedPath, "/api-docs/") {
-			r.URL.Path = strings.TrimSuffix(requestedPath, "/") + "/index.html"
+			handler.ServeHTTP(w, newReq)
+			return
 		}
 
-		httpSwagger.Handler().ServeHTTP(w, r)
+		// Normal path handling
+		handler.ServeHTTP(w, r)
 	})
 }
