@@ -49,11 +49,11 @@ variable GO_VERSION {
 }
 
 variable CACHE_FROM {
-  default = null
+  default = ""
 }
 
 variable CACHE_TO {
-  default = null
+  default = ""
 }
 
 variable OUTPUT {
