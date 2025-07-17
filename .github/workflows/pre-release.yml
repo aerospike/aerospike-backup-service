@@ -579,7 +579,7 @@ jobs:
       - name: Build and Push Docker Image
         env:
           CONTEXT: ${{ github.workspace }}
-          LATEST: true
+          LATEST: false
           TAG: ${{env.IMAGE_VERSION}}
           GIT_BRANCH: ${{ github.ref }}
           GIT_COMMIT_SHA: ${{ github.sha }}
