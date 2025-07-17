@@ -294,7 +294,7 @@ jobs:
           
           echo "CHECKSUMS_ASSET_LIST=$CHECKSUMS_ASSET_LIST" >> $GITHUB_ENV
           
-          echo "Checksum creation and discovery completed.
+          echo "Checksum creation and discovery completed."
 
       - name: Sign checksums
         env:
