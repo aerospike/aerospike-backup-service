@@ -87,7 +87,7 @@ func MetricsActionHandler() http.Handler {
 // @Success 	200 {string} string
 func APIDocsActionHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		slog.Info(r.URL.Path)
+		slog.Info("Api doc", "url", r.URL.Path)
 		handler := httpSwagger.Handler()
 		if strings.HasSuffix(r.URL.Path, "/api-docs/") {
 			// When the user requests "/api-docs/", we need to serve "index.html".
