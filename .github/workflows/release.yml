@@ -65,7 +65,9 @@ jobs:
           echo "BUNDLE_VERSION=$LATEST_TAG" >> $GITHUB_ENV
           echo "Setting IMAGE_TAG=${LATEST_TAG#v}"
           echo "IMAGE_TAG=${LATEST_TAG#v}" >> $GITHUB_ENV
+
       - name: Check Bundle was successfully created in JFrog
+        id: check-bundle
         env:
           BUNDLE_NAME: ${{ env.BUNDLE_NAME }}
           BUNDLE_VERSION: ${{ env.BUNDLE_VERSION }}
@@ -88,12 +90,14 @@ jobs:
 
           if [ "$HTTP_STATUS" -ne 200 ]; then
             echo "Bundle not found or request failed with HTTP status $HTTP_STATUS"
-            exit 1
+            echo "found=true" >> "$GITHUB_OUTPUT"
           else
             echo "Release bundle $BUNDLE_NAME:$BUNDLE_VERSION exists in JFrog (HTTP $HTTP_STATUS)"
+            echo "found=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Promote to JFrog PROD Environment
+        if: steps.check-bundle.outputs.found == 'true'
         env:
           BUNDLE_NAME: ${{ env.BUNDLE_NAME }}
           BUNDLE_VERSION: ${{ env.BUNDLE_VERSION }}
@@ -118,6 +122,7 @@ jobs:
           fi
 
       - name: Wait for Docker image to be available in JFrog registry
+        if: steps.check-bundle.outputs.found == 'true'
         env:
           JF_REGISTRY: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
           IMAGE_REPO: ${{ vars.ARTIFACTORY_CONTAINER_PROD }}
@@ -147,6 +152,7 @@ jobs:
           exit 1
       
       - name: Promote to DockerHub using docker image tools
+        if: steps.check-bundle.outputs.found == 'true'
         id: promote-to-dockerhub
         env:
           JF_REGISTRY: ${{ vars.ARTIFACTORY_REGISTRY_URL }}
@@ -177,7 +183,7 @@ jobs:
           fi
 
       - name: Get Tag Commit
-        if: steps.promote-to-dockerhub.outputs.status == 'failure'
+        if: steps.check_bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
         env:
           TAG: ${{ env.BUNDLE_VERSION }}
         run: |
@@ -191,7 +197,7 @@ jobs:
           echo "TAG_COMMIT=$TAG_COMMIT" >> $GITHUB_ENV
 
       - name: Download Aerospike Backup Service OCI Archive
-        if: steps.promote-to-dockerhub.outputs.status == 'failure'
+        if: steps.check_bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
         uses: dawidd6/action-download-artifact@ac66b43f0e6a346234dd65d4d0c8fbb31cb316e5 # v11
         with:
           workflow: pre-release.yml
@@ -201,13 +207,13 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Skopeo
-        if: steps.promote-to-dockerhub.outputs.status == 'failure'
+        if: steps.check_bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
         uses: warjiang/setup-skopeo@71776e03c10d767c04af8924fe5a67763f9b3d34 # v0.1.3
         with:
           version: v1.19.0
 
       - name: Push OCI Archive to DockerHub
-        if: steps.promote-to-dockerhub.outputs.status == 'failure'
+        if: steps.check_bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
         env:
           IMAGE_NAME: ${{ env.BUNDLE_NAME }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
