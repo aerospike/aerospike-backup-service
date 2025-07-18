@@ -165,14 +165,10 @@ jobs:
           SOURCE_IMAGE="$JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG"
           TARGET_IMAGE_VERSION_TAG="$ORG/$IMAGE_NAME:$IMAGE_TAG
           echo "Promoting image from: $FULL_SOURCE_IMAGE"
-          echo "Target tags: $TARGET_IMAGE_VERSION_TAG, $TARGET_IMAGE_LATEST_TAG"
+          echo "Target tags: $TARGET_IMAGE_VERSION_TAG"
           
           echo "Creating promoted image manifest..."
-          docker buildx imagetools create $JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG \
-          --tag $ORG/$IMAGE_NAME:$IMAGE_TAG
-          
-          
-          if docker buildx imagetools create "$FULL_SOURCE_IMAGE" \
+          if docker buildx imagetools create "$SOURCE_IMAGE" \
             --tag "$TARGET_IMAGE_VERSION_TAG"; then
           
                 echo "Promotion succeeded."
