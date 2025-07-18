@@ -71,6 +71,8 @@ jobs:
 
 
   build-packages:
+    permissions:
+      contents: write
     needs:
       - create-release
     runs-on: ubuntu-22.04
