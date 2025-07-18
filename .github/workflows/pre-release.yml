@@ -19,21 +19,22 @@ jobs:
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           script: |
-            console.log("Checking if release exists for tag: ${{ github.ref_name }}");
-            let release;
+            const tag = process.env.GITHUB_REF_NAME;
+            core.info(`Checking if release exists for tag: ${tag}`);
             try {
-              release = await github.rest.repos.getReleaseByTag({
+              const release = await github.rest.repos.getReleaseByTag({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                tag: "${{ github.ref_name }}"
+                tag: tag
               });
               core.setOutput('release-exists', 'true');
-              console.log("Release already exists.");
+              core.notice("Release already exists.");
             } catch (error) {
               if (error.status === 404) {
                 core.setOutput('release-exists', 'false');
-                console.log("Release not found. Will create a new one.");
+                core.notice("Release not found. Will create a new one.");
               } else {
+                core.setFailed(`Unexpected error while checking release: ${error.message}`);
                 throw error;
               }
             }
