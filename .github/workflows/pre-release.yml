@@ -345,13 +345,15 @@ jobs:
           echo "Checksum signing process completed successfully."
 
       - name: Upload Assets to GitHub Release
-        uses: svenstaro/upload-release-action@v2
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: "**/*.rpm **/*.deb **/*.sha256 **/*.asc"
-          tag: ${{ github.ref }}
-          overwrite: true
-          file_glob: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          files: |
+            **/*.rpm 
+            **/*.deb 
+            **/*.sha256 
+            **/*.asc
 
       - name: Upload RPM Packages to Jfrog
         env:
