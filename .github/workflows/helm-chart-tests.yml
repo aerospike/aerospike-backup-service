@@ -154,7 +154,7 @@ jobs:
           GITHUB_BRANCH: ${{ github.ref_name }}
           GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          yq eval '. as $item ireduce ({}; .backupServiceConfig = $item)' .github/samples/test-chart-abs-conf.yaml > abs-values.yaml
+          yq eval '. as $item ireduce ({}; .backupServiceConfig = $item)' .github/config/test-chart-abs-conf.yaml > abs-values.yaml
           cat <<EOF > ct-values.yaml
           volumes:
             - name: minio-credentials
