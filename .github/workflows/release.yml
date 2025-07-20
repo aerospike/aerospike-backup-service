@@ -161,22 +161,21 @@ jobs:
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
           ORG: "aerospike"
         run: |
-          echo "status=failure" >> "$GITHUB_OUTPUT"
-#          SOURCE_IMAGE="$JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG"
-#          TARGET_IMAGE_VERSION_TAG="$ORG/$IMAGE_NAME:$IMAGE_TAG"
-#          echo "Promoting image from: $SOURCE_IMAGE"
-#          echo "Target tags: $TARGET_IMAGE_VERSION_TAG"
-#
-#          echo "Creating promoted image manifest..."
-#          if docker buildx imagetools create "$SOURCE_IMAGE" \
-#            --tag "$TARGET_IMAGE_VERSION_TAG"; then
-#
-#                echo "Promotion succeeded."
-#                echo "status=success" >> "$GITHUB_OUTPUT"
-#          else
-#                echo "Promotion failed."
-#                echo "status=failure" >> "$GITHUB_OUTPUT"
-#          fi
+          SOURCE_IMAGE="$JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG"
+          TARGET_IMAGE_VERSION_TAG="$ORG/$IMAGE_NAME:$IMAGE_TAG"
+          echo "Promoting image from: $SOURCE_IMAGE"
+          echo "Target tags: $TARGET_IMAGE_VERSION_TAG"
+
+          echo "Creating promoted image manifest..."
+          if docker buildx imagetools create "$SOURCE_IMAGE" \
+            --tag "$TARGET_IMAGE_VERSION_TAG"; then
+
+                echo "Promotion succeeded."
+                echo "status=success" >> "$GITHUB_OUTPUT"
+          else
+                echo "Promotion failed."
+                echo "status=failure" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Get Tag Commit
         if: steps.check-bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
@@ -215,9 +214,35 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
-          echo "Verify archive content"
-          tar -tf ./abs-image/abs-image.tar
+          echo "Starting DockerHub push from OCI Archive..."
+          echo "Image Name : $IMAGE_NAME"
+          echo "Image Tag  : $IMAGE_TAG"
+          
+          echo "Verifying OCI archive content at ./abs-image/abs-image.tar"
+          if [ ! -f ./abs-image/abs-image.tar ]; then
+            echo "Archive file not found: ./abs-image/abs-image.tar"
+            exit 1
+          fi
+          
+          echo "Listing contents of OCI archive:"
+          tar -tf ./abs-image/abs-image.tar || {
+            echo "Failed to list archive contents."
+            exit 1
+          }
+          
+          echo "Initiating image push via skopeo to DockerHub..."
+          echo "docker.io/aerospike/$IMAGE_NAME:$IMAGE_TAG"
+          
           skopeo copy --all \
             --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
             oci-archive:./abs-image/abs-image.tar \
             docker://docker.io/aerospike/$IMAGE_NAME:$IMAGE_TAG
+          
+          SKOPEO_STATUS=$?
+          if [ $SKOPEO_STATUS -ne 0 ]; then
+            echo "skopeo copy failed with exit code $SKOPEO_STATUS"
+            exit $SKOPEO_STATUS
+          fi
+          
+          echo "OCI archive successfully pushed to DockerHub."
+          echo "Image: aerospike/$IMAGE_NAME:$IMAGE_TAG"
