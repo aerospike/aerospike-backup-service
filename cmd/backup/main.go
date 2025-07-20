@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -15,6 +16,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -25,8 +27,8 @@ import (
 )
 
 var (
-	commit    string
-	buildTime string
+	commitHash string
+	buildTime  string
 )
 
 // run parses the CLI parameters and executes backup.
@@ -35,6 +37,13 @@ func run() int {
 		configFile string
 		remote     bool
 	)
+
+	// Log commit information as the first log entry, ensuring it appears at the top
+	// regardless of subsequent errors or execution flow.
+	slog.Info("Aerospike Backup Service",
+		slog.String("version", backup.Version),
+		slog.String("commit", commitHash),
+		slog.String("buildTime", buildTime))
 
 	validateFlags := func(_ *cobra.Command, _ []string) error {
 		if len(configFile) == 0 {
@@ -59,7 +68,7 @@ func run() int {
 
 	err := rootCmd.Execute()
 	if err != nil {
-		slog.Error("Error in rootCmd.Execute", "err", err)
+		slog.Error("Error in rootCmd.Execute", slog.Any("error", err))
 	}
 
 	return util.ToExitVal(err)
@@ -84,6 +93,7 @@ func startService(configFile string, remote bool) error {
 	return err
 }
 
+//nolint:funlen
 func initComponents(ctx context.Context, configFile string, remote bool) (
 	*model.Config, quartz.Scheduler, *handlers.Service, *slog.Logger, error,
 ) {
@@ -96,7 +106,16 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	}
 
 	appLogger := setDefaultLogger(config.ServiceConfig.GetLoggerOrDefault())
-	slog.Info("Aerospike Backup Service", "commit", commit, "buildTime", buildTime)
+
+	// Re-log build metadata now that the app-logger is active.
+	// Duplication with the bootstrap log is intentional.
+	configStr, _ := json.Marshal(dto.NewConfigFromModel(config))
+	slog.Info("Aerospike Backup Service",
+		slog.String("version", backup.Version),
+		slog.String("commit", commitHash),
+		slog.String("buildTime", buildTime),
+		slog.String("config", string(configStr)))
+
 	clientManager.SetLogger(appLogger)
 
 	// schedule all configured backup routines
@@ -177,7 +196,7 @@ func runHTTPServer(
 	time.Sleep(time.Millisecond * 100) // wait for other goroutines to exit
 	// shutdown the HTTP server gracefully
 	if err := httpServer.Shutdown(); err != nil {
-		slog.Error("HTTP server shutdown failed", "error", err)
+		slog.Error("HTTP server shutdown failed", slog.Any("error", err))
 		return err
 	}
 

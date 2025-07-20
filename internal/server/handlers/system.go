@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	_ "github.com/aerospike/aerospike-backup-service/v3/docs" // auto-generated Swagger spec
@@ -23,7 +24,7 @@ func RootActionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err := fmt.Fprintf(w, "")
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		slog.Error("failed to write response", slog.Any("error", err))
 	}
 }
 
@@ -36,7 +37,7 @@ func RootActionHandler(w http.ResponseWriter, r *http.Request) {
 func HealthActionHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := fmt.Fprintf(w, "Ok")
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		slog.Error("failed to write response", slog.Any("error", err))
 	}
 }
 
@@ -49,7 +50,7 @@ func HealthActionHandler(w http.ResponseWriter, _ *http.Request) {
 func ReadyActionHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := fmt.Fprintf(w, "Ok")
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		slog.Error("failed to write response", slog.Any("error", err))
 	}
 }
 
@@ -62,7 +63,7 @@ func ReadyActionHandler(w http.ResponseWriter, _ *http.Request) {
 func VersionActionHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := fmt.Fprint(w, backup.Version)
 	if err != nil {
-		slog.Error("failed to write response", "err", err)
+		slog.Error("failed to write response", slog.Any("error", err))
 	}
 }
 
@@ -85,5 +86,21 @@ func MetricsActionHandler() http.Handler {
 // @Produce     html
 // @Success 	200 {string} string
 func APIDocsActionHandler() http.Handler {
-	return httpSwagger.Handler()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler := httpSwagger.Handler()
+		if strings.HasSuffix(r.URL.Path, "/api-docs/") {
+			// When the user requests "/api-docs/", we need to serve "index.html".
+			// We cannot use http.Redirect because the reverse proxy may strip path components or block redirects.
+			// The Swagger handler extracts the file path from `RequestURI` using regex,
+			// so we must rewrite `RequestURI` directly to point to "/api-docs/index.html".
+			newReq := r.Clone(r.Context())
+			newReq.RequestURI = strings.TrimSuffix(r.URL.Path, "/") + "/index.html"
+
+			handler.ServeHTTP(w, newReq)
+			return
+		}
+
+		// Normal path handling
+		handler.ServeHTTP(w, r)
+	})
 }

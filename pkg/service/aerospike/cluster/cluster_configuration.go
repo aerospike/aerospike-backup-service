@@ -26,7 +26,7 @@ func ReadConfiguration(client aerospike.Cluster, logger *slog.Logger) []asconfig
 		})
 		if err != nil {
 			logger.Error("Error reading configuration",
-				slog.Any("host", host), slog.Any("err", err))
+				slog.Any("host", host), slog.Any("error", err))
 			continue
 		}
 
@@ -35,14 +35,14 @@ func ReadConfiguration(client aerospike.Cluster, logger *slog.Logger) []asconfig
 		})
 		if err != nil {
 			logger.Error("Error parsing configuration",
-				slog.Any("host", host), slog.Any("err", err))
+				slog.Any("host", host), slog.Any("error", err))
 			continue
 		}
 
 		configAsString, err := util.TryAndRecover(asconf.ToConfFile)
 		if err != nil {
 			logger.Error("Error serialising configuration",
-				slog.Any("host", host), slog.Any("err", err))
+				slog.Any("host", host), slog.Any("error", err))
 			continue
 		}
 

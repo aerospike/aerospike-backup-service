@@ -228,7 +228,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	if err != nil {
 		slog.Error("Failed to restore by timestamp",
 			slog.Any("cluster", request.DestinationCluster.ClusterLabel),
-			slog.Any("err", err))
+			slog.Any("error", err))
 		r.restoreJobs.finishJob(jobID, err)
 		return
 	}
