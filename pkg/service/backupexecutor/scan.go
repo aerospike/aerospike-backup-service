@@ -75,6 +75,10 @@ func makeBackupConfig(
 	config.RecordsPerSecond = util.ValueOrZero(backupPolicy.RecordsPerSecond)
 	config.Bandwidth = int64(util.ValueOrZero(backupPolicy.Bandwidth) * megabyte) // lib expects file size in bytes.
 
+	if config.Bandwidth == 0 {
+		config.Bandwidth = 8 * 1024 * 1024
+	}
+
 	config.ModBefore = timeBounds.ToTime
 	config.ModAfter = timeBounds.FromTime
 
