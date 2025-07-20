@@ -198,7 +198,7 @@ jobs:
         with:
           workflow: pre-release.yml
           name: abs-image
-          path: ./abs-image.tar
+          path: ./abs-image
           commit: ${{ env.TAG_COMMIT }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -217,6 +217,7 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           skopeo copy --all \
-          --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
-            oci-archive:abs-image.tar \
+            --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
+            oci-archive:./abs-image/abs-image.tar \
             docker://docker.io/aerospike/$IMAGE_NAME:$IMAGE_TAG
+          
