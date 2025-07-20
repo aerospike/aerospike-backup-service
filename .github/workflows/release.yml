@@ -246,18 +246,15 @@ jobs:
 #              oci-archive:./abs-image/abs-image.tar \
 #              docker://docker.io/aerospike/$IMAGE_NAME:$TAG
 
-          for TAG in "$IMAGE_TAG"; do
-            echo "Pushing tag: $TAG"
             skopeo copy --all \
               --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
               oci-archive:./abs-image/abs-image.tar \
-              docker://docker.io/aerospike/$IMAGE_NAME:$TAG
+              docker://docker.io/aerospike/$IMAGE_NAME:$IMAGE_TAG
           
             SKOPEO_STATUS=$?
             if [ $SKOPEO_STATUS -ne 0 ]; then
-              echo "skopeo copy for tag '$TAG' failed with exit code $SKOPEO_STATUS"
+              echo "skopeo copy for tag '$IMAGE_TAG' failed with exit code $SKOPEO_STATUS"
               exit $SKOPEO_STATUS
             fi
-          done
           
           echo "OCI archive successfully pushed to DockerHub with both '$IMAGE_TAG' and 'latest' tags."
