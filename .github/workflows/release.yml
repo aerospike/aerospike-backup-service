@@ -171,8 +171,7 @@ jobs:
 
           echo "Creating promoted image manifest with both version and latest tags..."
           if docker buildx imagetools create "$SOURCE_IMAGE" \
-            --tag "$TARGET_IMAGE_VERSION_TAG" \
-            --tag "$TARGET_IMAGE_LATEST_TAG"; then
+            --tag "$TARGET_IMAGE_VERSION_TAG"; then
 
                 echo "Promotion with latest tag succeeded."
                 echo "status=success" >> "$GITHUB_OUTPUT"
