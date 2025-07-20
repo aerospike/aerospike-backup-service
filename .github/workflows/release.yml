@@ -201,7 +201,6 @@ jobs:
           path: ./abs-image
           commit: ${{ env.TAG_COMMIT }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Install Skopeo
         if: steps.check-bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
         uses: warjiang/setup-skopeo@71776e03c10d767c04af8924fe5a67763f9b3d34 # v0.1.3
@@ -216,7 +215,9 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
+          echo "Verify archive content"
+          tar -tf ./abs-image/abs-image.tar
           skopeo copy --all \
             --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
-            oci-archive:./abs-image/abs-image.tar \
+            docker-archive:./abs-image/abs-image.tar \
             docker://docker.io/aerospike/$IMAGE_NAME:$IMAGE_TAG
