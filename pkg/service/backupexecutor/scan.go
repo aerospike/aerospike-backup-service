@@ -73,7 +73,7 @@ func makeBackupConfig(
 	config.ParallelWrite = backupPolicy.GetParallelOrDefault()
 	config.FileLimit = uint64(backupPolicy.GetFileLimitOrDefault() * megabyte) // lib expects limit in bytes.
 	config.RecordsPerSecond = util.ValueOrZero(backupPolicy.RecordsPerSecond)
-	config.Bandwidth = util.ValueOrZero(backupPolicy.Bandwidth) * megabyte // lib expects file size in bytes.
+	config.Bandwidth = int64(util.ValueOrZero(backupPolicy.Bandwidth) * megabyte) // lib expects file size in bytes.
 
 	config.ModBefore = timeBounds.ToTime
 	config.ModAfter = timeBounds.FromTime
