@@ -528,7 +528,7 @@ jobs:
           ISO8601: ${{env.ISO8601}}
           IMAGE_NAME: ${{env.IMAGE_NAME}}
           GO_VERSION: ${{env.GO_VERSION}}
-          OUTPUT: "type=image,push=true type=tar,dest=./abs-image.tar"
+          OUTPUT: "type=image,push=true type=oci,dest=./abs-image.tar"
           REPO: ${{ vars.ARTIFACTORY_REGISTRY_URL }}/${{ vars.ARTIFACTORY_CONTAINER_DEV }}
           ARTIFACTORY_CONTAINER_DEV: ${{ vars.ARTIFACTORY_CONTAINER_DEV }}
         run: |
