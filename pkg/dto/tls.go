@@ -64,23 +64,39 @@ func (t *TLS) validateCACertificates() error {
 
 // validateMutualTLS ensures that if any mTLS field is set, all required fields are present.
 func (t *TLS) validateMutualTLS() error {
-	mtlsAnySet := hasText(t.Name) || hasText(t.Keyfile) || hasText(t.Certfile)
+	nameSet := hasText(t.Name)
+	keyfileSet := hasText(t.Keyfile)
+	certfileSet := hasText(t.Certfile)
 
-	if !mtlsAnySet {
-		return nil // No mTLS fields set, which is valid
-	}
-
-	// If any mTLS field is set, all must be set
-	if !hasText(t.Name) {
-		return errValidationRequires("cert-file/key-file", "name")
-	}
-	if !hasText(t.Keyfile) {
-		return errValidationRequires("name/cert-file", "key-file")
-	}
-	if !hasText(t.Certfile) {
-		return errValidationRequires("name/key-file", "cert-file")
+	// each of fields require two others to be set as well
+	if nameSet {
+		if !keyfileSet {
+			return errValidationRequires("name", "key-file")
+		}
+		if !certfileSet {
+			return errValidationRequires("name", "cert-file")
+		}
 	}
 
+	if keyfileSet {
+		if !nameSet {
+			return errValidationRequires("key-file", "name")
+		}
+		if !certfileSet {
+			return errValidationRequires("key-file", "cert-file")
+		}
+	}
+
+	if certfileSet {
+		if !nameSet {
+			return errValidationRequires("cert-file", "name")
+		}
+		if !keyfileSet {
+			return errValidationRequires("cert-file", "key-file")
+		}
+	}
+
+	// no mTLS fields are set
 	return nil
 }
 
