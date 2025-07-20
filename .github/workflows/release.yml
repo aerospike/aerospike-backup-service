@@ -161,7 +161,6 @@ jobs:
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
           ORG: "aerospike"
         run: |
-          
           echo "status=failure" >> "$GITHUB_OUTPUT"
 
 #          SOURCE_IMAGE="$JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG"
