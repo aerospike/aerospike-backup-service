@@ -163,14 +163,17 @@ jobs:
         run: |
           SOURCE_IMAGE="$JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG"
           TARGET_IMAGE_VERSION_TAG="$ORG/$IMAGE_NAME:$IMAGE_TAG"
+          TARGET_IMAGE_LATEST_TAG="$ORG/$IMAGE_NAME:latest"
+          
           echo "Promoting image from: $SOURCE_IMAGE"
-          echo "Target tags: $TARGET_IMAGE_VERSION_TAG"
-
-          echo "Creating promoted image manifest..."
+          echo "Target tags: $TARGET_IMAGE_VERSION_TAG, $TARGET_IMAGE_LATEST_TAG"
+          
+          echo "Creating promoted image manifest with both version and latest tags..."
           if docker buildx imagetools create "$SOURCE_IMAGE" \
-            --tag "$TARGET_IMAGE_VERSION_TAG"; then
-
-                echo "Promotion succeeded."
+            --tag "$TARGET_IMAGE_VERSION_TAG" \
+            --tag "$TARGET_IMAGE_LATEST_TAG"; then
+          
+                echo "Promotion with latest tag succeeded."
                 echo "status=success" >> "$GITHUB_OUTPUT"
           else
                 echo "Promotion failed."
@@ -190,21 +193,6 @@ jobs:
           
           echo "Setting TAG_COMMIT=$TAG_COMMIT"
           echo "TAG_COMMIT=$TAG_COMMIT" >> $GITHUB_ENV
-
-      - name: Download Aerospike Backup Service OCI Archive
-        if: steps.check-bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
-        uses: dawidd6/action-download-artifact@ac66b43f0e6a346234dd65d4d0c8fbb31cb316e5 # v11
-        with:
-          workflow: pre-release.yml
-          name: abs-image
-          path: ./abs-image
-          commit: ${{ env.TAG_COMMIT }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install Skopeo
-        if: steps.check-bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
-        uses: warjiang/setup-skopeo@71776e03c10d767c04af8924fe5a67763f9b3d34 # v0.1.3
-        with:
-          version: v1.19.0
 
       - name: Push OCI Archive to DockerHub
         if: steps.check-bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
@@ -231,18 +219,19 @@ jobs:
           }
           
           echo "Initiating image push via skopeo to DockerHub..."
-          echo "docker.io/aerospike/$IMAGE_NAME:$IMAGE_TAG"
           
-          skopeo copy --all \
-            --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
-            oci-archive:./abs-image/abs-image.tar \
-            docker://docker.io/aerospike/$IMAGE_NAME:$IMAGE_TAG
+          for TAG in "$IMAGE_TAG" "latest"; do
+            echo "Pushing tag: $TAG"
+            skopeo copy --all \
+              --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
+              oci-archive:./abs-image/abs-image.tar \
+              docker://docker.io/aerospike/$IMAGE_NAME:$TAG
           
-          SKOPEO_STATUS=$?
-          if [ $SKOPEO_STATUS -ne 0 ]; then
-            echo "skopeo copy failed with exit code $SKOPEO_STATUS"
-            exit $SKOPEO_STATUS
-          fi
+            SKOPEO_STATUS=$?
+            if [ $SKOPEO_STATUS -ne 0 ]; then
+              echo "skopeo copy for tag '$TAG' failed with exit code $SKOPEO_STATUS"
+              exit $SKOPEO_STATUS
+            fi
+          done
           
-          echo "OCI archive successfully pushed to DockerHub."
-          echo "Image: aerospike/$IMAGE_NAME:$IMAGE_TAG"
+          echo "OCI archive successfully pushed to DockerHub with both '$IMAGE_TAG' and 'latest' tags."
