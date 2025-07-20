@@ -1,6 +1,5 @@
 name: Create Aerospike Backup Service Pre Release
 on:
-  workflow_dispatch:
   push:
     tags:
       - 'v*'
