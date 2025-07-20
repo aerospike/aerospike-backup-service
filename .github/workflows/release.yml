@@ -220,4 +220,3 @@ jobs:
             --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
             oci-archive:./abs-image/abs-image.tar \
             docker://docker.io/aerospike/$IMAGE_NAME:$IMAGE_TAG
-          
