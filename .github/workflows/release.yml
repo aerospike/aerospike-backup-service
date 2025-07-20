@@ -162,24 +162,26 @@ jobs:
           ORG: "aerospike"
         run: |
           
-          SOURCE_IMAGE="$JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG"
-          TARGET_IMAGE_VERSION_TAG="$ORG/$IMAGE_NAME:$IMAGE_TAG"
-          TARGET_IMAGE_LATEST_TAG="$ORG/$IMAGE_NAME:latest"
-          
-          echo "Promoting image from: $SOURCE_IMAGE"
-          echo "Target tags: $TARGET_IMAGE_VERSION_TAG, $TARGET_IMAGE_LATEST_TAG"
-          
-          echo "Creating promoted image manifest with both version and latest tags..."
-          if docker buildx imagetools create "$SOURCE_IMAGE" \
-            --tag "$TARGET_IMAGE_VERSION_TAG" \
-            --tag "$TARGET_IMAGE_LATEST_TAG"; then
-          
-                echo "Promotion with latest tag succeeded."
-                echo "status=success" >> "$GITHUB_OUTPUT"
-          else
-                echo "Promotion failed."
-                echo "status=failure" >> "$GITHUB_OUTPUT"
-          fi
+          echo "status=failure" >> "$GITHUB_OUTPUT"
+
+#          SOURCE_IMAGE="$JF_REGISTRY/$IMAGE_REPO/$IMAGE_NAME:$IMAGE_TAG"
+#          TARGET_IMAGE_VERSION_TAG="$ORG/$IMAGE_NAME:$IMAGE_TAG"
+#          TARGET_IMAGE_LATEST_TAG="$ORG/$IMAGE_NAME:latest"
+#
+#          echo "Promoting image from: $SOURCE_IMAGE"
+#          echo "Target tags: $TARGET_IMAGE_VERSION_TAG, $TARGET_IMAGE_LATEST_TAG"
+#
+#          echo "Creating promoted image manifest with both version and latest tags..."
+#          if docker buildx imagetools create "$SOURCE_IMAGE" \
+#            --tag "$TARGET_IMAGE_VERSION_TAG" \
+#            --tag "$TARGET_IMAGE_LATEST_TAG"; then
+#
+#                echo "Promotion with latest tag succeeded."
+#                echo "status=success" >> "$GITHUB_OUTPUT"
+#          else
+#                echo "Promotion failed."
+#                echo "status=failure" >> "$GITHUB_OUTPUT"
+#          fi
 
       - name: Get Tag Commit
         if: steps.check-bundle.outputs.found == 'true' && steps.promote-to-dockerhub.outputs.status == 'failure'
@@ -237,7 +239,14 @@ jobs:
           
           echo "Initiating image push via skopeo to DockerHub..."
           
-          for TAG in "$IMAGE_TAG" "latest"; do
+#          for TAG in "$IMAGE_TAG" "latest"; do
+#            echo "Pushing tag: $TAG"
+#            skopeo copy --all \
+#              --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
+#              oci-archive:./abs-image/abs-image.tar \
+#              docker://docker.io/aerospike/$IMAGE_NAME:$TAG
+
+          for TAG in "$IMAGE_TAG"; do
             echo "Pushing tag: $TAG"
             skopeo copy --all \
               --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
