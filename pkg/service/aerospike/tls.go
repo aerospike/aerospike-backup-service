@@ -79,7 +79,7 @@ func loadCertPool(caFile, caPath *string) (*x509.CertPool, error) {
 	// Try to load system CA certs, otherwise just make an empty pool
 	pool, err := x509.SystemCertPool()
 	if pool == nil || err != nil {
-		slog.Warn("Failed to load system CA certificates", "err", err)
+		slog.Warn("Failed to load system CA certificates", slog.Any("error", err))
 		pool = x509.NewCertPool()
 	}
 

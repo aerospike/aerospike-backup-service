@@ -60,7 +60,7 @@ func (r *retryExecutor) run(label string, f func() error, onRetry func()) error 
 				slog.Any("attempt", attempt),
 				slog.Any("maxAttempts", r.policy.MaxRetries),
 				slog.Any("retryInterval", retryInterval),
-				slog.Any("err", lastErr))
+				slog.Any("error", lastErr))
 			time.Sleep(retryInterval) // wait before the next attempt
 			retryInterval = time.Duration(float64(retryInterval) * r.policy.Multiplier)
 		}

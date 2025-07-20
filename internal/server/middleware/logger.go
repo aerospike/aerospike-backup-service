@@ -26,7 +26,7 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 
 			body, err := readRequestBody(r)
 			if err != nil {
-				logger.Error("failed to read request body", "error", err)
+				logger.Error("failed to read request body", slog.Any("error", err))
 				http.Error(w, "Failed to read request body: "+err.Error(), http.StatusInternalServerError)
 				return
 			}

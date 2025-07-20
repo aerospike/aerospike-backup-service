@@ -111,7 +111,7 @@ func (c *Credentials) loadPassword() *string {
 	if c.Password != nil {
 		password, err := c.SecretAgent.Read(*c.Password)
 		if err != nil {
-			slog.Warn("Failed to read password from secret agent", slog.Any("err", err))
+			slog.Warn("Failed to read password from secret agent", slog.Any("error", err))
 			return nil
 		}
 
@@ -136,7 +136,7 @@ func (c *Credentials) loadPasswordFromFile() *string {
 	if err != nil {
 		slog.Error("Failed to read password",
 			slog.String("path", *c.PasswordPath),
-			slog.Any("err", err))
+			slog.Any("error", err))
 		return nil
 	}
 
