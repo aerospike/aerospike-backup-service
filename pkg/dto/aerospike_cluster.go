@@ -42,17 +42,43 @@ func (a *AerospikeCluster) Validate() error {
 	if len(a.SeedNodes) == 0 {
 		return errors.New("seed nodes are not specified")
 	}
+
+	withTLS := a.TLS != nil
 	for _, node := range a.SeedNodes {
-		if err := node.Validate(a.TLS != nil); err != nil {
+		if err := node.Validate(withTLS); err != nil {
 			return err
 		}
 	}
+	if err := a.validateSeedNodesTLSConsistency(); err != nil {
+		return err
+	}
+
 	if err := a.Credentials.Validate(); err != nil {
 		return fmt.Errorf("credentials validation error: %w", err)
 	}
 
 	if err := a.TLS.Validate(); err != nil {
 		return fmt.Errorf("tls validation error: %w", err)
+	}
+
+	return nil
+}
+
+// validateSeedNodesTLSConsistency ensures that if any seed node has TLS configuration,
+// then all seed nodes must have TLS configuration.
+func (a *AerospikeCluster) validateSeedNodesTLSConsistency() error {
+	var hasTLSNodes, hasNonTLSNodes bool
+
+	for _, node := range a.SeedNodes {
+		if node.TLSName != "" {
+			hasTLSNodes = true
+		} else {
+			hasNonTLSNodes = true
+		}
+	}
+
+	if hasTLSNodes && hasNonTLSNodes {
+		return errors.New("if any seed node has TLS configuration (tls-name), all seed nodes must have TLS configuration")
 	}
 
 	return nil
