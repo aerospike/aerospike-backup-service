@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -32,13 +31,16 @@ var _ quartz.Job = (*backupJob)(nil)
 
 // Execute is called by a Scheduler when the Trigger associated with this job fires.
 func (j *backupJob) Execute(ctx context.Context) error {
+	jobMetadata, _ := ctx.Value(quartz.JobMetadataContextKey).(quartz.JobMetadata)
+	now := time.Unix(0, jobMetadata.RunTime).Truncate(time.Millisecond)
+
 	if j.isRunning.CompareAndSwap(false, true) {
 		defer j.isRunning.Store(false)
 		switch j.jobType {
 		case jobTypeFull:
-			j.runner.runFullBackup(ctx, util.NowWithZeroMillis())
+			j.runner.runFullBackup(ctx, now)
 		case jobTypeIncremental:
-			j.runner.runIncrementalBackup(ctx, util.NowWithZeroMillis())
+			j.runner.runIncrementalBackup(ctx, now)
 		default:
 			j.logger.Error("Unsupported backup type")
 		}

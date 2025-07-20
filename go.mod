@@ -18,7 +18,7 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/googleapis/gax-go/v2 v2.14.2
 	github.com/prometheus/client_golang v1.21.1
-	github.com/reugn/go-quartz v0.14.0
+	github.com/reugn/go-quartz v0.14.1-0.20250720115006-973a476db8ad
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/swaggo/http-swagger/v2 v2.0.2

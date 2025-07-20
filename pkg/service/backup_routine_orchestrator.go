@@ -196,7 +196,7 @@ func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.T
 }
 
 func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, now time.Time) {
-	if h.skipIncrementalBackup() {
+	if h.skipIncrementalBackup(now) {
 		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeSkip, 0)
 		return
 	}
@@ -213,7 +213,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 	}
 }
 
-func (h *BackupRoutineOrchestrator) skipIncrementalBackup() bool {
+func (h *BackupRoutineOrchestrator) skipIncrementalBackup(now time.Time) bool {
 	currentStat := h.registry.GetRoutineState(h.routineName)
 	if currentStat.LastRunTime.NoFullBackup() {
 		h.logger.Debug("Skip incremental backup until initial full backup is done")
@@ -230,6 +230,11 @@ func (h *BackupRoutineOrchestrator) skipIncrementalBackup() bool {
 	}
 	if currentStat.Incremental != nil && !allowConcurrent {
 		h.logger.Debug("Incremental backup is currently in progress, skipping incremental backup")
+		return true
+	}
+	// check if we have full backup starting at the same time
+	if util.IsCronFireTime(h.routine.IntervalCron, now) {
+		h.logger.Debug("Skip because we have full backup running at same time")
 		return true
 	}
 
