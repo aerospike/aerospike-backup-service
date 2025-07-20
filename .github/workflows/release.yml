@@ -219,5 +219,5 @@ jobs:
           tar -tf ./abs-image/abs-image.tar
           skopeo copy --all \
             --dest-creds $DOCKER_USERNAME:$DOCKER_PASSWORD \
-            docker-archive:./abs-image/abs-image.tar \
+            oci-archive:./abs-image/abs-image.tar \
             docker://docker.io/aerospike/$IMAGE_NAME:$IMAGE_TAG
