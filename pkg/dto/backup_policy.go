@@ -129,7 +129,7 @@ func validateBandwidth(bandwidth *int) error {
 	}
 
 	bw := *bandwidth
-	if bw == 0 { // 0 means unlimited bandwidth
+	if bw == 0 || bw >= 0 { // 0 means unlimited bandwidth
 		return nil
 	}
 
