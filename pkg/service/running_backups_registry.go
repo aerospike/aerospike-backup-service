@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
@@ -128,11 +129,11 @@ func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string) {
 	if err != nil {
 		switch {
 		case errors.Is(err, context.Canceled):
-			slog.Info("Backup history scan cancelled", slog.String("routine", routineName))
+			slog.Info("Backup history scan cancelled", attr.Routine(routineName))
 		default:
 			slog.Error("Failed to read last backup time",
-				slog.String("routine", routineName),
-				slog.Any("error", err))
+				attr.Routine(routineName),
+				attr.Error(err))
 		}
 		r.lastSuccessful.Remove(routineName)
 
@@ -141,7 +142,7 @@ func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string) {
 
 	slog.Info("Last backup time scan completed",
 		slog.Duration("duration", time.Since(routineStart)),
-		slog.String("routine", routineName),
+		attr.Routine(routineName),
 		slog.String("lastRun", lastRun.String()))
 
 	// set last successful backup time for backups done before ABS started
@@ -169,7 +170,7 @@ func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType
 	defer routineLock.Unlock()
 
 	slog.Info("set last backup time",
-		slog.String("routine", routineName),
+		attr.Routine(routineName),
 		slog.String("time", timestamp.String()),
 		slog.String("job", string(job)),
 	)
@@ -209,14 +210,14 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 
 	lastRun, found := r.lastSuccessful.Load(routineName)
 	if !found {
-		slog.Info("No last backup info available", slog.String("routine", routineName))
+		slog.Info("No last backup info available", attr.Routine(routineName))
 		lastRun = model.NewNoBackupTime()
 	}
 
 	nextRunTime, err := nextBackup(routineName, r.config)
 	if err != nil {
 		slog.Warn("Could not calculate next fire time",
-			slog.String("routine", routineName), slog.Any("error", err))
+			attr.Routine(routineName), attr.Error(err))
 		nextRunTime = model.NewNoBackupTime()
 	}
 

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
@@ -228,7 +229,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	if err != nil {
 		slog.Error("Failed to restore by timestamp",
 			slog.Any("cluster", request.DestinationCluster.ClusterLabel),
-			slog.Any("error", err))
+			attr.Error(err))
 		r.restoreJobs.finishJob(jobID, err)
 		return
 	}
