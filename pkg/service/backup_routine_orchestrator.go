@@ -233,7 +233,7 @@ func (h *BackupRoutineOrchestrator) skipIncrementalBackup(now time.Time) bool {
 		return true
 	}
 	// check if we have full backup starting at the same time
-	if util.IsCronFireTime(h.routine.IntervalCron, now) {
+	if util.IsCronFireTime(h.routine.IntervalCron, now) && !allowConcurrent {
 		h.logger.Debug("Skip because we have full backup running at same time")
 		return true
 	}
