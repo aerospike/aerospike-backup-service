@@ -6,5 +6,5 @@ const (
 
 	// We need to enforce a minimum bandwidth due to rate limiter constraints.
 	// Set to 8 MiB/s for the maximum record size.
-	minBandwidth = 8
+	minBandwidth = 0
 )
