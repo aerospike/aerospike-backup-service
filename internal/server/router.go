@@ -18,8 +18,6 @@ func NewServeMux(apiPath, sysPath string, service *handlers.Service) *http.Serve
 	registerBackupRoutes(mux, apiPath, service)
 	registerRestoreRoutes(mux, apiPath, service)
 
-	registerPprofRoutes(mux, apiPath)
-
 	return mux
 }
 
@@ -92,12 +90,4 @@ func registerRestoreRoutes(mux *http.ServeMux, apiPath string, service *handlers
 
 	// Return backed up Aerospike configuration
 	mux.HandleFunc("GET "+apiPath+"/retrieve/configuration/{name}/{timestamp}", service.RetrieveConfig)
-}
-
-func registerPprofRoutes(mux *http.ServeMux, apiPath string) {
-	mux.HandleFunc("GET "+apiPath+"/debug/pprof/", http.DefaultServeMux.ServeHTTP)
-	mux.HandleFunc("GET "+apiPath+"/debug/pprof/cmdline", http.DefaultServeMux.ServeHTTP)
-	mux.HandleFunc("GET "+apiPath+"/debug/pprof/profile", http.DefaultServeMux.ServeHTTP)
-	mux.HandleFunc("GET "+apiPath+"/debug/pprof/symbol", http.DefaultServeMux.ServeHTTP)
-	mux.HandleFunc("GET "+apiPath+"/debug/pprof/trace", http.DefaultServeMux.ServeHTTP)
 }

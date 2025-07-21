@@ -53,7 +53,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 	}
 
 	config.RecordsPerSecond = util.ValueOrZero(restoreRequest.Policy.Tps)
-	config.Bandwidth = int64(util.ValueOrZero(restoreRequest.Policy.Bandwidth) * megabyte)
+	config.Bandwidth = util.ValueOrZero(restoreRequest.Policy.Bandwidth) * megabyte
 	config.Parallel = restoreRequest.Policy.GetParallelOrDefault()
 	config.MaxAsyncBatches = restoreRequest.Policy.GetMaxAsyncBatchesOrDefault()
 	config.BatchSize = restoreRequest.Policy.GetBatchSizeOrDefault()
