@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"log/slog"
 	"math/rand"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
