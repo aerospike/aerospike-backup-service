@@ -49,6 +49,11 @@ linters:
         rules:
           json: kebab
           yaml: kebab
+    sloglint:
+      attr-only: true
+      key-naming-case: camel
+      forbidden-keys:
+        - err
   exclusions:
     generated: lax
     presets:
