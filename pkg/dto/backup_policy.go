@@ -118,7 +118,7 @@ func (p *BackupPolicy) Validate() error {
 	}
 	// if err := p.XDRConfig.Validate(); err != nil {
 	//	return fmt.Errorf("invalid xdr config: %w", err)
-	//}
+	// }
 
 	return nil
 }
@@ -129,7 +129,7 @@ func validateBandwidth(bandwidth *int) error {
 	}
 
 	bw := *bandwidth
-	if bw == 0 || bw >= minBandwidth { // 0 means unlimited bandwidth
+	if bw == 0 { // 0 means unlimited bandwidth
 		return nil
 	}
 
@@ -161,7 +161,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		EncryptionPolicy:  p.EncryptionPolicy.ToModel(),
 		CompressionPolicy: p.CompressionPolicy.ToModel(),
 		Sealed:            p.Sealed,
-		//XDRConfig:             p.XDRConfig.ToModel(),
+		// XDRConfig:             p.XDRConfig.ToModel(),
 		ConcurrentIncremental: p.ConcurrentIncremental,
 	}
 }
