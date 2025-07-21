@@ -1,0 +1,24 @@
+aerospike-clusters:
+  asdb-cluster:
+    seed-nodes:
+      - host-name: aerocluster-0-0
+        port: 3000
+storage:
+  minio:
+    s3-storage:
+      path: abs
+      bucket: abs-testing-bucket
+      s3-region: us-east-1
+      s3-profile: minio
+      s3-endpoint-override: http://minio:9000
+backup-policies:
+  keepFilesPolicy:
+    parallel: 1
+backup-routines:
+  minioKeepFilesRoutine:
+    interval-cron: "@daily"
+    incr-interval-cron: "@hourly"
+    source-cluster: asdb-cluster
+    storage: minio
+    namespaces: [ "test" ]
+    backup-policy: keepFilesPolicy
