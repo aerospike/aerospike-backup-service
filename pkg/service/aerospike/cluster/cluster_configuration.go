@@ -3,6 +3,7 @@ package cluster
 import (
 	"log/slog"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	_ "github.com/aerospike/aerospike-backup-service/v3/modules/schema" // it's required to load configuration schemas in init method
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
@@ -26,7 +27,7 @@ func ReadConfiguration(client aerospike.Cluster, logger *slog.Logger) []asconfig
 		})
 		if err != nil {
 			logger.Error("Error reading configuration",
-				slog.Any("host", host), slog.Any("error", err))
+				slog.Any("host", host), attr.Error(err))
 			continue
 		}
 
@@ -35,14 +36,14 @@ func ReadConfiguration(client aerospike.Cluster, logger *slog.Logger) []asconfig
 		})
 		if err != nil {
 			logger.Error("Error parsing configuration",
-				slog.Any("host", host), slog.Any("error", err))
+				slog.Any("host", host), attr.Error(err))
 			continue
 		}
 
 		configAsString, err := util.TryAndRecover(asconf.ToConfFile)
 		if err != nil {
 			logger.Error("Error serialising configuration",
-				slog.Any("host", host), slog.Any("error", err))
+				slog.Any("host", host), attr.Error(err))
 			continue
 		}
 

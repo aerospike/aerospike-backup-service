@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
@@ -46,14 +47,14 @@ func (nv *defaultNamespaceValidator) MissingNamespaces(
 
 	backupClient, err := nv.ClientManager.GetClient(cluster)
 	if err != nil {
-		slog.Info("Failed to connect to aerospike cluster", slog.Any("error", err))
+		slog.Info("Failed to connect to aerospike cluster", attr.Error(err))
 		return nil
 	}
 	defer nv.ClientManager.Close(backupClient)
 
 	namespacesInCluster, err := getAllNamespacesOfCluster(backupClient.AerospikeClient())
 	if err != nil {
-		slog.Info("Failed to retrieve namespaces from cluster", slog.Any("error", err))
+		slog.Info("Failed to retrieve namespaces from cluster", attr.Error(err))
 	}
 
 	return util.MissingElements(namespaces, namespacesInCluster)
@@ -98,7 +99,7 @@ func getAllNamespacesOfCluster(client Cluster) ([]string, error) {
 		return nil, fmt.Errorf("failed to get cluster info: %w", err)
 	}
 	namespaces := infoRes[namespaceInfo]
-	slog.Debug("Retrieved namespace info", "result", namespaces)
+	slog.Debug("Retrieved namespace info", slog.String("result", namespaces))
 
 	return strings.Split(namespaces, ";"), nil
 }

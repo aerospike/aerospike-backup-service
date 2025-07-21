@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"gopkg.in/yaml.v3"
 )
 
@@ -66,7 +67,7 @@ func Deserialize(v any, r io.Reader, format SerializationFormat) error {
 func enhanceJSONError(jsonError error) error {
 	field, err := parseJSONError(jsonError.Error())
 	if err != nil {
-		slog.Warn("Failed to parse JSON error message", slog.Any("error", err))
+		slog.Warn("Failed to parse JSON error message", attr.Error(err))
 		return jsonError // Can't enhance this error, so keep the original error as-is
 	}
 
@@ -117,7 +118,7 @@ func enhanceYamlErrors(err error) error {
 func processYamlError(errMsg string) error {
 	line, field, dtoName, err := parseYamlErrorMessage(errMsg)
 	if err != nil {
-		slog.Warn("Failed to parse YAML error message", slog.String("errMsg", errMsg), slog.Any("error", err))
+		slog.Warn("Failed to parse YAML error message", slog.String("errMsg", errMsg), attr.Error(err))
 		return err // Cannot enhance this error, so keep the original error as-is
 	}
 
