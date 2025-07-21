@@ -59,10 +59,6 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 	config.BatchSize = restoreRequest.Policy.GetBatchSizeOrDefault()
 	config.DisableBatchWrites = util.ValueOrZero(restoreRequest.Policy.DisableBatchWrites)
 
-	if config.Bandwidth == 0 {
-		config.Bandwidth = 8 * 1024 * 1024
-	}
-
 	if restoreRequest.Policy.CompressionPolicy != nil {
 		config.CompressionPolicy = &backup.CompressionPolicy{
 			Mode:  restoreRequest.Policy.CompressionPolicy.Mode,
