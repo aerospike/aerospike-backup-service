@@ -14,7 +14,7 @@ func TestRestorePolicy_ValidPolicy(t *testing.T) {
 		SocketTimeout:      util.Ptr(int64(1000)),
 		MaxAsyncBatches:    util.Ptr(32),
 		BatchSize:          util.Ptr(128),
-		Bandwidth:          util.Ptr(50000),
+		Bandwidth:          util.Ptr(int64(50000)),
 		Tps:                util.Ptr(4000),
 		Replace:            util.Ptr(true),
 		NoGeneration:       util.Ptr(false),
@@ -96,12 +96,12 @@ func TestRestorePolicy_InvalidBatchSize(t *testing.T) {
 
 func TestRestorePolicy_InvalidBandwidth(t *testing.T) {
 	policy := &RestorePolicy{
-		Bandwidth: util.Ptr(1),
+		Bandwidth: util.Ptr(int64(-1)),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "bandwidth")
-	assert.Contains(t, err.Error(), "'1' is not a valid bandwidth")
+	assert.Contains(t, err.Error(), "'-1' is not a valid bandwidth")
 }
 
 func TestRestorePolicy_InvalidTps(t *testing.T) {

@@ -19,7 +19,7 @@ func TestMakeRestoreConfig(t *testing.T) {
 			NoIndexes:          util.Ptr(false),
 			NoUdfs:             util.Ptr(false),
 			Tps:                util.Ptr(500),
-			Bandwidth:          util.Ptr(1024),
+			Bandwidth:          util.Ptr(int64(1024)),
 			ExtraTTL:           util.Ptr(int64(3600)),
 			Parallel:           util.Ptr(8),
 			BatchSize:          util.Ptr(128),
@@ -62,7 +62,7 @@ func TestMakeRestoreConfig(t *testing.T) {
 	assert.Equal(t, false, config.NoIndexes)
 	assert.Equal(t, false, config.NoUDFs)
 	assert.Equal(t, 500, config.RecordsPerSecond)
-	assert.Equal(t, 1024*megabyte, config.Bandwidth)
+	assert.Equal(t, int64(1024*megabyte), config.Bandwidth)
 	assert.Equal(t, int64(3600), config.ExtraTTL)
 	assert.Equal(t, 8, config.Parallel)
 	assert.Equal(t, 128, config.BatchSize)
