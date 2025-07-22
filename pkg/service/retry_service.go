@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -60,7 +61,7 @@ func (r *retryExecutor) run(label string, f func() error, onRetry func()) error 
 				slog.Any("attempt", attempt),
 				slog.Any("maxAttempts", r.policy.MaxRetries),
 				slog.Any("retryInterval", retryInterval),
-				slog.Any("error", lastErr))
+				attr.Error(lastErr))
 			time.Sleep(retryInterval) // wait before the next attempt
 			retryInterval = time.Duration(float64(retryInterval) * r.policy.Multiplier)
 		}

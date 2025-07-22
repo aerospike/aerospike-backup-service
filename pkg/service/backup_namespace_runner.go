@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
@@ -90,7 +91,7 @@ func (op *BackupNamespaceRunner) Run(
 func (op *BackupNamespaceRunner) deleteFolder(ctx context.Context, path string) {
 	err := op.backendService.Delete(ctx, op.routineName, path)
 	if err != nil {
-		op.logger.Error("Could not delete folder", slog.Any("error", err))
+		op.logger.Error("Could not delete folder", attr.Error(err))
 		return
 	}
 }

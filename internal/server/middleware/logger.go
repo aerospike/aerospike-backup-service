@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 )
 
 const maxLogSize = 10_000 // Maximum size of request body to log in bytes.
@@ -26,7 +28,7 @@ func RequestLogger(logger *slog.Logger, skipPaths []string) Middleware {
 
 			body, err := readRequestBody(r)
 			if err != nil {
-				logger.Error("failed to read request body", slog.Any("error", err))
+				logger.Error("failed to read request body", attr.Error(err))
 				http.Error(w, "Failed to read request body: "+err.Error(), http.StatusInternalServerError)
 				return
 			}

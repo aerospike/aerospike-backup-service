@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
@@ -97,7 +98,7 @@ func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
 		}
 		job.status = model.JobStatusFailed
 		job.err = err
-		slog.Error("Failed to restore", slog.Any("jobId", id), slog.Any("error", err))
+		slog.Error("Failed to restore", slog.Any("jobId", id), attr.Error(err))
 	})
 }
 

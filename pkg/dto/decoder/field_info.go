@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	_ "github.com/aerospike/aerospike-backup-service/v3/docs" // need to ensure swagger is initialized before.
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/swaggo/swag"
 )
 
@@ -17,12 +18,12 @@ var (
 func init() {
 	swaggerDoc, err := swag.ReadDoc("swagger")
 	if err != nil {
-		slog.Warn("Failed to read swagger doc", slog.Any("error", err))
+		slog.Warn("Failed to read swagger doc", attr.Error(err))
 		return
 	}
 	fieldsByStruct, err = parseOpenAPISpec(swaggerDoc)
 	if err != nil {
-		slog.Warn("Failed to parse swagger doc", slog.Any("error", err))
+		slog.Warn("Failed to parse swagger doc", attr.Error(err))
 		return
 	}
 
