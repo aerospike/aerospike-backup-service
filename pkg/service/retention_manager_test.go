@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -16,8 +15,6 @@ func TestRetentionManagerImpl_deleteOldBackups_full(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	ctx := context.Background()
-	routineName := "testRoutine"
 	retentionPolicy := model.RetentionPolicy{
 		FullBackups: util.Ptr(2),
 	}
@@ -45,9 +42,9 @@ func TestRetentionManagerImpl_deleteOldBackups_full(t *testing.T) {
 		Return(fullBackups, nil)
 
 	// Expect deletion of the first 3 full backups (keep last 2)
-	backendService.EXPECT().Delete(ctx, routineName, "testRoutine/backup/1000").Return(nil)
-	backendService.EXPECT().Delete(ctx, routineName, "testRoutine/backup/2000").Return(nil)
-	backendService.EXPECT().Delete(ctx, routineName, "testRoutine/backup/3000").Return(nil)
+	backendService.EXPECT().Delete(ctx, routineName, "test-routine/backup/1000").Return(nil)
+	backendService.EXPECT().Delete(ctx, routineName, "test-routine/backup/2000").Return(nil)
+	backendService.EXPECT().Delete(ctx, routineName, "test-routine/backup/3000").Return(nil)
 
 	// Expect calls to get incrementals.
 	backendService.EXPECT().GetBackups(ctx,
@@ -64,8 +61,6 @@ func TestRetentionManagerImpl_deleteOldBackups_fullWithIncrementals(t *testing.T
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	ctx := context.Background()
-	routineName := "testRoutine"
 	retentionPolicy := model.RetentionPolicy{
 		FullBackups: util.Ptr(1),
 	}
@@ -90,7 +85,7 @@ func TestRetentionManagerImpl_deleteOldBackups_fullWithIncrementals(t *testing.T
 		Return(fullBackups, nil)
 
 	// Expect deletion of the first full backup
-	backendService.EXPECT().Delete(ctx, routineName, "testRoutine/backup/1000").Return(nil)
+	backendService.EXPECT().Delete(ctx, routineName, "test-routine/backup/1000").Return(nil)
 
 	// Expect a call to get incrementals for the deleted full backup
 	incrementals := []model.BackupDetails{
@@ -102,8 +97,8 @@ func TestRetentionManagerImpl_deleteOldBackups_fullWithIncrementals(t *testing.T
 		Return(incrementals, nil)
 
 	// Expect deletion of the incrementals
-	backendService.EXPECT().Delete(ctx, routineName, "testRoutine/incremental/1100").Return(nil)
-	backendService.EXPECT().Delete(ctx, routineName, "testRoutine/incremental/1200").Return(nil)
+	backendService.EXPECT().Delete(ctx, routineName, "test-routine/incremental/1100").Return(nil)
+	backendService.EXPECT().Delete(ctx, routineName, "test-routine/incremental/1200").Return(nil)
 
 	err := retentionManager.deleteOldBackups(ctx, routineName)
 	assert.NoError(t, err)
@@ -114,8 +109,6 @@ func TestRetentionManagerImpl_deleteOldBackups_incrementalPolicy(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	ctx := context.Background()
-	routineName := "testRoutine"
 	retentionPolicy := model.RetentionPolicy{
 		FullBackups: util.Ptr(2),
 		IncrBackups: util.Ptr(1),
@@ -150,8 +143,8 @@ func TestRetentionManagerImpl_deleteOldBackups_incrementalPolicy(t *testing.T) {
 		Return(incrementals, nil)
 
 	// Expect deletion of the older incrementals
-	backendService.EXPECT().Delete(ctx, routineName, "testRoutine/incremental/1100").Return(nil)
-	backendService.EXPECT().Delete(ctx, routineName, "testRoutine/incremental/1200").Return(nil)
+	backendService.EXPECT().Delete(ctx, routineName, "test-routine/incremental/1100").Return(nil)
+	backendService.EXPECT().Delete(ctx, routineName, "test-routine/incremental/1200").Return(nil)
 
 	err := retentionManager.deleteOldBackups(ctx, routineName)
 	assert.NoError(t, err)
@@ -161,9 +154,6 @@ func TestRetentionManagerImpl_deleteOldBackups_incrementalPolicy(t *testing.T) {
 func TestRetentionManagerImpl_deleteOldBackups_noPolicy(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	ctx := context.Background()
-	routineName := "testRoutine"
 
 	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
 
@@ -187,8 +177,6 @@ func TestRetentionManagerImpl_deleteOldBackups_noneToDelete(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	ctx := context.Background()
-	routineName := "testRoutine"
 	retentionPolicy := model.RetentionPolicy{
 		FullBackups: util.Ptr(5),
 	}
@@ -225,8 +213,6 @@ func TestRetentionManagerImpl_deleteOldBackups_retainZeroIncrementals(t *testing
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	ctx := context.Background()
-	routineName := "testRoutine"
 	retentionPolicy := model.RetentionPolicy{
 		IncrBackups: util.Ptr(0),
 	}
@@ -247,7 +233,7 @@ func TestRetentionManagerImpl_deleteOldBackups_retainZeroIncrementals(t *testing
 		Return([]model.BackupDetails{}, nil)
 
 	// Expect a single delete call for the incremental root path
-	backendService.EXPECT().Delete(ctx, routineName, "testRoutine/incremental").Return(nil)
+	backendService.EXPECT().Delete(ctx, routineName, "test-routine/incremental").Return(nil)
 
 	err := retentionManager.deleteOldBackups(ctx, routineName)
 	assert.NoError(t, err)
@@ -259,8 +245,6 @@ func TestRetentionManagerImpl_deleteOldBackups_concurrencyLock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	ctx := context.Background()
-	routineName := "testRoutine"
 	retentionPolicy := model.RetentionPolicy{
 		FullBackups: util.Ptr(1),
 	}
