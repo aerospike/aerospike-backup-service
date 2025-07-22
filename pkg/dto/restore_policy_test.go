@@ -101,7 +101,7 @@ func TestRestorePolicy_InvalidBandwidth(t *testing.T) {
 	err := policy.Validate()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "bandwidth")
-	assert.Contains(t, err.Error(), "'-1' is not a valid bandwidth")
+	assert.Contains(t, err.Error(), "\"bandwidth\" -1 invalid, should not be negative number")
 }
 
 func TestRestorePolicy_InvalidTps(t *testing.T) {
