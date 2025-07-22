@@ -10,24 +10,17 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-// TestRetentionManagerImpl_deleteOldBackups_full tests the case where only full backups are deleted.
-func TestRetentionManagerImpl_deleteOldBackups_full(t *testing.T) {
+// TestRetentionManager_FullBackupsOnly
+// tests that only full backups are deleted when only a full backup retention policy is set.
+func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	retentionPolicy := model.RetentionPolicy{
-		FullBackups: util.Ptr(2),
-	}
-
 	backendService := NewMockBackupReaderWriter(ctrl)
 
-	config := model.NewConfig()
-	testRoutine := &model.BackupRoutine{
-		BackupPolicy: &model.BackupPolicy{
-			RetentionPolicy: &retentionPolicy,
-		},
-	}
-	_ = config.AddRoutine(routineName, testRoutine)
+	config := configWithRetentionPolicy(&model.RetentionPolicy{
+		FullBackups: util.Ptr(2),
+	})
 
 	retentionManager := NewBackupRetentionManager(backendService, config)
 
@@ -46,7 +39,7 @@ func TestRetentionManagerImpl_deleteOldBackups_full(t *testing.T) {
 	backendService.EXPECT().Delete(ctx, routineName, "test-routine/backup/2000").Return(nil)
 	backendService.EXPECT().Delete(ctx, routineName, "test-routine/backup/3000").Return(nil)
 
-	// Expect calls to get incrementals.
+	// Expect calls to get incremental backups.
 	backendService.EXPECT().GetBackups(ctx,
 		NewIncrementalBackupFilter(routineName).WithToTime(time.UnixMilli(4000))).
 		Return([]model.BackupDetails{}, nil)
@@ -55,25 +48,18 @@ func TestRetentionManagerImpl_deleteOldBackups_full(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestRetentionManagerImpl_deleteOldBackups_fullWithIncrementals tests that when a full backup is deleted,
-// its corresponding incremental backups are also deleted.
-func TestRetentionManagerImpl_deleteOldBackups_fullWithIncrementals(t *testing.T) {
+// TestRetentionManager_FullAndIncremental
+// tests that when a full backup is deleted, its corresponding incremental backups are also deleted
+// (even without incremental retention policy).
+func TestRetentionManager_FullAndIncremental(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	retentionPolicy := model.RetentionPolicy{
-		FullBackups: util.Ptr(1),
-	}
-
 	backendService := NewMockBackupReaderWriter(ctrl)
 
-	config := model.NewConfig()
-	testRoutine := &model.BackupRoutine{
-		BackupPolicy: &model.BackupPolicy{
-			RetentionPolicy: &retentionPolicy,
-		},
-	}
-	_ = config.AddRoutine(routineName, testRoutine)
+	config := configWithRetentionPolicy(&model.RetentionPolicy{
+		FullBackups: util.Ptr(1),
+	})
 
 	retentionManager := NewBackupRetentionManager(backendService, config)
 
@@ -104,25 +90,17 @@ func TestRetentionManagerImpl_deleteOldBackups_fullWithIncrementals(t *testing.T
 	assert.NoError(t, err)
 }
 
-// TestRetentionManagerImpl_deleteOldBackups_incrementalPolicy tests the incremental retention policy.
-func TestRetentionManagerImpl_deleteOldBackups_incrementalPolicy(t *testing.T) {
+// TestRetentionManager_IncrementalPolicy tests the incremental retention policy.
+func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	retentionPolicy := model.RetentionPolicy{
+	config := configWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: util.Ptr(2),
 		IncrBackups: util.Ptr(1),
-	}
+	})
 
 	backendService := NewMockBackupReaderWriter(ctrl)
-
-	config := model.NewConfig()
-	testRoutine := &model.BackupRoutine{
-		BackupPolicy: &model.BackupPolicy{
-			RetentionPolicy: &retentionPolicy,
-		},
-	}
-	_ = config.AddRoutine(routineName, testRoutine)
 
 	retentionManager := NewBackupRetentionManager(backendService, config)
 
@@ -150,20 +128,14 @@ func TestRetentionManagerImpl_deleteOldBackups_incrementalPolicy(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestRetentionManagerImpl_deleteOldBackups_noPolicy tests the case where no retention policy is defined.
-func TestRetentionManagerImpl_deleteOldBackups_noPolicy(t *testing.T) {
+// TestRetentionManager_NoPolicy tests the case where no retention policy is defined.
+func TestRetentionManager_NoPolicy(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
 
-	config := model.NewConfig()
-	testRoutine := &model.BackupRoutine{
-		BackupPolicy: &model.BackupPolicy{
-			RetentionPolicy: nil, // No retention policy
-		},
-	}
-	_ = config.AddRoutine(routineName, testRoutine)
+	config := configWithRetentionPolicy(nil)
 
 	retentionManager := NewBackupRetentionManager(backendService, config)
 
@@ -171,32 +143,24 @@ func TestRetentionManagerImpl_deleteOldBackups_noPolicy(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestRetentionManagerImpl_deleteOldBackups_noneToDelete tests the case where the number of backups
+// TestRetentionManager_NoneToDelete tests the case where the number of backups
 // is less than or equal to the retention count.
-func TestRetentionManagerImpl_deleteOldBackups_noneToDelete(t *testing.T) {
+func TestRetentionManager_NoneToDelete(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	retentionPolicy := model.RetentionPolicy{
-		FullBackups: util.Ptr(5),
-	}
-
 	backendService := NewMockBackupReaderWriter(ctrl)
 
-	config := model.NewConfig()
-	testRoutine := &model.BackupRoutine{
-		BackupPolicy: &model.BackupPolicy{
-			RetentionPolicy: &retentionPolicy,
-		},
-	}
-	_ = config.AddRoutine(routineName, testRoutine)
+	config := configWithRetentionPolicy(&model.RetentionPolicy{
+		FullBackups: util.Ptr(5),
+	})
 
 	retentionManager := NewBackupRetentionManager(backendService, config)
 
 	fullBackups := []model.BackupDetails{
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(1000)}},
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(2000)}},
-		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(3000)}},
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(1000)}}, // keep
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(2000)}}, // keep
+		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(3000)}}, // keep
 	}
 	backendService.EXPECT().GetBackups(ctx, NewFullBackupFilter(routineName)).
 		Return(fullBackups, nil)
@@ -207,24 +171,17 @@ func TestRetentionManagerImpl_deleteOldBackups_noneToDelete(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// TestRetentionManagerImpl_deleteOldBackups_retainZeroIncrementals tests the case where the retention
-// count for incremental backups is 0.
-func TestRetentionManagerImpl_deleteOldBackups_retainZeroIncrementals(t *testing.T) {
+// TestRetentionManager_RetainZeroIncrementals
+// tests the case where the retention count for incremental backups is 0.
+func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	retentionPolicy := model.RetentionPolicy{
+	config := configWithRetentionPolicy(&model.RetentionPolicy{
 		IncrBackups: util.Ptr(0),
-	}
+	})
 
 	backendService := NewMockBackupReaderWriter(ctrl)
-	config := model.NewConfig()
-	testRoutine := &model.BackupRoutine{
-		BackupPolicy: &model.BackupPolicy{
-			RetentionPolicy: &retentionPolicy,
-		},
-	}
-	_ = config.AddRoutine(routineName, testRoutine)
 
 	retentionManager := NewBackupRetentionManager(backendService, config)
 
@@ -239,31 +196,19 @@ func TestRetentionManagerImpl_deleteOldBackups_retainZeroIncrementals(t *testing
 	assert.NoError(t, err)
 }
 
-// TestRetentionManagerImpl_deleteOldBackups_concurrencyLock tests that the concurrency lock
-// prevents multiple retention jobs from running for the same routine.
-func TestRetentionManagerImpl_deleteOldBackups_concurrencyLock(t *testing.T) {
+// TestRetentionManager_ConcurrencyLock
+// tests that the concurrency lock prevents multiple retention jobs from running for the same routine.
+func TestRetentionManager_ConcurrencyLock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	retentionPolicy := model.RetentionPolicy{
+	config := configWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: util.Ptr(1),
-	}
+	})
 
 	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
 
-	config := model.NewConfig()
-	testRoutine := &model.BackupRoutine{
-		BackupPolicy: &model.BackupPolicy{
-			RetentionPolicy: &retentionPolicy,
-		},
-	}
-	_ = config.AddRoutine(routineName, testRoutine)
-
-	// Manually create the manager to access the internal lock
-	retentionManager := &RetentionManagerImpl{
-		backendService: backendService,
-		config:         config,
-	}
+	retentionManager := NewBackupRetentionManager(backendService, config)
 
 	// Simulate lock being held by another process
 	mu := retentionManager.locks.Get(routineName)
@@ -273,4 +218,31 @@ func TestRetentionManagerImpl_deleteOldBackups_concurrencyLock(t *testing.T) {
 	// This call should be skipped due to the lock
 	err := retentionManager.deleteOldBackups(ctx, routineName)
 	assert.NoError(t, err)
+}
+
+// TestRetentionManager_PolicyWithNilCounts
+// tests the case where the retention policy is defined but both FullBackups and IncrBackups are nil.
+func TestRetentionManager_PolicyWithNilCounts(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
+
+	config := configWithRetentionPolicy(&model.RetentionPolicy{})
+	retentionManager := NewBackupRetentionManager(backendService, config)
+
+	err := retentionManager.deleteOldBackups(ctx, routineName)
+	assert.NoError(t, err)
+}
+
+func configWithRetentionPolicy(retentionPolicy *model.RetentionPolicy) *model.Config {
+	config := model.NewConfig()
+	testRoutine := &model.BackupRoutine{
+		BackupPolicy: &model.BackupPolicy{
+			RetentionPolicy: retentionPolicy,
+		},
+	}
+
+	_ = config.AddRoutine(routineName, testRoutine)
+	return config
 }

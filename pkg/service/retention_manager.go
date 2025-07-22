@@ -29,7 +29,7 @@ var _ RetentionManager = (*RetentionManagerImpl)(nil)
 func NewBackupRetentionManager(
 	backendService BackupReaderWriter,
 	config *model.Config,
-) RetentionManager {
+) *RetentionManagerImpl {
 	return &RetentionManagerImpl{
 		backendService: backendService,
 		config:         config,
