@@ -129,10 +129,9 @@ func validateBandwidth(bandwidth *int64) error {
 	}
 
 	if *bandwidth < 0 {
-		return errValidationInvalidValue(
+		return errValidationNegative(
 			"bandwidth",
 			*bandwidth,
-			"0 (unlimited) or positive",
 		)
 	}
 
