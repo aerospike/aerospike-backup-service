@@ -13,13 +13,13 @@ func IsCronFireTime(cronExpr string, t time.Time) bool {
 	trigger, err := quartz.NewCronTrigger(cronExpr)
 	if err != nil {
 		slog.Error("Failed to parse cron expression", attr.Error(err))
-		return true
+		return false
 	}
 
 	fireTime, err := trigger.NextFireTime(t.Add(-1 * time.Second).UnixNano())
 	if err != nil {
 		slog.Error("Failed to get next fire time", attr.Error(err))
-		return true
+		return false
 	}
 
 	return fireTime == t.UnixNano()
