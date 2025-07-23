@@ -12,11 +12,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
+const (
 	routineName   = "test-routine"
 	testNamespace = "test-ns"
-	ctx           = context.Background()
-	mockClient    = &backup.Client{}
+)
+
+var (
+	ctx        = context.Background()
+	mockClient = &backup.Client{}
 )
 
 func TestLocalGetBackupsWithTimeFilters(t *testing.T) {

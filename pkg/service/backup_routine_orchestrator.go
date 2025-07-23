@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
@@ -62,7 +63,7 @@ func NewBackupComponents(
 
 func newOrchestrator(routineName string, config *model.Config, h *BackupComponents) *BackupRoutineOrchestrator {
 	routine, _ := config.Routine(routineName)
-	logger := slog.With(slog.String("routine_name", routineName))
+	logger := slog.With(attr.Routine(routineName))
 	retry := newRetryExecutor(routine.BackupPolicy.GetRetryPolicyOrDefault(), logger)
 	return &BackupRoutineOrchestrator{
 		routineName:         routineName,
@@ -83,7 +84,7 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 	})
 
 	if err != nil {
-		h.logger.Error("Full backup failed", slog.Any("error", err))
+		h.logger.Error("Full backup failed", attr.Error(err))
 		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeFailure, duration)
 	} else {
 		h.logger.Debug("Finished full backup", slog.Int64("time", now.UnixMilli()))
@@ -133,7 +134,7 @@ func (h *BackupRoutineOrchestrator) backupClusterConfiguration(ctx context.Conte
 	}
 
 	if err := h.clusterConfigWriter.Write(ctx, h.routineName, now); err != nil {
-		slog.Warn("Failed to backup cluster configuration", slog.Any("error", err))
+		slog.Warn("Failed to backup cluster configuration", attr.Error(err))
 	}
 }
 
@@ -150,7 +151,7 @@ func (h *BackupRoutineOrchestrator) skipFullBackup() bool {
 func (h *BackupRoutineOrchestrator) deleteOldBackups(ctx context.Context, routineName string) {
 	err := h.retentionManager.deleteOldBackups(ctx, routineName)
 	if err != nil {
-		h.logger.Error("failed to clean up old backups", slog.Any("error", err))
+		h.logger.Error("failed to clean up old backups", attr.Error(err))
 	}
 }
 
@@ -206,7 +207,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 	})
 	if err != nil {
 		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeFailure, duration)
-		h.logger.Error("Incremental backup failed", slog.Any("error", err))
+		h.logger.Error("Incremental backup failed", attr.Error(err))
 	} else {
 		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeSuccess, duration)
 		h.logger.Debug("Finished incremental backup", slog.Int64("time", now.UnixMilli()))

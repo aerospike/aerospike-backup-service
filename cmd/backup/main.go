@@ -16,6 +16,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -68,7 +69,7 @@ func run() int {
 
 	err := rootCmd.Execute()
 	if err != nil {
-		slog.Error("Error in rootCmd.Execute", slog.Any("error", err))
+		slog.Error("Error in rootCmd.Execute", attr.Error(err))
 	}
 
 	return util.ToExitVal(err)
@@ -196,7 +197,7 @@ func runHTTPServer(
 	time.Sleep(time.Millisecond * 100) // wait for other goroutines to exit
 	// shutdown the HTTP server gracefully
 	if err := httpServer.Shutdown(); err != nil {
-		slog.Error("HTTP server shutdown failed", slog.Any("error", err))
+		slog.Error("HTTP server shutdown failed", attr.Error(err))
 		return err
 	}
 

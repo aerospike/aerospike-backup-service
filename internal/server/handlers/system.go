@@ -8,6 +8,7 @@ import (
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	_ "github.com/aerospike/aerospike-backup-service/v3/docs" // auto-generated Swagger spec
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
@@ -24,7 +25,7 @@ func RootActionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err := fmt.Fprintf(w, "")
 	if err != nil {
-		slog.Error("failed to write response", slog.Any("error", err))
+		slog.Error("failed to write response", attr.Error(err))
 	}
 }
 
@@ -37,7 +38,7 @@ func RootActionHandler(w http.ResponseWriter, r *http.Request) {
 func HealthActionHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := fmt.Fprintf(w, "Ok")
 	if err != nil {
-		slog.Error("failed to write response", slog.Any("error", err))
+		slog.Error("failed to write response", attr.Error(err))
 	}
 }
 
@@ -50,7 +51,7 @@ func HealthActionHandler(w http.ResponseWriter, _ *http.Request) {
 func ReadyActionHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := fmt.Fprintf(w, "Ok")
 	if err != nil {
-		slog.Error("failed to write response", slog.Any("error", err))
+		slog.Error("failed to write response", attr.Error(err))
 	}
 }
 
@@ -63,7 +64,7 @@ func ReadyActionHandler(w http.ResponseWriter, _ *http.Request) {
 func VersionActionHandler(w http.ResponseWriter, _ *http.Request) {
 	_, err := fmt.Fprint(w, backup.Version)
 	if err != nil {
-		slog.Error("failed to write response", slog.Any("error", err))
+		slog.Error("failed to write response", attr.Error(err))
 	}
 }
 

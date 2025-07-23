@@ -39,7 +39,7 @@ type BackupPolicy struct {
 	WithClusterConfig *bool `yaml:"with-cluster-configuration,omitempty" json:"with-cluster-configuration,omitempty" default:"false"`
 	// Throttles backup write speed to a maximum of the specified bandwidth in MiB/s.
 	// Default is no limit.
-	Bandwidth *int `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" extensions:"x-nullable" minimum:"8"`
+	Bandwidth *int64 `yaml:"bandwidth,omitempty" json:"bandwidth,omitempty" example:"10000" extensions:"x-nullable"`
 	// Limits the number of records returned per second (RPS).
 	// Default is no limit.
 	RecordsPerSecond *int `yaml:"records-per-second,omitempty" json:"records-per-second,omitempty" example:"1000" extensions:"x-nullable"`
@@ -118,26 +118,24 @@ func (p *BackupPolicy) Validate() error {
 	}
 	// if err := p.XDRConfig.Validate(); err != nil {
 	//	return fmt.Errorf("invalid xdr config: %w", err)
-	//}
+	// }
 
 	return nil
 }
 
-func validateBandwidth(bandwidth *int) error {
+func validateBandwidth(bandwidth *int64) error {
 	if bandwidth == nil {
 		return nil
 	}
 
-	bw := *bandwidth
-	if bw == 0 || bw >= minBandwidth { // 0 means unlimited bandwidth
-		return nil
+	if *bandwidth < 0 {
+		return errValidationNegative(
+			"bandwidth",
+			*bandwidth,
+		)
 	}
 
-	return errValidationInvalidValue(
-		"bandwidth",
-		bw,
-		"0 (unlimited) or greater than 8 MiB/s",
-	)
+	return nil
 }
 
 func (p *BackupPolicy) ToModel() *model.BackupPolicy {
@@ -161,7 +159,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		EncryptionPolicy:  p.EncryptionPolicy.ToModel(),
 		CompressionPolicy: p.CompressionPolicy.ToModel(),
 		Sealed:            p.Sealed,
-		//XDRConfig:             p.XDRConfig.ToModel(),
+		// XDRConfig:             p.XDRConfig.ToModel(),
 		ConcurrentIncremental: p.ConcurrentIncremental,
 	}
 }

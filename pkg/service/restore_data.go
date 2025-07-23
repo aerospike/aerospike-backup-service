@@ -8,6 +8,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
@@ -61,7 +62,7 @@ func (r *dataRestorer) Restore(ctx context.Context, request *model.RestoreReques
 	ctx, cancel := context.WithCancel(ctx)
 
 	jobID := r.restoreJobs.newJob(request.BackupDataPath, cancel)
-	slog.Info("new restore job", slog.Any("jobID", jobID), slog.Any("request", *request))
+	slog.Info("new restore job", slog.Any("jobId", jobID), slog.Any("request", *request))
 	go func() {
 		err := r.executeRestore(ctx, request, jobID)
 		if err != nil { // if some of restore sub-operations failed, we need to cancel the rest.
@@ -97,7 +98,7 @@ func (r *dataRestorer) executeRestore(
 		// edge case: backups exist but are empty — nothing to restore.
 		// If no backups found, we still attempt restore, as CLI-created files may exist without metadata.
 		r.restoreJobs.finishJob(jobID, nil)
-		slog.Info("Empty backup found, nothing to restore", slog.Any("jobID", jobID))
+		slog.Info("Empty backup found, nothing to restore", slog.Any("jobId", jobID))
 		return nil
 	}
 
@@ -114,7 +115,7 @@ func (r *dataRestorer) executeRestore(
 	r.restoreJobs.addHandler(jobID, handler)
 
 	// Wait for the restore operation to complete
-	slog.Info("Wait for the restore job completion", slog.Any("jobID", jobID))
+	slog.Info("Wait for the restore job completion", slog.Any("jobId", jobID))
 
 	return handler.Wait(ctx)
 }
@@ -228,7 +229,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	if err != nil {
 		slog.Error("Failed to restore by timestamp",
 			slog.Any("cluster", request.DestinationCluster.ClusterLabel),
-			slog.Any("error", err))
+			attr.Error(err))
 		r.restoreJobs.finishJob(jobID, err)
 		return
 	}

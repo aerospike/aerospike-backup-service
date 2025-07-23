@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -64,6 +66,6 @@ func newBackupJob(runner backupRunner, jobType jobType, routineName string) quar
 		runner:      runner,
 		jobType:     jobType,
 		routineName: routineName,
-		logger:      slog.Default().With(slog.String("routine", routineName), slog.Any("type", jobType)),
+		logger:      slog.Default().With(attr.Routine(routineName), slog.Any("type", jobType)),
 	}
 }

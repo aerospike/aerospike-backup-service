@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"path/filepath"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -72,7 +73,7 @@ func httpOK(w http.ResponseWriter, data any) {
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		slog.Error("Error encoding JSON response", slog.Any("error", err))
+		slog.Error("Error encoding JSON response", attr.Error(err))
 	}
 }
 
@@ -82,7 +83,7 @@ func httpAcceptedWithJobID(w http.ResponseWriter, jobID model.RestoreJobID) {
 	w.WriteHeader(http.StatusAccepted)
 	_, err := fmt.Fprintf(w, "%d", jobID)
 	if err != nil {
-		slog.Error("Error encoding job id response", slog.Any("error", err))
+		slog.Error("Error encoding job id response", attr.Error(err))
 	}
 }
 
@@ -107,7 +108,7 @@ func httpContent(w http.ResponseWriter, buf []byte, filename string) {
 	w.WriteHeader(http.StatusOK)
 
 	if _, err := w.Write(buf); err != nil {
-		slog.Error("Error encoding writing response", slog.Any("error", err))
+		slog.Error("Error encoding writing response", attr.Error(err))
 		http.Error(w, "Failed to send file", http.StatusInternalServerError)
 	}
 }

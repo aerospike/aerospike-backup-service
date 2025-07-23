@@ -13,8 +13,19 @@ COPY --from=xx / /
 WORKDIR /app/aerospike-backup-service
 COPY . .
 
-RUN <<-EOF
-    xx-go --wrap
+RUN xx-go --wrap
+
+RUN --mount=type=secret,id=GOPROXY <<-EOF
+    if [ -s /run/secrets/GOPROXY ]; then
+        export GOPROXY=$(cat /run/secrets/GOPROXY)
+    fi
+    go mod download
+EOF
+
+RUN --mount=type=secret,id=GOPROXY <<-EOF
+    if [ -s /run/secrets/GOPROXY ]; then
+        export GOPROXY=$(cat /run/secrets/GOPROXY)
+    fi
     OS=${TARGETOS} ARCH=${TARGETARCH} make build
     xx-verify /app/aerospike-backup-service/build/target/aerospike-backup-service_${TARGETOS}_${TARGETARCH}
 EOF
