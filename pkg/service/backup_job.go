@@ -35,7 +35,7 @@ func (j *backupJob) Execute(ctx context.Context) error {
 	jobMetadata, ok := ctx.Value(quartz.JobMetadataContextKey).(quartz.JobMetadata)
 	if !ok {
 		return fmt.Errorf("failed to retrieve job metadata from context. " +
-			"Use quartz.WithJobMetadata() option for scheduling jobs")
+			"Use quartz.WithJobMetadata() when initializing the scheduler")
 	}
 	now := time.Unix(0, jobMetadata.RunTime).Truncate(time.Millisecond)
 
