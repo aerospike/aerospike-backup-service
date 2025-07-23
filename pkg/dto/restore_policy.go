@@ -56,7 +56,7 @@ type RestorePolicy struct {
 	NoGeneration *bool `json:"no-generation,omitempty" default:"false"`
 	// Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in MiB/s.
 	// Default: no limit.
-	Bandwidth *int `json:"bandwidth,omitempty" example:"50000" extensions:"x-nullable" minimum:"8"`
+	Bandwidth *int64 `json:"bandwidth,omitempty" example:"50000" extensions:"x-nullable"`
 	// Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.
 	// Default: no limit.
 	Tps *int `json:"tps,omitempty" example:"4000" extensions:"x-nullable"`

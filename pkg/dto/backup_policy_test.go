@@ -15,7 +15,7 @@ func TestBackupPolicyConversionIsLossless(t *testing.T) {
 	noRecords := true
 	noIndexes := false
 	noUdfs := true
-	bandwidth := 50
+	bandwidth := int64(50)
 	recordsPerSecond := 100
 	fileLimit := 1024
 	compressionPolicy := &CompressionPolicy{Level: 5}
