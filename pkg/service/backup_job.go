@@ -32,7 +32,11 @@ var _ quartz.Job = (*backupJob)(nil)
 
 // Execute is called by a Scheduler when the Trigger associated with this job fires.
 func (j *backupJob) Execute(ctx context.Context) error {
-	jobMetadata, _ := ctx.Value(quartz.JobMetadataContextKey).(quartz.JobMetadata)
+	jobMetadata, ok := ctx.Value(quartz.JobMetadataContextKey).(quartz.JobMetadata)
+	if !ok {
+		return fmt.Errorf("failed to retrieve job metadata from context. " +
+			"Use quartz.WithJobMetadata() option for scheduling jobs")
+	}
 	now := time.Unix(0, jobMetadata.RunTime).Truncate(time.Millisecond)
 
 	if j.isRunning.CompareAndSwap(false, true) {
