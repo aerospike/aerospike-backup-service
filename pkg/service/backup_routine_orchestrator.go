@@ -216,27 +216,31 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 
 func (h *BackupRoutineOrchestrator) skipIncrementalBackup(now time.Time) bool {
 	currentStat := h.registry.GetRoutineState(h.routineName)
+
+	// Skip if no initial full backup has been completed
 	if currentStat.LastRunTime.NoFullBackup() {
-		h.logger.Debug("Skip incremental backup until initial full backup is done")
+		h.logger.Debug("Skipping incremental backup: initial full backup not yet completed")
 		return true
 	}
 
-	// Concurrent incremental are only allowed when explicitly set.
+	// Concurrent incremental are only allowed when explicitly set (default is false).
 	allowConcurrent := h.routine.BackupPolicy.ConcurrentIncremental != nil &&
 		*h.routine.BackupPolicy.ConcurrentIncremental
 
-	if currentStat.Full != nil && !allowConcurrent {
-		h.logger.Debug("Full backup is currently in progress, skipping incremental backup")
-		return true
-	}
-	if currentStat.Incremental != nil && !allowConcurrent {
-		h.logger.Debug("Incremental backup is currently in progress, skipping incremental backup")
-		return true
-	}
-	// check if we have full backup starting at the same time
-	if util.IsCronFireTime(h.routine.IntervalCron, now) && !allowConcurrent {
-		h.logger.Debug("Skip because we have full backup running at same time")
-		return true
+	// Skip if concurrent backups are not allowed and any backup is running
+	if !allowConcurrent {
+		if currentStat.Full != nil {
+			h.logger.Debug("Skipping incremental backup: full backup in progress")
+			return true
+		}
+		if currentStat.Incremental != nil {
+			h.logger.Debug("Skipping incremental backup: another incremental backup in progress")
+			return true
+		}
+		if util.IsCronFireTime(h.routine.IntervalCron, now) {
+			h.logger.Debug("Skipping incremental backup: full backup scheduled at same time")
+			return true
+		}
 	}
 
 	return false
