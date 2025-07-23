@@ -177,12 +177,14 @@ func (mc *MetricsCollector) collectBackupMetrics() {
 	for routineName, currentStat := range runningState {
 		// Update Full backup metric if running
 		if currentStat.Full != nil {
-			backupProgress.WithLabelValues(routineName, "Full").Set(float64(currentStat.Full.PercentageDone))
+			backupProgress.WithLabelValues(routineName, string(jobTypeFull)).
+				Set(float64(currentStat.Full.PercentageDone))
 		}
 
 		// Update Incremental backup metric if running
 		if currentStat.Incremental != nil {
-			backupProgress.WithLabelValues(routineName, "Incremental").Set(float64(currentStat.Incremental.PercentageDone))
+			backupProgress.WithLabelValues(routineName, string(jobTypeIncremental)).
+				Set(float64(currentStat.Incremental.PercentageDone))
 		}
 	}
 }

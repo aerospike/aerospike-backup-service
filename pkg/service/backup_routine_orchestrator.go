@@ -197,7 +197,7 @@ func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.T
 }
 
 func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, now time.Time) {
-	if h.skipIncrementalBackup() {
+	if h.skipIncrementalBackup(now) {
 		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeSkip, 0)
 		return
 	}
@@ -214,23 +214,30 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 	}
 }
 
-func (h *BackupRoutineOrchestrator) skipIncrementalBackup() bool {
+func (h *BackupRoutineOrchestrator) skipIncrementalBackup(now time.Time) bool {
 	currentStat := h.registry.GetRoutineState(h.routineName)
+
+	// Skip if no initial full backup has been completed
 	if currentStat.LastRunTime.NoFullBackup() {
-		h.logger.Debug("Skip incremental backup until initial full backup is done")
+		h.logger.Debug("Skipping incremental backup: initial full backup not yet completed")
 		return true
 	}
 
-	// Concurrent incremental are only allowed when explicitly set.
-	allowConcurrent := h.routine.BackupPolicy.ConcurrentIncremental != nil &&
-		*h.routine.BackupPolicy.ConcurrentIncremental
-
-	if currentStat.Full != nil && !allowConcurrent {
-		h.logger.Debug("Full backup is currently in progress, skipping incremental backup")
-		return true
+	// Concurrent incremental are only allowed when explicitly set (default is false).
+	if allowConcurrent := h.routine.BackupPolicy.ConcurrentIncremental != nil &&
+		*h.routine.BackupPolicy.ConcurrentIncremental; allowConcurrent {
+		return false
 	}
-	if currentStat.Incremental != nil && !allowConcurrent {
-		h.logger.Debug("Incremental backup is currently in progress, skipping incremental backup")
+
+	switch {
+	case currentStat.Full != nil:
+		h.logger.Debug("Skipping incremental backup: full backup in progress")
+		return true
+	case currentStat.Incremental != nil:
+		h.logger.Debug("Skipping incremental backup: another incremental backup in progress")
+		return true
+	case util.IsCronFireTime(h.routine.IntervalCron, now):
+		h.logger.Debug("Skipping incremental backup: full backup scheduled at same time")
 		return true
 	}
 

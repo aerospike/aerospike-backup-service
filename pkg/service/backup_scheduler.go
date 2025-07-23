@@ -50,6 +50,7 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 	scheduler, err := quartz.NewStdScheduler(
 		quartz.WithOutdatedThreshold(time.Second),
 		quartz.WithLogger(logger.NewSlogLogger(ctx, appLogger)),
+		quartz.WithJobMetadata(),
 	)
 	return scheduler, err
 }

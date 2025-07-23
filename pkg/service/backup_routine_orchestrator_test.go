@@ -288,83 +288,82 @@ func TestBackupRoutineOrchestrator_runFullBackup_RaceCondition(t *testing.T) {
 	time.Sleep(10 * time.Millisecond) // time to unregister routine.
 }
 
-func TestRunIncrementalBackup_SkipWhenNoFullBackup(t *testing.T) {
+func TestSkipIncrementalBackup(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	config := setupBaseConfig()
+	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	lastFullBackupTime := now.Add(-25 * time.Hour)
 
-	mockClientManager := aerospike.NewMockClientManager(ctrl)
-	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
-	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
-	mockRetentionManager := NewMockRetentionManager(ctrl)
-	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
-	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
-
-	mockRegistry.EXPECT().GetRoutineState(routineName).Return(&model.RoutineState{
-		LastRunTime: model.NewNoBackupTime(),
-	}).AnyTimes()
-
-	o := newOrchestrator(routineName, config, NewBackupComponents(
-		mockClientManager,
-		mockBackupExecutor,
-		mockRegistry,
-		mockRetentionManager,
-		mockBackupBackend,
-		mockClusterConfigWriter,
-	))
-
-	ctx := context.Background()
-	now := time.Now()
-
-	counter := backupCounters.WithLabelValues(routineName, string(jobTypeIncremental), string(BackupOutcomeSkip))
-	counterValueBefore := testutil.ToFloat64(counter)
-	o.runIncrementalBackup(ctx, now)
-
-	counterValueAfter := testutil.ToFloat64(counter)
-	assert.Equal(t, counterValueBefore+1, counterValueAfter)
-}
-
-func TestRunIncrementalBackup_SkipWhenFullBackupInProgress(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	config := setupBaseConfig()
-
-	mockClientManager := aerospike.NewMockClientManager(ctrl)
-	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
-	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
-	mockRetentionManager := NewMockRetentionManager(ctrl)
-	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
-	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
-
-	// Simulate an ongoing full backup
-	runningBackup := model.RoutineState{
-		LastRunTime: model.NewFullBackupTime(time.Now().Add(-24 * time.Hour)),
-		Full: &model.RunningJob{
-			StartTime: time.Now(),
+	tests := []struct {
+		name           string
+		routineState   *model.RoutineState
+		concurrent     bool
+		intervalCron   string
+		now            time.Time
+		expectedToSkip bool
+	}{
+		{
+			name: "don't skip usually",
+			routineState: &model.RoutineState{
+				LastRunTime: model.NewFullBackupTime(lastFullBackupTime),
+			},
+			intervalCron:   "@daily",
+			now:            now.Add(1 * time.Hour),
+			expectedToSkip: false,
+		},
+		{
+			name:           "skip when no full backup",
+			routineState:   &model.RoutineState{LastRunTime: model.NewNoBackupTime()},
+			expectedToSkip: true,
+		},
+		{
+			name: "skip when full backup in progress",
+			routineState: &model.RoutineState{
+				LastRunTime: model.NewFullBackupTime(now.Add(-24 * time.Hour)),
+				Full:        &model.RunningJob{StartTime: now},
+			},
+			expectedToSkip: true,
+		},
+		{
+			name: "don't skip when full backup in progress and concurrent allowed",
+			routineState: &model.RoutineState{
+				LastRunTime: model.NewFullBackupTime(now.Add(-24 * time.Hour)),
+				Full:        &model.RunningJob{StartTime: now},
+			},
+			concurrent:     true,
+			expectedToSkip: false,
+		},
+		{
+			name: "skip when full backup is scheduled at same time",
+			routineState: &model.RoutineState{
+				LastRunTime: model.NewFullBackupTime(lastFullBackupTime),
+			},
+			intervalCron:   "@daily",
+			now:            now,
+			expectedToSkip: true,
 		},
 	}
-	mockRegistry.EXPECT().GetRoutineState(routineName).Return(&runningBackup).AnyTimes()
 
-	o := newOrchestrator(routineName, config, NewBackupComponents(
-		mockClientManager,
-		mockBackupExecutor,
-		mockRegistry,
-		mockRetentionManager,
-		mockBackupBackend,
-		mockClusterConfigWriter,
-	))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := setupBaseConfig()
+			routine, _ := config.Routine(routineName)
+			routine.IntervalCron = tt.intervalCron
+			if tt.concurrent {
+				routine.BackupPolicy.ConcurrentIncremental = util.Ptr(true)
+			}
 
-	ctx := context.Background()
-	now := time.Now()
+			mockRegistry := NewMockRunningBackupsRegistry(ctrl)
+			mockRegistry.EXPECT().GetRoutineState(routineName).Return(tt.routineState).AnyTimes()
 
-	counter := backupCounters.WithLabelValues(routineName, string(jobTypeIncremental), string(BackupOutcomeSkip))
-	counterValueBefore := testutil.ToFloat64(counter)
-	o.runIncrementalBackup(ctx, now)
+			orchestrator := newOrchestrator(routineName, config, &BackupComponents{
+				registry: mockRegistry,
+			})
 
-	counterValueAfter := testutil.ToFloat64(counter)
-	assert.Equal(t, counterValueBefore+1, counterValueAfter)
+			assert.Equal(t, tt.expectedToSkip, orchestrator.skipIncrementalBackup(tt.now))
+		})
+	}
 }
 
 func TestRunIncrementalBackup_Success(t *testing.T) {
