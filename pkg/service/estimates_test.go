@@ -16,18 +16,18 @@ func TestNewRunningJob(t *testing.T) {
 
 		assert.Equal(t, startTime, result.StartTime)
 		assert.Equal(t, &finishTime, result.FinishTime)
-		assert.Equal(t, uint64(0), result.DoneRecords)
-		assert.Equal(t, uint64(0), result.TotalRecords)
+		assert.Zero(t, result.DoneRecords)
+		assert.Zero(t, result.TotalRecords)
 		assert.Nil(t, result.EstimatedEndTime)
-		assert.Equal(t, uint(0), result.PercentageDone)
+		assert.Zero(t, result.PercentageDone)
 	})
 
 	t.Run("zero progress", func(t *testing.T) {
 		result := NewRunningJob(startTime, nil, 0, 100)
 
-		assert.Equal(t, uint64(0), result.DoneRecords)
+		assert.Zero(t, result.DoneRecords)
+		assert.Zero(t, result.PercentageDone)
 		assert.Equal(t, uint64(100), result.TotalRecords)
-		assert.Equal(t, uint(0), result.PercentageDone)
 		assert.Nil(t, result.EstimatedEndTime) // too early to estimate
 	})
 
