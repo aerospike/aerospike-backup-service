@@ -21,6 +21,9 @@ import (
 // @Failure     400 {string} string
 // @Failure     500 {string} string
 func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	name := r.PathValue("name")
 	if name == "" {
 		httpError(w, errMissingClusterName)
@@ -59,6 +62,9 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Success  	200 {object} map[string]dto.AerospikeCluster
 // @Failure     500 {string} string
 func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	backupConfig := s.config.BackupConfigCopy()
 	clusters := dto.ConvertModelMapToDTO(
 		backupConfig.AerospikeClusters,
@@ -81,6 +87,9 @@ func (s *Service) ReadAerospikeClusters(w http.ResponseWriter, _ *http.Request) 
 // @Failure     404 {string} string "The specified cluster could not be found"
 // @Failure     500 {string} string "The specified cluster could not be found"
 func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	clusterName := r.PathValue("name")
 	if clusterName == "" {
 		httpError(w, errMissingClusterName)
@@ -107,6 +116,9 @@ func (s *Service) ReadAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	clusterName := r.PathValue("name")
 	if clusterName == "" {
 		httpError(w, errMissingClusterName)
@@ -152,6 +164,9 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 // @Success     204
 // @Failure     400 {string} string
 func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	clusterName := r.PathValue("name")
 	if clusterName == "" {
 		httpError(w, errMissingClusterName)
