@@ -19,9 +19,6 @@ import (
 // @Success     201
 // @Failure     400 {string} string
 func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	newPolicy, err := dto.NewBackupPolicyFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
@@ -53,9 +50,6 @@ func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 // @Success  	200 {object} map[string]dto.BackupPolicy
 // @Failure     500 {string} string
 func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	policies := dto.ConvertModelMapToDTO(s.config.BackupConfigCopy().BackupPolicies, dto.NewBackupPolicyFromModel)
 	httpOK(w, policies)
 }
@@ -72,9 +66,6 @@ func (s *Service) ReadPolicies(w http.ResponseWriter, _ *http.Request) {
 // @Failure     404 {string} string "The specified policy could not be found"
 // @Failure     500 {string} string "The specified policy could not be found"
 func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	name := r.PathValue("name")
 	if name == "" {
 		httpError(w, errMissingPolicyName)
@@ -100,9 +91,6 @@ func (s *Service) ReadPolicy(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	updatedPolicy, err := dto.NewBackupPolicyFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
@@ -135,9 +123,6 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 // @Success     204
 // @Failure     400 {string} string
 func (s *Service) DeletePolicy(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	name := r.PathValue("name")
 	if name == "" {
 		httpError(w, errMissingPolicyName)

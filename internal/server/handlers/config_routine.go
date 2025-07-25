@@ -1,10 +1,10 @@
 package handlers
 
 import (
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"log/slog"
 	"net/http"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -23,9 +23,6 @@ import (
 //
 //nolint:dupl
 func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	name := r.PathValue("name")
 	if name == "" {
 		httpError(w, errMissingRoutineName)
@@ -63,9 +60,6 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success  	200 {object} map[string]dto.BackupRoutine
 // @Failure     400 {string} string
 func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	routines := dto.ConvertModelMapToDTO(s.config.Routines(), func(m *model.BackupRoutine) *dto.BackupRoutine {
 		return dto.NewRoutineFromModel(m, s.config)
 	})
@@ -84,9 +78,6 @@ func (s *Service) ReadRoutines(w http.ResponseWriter, _ *http.Request) {
 // @Response    400 {string} string
 // @Failure     404 {string} string "The specified routine could not be found"
 func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	routineName := r.PathValue("name")
 	if routineName == "" {
 		httpError(w, errMissingRoutineName)
@@ -114,9 +105,6 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 //
 //nolint:dupl
 func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	name := r.PathValue("name")
 	if name == "" {
 		httpError(w, errMissingRoutineName)
@@ -156,9 +144,6 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success     204
 // @Failure     400 {string} string
 func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	routineName := r.PathValue("name")
 	if routineName == "" {
 		httpError(w, errMissingRoutineName)
@@ -185,9 +170,6 @@ func (s *Service) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure     404 {string} string
 // @Router      /v1/config/routines/{name}/enable [put]
 func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	routineName := r.PathValue("name")
 	if routineName == "" {
 		httpError(w, errMissingRoutineName)
@@ -221,9 +203,6 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 // @Failure     500 {string} string "Unexpected error occurred."
 // @Router      /v1/config/routines/{name}/disable [put]
 func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	routineName := r.PathValue("name")
 	if routineName == "" {
 		httpError(w, errMissingRoutineName)

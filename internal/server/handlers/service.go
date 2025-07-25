@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -23,8 +22,6 @@ type Service struct {
 	registry             RunningBackupsRegistry
 	configurationManager configuration.Manager
 	nsValidator          aerospike.NamespaceValidator
-
-	mu sync.RWMutex
 }
 
 func NewService(

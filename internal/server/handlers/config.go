@@ -11,6 +11,10 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/validation"
 )
 
+func (s *Service) ConfigActionHandler(_ http.ResponseWriter, _ *http.Request) {
+
+}
+
 // ReadConfig
 // @Summary     Returns the configuration for the service.
 // @ID	        readConfig
@@ -20,9 +24,6 @@ import (
 // @Success     200 {object} dto.Config
 // @Failure     500 {string} string
 func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	httpOK(w, dto.NewConfigFromModel(s.config))
 }
 
@@ -36,9 +37,6 @@ func (s *Service) ReadConfig(w http.ResponseWriter, _ *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	newConfig, err := dto.NewConfigFromReader(r.Body, decoder.JSON)
 	if err != nil {
 		httpError(w, errInvalidJSONPayload(err))
@@ -80,9 +78,6 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	config, err := s.configurationManager.Read(r.Context())
 	if err != nil {
 		httpError(w, fmt.Errorf("failed to read configuration: %w", err))
