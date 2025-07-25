@@ -2,6 +2,8 @@ package model
 
 import (
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"log/slog"
 	"maps"
 	"sync"
 )
@@ -321,6 +323,8 @@ func (c *Config) SetBackupConfig(other *BackupConfig) {
 func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	slog.Info("toggle routine", attr.Routine(name), slog.Bool("disabled", isDisabled))
 
 	_, exists := c.backupConfig.BackupRoutines[name]
 	if !exists {

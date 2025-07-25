@@ -78,6 +78,9 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	config, err := s.configurationManager.Read(r.Context())
 	if err != nil {
 		httpError(w, fmt.Errorf("failed to read configuration: %w", err))
@@ -103,6 +106,9 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	err := updateFunc(s.config)
 	if err != nil {
 		return fmt.Errorf("cannot update configuration: %w", err)

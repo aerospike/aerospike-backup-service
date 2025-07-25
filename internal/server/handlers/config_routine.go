@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
-	"log/slog"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -182,7 +180,6 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := s.changeConfig(r.Context(), func(config *model.Config) error {
-		slog.Info("Enabling routine ", attr.Routine(routineName))
 		return config.ToggleRoutineDisabled(routineName, false)
 	})
 	if err != nil {
