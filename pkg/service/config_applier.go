@@ -46,13 +46,13 @@ func (a *DefaultConfigApplier) ApplyNewConfig() error {
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
 
-	// Scan existing backups to find the last successful runs for every routine.
-	go a.registry.SynchroniseBackupHistory()
-
 	err = scheduleRoutines(a.scheduler, a.config, a.components)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
+
+	// Scan existing backups to find the last successful runs for every routine.
+	go a.registry.SynchroniseBackupHistory()
 
 	return nil
 }
