@@ -78,25 +78,23 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	err := s.changeConfig(r.Context(), func(_ *model.Config) error {
+		config, err := s.configurationManager.Read(r.Context())
+		if err != nil {
+			return fmt.Errorf("failed to read configuration: %w", err)
+		}
 
-	config, err := s.configurationManager.Read(r.Context())
-	if err != nil {
-		httpError(w, fmt.Errorf("failed to read configuration: %w", err))
-		return
-	}
+		// validate static fields.
+		newConfig := dto.NewConfigFromModel(config)
+		oldConfig := dto.NewConfigFromModel(s.config)
+		if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
+			return fmt.Errorf("static fields changed: %w", err)
+		}
 
-	// validate static fields.
-	newConfig := dto.NewConfigFromModel(s.config)
-	oldConfig := dto.NewConfigFromModel(config)
-	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
+		s.config.SetBackupConfig(config.BackupConfigCopy())
 
-	s.config.SetBackupConfig(config.BackupConfigCopy())
-	err = s.configApplier.ApplyNewConfig()
+		return nil
+	})
 
 	if err != nil {
 		httpError(w, err)
@@ -105,9 +103,14 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// changeConfig atomically updates the service configuration by applying the given
+// update function to the current config, persisting it to disk, and applying it
+// to the business logic.
+//
+// All configuration modifications must go through this method to prevent race conditions.
 func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.configMutex.Lock()
+	defer s.configMutex.Unlock()
 
 	err := updateFunc(s.config)
 	if err != nil {
