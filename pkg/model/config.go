@@ -2,11 +2,10 @@ package model
 
 import (
 	"fmt"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"log/slog"
 	"maps"
 	"sync"
-
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 )
 
 // Config represents the service configuration.

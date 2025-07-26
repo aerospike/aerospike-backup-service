@@ -24,7 +24,7 @@ type Service struct {
 	configurationManager configuration.Manager
 	nsValidator          aerospike.NamespaceValidator
 
-	configMutex sync.Mutex
+	mu sync.Mutex
 }
 
 func NewService(
