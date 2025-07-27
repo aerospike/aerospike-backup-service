@@ -80,6 +80,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	// ApplyConfig and changeConfig must be synchronized to prevent race conditions
 	// where one operation reads/writes config while another is in the middle of updating it
+	s.changeConfigLock.Lock()
 	defer s.changeConfigLock.Unlock()
 
 	config, err := s.configurationManager.Read(r.Context())
