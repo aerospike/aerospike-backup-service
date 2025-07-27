@@ -64,7 +64,7 @@ func scheduleRoutines(
 	var errs error
 	for routineName, routine := range config.Routines() {
 		if routine.Disabled {
-			slog.Info("Skipping disabled routine", attr.Routine(routineName))
+			slog.Debug("Skipping disabled routine", attr.Routine(routineName))
 			continue
 		}
 
@@ -82,7 +82,7 @@ func scheduleRoutines(
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
 		}
 
-		slog.Info("Scheduled routine", attr.Routine(routineName))
+		slog.Debug("Scheduled routine", attr.Routine(routineName))
 	}
 
 	jobStore.ReplaceContent(newJobs)
