@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
@@ -27,7 +28,7 @@ type BackupRoutineOrchestrator struct {
 	registry            RunningBackupsRegistry
 	retentionManager    RetentionManager
 
-	routineLocks util.LockMap
+	fullBackupLock sync.Mutex
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
@@ -79,6 +80,15 @@ func newOrchestrator(routineName string, config *model.Config, h *BackupComponen
 }
 
 func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.Time) {
+	// We use the registry to determine if a full backup is running, so the check must be performed
+	// under lock protection, and the lock must be held until the backup is registered.
+	h.fullBackupLock.Lock()
+	if h.skipFullBackup() {
+		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSkip, 0)
+		h.fullBackupLock.Unlock()
+		return
+	}
+
 	duration, err := util.MeasureDuration(func() error {
 		return h.runFullBackupInternal(ctx, now)
 	})
@@ -99,20 +109,11 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	}
 	defer h.clientManager.Close(client)
 
-	lock := h.routineLocks.Get(h.routineName)
-	lock.Lock()
-	if h.skipFullBackup() {
-		lock.Unlock()
-
-		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSkip, 0)
-		return nil
-	}
-
 	timeBounds := h.createTimeBounds(jobTypeFull, now)
 	backupHandler := startNamespacesBackup(ctx, h.runner, client, namespaces, timeBounds, now, h.routine, jobTypeFull)
 
 	h.registry.register(h.routineName, jobTypeFull, backupHandler)
-	lock.Unlock()
+	h.fullBackupLock.Unlock()
 
 	h.backupClusterConfiguration(ctx, now)
 
