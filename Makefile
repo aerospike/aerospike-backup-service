@@ -36,7 +36,7 @@ ARCH ?= $(shell $(GO) env GOARCH)
 REGISTRY ?= "docker.io"
 
 GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 $(GO) build \
--trimpath -ldflags="-s -w -X main.appVersion=$(VERSION) -X main.commitHash=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
+-trimpath -ldflags="-s -w -X main.commitHash=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
 GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
