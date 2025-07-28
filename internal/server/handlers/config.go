@@ -78,6 +78,11 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 // @Success     200
 // @Failure     400 {string} string
 func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
+	// ApplyConfig and changeConfig must be synchronized to prevent race conditions
+	// where one operation reads/writes config while another is in the middle of updating it
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+
 	config, err := s.configurationManager.Read(r.Context())
 	if err != nil {
 		httpError(w, fmt.Errorf("failed to read configuration: %w", err))
@@ -88,7 +93,7 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 	newConfig := dto.NewConfigFromModel(s.config)
 	oldConfig := dto.NewConfigFromModel(config)
 	if err := validation.ValidateStaticFieldChanges(oldConfig, newConfig); err != nil {
-		httpError(w, errBadRequest(err))
+		httpError(w, errBadRequest(fmt.Errorf("static configuration has changed: %w", err)))
 		return
 	}
 
@@ -103,6 +108,11 @@ func (s *Service) ApplyConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) changeConfig(ctx context.Context, updateFunc func(*model.Config) error) error {
+	// ApplyConfig and changeConfig must be synchronized to prevent race conditions
+	// where one operation reads/writes config while another is in the middle of updating it
+	s.changeConfigLock.Lock()
+	defer s.changeConfigLock.Unlock()
+
 	err := updateFunc(s.config)
 	if err != nil {
 		return fmt.Errorf("cannot update configuration: %w", err)
