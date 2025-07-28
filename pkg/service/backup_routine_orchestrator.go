@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"errors" // Added import
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
