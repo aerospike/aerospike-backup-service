@@ -135,7 +135,7 @@ func (cm *ClientManagerImpl) storeClient(clusterKey string, client *backup.Clien
 	if cm.logger != nil {
 		cm.logger.Info("Created new backup client",
 			slog.Int("len", len(cm.clients)),
-			slog.String("key", clusterKey))
+			slog.String("id", clusterKey))
 	}
 }
 
