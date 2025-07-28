@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
@@ -13,6 +15,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 )
+
+var errBackupSkipped = errors.New("full backup skipped")
 
 // BackupRoutineOrchestrator orchestrates the execution of a single backup routine (both full and incremental).
 // It manages all necessary preparations, executes the backup process, handles post-processing, and updates metrics.
@@ -27,7 +31,7 @@ type BackupRoutineOrchestrator struct {
 	registry            RunningBackupsRegistry
 	retentionManager    RetentionManager
 
-	routineLocks util.LockMap
+	fullBackupLock sync.Mutex
 }
 
 var _ backupRunner = (*BackupRoutineOrchestrator)(nil)
@@ -84,35 +88,39 @@ func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.
 	})
 
 	if err != nil {
-		h.logger.Error("Full backup failed", attr.Error(err))
-		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeFailure, duration)
+		if errors.Is(err, errBackupSkipped) {
+			h.logger.Debug("Full backup skipped")
+			observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSkip, 0)
+		} else {
+			h.logger.Error("Full backup failed", attr.Error(err))
+			observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeFailure, duration)
+		}
 	} else {
-		h.logger.Debug("Finished full backup", slog.Int64("time", now.UnixMilli()))
+		h.logger.Debug("Full backup finished")
 		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSuccess, duration)
 	}
 }
 
 func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, now time.Time) error {
+	h.fullBackupLock.Lock()
+	if h.skipFullBackup() {
+		h.fullBackupLock.Unlock()
+		return errBackupSkipped
+	}
+
 	client, namespaces, err := h.prepareCluster(h.retry)
 	if err != nil {
+		h.fullBackupLock.Unlock()
 		return err
 	}
 	defer h.clientManager.Close(client)
-
-	lock := h.routineLocks.Get(h.routineName)
-	lock.Lock()
-	if h.skipFullBackup() {
-		lock.Unlock()
-
-		observeBackupEvent(h.routineName, jobTypeFull, BackupOutcomeSkip, 0)
-		return nil
-	}
 
 	timeBounds := h.createTimeBounds(jobTypeFull, now)
 	backupHandler := startNamespacesBackup(ctx, h.runner, client, namespaces, timeBounds, now, h.routine, jobTypeFull)
 
 	h.registry.register(h.routineName, jobTypeFull, backupHandler)
-	lock.Unlock()
+	// The lock must be held until the backup is registered.
+	h.fullBackupLock.Unlock()
 
 	h.backupClusterConfiguration(ctx, now)
 
@@ -120,8 +128,8 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 		h.registry.remove(h.routineName, jobTypeFull)
 		return fmt.Errorf("backup failed: %w", err)
 	}
-	go h.registry.unregister(h.routineName, jobTypeFull, now)
 
+	go h.registry.unregister(h.routineName, jobTypeFull, now)
 	go h.deleteOldBackups(ctx, h.routineName)
 
 	return nil
@@ -198,6 +206,7 @@ func (h *BackupRoutineOrchestrator) createTimeBounds(jobType jobType, now time.T
 
 func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, now time.Time) {
 	if h.skipIncrementalBackup(now) {
+		h.logger.Debug("Incremental backup skipped")
 		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeSkip, 0)
 		return
 	}
@@ -210,7 +219,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 		h.logger.Error("Incremental backup failed", attr.Error(err))
 	} else {
 		observeBackupEvent(h.routineName, jobTypeIncremental, BackupOutcomeSuccess, duration)
-		h.logger.Debug("Finished incremental backup", slog.Int64("time", now.UnixMilli()))
+		h.logger.Debug("Incremental backup finished")
 	}
 }
 
