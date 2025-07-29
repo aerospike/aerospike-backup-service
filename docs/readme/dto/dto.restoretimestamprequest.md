@@ -11,7 +11,5 @@ RestoreTimestampRequest represents a restore by timestamp operation request.
 | `policy`             | Restore policy to use in the operation.<br>See: [dto.RestorePolicy](dto.restorepolicy.md)                                                                |               |
 | `secret-agent`       | Secret Agent configuration (optional).<br>Mutually exclusive with 'secret-agent-name'.<br>See: [dto.SecretAgent](dto.secretagent.md)                     |               |
 | `secret-agent-name`  | Secret Agent configuration (optional). Link to one of preconfigured agents.<br>Mutually exclusive with 'secret-agent'.                                   |               |
-| `source`             | The details of the storage configuration.<br>Mutually exclusive with 'source-name'.<br>See: [dto.Storage](dto.storage.md)                                |               |
-| `source-name`        | Link to one of preconfigured storages.<br>Mutually exclusive with 'source'.                                                                              |               |
 
 📍 = Required field
