@@ -93,7 +93,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 			NoRecords:     util.Ptr(true),
 			NoIndexes:     util.Ptr(true),
 			NoUdfs:        util.Ptr(true),
-			Bandwidth:     util.Ptr(10),
+			Bandwidth:     util.Ptr(int64(10)),
 			SocketTimeout: util.Ptr(5 * time.Minute),
 
 			CompressionPolicy: &model.CompressionPolicy{
@@ -141,7 +141,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	assert.Equal(t, true, config.NoRecords)
 	assert.Equal(t, true, config.NoIndexes)
 	assert.Equal(t, true, config.NoUDFs)
-	assert.Equal(t, 10*megabyte, config.Bandwidth)
+	assert.Equal(t, int64(10*megabyte), config.Bandwidth)
 	assert.Equal(t, timeBounds.ToTime, config.ModBefore)
 	assert.Nil(t, config.ModAfter)
 	assert.NotNil(t, config.ScanPolicy)
@@ -178,7 +178,7 @@ func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {
 			NoRecords: util.Ptr(false),
 			NoIndexes: util.Ptr(false),
 			NoUdfs:    util.Ptr(false),
-			Bandwidth: util.Ptr(10),
+			Bandwidth: util.Ptr(int64(10)),
 		},
 		SetList:          []string{"testSet"},
 		BinList:          []string{"bin1", "bin2"},
@@ -207,7 +207,7 @@ func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {
 	assert.Equal(t, false, config.NoRecords)
 	assert.Equal(t, true, config.NoIndexes) // Incremental backup should have NoIndexes=true
 	assert.Equal(t, true, config.NoUDFs)    // Incremental backup should have NoUDFs=true
-	assert.Equal(t, 10*megabyte, config.Bandwidth)
+	assert.Equal(t, int64(10*megabyte), config.Bandwidth)
 	assert.Equal(t, timeBounds.ToTime, config.ModBefore)
 	assert.Equal(t, timeBounds.FromTime, config.ModAfter)
 	assert.NotNil(t, config.ScanPolicy)

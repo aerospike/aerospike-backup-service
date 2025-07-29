@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
@@ -111,7 +112,7 @@ func (c *Credentials) loadPassword() *string {
 	if c.Password != nil {
 		password, err := c.SecretAgent.Read(*c.Password)
 		if err != nil {
-			slog.Warn("Failed to read password from secret agent", slog.Any("error", err))
+			slog.Warn("Failed to read password from secret agent", attr.Error(err))
 			return nil
 		}
 
@@ -136,11 +137,11 @@ func (c *Credentials) loadPasswordFromFile() *string {
 	if err != nil {
 		slog.Error("Failed to read password",
 			slog.String("path", *c.PasswordPath),
-			slog.Any("error", err))
+			attr.Error(err))
 		return nil
 	}
 
-	slog.Debug("Successfully read password", "path", *c.PasswordPath)
+	slog.Debug("Successfully read password", slog.String("path", *c.PasswordPath))
 	password := string(data)
 
 	return &password

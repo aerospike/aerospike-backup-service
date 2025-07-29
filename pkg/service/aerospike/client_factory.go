@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
@@ -108,7 +109,7 @@ func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
 	if err != nil {
 		slog.Error("Failed to initialize tls.Config",
 			slog.String("cluster", util.ValueOrZero(c.ClusterLabel)),
-			slog.Any("error", err))
+			attr.Error(err))
 	}
 }
 

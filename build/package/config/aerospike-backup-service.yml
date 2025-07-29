@@ -7,7 +7,7 @@ aerospike-clusters:
         port: 3000
     credentials:
       user: tester
-      password: secret:asbackup:psw # Password will be fetched from the secret agent
+      password: secrets:asbackup:psw # Password will be fetched from the secret agent
       secret-agent-name: secret-agent  # <--- Refers to the secret agent name under secret-agents
 
 secret-agents:

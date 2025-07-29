@@ -53,7 +53,10 @@ func RestoreJobStatus(job *restoreJob) *model.RestoreJobStatus {
 // NewRunningJob created new RunningJob with calculated estimated time and percentage.
 func NewRunningJob(startTime time.Time, finishTime *time.Time, done, total uint64) *model.RunningJob {
 	if total == 0 {
-		return &model.RunningJob{}
+		return &model.RunningJob{
+			StartTime:  startTime,
+			FinishTime: finishTime,
+		}
 	}
 
 	percentage := float64(done) / float64(total)

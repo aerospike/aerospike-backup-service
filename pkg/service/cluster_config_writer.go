@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike/cluster"
@@ -37,7 +38,7 @@ func (w *DefaultClusterConfigWriter) Write(
 	routineName string,
 	timestamp time.Time,
 ) error {
-	logger := slog.Default().With(slog.String("routine", routineName))
+	logger := slog.Default().With(attr.Routine(routineName))
 	routine, found := w.config.Routine(routineName)
 	if !found {
 		return fmt.Errorf("routine not found: %q", routineName)
@@ -60,7 +61,7 @@ func (w *DefaultClusterConfigWriter) Write(
 		err := storage.WriteDataFile(ctx, routine.Storage, confFilePath, []byte(info))
 		if err != nil {
 			logger.Error("Failed to write cluster configuration backup",
-				slog.Any("error", err))
+				attr.Error(err))
 		}
 		logger.Debug("Wrote cluster configuration backup", slog.String("path", confFilePath))
 	}

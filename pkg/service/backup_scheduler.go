@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/reugn/go-quartz/logger"
@@ -50,6 +51,7 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 	scheduler, err := quartz.NewStdScheduler(
 		quartz.WithOutdatedThreshold(time.Second),
 		quartz.WithLogger(logger.NewSlogLogger(ctx, appLogger)),
+		quartz.WithJobMetadata(),
 	)
 	return scheduler, err
 }
@@ -62,6 +64,7 @@ func scheduleRoutines(
 	var errs error
 	for routineName, routine := range config.Routines() {
 		if routine.Disabled {
+			slog.Debug("Skipping disabled routine", attr.Routine(routineName))
 			continue
 		}
 
@@ -78,6 +81,8 @@ func scheduleRoutines(
 		if err = scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routineName); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
 		}
+
+		slog.Debug("Scheduled routine", attr.Routine(routineName))
 	}
 
 	jobStore.ReplaceContent(newJobs)

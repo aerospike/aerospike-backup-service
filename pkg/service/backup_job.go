@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -32,13 +32,20 @@ var _ quartz.Job = (*backupJob)(nil)
 
 // Execute is called by a Scheduler when the Trigger associated with this job fires.
 func (j *backupJob) Execute(ctx context.Context) error {
+	jobMetadata, ok := ctx.Value(quartz.JobMetadataContextKey).(quartz.JobMetadata)
+	if !ok {
+		return fmt.Errorf("failed to retrieve job metadata from context. " +
+			"Use quartz.WithJobMetadata() option when initializing the scheduler")
+	}
+	now := time.Unix(0, jobMetadata.RunTime).Truncate(time.Millisecond)
+
 	if j.isRunning.CompareAndSwap(false, true) {
 		defer j.isRunning.Store(false)
 		switch j.jobType {
 		case jobTypeFull:
-			j.runner.runFullBackup(ctx, util.NowWithZeroMillis())
+			j.runner.runFullBackup(ctx, now)
 		case jobTypeIncremental:
-			j.runner.runIncrementalBackup(ctx, util.NowWithZeroMillis())
+			j.runner.runIncrementalBackup(ctx, now)
 		default:
 			j.logger.Error("Unsupported backup type")
 		}
@@ -62,6 +69,6 @@ func newBackupJob(runner backupRunner, jobType jobType, routineName string) quar
 		runner:      runner,
 		jobType:     jobType,
 		routineName: routineName,
-		logger:      slog.Default().With(slog.String("routine", routineName), slog.Any("type", jobType)),
+		logger:      slog.Default().With(attr.Routine(routineName), slog.Any("type", jobType)),
 	}
 }

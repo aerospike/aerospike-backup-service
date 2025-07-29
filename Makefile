@@ -17,7 +17,9 @@ PACKAGERS ?= deb rpm
 
 IMAGE_TAG ?= test
 IMAGE_REPO ?= aerospike/aerospike-backup-service
-
+IMAGE_CACHE_FROM ?=
+IMAGE_CACHE_TO ?=
+IMAGE_OUTPUT ?= type=image,push=true
 TARGET=$(TARGET_DIR)/$(BINARY_NAME)
 ifneq ($(strip $(OS))$(strip $(ARCH)),)
 	TARGET=$(TARGET_DIR)/$(BINARY_NAME)_$(OS)_$(ARCH)
@@ -34,7 +36,7 @@ ARCH ?= $(shell $(GO) env GOARCH)
 REGISTRY ?= "docker.io"
 
 GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 $(GO) build \
--trimpath -ldflags="-s -w -X main.appVersion=$(VERSION) -X main.commitHash=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
+-trimpath -ldflags="-s -w -X main.commitHash=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
 GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
@@ -95,7 +97,14 @@ docker-build:
 
 .PHONY: docker-buildx
 docker-buildx:
-	cd ./build/scripts && ./docker-buildx.sh --tag $(IMAGE_TAG) --registry $(REGISTRY) --platforms "$(ARCHS)"
+	cd ./build/scripts && ./docker-buildx.sh \
+	--repo $(IMAGE_REPO) \
+	--tag $(IMAGE_TAG) \
+	--registry $(REGISTRY) \
+	--platforms "$(ARCHS)" \
+	--cache-to "$(IMAGE_CACHE_TO)" \
+	--cache-from "$(IMAGE_CACHE_FROM)" \
+	--output "$(IMAGE_OUTPUT)"
 
 .PHONY: test
 test:
@@ -122,11 +131,11 @@ clean:
 
 .PHONY: vulnerability-scan
 vulnerability-scan:
-	snyk test --all-projects --policy-path=$(WORKSPACE)/.snyk --severity-threshold=high
+	snyk test --policy-path=.snyk --severity-threshold=high
 
 .PHONY: vulnerability-scan-container
 vulnerability-scan-container:
 	snyk container test $(IMAGE_REPO):$(IMAGE_TAG) \
-	--policy-path=$(WORKSPACE)/.snyk \
+	--policy-path=.snyk \
 	--file=Dockerfile \
 	--severity-threshold=high

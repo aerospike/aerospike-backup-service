@@ -29,7 +29,7 @@ var _ RetentionManager = (*RetentionManagerImpl)(nil)
 func NewBackupRetentionManager(
 	backendService BackupReaderWriter,
 	config *model.Config,
-) RetentionManager {
+) *RetentionManagerImpl {
 	return &RetentionManagerImpl{
 		backendService: backendService,
 		config:         config,
@@ -65,8 +65,9 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routineName
 		}
 	}
 
-	if policy.IncrBackups != nil {
-		if err := e.deleteIncrementalBackups(ctx, timestamps, *policy.IncrBackups, routineName); err != nil {
+	effectiveIncrementalRetention := policy.GetIncrementalRetentionCount()
+	if effectiveIncrementalRetention != nil {
+		if err := e.deleteIncrementalBackups(ctx, timestamps, *effectiveIncrementalRetention, routineName); err != nil {
 			return fmt.Errorf("failed to delete excess incremental backups: %w", err)
 		}
 	}
@@ -95,17 +96,17 @@ func (e *RetentionManagerImpl) deleteFullBackups(
 func (e *RetentionManagerImpl) deleteIncrementalBackups(
 	ctx context.Context, timestamps []time.Time, retainCount int, routineName string,
 ) error {
-	if len(timestamps) <= retainCount {
-		return nil
-	}
-
 	if retainCount == 0 { // Delete all incremental backups.
 		path := getBackupRootPath(routineName, jobTypeIncremental)
 		return e.backendService.Delete(ctx, routineName, path)
 	}
 
+	if len(timestamps) <= retainCount {
+		return nil
+	}
+
 	earliest := timestamps[len(timestamps)-retainCount]
-	incrBackups, err := e.backendService.GetBackups(ctx, NewIncrementalBackupFilter(routineName).WithFromTime(earliest))
+	incrBackups, err := e.backendService.GetBackups(ctx, NewIncrementalBackupFilter(routineName).WithToTime(earliest))
 	if err != nil {
 		return fmt.Errorf("failed to fetch incremental backups: %w", err)
 	}

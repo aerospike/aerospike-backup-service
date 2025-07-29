@@ -30,7 +30,7 @@ type BackupPolicy struct {
 	WithClusterConfig *bool
 	// Throttles backup write operations to the backup file(s) to not exceed the given
 	// bandwidth in MiB/s.
-	Bandwidth *int
+	Bandwidth *int64
 	// Limit total returned records per second (RPS). If RPS is zero (the default),
 	// the records-per-second limit is not applied.
 	RecordsPerSecond *int
@@ -107,4 +107,15 @@ func (p *BackupPolicy) GetFileLimitOrDefault() int {
 type RetentionPolicy struct {
 	FullBackups *int // Number of full backups to store
 	IncrBackups *int // Number of full backups to store incremental backups for
+}
+
+// GetIncrementalRetentionCount returns the effective number of full backups
+// for which to retain incremental backups. When IncrBackups is nil (meaning
+// "retain all incrementals"), this returns the FullBackups value since
+// incremental backups cannot exist without their corresponding full backup.
+func (r *RetentionPolicy) GetIncrementalRetentionCount() *int {
+	if r.IncrBackups == nil {
+		return r.FullBackups
+	}
+	return r.IncrBackups
 }

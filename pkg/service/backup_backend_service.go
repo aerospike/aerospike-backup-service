@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
@@ -316,7 +317,7 @@ func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName strin
 		return fmt.Errorf("failed to delete folder: %w", err)
 	}
 
-	slog.Debug("Deleted folder", slog.String("path", path), slog.String("routine", routineName))
+	slog.Debug("Deleted folder", slog.String("path", path), attr.Routine(routineName))
 
 	return err
 }
