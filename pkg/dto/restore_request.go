@@ -40,7 +40,6 @@ func NewRestoreRequestFromReader(r io.Reader) (*RestoreRequest, error) {
 type RestoreTimestampRequest struct {
 	DestinationClusterConfig
 	*SecretAgentConfig
-	StorageConfig
 	// Restore policy to use in the operation.
 	Policy *RestorePolicy `json:"policy,omitempty"`
 	// Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.

@@ -31,7 +31,7 @@ func TestIsNamespaceEmpty(t *testing.T) {
 	nsValidator := &defaultNamespaceValidator{}
 
 	namespace := "source-ns1"
-	aerr = client.Truncate(nil, namespace, "test-set", nil)
+	aerr = client.Truncate(nil, namespace, "", nil)
 	require.NoError(t, aerr)
 
 	testSet := "test-set"

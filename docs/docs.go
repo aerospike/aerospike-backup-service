@@ -2909,19 +2909,6 @@ const docTemplate = `{
                     "type": "string",
                     "x-nullable": true
                 },
-                "source": {
-                    "description": "The details of the storage configuration.\nMutually exclusive with 'source-name'.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.Storage"
-                        }
-                    ]
-                },
-                "source-name": {
-                    "description": "Link to one of preconfigured storages.\nMutually exclusive with 'source'.",
-                    "type": "string",
-                    "x-nullable": true
-                },
                 "time": {
                     "description": "Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.",
                     "type": "integer",
