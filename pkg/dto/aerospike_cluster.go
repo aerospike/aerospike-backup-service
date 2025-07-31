@@ -70,7 +70,7 @@ func (a *AerospikeCluster) validateSeedNodesTLSConsistency() error {
 	if len(a.SeedNodes) <= 1 {
 		return nil
 	}
-	
+
 	var hasTLSNodes, hasNonTLSNodes bool
 
 	for _, node := range a.SeedNodes {
