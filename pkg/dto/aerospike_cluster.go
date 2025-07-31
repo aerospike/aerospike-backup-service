@@ -67,6 +67,10 @@ func (a *AerospikeCluster) Validate() error {
 // validateSeedNodesTLSConsistency ensures that if any seed node has TLS configuration,
 // then all seed nodes must have TLS configuration.
 func (a *AerospikeCluster) validateSeedNodesTLSConsistency() error {
+	if len(a.SeedNodes) <= 1 {
+		return nil
+	}
+	
 	var hasTLSNodes, hasNonTLSNodes bool
 
 	for _, node := range a.SeedNodes {
