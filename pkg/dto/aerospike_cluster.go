@@ -9,7 +9,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -43,17 +42,47 @@ func (a *AerospikeCluster) Validate() error {
 	if len(a.SeedNodes) == 0 {
 		return errors.New("seed nodes are not specified")
 	}
+
+	withTLS := a.TLS != nil
 	for _, node := range a.SeedNodes {
-		if err := node.Validate(); err != nil {
+		if err := node.Validate(withTLS); err != nil {
 			return err
 		}
 	}
+	if err := a.validateSeedNodesTLSConsistency(); err != nil {
+		return err
+	}
+
 	if err := a.Credentials.Validate(); err != nil {
 		return fmt.Errorf("credentials validation error: %w", err)
 	}
 
 	if err := a.TLS.Validate(); err != nil {
 		return fmt.Errorf("tls validation error: %w", err)
+	}
+
+	return nil
+}
+
+// validateSeedNodesTLSConsistency ensures that if any seed node has TLS configuration,
+// then all seed nodes must have TLS configuration.
+func (a *AerospikeCluster) validateSeedNodesTLSConsistency() error {
+	if len(a.SeedNodes) <= 1 {
+		return nil
+	}
+
+	var hasTLSNodes, hasNonTLSNodes bool
+
+	for _, node := range a.SeedNodes {
+		if node.TLSName != "" {
+			hasTLSNodes = true
+		} else {
+			hasNonTLSNodes = true
+		}
+	}
+
+	if hasTLSNodes && hasNonTLSNodes {
+		return errors.New("if any seed node has TLS configuration (tls-name), all seed nodes must have TLS configuration")
 	}
 
 	return nil
@@ -125,64 +154,6 @@ func (a *AerospikeCluster) seedNodesToModel() []model.SeedNode {
 		nodes[i] = d.toModel()
 	}
 	return nodes
-}
-
-// TLS represents the Aerospike cluster TLS configuration options.
-// @Description TLS represents the Aerospike cluster TLS configuration options.
-//
-//nolint:lll
-type TLS struct {
-	// Path to a trusted CA certificate file.
-	CAFile *string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/cafile.pem" extensions:"x-nullable"`
-	// Path to a directory of trusted CA certificates.
-	CAPath *string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
-	// The default TLS name used to authenticate each TLS socket connection.
-	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name" extensions:"x-nullable"`
-	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
-	Protocols *string `yaml:"protocols,omitempty" json:"protocols,omitempty" default:"TLSv1.2"`
-	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
-	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"ECDHE-ECDSA-AES256-GCM-SHA384" extensions:"x-nullable"`
-	// Path to the key for mutual authentication (if Aerospike cluster supports it).
-	Keyfile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/keyfile.pem" extensions:"x-nullable"`
-	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
-	KeyfilePassword *string `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" example:"file:/path/to/password" extensions:"x-nullable"`
-	// Path to the chain file for mutual authentication (if Aerospike Cluster supports it).
-	Certfile *string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/certfile.pem" extensions:"x-nullable"`
-}
-
-func (t *TLS) fromModel(m *model.TLS) {
-	t.CAFile = m.CAFile
-	t.CAPath = m.CAPath
-	t.Name = m.Name
-	t.Protocols = m.Protocols
-	t.CipherSuite = m.CipherSuite
-	t.Keyfile = m.Keyfile
-	t.KeyfilePassword = m.KeyfilePassword
-	t.Certfile = m.Certfile
-}
-
-func (t *TLS) toModel() *model.TLS {
-	if t == nil {
-		return nil
-	}
-
-	return &model.TLS{
-		CAFile:          t.CAFile,
-		CAPath:          t.CAPath,
-		Name:            t.Name,
-		Protocols:       t.Protocols,
-		CipherSuite:     t.CipherSuite,
-		Keyfile:         t.Keyfile,
-		KeyfilePassword: t.KeyfilePassword,
-		Certfile:        t.Certfile,
-	}
-}
-
-func (t *TLS) Validate() error {
-	// try to parse tls config to verify all parameters are valid
-	_, err := aerospike.NewTLSConfig(t.toModel())
-
-	return err
 }
 
 // Credentials represents authentication details to the Aerospike cluster.
@@ -266,7 +237,10 @@ type SeedNode struct {
 }
 
 // Validate validates the SeedNode entity.
-func (node *SeedNode) Validate() error {
+func (node *SeedNode) Validate(withTLS bool) error {
+	if withTLS && node.TLSName == "" {
+		return errValidationEmptyField("tls-name")
+	}
 	if node.HostName == "" {
 		return errValidationEmptyField("hostname")
 	}

@@ -79,16 +79,47 @@ func clientPolicy(c *model.AerospikeCluster) *as.ClientPolicy {
 		policy.UseServicesAlternate = *c.UseServicesAlternate
 	}
 
-	var err error
-	policy.TlsConfig, err = NewTLSConfig(c.TLS)
-	if err != nil {
-		slog.Error("Failed to initialize tls.Config",
-			slog.String("cluster", util.ValueOrZero(c.ClusterLabel)),
-			attr.Error(err))
-	}
+	setTLSConfig(c, policy)
 
 	policy.ConnectionQueueSize = 256
 	policy.LimitConnectionsToQueueSize = false
 
 	return policy
+}
+
+func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
+	if !anySeedNodeHasTLSName(c) {
+		if c.TLS != nil {
+			slog.Warn("A TLS configuration is provided, but no seed nodes have TLS names. Ignoring TLS settings.",
+				slog.String("cluster", util.ValueOrZero(c.ClusterLabel)))
+		}
+
+		return // no TLS configuration needed for this cluster
+	}
+
+	// Seed nodes require TLS, so a TLS configuration is necessary.
+	// If no specific TLS configuration is provided, a default one is used.
+	tlsToApply := c.TLS
+	if tlsToApply == nil {
+		tlsToApply = &model.TLS{}
+	}
+
+	var err error
+	policy.TlsConfig, err = NewTLSConfig(tlsToApply)
+	if err != nil {
+		slog.Error("Failed to initialize tls.Config",
+			slog.String("cluster", util.ValueOrZero(c.ClusterLabel)),
+			attr.Error(err))
+	}
+}
+
+// anySeedNodeHasTLSName checks if any of the seed nodes are configured with a TLS name.
+func anySeedNodeHasTLSName(c *model.AerospikeCluster) bool {
+	for _, node := range c.SeedNodes {
+		if node.TLSName != "" {
+			return true
+		}
+	}
+
+	return false
 }
