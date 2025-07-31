@@ -152,7 +152,6 @@ func (a *AerospikeCluster) seedNodesToModel() []model.SeedNode {
 	return nodes
 }
 
-// Credentials represents authentication details to the Aerospike cluster
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
 type Credentials struct {
