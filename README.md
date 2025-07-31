@@ -21,6 +21,8 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
     * [Run](#run)
     * [Configuration](#configuration)
         + [Configuration File Format](#configuration-file-format)
+        + [Scheduling with Quartz](#scheduling-with-quartz)
+        + [Configuration file example](#configuration-file-example)
         + [Configuration with API](#configuration-with-api)
     * [Monitoring](#monitoring)
         + [Backup Progress Monitoring](#backup-progress-monitoring)
@@ -146,7 +148,32 @@ backups occur. When defining a routine, you reference:
 Each of these referenced components must be created and named in the configuration before the routine can use them. This
 modular approach lets you reuse and combine policies, clusters, and storage setups across multiple routines.
 
-#### Configuration file example
+### Scheduling with Quartz
+
+The service uses the [Quartz](https://github.com/reugn/go-quartz?tab=readme-ov-file#cron-expression-format) scheduler
+for executing recurring jobs. Quartz supports rich scheduling options through cron expressions, enabling precise control
+over job execution timing.
+
+Quartz uses either:
+
+* A 6/7-field cron expression format:
+  `Seconds Minutes Hours Day-of-Month Month Day-of-Week Year` (`Year` is optional)
+* Shorthand expressions for common schedules:
+  `@hourly`, `@daily`, `@weekly`, `@monthly`, `@yearly`
+
+**📆 Quartz Cron Expression Examples for Backup Scheduling**
+
+| Schedule Description                | Cron Expression       | Use Case                                                             |
+|-------------------------------------|-----------------------|----------------------------------------------------------------------|
+| **Midnight daily**                  | `0 0 0 * * ? *`       | Daily full backup during off-peak hours                              |
+| **Every 2 hours**                   | `0 0 0/2 * * ? *`     | Frequent incremental backups throughout the day                      |
+| **Every 30 minutes**                | `0 0/30 * * * ? *`    | High-frequency backup for critical, fast-changing data               |
+| **Weekdays at 3 AM**                | `0 0 3 ? * MON-FRI *` | Scheduled business-day backups for non-production clusters           |
+| **First day of each month at 1 AM** | `0 0 1 1 * ? *`       | Monthly archival full backup                                         |
+| **Every Sunday at 2 AM**            | `0 0 2 ? * SUN *`     | Weekly full backup before a new work week starts                     |
+| **Twice daily at 1 AM and 1 PM**    | `0 0 1,13 * * ? *`    | Split-day incremental backups to catch morning and afternoon changes |
+
+### Configuration file example
 
 <!-- DefaultConfig -->
 
@@ -191,11 +218,11 @@ backup-policies:
 backup-routines:
   dailyLocalBackupRoutine: # <--- Custom routine name
     interval-cron: "@daily" # Full backup will be triggered daily at midnight
-    incr-interval-cron: "0 */2 * * * *" # Incremental backups every 2 hours
-    source-cluster: abs-cluster         # <--- Refers to the cluster name under aerospike-clusters
-    storage: s3                         # <--- Refers to the storage name under storage
-    backup-policy: dailyBackupPolicy    # <--- Refers to the policy name under backup-policies
-    namespaces: []                      # <--- An empty list is used to configure a backup of the whole cluster
+    incr-interval-cron: "0 0 0/2 * * ? *" # Incremental backups every 2 hours
+    source-cluster: abs-cluster           # <--- Refers to the cluster name under aerospike-clusters
+    storage: s3                           # <--- Refers to the storage name under storage
+    backup-policy: dailyBackupPolicy      # <--- Refers to the policy name under backup-policies
+    namespaces: []                        # <--- An empty list is used to configure a backup of the whole cluster
 
 service:
   http:
@@ -406,6 +433,7 @@ recommended for a more convenient and user-friendly experience.
 ### Backup
 
 #### Trigger On-Demand Backup
+
 ℹ️ *Available since v1.0*
 
 This request starts the backup operation for the specified routine, regardless of its configured schedule.
@@ -419,6 +447,7 @@ This request starts the backup operation for the specified routine, regardless o
 If the request is accepted, the server responds with Http 202 Accepted.
 
 #### Get Current Backup
+
 ℹ️ *Available since v1.0*
 
 This endpoint retrieves the current statistics for a backup in progress, identified by its routine name.
@@ -455,6 +484,7 @@ See [fields description](docs/readme/dto/dto.runningjob.md) for details.
 </details>
 
 #### Cancel Backup Job
+
 ℹ️ *Available since v3.0*
 
 [
@@ -464,6 +494,7 @@ Cancel all currently running backups (both full and incremental) for the specifi
 will be deleted.
 
 #### Retrieve Backup List
+
 ℹ️ *Available since v1.0*
 
 Provides a list of backups for each configured routine, including details such as creation time, duration, namespace,
@@ -519,6 +550,7 @@ You can filter the results by adding query parameters:
 Here, `name` is the routine name, `from` and `to` are timestamps in milliseconds since epoch.
 
 #### Disable Routine
+
 ℹ️ *Available since v3.0*
 
 [
@@ -535,6 +567,7 @@ Set the disabled flag for the given routine to `true` or `false` (default is `fa
 ### Restore
 
 #### Direct restore using a specific backup
+
 ℹ️ *Available since v1.0*
 
 This request restores a backup from a specified path to a designated destination.
@@ -592,6 +625,7 @@ For more details see [fields description](docs/readme/dto/dto.restorerequest.md)
 The response is a job ID.
 
 #### Restore using routine name and timestamp
+
 ℹ️ *Available since v1.0*
 
 This option automatically restores data by identifying and applying the
@@ -663,6 +697,7 @@ For more details see [fields description](docs/readme/dto/dto.restoretimestampre
 The response is a job ID.
 
 #### Restore job status
+
 ℹ️ *Available since v1.0*
 
 You can get job status with the endpoint
@@ -709,6 +744,7 @@ For fields description see [fields description](docs/readme/dto/dto.restorejobst
 </details>
 
 #### Retrieve Restore Jobs
+
 ℹ️ *Available since v3.2*
 
 Provides a list of all restore jobs, with optional filtering by time range and status.
@@ -760,6 +796,7 @@ Provides a list of all restore jobs, with optional filtering by time range and s
 </details>
 
 #### Cancel Restore Job
+
 ℹ️ *Available since v3.0*
 
 Cancel the restore job identified by `<jobId>`. Data that has already been restored will remain intact.
