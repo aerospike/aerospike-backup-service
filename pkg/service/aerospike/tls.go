@@ -104,7 +104,8 @@ func loadCertPool(caFile, caPath *string) (*x509.CertPool, error) {
 			}
 			path := filepath.Join(*caPath, file.Name())
 			if err := appendCertFile(pool, path); err != nil {
-				slog.Warn("Failed to append certificate file, skipping", "path", path, "err", err)
+				slog.Warn("Failed to append certificate file, skipping",
+					slog.String("path", path), attr.Error(err))
 			}
 		}
 	}

@@ -91,7 +91,7 @@ func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
 	if !anySeedNodeHasTLSName(c) {
 		if c.TLS != nil {
 			slog.Warn("A TLS configuration is provided, but no seed nodes have TLS names. Ignoring TLS settings.",
-				"cluster", util.ValueOrZero(c.ClusterLabel))
+				slog.String("cluster", util.ValueOrZero(c.ClusterLabel)))
 		}
 
 		return // no TLS configuration needed for this cluster
