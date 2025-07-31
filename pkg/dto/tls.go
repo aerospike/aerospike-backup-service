@@ -112,7 +112,7 @@ func (t *TLS) validateKeyfilePassword() error {
 // validateTLSConfig attempts to create a TLS config to catch low-level issues.
 func (t *TLS) validateTLSConfig() error {
 	if _, err := aerospike.NewTLSConfig(t.toModel()); err != nil {
-		return fmt.Errorf("tls: invalid configuration: %w", err)
+		return fmt.Errorf("tls %w: %w", errValidation, err)
 	}
 
 	return nil
