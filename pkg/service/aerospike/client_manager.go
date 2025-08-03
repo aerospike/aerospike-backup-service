@@ -174,12 +174,12 @@ func (cm *ClientManagerImpl) Close(client *backup.Client) {
 		}
 	}
 
+	// Close client even if it was not found in the cache
+	client.AerospikeClient().Close()
 	if cm.logger != nil {
-		cm.logger.Info("Aerospike client not found and closed",
+		cm.logger.Info("Closed Aerospike client not managed by the cache",
 			slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()))
 	}
-	// Close client even if it was not found
-	client.AerospikeClient().Close()
 }
 
 // incrementRef increases the reference count and cancels any pending close operation.
