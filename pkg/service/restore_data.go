@@ -85,20 +85,26 @@ func (r *dataRestorer) executeRestore(
 	}
 	defer r.clientManager.Close(client)
 
+	logger := slog.With(slog.Any("jobId", jobID))
+	logger.Info("got AS client")
+
 	if err := r.validateDestinationNamespace(request); err != nil {
 		return err
 	}
+	logger.Info("validate namespaces")
 
 	backups, err := r.backupReader.GetBackups(ctx, NewPathFilter(request.BackupDataPath, request.SourceStorage))
 	if err != nil {
 		return fmt.Errorf("failed to read backups: %w", err)
 	}
 
+	logger.Info("got backups")
+
 	if len(backups) > 0 && r.allBackupsEmpty(backups) {
 		// edge case: backups exist but are empty — nothing to restore.
 		// If no backups found, we still attempt restore, as CLI-created files may exist without metadata.
 		r.restoreJobs.finishJob(jobID, nil)
-		slog.Info("Empty backup found, nothing to restore", slog.Any("jobId", jobID))
+		logger.Info("Empty backup found, nothing to restore", slog.Any("jobId", jobID))
 		return nil
 	}
 
@@ -106,16 +112,19 @@ func (r *dataRestorer) executeRestore(
 		return err
 	}
 
+	logger.Info("validated backups")
+
 	handler, err := r.restoreService.Run(ctx, client, request)
 	if err != nil {
 		return fmt.Errorf("failed to start restore operation: %w", err)
 	}
+	logger.Info("stated restore service")
 
 	r.restoreJobs.addTotalRecords(jobID, r.recordsInBackup(backups))
 	r.restoreJobs.addHandler(jobID, handler)
 
 	// Wait for the restore operation to complete
-	slog.Info("Wait for the restore job completion", slog.Any("jobId", jobID))
+	logger.Info("Wait for the restore job completion")
 
 	return handler.Wait(ctx)
 }
