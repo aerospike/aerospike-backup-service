@@ -62,9 +62,10 @@ func (r *dataRestorer) Restore(ctx context.Context, request *model.RestoreReques
 	ctx, cancel := context.WithCancel(ctx)
 
 	jobID := r.restoreJobs.newJob(request.BackupDataPath, cancel)
-	slog.Info("new restore job", slog.Any("jobId", jobID), slog.Any("request", *request))
+	logger := slog.With(slog.Any("jobId", jobID))
+	logger.Info("new restore job", slog.Any("request", *request))
 	go func() {
-		err := r.executeRestore(ctx, request, jobID)
+		err := r.executeRestore(ctx, request, jobID, logger)
 		if err != nil { // if some of restore sub-operations failed, we need to cancel the rest.
 			cancel()
 		}
@@ -78,6 +79,7 @@ func (r *dataRestorer) executeRestore(
 	ctx context.Context,
 	request *model.RestoreRequest,
 	jobID model.RestoreJobID,
+	logger *slog.Logger,
 ) error {
 	client, err := r.clientManager.GetClient(request.DestinationCluster)
 	if err != nil {
@@ -85,7 +87,6 @@ func (r *dataRestorer) executeRestore(
 	}
 	defer r.clientManager.Close(client)
 
-	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("got AS client")
 
 	if err := r.validateDestinationNamespace(request); err != nil {
@@ -183,7 +184,9 @@ func (r *dataRestorer) RestoreByTime(
 
 	ctx, cancel := context.WithCancel(ctx)
 	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
-	go r.restoreByTimeSync(ctx, request, jobID, backupsByNamespace)
+	logger := slog.With(slog.Any("jobId", jobID))
+	logger.Info("new restore by time job", slog.Any("request", *request))
+	go r.restoreByTimeSync(ctx, request, jobID, backupsByNamespace, logger)
 
 	return jobID, nil
 }
@@ -233,6 +236,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
 	fullBackupsByNamespace map[string][]model.BackupDetails,
+	logger *slog.Logger,
 ) {
 	client, err := r.clientManager.GetClient(request.DestinationCluster)
 	if err != nil {
@@ -250,7 +254,7 @@ func (r *dataRestorer) restoreByTimeSync(
 		wg.Add(1)
 		go func(namespace string, nsBackup []model.BackupDetails) {
 			defer wg.Done()
-			if err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup); err != nil {
+			if err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup, logger); err != nil {
 				multiError = errors.Join(multiError,
 					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
 						request.RoutineName, namespace, err))
@@ -270,6 +274,7 @@ func (r *dataRestorer) restoreNamespace(
 	jobID model.RestoreJobID,
 	namespace string,
 	backups []model.BackupDetails,
+	logger *slog.Logger,
 ) error {
 	// Now restore all backups in order
 	dbEmpty, err := r.nsValidator.IsEmpty(client.AerospikeClient(), namespace, request.Policy.SetList)
@@ -278,6 +283,7 @@ func (r *dataRestorer) restoreNamespace(
 	}
 
 	if dbEmpty && !request.DisableReordering {
+		logger.Info("Use optimised restore")
 		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
 		// This way we reduce generation noise and unnecessary load.
 		slices.Reverse(backups)
@@ -291,7 +297,10 @@ func (r *dataRestorer) restoreNamespace(
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 	}
 
-	for _, b := range backups {
+	for i, b := range backups {
+		logger.Info("Start restoring",
+			slog.String("step", fmt.Sprintf("%d/%d", i, +len(backups))),
+			slog.Any("backup", b))
 		if b.FileCount == 0 { // skip empty namespaces
 			continue
 		}
