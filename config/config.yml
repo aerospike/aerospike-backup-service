@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/aerospike/aerospike-backup-service/refs/heads/v3/docs/config.schema.json
+
 aerospike-clusters:
   absDefaultCluster:
     seed-nodes:
@@ -24,9 +25,8 @@ storage:
 backup-policies:
   defaultPolicy:
     parallel: 8
-    sealed: true
     retry-policy:
-      base-timeout: 3_000
+      base-timeout: 3000
       max-retries: 10
       multiplier: 1
     retention:
@@ -35,19 +35,20 @@ backup-policies:
   withFileLimit:
     file-limit: 1
     parallel: 1
-    sealed: true
-    with-cluster-configuration: true
     retry-policy:
-      base-timeout: 1_000
+      base-timeout: 1000
       max-retries: 1
       multiplier: 1
     retention:
       full: 10
       incremental: 10
+  withClusterConfiguration:
+    with-cluster-configuration: true
+    retention:
+      full: 10
   withBandwidthLimit:
     bandwidth: 10
     parallel: 1
-    sealed: true
     retry-policy:
       base-timeout: 1_000
       max-retries: 1
@@ -60,19 +61,12 @@ backup-policies:
     retention:
       full: 1
       incremental: 0
-    sealed: true
-  removeIncrementalPolicy:
-    parallel: 8
-    retention:
-      full: 10
-      incremental: 0
-    sealed: true
   encryptedCompressedPolicy128:
-    parallel: 8
+    file-limit: 1
+    parallel: 1
     retention:
       full: 1
       incremental: 0
-    sealed: true
     encryption:
       key-file: encryptionKey
       mode: AES128
@@ -84,59 +78,49 @@ backup-policies:
     retention:
       full: 1
       incremental: 0
-    sealed: true
     encryption:
       key-env: BACKUP_ENCRYPTION_KEY
       mode: AES256
     compression:
       level: 10
       mode: ZSTD
-  notSealed:
+  sealed:
     parallel: 8
-    sealed: false
+    sealed: true
     retention:
       full: 10
       incremental: 10
   noIndexesUdfsRecords:
+    with-cluster-configuration: true
     parallel: 8
-    sealed: true
     no-indexes: true
     no-records: true
     no-udfs: true
     retention:
       full: 10
-#  xdrBackup:
-#    parallel: 8
-#    retention:
-#      full: 10
-#      incremental: 10
-#    xdr:
-#      local-host: "localhost"
+#    xdrBackup:
+#        parallel: 8
+#        retention:
+#          full: 10
+#          incremental: 10
+#        xdr:
+#            local-host: "host.docker.internal"
+#            port-range:
+#                start: 8081
+#                end: 8085
 backup-routines:
-  localStorageRemoveFiles:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: [ "source-ns1" ]
-    backup-policy: removeFilesPolicy
   localStorage:
     interval-cron: "@yearly"
     source-cluster: absDefaultCluster
     storage: local
     namespaces: [ "source-ns2" ]
-    backup-policy: defaultPolicy
-  localStorageNotSealed:
+    # this routine tests that policy is optional
+  localStorageSealed:
     interval-cron: "@yearly"
     source-cluster: absDefaultCluster
     storage: local
     namespaces: [ "source-ns2" ]
-    backup-policy: notSealed
-  minioRemoveFiles:
-    interval-cron: "@yearly"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: [ "source-ns3" ]
-    backup-policy: removeFilesPolicy
+    backup-policy: sealed
   minio:
     interval-cron: "@yearly"
     source-cluster: absDefaultCluster
@@ -159,13 +143,13 @@ backup-routines:
     storage: local
     namespaces: [ ]
     backup-policy: defaultPolicy
-  incrementalBackupClusterNotSealed:
+  incrementalBackupClusterSealed:
     interval-cron: "@yearly"
     incr-interval-cron: "*/10 * * * * *"
     source-cluster: absDefaultCluster
     storage: local
     namespaces: [ ]
-    backup-policy: notSealed
+    backup-policy: sealed
   incrementalBackupMultipleNSs:
     interval-cron: "@yearly"
     incr-interval-cron: "*/10 * * * * *"
@@ -173,15 +157,6 @@ backup-routines:
     storage: local
     namespaces: [ "source-ns18", "source-ns19", "source-ns20" ]
     backup-policy: defaultPolicy
-  minioIncremental:
-    interval-cron: "@yearly"
-    incr-interval-cron: "*/10 * * * * *"
-    source-cluster: absDefaultCluster
-    storage: local
-    namespaces: [ "source-ns6" ]
-    set-list:
-      - absSet6
-    backup-policy: removeIncrementalPolicy
   edgeCases:
     interval-cron: "@yearly"
     source-cluster: absDefaultCluster
@@ -192,19 +167,19 @@ backup-routines:
     interval-cron: "@yearly"
     source-cluster: absDefaultCluster
     storage: local
-    namespaces: [ "source-ns8" ]
+    namespaces: [ "source-ns8" ] # don't truncate full source-ns8 in any tests
     set-list:
       - backupSet
     bin-list:
       - backupBin
-    backup-policy: removeFilesPolicy
+    backup-policy: defaultPolicy
   localStorageIncremental3:
     interval-cron: "@yearly"
     incr-interval-cron: "*/10 * * * * *"
     source-cluster: absDefaultCluster
     storage: local
     namespaces: [ "source-ns10" ]
-    backup-policy: removeFilesPolicy
+    backup-policy: defaultPolicy
   fullBackup1:
     interval-cron: "@yearly"
     source-cluster: absDefaultCluster
@@ -237,7 +212,7 @@ backup-routines:
     backup-policy: defaultPolicy
   timestamp:
     interval-cron: "@yearly"
-    incr-interval-cron: "*/9 * * * * *"
+    incr-interval-cron: "*/10 * * * * *"
     source-cluster: absDefaultCluster
     storage: local
     namespaces: [ "source-ns14" ]
@@ -248,7 +223,7 @@ backup-routines:
     storage: local
     namespaces: [ "source-ns13" ]
     backup-policy: withBandwidthLimit
-  fullBackupEncrypedCompressed128:
+  fullBackupEncryptedCompressed128:
     interval-cron: "@yearly"
     source-cluster: absDefaultCluster
     storage: local
@@ -271,7 +246,7 @@ backup-routines:
     source-cluster: absDefaultCluster
     storage: local
     namespaces: [ "source-ns20" ]
-    backup-policy: removeFilesPolicy
+    backup-policy: defaultPolicy
   everySecondBackup:
     backup-policy: defaultPolicy
     source-cluster: absDefaultCluster
@@ -281,13 +256,20 @@ backup-routines:
     namespaces:
       - source-ns20
     disabled: true
-#  xdrBackup:
-#    interval-cron: "@yearly"
-#    incr-interval-cron: "0 */1 * * * *" # every minute incremental backup
-#    source-cluster: absDefaultCluster
-#    storage: local
-#    namespaces: [ "source-ns22" ]
-#    backup-policy: xdrBackup
+  #    xdrBackup:
+  #        interval-cron: "@yearly"
+  #        incr-interval-cron: "0 */1 * * * *" # every minute incremental backup
+  #        source-cluster: absDefaultCluster
+  #        storage: local
+  #        namespaces: [ "source-ns22" ]
+  #        backup-policy: xdrBackup
+  incrementalBackupEncryptedCompressed128:
+    interval-cron: "@yearly"
+    incr-interval-cron: "*/10 * * * * *"
+    source-cluster: absDefaultCluster
+    storage: local
+    namespaces: [ "source-ns23" ]
+    backup-policy: encryptedCompressedPolicy128
 
 service:
   logger:
