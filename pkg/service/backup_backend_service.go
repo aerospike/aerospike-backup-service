@@ -330,6 +330,7 @@ func (b *BackupBackendServiceImpl) getPathBackups(
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.String(), err)
 	}
+	slog.Info("read filenames", slog.Any("files", len(files)))
 
 	storagePrefix := filepath.Clean(filter.storage.GetPath())
 	var backups []model.BackupDetails
@@ -344,9 +345,12 @@ func (b *BackupBackendServiceImpl) getPathBackups(
 		}
 
 		if filter.timeBounds().Contains(metadata.Created) {
+			slog.Info("metadata added", slog.String("file", fileName))
 			key := backupKey(fileName, storagePrefix)
 			details := model.NewBackupDetails(*metadata, key, filter.storage, "")
 			backups = append(backups, details)
+		} else {
+			slog.Info("metadata skipped", slog.String("file", fileName))
 		}
 	}
 
