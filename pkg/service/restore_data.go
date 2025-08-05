@@ -100,7 +100,7 @@ func (r *dataRestorer) executeRestore(
 		// edge case: backups exist but are empty — nothing to restore.
 		// If no backups found, we still attempt restore, as CLI-created files may exist without metadata.
 		r.restoreJobs.finishJob(jobID, nil)
-		logger.Info("Empty backup found, nothing to restore", slog.Any("jobId", jobID))
+		logger.Info("Empty backup found, nothing to restore")
 		return nil
 	}
 
