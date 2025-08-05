@@ -8,7 +8,7 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v8"
 )
 
-// IsEmpty checks if the given namespace or specific sets within it are empty.
+// IsEmpty checks if the given namespace or specific sets within it are empty across all nodes.
 // If sets slice is empty, it checks the entire namespace.
 // If sets are provided, it checks only those specific sets.
 func (nv *defaultNamespaceValidator) IsEmpty(
@@ -16,11 +16,22 @@ func (nv *defaultNamespaceValidator) IsEmpty(
 	namespace string,
 	sets []string,
 ) (bool, error) {
-	node, err := client.Cluster().GetRandomNode()
-	if err != nil {
-		return false, fmt.Errorf("failed to get node: %w", err)
+	nodes := client.Cluster().GetNodes()
+	for _, node := range nodes {
+		isEmpty, err := isNamespaceNodeEmpty(node, namespace, sets)
+		if err != nil {
+			return false, err
+		}
+		if !isEmpty {
+			return false, nil // Found non-empty node, can return immediately
+		}
 	}
 
+	return true, nil // All nodes are empty
+}
+
+// isNamespaceNodeEmpty checks if a namespace (or specific sets) is empty on a single node.
+func isNamespaceNodeEmpty(node *as.Node, namespace string, sets []string) (bool, error) {
 	if len(sets) == 0 {
 		return isEntireNamespaceEmpty(as.NewInfoPolicy(), node, namespace)
 	}
@@ -33,7 +44,7 @@ func isEntireNamespaceEmpty(policy *as.InfoPolicy, node *as.Node, namespace stri
 	statsKey := "namespace/" + namespace
 	stats, err := getNodeStats(policy, node, statsKey)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get node stats: %w", err)
 	}
 
 	objectCount, err := parseObjectCount(stats, ";", "objects")
@@ -51,11 +62,12 @@ func areSetsEmpty(policy *as.InfoPolicy, node *as.Node, namespace string, sets [
 		if err != nil {
 			return false, err
 		}
-		if !isEmpty { // return false if any of sets is not empty.
-			return false, nil
+		if !isEmpty {
+			return false, nil // Found non-empty set, can return immediately
 		}
 	}
-	return true, nil
+
+	return true, nil // All sets are empty
 }
 
 // isSetEmpty checks if a specific set is empty.
