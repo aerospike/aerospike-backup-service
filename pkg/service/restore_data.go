@@ -63,7 +63,7 @@ func (r *dataRestorer) Restore(ctx context.Context, request *model.RestoreReques
 
 	jobID := r.restoreJobs.newJob(request.BackupDataPath, cancel)
 	logger := slog.With(slog.Any("jobId", jobID))
-	logger.Info("new restore job", slog.Any("request", *request))
+	logger.Info("New restore job", slog.Any("request", *request))
 	go func() {
 		err := r.executeRestore(ctx, request, jobID, logger)
 		if err != nil { // if some of restore sub-operations failed, we need to cancel the rest.
@@ -173,7 +173,8 @@ func (r *dataRestorer) RestoreByTime(
 	ctx, cancel := context.WithCancel(ctx)
 	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
 	logger := slog.With(slog.Any("jobId", jobID))
-	logger.Info("new restore by time job", slog.Any("request", *request))
+	logger.Info("New restore by time job", slog.Any("request", *request))
+
 	go r.restoreByTimeSync(ctx, request, jobID, backupsByNamespace, logger)
 
 	return jobID, nil
@@ -271,7 +272,7 @@ func (r *dataRestorer) restoreNamespace(
 	}
 
 	if dbEmpty && !request.DisableReordering {
-		logger.Info("Use optimised restore")
+		logger.Info("Use optimized restore because database is empty")
 		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
 		// This way we reduce generation noise and unnecessary load.
 		slices.Reverse(backups)
@@ -287,7 +288,7 @@ func (r *dataRestorer) restoreNamespace(
 
 	for i, b := range backups {
 		logger.Info("Start restoring",
-			slog.String("step", fmt.Sprintf("%d/%d", i, +len(backups))),
+			slog.String("step", fmt.Sprintf("%d/%d", i+1, len(backups))),
 			slog.Any("backup", b))
 		if b.FileCount == 0 { // skip empty namespaces
 			continue
