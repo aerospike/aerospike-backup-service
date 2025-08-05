@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"path/filepath"
 	"time"
 
@@ -133,7 +132,6 @@ func ReadFileNames(
 		startScanFrom = filepath.Join(storage.GetPath(), path, fromTimeStr)
 	}
 
-	slog.Info("Reading file names from", slog.String("path", startScanFrom))
 	reader, err := CreateDirReader(ctx, storage, path,
 		ioStorage.WithValidator(newNameValidator(filterStr)),
 		ioStorage.WithStartAfter(startScanFrom),
@@ -143,8 +141,6 @@ func ReadFileNames(
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reader: %w", err)
 	}
-
-	slog.Info("Start listing file names from", slog.String("path", startScanFrom))
 
 	return reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path)+"/")
 }
