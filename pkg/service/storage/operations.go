@@ -145,6 +145,7 @@ func ReadFileNames(
 	}
 
 	slog.Info("Start listing file names from", slog.String("path", startScanFrom))
+
 	return reader.ListObjects(ctx, filepath.Join(storage.GetPath(), path)+"/")
 }
 
