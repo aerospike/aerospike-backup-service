@@ -271,6 +271,7 @@ func (r *dataRestorer) restoreNamespace(
 		return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
 	}
 
+	effectivePolicy := *request.Policy // make a thread safe copy.
 	if dbEmpty && !request.DisableReordering {
 		logger.Info("Use optimized restore because database is empty")
 		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
@@ -278,8 +279,8 @@ func (r *dataRestorer) restoreNamespace(
 		slices.Reverse(backups)
 
 		// old values are not important, because they qualify how to handle existing data in db.
-		request.Policy.Unique = util.Ptr(true)
-		request.Policy.Replace = nil
+		effectivePolicy.Unique = util.Ptr(true)
+		effectivePolicy.Replace = nil
 	}
 
 	for _, b := range backups {
@@ -294,7 +295,7 @@ func (r *dataRestorer) restoreNamespace(
 			continue
 		}
 
-		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage)
+		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage, &effectivePolicy)
 		if err != nil {
 			return err
 		}
@@ -316,10 +317,11 @@ func (r *dataRestorer) restoreFromPath(
 	request *model.RestoreTimestampRequest,
 	backupPath string,
 	storage model.Storage,
+	policy *model.RestorePolicy,
 ) (restoreexecutor.RestoreHandler, error) {
 	restoreRequest := model.NewRestoreRequest(
 		request.DestinationCluster,
-		request.Policy,
+		policy,
 		storage,
 		request.SecretAgent,
 		backupPath,
