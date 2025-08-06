@@ -62,9 +62,10 @@ func (r *dataRestorer) Restore(ctx context.Context, request *model.RestoreReques
 	ctx, cancel := context.WithCancel(ctx)
 
 	jobID := r.restoreJobs.newJob(request.BackupDataPath, cancel)
-	slog.Info("new restore job", slog.Any("jobId", jobID), slog.Any("request", *request))
+	logger := slog.With(slog.Any("jobId", jobID))
+	logger.Info("New restore job", slog.Any("request", *request))
 	go func() {
-		err := r.executeRestore(ctx, request, jobID)
+		err := r.executeRestore(ctx, request, jobID, logger)
 		if err != nil { // if some of restore sub-operations failed, we need to cancel the rest.
 			cancel()
 		}
@@ -78,6 +79,7 @@ func (r *dataRestorer) executeRestore(
 	ctx context.Context,
 	request *model.RestoreRequest,
 	jobID model.RestoreJobID,
+	logger *slog.Logger,
 ) error {
 	client, err := r.clientManager.GetClient(request.DestinationCluster)
 	if err != nil {
@@ -98,7 +100,7 @@ func (r *dataRestorer) executeRestore(
 		// edge case: backups exist but are empty — nothing to restore.
 		// If no backups found, we still attempt restore, as CLI-created files may exist without metadata.
 		r.restoreJobs.finishJob(jobID, nil)
-		slog.Info("Empty backup found, nothing to restore", slog.Any("jobId", jobID))
+		logger.Info("Empty backup found, nothing to restore")
 		return nil
 	}
 
@@ -110,12 +112,8 @@ func (r *dataRestorer) executeRestore(
 	if err != nil {
 		return fmt.Errorf("failed to start restore operation: %w", err)
 	}
-
 	r.restoreJobs.addTotalRecords(jobID, r.recordsInBackup(backups))
 	r.restoreJobs.addHandler(jobID, handler)
-
-	// Wait for the restore operation to complete
-	slog.Info("Wait for the restore job completion", slog.Any("jobId", jobID))
 
 	return handler.Wait(ctx)
 }
@@ -174,7 +172,10 @@ func (r *dataRestorer) RestoreByTime(
 
 	ctx, cancel := context.WithCancel(ctx)
 	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
-	go r.restoreByTimeSync(ctx, request, jobID, backupsByNamespace)
+	logger := slog.With(slog.Any("jobId", jobID))
+	logger.Info("New restore by time job", slog.Any("request", *request))
+
+	go r.restoreByTimeSync(ctx, request, jobID, backupsByNamespace, logger)
 
 	return jobID, nil
 }
@@ -224,6 +225,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
 	fullBackupsByNamespace map[string][]model.BackupDetails,
+	logger *slog.Logger,
 ) {
 	client, err := r.clientManager.GetClient(request.DestinationCluster)
 	if err != nil {
@@ -241,7 +243,7 @@ func (r *dataRestorer) restoreByTimeSync(
 		wg.Add(1)
 		go func(namespace string, nsBackup []model.BackupDetails) {
 			defer wg.Done()
-			if err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup); err != nil {
+			if err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup, logger); err != nil {
 				multiError = errors.Join(multiError,
 					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
 						request.RoutineName, namespace, err))
@@ -261,6 +263,7 @@ func (r *dataRestorer) restoreNamespace(
 	jobID model.RestoreJobID,
 	namespace string,
 	backups []model.BackupDetails,
+	logger *slog.Logger,
 ) error {
 	// Now restore all backups in order
 	dbEmpty, err := r.nsValidator.IsEmpty(client.AerospikeClient(), namespace, request.Policy.SetList)
@@ -268,26 +271,31 @@ func (r *dataRestorer) restoreNamespace(
 		return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
 	}
 
+	effectivePolicy := *request.Policy // make a thread safe copy.
 	if dbEmpty && !request.DisableReordering {
+		logger.Info("Use optimized restore because database is empty")
 		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
 		// This way we reduce generation noise and unnecessary load.
 		slices.Reverse(backups)
 
 		// old values are not important, because they qualify how to handle existing data in db.
-		request.Policy.Unique = util.Ptr(true)
-		request.Policy.Replace = nil
+		effectivePolicy.Unique = util.Ptr(true)
+		effectivePolicy.Replace = nil
 	}
 
 	for _, b := range backups {
 		r.restoreJobs.addTotalRecords(jobID, b.RecordCount)
 	}
 
-	for _, b := range backups {
+	for i, b := range backups {
+		logger.Info("Start restoring",
+			slog.String("step", fmt.Sprintf("%d/%d", i+1, len(backups))),
+			slog.Any("backup", b))
 		if b.FileCount == 0 { // skip empty namespaces
 			continue
 		}
 
-		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage)
+		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage, &effectivePolicy)
 		if err != nil {
 			return err
 		}
@@ -309,10 +317,11 @@ func (r *dataRestorer) restoreFromPath(
 	request *model.RestoreTimestampRequest,
 	backupPath string,
 	storage model.Storage,
+	policy *model.RestorePolicy,
 ) (restoreexecutor.RestoreHandler, error) {
 	restoreRequest := model.NewRestoreRequest(
 		request.DestinationCluster,
-		request.Policy,
+		policy,
 		storage,
 		request.SecretAgent,
 		backupPath,

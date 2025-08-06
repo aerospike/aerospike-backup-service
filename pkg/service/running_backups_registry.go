@@ -124,25 +124,23 @@ func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string) {
 	r.routineCancel.Store(routineName, cancelFunc)
 	defer cancelFunc()
 
+	logger := slog.Default().With(attr.Routine(routineName))
 	routineStart := time.Now()
 	lastRun, err := r.findLastRun(ctx, routineName)
 	if err != nil {
 		switch {
 		case errors.Is(err, context.Canceled):
-			slog.Info("Backup history scan cancelled", attr.Routine(routineName))
+			logger.Info("Backup history scan cancelled")
 		default:
-			slog.Error("Failed to read last backup time",
-				attr.Routine(routineName),
-				attr.Error(err))
+			logger.Error("Failed to read last backup time", attr.Error(err))
 		}
 		r.lastSuccessful.Remove(routineName)
 
 		return
 	}
 
-	slog.Info("Last backup time scan completed",
+	logger.Info("Last backup time scan completed",
 		slog.Duration("duration", time.Since(routineStart)),
-		attr.Routine(routineName),
 		slog.String("lastRun", lastRun.String()))
 
 	// set last successful backup time for backups done before ABS started
@@ -169,8 +167,8 @@ func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType
 	routineLock.Lock()
 	defer routineLock.Unlock()
 
-	slog.Info("set last backup time",
-		attr.Routine(routineName),
+	logger := slog.Default().With(attr.Routine(routineName))
+	logger.Info("set last backup time",
 		slog.String("time", timestamp.String()),
 		slog.String("job", string(job)),
 	)
@@ -208,16 +206,16 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 	routineLock.RLock()
 	defer routineLock.RUnlock()
 
+	logger := slog.Default().With(attr.Routine(routineName))
 	lastRun, found := r.lastSuccessful.Load(routineName)
 	if !found {
-		slog.Info("No last backup info available", attr.Routine(routineName))
+		logger.Info("No last backup info available")
 		lastRun = model.NewNoBackupTime()
 	}
 
 	nextRunTime, err := nextBackup(routineName, r.config)
 	if err != nil {
-		slog.Warn("Could not calculate next fire time",
-			attr.Routine(routineName), attr.Error(err))
+		logger.Warn("Could not calculate next fire time", attr.Error(err))
 		nextRunTime = model.NewNoBackupTime()
 	}
 
