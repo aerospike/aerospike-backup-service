@@ -92,6 +92,8 @@ func makeBackupConfig(
 
 	config.MetricsEnabled = true
 
+	config.RackList = backupRoutine.PreferRacks
+
 	return config, nil
 }
 
