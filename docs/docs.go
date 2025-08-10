@@ -1957,6 +1957,13 @@ const docTemplate = `{
                     "minimum": 1,
                     "example": 1
                 },
+                "parallel-write": {
+                    "description": "Maximum number of threads to use for writing backup files. If not specified, same values as ` + "`" + `parallel` + "`" + ` is used.",
+                    "type": "integer",
+                    "default": 8,
+                    "minimum": 1,
+                    "example": 1
+                },
                 "records-per-second": {
                     "description": "Limits the number of records returned per second (RPS).\nDefault is no limit.",
                     "type": "integer",

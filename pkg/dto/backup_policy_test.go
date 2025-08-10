@@ -9,6 +9,7 @@ import (
 
 func TestBackupPolicyConversionIsLossless(t *testing.T) {
 	parallel := 4
+	parallelWrite := 8
 	socketTimeout := int64(5000)
 	totalTimeout := int64(10000)
 	retryPolicy := &RetryPolicy{MaxRetries: 3}
@@ -23,6 +24,7 @@ func TestBackupPolicyConversionIsLossless(t *testing.T) {
 
 	original := &BackupPolicy{
 		Parallel:      &parallel,
+		ParallelWrite: &parallelWrite,
 		SocketTimeout: &socketTimeout,
 		TotalTimeout:  &totalTimeout,
 		RetryPolicy:   retryPolicy,
@@ -87,6 +89,62 @@ func TestRetentionPolicy_Validate(t *testing.T) {
 			name:        "invalid incremental backups: exceeds full backups",
 			policy:      &RetentionPolicy{FullBackups: util.Ptr(3), IncrBackups: util.Ptr(5)},
 			expectedErr: "incremental backups retention 5 cannot exceed full backups retention 3",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.policy.Validate()
+			if tt.expectedErr == "" {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				require.EqualError(t, err, tt.expectedErr)
+			}
+		})
+	}
+}
+
+func TestBackupPolicy_Validate(t *testing.T) {
+	tests := []struct {
+		name        string
+		policy      *BackupPolicy
+		expectedErr string
+	}{
+		{
+			name:        "valid parallel",
+			policy:      &BackupPolicy{Parallel: util.Ptr(1)},
+			expectedErr: "",
+		},
+		{
+			name:        "invalid parallel: zero",
+			policy:      &BackupPolicy{Parallel: util.Ptr(0)},
+			expectedErr: "non-positive value validation error: \"parallel\" 0 invalid, should be positive number",
+		},
+		{
+			name:        "invalid parallel: negative",
+			policy:      &BackupPolicy{Parallel: util.Ptr(-1)},
+			expectedErr: "non-positive value validation error: \"parallel\" -1 invalid, should be positive number",
+		},
+		{
+			name:        "valid parallel-write",
+			policy:      &BackupPolicy{ParallelWrite: util.Ptr(1)},
+			expectedErr: "",
+		},
+		{
+			name:        "invalid parallel-write: zero",
+			policy:      &BackupPolicy{ParallelWrite: util.Ptr(0)},
+			expectedErr: "non-positive value validation error: \"parallel-write\" 0 invalid, should be positive number",
+		},
+		{
+			name:        "invalid parallel-write: negative",
+			policy:      &BackupPolicy{ParallelWrite: util.Ptr(-1)},
+			expectedErr: "non-positive value validation error: \"parallel-write\" -1 invalid, should be positive number",
+		},
+		{
+			name:        "nil policy",
+			policy:      nil,
+			expectedErr: "",
 		},
 	}
 
