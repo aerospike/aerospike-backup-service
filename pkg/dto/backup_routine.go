@@ -8,7 +8,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -164,10 +163,7 @@ func isValidPartitionID(entry string) bool {
 	return err == nil && id >= 0 && id <= 4095
 }
 
-func (r *BackupRoutine) ToModel(
-	config *model.BackupConfig,
-	nsValidator aerospike.NamespaceValidator,
-) (*model.BackupRoutine, error) {
+func (r *BackupRoutine) ToModel(config *model.BackupConfig) (*model.BackupRoutine, error) {
 	policy, err := resolveBackupPolicy(r.BackupPolicy, config.BackupPolicies)
 	if err != nil {
 		return nil, err
@@ -195,11 +191,6 @@ func (r *BackupRoutine) ToModel(
 		if !found {
 			return nil, errValidationNotFound("secret agent", *r.SecretAgent)
 		}
-	}
-
-	missingNSs := nsValidator.MissingNamespaces(cluster, *r.Namespaces)
-	if len(missingNSs) > 0 {
-		return nil, fmt.Errorf("the following namespaces are missing in the cluster: %v", missingNSs)
 	}
 
 	return &model.BackupRoutine{

@@ -10,7 +10,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/stretchr/testify/assert"
 )
@@ -241,7 +240,6 @@ func TestDeletePolicy(t *testing.T) {
 func setupTestService() *Service {
 	mockScheduler := &MockScheduler{}
 	mockConfigApplier := &MockConfigApplier{}
-	mockNsValidator := &aerospike.NoopNamespaceValidator{}
 	mockConfigurationManager := &configurationManagerMock{}
 	mockRegistry := &mockRunningBackupsRegistry{}
 
@@ -255,6 +253,6 @@ func setupTestService() *Service {
 		nil,
 		mockRegistry,
 		mockConfigurationManager,
-		mockNsValidator,
+		nil,
 	)
 }

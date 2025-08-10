@@ -63,9 +63,13 @@ func readConfig(reader io.Reader, nsValidator aerospike.NamespaceValidator) (*mo
 		return nil, fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 
-	modelConfig, err := config.ToModel(nsValidator)
+	modelConfig, err := config.ToModel()
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert configuration to model: %w", err)
+	}
+
+	if err := nsValidator.ValidateConfig(modelConfig); err != nil {
+		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
 	return modelConfig, nil

@@ -6,7 +6,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 )
 
 // Config represents the service configuration file.
@@ -136,7 +135,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func (c *Config) ToModel(nsValidator aerospike.NamespaceValidator) (*model.Config, error) {
+func (c *Config) ToModel() (*model.Config, error) {
 	if err := c.Validate(); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
@@ -183,7 +182,7 @@ func (c *Config) ToModel(nsValidator aerospike.NamespaceValidator) (*model.Confi
 	backupConfig := modelConfig.BackupConfigCopy()
 	// routines must be added after storage, secret agents and policies.
 	for k, v := range c.BackupRoutines {
-		toModel, err := v.ToModel(backupConfig, nsValidator)
+		toModel, err := v.ToModel(backupConfig)
 		if err != nil {
 			return nil, fmt.Errorf("invalid backup routine %q: %w", k, err)
 		}

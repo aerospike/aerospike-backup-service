@@ -32,12 +32,16 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body.Close()
-	toModel, err := newRoutine.ToModel(s.config.BackupConfigCopy(), s.nsValidator)
+	toModel, err := newRoutine.ToModel(s.config.BackupConfigCopy())
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
-
+	err = s.nsValidator.ValidateBackupRoutineNamespaces(toModel)
+	if err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		return config.AddRoutine(name, toModel)
 	})
@@ -116,7 +120,12 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 	}
 	r.Body.Close()
 
-	toModel, err := updatedRoutine.ToModel(s.config.BackupConfigCopy(), s.nsValidator)
+	toModel, err := updatedRoutine.ToModel(s.config.BackupConfigCopy())
+	if err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
+	err = s.nsValidator.ValidateBackupRoutineNamespaces(toModel)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return

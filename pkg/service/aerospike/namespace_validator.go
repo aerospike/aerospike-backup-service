@@ -21,10 +21,24 @@ type NamespaceValidator interface {
 	// ValidateRoutines verifies that all namespaces referenced in backup routines
 	// exist in their respective clusters.
 	ValidateRoutines(cluster *model.AerospikeCluster, routines map[string]*model.BackupRoutine) error
+	// ValidateBackupRoutineNamespaces validates that all namespaces referenced in the
+	// backup routine exist in their respective clusters.
+	ValidateBackupRoutineNamespaces(routine *model.BackupRoutine) error
+	ValidateConfig(configModel *model.Config) error
 }
 
 type defaultNamespaceValidator struct {
 	ClientManager ClientManager
+}
+
+func (nv *defaultNamespaceValidator) ValidateConfig(configModel *model.Config) error {
+	for k, v := range configModel.Routines() {
+		if err := nv.ValidateBackupRoutineNamespaces(v); err != nil {
+			return fmt.Errorf("validation error for routine %s: %w", k, err)
+		}
+	}
+
+	return nil
 }
 
 func NewNamespaceValidator(clientManager ClientManager) NamespaceValidator {
@@ -71,6 +85,14 @@ func (nv *defaultNamespaceValidator) ValidateRoutines(
 	return err
 }
 
+func (nv *defaultNamespaceValidator) ValidateBackupRoutineNamespaces(routine *model.BackupRoutine) error {
+	missingNSs := nv.MissingNamespaces(routine.SourceCluster, routine.Namespaces)
+	if len(missingNSs) > 0 {
+		return fmt.Errorf("the following namespaces are missing in the cluster: %v", missingNSs)
+	}
+	return nil
+}
+
 // filterRoutinesByCluster filters backup routines by the given cluster.
 func filterRoutinesByCluster(
 	routines map[string]*model.BackupRoutine, cluster *model.AerospikeCluster,
@@ -108,21 +130,4 @@ func ResolveNamespaces(namespaces []string, client Cluster) ([]string, error) {
 	}
 
 	return namespaces, nil
-}
-
-// NoopNamespaceValidator is a noop implementation of the NamespaceValidator interface.
-type NoopNamespaceValidator struct{}
-
-func (n *NoopNamespaceValidator) IsEmpty(Cluster, string, []string) (bool, error) {
-	return false, nil
-}
-
-// MissingNamespaces returns an empty slice, indicating no namespaces are missing.
-func (n *NoopNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ []string) []string {
-	return nil
-}
-
-// ValidateRoutines returns nil, indicating no error in validation.
-func (n *NoopNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ map[string]*model.BackupRoutine) error {
-	return nil
 }

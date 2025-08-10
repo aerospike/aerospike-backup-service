@@ -92,21 +92,6 @@ func (m *MockNamespaceValidator) EXPECT() *MockNamespaceValidatorMockRecorder {
 	return m.recorder
 }
 
-// IsEmpty mocks base method.
-func (m *MockNamespaceValidator) IsEmpty(client Cluster, namespace string, setList []string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsEmpty", client, namespace, setList)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsEmpty indicates an expected call of IsEmpty.
-func (mr *MockNamespaceValidatorMockRecorder) IsEmpty(client, namespace, setList any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEmpty", reflect.TypeOf((*MockNamespaceValidator)(nil).IsEmpty), client, namespace, setList)
-}
-
 // MissingNamespaces mocks base method.
 func (m *MockNamespaceValidator) MissingNamespaces(cluster *model.AerospikeCluster, namespaces []string) []string {
 	m.ctrl.T.Helper()
@@ -119,6 +104,34 @@ func (m *MockNamespaceValidator) MissingNamespaces(cluster *model.AerospikeClust
 func (mr *MockNamespaceValidatorMockRecorder) MissingNamespaces(cluster, namespaces any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MissingNamespaces", reflect.TypeOf((*MockNamespaceValidator)(nil).MissingNamespaces), cluster, namespaces)
+}
+
+// ValidateBackupRoutineNamespaces mocks base method.
+func (m *MockNamespaceValidator) ValidateBackupRoutineNamespaces(routine *model.BackupRoutine) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateBackupRoutineNamespaces", routine)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateBackupRoutineNamespaces indicates an expected call of ValidateBackupRoutineNamespaces.
+func (mr *MockNamespaceValidatorMockRecorder) ValidateBackupRoutineNamespaces(routine any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateBackupRoutineNamespaces", reflect.TypeOf((*MockNamespaceValidator)(nil).ValidateBackupRoutineNamespaces), routine)
+}
+
+// ValidateConfig mocks base method.
+func (m *MockNamespaceValidator) ValidateConfig(configModel *model.Config) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateConfig", configModel)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateConfig indicates an expected call of ValidateConfig.
+func (mr *MockNamespaceValidatorMockRecorder) ValidateConfig(configModel any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateConfig", reflect.TypeOf((*MockNamespaceValidator)(nil).ValidateConfig), configModel)
 }
 
 // ValidateRoutines mocks base method.

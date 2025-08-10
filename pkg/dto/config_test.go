@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
@@ -63,7 +62,7 @@ func TestInvalidClusterReference(t *testing.T) {
 	routine := config.BackupRoutines["routine1"]
 	routine.SourceCluster = "nonExistentCluster"
 
-	_, err := config.ToModel(&aerospike.NoopNamespaceValidator{})
+	_, err := config.ToModel()
 
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
@@ -79,7 +78,7 @@ func TestInvalidBackupPolicyReference(t *testing.T) {
 	routine := config.BackupRoutines["routine1"]
 	routine.BackupPolicy = "nonExistentPolicy"
 
-	_, err := config.ToModel(&aerospike.NoopNamespaceValidator{})
+	_, err := config.ToModel()
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}
@@ -94,7 +93,7 @@ func TestInvalidStorageReference(t *testing.T) {
 	routine := config.BackupRoutines["routine1"]
 	routine.Storage = "nonExistentStorage"
 
-	_, err := config.ToModel(&aerospike.NoopNamespaceValidator{})
+	_, err := config.ToModel()
 	if err == nil {
 		t.Fatalf("Expected validation error, but got none.")
 	}

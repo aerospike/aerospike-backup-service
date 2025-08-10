@@ -50,10 +50,14 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newConfigModel, err := newConfig.ToModel(s.nsValidator)
+	newConfigModel, err := newConfig.ToModel()
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
+	}
+
+	if err := s.nsValidator.ValidateConfig(newConfigModel); err != nil {
+		httpError(w, errBadRequest(fmt.Errorf("invalid configuration: %w", err)))
 	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
