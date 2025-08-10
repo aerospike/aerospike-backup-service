@@ -21,10 +21,6 @@ type NamespaceValidator interface {
 	// ValidateRoutines verifies that all namespaces referenced in backup routines
 	// exist in their respective clusters.
 	ValidateRoutines(cluster *model.AerospikeCluster, routines map[string]*model.BackupRoutine) error
-	// IsEmpty checks if the given namespace or specific sets within it are empty.
-	// If sets slice is empty, it checks the entire namespace.
-	// If sets are provided, it checks only those specific sets.
-	IsEmpty(client Cluster, namespace string, setList []string) (bool, error)
 }
 
 type defaultNamespaceValidator struct {
