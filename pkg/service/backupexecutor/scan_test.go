@@ -89,6 +89,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	routine := &model.BackupRoutine{
 		BackupPolicy: &model.BackupPolicy{
 			Parallel:      util.Ptr(4),
+			ParallelWrite: util.Ptr(8),
 			FileLimit:     util.Ptr(100),
 			NoRecords:     util.Ptr(true),
 			NoIndexes:     util.Ptr(true),
@@ -136,7 +137,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	assert.Equal(t, routine.SetList, config.SetList)
 	assert.Equal(t, routine.NodeList, config.NodeList)
 	assert.Equal(t, 4, config.ParallelRead)
-	assert.Equal(t, 4, config.ParallelWrite)
+	assert.Equal(t, 8, config.ParallelWrite)
 	assert.Equal(t, uint64(100*megabyte), config.FileLimit)
 	assert.Equal(t, true, config.NoRecords)
 	assert.Equal(t, true, config.NoIndexes)
@@ -173,12 +174,13 @@ func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {
 	namespace := "testNamespace"
 	routine := &model.BackupRoutine{
 		BackupPolicy: &model.BackupPolicy{
-			Parallel:  util.Ptr(4),
-			FileLimit: util.Ptr(100),
-			NoRecords: util.Ptr(false),
-			NoIndexes: util.Ptr(false),
-			NoUdfs:    util.Ptr(false),
-			Bandwidth: util.Ptr(int64(10)),
+			Parallel:      util.Ptr(4),
+			ParallelWrite: util.Ptr(8),
+			FileLimit:     util.Ptr(100),
+			NoRecords:     util.Ptr(false),
+			NoIndexes:     util.Ptr(false),
+			NoUdfs:        util.Ptr(false),
+			Bandwidth:     util.Ptr(int64(10)),
 		},
 		SetList:          []string{"testSet"},
 		BinList:          []string{"bin1", "bin2"},
@@ -202,7 +204,7 @@ func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {
 	assert.Equal(t, routine.SetList, config.SetList)
 	assert.Equal(t, routine.NodeList, config.NodeList)
 	assert.Equal(t, 4, config.ParallelRead)
-	assert.Equal(t, 4, config.ParallelWrite)
+	assert.Equal(t, 8, config.ParallelWrite)
 	assert.Equal(t, uint64(100*megabyte), config.FileLimit)
 	assert.Equal(t, false, config.NoRecords)
 	assert.Equal(t, true, config.NoIndexes) // Incremental backup should have NoIndexes=true
@@ -229,4 +231,20 @@ func TestMakeBackupConfigWithPartitionList(t *testing.T) {
 
 	assert.Nil(t, config.EncryptionPolicy)
 	assert.Nil(t, config.CompressionPolicy)
+}
+
+func TestMakeBackupConfig_DefaultParallelWrite(t *testing.T) {
+	namespace := "testNamespace"
+	routine := &model.BackupRoutine{
+		BackupPolicy: &model.BackupPolicy{
+			Parallel: util.Ptr(4),
+		},
+		IntervalCron: "@daily",
+	}
+
+	config, err := makeBackupConfig(namespace, routine, model.TimeBounds{})
+
+	require.NoError(t, err)
+	assert.Equal(t, 4, config.ParallelRead)
+	assert.Equal(t, 4, config.ParallelWrite)
 }

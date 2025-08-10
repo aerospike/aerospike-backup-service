@@ -11,6 +11,8 @@ import (
 type BackupPolicy struct {
 	// Maximum number of scan calls to run in parallel.
 	Parallel *int
+	// Maximum number of threads to use for writing backup files.
+	ParallelWrite *int
 	// Socket timeout. If this value is 0, it is set to total-timeout.
 	// If both are 0, there is no socket idle time limit.
 	SocketTimeout *time.Duration
@@ -66,6 +68,7 @@ func (p *BackupPolicy) IsSealedOrDefault() bool {
 func (p *BackupPolicy) CopyWithNoRecords() *BackupPolicy {
 	return &BackupPolicy{
 		Parallel:         p.Parallel,
+		ParallelWrite:    p.ParallelWrite,
 		SocketTimeout:    p.SocketTimeout,
 		TotalTimeout:     p.TotalTimeout,
 		RetryPolicy:      p.RetryPolicy,
@@ -94,6 +97,13 @@ func (p *BackupPolicy) GetParallelOrDefault() int {
 	}
 
 	return *defaultConfig.backupPolicy.Parallel
+}
+
+func (p *BackupPolicy) GetParallelWriteOrDefault() int {
+	if p.ParallelWrite != nil {
+		return *p.ParallelWrite
+	}
+	return p.GetParallelOrDefault()
 }
 
 func (p *BackupPolicy) GetFileLimitOrDefault() int {
