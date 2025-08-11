@@ -102,7 +102,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2) // for ns1 and ns2
 
-	nsValidator := &aerospike.MockNamespaceValidator{}
+	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 	o := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
@@ -144,7 +144,7 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		},
 	})
 
-	nsValidator := &aerospike.MockNamespaceValidator{}
+	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 	o := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
@@ -198,7 +198,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	initialState := &model.RoutineState{}
 	mockRegistry.EXPECT().GetRoutineState(routineName).Return(initialState)
 
-	nsValidator := &aerospike.MockNamespaceValidator{}
+	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 	o := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
@@ -238,7 +238,7 @@ func TestBackupRoutineOrchestrator_runFullBackup_RaceCondition(t *testing.T) {
 	config := setupBaseConfig()
 	registry := NewRunningBackupsRegistry(ctx, mockBackupBackend, config)
 
-	nsValidator := &aerospike.MockNamespaceValidator{}
+	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 	orchestrator := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
@@ -417,7 +417,7 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 	mockRegistry.EXPECT().GetRoutineState(routineName).Return(routineState)
 
-	nsValidator := &aerospike.MockNamespaceValidator{}
+	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 	o := newOrchestrator(routineName, setupBaseConfig(), NewBackupComponents(
 		nil,
 		nil,
@@ -521,7 +521,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2)
 
-	nsValidator := &aerospike.MockNamespaceValidator{}
+	nsValidator := aerospike.NewMockNamespaceValidator(ctrl)
 	o := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,

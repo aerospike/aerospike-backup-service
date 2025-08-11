@@ -27,7 +27,8 @@ func Test(t *testing.T) {
 	assert.NoError(t, aerr)
 	defer client.Close()
 
-	namespaces, err := getAllNamespacesOfCluster(client)
+	validator := NewNamespaceValidator(nil)
+	namespaces, err := validator.GetAllNamespacesOfCluster(client.Cluster())
 	assert.NoError(t, err)
 	assert.NotEmpty(t, namespaces)
 }

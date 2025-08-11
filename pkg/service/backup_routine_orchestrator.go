@@ -13,7 +13,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 )
 
@@ -181,7 +180,7 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 		if err != nil {
 			return fmt.Errorf("cannot get backup client: %w", err)
 		}
-		namespaces, err = h.resolveNamespaces(h.routine.Namespaces, client.AerospikeClient().Cluster())
+		namespaces, err = h.resolveNamespaces(h.routine.Namespaces, client)
 		if err != nil {
 			h.clientManager.Close(client)
 			return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
@@ -195,9 +194,9 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 
 // resolveNamespaces returns the list of namespaces to back up.
 // If `namespaces` is empty, it fetches all namespaces from the cluster via the provided client.
-func (h *BackupRoutineOrchestrator) resolveNamespaces(namespaces []string, cluster *as.Cluster) ([]string, error) {
+func (h *BackupRoutineOrchestrator) resolveNamespaces(namespaces []string, client *backup.Client) ([]string, error) {
 	if len(namespaces) == 0 {
-		return h.nsValidator.GetAllNamespacesOfCluster(cluster)
+		return h.nsValidator.GetAllNamespacesOfCluster(client.AerospikeClient().Cluster())
 	}
 
 	return namespaces, nil

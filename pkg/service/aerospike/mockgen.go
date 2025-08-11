@@ -124,11 +124,12 @@ func (mr *MockNamespaceValidatorMockRecorder) IsEmpty(client, namespace, request
 }
 
 // MissingNamespaces mocks base method.
-func (m *MockNamespaceValidator) MissingNamespaces(cluster *model.AerospikeCluster, namespaces []string) []string {
+func (m *MockNamespaceValidator) MissingNamespaces(cluster *model.AerospikeCluster, namespaces []string) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "MissingNamespaces", cluster, namespaces)
 	ret0, _ := ret[0].([]string)
-	return ret0
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // MissingNamespaces indicates an expected call of MissingNamespaces.

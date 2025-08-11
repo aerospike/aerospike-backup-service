@@ -154,7 +154,7 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 		// it can be only 1 missing ns: destinationNS
 		err := r.nsValidator.ValidatePresent(request.DestinationCluster, destinationNS)
 		if err != nil {
-			return fmt.Errorf("destination cluster does not have namespace %q", destinationNS)
+			return fmt.Errorf("destination cluster does not have required namespace: %w", err)
 		}
 	}
 

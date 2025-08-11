@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -160,8 +159,8 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 
 	// Expect namespace validation to fail
 	env.mockNsValidator.EXPECT().
-		MissingNamespaces(cluster, []string{destinationNS}).
-		Return([]string{destinationNS})
+		ValidatePresent(cluster, []string{destinationNS}).
+		Return(errors.New("missing namespaces: test-ns"))
 
 	// Execute the restore
 	jobID, err := env.restoreManager.Restore(context.Background(), request)
@@ -173,7 +172,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
 	assert.Contains(t, jobStatus.Error.Error(),
-		fmt.Sprintf("destination cluster does not have namespace %q", destinationNS))
+		"destination cluster does not have required namespace: missing namespaces: test-ns")
 }
 
 func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
@@ -190,7 +189,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 	// Namespace validation passes
 	env.mockNsValidator.EXPECT().
 		MissingNamespaces(gomock.Any(), gomock.Any()).
-		Return(nil).AnyTimes()
+		Return(nil, nil).AnyTimes()
 
 	// BackupReader returns backups with different creation times, which is invalid
 	backups := []model.BackupDetails{
