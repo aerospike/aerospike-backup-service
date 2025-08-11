@@ -48,7 +48,7 @@ func NewNamespaceValidator(clientManager ClientManager) NamespaceValidator {
 	}
 }
 
-func (nv *defaultNamespaceValidator) MissingNamespaces(
+func (nv *defaultNamespaceValidator) missingNamespaces(
 	cluster *model.AerospikeCluster,
 	namespaces []string,
 ) ([]string, error) {
@@ -70,7 +70,7 @@ func (nv *defaultNamespaceValidator) ValidateRoutines(
 ) error {
 	var errs []error
 	for routineName, routine := range filterRoutinesByCluster(routines, cluster) {
-		missingNamespaces, err := nv.MissingNamespaces(cluster, routine.Namespaces)
+		missingNamespaces, err := nv.missingNamespaces(cluster, routine.Namespaces)
 		if err != nil {
 			// if we can't connect to the cluster, we can't validate any routine for it
 			return fmt.Errorf("cannot validate routines for cluster: %w", err)
@@ -87,7 +87,7 @@ func (nv *defaultNamespaceValidator) ValidateRoutines(
 func (nv *defaultNamespaceValidator) ValidateBackupRoutineNamespaces(
 	routine *model.BackupRoutine,
 ) error {
-	missingNSs, err := nv.MissingNamespaces(routine.SourceCluster, routine.Namespaces)
+	missingNSs, err := nv.missingNamespaces(routine.SourceCluster, routine.Namespaces)
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (nv *defaultNamespaceValidator) ValidatePresent(
 		return nil
 	}
 
-	missing, err := nv.MissingNamespaces(cluster, namespaces)
+	missing, err := nv.missingNamespaces(cluster, namespaces)
 	if err != nil {
 		return err
 	}
