@@ -30,7 +30,7 @@ type BackupRoutineOrchestrator struct {
 	clientManager       aerospike.ClientManager
 	registry            RunningBackupsRegistry
 	retentionManager    RetentionManager
-	nsValidator         aerospike.NamespaceValidator
+	infoRequest         aerospike.InfoRequest
 
 	fullBackupLock sync.Mutex
 }
@@ -46,7 +46,7 @@ type BackupComponents struct {
 	backendService   BackupWriter            // Writes backup metadata after a successful backup and
 	// deletes created files if the backup fails.
 	clusterConfigWriter ClusterConfigWriter // Backs up cluster configuration.
-	nsValidator         aerospike.NamespaceValidator
+	infoRequest         aerospike.InfoRequest
 }
 
 func NewBackupComponents(
@@ -56,7 +56,7 @@ func NewBackupComponents(
 	retentionManager RetentionManager,
 	backendService BackupWriter,
 	clusterConfigWriter ClusterConfigWriter,
-	nsValidator aerospike.NamespaceValidator,
+	infoRequest aerospike.InfoRequest,
 ) *BackupComponents {
 	return &BackupComponents{
 		clientManager:       clientManager,
@@ -65,7 +65,7 @@ func NewBackupComponents(
 		retentionManager:    retentionManager,
 		backendService:      backendService,
 		clusterConfigWriter: clusterConfigWriter,
-		nsValidator:         nsValidator,
+		infoRequest:         infoRequest,
 	}
 }
 
@@ -83,7 +83,7 @@ func newOrchestrator(routineName string, config *model.Config, h *BackupComponen
 		registry:            h.registry,
 		retentionManager:    h.retentionManager,
 		logger:              logger,
-		nsValidator:         h.nsValidator,
+		infoRequest:         h.infoRequest,
 	}
 }
 
@@ -196,7 +196,7 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 // If `namespaces` is empty, it fetches all namespaces from the cluster via the provided client.
 func (h *BackupRoutineOrchestrator) resolveNamespaces(namespaces []string, client *backup.Client) ([]string, error) {
 	if len(namespaces) == 0 {
-		return h.nsValidator.GetAllNamespacesOfCluster(client.AerospikeClient().Cluster())
+		return h.infoRequest.Namespaces(client.AerospikeClient().Cluster())
 	}
 
 	return namespaces, nil

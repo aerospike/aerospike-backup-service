@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -27,7 +26,7 @@ var components = NewBackupComponents(
 	new(mockRetentionManager),
 	new(MockBackupBackendService),
 	new(mockClusterConfigWriter),
-	&aerospike.MockNamespaceValidator{},
+	nil,
 )
 
 func TestScheduleRoutines(t *testing.T) {

@@ -8,7 +8,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	"github.com/aerospike/backup-go/pkg/asinfo"
 )
 
 // NamespaceValidator provides methods for validating namespace existence in Aerospike clusters.
@@ -23,9 +22,6 @@ type NamespaceValidator interface {
 
 	// ValidateConfig validates all backup routines in the configuration.
 	ValidateConfig(configModel *model.Config) error
-
-	// GetAllNamespacesOfCluster retrieves all namespace names from a cluster.
-	GetAllNamespacesOfCluster(cluster asinfo.NodeGetter) ([]string, error)
 }
 
 // defaultNamespaceValidator implements the NamespaceValidator interface.
@@ -100,12 +96,6 @@ func (nv *defaultNamespaceValidator) ValidateConfig(configModel *model.Config) e
 	return nil
 }
 
-func (nv *defaultNamespaceValidator) GetAllNamespacesOfCluster(
-	cluster asinfo.NodeGetter,
-) ([]string, error) {
-	return nv.infoRequest.Namespaces(cluster)
-}
-
 // getClusterNamespaces retrieves the list of namespaces from the given cluster.
 // It handles client acquisition and release.
 func (nv *defaultNamespaceValidator) getClusterNamespaces(
@@ -118,7 +108,7 @@ func (nv *defaultNamespaceValidator) getClusterNamespaces(
 	}
 	defer nv.clientManager.Close(backupClient)
 
-	namespaces, err := nv.GetAllNamespacesOfCluster(backupClient.AerospikeClient().Cluster())
+	namespaces, err := nv.infoRequest.Namespaces(backupClient.AerospikeClient().Cluster())
 	if err != nil {
 		slog.Error("Failed to retrieve namespaces from cluster", attr.Error(err))
 		return nil, err

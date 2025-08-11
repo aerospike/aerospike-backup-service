@@ -134,7 +134,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	backupExecutor := backupexecutor.NewDefaultBackupExecutor()
 	backupComponents := service.NewBackupComponents(
 		clientManager, backupExecutor, registry, retentionManager,
-		backendService, clusterConfigWriter, nsValidator)
+		backendService, clusterConfigWriter, infoRequest)
 	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config)
 
 	err = configApplier.ApplyNewConfig()
