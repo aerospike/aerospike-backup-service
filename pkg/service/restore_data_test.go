@@ -188,8 +188,8 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 
 	// Namespace validation passes
 	env.mockNsValidator.EXPECT().
-		MissingNamespaces(gomock.Any(), gomock.Any()).
-		Return(nil, nil).AnyTimes()
+		ValidatePresent(gomock.Any(), gomock.Any()).
+		Return(nil).AnyTimes()
 
 	// BackupReader returns backups with different creation times, which is invalid
 	backups := []model.BackupDetails{
