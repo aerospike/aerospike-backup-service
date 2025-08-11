@@ -8,7 +8,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 )
@@ -38,13 +37,15 @@ type NamespaceValidator interface {
 
 // defaultNamespaceValidator implements the NamespaceValidator interface.
 type defaultNamespaceValidator struct {
-	ClientManager ClientManager
+	clientManager ClientManager
+	infoRequest   InfoRequest
 }
 
 // NewNamespaceValidator returns a new NamespaceValidator instance.
-func NewNamespaceValidator(clientManager ClientManager) NamespaceValidator {
+func NewNamespaceValidator(clientManager ClientManager, asinfo InfoRequest) NamespaceValidator {
 	return &defaultNamespaceValidator{
-		ClientManager: clientManager,
+		clientManager: clientManager,
+		infoRequest:   asinfo,
 	}
 }
 
@@ -111,12 +112,7 @@ func (nv *defaultNamespaceValidator) IsEmpty(
 	namespace string,
 	request *model.RestoreTimestampRequest,
 ) (bool, error) {
-	newClient, err := asinfo.NewClient(client.AerospikeClient().Cluster(), as.NewInfoPolicy(), request.Policy.RetryPolicy)
-	if err != nil {
-		return false, err
-	}
-
-	count, err := newClient.GetRecordCount(namespace, request.Policy.SetList)
+	count, err := nv.infoRequest.RecordCount(client.AerospikeClient().Cluster(), namespace, request.Policy.SetList)
 	if err != nil {
 		return false, err
 	}
@@ -127,11 +123,7 @@ func (nv *defaultNamespaceValidator) IsEmpty(
 func (nv *defaultNamespaceValidator) GetAllNamespacesOfCluster(
 	cluster asinfo.NodeGetter,
 ) ([]string, error) {
-	newClient, err := asinfo.NewClient(cluster, as.NewInfoPolicy(), nil)
-	if err != nil {
-		return nil, err
-	}
-	return newClient.GetNamespacesList()
+	return nv.infoRequest.Namespaces(cluster)
 }
 
 func (nv *defaultNamespaceValidator) ValidatePresent(
@@ -159,12 +151,12 @@ func (nv *defaultNamespaceValidator) ValidatePresent(
 func (nv *defaultNamespaceValidator) getClusterNamespaces(
 	cluster *model.AerospikeCluster,
 ) ([]string, error) {
-	backupClient, err := nv.ClientManager.GetClient(cluster)
+	backupClient, err := nv.clientManager.GetClient(cluster)
 	if err != nil {
 		slog.Error("Failed to connect to Aerospike cluster", attr.Error(err))
 		return nil, fmt.Errorf("failed to connect to Aerospike cluster: %w", err)
 	}
-	defer nv.ClientManager.Close(backupClient)
+	defer nv.clientManager.Close(backupClient)
 
 	namespaces, err := nv.GetAllNamespacesOfCluster(backupClient.AerospikeClient().Cluster())
 	if err != nil {

@@ -9,11 +9,18 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/pkg/asinfo"
 )
 
 // DefaultClientFactory is the default implementation of ClientFactory.
-type DefaultClientFactory struct{}
+type DefaultClientFactory struct {
+	asinfo InfoRequest
+}
+
+func NewClientFactory(asinfo InfoRequest) *DefaultClientFactory {
+	return &DefaultClientFactory{
+		asinfo: asinfo,
+	}
+}
 
 // NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
 func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
@@ -32,12 +39,7 @@ func (f *DefaultClientFactory) IsClusterHealthy(client Cluster) bool {
 		return false
 	}
 
-	infoclient, err := asinfo.NewClient(client.Cluster(), as.NewInfoPolicy(), nil)
-	if err != nil {
-		return false
-	}
-
-	status, err := infoclient.GetStatus()
+	status, err := f.asinfo.Status(client.Cluster())
 
 	return err == nil && status == "ok"
 }

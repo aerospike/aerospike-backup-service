@@ -98,8 +98,9 @@ func startService(configFile string, remote bool) error {
 func initComponents(ctx context.Context, configFile string, remote bool) (
 	*model.Config, quartz.Scheduler, *handlers.Service, *slog.Logger, error,
 ) {
-	clientManager := aerospike.NewClientManager(&aerospike.DefaultClientFactory{}, 10*time.Second)
-	nsValidator := aerospike.NewNamespaceValidator(clientManager)
+	infoRequest := aerospike.NewInfoRequest(nil, nil)
+	clientManager := aerospike.NewClientManager(aerospike.NewClientFactory(infoRequest), 10*time.Second)
+	nsValidator := aerospike.NewNamespaceValidator(clientManager, infoRequest)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
 	if err != nil {

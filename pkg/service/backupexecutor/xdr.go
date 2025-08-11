@@ -123,7 +123,7 @@ var (
 )
 
 func generateUniqueDCName(client backup.AerospikeClient) (string, error) {
-	existingDCs, err := aerospike.GetDCNames(client)
+	existingDCs, err := aerospike.NewInfoRequest(nil, nil).DCs(client.Cluster())
 	if err != nil {
 		return "", fmt.Errorf("failed to get existing DC names: %w", err)
 	}
