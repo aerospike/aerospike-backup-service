@@ -13,9 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	a "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
-	"github.com/aerospike/backup-go/pkg/asinfo"
 )
 
 type ErrJobNotFound struct {
@@ -268,7 +266,7 @@ func (r *dataRestorer) restoreNamespace(
 	logger *slog.Logger,
 ) error {
 	// Now restore all backups in order
-	dbEmpty, err := r.isEmpty(client, namespace, request)
+	dbEmpty, err := r.nsValidator.IsEmpty(client, namespace, request)
 	if err != nil {
 		return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
 	}
@@ -311,24 +309,6 @@ func (r *dataRestorer) restoreNamespace(
 	}
 
 	return nil
-}
-
-func (r *dataRestorer) isEmpty(
-	client *backup.Client,
-	namespace string,
-	request *model.RestoreTimestampRequest,
-) (bool, error) {
-	newClient, err := asinfo.NewClient(client.AerospikeClient().Cluster(), a.NewInfoPolicy(), request.Policy.RetryPolicy)
-	if err != nil {
-		return false, err
-	}
-
-	count, err := newClient.GetRecordCount(namespace, request.Policy.SetList)
-	if err != nil {
-		return false, err
-	}
-
-	return count == 0, nil
 }
 
 func (r *dataRestorer) restoreFromPath(

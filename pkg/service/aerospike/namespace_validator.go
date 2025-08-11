@@ -10,6 +10,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
+	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/pkg/asinfo"
 )
 
 const namespaceInfo = "namespaces"
@@ -25,10 +27,29 @@ type NamespaceValidator interface {
 	// backup routine exist in their respective clusters.
 	ValidateBackupRoutineNamespaces(routine *model.BackupRoutine) error
 	ValidateConfig(configModel *model.Config) error
+	IsEmpty(client *backup.Client, namespace string, request *model.RestoreTimestampRequest) (bool, error)
 }
 
 type defaultNamespaceValidator struct {
 	ClientManager ClientManager
+}
+
+func (nv *defaultNamespaceValidator) IsEmpty(
+	client *backup.Client,
+	namespace string,
+	request *model.RestoreTimestampRequest,
+) (bool, error) {
+	newClient, err := asinfo.NewClient(client.AerospikeClient().Cluster(), as.NewInfoPolicy(), request.Policy.RetryPolicy)
+	if err != nil {
+		return false, err
+	}
+
+	count, err := newClient.GetRecordCount(namespace, request.Policy.SetList)
+	if err != nil {
+		return false, err
+	}
+
+	return count == 0, nil
 }
 
 func (nv *defaultNamespaceValidator) ValidateConfig(configModel *model.Config) error {

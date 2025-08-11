@@ -92,6 +92,21 @@ func (m *MockNamespaceValidator) EXPECT() *MockNamespaceValidatorMockRecorder {
 	return m.recorder
 }
 
+// IsEmpty mocks base method.
+func (m *MockNamespaceValidator) IsEmpty(client *backup.Client, namespace string, request *model.RestoreTimestampRequest) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsEmpty", client, namespace, request)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsEmpty indicates an expected call of IsEmpty.
+func (mr *MockNamespaceValidatorMockRecorder) IsEmpty(client, namespace, request any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEmpty", reflect.TypeOf((*MockNamespaceValidator)(nil).IsEmpty), client, namespace, request)
+}
+
 // MissingNamespaces mocks base method.
 func (m *MockNamespaceValidator) MissingNamespaces(cluster *model.AerospikeCluster, namespaces []string) []string {
 	m.ctrl.T.Helper()
