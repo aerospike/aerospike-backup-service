@@ -12,7 +12,7 @@ import (
 // NamespaceValidator provides methods for checking namespace existence in Aerospike clusters.
 // NOTE: This implementation is non-blocking: it logs warnings but does not return errors.
 type NamespaceValidator interface {
-	// ValidateConfig scans all backup routines and logs warnings for missing namespaces.
+	// ValidateConfig scans all backup routines and logs warnings for missing namespaces in corresponding clusters.
 	ValidateConfig(cfg *model.Config)
 }
 
