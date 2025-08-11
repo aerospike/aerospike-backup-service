@@ -15,10 +15,6 @@ import (
 
 // NamespaceValidator provides methods for validating namespace existence in Aerospike clusters.
 type NamespaceValidator interface {
-	// MissingNamespaces returns a slice containing any namespaces specified in the
-	// provided slice which do not exist on the given cluster.
-	MissingNamespaces(cluster *model.AerospikeCluster, namespaces []string) ([]string, error)
-
 	// ValidateRoutines verifies that all namespaces referenced in backup routines
 	// for a given cluster exist in that cluster.
 	ValidateRoutines(cluster *model.AerospikeCluster, routines map[string]*model.BackupRoutine) error

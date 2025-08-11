@@ -123,21 +123,6 @@ func (mr *MockNamespaceValidatorMockRecorder) IsEmpty(client, namespace, request
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEmpty", reflect.TypeOf((*MockNamespaceValidator)(nil).IsEmpty), client, namespace, request)
 }
 
-// MissingNamespaces mocks base method.
-func (m *MockNamespaceValidator) MissingNamespaces(cluster *model.AerospikeCluster, namespaces []string) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MissingNamespaces", cluster, namespaces)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// MissingNamespaces indicates an expected call of MissingNamespaces.
-func (mr *MockNamespaceValidatorMockRecorder) MissingNamespaces(cluster, namespaces any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MissingNamespaces", reflect.TypeOf((*MockNamespaceValidator)(nil).MissingNamespaces), cluster, namespaces)
-}
-
 // ValidateBackupRoutineNamespaces mocks base method.
 func (m *MockNamespaceValidator) ValidateBackupRoutineNamespaces(routine *model.BackupRoutine) error {
 	m.ctrl.T.Helper()
