@@ -93,61 +93,16 @@ func (m *MockNamespaceValidator) EXPECT() *MockNamespaceValidatorMockRecorder {
 	return m.recorder
 }
 
-// GetAllNamespacesOfCluster mocks base method.
-func (m *MockNamespaceValidator) GetAllNamespacesOfCluster(cluster asinfo.NodeGetter) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAllNamespacesOfCluster", cluster)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAllNamespacesOfCluster indicates an expected call of GetAllNamespacesOfCluster.
-func (mr *MockNamespaceValidatorMockRecorder) GetAllNamespacesOfCluster(cluster any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllNamespacesOfCluster", reflect.TypeOf((*MockNamespaceValidator)(nil).GetAllNamespacesOfCluster), cluster)
-}
-
-// ValidateBackupRoutineNamespaces mocks base method.
-func (m *MockNamespaceValidator) ValidateBackupRoutineNamespaces(routine *model.BackupRoutine) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateBackupRoutineNamespaces", routine)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateBackupRoutineNamespaces indicates an expected call of ValidateBackupRoutineNamespaces.
-func (mr *MockNamespaceValidatorMockRecorder) ValidateBackupRoutineNamespaces(routine any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateBackupRoutineNamespaces", reflect.TypeOf((*MockNamespaceValidator)(nil).ValidateBackupRoutineNamespaces), routine)
-}
-
 // ValidateConfig mocks base method.
-func (m *MockNamespaceValidator) ValidateConfig(configModel *model.Config) error {
+func (m *MockNamespaceValidator) ValidateConfig(cfg *model.Config) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateConfig", configModel)
-	ret0, _ := ret[0].(error)
-	return ret0
+	m.ctrl.Call(m, "ValidateConfig", cfg)
 }
 
 // ValidateConfig indicates an expected call of ValidateConfig.
-func (mr *MockNamespaceValidatorMockRecorder) ValidateConfig(configModel any) *gomock.Call {
+func (mr *MockNamespaceValidatorMockRecorder) ValidateConfig(cfg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateConfig", reflect.TypeOf((*MockNamespaceValidator)(nil).ValidateConfig), configModel)
-}
-
-// ValidateRoutines mocks base method.
-func (m *MockNamespaceValidator) ValidateRoutines(cluster *model.AerospikeCluster, routines map[string]*model.BackupRoutine) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateRoutines", cluster, routines)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidateRoutines indicates an expected call of ValidateRoutines.
-func (mr *MockNamespaceValidatorMockRecorder) ValidateRoutines(cluster, routines any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRoutines", reflect.TypeOf((*MockNamespaceValidator)(nil).ValidateRoutines), cluster, routines)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateConfig", reflect.TypeOf((*MockNamespaceValidator)(nil).ValidateConfig), cfg)
 }
 
 // MockInfoRequest is a mock of InfoRequest interface.

@@ -56,12 +56,9 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.nsValidator.ValidateConfig(newConfigModel); err != nil {
-		httpError(w, errBadRequest(fmt.Errorf("invalid configuration: %w", err)))
-	}
-
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
+		s.nsValidator.ValidateConfig(config) // validate under the lock
 		return nil
 	})
 

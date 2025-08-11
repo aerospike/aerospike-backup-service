@@ -37,14 +37,18 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
-	err = s.nsValidator.ValidateBackupRoutineNamespaces(toModel)
-	if err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
+
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.AddRoutine(name, toModel)
+		err := config.AddRoutine(name, toModel)
+		if err != nil {
+			return err
+		}
+
+		// validate that new routine has all required NSs (under the lock)
+		s.nsValidator.ValidateConfig(config)
+		return nil
 	})
+
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -125,14 +129,16 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errBadRequest(err))
 		return
 	}
-	err = s.nsValidator.ValidateBackupRoutineNamespaces(toModel)
-	if err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.UpdateRoutine(name, toModel)
+		err := config.UpdateRoutine(name, toModel)
+		if err != nil {
+			return err
+		}
+
+		// validate that updated routine has all required NSs (under the lock)
+		s.nsValidator.ValidateConfig(config)
+		return nil
 	})
 	if err != nil {
 		httpError(w, errBadRequest(err))

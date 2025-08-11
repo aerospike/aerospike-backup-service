@@ -1,7 +1,6 @@
 package aerospike
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -10,123 +9,103 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 )
 
-// NamespaceValidator provides methods for validating namespace existence in Aerospike clusters.
+// NamespaceValidator provides methods for checking namespace existence in Aerospike clusters.
+// NOTE: This implementation is non-blocking: it logs warnings but does not return errors.
 type NamespaceValidator interface {
-	// ValidateRoutines verifies that all namespaces referenced in backup routines
-	// for a given cluster exist in that cluster.
-	ValidateRoutines(cluster *model.AerospikeCluster, routines map[string]*model.BackupRoutine) error
-
-	// ValidateBackupRoutineNamespaces validates that all namespaces referenced in a
-	// backup routine exist in its source cluster.
-	ValidateBackupRoutineNamespaces(routine *model.BackupRoutine) error
-
-	// ValidateConfig validates all backup routines in the configuration.
-	ValidateConfig(configModel *model.Config) error
+	// ValidateConfig scans all backup routines and logs warnings for missing namespaces.
+	ValidateConfig(cfg *model.Config)
 }
 
-// defaultNamespaceValidator implements the NamespaceValidator interface.
-type defaultNamespaceValidator struct {
+// NamespaceValidatorImpl implements NamespaceValidator.
+type NamespaceValidatorImpl struct {
 	clientManager ClientManager
 	infoRequest   InfoRequest
 }
 
-// NewNamespaceValidator returns a new NamespaceValidator instance.
-func NewNamespaceValidator(clientManager ClientManager, asinfo InfoRequest) NamespaceValidator {
-	return &defaultNamespaceValidator{
+func NewNamespaceValidator(clientManager ClientManager, infoRequest InfoRequest) NamespaceValidator {
+	return &NamespaceValidatorImpl{
 		clientManager: clientManager,
-		infoRequest:   asinfo,
+		infoRequest:   infoRequest,
 	}
 }
 
-func (nv *defaultNamespaceValidator) missingNamespaces(
-	cluster *model.AerospikeCluster,
-	namespaces []string,
-) ([]string, error) {
-	if len(namespaces) == 0 {
-		return nil, nil
+func (nv *NamespaceValidatorImpl) ValidateConfig(cfg *model.Config) {
+	if cfg == nil {
+		return
 	}
 
-	namespacesInCluster, err := nv.getClusterNamespaces(cluster)
-	if err != nil {
-		return nil, err
-	}
-
-	return util.MissingElements(namespaces, namespacesInCluster), nil
+	clusters := nv.collectClusters(cfg)
+	namespacesByCluster := nv.buildClusterNamespaceCache(clusters)
+	nv.validateRoutines(cfg, namespacesByCluster)
 }
 
-func (nv *defaultNamespaceValidator) ValidateRoutines(
-	cluster *model.AerospikeCluster,
-	routines map[string]*model.BackupRoutine,
-) error {
-	var errs []error
-	for routineName, routine := range filterRoutinesByCluster(routines, cluster) {
-		missingNamespaces, err := nv.missingNamespaces(cluster, routine.Namespaces)
+// collectClusters gathers unique clusters referenced by routines that actually need validation.
+func (nv *NamespaceValidatorImpl) collectClusters(cfg *model.Config) map[*model.AerospikeCluster]struct{} {
+	clusters := make(map[*model.AerospikeCluster]struct{})
+	for _, r := range cfg.Routines() {
+		if r == nil || len(r.Namespaces) == 0 || r.SourceCluster == nil {
+			continue
+		}
+		clusters[r.SourceCluster] = struct{}{}
+	}
+
+	return clusters
+}
+
+// buildClusterNamespaceCache fetches namespaces once per cluster, logging (warn-only) on failures.
+func (nv *NamespaceValidatorImpl) buildClusterNamespaceCache(
+	clusters map[*model.AerospikeCluster]struct{},
+) map[*model.AerospikeCluster][]string {
+	cache := make(map[*model.AerospikeCluster][]string, len(clusters))
+	for c := range clusters {
+		ns, err := nv.fetchNamespacesForCluster(c)
 		if err != nil {
-			// if we can't connect to the cluster, we can't validate any routine for it
-			return fmt.Errorf("cannot validate routines for cluster: %w", err)
+			slog.Error("failed to fetch namespaces for cluster", attr.Error(err))
+			continue
 		}
-		if len(missingNamespaces) > 0 {
-			errs = append(errs, fmt.Errorf("cluster is missing namespaces %v for routine %s",
-				missingNamespaces, routineName))
-		}
+		cache[c] = ns
 	}
 
-	return errors.Join(errs...)
+	return cache
 }
 
-func (nv *defaultNamespaceValidator) ValidateBackupRoutineNamespaces(
-	routine *model.BackupRoutine,
-) error {
-	missingNSs, err := nv.missingNamespaces(routine.SourceCluster, routine.Namespaces)
+// fetchNamespacesForCluster obtains the namespace list for a single cluster.
+func (nv *NamespaceValidatorImpl) fetchNamespacesForCluster(cluster *model.AerospikeCluster) ([]string, error) {
+	client, err := nv.clientManager.GetClient(cluster)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("cannot connect to cluster: %w", err)
 	}
-	if len(missingNSs) > 0 {
-		return fmt.Errorf("the following namespaces are missing in the cluster: %v", missingNSs)
+	defer nv.clientManager.Close(client)
+
+	ns, err := nv.infoRequest.Namespaces(client.AerospikeClient().Cluster())
+	if err != nil {
+		return nil, fmt.Errorf("cannot retrieve namespaces: %w", err)
 	}
-	return nil
+
+	return ns, nil
 }
 
-func (nv *defaultNamespaceValidator) ValidateConfig(configModel *model.Config) error {
-	for k, v := range configModel.Routines() {
-		if err := nv.ValidateBackupRoutineNamespaces(v); err != nil {
-			return fmt.Errorf("validation error for routine %s: %w", k, err)
+// validateRoutines checks each routine against the cached namespace list (if present).
+func (nv *NamespaceValidatorImpl) validateRoutines(
+	cfg *model.Config,
+	cache map[*model.AerospikeCluster][]string,
+) {
+	for name, r := range cfg.Routines() {
+		if len(r.Namespaces) == 0 {
+			continue
+		}
+		nsList, ok := cache[r.SourceCluster]
+		if !ok {
+			// No cache entry -> cluster unreachable / fetch failed; earlier step already warned.
+			continue
+		}
+
+		missing := util.MissingElements(nsList, r.Namespaces)
+		if len(missing) > 0 {
+			slog.Warn("namespaces referenced by routine are missing in the cluster",
+				attr.Routine(name),
+				slog.Any("missing", missing),
+			)
 		}
 	}
-	return nil
-}
-
-// getClusterNamespaces retrieves the list of namespaces from the given cluster.
-// It handles client acquisition and release.
-func (nv *defaultNamespaceValidator) getClusterNamespaces(
-	cluster *model.AerospikeCluster,
-) ([]string, error) {
-	backupClient, err := nv.clientManager.GetClient(cluster)
-	if err != nil {
-		slog.Error("Failed to connect to Aerospike cluster", attr.Error(err))
-		return nil, fmt.Errorf("failed to connect to Aerospike cluster: %w", err)
-	}
-	defer nv.clientManager.Close(backupClient)
-
-	namespaces, err := nv.infoRequest.Namespaces(backupClient.AerospikeClient().Cluster())
-	if err != nil {
-		slog.Error("Failed to retrieve namespaces from cluster", attr.Error(err))
-		return nil, err
-	}
-
-	return namespaces, nil
-}
-
-// filterRoutinesByCluster filters backup routines by the given cluster.
-func filterRoutinesByCluster(
-	routines map[string]*model.BackupRoutine,
-	cluster *model.AerospikeCluster,
-) map[string]*model.BackupRoutine {
-	filteredRoutines := make(map[string]*model.BackupRoutine)
-	for name, routine := range routines {
-		if routine.SourceCluster == cluster {
-			filteredRoutines[name] = routine
-		}
-	}
-	return filteredRoutines
 }

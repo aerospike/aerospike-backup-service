@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -149,7 +148,6 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 		name           string
 		clusterName    string
 		requestBody    string
-		validatorError error
 		expectedStatus int
 		expectedError  string
 		runValidation  bool
@@ -158,7 +156,6 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			name:           "successful update",
 			clusterName:    "test-cluster",
 			requestBody:    marshalToString(cluster),
-			validatorError: nil,
 			expectedStatus: http.StatusOK,
 			runValidation:  true,
 		},
@@ -176,15 +173,6 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  "invalid JSON payload",
 		},
-		{
-			name:           "namespace validation failure",
-			clusterName:    "test-cluster",
-			requestBody:    marshalToString(cluster),
-			validatorError: fmt.Errorf("invalid namespace"),
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "invalid namespace",
-			runValidation:  true,
-		},
 	}
 
 	for _, tt := range tests {
@@ -197,7 +185,7 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			svc.nsValidator = mockNsValidator
 
 			if tt.runValidation {
-				mockNsValidator.EXPECT().ValidateRoutines(gomock.Any(), gomock.Any()).Return(tt.validatorError)
+				mockNsValidator.EXPECT().ValidateConfig(gomock.Eq(svc.config))
 			}
 
 			initialCluster := &model.AerospikeCluster{}

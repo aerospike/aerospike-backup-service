@@ -125,14 +125,15 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = s.nsValidator.ValidateRoutines(cluster, s.config.Routines())
-	if err != nil {
-		httpError(w, errBadRequest(err))
-		return
-	}
-
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		return config.UpdateCluster(clusterName, cluster)
+		err := config.UpdateCluster(clusterName, cluster)
+		if err != nil {
+			return err
+		}
+
+		// validate that new cluster has all required NSs (under the lock)
+		s.nsValidator.ValidateConfig(config)
+		return nil
 	})
 
 	if err != nil {
