@@ -35,7 +35,7 @@ type dataRestorer struct {
 	restoreService restoreexecutor.Restore
 	backupReader   BackupReader
 	clientManager  aerospike.ClientManager
-	nsValidator    aerospike.NamespaceValidator
+	infoRequest    aerospike.InfoRequest
 }
 
 var _ RestoreManager = (*dataRestorer)(nil)
@@ -45,7 +45,7 @@ func NewRestoreManager(
 	restoreService restoreexecutor.Restore,
 	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,
-	nsValidator aerospike.NamespaceValidator,
+	infoRequest aerospike.InfoRequest,
 	backupReader BackupReader,
 ) RestoreManager {
 	return &dataRestorer{
@@ -53,7 +53,7 @@ func NewRestoreManager(
 		restoreService: restoreService,
 		backupReader:   backupReader,
 		clientManager:  clientManager,
-		nsValidator:    nsValidator,
+		infoRequest:    infoRequest,
 	}
 }
 
@@ -87,7 +87,7 @@ func (r *dataRestorer) executeRestore(
 	}
 	defer r.clientManager.Close(client)
 
-	if err := r.validateDestinationNamespace(request); err != nil {
+	if err := r.validateDestinationNamespace(request, client); err != nil {
 		return err
 	}
 
@@ -148,13 +148,15 @@ func (r *dataRestorer) recordsInBackup(backups []model.BackupDetails) uint64 {
 }
 
 // validateDestinationNamespace checks if destination cluster contains namespace from restore request (if it is set).
-func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest) error {
+func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest, client *backup.Client) error {
 	if request.Policy.Namespace != nil {
 		destinationNS := *request.Policy.Namespace.Destination
-		// it can be only 1 missing ns: destinationNS
-		err := r.nsValidator.ValidatePresent(request.DestinationCluster, destinationNS)
+		namespaces, err := r.infoRequest.Namespaces(client.AerospikeClient().Cluster())
 		if err != nil {
-			return fmt.Errorf("destination cluster does not have required namespace: %w", err)
+			return fmt.Errorf("failed to get namespaces from destination cluster: %w", err)
+		}
+		if !slices.Contains(namespaces, destinationNS) {
+			return fmt.Errorf("destination cluster does not have required namespace: %s", destinationNS)
 		}
 	}
 
@@ -265,10 +267,11 @@ func (r *dataRestorer) restoreNamespace(
 	logger *slog.Logger,
 ) error {
 	// Now restore all backups in order
-	dbEmpty, err := r.nsValidator.IsEmpty(client, namespace, request)
+	counter, err := r.infoRequest.RecordCount(client.AerospikeClient().Cluster(), namespace, request.Policy.SetList)
 	if err != nil {
 		return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
 	}
+	var dbEmpty = counter == 0
 
 	effectivePolicy := *request.Policy // make a thread safe copy.
 	if dbEmpty && !request.DisableReordering {

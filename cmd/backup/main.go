@@ -146,7 +146,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator, backendService)
+		restoreexecutor.NewRestore(), clientManager, restoreJobs, infoRequest, backendService)
 
 	configRetriever := service.NewConfigRetriever(backendService, config)
 	httpService := handlers.NewService(

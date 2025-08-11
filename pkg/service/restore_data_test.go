@@ -45,7 +45,7 @@ func TestRestoreOK(t *testing.T) {
 		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(context.Background(), request)
+	jobID, err := env.restoreManager.Restore(ctx, request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -87,7 +87,7 @@ func TestCancelRestoreOK(t *testing.T) {
 	// Expect Run to start the process
 	env.mockRestore.EXPECT().Run(gomock.Any(), client, request).Return(mockRestoreHandler, nil)
 
-	jobID, err := env.restoreManager.Restore(context.Background(), request)
+	jobID, err := env.restoreManager.Restore(ctx, request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -130,7 +130,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 		Return(nil, clientErr)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(context.Background(), request)
+	jobID, err := env.restoreManager.Restore(ctx, request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -155,15 +155,15 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	storage := &model.LocalStorage{Path: "/backup/path"}
 	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
 
-	env.expectSuccessfulClientInteraction(t, cluster)
+	client := env.expectSuccessfulClientInteraction(t, cluster)
+
+	client.AerospikeClient().(*mocks.MockAerospikeClient).EXPECT().Cluster().Return(nil)
 
 	// Expect namespace validation to fail
-	env.mockNsValidator.EXPECT().
-		ValidatePresent(cluster, []string{destinationNS}).
-		Return(errors.New("missing namespaces: test-ns"))
+	env.mockInfoRequest.EXPECT().Namespaces(gomock.Any()).Return([]string{"other NS"}, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(context.Background(), request)
+	jobID, err := env.restoreManager.Restore(ctx, request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -172,7 +172,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
 	assert.Contains(t, jobStatus.Error.Error(),
-		"destination cluster does not have required namespace: missing namespaces: test-ns")
+		"destination cluster does not have required namespace: test-ns")
 }
 
 func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
@@ -186,11 +186,6 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 
 	env.expectSuccessfulClientInteraction(t, cluster)
 
-	// Namespace validation passes
-	env.mockNsValidator.EXPECT().
-		ValidatePresent(gomock.Any(), gomock.Any()).
-		Return(nil).AnyTimes()
-
 	// BackupReader returns backups with different creation times, which is invalid
 	backups := []model.BackupDetails{
 		{BackupMetadata: model.BackupMetadata{Created: time.Now().Add(-time.Hour), FileCount: 1}},
@@ -199,7 +194,7 @@ func TestRestoreFailsWithInvalidBackupData(t *testing.T) {
 	env.mockBackupReader.EXPECT().GetBackups(gomock.Any(), gomock.Any()).Return(backups, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(context.Background(), request)
+	jobID, err := env.restoreManager.Restore(ctx, request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -231,7 +226,7 @@ func TestRestoreFailsWithRestoreServiceError(t *testing.T) {
 		[]model.BackupDetails{detailsDetails}, nil)
 
 	// Execute the restore
-	jobID, err := env.restoreManager.Restore(context.Background(), request)
+	jobID, err := env.restoreManager.Restore(ctx, request)
 	require.NoError(t, err)
 	require.NotZero(t, jobID)
 
@@ -276,7 +271,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 		})
 
 	// 1. Start the restore. This will run in a goroutine.
-	jobID, err := env.restoreManager.Restore(context.Background(), request)
+	jobID, err := env.restoreManager.Restore(ctx, request)
 	require.NoError(t, err)
 
 	// 2. Wait for the signal that the restore goroutine has called Run().
@@ -321,7 +316,7 @@ type testRestoreEnv struct {
 	ctrl              *gomock.Controller
 	mockRestore       *restoreexecutor.MockRestore
 	mockClientManager *aerospike.MockClientManager
-	mockNsValidator   *aerospike.MockNamespaceValidator
+	mockInfoRequest   *aerospike.MockInfoRequest
 	mockBackupReader  *MockBackupReader
 	jobsHolder        *RestoreJobsHolder
 	restoreManager    RestoreManager
@@ -334,7 +329,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 
 	mockRestore := restoreexecutor.NewMockRestore(ctrl)
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
-	mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
+	mockNsValidator := aerospike.NewMockInfoRequest(ctrl)
 	mockBackupReader := NewMockBackupReader(ctrl)
 	restoreJobsHolder := NewRestoreJobsHolder()
 
@@ -350,20 +345,11 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 		ctrl:              ctrl,
 		mockRestore:       mockRestore,
 		mockClientManager: mockClientManager,
-		mockNsValidator:   mockNsValidator,
+		mockInfoRequest:   mockNsValidator,
 		mockBackupReader:  mockBackupReader,
 		jobsHolder:        restoreJobsHolder,
 		restoreManager:    restoreManager,
 	}
-}
-
-// mockClient is a helper to create a backup client with a mock Aerospike client.
-func newMockClient(t *testing.T) *backup.Client {
-	t.Helper()
-
-	client, err := backup.NewClient(&mocks.MockAerospikeClient{})
-	require.NoError(t, err, "Failed to create mock backup client")
-	return client
 }
 
 // expectSuccessfulClientInteraction sets up the common GetClient/Close mock expectations.
@@ -373,7 +359,9 @@ func (env *testRestoreEnv) expectSuccessfulClientInteraction(
 	cluster *model.AerospikeCluster,
 ) *backup.Client {
 	t.Helper()
-	client := newMockClient(t)
+
+	client, err := backup.NewClient(&mocks.MockAerospikeClient{})
+	require.NoError(t, err, "Failed to create mock backup client")
 
 	env.mockClientManager.EXPECT().
 		GetClient(cluster).
