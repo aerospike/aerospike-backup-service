@@ -151,10 +151,9 @@ func (r *dataRestorer) recordsInBackup(backups []model.BackupDetails) uint64 {
 func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest) error {
 	if request.Policy.Namespace != nil {
 		destinationNS := *request.Policy.Namespace.Destination
-		missingNamespaces := r.nsValidator.MissingNamespaces(
-			request.DestinationCluster, []string{destinationNS})
-		if len(missingNamespaces) > 0 {
-			// it can be only 1 missing ns: destinationNS
+		// it can be only 1 missing ns: destinationNS
+		err := r.nsValidator.ValidatePresent(request.DestinationCluster, destinationNS)
+		if err != nil {
 			return fmt.Errorf("destination cluster does not have namespace %q", destinationNS)
 		}
 	}

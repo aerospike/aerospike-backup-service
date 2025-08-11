@@ -165,6 +165,25 @@ func (mr *MockNamespaceValidatorMockRecorder) ValidateConfig(configModel any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateConfig", reflect.TypeOf((*MockNamespaceValidator)(nil).ValidateConfig), configModel)
 }
 
+// ValidatePresent mocks base method.
+func (m *MockNamespaceValidator) ValidatePresent(cluster *model.AerospikeCluster, ns ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []any{cluster}
+	for _, a := range ns {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ValidatePresent", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidatePresent indicates an expected call of ValidatePresent.
+func (mr *MockNamespaceValidatorMockRecorder) ValidatePresent(cluster any, ns ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{cluster}, ns...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatePresent", reflect.TypeOf((*MockNamespaceValidator)(nil).ValidatePresent), varargs...)
+}
+
 // ValidateRoutines mocks base method.
 func (m *MockNamespaceValidator) ValidateRoutines(cluster *model.AerospikeCluster, routines map[string]*model.BackupRoutine) error {
 	m.ctrl.T.Helper()

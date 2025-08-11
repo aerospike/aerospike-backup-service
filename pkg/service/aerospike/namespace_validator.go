@@ -13,8 +13,6 @@ import (
 	"github.com/aerospike/backup-go/pkg/asinfo"
 )
 
-const namespaceInfo = "namespaces"
-
 type NamespaceValidator interface {
 	// MissingNamespaces returns a slice containing any namespaces specified in the
 	// provided slice which do not exist on the given cluster.
@@ -28,6 +26,7 @@ type NamespaceValidator interface {
 	ValidateConfig(configModel *model.Config) error
 	IsEmpty(client *backup.Client, namespace string, request *model.RestoreTimestampRequest) (bool, error)
 	GetAllNamespacesOfCluster(cluster asinfo.NodeGetter) ([]string, error)
+	ValidatePresent(cluster *model.AerospikeCluster, ns ...string) error
 }
 
 type defaultNamespaceValidator struct {
@@ -134,4 +133,30 @@ func (nv *defaultNamespaceValidator) GetAllNamespacesOfCluster(cluster asinfo.No
 	}
 
 	return newClient.GetNamespacesList()
+}
+
+// ValidatePresent verifies that all provided namespaces exist.
+func (nv *defaultNamespaceValidator) ValidatePresent(cluster *model.AerospikeCluster, namespaces ...string) error {
+	if len(namespaces) == 0 {
+		return nil
+	}
+
+	backupClient, err := nv.ClientManager.GetClient(cluster)
+	if err != nil {
+		slog.Info("Failed to connect to aerospike cluster", attr.Error(err))
+		return nil
+	}
+	defer nv.ClientManager.Close(backupClient)
+
+	clusterNS, err := nv.GetAllNamespacesOfCluster(backupClient.AerospikeClient().Cluster())
+	if err != nil {
+		return err
+	}
+
+	missing := util.MissingElements(namespaces, clusterNS)
+	if len(missing) > 0 {
+		return fmt.Errorf("missing namespaces: %v", missing)
+	}
+
+	return nil
 }
