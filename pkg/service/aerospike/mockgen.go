@@ -108,21 +108,6 @@ func (mr *MockNamespaceValidatorMockRecorder) GetAllNamespacesOfCluster(cluster 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllNamespacesOfCluster", reflect.TypeOf((*MockNamespaceValidator)(nil).GetAllNamespacesOfCluster), cluster)
 }
 
-// IsEmpty mocks base method.
-func (m *MockNamespaceValidator) IsEmpty(client *backup.Client, namespace string, request *model.RestoreTimestampRequest) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsEmpty", client, namespace, request)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsEmpty indicates an expected call of IsEmpty.
-func (mr *MockNamespaceValidatorMockRecorder) IsEmpty(client, namespace, request any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEmpty", reflect.TypeOf((*MockNamespaceValidator)(nil).IsEmpty), client, namespace, request)
-}
-
 // ValidateBackupRoutineNamespaces mocks base method.
 func (m *MockNamespaceValidator) ValidateBackupRoutineNamespaces(routine *model.BackupRoutine) error {
 	m.ctrl.T.Helper()
@@ -149,25 +134,6 @@ func (m *MockNamespaceValidator) ValidateConfig(configModel *model.Config) error
 func (mr *MockNamespaceValidatorMockRecorder) ValidateConfig(configModel any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateConfig", reflect.TypeOf((*MockNamespaceValidator)(nil).ValidateConfig), configModel)
-}
-
-// ValidatePresent mocks base method.
-func (m *MockNamespaceValidator) ValidatePresent(cluster *model.AerospikeCluster, ns ...string) error {
-	m.ctrl.T.Helper()
-	varargs := []any{cluster}
-	for _, a := range ns {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "ValidatePresent", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ValidatePresent indicates an expected call of ValidatePresent.
-func (mr *MockNamespaceValidatorMockRecorder) ValidatePresent(cluster any, ns ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{cluster}, ns...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatePresent", reflect.TypeOf((*MockNamespaceValidator)(nil).ValidatePresent), varargs...)
 }
 
 // ValidateRoutines mocks base method.

@@ -8,7 +8,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 )
 
@@ -25,14 +24,8 @@ type NamespaceValidator interface {
 	// ValidateConfig validates all backup routines in the configuration.
 	ValidateConfig(configModel *model.Config) error
 
-	// IsEmpty checks if a namespace in a cluster is empty of records.
-	IsEmpty(client *backup.Client, namespace string, request *model.RestoreTimestampRequest) (bool, error)
-
 	// GetAllNamespacesOfCluster retrieves all namespace names from a cluster.
 	GetAllNamespacesOfCluster(cluster asinfo.NodeGetter) ([]string, error)
-
-	// ValidatePresent verifies that all provided namespaces exist in the cluster.
-	ValidatePresent(cluster *model.AerospikeCluster, ns ...string) error
 }
 
 // defaultNamespaceValidator implements the NamespaceValidator interface.
@@ -107,43 +100,10 @@ func (nv *defaultNamespaceValidator) ValidateConfig(configModel *model.Config) e
 	return nil
 }
 
-func (nv *defaultNamespaceValidator) IsEmpty(
-	client *backup.Client,
-	namespace string,
-	request *model.RestoreTimestampRequest,
-) (bool, error) {
-	count, err := nv.infoRequest.RecordCount(client.AerospikeClient().Cluster(), namespace, request.Policy.SetList)
-	if err != nil {
-		return false, err
-	}
-
-	return count == 0, nil
-}
-
 func (nv *defaultNamespaceValidator) GetAllNamespacesOfCluster(
 	cluster asinfo.NodeGetter,
 ) ([]string, error) {
 	return nv.infoRequest.Namespaces(cluster)
-}
-
-func (nv *defaultNamespaceValidator) ValidatePresent(
-	cluster *model.AerospikeCluster,
-	namespaces ...string,
-) error {
-	if len(namespaces) == 0 {
-		return nil
-	}
-
-	missing, err := nv.missingNamespaces(cluster, namespaces)
-	if err != nil {
-		return err
-	}
-
-	if len(missing) > 0 {
-		return fmt.Errorf("missing namespaces: %v", missing)
-	}
-
-	return nil
 }
 
 // getClusterNamespaces retrieves the list of namespaces from the given cluster.
