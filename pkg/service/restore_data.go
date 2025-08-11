@@ -13,6 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	a "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/pkg/asinfo"
 )
@@ -317,7 +318,7 @@ func (r *dataRestorer) isEmpty(
 	namespace string,
 	request *model.RestoreTimestampRequest,
 ) (bool, error) {
-	newClient, err := asinfo.NewClient(client.AerospikeClient().Cluster(), nil, request.Policy.RetryPolicy)
+	newClient, err := asinfo.NewClient(client.AerospikeClient().Cluster(), a.NewInfoPolicy(), request.Policy.RetryPolicy)
 	if err != nil {
 		return false, err
 	}
