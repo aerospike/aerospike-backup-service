@@ -14,6 +14,7 @@ import (
 
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	backup "github.com/aerospike/backup-go"
+	asinfo "github.com/aerospike/backup-go/pkg/asinfo"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -90,6 +91,21 @@ func NewMockNamespaceValidator(ctrl *gomock.Controller) *MockNamespaceValidator 
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNamespaceValidator) EXPECT() *MockNamespaceValidatorMockRecorder {
 	return m.recorder
+}
+
+// GetAllNamespacesOfCluster mocks base method.
+func (m *MockNamespaceValidator) GetAllNamespacesOfCluster(cluster asinfo.NodeGetter) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllNamespacesOfCluster", cluster)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllNamespacesOfCluster indicates an expected call of GetAllNamespacesOfCluster.
+func (mr *MockNamespaceValidatorMockRecorder) GetAllNamespacesOfCluster(cluster any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllNamespacesOfCluster", reflect.TypeOf((*MockNamespaceValidator)(nil).GetAllNamespacesOfCluster), cluster)
 }
 
 // IsEmpty mocks base method.

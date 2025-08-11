@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -28,6 +27,7 @@ type NamespaceValidator interface {
 	ValidateBackupRoutineNamespaces(routine *model.BackupRoutine) error
 	ValidateConfig(configModel *model.Config) error
 	IsEmpty(client *backup.Client, namespace string, request *model.RestoreTimestampRequest) (bool, error)
+	GetAllNamespacesOfCluster(cluster asinfo.NodeGetter) ([]string, error)
 }
 
 type defaultNamespaceValidator struct {
@@ -83,7 +83,7 @@ func (nv *defaultNamespaceValidator) MissingNamespaces(
 	}
 	defer nv.ClientManager.Close(backupClient)
 
-	namespacesInCluster, err := getAllNamespacesOfCluster(backupClient.AerospikeClient())
+	namespacesInCluster, err := nv.GetAllNamespacesOfCluster(backupClient.AerospikeClient().Cluster())
 	if err != nil {
 		slog.Info("Failed to retrieve namespaces from cluster", attr.Error(err))
 	}
@@ -127,28 +127,11 @@ func filterRoutinesByCluster(
 	return filteredRoutines
 }
 
-// getAllNamespacesOfCluster retrieves a list of all namespaces in an Aerospike cluster.
-func getAllNamespacesOfCluster(client Cluster) ([]string, error) {
-	node, err := client.Cluster().GetRandomNode()
+func (nv *defaultNamespaceValidator) GetAllNamespacesOfCluster(cluster asinfo.NodeGetter) ([]string, error) {
+	newClient, err := asinfo.NewClient(cluster, as.NewInfoPolicy(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get node: %w", err)
-	}
-	infoRes, err := node.RequestInfo(&as.InfoPolicy{}, namespaceInfo)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cluster info: %w", err)
-	}
-	namespaces := infoRes[namespaceInfo]
-	slog.Debug("Retrieved namespace info", slog.String("result", namespaces))
-
-	return strings.Split(namespaces, ";"), nil
-}
-
-// ResolveNamespaces returns the list of namespaces to back up.
-// If `namespaces` is empty, it fetches all namespaces from the cluster via the provided client.
-func ResolveNamespaces(namespaces []string, client Cluster) ([]string, error) {
-	if len(namespaces) == 0 {
-		return getAllNamespacesOfCluster(client)
+		return nil, err
 	}
 
-	return namespaces, nil
+	return newClient.GetNamespacesList()
 }
