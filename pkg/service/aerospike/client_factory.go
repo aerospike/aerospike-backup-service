@@ -9,6 +9,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/pkg/asinfo"
 )
 
 // DefaultClientFactory is the default implementation of ClientFactory.
@@ -27,19 +28,18 @@ func (f *DefaultClientFactory) IsClusterHealthy(client Cluster) bool {
 		return false
 	}
 
-	cluster := client.Cluster()
-	if !cluster.IsConnected() {
+	if !client.Cluster().IsConnected() {
 		return false
 	}
 
-	node, err := cluster.GetRandomNode()
+	infoclient, err := asinfo.NewClient(client.Cluster(), as.NewInfoPolicy(), nil)
 	if err != nil {
 		return false
 	}
 
-	info, err := node.RequestInfo(as.NewInfoPolicy(), "status")
+	status, err := infoclient.GetStatus()
 
-	return err == nil && info["status"] == "ok"
+	return err == nil && status == "ok"
 }
 
 // clientHosts builds and returns a Host list from the AerospikeCluster configuration.
