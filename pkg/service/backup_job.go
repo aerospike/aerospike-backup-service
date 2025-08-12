@@ -64,7 +64,7 @@ func (j *backupJob) Description() string {
 }
 
 // newBackupJob creates a new backup job.
-func newBackupJob(runner backupRunner, jobType jobType, routineName string) *backupJob {
+func newBackupJob(runner backupRunner, jobType jobType, routineName string) quartz.Job {
 	return &backupJob{
 		runner:      runner,
 		jobType:     jobType,

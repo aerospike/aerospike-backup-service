@@ -121,7 +121,11 @@ func schedule(scheduler Scheduler, interval string, jobDetail *quartz.JobDetail)
 	if err != nil {
 		return err
 	}
-	jobDetail.Job().(*backupJob).logger.Info("Schedule", slog.Any("nextRun", time.Unix(0, fireTime)))
+	if job, ok := jobDetail.Job().(*backupJob); ok {
+		job.logger.Info("Schedule", slog.Any("nextRun", time.Unix(0, fireTime)))
+	} else {
+		slog.Warn("Unexpected job type", slog.Any("job", jobDetail))
+	}
 
 	return scheduler.ScheduleJob(jobDetail, cronTrigger)
 }
