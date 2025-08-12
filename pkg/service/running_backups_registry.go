@@ -141,7 +141,7 @@ func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string) {
 
 	logger.Info("Last backup time scan completed",
 		slog.Duration("duration", time.Since(routineStart)),
-		slog.String("last run", lastRun.String()))
+		slog.String("lastRun", lastRun.String()))
 
 	// set last successful backup time for backups done before ABS started
 	if lastRun.LatestRun() != nil {
