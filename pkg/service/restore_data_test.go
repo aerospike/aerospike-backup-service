@@ -10,7 +10,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
-	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/mocks"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
@@ -155,12 +154,9 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	storage := &model.LocalStorage{Path: "/backup/path"}
 	request := model.NewRestoreRequest(cluster, policy, storage, nil, "/backup/path/data")
 
-	client := env.expectSuccessfulClientInteraction(t, cluster)
+	env.expectSuccessfulClientInteraction(t, cluster)
 
-	client.AerospikeClient().(*mocks.MockAerospikeClient).EXPECT().Cluster().Return(nil)
-
-	// Expect namespace validation to fail
-	// env.mockInfoRequest.EXPECT().Namespaces(gomock.Any()).Return([]string{"other NS"}, nil)
+	env.infoGetter.EXPECT().GetNamespacesList().Return([]string{"other NS"}, nil)
 
 	// Execute the restore
 	jobID, err := env.restoreManager.Restore(ctx, request)
@@ -259,7 +255,7 @@ func TestCancelRestore_RaceCondition(t *testing.T) {
 		Run(gomock.Any(), client, request).
 		DoAndReturn(func(
 			ctx context.Context,
-			_ *backup.Client,
+			_ aerospike.Client,
 			_ *model.RestoreRequest,
 		) (restoreexecutor.RestoreHandler, error) {
 			// Signal that the Run method has started.
@@ -316,6 +312,7 @@ type testRestoreEnv struct {
 	ctrl              *gomock.Controller
 	mockRestore       *restoreexecutor.MockRestore
 	mockClientManager *aerospike.MockClientManager
+	infoGetter        *mocks.MockInfoGetter
 	mockBackupReader  *MockBackupReader
 	jobsHolder        *RestoreJobsHolder
 	restoreManager    RestoreManager
@@ -325,6 +322,7 @@ type testRestoreEnv struct {
 func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	t.Helper()
 	ctrl := gomock.NewController(t)
+	infoGetter := mocks.NewMockInfoGetter(t)
 
 	mockRestore := restoreexecutor.NewMockRestore(ctrl)
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
@@ -345,6 +343,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 		mockBackupReader:  mockBackupReader,
 		jobsHolder:        restoreJobsHolder,
 		restoreManager:    restoreManager,
+		infoGetter:        infoGetter,
 	}
 }
 
@@ -353,11 +352,11 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 func (env *testRestoreEnv) expectSuccessfulClientInteraction(
 	t *testing.T,
 	cluster *model.AerospikeCluster,
-) *backup.Client {
+) aerospike.Client {
 	t.Helper()
 
-	client, err := backup.NewClient(&mocks.MockAerospikeClient{})
-	require.NoError(t, err, "Failed to create mock backup client")
+	client := aerospike.NewMockClient(env.ctrl)
+	client.EXPECT().InfoClient().Return(env.infoGetter).AnyTimes()
 
 	env.mockClientManager.EXPECT().
 		GetClient(cluster).
