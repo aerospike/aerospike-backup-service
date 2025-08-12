@@ -121,7 +121,7 @@ func schedule(scheduler Scheduler, interval string, jobDetail *quartz.JobDetail)
 	if err != nil {
 		return err
 	}
-	jobDetail.Job().(*backupJob).logger.Info("Schedule", slog.Any("next run", time.Unix(0, fireTime)))
+	jobDetail.Job().(*backupJob).logger.Info("Schedule", slog.Any("nextRun", time.Unix(0, fireTime)))
 
 	return scheduler.ScheduleJob(jobDetail, cronTrigger)
 }
