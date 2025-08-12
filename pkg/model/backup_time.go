@@ -76,12 +76,12 @@ func (r *BackupTime) String() string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	full := "nil"
+	full := "never"
 	if r.full != nil {
 		full = r.full.Format(time.RFC3339)
 	}
 
-	incremental := "nil"
+	incremental := "never"
 	if r.incremental != nil {
 		incremental = r.incremental.Format(time.RFC3339)
 	}
