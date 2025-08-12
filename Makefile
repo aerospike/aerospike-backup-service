@@ -22,7 +22,7 @@ IMAGE_CACHE_TO ?=
 IMAGE_OUTPUT ?= type=image,push=true
 TARGET=$(TARGET_DIR)/$(BINARY_NAME)
 ifneq ($(strip $(OS))$(strip $(ARCH)),)
-	TARGET=$(TARGET_DIR)/$(BINARY_NAME)_$(OS)_$(ARCH)
+    TARGET=$(TARGET_DIR)/$(BINARY_NAME)_$(OS)_$(ARCH)
 endif
 
 GIT_COMMIT := $(shell git rev-parse HEAD)
@@ -34,6 +34,10 @@ NFPM ?= $(shell which nfpm)
 OS ?= $(shell $(GO) env GOOS)
 ARCH ?= $(shell $(GO) env GOARCH)
 REGISTRY ?= "docker.io"
+
+PREFIX ?= /usr/local
+BINDIR ?= $(PREFIX)/bin
+DESTDIR ?=
 
 GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 $(GO) build \
 -trimpath -ldflags="-s -w -X main.commitHash=$(GIT_COMMIT) -X main.buildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
@@ -53,40 +57,49 @@ build: submodules
 .PHONY: buildx
 buildx:
 	@for arch in $(ARCHS); do \
-		OS=$$(echo $$arch | cut -d/ -f1); \
-		ARCH=$$(echo $$arch | cut -d/ -f2); \
-		OS=$$OS ARCH=$$ARCH $(MAKE) build; \
+	   OS=$$(echo $$arch | cut -d/ -f1); \
+	   ARCH=$$(echo $$arch | cut -d/ -f2); \
+	   OS=$$OS ARCH=$$ARCH $(MAKE) build; \
 	done
+
+.PHONY: install
+install: build
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 755 $(TARGET) $(DESTDIR)$(BINDIR)/$(BINARY_NAME)
+
+.PHONY: uninstall
+uninstall:
+	rm -f $(DESTDIR)$(BINDIR)/$(BINARY_NAME)
 
 .PHONY: packages
 packages: buildx
 	@for arch in $(ARCHS); do \
-		OS=$$(echo $$arch | cut -d/ -f1); \
-		ARCH=$$(echo $$arch | cut -d/ -f2); \
-		OS=$$OS ARCH=$$ARCH \
-		NAME=$(BINARY_NAME) \
-		VERSION=$(VERSION) \
-		WORKSPACE=$(WORKSPACE) \
-		MAINTAINER=$(MAINTAINER) \
-		DESCRIPTION=$(DESCRIPTION) \
-		HOMEPAGE=$(HOMEPAGE) \
-		VENDOR=$(VENDOR) \
-		LICENSE=$(LICENSE) \
-		envsubst '$$OS $$ARCH $$NAME $$VERSION $$WORKSPACE $$MAINTAINER $$DESCRIPTION $$HOMEPAGE $$VENDOR $$LICENSE' \
-		< $(PACKAGE_DIR)/nfpm.tmpl.yaml > $(PACKAGE_DIR)/nfpm-$$OS-$$ARCH.yaml; \
-		for packager in $(PACKAGERS); do \
-			$(NFPM) package \
-			--config $(PACKAGE_DIR)/nfpm-$$OS-$$ARCH.yaml \
-			--packager $$packager \
-			--target $(TARGET_DIR); \
-		done; \
+	   OS=$$(echo $$arch | cut -d/ -f1); \
+	   ARCH=$$(echo $$arch | cut -d/ -f2); \
+	   OS=$$OS ARCH=$$ARCH \
+	   NAME=$(BINARY_NAME) \
+	   VERSION=$(VERSION) \
+	   WORKSPACE=$(WORKSPACE) \
+	   MAINTAINER=$(MAINTAINER) \
+	   DESCRIPTION=$(DESCRIPTION) \
+	   HOMEPAGE=$(HOMEPAGE) \
+	   VENDOR=$(VENDOR) \
+	   LICENSE=$(LICENSE) \
+	   envsubst '$$OS $$ARCH $$NAME $$VERSION $$WORKSPACE $$MAINTAINER $$DESCRIPTION $$HOMEPAGE $$VENDOR $$LICENSE' \
+	   < $(PACKAGE_DIR)/nfpm.tmpl.yaml > $(PACKAGE_DIR)/nfpm-$$OS-$$ARCH.yaml; \
+	   for packager in $(PACKAGERS); do \
+	      $(NFPM) package \
+	      --config $(PACKAGE_DIR)/nfpm-$$OS-$$ARCH.yaml \
+	      --packager $$packager \
+	      --target $(TARGET_DIR); \
+	   done; \
 	done
 
 .PHONY: checksums
 checksums:
 	@find . -type f \
-		\( -name '*.deb' -o -name '*.rpm' \) \
-		-exec sh -c 'sha256sum "$$1" | cut -d" " -f1 > "$$1.sha256"' _ {} \;
+	   \( -name '*.deb' -o -name '*.rpm' \) \
+	   -exec sh -c 'sha256sum "$$1" | cut -d" " -f1 > "$$1.sha256"' _ {} \;
 
 .PHONY: docker-build
 docker-build:
