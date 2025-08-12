@@ -47,6 +47,6 @@ generate_mocks \
 
 generate_mocks \
     "pkg/service/aerospike" \
-    "ClientManager,NamespaceValidator,InfoRequest"
+    "ClientManager,Backuper,Restorer,Client,ClientFactory"
 
 echo "All mocks generated successfully."

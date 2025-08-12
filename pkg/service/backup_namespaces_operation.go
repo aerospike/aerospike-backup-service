@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/backup-go"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -17,7 +17,7 @@ import (
 func startNamespacesBackup(
 	ctx context.Context,
 	runner *BackupNamespaceRunner,
-	client *backup.Client,
+	client aerospike.Backuper,
 	namespaces []string,
 	timeBounds model.TimeBounds,
 	now time.Time,

@@ -10,20 +10,19 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 )
 
 // runXDRBackup performs an XDR-based backup.
 func runXDRBackup(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Backuper,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,
 	writer backup.Writer,
 ) (BackupHandler, error) {
-	xdrConfig, err := makeXDRConfig(namespace, routine, timeBounds, client.AerospikeClient())
+	xdrConfig, err := makeXDRConfig(namespace, routine, timeBounds, client.InfoClient())
 	if err != nil {
 		return nil, fmt.Errorf("failed to build XDR configuration: %w", err)
 	}
@@ -40,11 +39,11 @@ func makeXDRConfig(
 	namespace string,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
-	client backup.AerospikeClient,
+	infoGetter backup.InfoGetter,
 ) (*backup.ConfigBackupXDR, error) {
 	// Every xdr requests starts a server instance that listens for connections from other nodes in the cluster.
 	// It needs unique dc name and port.
-	dc, err := generateUniqueDCName(client)
+	dc, err := generateUniqueDCName(infoGetter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate unique DC name: %w", err)
 	}
@@ -57,7 +56,6 @@ func makeXDRConfig(
 	xdrConfig := policy.XDRConfig
 
 	return &backup.ConfigBackupXDR{
-		InfoPolicy:        as.NewInfoPolicy(),
 		EncryptionPolicy:  makeEncryptionPolicy(policy),
 		CompressionPolicy: makeCompressionPolicy(policy),
 		SecretAgentConfig: routine.SecretAgent.ToSecretAgentConfig(),
@@ -77,7 +75,6 @@ func makeXDRConfig(
 		MaxConnections:    xdrConfig.GetMaxConnsOrDefault(),
 		InfoPolingPeriod:  xdrConfig.GetPollingPeriodOrDefault(),
 		StartTimeout:      xdrConfig.GetStartTimeoutOrDefault(),
-		InfoRetryPolicy:   xdrConfig.GetInfoRetryPolicyOrDefault(),
 	}, nil
 }
 
@@ -122,8 +119,8 @@ var (
 	dcUpperBound int32 = 10_000
 )
 
-func generateUniqueDCName(client backup.AerospikeClient) (string, error) {
-	existingDCs, err := aerospike.NewInfoRequest(nil, nil).DCs(client.Cluster())
+func generateUniqueDCName(infoGetter backup.InfoGetter) (string, error) {
+	existingDCs, err := infoGetter.GetDCsList()
 	if err != nil {
 		return "", fmt.Errorf("failed to get existing DC names: %w", err)
 	}

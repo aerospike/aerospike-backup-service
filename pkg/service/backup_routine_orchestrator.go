@@ -168,9 +168,9 @@ func (h *BackupRoutineOrchestrator) deleteOldBackups(ctx context.Context, routin
 	}
 }
 
-func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Client, []string, error) {
+func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (aerospike.Client, []string, error) {
 	var (
-		client     *backup.Client
+		client     aerospike.Client
 		namespaces []string
 	)
 
@@ -180,7 +180,7 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 		if err != nil {
 			return fmt.Errorf("cannot get backup client: %w", err)
 		}
-		namespaces, err = h.resolveNamespaces(h.routine.Namespaces, client)
+		namespaces, err = h.resolveNamespaces(h.routine.Namespaces, client.InfoClient())
 		if err != nil {
 			h.clientManager.Close(client)
 			return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
@@ -194,9 +194,9 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (*backup.Clie
 
 // resolveNamespaces returns the list of namespaces to back up.
 // If `namespaces` is empty, it fetches all namespaces from the cluster via the provided client.
-func (h *BackupRoutineOrchestrator) resolveNamespaces(namespaces []string, client *backup.Client) ([]string, error) {
+func (h *BackupRoutineOrchestrator) resolveNamespaces(namespaces []string, infoGetter backup.InfoGetter) ([]string, error) {
 	if len(namespaces) == 0 {
-		return h.infoRequest.Namespaces(client.AerospikeClient().Cluster())
+		return infoGetter.GetNamespacesList()
 	}
 
 	return namespaces, nil

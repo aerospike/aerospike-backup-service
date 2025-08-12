@@ -17,12 +17,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockClientFactory is a mock implementation of the ClientFactory interface.
-type MockClientFactory struct {
+// MockClientFactoryManual is a mock implementation of the ClientFactory interface.
+type MockClientFactoryManual struct {
 	ShouldFail            bool
 	IsClusterDisconnected bool
 	WithDelay             bool
 	called                atomic.Int32
+}
+
+func (f *MockClientFactoryManual) NewBackupClient(client backup.AerospikeClient, opt ...backup.ClientOpt) (*backup.Client, error) {
+	return NewMockClient(nil), nil
 }
 
 var cluster = &model.AerospikeCluster{
@@ -33,7 +37,7 @@ var cluster2 = &model.AerospikeCluster{
 	ClusterLabel: ptr.String("test2"),
 }
 
-func (f *MockClientFactory) NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error) {
+func (f *MockClientFactoryManual) NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error) {
 	if f.ShouldFail {
 		return nil, errors.New("failed to connect to aerospike")
 	}
@@ -50,12 +54,12 @@ func (f *MockClientFactory) NewClientWithPolicyAndHost(*model.AerospikeCluster) 
 	return m, nil
 }
 
-func (f *MockClientFactory) IsClusterHealthy(_ Cluster) bool {
+func (f *MockClientFactoryManual) IsClusterHealthy(_ Cluster) bool {
 	return !f.IsClusterDisconnected
 }
 
 func Test_GetClient(t *testing.T) {
-	clientFactory := &MockClientFactory{}
+	clientFactory := &MockClientFactoryManual{}
 	clientManager := NewClientManager(
 		clientFactory,
 		10*time.Second,
@@ -76,7 +80,7 @@ func Test_GetClient(t *testing.T) {
 }
 
 func Test_GetClientParallel(t *testing.T) {
-	clientFactory := &MockClientFactory{
+	clientFactory := &MockClientFactoryManual{
 		WithDelay: true,
 	}
 	clientManager := NewClientManager(
@@ -108,7 +112,7 @@ func Test_GetClientParallel(t *testing.T) {
 }
 
 func Test_GetTwoClients(t *testing.T) {
-	clientFactory := &MockClientFactory{}
+	clientFactory := &MockClientFactoryManual{}
 	clientManager := NewClientManager(
 		clientFactory,
 		10*time.Second,
@@ -125,7 +129,7 @@ func Test_GetTwoClients(t *testing.T) {
 
 func Test_GetClient_UnhealthyConnection(t *testing.T) {
 	clientManager := NewClientManager(
-		&MockClientFactory{IsClusterDisconnected: true},
+		&MockClientFactoryManual{IsClusterDisconnected: true},
 		10*time.Second,
 	)
 
@@ -139,7 +143,7 @@ func Test_GetClient_UnhealthyConnection(t *testing.T) {
 
 func Test_CreateClient(t *testing.T) {
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		&MockClientFactoryManual{},
 		10*time.Second,
 	)
 
@@ -149,7 +153,7 @@ func Test_CreateClient(t *testing.T) {
 }
 
 func Test_CreateClient_Errors(t *testing.T) {
-	mockClientFactory := &MockClientFactory{ShouldFail: true}
+	mockClientFactory := &MockClientFactoryManual{ShouldFail: true}
 	aeroCluster := &model.AerospikeCluster{}
 
 	clientManager := NewClientManager(
@@ -164,7 +168,7 @@ func Test_CreateClient_Errors(t *testing.T) {
 
 func Test_Close(t *testing.T) {
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		&MockClientFactoryManual{},
 		100*time.Millisecond,
 	)
 
@@ -184,7 +188,7 @@ func Test_Close(t *testing.T) {
 
 func Test_Close_Multiple(t *testing.T) {
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		&MockClientFactoryManual{},
 		100*time.Millisecond,
 	)
 
@@ -205,7 +209,7 @@ func Test_Close_Multiple(t *testing.T) {
 
 func Test_Close_CancelOnReuse(t *testing.T) {
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		&MockClientFactoryManual{},
 		100*time.Millisecond,
 	)
 
@@ -229,7 +233,7 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 
 func Test_Close_NotExisting(t *testing.T) {
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		&MockClientFactoryManual{},
 		10*time.Second,
 	)
 	clientManager.SetLogger(slog.Default())

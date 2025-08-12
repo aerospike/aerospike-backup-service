@@ -11,6 +11,15 @@ import (
 	"github.com/aerospike/backup-go"
 )
 
+// ClientFactory defines an interface for creating and checking clients.
+type ClientFactory interface {
+	NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error)
+	NewBackupClient(backup.AerospikeClient, ...backup.ClientOpt) (Client, error)
+	IsClusterHealthy(client Cluster) bool
+}
+
+var _ ClientFactory = (*DefaultClientFactory)(nil)
+
 // DefaultClientFactory is the default implementation of ClientFactory.
 type DefaultClientFactory struct {
 	asinfo InfoRequest
@@ -20,6 +29,11 @@ func NewClientFactory(asinfo InfoRequest) *DefaultClientFactory {
 	return &DefaultClientFactory{
 		asinfo: asinfo,
 	}
+}
+
+func (f *DefaultClientFactory) NewBackupClient(client backup.AerospikeClient, opt ...backup.ClientOpt) (Client, error) {
+	newClient, err := backup.NewClient(client, opt...)
+	return newClient, err
 }
 
 // NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.

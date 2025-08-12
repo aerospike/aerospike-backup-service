@@ -87,7 +87,7 @@ func (r *dataRestorer) executeRestore(
 	}
 	defer r.clientManager.Close(client)
 
-	if err := r.validateDestinationNamespace(request, client); err != nil {
+	if err := r.validateDestinationNamespace(request, client.InfoClient()); err != nil {
 		return err
 	}
 
@@ -148,10 +148,10 @@ func (r *dataRestorer) recordsInBackup(backups []model.BackupDetails) uint64 {
 }
 
 // validateDestinationNamespace checks if destination cluster contains namespace from restore request (if it is set).
-func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest, client *backup.Client) error {
+func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest, infoGetter backup.InfoGetter) error {
 	if request.Policy.Namespace != nil {
 		destinationNS := *request.Policy.Namespace.Destination
-		namespaces, err := r.infoRequest.Namespaces(client.AerospikeClient().Cluster())
+		namespaces, err := infoGetter.GetNamespacesList()
 		if err != nil {
 			return fmt.Errorf("failed to get namespaces from destination cluster: %w", err)
 		}
@@ -259,30 +259,32 @@ func (r *dataRestorer) restoreByTimeSync(
 
 func (r *dataRestorer) restoreNamespace(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Restorer,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
 	namespace string,
 	backups []model.BackupDetails,
 	logger *slog.Logger,
 ) error {
-	// Now restore all backups in order
-	counter, err := r.infoRequest.RecordCount(client.AerospikeClient().Cluster(), namespace, request.Policy.SetList)
-	if err != nil {
-		return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
-	}
-	var dbEmpty = counter == 0
-
 	effectivePolicy := *request.Policy // make a thread safe copy.
-	if dbEmpty && !request.DisableReordering {
-		logger.Info("Use optimized restore because database is empty")
-		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
-		// This way we reduce generation noise and unnecessary load.
-		slices.Reverse(backups)
 
-		// old values are not important, because they qualify how to handle existing data in db.
-		effectivePolicy.Unique = util.Ptr(true)
-		effectivePolicy.Replace = nil
+	// Now restore all backups in order
+	if !request.DisableReordering {
+		counter, err := client.InfoClient().GetRecordCount(namespace, request.Policy.SetList)
+		if err != nil {
+			return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
+		}
+
+		if counter == 0 {
+			logger.Info("Use optimized restore because database is empty")
+			// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
+			// This way we reduce generation noise and unnecessary load.
+			slices.Reverse(backups)
+
+			// old values are not important, because they qualify how to handle existing data in db.
+			effectivePolicy.Unique = util.Ptr(true)
+			effectivePolicy.Replace = nil
+		}
 	}
 
 	for _, b := range backups {
@@ -315,7 +317,7 @@ func (r *dataRestorer) restoreNamespace(
 
 func (r *dataRestorer) restoreFromPath(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Restorer,
 	request *model.RestoreTimestampRequest,
 	backupPath string,
 	storage model.Storage,
