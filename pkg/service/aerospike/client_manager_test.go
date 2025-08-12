@@ -95,7 +95,7 @@ func Test_GetClientParallel(t *testing.T) {
 	require.NoError(t, err2)
 	require.NotNil(t, client2)
 
-	assert.True(t, client == client2)
+	assert.Same(t, client, client2)
 }
 
 func Test_GetTwoClients(t *testing.T) {
@@ -119,7 +119,7 @@ func Test_GetTwoClients(t *testing.T) {
 	client2, err := clientManager.GetClient(cluster2)
 	require.NoError(t, err)
 
-	assert.False(t, client == client2)
+	assert.NotSame(t, client, client2)
 }
 
 func Test_GetClient_UnhealthyConnection(t *testing.T) {
