@@ -193,9 +193,9 @@ func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (aerospike.Cl
 
 // resolveNamespaces returns the list of namespaces to back up.
 // If `namespaces` is empty, it fetches all namespaces from the cluster via the provided client.
-func (h *BackupRoutineOrchestrator) resolveNamespaces(namespaces []string, infoGetter backup.InfoGetter) ([]string, error) {
+func (h *BackupRoutineOrchestrator) resolveNamespaces(namespaces []string, ig backup.InfoGetter) ([]string, error) {
 	if len(namespaces) == 0 {
-		return infoGetter.GetNamespacesList()
+		return ig.GetNamespacesList()
 	}
 
 	return namespaces, nil
