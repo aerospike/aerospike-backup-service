@@ -43,9 +43,10 @@ func (nv *NamespaceValidatorImpl) ValidateConfig(cfg *model.Config) {
 func (nv *NamespaceValidatorImpl) collectClusters(cfg *model.Config) map[*model.AerospikeCluster]struct{} {
 	clusters := make(map[*model.AerospikeCluster]struct{})
 	for _, r := range cfg.Routines() {
-		if r == nil || len(r.Namespaces) == 0 || r.SourceCluster == nil {
+		if len(r.Namespaces) == 0 {
 			continue
 		}
+
 		clusters[r.SourceCluster] = struct{}{}
 	}
 
@@ -94,6 +95,7 @@ func (nv *NamespaceValidatorImpl) validateRoutines(
 		if len(r.Namespaces) == 0 {
 			continue
 		}
+
 		nsList, ok := cache[r.SourceCluster]
 		if !ok {
 			// No cache entry -> cluster unreachable / fetch failed; earlier step already warned.
