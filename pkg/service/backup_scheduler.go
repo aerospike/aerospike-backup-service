@@ -81,8 +81,6 @@ func scheduleRoutines(
 		if err = scheduleIncrementalBackup(scheduler, runner, routine.IncrIntervalCron, routineName); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("failed to schedule incremental backup: %w", err))
 		}
-
-		slog.Debug("Scheduled routine", attr.Routine(routineName))
 	}
 
 	jobStore.ReplaceContent(newJobs)
@@ -118,6 +116,12 @@ func schedule(scheduler Scheduler, interval string, jobDetail *quartz.JobDetail)
 	if err != nil {
 		return err
 	}
+
+	fireTime, err := cronTrigger.NextFireTime(time.Now().UnixNano())
+	if err != nil {
+		return err
+	}
+	jobDetail.Job().(*backupJob).logger.Info("Schedule", slog.Any("next run", time.Unix(0, fireTime)))
 
 	return scheduler.ScheduleJob(jobDetail, cronTrigger)
 }
