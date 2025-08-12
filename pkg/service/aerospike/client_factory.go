@@ -32,8 +32,7 @@ func NewClientFactory(asinfo InfoRequest) *DefaultClientFactory {
 }
 
 func (f *DefaultClientFactory) NewBackupClient(client backup.AerospikeClient, opt ...backup.ClientOpt) (Client, error) {
-	newClient, err := backup.NewClient(client, opt...)
-	return newClient, err
+	return backup.NewClient(client, opt...)
 }
 
 // NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.

@@ -326,14 +326,14 @@ func (mr *MockClientFactoryMockRecorder) IsClusterHealthy(client any) *gomock.Ca
 }
 
 // NewBackupClient mocks base method.
-func (m *MockClientFactory) NewBackupClient(arg0 backup.AerospikeClient, arg1 ...backup.ClientOpt) (*backup.Client, error) {
+func (m *MockClientFactory) NewBackupClient(arg0 backup.AerospikeClient, arg1 ...backup.ClientOpt) (Client, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{arg0}
 	for _, a := range arg1 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "NewBackupClient", varargs...)
-	ret0, _ := ret[0].(*backup.Client)
+	ret0, _ := ret[0].(Client)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
