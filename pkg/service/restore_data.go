@@ -35,7 +35,6 @@ type dataRestorer struct {
 	restoreService restoreexecutor.Restore
 	backupReader   BackupReader
 	clientManager  aerospike.ClientManager
-	infoRequest    aerospike.InfoRequest
 }
 
 var _ RestoreManager = (*dataRestorer)(nil)
@@ -45,7 +44,6 @@ func NewRestoreManager(
 	restoreService restoreexecutor.Restore,
 	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,
-	infoRequest aerospike.InfoRequest,
 	backupReader BackupReader,
 ) RestoreManager {
 	return &dataRestorer{
@@ -53,7 +51,6 @@ func NewRestoreManager(
 		restoreService: restoreService,
 		backupReader:   backupReader,
 		clientManager:  clientManager,
-		infoRequest:    infoRequest,
 	}
 }
 

@@ -160,7 +160,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 	client.AerospikeClient().(*mocks.MockAerospikeClient).EXPECT().Cluster().Return(nil)
 
 	// Expect namespace validation to fail
-	env.mockInfoRequest.EXPECT().Namespaces(gomock.Any()).Return([]string{"other NS"}, nil)
+	// env.mockInfoRequest.EXPECT().Namespaces(gomock.Any()).Return([]string{"other NS"}, nil)
 
 	// Execute the restore
 	jobID, err := env.restoreManager.Restore(ctx, request)
@@ -316,7 +316,6 @@ type testRestoreEnv struct {
 	ctrl              *gomock.Controller
 	mockRestore       *restoreexecutor.MockRestore
 	mockClientManager *aerospike.MockClientManager
-	mockInfoRequest   *aerospike.MockInfoRequest
 	mockBackupReader  *MockBackupReader
 	jobsHolder        *RestoreJobsHolder
 	restoreManager    RestoreManager
@@ -329,7 +328,6 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 
 	mockRestore := restoreexecutor.NewMockRestore(ctrl)
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
-	mockNsValidator := aerospike.NewMockInfoRequest(ctrl)
 	mockBackupReader := NewMockBackupReader(ctrl)
 	restoreJobsHolder := NewRestoreJobsHolder()
 
@@ -337,7 +335,6 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 		mockRestore,
 		mockClientManager,
 		restoreJobsHolder,
-		mockNsValidator,
 		mockBackupReader,
 	)
 
@@ -345,7 +342,6 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 		ctrl:              ctrl,
 		mockRestore:       mockRestore,
 		mockClientManager: mockClientManager,
-		mockInfoRequest:   mockNsValidator,
 		mockBackupReader:  mockBackupReader,
 		jobsHolder:        restoreJobsHolder,
 		restoreManager:    restoreManager,

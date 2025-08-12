@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/backup-go"
 	"github.com/stretchr/testify/mock"
@@ -16,7 +17,7 @@ type mockBackupExecutor struct {
 
 func (m *mockBackupExecutor) Run(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Backuper,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,
@@ -30,7 +31,7 @@ type mockClientManager struct {
 	mock.Mock
 }
 
-func (m *mockClientManager) GetClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
+func (m *mockClientManager) GetClient(cluster *model.AerospikeCluster) (aerospike.Client, error) {
 	args := m.Called(cluster)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -38,7 +39,7 @@ func (m *mockClientManager) GetClient(cluster *model.AerospikeCluster) (*backup.
 	return args.Get(0).(*backup.Client), args.Error(1)
 }
 
-func (m *mockClientManager) Close(client *backup.Client) {
+func (m *mockClientManager) Close(client aerospike.Client) {
 	m.Called(client)
 }
 

@@ -26,7 +26,6 @@ var components = NewBackupComponents(
 	new(mockRetentionManager),
 	new(MockBackupBackendService),
 	new(mockClusterConfigWriter),
-	nil,
 )
 
 func TestScheduleRoutines(t *testing.T) {

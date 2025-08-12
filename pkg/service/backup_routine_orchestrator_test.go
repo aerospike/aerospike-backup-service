@@ -102,7 +102,6 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2) // for ns1 and ns2
 
-	mockInfoRequest := aerospike.NewMockInfoRequest(ctrl)
 	o := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
@@ -110,7 +109,6 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mockRetentionManager,
 		mockBackupBackend,
 		mockClusterConfigWriter,
-		mockInfoRequest,
 	))
 
 	backupCounters.Reset()
@@ -144,7 +142,6 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		},
 	})
 
-	mockInfoRequest := aerospike.NewMockInfoRequest(ctrl)
 	o := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
@@ -152,7 +149,6 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		mockRetentionManager,
 		mockBackupBackend,
 		mockClusterConfigWriter,
-		mockInfoRequest,
 	))
 
 	ctx := context.Background()
@@ -198,7 +194,6 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	initialState := &model.RoutineState{}
 	mockRegistry.EXPECT().GetRoutineState(routineName).Return(initialState)
 
-	mockInfoRequest := aerospike.NewMockInfoRequest(ctrl)
 	o := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
@@ -206,7 +201,6 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 		mockRetentionManager,
 		mockBackupBackend,
 		mockClusterConfigWriter,
-		mockInfoRequest,
 	))
 
 	backupCounters.Reset()
@@ -238,7 +232,6 @@ func TestBackupRoutineOrchestrator_runFullBackup_RaceCondition(t *testing.T) {
 	config := setupBaseConfig()
 	registry := NewRunningBackupsRegistry(ctx, mockBackupBackend, config)
 
-	mockInfoRequest := aerospike.NewMockInfoRequest(ctrl)
 	orchestrator := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
@@ -246,7 +239,6 @@ func TestBackupRoutineOrchestrator_runFullBackup_RaceCondition(t *testing.T) {
 		mockRetentionManager,
 		mockBackupBackend,
 		mockClusterConfigWriter,
-		mockInfoRequest,
 	))
 
 	var wg sync.WaitGroup
@@ -417,7 +409,6 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
 	mockRegistry.EXPECT().GetRoutineState(routineName).Return(routineState)
 
-	mockInfoRequest := aerospike.NewMockInfoRequest(ctrl)
 	o := newOrchestrator(routineName, setupBaseConfig(), NewBackupComponents(
 		nil,
 		nil,
@@ -425,7 +416,6 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 		nil,
 		nil,
 		nil,
-		mockInfoRequest,
 	))
 
 	backupCounters.Reset()
@@ -521,7 +511,6 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2)
 
-	mockInfoRequest := aerospike.NewMockInfoRequest(ctrl)
 	o := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
@@ -529,7 +518,6 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 		mockRetentionManager,
 		mockBackupBackend,
 		mockClusterConfigWriter,
-		mockInfoRequest,
 	))
 
 	o.runIncrementalBackup(context.Background(), time.Now())

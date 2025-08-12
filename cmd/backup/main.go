@@ -98,9 +98,8 @@ func startService(configFile string, remote bool) error {
 func initComponents(ctx context.Context, configFile string, remote bool) (
 	*model.Config, quartz.Scheduler, *handlers.Service, *slog.Logger, error,
 ) {
-	infoRequest := aerospike.NewInfoRequest(nil, nil)
-	clientManager := aerospike.NewClientManager(aerospike.NewClientFactory(infoRequest), 10*time.Second)
-	nsValidator := aerospike.NewNamespaceValidator(clientManager, infoRequest)
+	clientManager := aerospike.NewClientManager(aerospike.NewClientFactory(), 10*time.Second)
+	nsValidator := aerospike.NewNamespaceValidator(clientManager)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
 	if err != nil {
@@ -134,7 +133,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	backupExecutor := backupexecutor.NewDefaultBackupExecutor()
 	backupComponents := service.NewBackupComponents(
 		clientManager, backupExecutor, registry, retentionManager,
-		backendService, clusterConfigWriter, infoRequest)
+		backendService, clusterConfigWriter)
 	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config)
 
 	err = configApplier.ApplyNewConfig()
@@ -146,7 +145,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestore(), clientManager, restoreJobs, infoRequest, backendService)
+		restoreexecutor.NewRestore(), clientManager, restoreJobs, backendService)
 
 	configRetriever := service.NewConfigRetriever(backendService, config)
 	httpService := handlers.NewService(

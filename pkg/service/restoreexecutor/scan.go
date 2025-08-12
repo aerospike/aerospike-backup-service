@@ -17,7 +17,11 @@ import (
 
 const megabyte = 1_048_576
 
-func runScanRestore(ctx context.Context, client aerospike.Restorer, request *model.RestoreRequest) (RestoreHandler, error) {
+func runScanRestore(
+	ctx context.Context,
+	client aerospike.Restorer,
+	request *model.RestoreRequest,
+) (RestoreHandler, error) {
 	reader, err := storage.CreateDirReader(ctx,
 		request.SourceStorage, request.BackupDataPath, ioStorage.WithValidator(asb.NewValidator()))
 	if err != nil {

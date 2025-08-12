@@ -15,20 +15,16 @@ import (
 type ClientFactory interface {
 	NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error)
 	NewBackupClient(backup.AerospikeClient, ...backup.ClientOpt) (Client, error)
-	IsClusterHealthy(client Cluster) bool
 }
 
 var _ ClientFactory = (*DefaultClientFactory)(nil)
 
 // DefaultClientFactory is the default implementation of ClientFactory.
 type DefaultClientFactory struct {
-	asinfo InfoRequest
 }
 
-func NewClientFactory(asinfo InfoRequest) *DefaultClientFactory {
-	return &DefaultClientFactory{
-		asinfo: asinfo,
-	}
+func NewClientFactory() *DefaultClientFactory {
+	return &DefaultClientFactory{}
 }
 
 func (f *DefaultClientFactory) NewBackupClient(client backup.AerospikeClient, opt ...backup.ClientOpt) (Client, error) {
@@ -40,21 +36,6 @@ func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
 	cluster *model.AerospikeCluster,
 ) (backup.AerospikeClient, error) {
 	return as.NewClientWithPolicyAndHost(clientPolicy(cluster), clientHosts(cluster)...)
-}
-
-// IsClusterHealthy checks if the cluster is connected and responding.
-func (f *DefaultClientFactory) IsClusterHealthy(client Cluster) bool {
-	if client == nil {
-		return false
-	}
-
-	if !client.Cluster().IsConnected() {
-		return false
-	}
-
-	status, err := f.asinfo.Status(client.Cluster())
-
-	return err == nil && status == "ok"
 }
 
 // clientHosts builds and returns a Host list from the AerospikeCluster configuration.

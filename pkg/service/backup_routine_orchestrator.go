@@ -30,7 +30,6 @@ type BackupRoutineOrchestrator struct {
 	clientManager       aerospike.ClientManager
 	registry            RunningBackupsRegistry
 	retentionManager    RetentionManager
-	infoRequest         aerospike.InfoRequest
 
 	fullBackupLock sync.Mutex
 }
@@ -46,7 +45,6 @@ type BackupComponents struct {
 	backendService   BackupWriter            // Writes backup metadata after a successful backup and
 	// deletes created files if the backup fails.
 	clusterConfigWriter ClusterConfigWriter // Backs up cluster configuration.
-	infoRequest         aerospike.InfoRequest
 }
 
 func NewBackupComponents(
@@ -56,7 +54,6 @@ func NewBackupComponents(
 	retentionManager RetentionManager,
 	backendService BackupWriter,
 	clusterConfigWriter ClusterConfigWriter,
-	infoRequest aerospike.InfoRequest,
 ) *BackupComponents {
 	return &BackupComponents{
 		clientManager:       clientManager,
@@ -65,11 +62,14 @@ func NewBackupComponents(
 		retentionManager:    retentionManager,
 		backendService:      backendService,
 		clusterConfigWriter: clusterConfigWriter,
-		infoRequest:         infoRequest,
 	}
 }
 
-func newOrchestrator(routineName string, config *model.Config, h *BackupComponents) *BackupRoutineOrchestrator {
+func newOrchestrator(
+	routineName string,
+	config *model.Config,
+	h *BackupComponents,
+) *BackupRoutineOrchestrator {
 	routine, _ := config.Routine(routineName)
 	logger := slog.With(attr.Routine(routineName))
 	retry := newRetryExecutor(routine.BackupPolicy.GetRetryPolicyOrDefault(), logger)
@@ -83,7 +83,6 @@ func newOrchestrator(routineName string, config *model.Config, h *BackupComponen
 		registry:            h.registry,
 		retentionManager:    h.retentionManager,
 		logger:              logger,
-		infoRequest:         h.infoRequest,
 	}
 }
 

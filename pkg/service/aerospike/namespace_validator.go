@@ -19,13 +19,11 @@ type NamespaceValidator interface {
 // NamespaceValidatorImpl implements NamespaceValidator.
 type NamespaceValidatorImpl struct {
 	clientManager ClientManager
-	infoRequest   InfoRequest
 }
 
-func NewNamespaceValidator(clientManager ClientManager, infoRequest InfoRequest) NamespaceValidator {
+func NewNamespaceValidator(clientManager ClientManager) NamespaceValidator {
 	return &NamespaceValidatorImpl{
 		clientManager: clientManager,
-		infoRequest:   infoRequest,
 	}
 }
 
@@ -78,7 +76,7 @@ func (nv *NamespaceValidatorImpl) fetchNamespacesForCluster(cluster *model.Aeros
 	}
 	defer nv.clientManager.Close(client)
 
-	ns, err := nv.infoRequest.Namespaces(client.AerospikeClient().Cluster())
+	ns, err := client.InfoClient().GetNamespacesList()
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve namespaces: %w", err)
 	}

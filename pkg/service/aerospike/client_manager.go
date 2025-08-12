@@ -104,7 +104,11 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (Client,
 }
 
 func (cm *ClientManagerImpl) checkHealthAndIncrement(info *clientInfo) (Client, error) {
-	if !cm.clientFactory.IsClusterHealthy(info.client.AerospikeClient()) {
+	status, err := info.client.InfoClient().GetStatus()
+	if err != nil {
+		return nil, err
+	}
+	if status != "ok" {
 		return nil, errors.New("aerospike cluster connection lost")
 	}
 
