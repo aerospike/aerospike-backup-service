@@ -100,7 +100,7 @@ func (nv *NamespaceValidatorImpl) validateRoutines(
 			continue
 		}
 
-		missing := util.MissingElements(nsList, r.Namespaces)
+		missing := util.MissingElements(r.Namespaces, nsList)
 		if len(missing) > 0 {
 			slog.Warn("namespaces referenced by routine are missing in the cluster",
 				attr.Routine(name),
