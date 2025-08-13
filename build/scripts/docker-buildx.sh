@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -e
 WORKSPACE="$(git rev-parse --show-toplevel)"
 CHANNEL="dev"
 REGISTRY="docker.io"
@@ -70,13 +70,10 @@ set -- "${POSITIONAL_ARGS[@]}"
 docker login aerospike.jfrog.io -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 
 
-GO_VERSION="$(curl -s 'https://go.dev/dl/?mode=json' | \
-  jq -r --arg ver "go$(grep '^go ' \"$WORKSPACE/go.mod\" | cut -d ' ' -f2 | cut -d. -f1,2)" \
-    '.[] | select(.version | startswith($ver)) | .version' | \
-  sort -V | \
-  tail -n1 | \
-  cut -c3- | \
-  tr -d '\n')"
+GO_VERSION="$( curl -s 'https://go.dev/dl/?mode=json&include=all' | \
+jq -r --arg ver "go$(go mod edit -json | \
+jq -r '.Go' | cut -d. -f1-2)" '.[] | select(.version | startswith($ver)) | .version' | \
+sort -V | tail -n1 | cut -c3- | tr -d '\n')"
 
 PLATFORMS="$PLATFORMS" \
 TAG="$TAG" \

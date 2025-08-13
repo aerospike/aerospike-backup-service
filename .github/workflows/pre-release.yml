@@ -471,13 +471,10 @@ jobs:
           RAW_VERSION=$(cat VERSION)
           
           echo "Determining appropriate Go version based on go.mod."
-          GO_VERSION="$(curl -s 'https://go.dev/dl/?mode=json' | \
-            jq -r --arg ver "go$(grep '^go ' go.mod | cut -d ' ' -f2 | cut -d. -f1,2)" \
-              '.[] | select(.version | startswith($ver)) | .version' | \
-            sort -V | \
-            tail -n1 | \
-            cut -c3- | \
-            tr -d '\n')"
+          GO_VERSION="$( curl -s 'https://go.dev/dl/?mode=json&include=all' | \
+          jq -r --arg ver "go$(go mod edit -json | \
+          jq -r '.Go' | cut -d. -f1-2)" '.[] | select(.version | startswith($ver)) | .version' | \
+          sort -V | tail -n1 | cut -c3- | tr -d '\n')"
           
           if [ -z "$GO_VERSION" ]; then
             echo "Failed to resolve Go version."
