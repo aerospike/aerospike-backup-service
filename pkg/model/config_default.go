@@ -46,7 +46,7 @@ var defaultConfig = struct {
 		FileLimit: util.Ptr(250),
 	},
 	restorePolicy: RestorePolicy{
-		Parallel: util.Ptr(20),
+		Parallel: util.Ptr(8),
 		RetryPolicy: &models.RetryPolicy{
 			BaseTimeout: 2 * time.Second,
 			MaxRetries:  5,
