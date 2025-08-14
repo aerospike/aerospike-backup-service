@@ -58,7 +58,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
-		s.nsValidator.ValidateConfig(config) // validate under the lock
+		s.nsValidator.Validate(config) // validate under the lock
 		return nil
 	})
 

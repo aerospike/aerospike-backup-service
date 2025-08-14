@@ -132,7 +132,7 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		}
 
 		// validate that new cluster has all required NSs (under the lock)
-		s.nsValidator.ValidateConfig(config)
+		s.nsValidator.Validate(config)
 		return nil
 	})
 
