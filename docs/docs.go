@@ -2069,7 +2069,7 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "partition-list": {
-                    "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"\u003cstart\u003e,\u003ccount\u003e\" (e.g., \"100,50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nThis field is mutually exclusive with node-list.",
+                    "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"\u003cstart\u003e-\u003ccount\u003e\" (e.g., \"100-50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nThis field is mutually exclusive with node-list.",
                     "type": "string",
                     "x-nullable": true
                 },
