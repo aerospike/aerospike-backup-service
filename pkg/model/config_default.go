@@ -84,9 +84,3 @@ var StorageRetryPolicy = struct {
 	},
 	MaxDuration: 2 * time.Minute,
 }
-
-var InfoDefaultRetryPolicy = &models.RetryPolicy{
-	BaseTimeout: 100 * time.Millisecond,
-	MaxRetries:  3,
-	Multiplier:  2,
-}
