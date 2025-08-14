@@ -71,7 +71,7 @@ func TestFindMissingByRoutine_MissingDetected_SingleFetchForSharedCluster(t *tes
 	env.expectSingleClusterFetch(cluster, []string{"foo"}, nil)
 
 	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
-	got := nv.findMissingByRoutine(routines)
+	got := nv.findMissingNamespaces(routines)
 
 	require.Len(t, got, 2)
 	assert.ElementsMatch(t, []string{"bar"}, got["r1"])
@@ -86,7 +86,7 @@ func TestFindMissingByRoutine_NoNamespaces_NoFetch(t *testing.T) {
 	}
 
 	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
-	got := nv.findMissingByRoutine(routines)
+	got := nv.findMissingNamespaces(routines)
 
 	require.Empty(t, got)
 }
@@ -104,7 +104,7 @@ func TestFindMissingByRoutine_FetchError_SkipsCluster(t *testing.T) {
 		Times(1)
 
 	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
-	got := nv.findMissingByRoutine(routines)
+	got := nv.findMissingNamespaces(routines)
 
 	require.Empty(t, got)
 }
@@ -119,7 +119,7 @@ func TestFindMissingByRoutine_InfoError_SkipsCluster(t *testing.T) {
 	env.expectSingleClusterFetch(cluster, nil, errors.New("info failed"))
 
 	nv := &NamespaceValidatorImpl{clientManager: env.mockClientManager}
-	got := nv.findMissingByRoutine(routines)
+	got := nv.findMissingNamespaces(routines)
 
 	require.Empty(t, got)
 }
@@ -141,7 +141,7 @@ func TestFindMissingByRoutine_TwoClusters_OK(t *testing.T) {
 	expectPerCluster(t, ctrl, mgr, b, []string{"ns2"}, nil)
 
 	nv := &NamespaceValidatorImpl{clientManager: mgr}
-	got := nv.findMissingByRoutine(routines)
+	got := nv.findMissingNamespaces(routines)
 
 	require.Empty(t, got)
 }
@@ -163,7 +163,7 @@ func TestFindMissingByRoutine_TwoClusters_Fail(t *testing.T) {
 	expectPerCluster(t, ctrl, mgr, b, []string{"ns2"}, nil)
 
 	nv := &NamespaceValidatorImpl{clientManager: mgr}
-	got := nv.findMissingByRoutine(routines)
+	got := nv.findMissingNamespaces(routines)
 
 	require.Len(t, got, 2)
 }

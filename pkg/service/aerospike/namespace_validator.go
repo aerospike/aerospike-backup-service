@@ -25,14 +25,15 @@ func NewNamespaceValidator(cm ClientManager) NamespaceValidator {
 	return &NamespaceValidatorImpl{clientManager: cm}
 }
 
-type MissingByRoutine map[string][]string
+// NamespacesByRoutine stores list of namespaces missing in each routine.
+type NamespacesByRoutine map[string][]string
 
 func (nv *NamespaceValidatorImpl) Validate(cfg *model.Config) {
 	if cfg == nil {
 		return
 	}
 
-	missing := nv.findMissingByRoutine(cfg.Routines())
+	missing := nv.findMissingNamespaces(cfg.Routines())
 
 	for routine, namespaces := range missing {
 		slog.Warn("namespaces referenced by routine are missing in the cluster",
@@ -42,7 +43,7 @@ func (nv *NamespaceValidatorImpl) Validate(cfg *model.Config) {
 	}
 }
 
-func (nv *NamespaceValidatorImpl) findMissingByRoutine(routines map[string]*model.BackupRoutine) MissingByRoutine {
+func (nv *NamespaceValidatorImpl) findMissingNamespaces(routines map[string]*model.BackupRoutine) NamespacesByRoutine {
 	clusters := nv.collectClusters(routines)
 	namespacesByCluster := nv.fetchNamespacesByCluster(clusters)
 	return nv.diffRoutineNamespaces(routines, namespacesByCluster)
@@ -99,8 +100,8 @@ func (nv *NamespaceValidatorImpl) fetchClusterNamespaces(cluster *model.Aerospik
 func (nv *NamespaceValidatorImpl) diffRoutineNamespaces(
 	routines map[string]*model.BackupRoutine,
 	namespacesByCluster map[*model.AerospikeCluster][]string,
-) MissingByRoutine {
-	result := make(MissingByRoutine)
+) NamespacesByRoutine {
+	result := make(NamespacesByRoutine)
 	for name, r := range routines {
 		if len(r.Namespaces) == 0 {
 			continue
