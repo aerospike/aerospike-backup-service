@@ -72,7 +72,7 @@ func (a ApiImpl) Backups(routine string) []m.BackupDetails {
 	details := append(backups, backupsIncr...)
 
 	slices.SortFunc(details, func(a, b m.BackupDetails) int {
-		return a.Created.Compare(b.Created)
+		return -a.Created.Compare(b.Created)
 	})
 
 	return details

@@ -40,7 +40,3 @@ func groupRows(in []m.BackupDetails) []row {
 	}
 	return out
 }
-
-func isFull(details m.BackupDetails) bool {
-	return details.IsFull()
-}
