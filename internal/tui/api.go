@@ -31,8 +31,7 @@ type ApiImpl struct {
 }
 
 func (a ApiImpl) CancelBackup(routine string) {
-	//TODO implement me
-	panic("implement me")
+	a.registry.Cancel(routine)
 }
 
 func (a ApiImpl) RunningBackup(routine string) *m.RunningJob {
