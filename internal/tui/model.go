@@ -216,7 +216,9 @@ func (m model) View() string {
 	b.WriteString(styleDivider.Render(strings.Repeat("─", max(10, m.width))))
 	b.WriteString("\n")
 
-	// List
+	chain := m.chainIndexes()
+	first, last, single := chainBounds(chain)
+
 	for i, r := range m.rows {
 		isCursor := i == m.cursor
 
@@ -224,27 +226,33 @@ func (m model) View() string {
 		case rowPlus:
 			line := stylePlus.Render(r.label) + stylePlus.Render("  (Enter)")
 			b.WriteString(applyCursor(line, isCursor))
+
 		case rowRunning:
 			line := renderRunning(r.backup)
 			b.WriteString(applyCursor(line, isCursor))
+
 		case rowFull:
 			line := "● " + presentBackupLine(*r.backup)
-			if chain := m.chainIndexes(); chain[i] {
-				line = styleChain.Render("╎ ") + styleFull.Render(line)
+			if chain[i] {
+				prefix := styleChain.Render(chainConnector(i, first, last, single))
+				line = prefix + styleFull.Render(line)
 			} else {
 				line = "  " + styleFull.Render(line)
 			}
 			b.WriteString(applyCursor(line, isCursor))
+
 		case rowIncr:
 			prefix := m.branchPrefix(i)
 			line := prefix + "○ " + presentBackupLine(*r.backup)
-			if chain := m.chainIndexes(); chain[i] {
-				line = styleChain.Render("╎") + " " + styleIncr.Render(line)
+			if chain[i] {
+				conn := styleChain.Render(chainConnector(i, first, last, single))
+				line = conn + styleIncr.Render(line)
 			} else {
 				line = "  " + styleIncr.Render(line)
 			}
 			b.WriteString(applyCursor(line, isCursor))
 		}
+
 		b.WriteString("\n")
 	}
 
@@ -267,26 +275,12 @@ func (m model) chainIndexes() map[int]bool {
 	if m.cursor < 0 || m.cursor >= len(m.rows) {
 		return out
 	}
-	if m.rows[m.cursor].kind != rowIncr {
-		return out
-	}
 
-	fullIdx := -1
-	for i := m.cursor - 1; i >= 0; i-- {
+	// Find the index of the preceding full backup.
+	for i := m.cursor; i < len(m.rows); i++ {
+		out[i] = true
 		if m.rows[i].kind == rowFull {
-			fullIdx = i
 			break
-		}
-		if m.rows[i].kind == rowPlus || m.rows[i].kind == rowRunning {
-			break
-		}
-	}
-	if fullIdx == -1 {
-		return out
-	}
-	for i := fullIdx; i <= m.cursor; i++ {
-		if m.rows[i].kind == rowFull || m.rows[i].kind == rowIncr {
-			out[i] = true
 		}
 	}
 
@@ -323,7 +317,39 @@ func renderConfirm(title string, width int) string {
 
 func applyCursor(s string, isCursor bool) string {
 	if !isCursor {
-		return " " + s + " "
+		return s
 	}
-	return "[" + styleCursor.Render(s) + "]"
+	return styleCursor.Render(s)
+}
+
+// helper: find first/last selected rows, and whether there's exactly one
+func chainBounds(chain map[int]bool) (first, last int, single bool) {
+	first, last = -1, -1
+	count := 0
+	for i := range chain {
+		if chain[i] {
+			count++
+			if first == -1 || i < first {
+				first = i
+			}
+			if i > last {
+				last = i
+			}
+		}
+	}
+	return first, last, count == 1
+}
+
+// helper: pick the connector rune (includes a trailing space)
+func chainConnector(i, first, last int, single bool) string {
+	switch {
+	case single && i == first:
+		return "[ "
+	case i == first:
+		return "┌ "
+	case i == last:
+		return "└ "
+	default:
+		return "│ "
+	}
 }
