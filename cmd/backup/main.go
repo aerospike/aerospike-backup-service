@@ -15,6 +15,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/tui"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -77,13 +78,15 @@ func run() int {
 
 func startService(configFile string, remote bool) error {
 	ctx := systemCtx()
-	config, scheduler, httpService, appLogger, err := initComponents(ctx, configFile, remote)
+	config, scheduler, httpService, appLogger, tservice, err := initComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
 	}
 
 	// start the scheduler only after all the initialization is done
 	scheduler.Start(ctx)
+
+	go tui.RunSSH(":2323", tservice)
 
 	// run HTTP server
 	err = runHTTPServer(ctx, config.ServiceConfig.GetHTTPServerOrDefault(), httpService, appLogger)
@@ -96,14 +99,14 @@ func startService(configFile string, remote bool) error {
 
 //nolint:funlen
 func initComponents(ctx context.Context, configFile string, remote bool) (
-	*model.Config, quartz.Scheduler, *handlers.Service, *slog.Logger, error,
+	*model.Config, quartz.Scheduler, *handlers.Service, *slog.Logger, tui.Api, error,
 ) {
 	clientManager := aerospike.NewClientManager(&aerospike.DefaultClientFactory{}, 10*time.Second)
 	nsValidator := aerospike.NewNamespaceValidator(clientManager)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	appLogger := setDefaultLogger(config.ServiceConfig.GetLoggerOrDefault())
@@ -122,7 +125,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	// schedule all configured backup routines
 	scheduler, err := service.NewScheduler(ctx, appLogger)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
 
 	backendService := service.NewBackupBackendService(config)
@@ -138,7 +141,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 
 	err = configApplier.ApplyNewConfig()
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}
 
 	var restoreJobs = service.NewRestoreJobsHolder()
@@ -161,7 +164,9 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		nsValidator,
 	)
 
-	return config, scheduler, httpService, appLogger, nil
+	tuiApi := tui.NewApiImpl(config, backendService, registry)
+
+	return config, scheduler, httpService, appLogger, tuiApi, nil
 }
 
 func setDefaultLogger(loggerConfig *model.LoggerConfig) *slog.Logger {

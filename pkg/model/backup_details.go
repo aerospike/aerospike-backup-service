@@ -99,3 +99,7 @@ func NewBackupMetadata(
 		Encryption:          encryption,
 	}
 }
+
+func (m *BackupMetadata) IsFull() bool {
+	return m.From.IsZero()
+}
