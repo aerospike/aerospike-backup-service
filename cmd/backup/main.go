@@ -164,7 +164,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		nsValidator,
 	)
 
-	tuiApi := tui.NewApiImpl(config, backendService, registry)
+	tuiApi := tui.NewApiImpl(config, backendService, registry, scheduler, restoreMgr)
 
 	return config, scheduler, httpService, appLogger, tuiApi, nil
 }

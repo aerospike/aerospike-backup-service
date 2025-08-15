@@ -2,10 +2,13 @@ package tui
 
 import (
 	"context"
+	"log/slog"
 	"slices"
+	"time"
 
 	m "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
+	"github.com/reugn/go-quartz/quartz"
 )
 
 type Api interface {
@@ -25,9 +28,11 @@ type Api interface {
 var _ Api = (*ApiImpl)(nil)
 
 type ApiImpl struct {
-	cfg          *m.Config
-	backupReader service.BackupReader
-	registry     service.RunningBackupsRegistry
+	cfg            *m.Config
+	backupReader   service.BackupReader
+	registry       service.RunningBackupsRegistry
+	scheduler      service.Scheduler
+	restoreManager service.RestoreManager
 }
 
 func (a ApiImpl) CancelBackup(routine string) {
@@ -39,11 +44,13 @@ func (a ApiImpl) RunningBackup(routine string) *m.RunningJob {
 	return state.Full
 }
 
-func NewApiImpl(cfg *m.Config, backupReader service.BackupReader, registry service.RunningBackupsRegistry) Api {
+func NewApiImpl(cfg *m.Config, backupReader service.BackupReader, registry service.RunningBackupsRegistry, scheduler service.Scheduler, restoreManager service.RestoreManager) Api {
 	return &ApiImpl{
-		cfg:          cfg,
-		backupReader: backupReader,
-		registry:     registry,
+		cfg:            cfg,
+		backupReader:   backupReader,
+		registry:       registry,
+		scheduler:      scheduler,
+		restoreManager: restoreManager,
 	}
 }
 
@@ -72,9 +79,21 @@ func (a ApiImpl) Backups(routine string) []m.BackupDetails {
 }
 
 func (a ApiImpl) StartBackup(routine string) {
-	panic("implement me")
+	job := service.NewAdHocFullBackupJobForRoutine(routine)
+	if job == nil {
+		slog.Error("Failed to create ad-hoc backup job", "routine", routine)
+		return
+	}
+	trigger := quartz.NewRunOnceTrigger(time.Second)
+	err := a.scheduler.ScheduleJob(job, trigger)
+	if err != nil {
+		slog.Error("Failed to schedule ad-hoc backup job", "routine", routine, "err", err)
+	}
 }
 
 func (a ApiImpl) StartRestore(request m.RestoreTimestampRequest) {
-	panic("implement me")
+	_, err := a.restoreManager.RestoreByTime(context.Background(), &request)
+	if err != nil {
+		slog.Error("Failed to start restore", "err", err)
+	}
 }
