@@ -13,8 +13,8 @@ func presentClusterLine(cfg *m.Config, routine string) string {
 
 // ---------- Backup rows ----------
 
-func presentBackupLine(b m.BackupDetails, isIncr bool) string {
-	t := b.Created.UTC().Format("2006-01-02 15:04")
+func presentBackupLine(b m.BackupDetails) string {
+	t := b.Created.UTC().Format("2006-01-02 15:04:01")
 	typ := "Full"
 	if !b.IsFull() {
 		typ = "Incr"

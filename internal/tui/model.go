@@ -228,7 +228,7 @@ func (m model) View() string {
 			line := renderRunning(r.backup)
 			b.WriteString(applyCursor(line, isCursor))
 		case rowFull:
-			line := "● " + presentBackupLine(*r.backup, false)
+			line := "● " + presentBackupLine(*r.backup)
 			if chain := m.chainIndexes(); chain[i] {
 				line = styleChain.Render("╎ ") + styleFull.Render(line)
 			} else {
@@ -237,18 +237,13 @@ func (m model) View() string {
 			b.WriteString(applyCursor(line, isCursor))
 		case rowIncr:
 			prefix := m.branchPrefix(i)
-			line := prefix + "○ " + presentBackupLine(*r.backup, true)
+			line := prefix + "○ " + presentBackupLine(*r.backup)
 			if chain := m.chainIndexes(); chain[i] {
 				line = styleChain.Render("╎") + " " + styleIncr.Render(line)
 			} else {
 				line = "  " + styleIncr.Render(line)
 			}
 			b.WriteString(applyCursor(line, isCursor))
-
-			if isCursor {
-				b.WriteString("\n")
-				b.WriteString(renderExpanded(r.backup))
-			}
 		}
 		b.WriteString("\n")
 	}
@@ -275,7 +270,7 @@ func (m model) chainIndexes() map[int]bool {
 	if m.rows[m.cursor].kind != rowIncr {
 		return out
 	}
-	// вверх до full
+
 	fullIdx := -1
 	for i := m.cursor - 1; i >= 0; i-- {
 		if m.rows[i].kind == rowFull {
@@ -299,19 +294,10 @@ func (m model) chainIndexes() map[int]bool {
 }
 
 func (m model) branchPrefix(i int) string {
-	// смотрим следующий элемент, чтобы решить ├─ или └─
 	if i+1 < len(m.rows) && m.rows[i+1].kind == rowIncr {
 		return "├─ "
 	}
 	return "└─ "
-}
-
-func renderExpanded(bkp *m.BackupDetails) string {
-	lines := []string{
-		styleDim.Render(strings.Repeat("─", 70)),
-		presentExpanded(bkp),
-	}
-	return styleExpanded.Render(strings.Join(lines, "\n"))
 }
 
 func renderRunning(bkp *m.BackupDetails) string {
