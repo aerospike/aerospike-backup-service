@@ -261,17 +261,6 @@ func (m model) View() string {
 
 func renderRunning(r *m.RunningJob) string {
 	return fmt.Sprintf("running %d (Cancel)", r.PercentageDone)
-	//
-	//
-	//pct, eta := presentProgress(bkp)
-	//left := "▶ Running…"
-	//if pct >= 0 {
-	//	left = fmt.Sprintf("▶ Running… %d%%", pct)
-	//}
-	//right := presentRunningRight(bkp) // typ/source/ns
-	//bar := presentBar(pct)
-	//meta := presentRunningMeta(bkp, eta)
-	//return styleRunning.Render(left + "  " + right + "\n   " + bar + "  " + meta + "\n   Enter = Cancel")
 }
 
 func renderConfirm(title string, width int) string {

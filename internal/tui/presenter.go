@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"time"
 
 	m "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
@@ -26,14 +25,6 @@ func presentBackupLine(b m.BackupDetails) string {
 	size := humanSize(b.ByteCount)
 
 	return fmt.Sprintf("BD %s  %s  (%s)   %s", t, typ, src, size)
-}
-
-func presentRunningMeta(bkp any, eta time.Duration) string {
-	b := bkp.(m.BackupDetails)
-	if eta > 0 {
-		return fmt.Sprintf("ETA %s  Started: %s", eta.Truncate(time.Second).String(), b.Created)
-	}
-	return fmt.Sprintf("Started: %s", b.Created)
 }
 
 // ---------- Human size ----------
