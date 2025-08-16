@@ -228,7 +228,7 @@ func (m model) View() string {
 
 		case rowRunning:
 			routine := m.tabs[m.activeTab]
-			line := prefix + renderRunning(m.api.RunningBackup(routine))
+			line := prefix + renderRunning(m.api.RunningBackup(routine), m.width)
 			b.WriteString(applyCursor(line, isCursor))
 
 		case rowFull:
@@ -259,8 +259,51 @@ func (m model) View() string {
 	return b.String()
 }
 
-func renderRunning(r *m.RunningJob) string {
-	return fmt.Sprintf("running %d (Cancel)", r.PercentageDone)
+func renderRunning(r *m.RunningJob, width int) string {
+	if r == nil {
+		return " "
+	}
+	var barWidth = width - 30
+	if barWidth < 10 {
+		barWidth = 10 // keep some minimum width
+	}
+
+	// Clamp [0..100]
+	pct := r.PercentageDone
+	if pct < 0 {
+		pct = 0
+	} else if pct > 100 {
+		pct = 100
+	}
+
+	filled := int(float64(barWidth) * (float64(pct) / 100.0))
+	if filled < 0 {
+		filled = 0
+	}
+	if filled > barWidth {
+		filled = barWidth
+	}
+
+	// Build bar slice so we can overwrite chars
+	barRunes := []rune(strings.Repeat("█", filled) + strings.Repeat("░", barWidth-filled))
+
+	// Overlay percentage text in the center
+	pctText := fmt.Sprintf("%3d%%", pct)
+	start := (barWidth - len(pctText)) / 2
+	for i, r := range pctText {
+		if start+i >= 0 && start+i < len(barRunes) {
+			barRunes[start+i] = r
+		}
+	}
+
+	bar := string(barRunes)
+
+	if r.EstimatedEndTime != nil {
+		until := time.Until(*r.EstimatedEndTime).Round(time.Second).String()
+		return fmt.Sprintf("[%s] %s left (Cancel)", bar, until)
+	}
+
+	return fmt.Sprintf("[%s] (Cancel)", bar)
 }
 
 func renderConfirm(title string, width int) string {
