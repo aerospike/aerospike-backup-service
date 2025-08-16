@@ -227,7 +227,8 @@ func (m model) View() string {
 			b.WriteString(applyCursor(line, isCursor))
 
 		case rowRunning:
-			line := prefix + renderRunning(r.backup)
+			routine := m.tabs[m.activeTab]
+			line := prefix + renderRunning(m.api.RunningBackup(routine))
 			b.WriteString(applyCursor(line, isCursor))
 
 		case rowFull:
@@ -258,8 +259,8 @@ func (m model) View() string {
 	return b.String()
 }
 
-func renderRunning(bkp *m.BackupDetails) string {
-	return "running (Cancel)"
+func renderRunning(r *m.RunningJob) string {
+	return fmt.Sprintf("running %d (Cancel)", r.PercentageDone)
 	//
 	//
 	//pct, eta := presentProgress(bkp)

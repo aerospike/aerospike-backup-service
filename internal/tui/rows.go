@@ -16,8 +16,8 @@ const (
 
 type row struct {
 	kind   rowKind
-	label  string           // для + и разводок
-	backup *m.BackupDetails // для running / full / incr
+	label  string
+	backup *m.BackupDetails
 }
 
 func groupRows(in []m.BackupDetails) []row {
