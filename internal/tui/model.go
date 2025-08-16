@@ -216,40 +216,29 @@ func (m model) View() string {
 	b.WriteString(styleDivider.Render(strings.Repeat("─", max(10, m.width))))
 	b.WriteString("\n")
 
-	chain := m.chainIndexes()
-	first, last, single := chainBounds(chain)
+	first, last := m.chainBounds()
 
 	for i, r := range m.rows {
 		isCursor := i == m.cursor
+		prefix := styleChain.Render(chainConnector(i, first, last))
 
 		switch r.kind {
 		case rowPlus:
-			line := stylePlus.Render(r.label) + stylePlus.Render("  (Enter)")
+			line := prefix + stylePlus.Render(r.label)
 			b.WriteString(applyCursor(line, isCursor))
 
 		case rowRunning:
-			line := renderRunning(r.backup)
+			line := prefix + renderRunning(r.backup)
 			b.WriteString(applyCursor(line, isCursor))
 
 		case rowFull:
-			line := "● " + presentBackupLine(*r.backup)
-			if chain[i] {
-				prefix := styleChain.Render(chainConnector(i, first, last, single))
-				line = prefix + styleFull.Render(line)
-			} else {
-				line = "  " + styleFull.Render(line)
-			}
+			line := "●  " + presentBackupLine(*r.backup)
+			line = prefix + styleFull.Render(line)
 			b.WriteString(applyCursor(line, isCursor))
 
 		case rowIncr:
-			prefix := m.branchPrefix(i)
-			line := prefix + "○ " + presentBackupLine(*r.backup)
-			if chain[i] {
-				conn := styleChain.Render(chainConnector(i, first, last, single))
-				line = conn + styleIncr.Render(line)
-			} else {
-				line = "  " + styleIncr.Render(line)
-			}
+			line := " ○ " + presentBackupLine(*r.backup)
+			line = prefix + styleFull.Render(line)
 			b.WriteString(applyCursor(line, isCursor))
 		}
 
@@ -268,30 +257,6 @@ func (m model) View() string {
 	b.WriteString(styleFooter.Render("←/→ routines   ↑/↓ list   Enter action   q/Esc quit  |  ● Full ○ Incr  (manual)/(schedule)"))
 
 	return b.String()
-}
-
-func (m model) chainIndexes() map[int]bool {
-	out := map[int]bool{}
-	if m.cursor < 0 || m.cursor >= len(m.rows) {
-		return out
-	}
-
-	// Find the index of the preceding full backup.
-	for i := m.cursor; i < len(m.rows); i++ {
-		out[i] = true
-		if m.rows[i].kind == rowFull {
-			break
-		}
-	}
-
-	return out
-}
-
-func (m model) branchPrefix(i int) string {
-	if i+1 < len(m.rows) && m.rows[i+1].kind == rowIncr {
-		return "├─ "
-	}
-	return "└─ "
 }
 
 func renderRunning(bkp *m.BackupDetails) string {
@@ -322,34 +287,45 @@ func applyCursor(s string, isCursor bool) string {
 	return styleCursor.Render(s)
 }
 
-// helper: find first/last selected rows, and whether there's exactly one
-func chainBounds(chain map[int]bool) (first, last int, single bool) {
+func (m model) chainBounds() (first, last int) {
 	first, last = -1, -1
-	count := 0
-	for i := range chain {
-		if chain[i] {
-			count++
-			if first == -1 || i < first {
-				first = i
-			}
-			if i > last {
-				last = i
-			}
+
+	if m.cursor < 0 || m.cursor >= len(m.rows) {
+		return
+	}
+
+	// If current row is running or plus → single-element chain
+	if m.rows[m.cursor].kind == rowRunning || m.rows[m.cursor].kind == rowPlus {
+		return m.cursor, m.cursor
+	}
+
+	// Otherwise walk forward until we hit a full backup
+	for i := m.cursor; i < len(m.rows); i++ {
+		if first == -1 {
+			first = i
+		}
+		last = i
+		if m.rows[i].kind == rowFull {
+			break
 		}
 	}
-	return first, last, count == 1
+
+	return
 }
 
-// helper: pick the connector rune (includes a trailing space)
-func chainConnector(i, first, last int, single bool) string {
-	switch {
-	case single && i == first:
-		return "[ "
-	case i == first:
-		return "┌ "
-	case i == last:
-		return "└ "
-	default:
-		return "│ "
+func chainConnector(i, first, last int) string {
+	if i < first || i > last {
+		return "  "
 	}
+	if i == first && i == last { // single element
+		return "[ "
+	}
+	if i == first {
+		return "┌ "
+	}
+	if i == last {
+		return "└ "
+	}
+
+	return "│ "
 }

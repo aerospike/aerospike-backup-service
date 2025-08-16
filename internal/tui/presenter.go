@@ -28,11 +28,6 @@ func presentBackupLine(b m.BackupDetails) string {
 	return fmt.Sprintf("BD %s  %s  (%s)   %s", t, typ, src, size)
 }
 
-func presentExpanded(bkp *m.BackupDetails) string {
-	return fmt.Sprintf("Created: %s\nSize: %s\nRestore: press Enter",
-		bkp.Created, humanSize(bkp.ByteCount))
-}
-
 func presentRunningMeta(bkp any, eta time.Duration) string {
 	b := bkp.(m.BackupDetails)
 	if eta > 0 {
