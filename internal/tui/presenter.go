@@ -36,13 +36,6 @@ func presentRunningMeta(bkp any, eta time.Duration) string {
 	return fmt.Sprintf("Started: %s", b.Created)
 }
 
-func buildRestoreRequest(routine string, b *m.BackupDetails) m.RestoreTimestampRequest {
-	var req m.RestoreTimestampRequest
-	req.RoutineName = routine
-	req.Time = b.Created
-	return req
-}
-
 // ---------- Human size ----------
 
 func humanSize(n uint64) string {

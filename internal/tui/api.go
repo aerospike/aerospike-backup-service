@@ -22,7 +22,7 @@ type Api interface {
 	// actions
 	StartBackup(routine string)
 	CancelBackup(routine string)
-	StartRestore(request m.RestoreTimestampRequest)
+	StartRestore(routine string, b *m.BackupDetails)
 }
 
 var _ Api = (*ApiImpl)(nil)
@@ -91,7 +91,23 @@ func (a ApiImpl) StartBackup(routine string) {
 	}
 }
 
-func (a ApiImpl) StartRestore(request m.RestoreTimestampRequest) {
+func (a ApiImpl) StartRestore(routine string, b *m.BackupDetails) {
+	backupRoutine, _ := a.cfg.Routine(routine)
+
+	policy := &m.RestorePolicy{}
+	if b.Compression != "" {
+		policy.CompressionPolicy = &m.CompressionPolicy{
+			Mode: b.Compression,
+		}
+	}
+
+	request := m.RestoreTimestampRequest{
+		RoutineName:        routine,
+		Time:               b.Created,
+		DestinationCluster: backupRoutine.SourceCluster,
+		SecretAgent:        backupRoutine.SecretAgent,
+		Policy:             policy,
+	}
 	_, err := a.restoreManager.RestoreByTime(context.Background(), &request)
 	if err != nil {
 		slog.Error("Failed to start restore", "err", err)

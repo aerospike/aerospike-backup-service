@@ -192,11 +192,10 @@ func (m *model) handleEnter() tea.Cmd {
 		return nil
 
 	case rowFull, rowIncr:
-		req := buildRestoreRequest(routine, r.backup)
 		m.showConfirm = &confirm{
 			title: "Start restore?",
 			onYes: tea.Batch(func() tea.Msg {
-				m.api.StartRestore(req)
+				m.api.StartRestore(routine, r.backup)
 				return nil
 			}, tickRefresh()),
 		}
