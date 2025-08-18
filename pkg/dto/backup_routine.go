@@ -174,12 +174,6 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig) (*model.BackupRoutin
 		return nil, errValidationNotFound("Aerospike cluster", r.SourceCluster)
 	}
 
-	if cluster.MaxParallelScans != nil {
-		if len(r.SetList) > *cluster.MaxParallelScans {
-			return nil, fmt.Errorf("max parallel scans must be at least the cardinality of set-list")
-		}
-	}
-
 	storage, found := config.Storage[r.Storage]
 	if !found {
 		return nil, errValidationNotFound("storage", r.Storage)
