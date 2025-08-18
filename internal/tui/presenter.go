@@ -7,7 +7,8 @@ import (
 )
 
 func presentClusterLine(cfg *m.Config, routine string) string {
-	return fmt.Sprintf("description for %s", routine)
+	r, _ := cfg.Routine(routine)
+	return fmt.Sprintf("Full backup: %s, incremental: %s", DescribeCron(r.IntervalCron), DescribeCron(r.IncrIntervalCron))
 }
 
 // ---------- Backup rows ----------
