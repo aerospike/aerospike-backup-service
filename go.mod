@@ -1,8 +1,6 @@
 module github.com/aerospike/aerospike-backup-service/v3
 
-go 1.23.11
-
-toolchain go1.24.2
+go 1.23.0
 
 require (
 	cloud.google.com/go/storage v1.55.0
@@ -10,8 +8,8 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.10.1
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.6.1
 	github.com/aerospike/aerospike-client-go/v8 v8.2.2
-	github.com/aerospike/aerospike-management-lib v1.8.0
-	github.com/aerospike/backup-go v0.5.2-0.20250818100546-120d0c4ec2db
+	github.com/aerospike/aerospike-management-lib v1.7.0
+	github.com/aerospike/backup-go v0.5.2-0.20250818105153-d8a72cd0f349
 	github.com/aws/aws-sdk-go-v2 v1.36.5
 	github.com/aws/aws-sdk-go-v2/config v1.29.17
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.70

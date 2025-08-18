@@ -48,10 +48,10 @@ github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
 github.com/aerospike/aerospike-client-go/v8 v8.2.2 h1:NV1GxB+ATUb1cQtwaIS731A/6EkwuAX4/heh8CpvQOI=
 github.com/aerospike/aerospike-client-go/v8 v8.2.2/go.mod h1:H6CzKDoHxBj1yY/oQPci1bUIbEx2ATQtJ2GtZ+N64Wg=
-github.com/aerospike/aerospike-management-lib v1.8.0 h1:oXxuXqCpMD0f8KXXOaCdIZofNUTovef/T8wAnPGUnx8=
-github.com/aerospike/aerospike-management-lib v1.8.0/go.mod h1:RNKlkSnppiaBaLEdAiCeBv68M+odPR5JR+ziO0NfaHQ=
-github.com/aerospike/backup-go v0.5.2-0.20250818100546-120d0c4ec2db h1:FaiBObKDKlTWf14CQ8jsEnt02FIWiAp4gt4dYl9AP3o=
-github.com/aerospike/backup-go v0.5.2-0.20250818100546-120d0c4ec2db/go.mod h1:B7UY4VR8ubk/qo25kfzvUcJpgFTflMQJe+F9MA1lOvc=
+github.com/aerospike/aerospike-management-lib v1.7.0 h1:XUtJKN/+WT3fSXIAQsZAk5rtm70PLCFoEXd5QMENLS8=
+github.com/aerospike/aerospike-management-lib v1.7.0/go.mod h1:m57ZBKHvC4vKM/qnX8md1vizjYLXOUiH8QnHK45KBFg=
+github.com/aerospike/backup-go v0.5.2-0.20250818105153-d8a72cd0f349 h1:rCUd824kJVY+gbViO14OS3V94HJKFgRdKa0N0fsRWYc=
+github.com/aerospike/backup-go v0.5.2-0.20250818105153-d8a72cd0f349/go.mod h1:B7UY4VR8ubk/qo25kfzvUcJpgFTflMQJe+F9MA1lOvc=
 github.com/aws/aws-sdk-go-v2 v1.36.5 h1:0OF9RiEMEdDdZEMqF9MRjevyxAQcf6gY+E7vwBILFj0=
 github.com/aws/aws-sdk-go-v2 v1.36.5/go.mod h1:EYrzvCCN9CMUTa5+6lf6MM4tq3Zjp8UhSGR/cBsjai0=
 github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.11 h1:12SpdwU8Djs+YGklkinSSlcrPyj3H4VifVsKf78KbwA=
