@@ -1,6 +1,8 @@
 module github.com/aerospike/aerospike-backup-service/v3
 
-go 1.23.0
+go 1.23.11
+
+toolchain go1.24.2
 
 require (
 	cloud.google.com/go/storage v1.55.0
@@ -8,14 +10,14 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.10.1
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.6.1
 	github.com/aerospike/aerospike-client-go/v8 v8.2.2
-	github.com/aerospike/aerospike-management-lib v1.7.0
-	github.com/aerospike/backup-go v0.5.2-0.20250813085956-94b59fa02d37
+	github.com/aerospike/aerospike-management-lib v1.8.0
+	github.com/aerospike/backup-go v0.5.2-0.20250818100546-120d0c4ec2db
 	github.com/aws/aws-sdk-go-v2 v1.36.5
 	github.com/aws/aws-sdk-go-v2/config v1.29.17
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.70
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.83.0
 	github.com/aws/smithy-go v1.22.4
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/googleapis/gax-go/v2 v2.14.2
 	github.com/prometheus/client_golang v1.21.1
 	github.com/reugn/go-quartz v0.15.1
@@ -107,11 +109,11 @@ require (
 	go.opentelemetry.io/contrib/detectors/gcp v1.36.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
-	go.opentelemetry.io/otel v1.36.0 // indirect
-	go.opentelemetry.io/otel/metric v1.36.0 // indirect
+	go.opentelemetry.io/otel v1.37.0 // indirect
+	go.opentelemetry.io/otel/metric v1.37.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.36.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.36.0 // indirect
-	go.opentelemetry.io/otel/trace v1.36.0 // indirect
+	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
