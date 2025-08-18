@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
@@ -16,7 +17,11 @@ import (
 
 const megabyte = 1_048_576
 
-func runScanRestore(ctx context.Context, client *backup.Client, request *model.RestoreRequest) (RestoreHandler, error) {
+func runScanRestore(
+	ctx context.Context,
+	client aerospike.Restorer,
+	request *model.RestoreRequest,
+) (RestoreHandler, error) {
 	reader, err := storage.CreateDirReader(ctx,
 		request.SourceStorage, request.BackupDataPath, ioStorage.WithValidator(asb.NewValidator()))
 	if err != nil {

@@ -16,15 +16,9 @@ import (
 // ClientManager is responsible for creating and closing backup clients.
 type ClientManager interface {
 	// GetClient returns a backup client by aerospike cluster name (new or cached).
-	GetClient(*model.AerospikeCluster) (*backup.Client, error)
+	GetClient(*model.AerospikeCluster) (Client, error)
 	// Close ensures that the specified backup client is closed.
-	Close(*backup.Client)
-}
-
-// ClientFactory defines an interface for creating and checking clients.
-type ClientFactory interface {
-	NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error)
-	IsClusterHealthy(client Cluster) bool
+	Close(Client)
 }
 
 type Cluster interface {
@@ -47,7 +41,7 @@ type ClientManagerImpl struct {
 var _ ClientManager = (*ClientManagerImpl)(nil)
 
 type clientInfo struct {
-	client     *backup.Client
+	client     Client
 	count      int
 	closeTimer *time.Timer
 }
@@ -68,7 +62,7 @@ func (cm *ClientManagerImpl) SetLogger(logger *slog.Logger) {
 }
 
 // GetClient returns a backup client by aerospike cluster name (new or cached).
-func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
+func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (Client, error) {
 	if cluster == nil {
 		return nil, errors.New("cluster is nil")
 	}
@@ -109,8 +103,12 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (*backup
 	return client, nil
 }
 
-func (cm *ClientManagerImpl) checkHealthAndIncrement(info *clientInfo) (*backup.Client, error) {
-	if !cm.clientFactory.IsClusterHealthy(info.client.AerospikeClient()) {
+func (cm *ClientManagerImpl) checkHealthAndIncrement(info *clientInfo) (Client, error) {
+	status, err := info.client.InfoClient().GetStatus()
+	if err != nil {
+		return nil, err
+	}
+	if status != "ok" {
 		return nil, errors.New("aerospike cluster connection lost")
 	}
 
@@ -123,7 +121,7 @@ func (cm *ClientManagerImpl) mutexForCluster(clusterKey string) *sync.Mutex {
 	return stored.(*sync.Mutex)
 }
 
-func (cm *ClientManagerImpl) storeClient(clusterKey string, client *backup.Client) {
+func (cm *ClientManagerImpl) storeClient(clusterKey string, client Client) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -140,7 +138,7 @@ func (cm *ClientManagerImpl) storeClient(clusterKey string, client *backup.Clien
 }
 
 // createClient creates a new backup client given the aerospike cluster configuration.
-func (cm *ClientManagerImpl) createClient(cluster *model.AerospikeCluster) (*backup.Client, error) {
+func (cm *ClientManagerImpl) createClient(cluster *model.AerospikeCluster) (Client, error) {
 	aeroClient, err := cm.clientFactory.NewClientWithPolicyAndHost(cluster)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to aerospike cluster, %w", err)
@@ -159,11 +157,11 @@ func (cm *ClientManagerImpl) createClient(cluster *model.AerospikeCluster) (*bac
 		options = append(options, backup.WithLogger(cm.logger))
 	}
 
-	return backup.NewClient(aeroClient, options...)
+	return cm.clientFactory.NewBackupClient(aeroClient, options...)
 }
 
 // Close ensures that the specified backup client is closed.
-func (cm *ClientManagerImpl) Close(client *backup.Client) {
+func (cm *ClientManagerImpl) Close(client Client) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 

@@ -231,6 +231,7 @@ func TestBackupRoutineOrchestrator_runFullBackup_RaceCondition(t *testing.T) {
 
 	config := setupBaseConfig()
 	registry := NewRunningBackupsRegistry(ctx, mockBackupBackend, config)
+
 	orchestrator := newOrchestrator(routineName, config, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
@@ -289,7 +290,7 @@ func TestBackupRoutineOrchestrator_runFullBackup_RaceCondition(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		// give the first goroutine a slight head start
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 		slog.Info("Process B start")
 		orchestrator.runFullBackup(context.Background(), secondBackupTime)
 		slog.Info("Process B done")

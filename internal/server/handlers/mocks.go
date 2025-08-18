@@ -6,7 +6,6 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/stretchr/testify/mock"
 )
@@ -190,22 +189,6 @@ type MockConfigApplier struct{}
 
 func (a *MockConfigApplier) ApplyNewConfig() error {
 	return nil
-}
-
-type mockNamespaceValidator struct {
-	validateError error
-}
-
-func (m *mockNamespaceValidator) IsEmpty(_ aerospike.Cluster, _ string, _ []string) (bool, error) {
-	return false, nil
-}
-
-func (m *mockNamespaceValidator) MissingNamespaces(_ *model.AerospikeCluster, _ []string) []string {
-	return nil
-}
-
-func (m *mockNamespaceValidator) ValidateRoutines(_ *model.AerospikeCluster, _ map[string]*model.BackupRoutine) error {
-	return m.validateError
 }
 
 type mockRunningBackupsRegistry struct {

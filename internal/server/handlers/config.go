@@ -50,7 +50,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newConfigModel, err := newConfig.ToModel(s.nsValidator)
+	newConfigModel, err := newConfig.ToModel()
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -58,6 +58,7 @@ func (s *Service) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		config.SetBackupConfig(newConfigModel.BackupConfigCopy())
+		s.nsValidator.Validate(config) // validate under the lock
 		return nil
 	})
 

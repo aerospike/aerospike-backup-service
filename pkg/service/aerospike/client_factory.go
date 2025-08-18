@@ -11,35 +11,31 @@ import (
 	"github.com/aerospike/backup-go"
 )
 
+// ClientFactory defines an interface for creating and checking clients.
+type ClientFactory interface {
+	NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error)
+	NewBackupClient(backup.AerospikeClient, ...backup.ClientOpt) (Client, error)
+}
+
+var _ ClientFactory = (*DefaultClientFactory)(nil)
+
 // DefaultClientFactory is the default implementation of ClientFactory.
-type DefaultClientFactory struct{}
+type DefaultClientFactory struct {
+}
+
+func NewClientFactory() *DefaultClientFactory {
+	return &DefaultClientFactory{}
+}
+
+func (f *DefaultClientFactory) NewBackupClient(client backup.AerospikeClient, opt ...backup.ClientOpt) (Client, error) {
+	return backup.NewClient(client, opt...)
+}
 
 // NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
 func (f *DefaultClientFactory) NewClientWithPolicyAndHost(
 	cluster *model.AerospikeCluster,
 ) (backup.AerospikeClient, error) {
 	return as.NewClientWithPolicyAndHost(clientPolicy(cluster), clientHosts(cluster)...)
-}
-
-// IsClusterHealthy checks if the cluster is connected and responding.
-func (f *DefaultClientFactory) IsClusterHealthy(client Cluster) bool {
-	if client == nil {
-		return false
-	}
-
-	cluster := client.Cluster()
-	if !cluster.IsConnected() {
-		return false
-	}
-
-	node, err := cluster.GetRandomNode()
-	if err != nil {
-		return false
-	}
-
-	info, err := node.RequestInfo(as.NewInfoPolicy(), "status")
-
-	return err == nil && info["status"] == "ok"
 }
 
 // clientHosts builds and returns a Host list from the AerospikeCluster configuration.

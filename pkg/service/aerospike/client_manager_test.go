@@ -2,28 +2,18 @@ package aerospike
 
 import (
 	"errors"
-	"log/slog"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/mocks"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
-
-// MockClientFactory is a mock implementation of the ClientFactory interface.
-type MockClientFactory struct {
-	ShouldFail            bool
-	IsClusterDisconnected bool
-	WithDelay             bool
-	called                atomic.Int32
-}
 
 var cluster = &model.AerospikeCluster{
 	ClusterLabel: ptr.String("test"),
@@ -33,29 +23,21 @@ var cluster2 = &model.AerospikeCluster{
 	ClusterLabel: ptr.String("test2"),
 }
 
-func (f *MockClientFactory) NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error) {
-	if f.ShouldFail {
-		return nil, errors.New("failed to connect to aerospike")
-	}
-
-	if f.WithDelay {
-		time.Sleep(100 * time.Millisecond)
-	}
-	f.called.Add(1)
-
-	m := &mocks.MockAerospikeClient{}
-	m.On("Close").Return()
-	m.On("Cluster").Return(&as.Cluster{})
-
-	return m, nil
-}
-
-func (f *MockClientFactory) IsClusterHealthy(_ Cluster) bool {
-	return !f.IsClusterDisconnected
-}
-
 func Test_GetClient(t *testing.T) {
-	clientFactory := &MockClientFactory{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientFactory := NewMockClientFactory(ctrl)
+	mockAsClient := mocks.NewMockAerospikeClient(t)
+	mockBackupClient := NewMockClient(ctrl)
+
+	infoGetter := mocks.NewMockInfoGetter(t)
+	infoGetter.EXPECT().GetStatus().Return("ok", nil)
+	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
+
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
+
 	clientManager := NewClientManager(
 		clientFactory,
 		10*time.Second,
@@ -71,20 +53,34 @@ func Test_GetClient(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, client2)
 	assert.Equal(t, client, client2)
-
-	assert.Equal(t, clientFactory.called.Load(), int32(1))
 }
 
 func Test_GetClientParallel(t *testing.T) {
-	clientFactory := &MockClientFactory{
-		WithDelay: true,
-	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientFactory := NewMockClientFactory(ctrl)
+	mockAsClient := mocks.NewMockAerospikeClient(t)
+
+	mockBackupClient := NewMockClient(ctrl)
+
+	infoGetter := mocks.NewMockInfoGetter(t)
+	infoGetter.EXPECT().GetStatus().Return("ok", nil)
+	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
+
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).
+		DoAndReturn(func(_ *model.AerospikeCluster) (backup.AerospikeClient, error) {
+			time.Sleep(100 * time.Millisecond)
+			return mockAsClient, nil
+		})
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
+
 	clientManager := NewClientManager(
 		clientFactory,
 		10*time.Second,
 	)
 
-	var client, client2 *backup.Client
+	var client, client2 Client
 	var err, err2 error
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -103,12 +99,21 @@ func Test_GetClientParallel(t *testing.T) {
 	require.NoError(t, err2)
 	require.NotNil(t, client2)
 
-	require.Equal(t, client, client2)
-	require.Equal(t, clientFactory.called.Load(), int32(1))
+	assert.Same(t, client, client2)
 }
 
 func Test_GetTwoClients(t *testing.T) {
-	clientFactory := &MockClientFactory{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	clientFactory := NewMockClientFactory(ctrl)
+	mockAsClient := mocks.NewMockAerospikeClient(t)
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil).Times(2)
+
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ backup.AerospikeClient, _ ...backup.ClientOpt) (Client, error) {
+			return NewMockClient(ctrl), nil
+		}).Times(2)
+
 	clientManager := NewClientManager(
 		clientFactory,
 		10*time.Second,
@@ -119,13 +124,27 @@ func Test_GetTwoClients(t *testing.T) {
 	client2, err := clientManager.GetClient(cluster2)
 	require.NoError(t, err)
 
-	assert.NotEqual(t, client, client2)
-	assert.Equal(t, clientFactory.called.Load(), int32(2))
+	assert.NotSame(t, client, client2)
 }
 
 func Test_GetClient_UnhealthyConnection(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientFactory := NewMockClientFactory(ctrl)
+	mockAsClient := mocks.NewMockAerospikeClient(t)
+
+	mockBackupClient := NewMockClient(ctrl)
+
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
+
+	infoGetter := mocks.NewMockInfoGetter(t)
+	infoGetter.EXPECT().GetStatus().Return("fail", nil)
+	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
+
 	clientManager := NewClientManager(
-		&MockClientFactory{IsClusterDisconnected: true},
+		clientFactory,
 		10*time.Second,
 	)
 
@@ -138,8 +157,17 @@ func Test_GetClient_UnhealthyConnection(t *testing.T) {
 }
 
 func Test_CreateClient(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientFactory := NewMockClientFactory(ctrl)
+	mockAsClient := mocks.NewMockAerospikeClient(t)
+
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(NewMockClient(ctrl), nil)
+
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		clientFactory,
 		10*time.Second,
 	)
 
@@ -149,11 +177,17 @@ func Test_CreateClient(t *testing.T) {
 }
 
 func Test_CreateClient_Errors(t *testing.T) {
-	mockClientFactory := &MockClientFactory{ShouldFail: true}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientFactory := NewMockClientFactory(ctrl)
 	aeroCluster := &model.AerospikeCluster{}
 
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(aeroCluster).
+		Return(nil, errors.New("failed to connect to aerospike"))
+
 	clientManager := NewClientManager(
-		mockClientFactory,
+		clientFactory,
 		10*time.Second,
 	)
 
@@ -163,8 +197,21 @@ func Test_CreateClient_Errors(t *testing.T) {
 }
 
 func Test_Close(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientFactory := NewMockClientFactory(ctrl)
+	mockAsClient := mocks.NewMockAerospikeClient(t)
+	mockAsClient.EXPECT().Close()
+
+	mockBackupClient := NewMockClient(ctrl)
+	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient)
+
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
+
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		clientFactory,
 		100*time.Millisecond,
 	)
 
@@ -183,8 +230,25 @@ func Test_Close(t *testing.T) {
 }
 
 func Test_Close_Multiple(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientFactory := NewMockClientFactory(ctrl)
+	mockAsClient := mocks.NewMockAerospikeClient(t)
+	mockAsClient.EXPECT().Close()
+
+	mockBackupClient := NewMockClient(ctrl)
+	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient)
+
+	infoGetter := mocks.NewMockInfoGetter(t)
+	infoGetter.EXPECT().GetStatus().Return("ok", nil)
+	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
+
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
+
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		clientFactory,
 		100*time.Millisecond,
 	)
 
@@ -204,8 +268,23 @@ func Test_Close_Multiple(t *testing.T) {
 }
 
 func Test_Close_CancelOnReuse(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientFactory := NewMockClientFactory(ctrl)
+	mockAsClient := mocks.NewMockAerospikeClient(t)
+
+	mockBackupClient := NewMockClient(ctrl)
+
+	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
+
+	infoGetter := mocks.NewMockInfoGetter(t)
+	infoGetter.EXPECT().GetStatus().Return("ok", nil)
+	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
+
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		clientFactory,
 		100*time.Millisecond,
 	)
 
@@ -228,15 +307,21 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 }
 
 func Test_Close_NotExisting(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	clientFactory := NewMockClientFactory(ctrl)
 	clientManager := NewClientManager(
-		&MockClientFactory{},
+		clientFactory,
 		10*time.Second,
 	)
-	clientManager.SetLogger(slog.Default())
-	aeroClient := &mocks.MockAerospikeClient{}
-	aeroClient.On("Close").Return()
-	aeroClient.On("Cluster").Return(&as.Cluster{})
-	client, _ := backup.NewClient(aeroClient)
+
+	aeroClient := mocks.NewMockAerospikeClient(t)
+	aeroClient.EXPECT().Close()
+
+	client := NewMockClient(ctrl)
+	client.EXPECT().AerospikeClient().Return(aeroClient)
+
 	clientManager.Close(client)
 
 	aeroClient.AssertExpectations(t)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
@@ -15,7 +16,7 @@ import (
 
 func runXDRRestore(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Restorer,
 	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
 	reader, err := storage.CreateDirReader(

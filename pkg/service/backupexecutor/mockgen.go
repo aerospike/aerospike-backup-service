@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	backup "github.com/aerospike/backup-go"
+	aerospike "github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	models "github.com/aerospike/backup-go/models"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -44,7 +44,7 @@ func (m *MockBackup) EXPECT() *MockBackupMockRecorder {
 }
 
 // Run mocks base method.
-func (m *MockBackup) Run(ctx context.Context, client *backup.Client, routine *model.BackupRoutine, timeBounds model.TimeBounds, namespace, path string) (BackupHandler, error) {
+func (m *MockBackup) Run(ctx context.Context, client aerospike.Backuper, routine *model.BackupRoutine, timeBounds model.TimeBounds, namespace, path string) (BackupHandler, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Run", ctx, client, routine, timeBounds, namespace, path)
 	ret0, _ := ret[0].(BackupHandler)

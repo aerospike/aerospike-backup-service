@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go"
 	ioStorage "github.com/aerospike/backup-go/io/storage"
@@ -14,7 +15,7 @@ import (
 type Backup interface {
 	Run(
 		ctx context.Context,
-		client *backup.Client,
+		client aerospike.Backuper,
 		routine *model.BackupRoutine,
 		timeBounds model.TimeBounds,
 		namespace string,
@@ -35,7 +36,7 @@ func NewDefaultBackupExecutor() *DefaultBackupExecutor {
 // - For incremental backups with XDR config, it uses XDR-only backup.
 func (r *DefaultBackupExecutor) Run(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Backuper,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,
@@ -68,7 +69,7 @@ func isFullBackup(timeBounds model.TimeBounds) bool {
 // runCombinedBackup performs both XDR backup for records and scan backup for UDFs/indexes.
 func runCombinedBackup(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Backuper,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,

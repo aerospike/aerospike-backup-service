@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 	"github.com/aws/smithy-go/ptr"
@@ -160,8 +159,7 @@ func TestConfigModelConversionIsLossless(t *testing.T) {
 	t.Logf("\nOriginal config:\n%s\n", string(configJSON))
 
 	// Convert the Config to a model.Config
-	nsValidator := &aerospike.NoopNamespaceValidator{}
-	modelConfig, err := originalConfig.ToModel(nsValidator)
+	modelConfig, err := originalConfig.ToModel()
 	require.NoError(t, err, "toModel should not return an error")
 
 	// Convert the model.Config back to a Config

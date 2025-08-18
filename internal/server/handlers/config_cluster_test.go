@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,7 +9,9 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 var cluster = dto.AerospikeCluster{SeedNodes: []dto.SeedNode{{HostName: "localhost", Port: 3000}}}
@@ -144,19 +145,19 @@ func TestReadAerospikeCluster(t *testing.T) {
 
 func TestUpdateAerospikeCluster(t *testing.T) {
 	tests := []struct {
-		name               string
-		clusterName        string
-		requestBody        string
-		mockValidatorError error
-		expectedStatus     int
-		expectedError      string
+		name           string
+		clusterName    string
+		requestBody    string
+		expectedStatus int
+		expectedError  string
+		runValidation  bool
 	}{
 		{
-			name:               "successful update",
-			clusterName:        "test-cluster",
-			requestBody:        marshalToString(cluster),
-			mockValidatorError: nil,
-			expectedStatus:     http.StatusOK,
+			name:           "successful update",
+			clusterName:    "test-cluster",
+			requestBody:    marshalToString(cluster),
+			expectedStatus: http.StatusOK,
+			runValidation:  true,
 		},
 		{
 			name:           "missing cluster name",
@@ -172,24 +173,21 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  "invalid JSON payload",
 		},
-		{
-			name:               "namespace validation failure",
-			clusterName:        "test-cluster",
-			requestBody:        marshalToString(cluster),
-			mockValidatorError: fmt.Errorf("invalid namespace"),
-			expectedStatus:     http.StatusBadRequest,
-			expectedError:      "invalid namespace",
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
 			svc := setupTestService()
-			if tt.mockValidatorError != nil {
-				svc.nsValidator = &mockNamespaceValidator{
-					validateError: tt.mockValidatorError,
-				}
+			mockNsValidator := aerospike.NewMockNamespaceValidator(ctrl)
+			svc.nsValidator = mockNsValidator
+
+			if tt.runValidation {
+				mockNsValidator.EXPECT().Validate(gomock.Eq(svc.config))
 			}
+
 			initialCluster := &model.AerospikeCluster{}
 			_ = svc.config.AddCluster("test-cluster", initialCluster)
 

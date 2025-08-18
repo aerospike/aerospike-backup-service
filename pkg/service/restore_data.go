@@ -35,7 +35,6 @@ type dataRestorer struct {
 	restoreService restoreexecutor.Restore
 	backupReader   BackupReader
 	clientManager  aerospike.ClientManager
-	nsValidator    aerospike.NamespaceValidator
 }
 
 var _ RestoreManager = (*dataRestorer)(nil)
@@ -45,7 +44,6 @@ func NewRestoreManager(
 	restoreService restoreexecutor.Restore,
 	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,
-	nsValidator aerospike.NamespaceValidator,
 	backupReader BackupReader,
 ) RestoreManager {
 	return &dataRestorer{
@@ -53,7 +51,6 @@ func NewRestoreManager(
 		restoreService: restoreService,
 		backupReader:   backupReader,
 		clientManager:  clientManager,
-		nsValidator:    nsValidator,
 	}
 }
 
@@ -87,7 +84,7 @@ func (r *dataRestorer) executeRestore(
 	}
 	defer r.clientManager.Close(client)
 
-	if err := r.validateDestinationNamespace(request); err != nil {
+	if err := r.validateDestinationNamespace(request, client.InfoClient()); err != nil {
 		return err
 	}
 
@@ -148,14 +145,15 @@ func (r *dataRestorer) recordsInBackup(backups []model.BackupDetails) uint64 {
 }
 
 // validateDestinationNamespace checks if destination cluster contains namespace from restore request (if it is set).
-func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest) error {
+func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest, infoGetter backup.InfoGetter) error {
 	if request.Policy.Namespace != nil {
 		destinationNS := *request.Policy.Namespace.Destination
-		missingNamespaces := r.nsValidator.MissingNamespaces(
-			request.DestinationCluster, []string{destinationNS})
-		if len(missingNamespaces) > 0 {
-			// it can be only 1 missing ns: destinationNS
-			return fmt.Errorf("destination cluster does not have namespace %q", destinationNS)
+		namespaces, err := infoGetter.GetNamespacesList()
+		if err != nil {
+			return fmt.Errorf("failed to get namespaces from destination cluster: %w", err)
+		}
+		if !slices.Contains(namespaces, destinationNS) {
+			return fmt.Errorf("destination cluster does not have required namespace: %s", destinationNS)
 		}
 	}
 
@@ -258,29 +256,32 @@ func (r *dataRestorer) restoreByTimeSync(
 
 func (r *dataRestorer) restoreNamespace(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Restorer,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
 	namespace string,
 	backups []model.BackupDetails,
 	logger *slog.Logger,
 ) error {
-	// Now restore all backups in order
-	dbEmpty, err := r.nsValidator.IsEmpty(client.AerospikeClient(), namespace, request.Policy.SetList)
-	if err != nil {
-		return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
-	}
-
 	effectivePolicy := *request.Policy // make a thread safe copy.
-	if dbEmpty && !request.DisableReordering {
-		logger.Info("Use optimized restore because database is empty")
-		// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
-		// This way we reduce generation noise and unnecessary load.
-		slices.Reverse(backups)
 
-		// old values are not important, because they qualify how to handle existing data in db.
-		effectivePolicy.Unique = util.Ptr(true)
-		effectivePolicy.Replace = nil
+	// Now restore all backups in order
+	if !request.DisableReordering {
+		counter, err := client.InfoClient().GetRecordCount(namespace, request.Policy.SetList)
+		if err != nil {
+			return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
+		}
+
+		if counter == 0 {
+			logger.Info("Use optimized restore because database is empty")
+			// If the data is restored to an empty cluster reverse the order using the CREATE_ONLY policy.
+			// This way we reduce generation noise and unnecessary load.
+			slices.Reverse(backups)
+
+			// old values are not important, because they qualify how to handle existing data in db.
+			effectivePolicy.Unique = util.Ptr(true)
+			effectivePolicy.Replace = nil
+		}
 	}
 
 	for _, b := range backups {
@@ -313,7 +314,7 @@ func (r *dataRestorer) restoreNamespace(
 
 func (r *dataRestorer) restoreFromPath(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Restorer,
 	request *model.RestoreTimestampRequest,
 	backupPath string,
 	storage model.Storage,

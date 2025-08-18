@@ -98,7 +98,7 @@ func startService(configFile string, remote bool) error {
 func initComponents(ctx context.Context, configFile string, remote bool) (
 	*model.Config, quartz.Scheduler, *handlers.Service, *slog.Logger, error,
 ) {
-	clientManager := aerospike.NewClientManager(&aerospike.DefaultClientFactory{}, 10*time.Second)
+	clientManager := aerospike.NewClientManager(aerospike.NewClientFactory(), 10*time.Second)
 	nsValidator := aerospike.NewNamespaceValidator(clientManager)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator)
@@ -145,7 +145,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestore(), clientManager, restoreJobs, nsValidator, backendService)
+		restoreexecutor.NewRestore(), clientManager, restoreJobs, backendService)
 
 	configRetriever := service.NewConfigRetriever(backendService, config)
 	httpService := handlers.NewService(

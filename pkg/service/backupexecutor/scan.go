@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
@@ -16,7 +17,7 @@ import (
 // runScanBackup performs a regular scan-based backup.
 func runScanBackup(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Backuper,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
 	namespace string,

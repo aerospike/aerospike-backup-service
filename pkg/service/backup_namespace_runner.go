@@ -8,9 +8,9 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
-	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -54,7 +54,7 @@ type CancelableBackupHandler interface {
 // including folder management, metadata writing, and error handling.
 func (op *BackupNamespaceRunner) Run(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Backuper,
 	backupRoutine *model.BackupRoutine,
 	backupType jobType,
 	namespace string,

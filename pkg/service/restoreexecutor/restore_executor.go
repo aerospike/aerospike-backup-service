@@ -5,15 +5,15 @@ import (
 	"errors"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
-	"github.com/aerospike/backup-go"
 )
 
 // Restore represents a restore service.
 type Restore interface {
 	Run(
 		ctx context.Context,
-		client *backup.Client,
+		client aerospike.Restorer,
 		restoreRequest *model.RestoreRequest,
 	) (RestoreHandler, error)
 }
@@ -31,7 +31,7 @@ func NewRestore() *DefaultRestoreExecutor {
 // A restore handler is returned to monitor the job status.
 func (r *DefaultRestoreExecutor) Run(
 	ctx context.Context,
-	client *backup.Client,
+	client aerospike.Restorer,
 	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
 	ops := []func() (RestoreHandler, error){
