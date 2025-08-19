@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
@@ -165,7 +164,7 @@ func ErrRoutineNotFound(routineName string) error {
 // BackupBackendServiceImpl default implementation of BackupReaderWriter.
 type BackupBackendServiceImpl struct {
 	config *model.Config
-	locks  *util.SafeMap[string, *sync.RWMutex] // lock per routine
+	locks  util.LockMap // lock per routine
 }
 
 var _ BackupReaderWriter = (*BackupBackendServiceImpl)(nil)
@@ -173,7 +172,6 @@ var _ BackupReaderWriter = (*BackupBackendServiceImpl)(nil)
 func NewBackupBackendService(config *model.Config) *BackupBackendServiceImpl {
 	return &BackupBackendServiceImpl{
 		config: config,
-		locks:  util.NewSafeMap[string, *sync.RWMutex](),
 	}
 }
 
@@ -198,7 +196,7 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 	}
 
 	backupStorage := routine.Storage
-	lock := b.locks.LoadOrStore(filter.routine, &sync.RWMutex{})
+	lock := b.locks.Get(filter.routine)
 	lock.RLock()
 	defer lock.RUnlock()
 
@@ -301,7 +299,7 @@ func (b *BackupBackendServiceImpl) WriteBackupMetadata(
 
 	metadataFilePath := filepath.Join(path, metadataFile)
 
-	lock := b.locks.LoadOrStore(routineName, &sync.RWMutex{})
+	lock := b.locks.Get(routineName)
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -314,7 +312,7 @@ func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName strin
 		return ErrRoutineNotFound(routineName)
 	}
 
-	lock := b.locks.LoadOrStore(routineName, &sync.RWMutex{})
+	lock := b.locks.Get(routineName)
 	lock.Lock()
 	defer lock.Unlock()
 
