@@ -41,7 +41,7 @@ func (w *DefaultClusterConfigWriter) Write(
 	logger := slog.Default().With(attr.Routine(routineName))
 	routine, found := w.config.Routine(routineName)
 	if !found {
-		return fmt.Errorf("routine not found: %q", routineName)
+		return ErrRoutineNotFound(routineName)
 	}
 
 	client, err := w.clientManager.GetClient(routine.SourceCluster)

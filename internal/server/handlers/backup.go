@@ -161,6 +161,10 @@ func (s *Service) readAllBackups(
 	for routine := range s.config.Routines() {
 		routineBackups, err := s.readBackupsForRoutine(ctx, filter(routine))
 		if err != nil {
+			if errors.Is(err, service.ErrNotFound) {
+				continue // Not an error. Routine may have been deleted while reading backups for previous routines.
+			}
+
 			return nil, err
 		}
 

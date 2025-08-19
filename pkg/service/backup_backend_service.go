@@ -156,6 +156,12 @@ type BackupWriter interface {
 	Delete(ctx context.Context, routineName, path string) error
 }
 
+var ErrNotFound = fmt.Errorf("not found")
+
+func ErrRoutineNotFound(routineName string) error {
+	return fmt.Errorf("routine %s %w", routineName, ErrNotFound)
+}
+
 // BackupBackendServiceImpl default implementation of BackupReaderWriter.
 type BackupBackendServiceImpl struct {
 	config *model.Config
@@ -188,7 +194,7 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 ) ([]model.BackupDetails, error) {
 	routine, found := b.config.Routine(filter.routine)
 	if !found {
-		return nil, fmt.Errorf("routine not found: %q", filter.routine)
+		return nil, ErrRoutineNotFound(filter.routine)
 	}
 
 	backupStorage := routine.Storage
@@ -285,7 +291,7 @@ func (b *BackupBackendServiceImpl) WriteBackupMetadata(
 ) error {
 	routine, ok := b.config.Routine(routineName)
 	if !ok {
-		return fmt.Errorf("routine not found: %q", routineName)
+		return ErrRoutineNotFound(routineName)
 	}
 
 	dataYaml, err := yaml.Marshal(metadata)
@@ -305,7 +311,7 @@ func (b *BackupBackendServiceImpl) WriteBackupMetadata(
 func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName string, path string) error {
 	routine, ok := b.config.Routine(routineName)
 	if !ok {
-		return fmt.Errorf("routine not found: %q", routineName)
+		return ErrRoutineNotFound(routineName)
 	}
 
 	lock := b.locks.LoadOrStore(routineName, &sync.RWMutex{})
