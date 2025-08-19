@@ -323,7 +323,7 @@ func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName strin
 		return fmt.Errorf("failed to delete folder: %w", err)
 	}
 
-	slog.Debug("Deleted folder", slog.String("path", path), attr.Routine(routineName))
+	slog.Info("Deleted folder", slog.String("path", path), attr.Routine(routineName))
 
 	return err
 }
