@@ -140,7 +140,7 @@ func extractJobID(r *http.Request) (model.RestoreJobID, error) {
 	if jobIDParam == "" {
 		return 0, fmt.Errorf("jobId required")
 	}
-	jobID, err := strconv.Atoi(jobIDParam)
+	jobID, err := strconv.ParseInt(jobIDParam, 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("invalid jobId %q", jobIDParam)
 	}
