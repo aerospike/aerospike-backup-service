@@ -253,15 +253,18 @@ func (r *dataRestorer) restoreByTimeSync(
 	}
 	defer r.clientManager.Close(client)
 
-	// Run namespace restores concurrently and collect errors safely.
-	var wg sync.WaitGroup
-	var multiError error
-	var errMu sync.Mutex
+	var (
+		wg         sync.WaitGroup
+		multiError error
+		errMu      sync.Mutex
+	)
 
+	// Run namespace restores concurrently and collect errors safely.
 	for namespace, nsBackup := range backupsByNamespace {
 		wg.Add(1)
 		go func(namespace string, nsBackup []model.BackupDetails) {
 			defer wg.Done()
+
 			nsLogger := logger.With(slog.String("namespace", namespace))
 			err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup, nsLogger)
 			if err != nil {
