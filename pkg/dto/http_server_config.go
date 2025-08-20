@@ -59,7 +59,7 @@ func (s *HTTPServerConfig) fromModel(m *model.HTTPServerConfig) {
 	}
 	s.Address = m.Address
 	s.Port = NewPortFromModel(m.Port)
-	if s.Rate != nil {
+	if m.Rate != nil {
 		s.Rate = &RateLimiterConfig{}
 		s.Rate.fromModel(m.Rate)
 	}
