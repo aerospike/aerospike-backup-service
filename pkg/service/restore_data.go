@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -13,7 +15,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
-	"golang.org/x/sync/errgroup"
 )
 
 type ErrJobNotFound struct {
@@ -253,19 +254,25 @@ func (r *dataRestorer) restoreByTimeSync(
 	defer r.clientManager.Close(client)
 
 	// Run namespace restores concurrently and collect errors safely.
-	var eg errgroup.Group
+	var wg sync.WaitGroup
+	var multiError error
 	for namespace, nsBackup := range backupsByNamespace {
-		eg.Go(func() error {
-			if err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup, logger); err != nil {
-				return fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
-					request.RoutineName, namespace, err)
+		wg.Add(1)
+		go func(namespace string, nsBackup []model.BackupDetails) {
+			defer wg.Done()
+			nsLogger := logger.With(slog.String("namespace", namespace))
+			err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup, nsLogger)
+			if err != nil {
+				multiError = errors.Join(multiError,
+					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
+						request.RoutineName, namespace, err))
 			}
-			return nil
-		})
+		}(namespace, nsBackup)
 	}
 
-	// errgroup.Wait returns nil if all succeed, otherwise a joined error.
-	return eg.Wait()
+	wg.Wait()
+
+	return multiError
 }
 
 func (r *dataRestorer) restoreNamespace(
