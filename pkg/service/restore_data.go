@@ -256,6 +256,8 @@ func (r *dataRestorer) restoreByTimeSync(
 	// Run namespace restores concurrently and collect errors safely.
 	var wg sync.WaitGroup
 	var multiError error
+	var errMu sync.Mutex
+
 	for namespace, nsBackup := range backupsByNamespace {
 		wg.Add(1)
 		go func(namespace string, nsBackup []model.BackupDetails) {
@@ -263,9 +265,11 @@ func (r *dataRestorer) restoreByTimeSync(
 			nsLogger := logger.With(slog.String("namespace", namespace))
 			err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup, nsLogger)
 			if err != nil {
+				errMu.Lock()
 				multiError = errors.Join(multiError,
 					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
 						request.RoutineName, namespace, err))
+				errMu.Unlock()
 			}
 		}(namespace, nsBackup)
 	}
