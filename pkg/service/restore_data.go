@@ -92,7 +92,11 @@ func (r *dataRestorer) executeRestore(
 	}
 
 	// Lock the routine storage from retention manager for the duration of restore.
-	routineName := strings.Split(request.BackupDataPath, "/")[0] // when restore by path routine is first segment
+	routineName, _, _ := strings.Cut(request.BackupDataPath, "/") // when restore by path routine is first segment
+	if routineName == "" {
+		routineName = request.BackupDataPath // fallback to full path
+	}
+
 	routineStorageLock := r.routineStorage.Get(routineName)
 	routineStorageLock.RLock()
 	defer routineStorageLock.RUnlock()
