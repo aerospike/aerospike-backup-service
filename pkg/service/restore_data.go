@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"sync"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/models"
 )
 
 type ErrJobNotFound struct {
@@ -35,6 +36,7 @@ type dataRestorer struct {
 	restoreService restoreexecutor.Restore
 	backupReader   BackupReader
 	clientManager  aerospike.ClientManager
+	routineStorage *util.LockMap
 }
 
 var _ RestoreManager = (*dataRestorer)(nil)
@@ -45,12 +47,14 @@ func NewRestoreManager(
 	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,
 	backupReader BackupReader,
+	routineStorage *util.LockMap,
 ) RestoreManager {
 	return &dataRestorer{
 		restoreJobs:    restoreJobs,
 		restoreService: restoreService,
 		backupReader:   backupReader,
 		clientManager:  clientManager,
+		routineStorage: routineStorage,
 	}
 }
 
@@ -87,6 +91,16 @@ func (r *dataRestorer) executeRestore(
 	if err := r.validateDestinationNamespace(request, client.InfoClient()); err != nil {
 		return err
 	}
+
+	// Lock the routine storage from retention manager for the duration of restore.
+	// Restore holds RLock to allow concurrent restores for the same routine.
+	routineName, _, _ := strings.Cut(request.BackupDataPath, "/") // when restore by path routine is first segment
+	if routineName == "" {
+		routineName = request.BackupDataPath // fallback to full path
+	}
+	routineStorageLock := r.routineStorage.Get(routineName)
+	routineStorageLock.RLock()
+	defer routineStorageLock.RUnlock()
 
 	backups, err := r.backupReader.GetBackups(ctx, NewPathFilter(request.BackupDataPath, request.SourceStorage))
 	if err != nil {
@@ -163,17 +177,15 @@ func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreReques
 func (r *dataRestorer) RestoreByTime(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
-	backupsByNamespace, err := r.findBackupsToRestore(ctx, request)
-	if err != nil {
-		return 0, err
-	}
-
 	ctx, cancel := context.WithCancel(ctx)
 	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore by time job", slog.Any("request", *request))
 
-	go r.restoreByTimeSync(ctx, request, jobID, backupsByNamespace, logger)
+	go func() {
+		err := r.restoreByTimeSync(ctx, request, jobID, logger)
+		r.restoreJobs.finishJob(jobID, err)
+	}()
 
 	return jobID, nil
 }
@@ -222,36 +234,53 @@ func (r *dataRestorer) restoreByTimeSync(
 	ctx context.Context,
 	request *model.RestoreTimestampRequest,
 	jobID model.RestoreJobID,
-	fullBackupsByNamespace map[string][]model.BackupDetails,
 	logger *slog.Logger,
-) {
+) error {
+	// Lock the routine storage from retention manager for the duration of restore.
+	// Restore holds RLock to allow concurrent restores for the same routine.
+	routineStorageLock := r.routineStorage.Get(request.RoutineName)
+	routineStorageLock.RLock()
+	defer routineStorageLock.RUnlock()
+
+	backupsByNamespace, err := r.findBackupsToRestore(ctx, request)
+	if err != nil {
+		return err
+	}
+
 	client, err := r.clientManager.GetClient(request.DestinationCluster)
 	if err != nil {
-		slog.Error("Failed to restore by timestamp",
-			slog.Any("cluster", request.DestinationCluster.ClusterLabel),
-			attr.Error(err))
-		r.restoreJobs.finishJob(jobID, err)
-		return
+		return fmt.Errorf("failed to get client for cluster %s: %w",
+			util.ValueOrZero(request.DestinationCluster.ClusterLabel), err)
 	}
 	defer r.clientManager.Close(client)
 
-	var wg sync.WaitGroup
-	var multiError error
-	for namespace, nsBackup := range fullBackupsByNamespace {
+	var (
+		wg         sync.WaitGroup
+		multiError error
+		errMu      sync.Mutex
+	)
+
+	// Run namespace restores concurrently and collect errors safely.
+	for namespace, nsBackup := range backupsByNamespace {
 		wg.Add(1)
 		go func(namespace string, nsBackup []model.BackupDetails) {
 			defer wg.Done()
-			if err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup, logger); err != nil {
+
+			nsLogger := logger.With(slog.String("namespace", namespace))
+			err := r.restoreNamespace(ctx, client, request, jobID, namespace, nsBackup, nsLogger)
+			if err != nil {
+				errMu.Lock()
 				multiError = errors.Join(multiError,
 					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
 						request.RoutineName, namespace, err))
+				errMu.Unlock()
 			}
 		}(namespace, nsBackup)
 	}
 
 	wg.Wait()
 
-	r.restoreJobs.finishJob(jobID, multiError)
+	return multiError
 }
 
 func (r *dataRestorer) restoreNamespace(
@@ -307,11 +336,28 @@ func (r *dataRestorer) restoreNamespace(
 		if err != nil {
 			return err
 		}
+		logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
 	}
 
 	return nil
 }
-
+func logAttrs(s *models.RestoreStats) []slog.Attr {
+	return []slog.Attr{
+		slog.Int64("RecordsInserted", int64(s.GetRecordsInserted())),
+		slog.Int64("RecordsExpired", int64(s.GetRecordsExpired())),
+		slog.Int64("RecordsSkipped", int64(s.GetRecordsSkipped())),
+		slog.Int64("RecordsIgnored", int64(s.GetRecordsIgnored())),
+		slog.Int64("RecordsFresher", int64(s.GetRecordsFresher())),
+		slog.Int64("RecordsExisted", int64(s.GetRecordsExisted())),
+		slog.Int64("TotalBytesRead", int64(s.TotalBytesRead.Load())),
+		slog.Int64("ErrorsInDoubt", int64(s.GetErrorsInDoubt())),
+		slog.Int64("ReadRecords", int64(s.ReadRecords.Load())),
+		slog.Int("SecondaryIndexes", int(s.GetSIndexes())),
+		slog.Int("UDFs", int(s.GetUDFs())),
+		slog.Int64("BytesWritten", int64(s.BytesWritten.Load())),
+		slog.Duration("Duration", s.GetDuration()),
+	}
+}
 func (r *dataRestorer) restoreFromPath(
 	ctx context.Context,
 	client aerospike.Restorer,

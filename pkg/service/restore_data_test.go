@@ -10,6 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/aerospike/backup-go/mocks"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
@@ -330,11 +331,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	restoreJobsHolder := NewRestoreJobsHolder()
 
 	restoreManager := NewRestoreManager(
-		mockRestore,
-		mockClientManager,
-		restoreJobsHolder,
-		mockBackupReader,
-	)
+		mockRestore, mockClientManager, restoreJobsHolder, mockBackupReader, &util.LockMap{})
 
 	return &testRestoreEnv{
 		ctrl:              ctrl,
