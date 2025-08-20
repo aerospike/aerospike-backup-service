@@ -317,12 +317,12 @@ func (r *dataRestorer) restoreNamespace(
 		if err != nil {
 			return err
 		}
-		logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", LogAttrs(handler.GetStats())...)
+		logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
 	}
 
 	return nil
 }
-func LogAttrs(s *models.RestoreStats) []slog.Attr {
+func logAttrs(s *models.RestoreStats) []slog.Attr {
 	return []slog.Attr{
 		slog.Int64("RecordsInserted", int64(s.GetRecordsInserted())),
 		slog.Int64("RecordsExpired", int64(s.GetRecordsExpired())),
