@@ -93,11 +93,11 @@ func (r *dataRestorer) executeRestore(
 	}
 
 	// Lock the routine storage from retention manager for the duration of restore.
+	// Restore holds RLock to allow concurrent restores for the same routine.
 	routineName, _, _ := strings.Cut(request.BackupDataPath, "/") // when restore by path routine is first segment
 	if routineName == "" {
 		routineName = request.BackupDataPath // fallback to full path
 	}
-
 	routineStorageLock := r.routineStorage.Get(routineName)
 	routineStorageLock.RLock()
 	defer routineStorageLock.RUnlock()
@@ -237,6 +237,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	logger *slog.Logger,
 ) error {
 	// Lock the routine storage from retention manager for the duration of restore.
+	// Restore holds RLock to allow concurrent restores for the same routine.
 	routineStorageLock := r.routineStorage.Get(request.RoutineName)
 	routineStorageLock.RLock()
 	defer routineStorageLock.RUnlock()

@@ -53,8 +53,8 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routineName
 	}
 
 	mu := e.routineStorage.Get(routineName)
-	if !mu.TryLock() { // If delete or restore operation already in progress, skip this iteration.
-		return nil
+	if !mu.TryLock() { // retention uses Lock to exclude restores while deleting.
+		return nil // If delete or restore operation already in progress, skip this iteration.
 	}
 	defer mu.Unlock()
 
