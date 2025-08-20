@@ -23,6 +23,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
+	u "github.com/aerospike/aerospike-backup-service/v3/pkg/util"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
@@ -128,7 +129,8 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	backendService := service.NewBackupBackendService(config)
 	registry := service.NewRunningBackupsRegistry(ctx, backendService, config)
 
-	retentionManager := service.NewBackupRetentionManager(backendService, config)
+	var routineStorage u.LockMap
+	retentionManager := service.NewBackupRetentionManager(backendService, config, &routineStorage)
 	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, config)
 	backupExecutor := backupexecutor.NewDefaultBackupExecutor()
 	backupComponents := service.NewBackupComponents(
@@ -145,7 +147,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestore(), clientManager, restoreJobs, backendService)
+		restoreexecutor.NewRestore(), clientManager, restoreJobs, backendService, &routineStorage)
 
 	configRetriever := service.NewConfigRetriever(backendService, config)
 	httpService := handlers.NewService(

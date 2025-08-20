@@ -22,7 +22,7 @@ func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 		FullBackups: util.Ptr(2),
 	})
 
-	retentionManager := NewBackupRetentionManager(backendService, config)
+	retentionManager := NewBackupRetentionManager(backendService, config, &util.LockMap{})
 
 	fullBackups := []model.BackupDetails{
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(1000)}}, // to be deleted
@@ -61,7 +61,7 @@ func TestRetentionManager_FullAndIncremental(t *testing.T) {
 		FullBackups: util.Ptr(1),
 	})
 
-	retentionManager := NewBackupRetentionManager(backendService, config)
+	retentionManager := NewBackupRetentionManager(backendService, config, &util.LockMap{})
 
 	fullBackups := []model.BackupDetails{
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(1000)}}, // to be deleted
@@ -102,7 +102,7 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 
 	backendService := NewMockBackupReaderWriter(ctrl)
 
-	retentionManager := NewBackupRetentionManager(backendService, config)
+	retentionManager := NewBackupRetentionManager(backendService, config, &util.LockMap{})
 
 	fullBackups := []model.BackupDetails{
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(1000)}}, // keep
@@ -137,7 +137,7 @@ func TestRetentionManager_NoPolicy(t *testing.T) {
 
 	config := configWithRetentionPolicy(nil)
 
-	retentionManager := NewBackupRetentionManager(backendService, config)
+	retentionManager := NewBackupRetentionManager(backendService, config, &util.LockMap{})
 
 	err := retentionManager.deleteOldBackups(ctx, routineName)
 	assert.NoError(t, err)
@@ -155,7 +155,7 @@ func TestRetentionManager_NoneToDelete(t *testing.T) {
 		FullBackups: util.Ptr(5),
 	})
 
-	retentionManager := NewBackupRetentionManager(backendService, config)
+	retentionManager := NewBackupRetentionManager(backendService, config, &util.LockMap{})
 
 	fullBackups := []model.BackupDetails{
 		{BackupMetadata: model.BackupMetadata{Created: time.UnixMilli(1000)}}, // keep
@@ -183,7 +183,7 @@ func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 
 	backendService := NewMockBackupReaderWriter(ctrl)
 
-	retentionManager := NewBackupRetentionManager(backendService, config)
+	retentionManager := NewBackupRetentionManager(backendService, config, &util.LockMap{})
 
 	// GetBackups is still called for full backups
 	backendService.EXPECT().GetBackups(ctx, NewFullBackupFilter(routineName)).
@@ -208,10 +208,11 @@ func TestRetentionManager_ConcurrencyLock(t *testing.T) {
 
 	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
 
-	retentionManager := NewBackupRetentionManager(backendService, config)
+	storage := &util.LockMap{}
+	retentionManager := NewBackupRetentionManager(backendService, config, storage)
 
 	// Simulate lock being held by another process
-	mu := retentionManager.locks.Get(routineName)
+	mu := storage.Get(routineName)
 	mu.Lock()
 	defer mu.Unlock()
 
@@ -229,7 +230,7 @@ func TestRetentionManager_PolicyWithNilCounts(t *testing.T) {
 	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
 
 	config := configWithRetentionPolicy(&model.RetentionPolicy{})
-	retentionManager := NewBackupRetentionManager(backendService, config)
+	retentionManager := NewBackupRetentionManager(backendService, config, &util.LockMap{})
 
 	err := retentionManager.deleteOldBackups(ctx, routineName)
 	assert.NoError(t, err)

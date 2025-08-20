@@ -329,12 +329,7 @@ func setupTestRestoreEnv(t *testing.T) *testRestoreEnv {
 	mockBackupReader := NewMockBackupReader(ctrl)
 	restoreJobsHolder := NewRestoreJobsHolder()
 
-	restoreManager := NewRestoreManager(
-		mockRestore,
-		mockClientManager,
-		restoreJobsHolder,
-		mockBackupReader,
-	)
+	restoreManager := NewRestoreManager(mockRestore, mockClientManager, restoreJobsHolder, mockBackupReader, nil)
 
 	return &testRestoreEnv{
 		ctrl:              ctrl,

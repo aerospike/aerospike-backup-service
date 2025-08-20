@@ -21,7 +21,10 @@ type RetentionManagerImpl struct {
 	backendService BackupReaderWriter
 	config         *model.Config
 
-	locks util.LockMap
+	// Lock per routine. The restore service reads backup data,
+	// while the retention manager deletes backup data.
+	// Locks are required to avoid race conditions.
+	routineStorage *util.LockMap
 }
 
 var _ RetentionManager = (*RetentionManagerImpl)(nil)
@@ -29,10 +32,12 @@ var _ RetentionManager = (*RetentionManagerImpl)(nil)
 func NewBackupRetentionManager(
 	backendService BackupReaderWriter,
 	config *model.Config,
+	routineStorage *util.LockMap,
 ) *RetentionManagerImpl {
 	return &RetentionManagerImpl{
 		backendService: backendService,
 		config:         config,
+		routineStorage: routineStorage,
 	}
 }
 
@@ -47,8 +52,8 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routineName
 		return nil // Retention policy is not enabled, do nothing.
 	}
 
-	mu := e.locks.Get(routineName)
-	if !mu.TryLock() { // If delete operation already in progress, skip this iteration.
+	mu := e.routineStorage.Get(routineName)
+	if !mu.TryLock() { // If delete or restore operation already in progress, skip this iteration.
 		return nil
 	}
 	defer mu.Unlock()
