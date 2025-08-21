@@ -7,7 +7,7 @@ image:
   repository: aerospike/aerospike-backup-service
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "3.2.0"
+  tag: "3.3.0"
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
