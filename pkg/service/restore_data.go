@@ -128,8 +128,7 @@ func (r *dataRestorer) executeRestore(
 	r.restoreJobs.addTotalRecords(jobID, r.recordsInBackup(backups))
 	r.restoreJobs.addHandler(jobID, handler)
 
-	err = handler.Wait(ctx)
-	if err != nil {
+	if err = handler.Wait(ctx); err != nil {
 		return err
 	}
 
@@ -341,8 +340,7 @@ func (r *dataRestorer) restoreNamespace(
 
 		r.restoreJobs.addHandler(jobID, handler)
 
-		err = handler.Wait(ctx)
-		if err != nil {
+		if err = handler.Wait(ctx); err != nil {
 			return err
 		}
 		logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
