@@ -41,6 +41,7 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
     + [Build Linux packages](#build-linux-packages)
     + [Release](#release)
 - [Migration Guide](#migration-guide)
+    * [v3.2 -> v3.3](#v32---v33)
     * [v3.1 -> v3.2](#v31---v32)
     * [v3 -> v3.1](#v3---v31)
     * [v2 -> v3](#v2---v3)
@@ -916,6 +917,36 @@ git push
 ```
 
 # Migration Guide
+
+## v3.2 -> v3.3
+
+This release includes minor breaking changes and numerous fixes to improve the
+reliability of backup and restore routines. Notable fixes address:
+
+* Backup reader now ensures that no more than the specified number of concurrent threads are scanning simultaneously.
+* Backup retention policy application; Retention is on pause during restore.
+* Handling of missing routines, full backup counters, and race conditions in config application.
+* Improved error handling and logging.
+* Bandwidth limiter update for more predictable throughput.
+* Dependencies updated to incorporate the latest security fixes.
+
+#### Breaking Changes
+
+- TLS configuration validation is now stricter. The service will reject incomplete or inconsistent TLS settings at
+  startup. Some configurations that were previously accepted (but not fully valid) may now fail validation. Please
+  review your TLS settings to ensure that all required certificate, key, and CA parameters are provided correctly.
+
+- Storage config removed from `RestoreTimestampRequest`.
+  Storage details are read from the routine. Because of strict validation, clients must not include it in restore
+  requests anymore.
+
+#### New Features
+
+- Support Aerospike 8.1
+
+- Independent tuning of read and write parallelism.
+  New field `parallel-write` can now be configured separately in [backup policy](docs/readme/dto/dto.backuppolicy.md)
+  giving operators finer control over performance. By default it is equal to `parallel-read`.
 
 ## v3.1 -> v3.2
 
