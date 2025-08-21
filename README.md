@@ -937,8 +937,8 @@ reliability of backup and restore routines. Notable fixes address:
   review your TLS settings to ensure that all required certificate, key, and CA parameters are provided correctly.
 
 - Storage config removed from `RestoreTimestampRequest`.
-  Storage details are read from the routine. Because of strict validation, clients must not include it in restore
-  requests anymore.
+  Storage details are read from the routine. Because of strict validation, clients must not include storage
+  configuration in restore requests anymore.
 
 #### New Features
 
