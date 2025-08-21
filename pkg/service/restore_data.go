@@ -123,10 +123,19 @@ func (r *dataRestorer) executeRestore(
 	if err != nil {
 		return fmt.Errorf("failed to start restore operation: %w", err)
 	}
+	logger.Info("Start restoring", slog.Any("backup", backups))
+
 	r.restoreJobs.addTotalRecords(jobID, r.recordsInBackup(backups))
 	r.restoreJobs.addHandler(jobID, handler)
 
-	return handler.Wait(ctx)
+	err = handler.Wait(ctx)
+	if err != nil {
+		return err
+	}
+
+	logger.LogAttrs(ctx, slog.LevelInfo, "Finished restoring", logAttrs(handler.GetStats())...)
+
+	return nil
 }
 
 func (r *dataRestorer) validateBackupsCreatedAtTheSameTime(backups []model.BackupDetails) error {
