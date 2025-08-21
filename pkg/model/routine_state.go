@@ -21,6 +21,7 @@ type RoutineState struct {
 // RunningJob tracks progress of currently running job.
 type RunningJob struct {
 	// TotalRecords: the total number of records to be processed.
+	// For backup jobs, this value is only an estimate, not exact.
 	TotalRecords uint64
 	// DoneRecords: the number of records that have been successfully done.
 	DoneRecords uint64
@@ -29,11 +30,16 @@ type RunningJob struct {
 	// FinishTime: the time when the operation finished.
 	// nil value indicates that operation is still running.
 	FinishTime *time.Time
-	// PercentageDone: the progress of the operation as a percentage.
+	// PercentageDone is the current progress of the operation as a percentage.
+	// For backup jobs, this value can exceed 100% if:
+	//   * new data is written to the database during the backup, or
+	//   * the estimated total record count is lower than the actual count.
 	PercentageDone uint
 	// EstimatedEndTime: the estimated time when the operation will be completed.
 	// A nil value indicates that the estimation is not available yet.
+	// This value is not guaranteed to be accurate and may even be earlier than
+	// the current time if PercentageDone exceeds 100%.
 	EstimatedEndTime *time.Time
-	// Performance metrics of current operation.
+	// Metrics contains performance metrics for the current operation.
 	Metrics *models.Metrics
 }

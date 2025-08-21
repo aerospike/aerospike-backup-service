@@ -2606,7 +2606,7 @@ const docTemplate = `{
                     "example": 8
                 },
                 "read-records": {
-                    "description": "Number of records read from backup.\nWhen backup is finished, ` + "`" + `read-records` + "`" + ` =  ` + "`" + `inserted-records` + "`" + ` + ` + "`" + `fresher-records` + "`" + ` +\n` + "`" + `existed-records` + "`" + ` + ` + "`" + `ignored-records` + "`" + ` + ` + "`" + `skipped-records` + "`" + ` + ` + "`" + `expired-records` + "`" + `",
+                    "description": "Number of records read from backup.\nWhen restore is finished, ` + "`" + `read-records` + "`" + ` =  ` + "`" + `inserted-records` + "`" + ` + ` + "`" + `fresher-records` + "`" + ` +\n` + "`" + `existed-records` + "`" + ` + ` + "`" + `ignored-records` + "`" + ` + ` + "`" + `skipped-records` + "`" + ` + ` + "`" + `expired-records` + "`" + `",
                     "type": "integer",
                     "format": "int64",
                     "example": 10
@@ -3347,7 +3347,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "v3.2.0",
+	Version:          "v3.3.0",
 	Host:             "localhost:8080",
 	BasePath:         "",
 	Schemes:          []string{},

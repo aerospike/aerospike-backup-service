@@ -8,7 +8,7 @@
             "name": "Apache 2.0",
             "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
         },
-        "version": "v3.2.0"
+        "version": "v3.3.0"
     },
     "paths": {
         "/": {
@@ -2938,7 +2938,7 @@
                         "example": 8
                     },
                     "read-records": {
-                        "description": "Number of records read from backup.\nWhen backup is finished, `read-records` =  `inserted-records` + `fresher-records` +\n`existed-records` + `ignored-records` + `skipped-records` + `expired-records`",
+                        "description": "Number of records read from backup.\nWhen restore is finished, `read-records` =  `inserted-records` + `fresher-records` +\n`existed-records` + `ignored-records` + `skipped-records` + `expired-records`",
                         "type": "integer",
                         "format": "int64",
                         "example": 10
