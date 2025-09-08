@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"time"
 
@@ -101,15 +102,27 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 
 		o.UsePathStyle = true
 
-		if s.MaxConnsPerHost != nil {
-			o.HTTPClient = &http.Client{
-				Transport: &http.Transport{
-					MaxConnsPerHost:     *s.MaxConnsPerHost,
-					IdleConnTimeout:     90 * time.Second,
-					TLSHandshakeTimeout: 10 * time.Second,
-					ReadBufferSize:      64 * 1024, // 64KB read buffer (default is 4KB)
-				},
-			}
+		transport := &http.Transport{
+			// The DialContext function is responsible for creating the underlying TCP connection.
+			DialContext: (&net.Dialer{
+				// Timeout for establishing a new TCP connection. If a connection isn't
+				// established within this duration, the request will fail.
+				Timeout: 45 * time.Second,
+
+				//  KeepAlive specifies the interval between keep-alive probes for an active network connection.
+				// Setting this helps prevent network intermediaries (like NATs, firewalls) from dropping
+				// the connection during long transfers due to inactivity.
+				KeepAlive: 45 * time.Second,
+			}).DialContext,
+
+			MaxConnsPerHost:     util.ValueOrZero(s.MaxConnsPerHost),
+			IdleConnTimeout:     120 * time.Second,
+			TLSHandshakeTimeout: 10 * time.Second,
+			ReadBufferSize:      64 * 1024,
+		}
+
+		o.HTTPClient = &http.Client{
+			Transport: transport,
 		}
 	})
 
