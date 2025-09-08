@@ -107,12 +107,12 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 			DialContext: (&net.Dialer{
 				// Timeout for establishing a new TCP connection. If a connection isn't
 				// established within this duration, the request will fail.
-				Timeout: 45 * time.Second,
+				Timeout: 30 * time.Second,
 
 				//  KeepAlive specifies the interval between keep-alive probes for an active network connection.
 				// Setting this helps prevent network intermediaries (like NATs, firewalls) from dropping
 				// the connection during long transfers due to inactivity.
-				KeepAlive: 45 * time.Second,
+				KeepAlive: 30 * time.Second,
 			}).DialContext,
 
 			MaxConnsPerHost:     util.ValueOrZero(s.MaxConnsPerHost),
