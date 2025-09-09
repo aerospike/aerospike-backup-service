@@ -18,6 +18,8 @@ import (
 	awsS3 "github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
+const requestTimeout = 1 * time.Hour
+
 type S3StorageAccessor struct {
 	clientMap *util.LoadingCache[*model.S3Storage, *awsS3.Client]
 }
@@ -43,6 +45,8 @@ func (a *S3StorageAccessor) createReader(
 	if err != nil {
 		return nil, err
 	}
+
+	opts = append(opts, ioStorage.WithRetryPolicy(&model.StorageRetryPolicy.RetryPolicy))
 
 	return s3.NewReader(ctx, client, s3s.Bucket, opts...)
 }
@@ -123,6 +127,7 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 
 		o.HTTPClient = &http.Client{
 			Transport: transport,
+			Timeout:   requestTimeout,
 		}
 	})
 
