@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"path/filepath"
 	"time"
 
@@ -22,8 +23,10 @@ func CreateFileReader(
 	path string,
 	opts ...ioStorage.Opt,
 ) (backup.StreamingReader, error) {
-	return getAccessor(storage).createReader(ctx, storage,
-		append(opts, ioStorage.WithFile(filepath.Join(storage.GetPath(), path)))...)
+	opts = append(opts,
+		ioStorage.WithFile(filepath.Join(storage.GetPath(), path)),
+		ioStorage.WithLogger(slog.Default()))
+	return getAccessor(storage).createReader(ctx, storage, opts...)
 }
 
 // CreateDirReader creates a reader for a folder in the specified storage.
@@ -35,7 +38,8 @@ func CreateDirReader(
 ) (backup.StreamingReader, error) {
 	opts = append(opts,
 		ioStorage.WithDir(filepath.Join(storage.GetPath(), path)),
-		ioStorage.WithNestedDir())
+		ioStorage.WithNestedDir(),
+		ioStorage.WithLogger(slog.Default()))
 	return getAccessor(storage).createReader(ctx, storage, opts...)
 }
 
@@ -46,8 +50,8 @@ func CreateFileWriter(
 	path string,
 	opts ...ioStorage.Opt,
 ) (backup.Writer, error) {
-	return getAccessor(storage).createWriter(ctx, storage,
-		append(opts, ioStorage.WithFile(filepath.Join(storage.GetPath(), path)))...)
+	opts = append(opts, ioStorage.WithFile(filepath.Join(storage.GetPath(), path)))
+	return getAccessor(storage).createWriter(ctx, storage, opts...)
 }
 
 // CreateDirWriter creates a writer for a folder in the specified storage.
@@ -57,8 +61,8 @@ func CreateDirWriter(
 	path string,
 	opts ...ioStorage.Opt,
 ) (backup.Writer, error) {
-	return getAccessor(storage).createWriter(ctx, storage,
-		append(opts, ioStorage.WithDir(filepath.Join(storage.GetPath(), path)))...)
+	opts = append(opts, ioStorage.WithDir(filepath.Join(storage.GetPath(), path)))
+	return getAccessor(storage).createWriter(ctx, storage, opts...)
 }
 
 func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {

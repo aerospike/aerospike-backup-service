@@ -43,7 +43,6 @@ func (a *S3StorageAccessor) createReader(
 	if err != nil {
 		return nil, err
 	}
-
 	opts = append(opts, ioStorage.WithRetryPolicy(&model.StorageRetryPolicy.RetryPolicy))
 
 	return s3.NewReader(ctx, client, s3s.Bucket, opts...)
