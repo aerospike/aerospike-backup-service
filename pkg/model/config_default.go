@@ -76,6 +76,7 @@ var defaultConfig = struct {
 var StorageRetryPolicy = struct {
 	models.RetryPolicy
 	MaxBackoffDuration time.Duration
+	MaxRequestTimeout  time.Duration
 }{
 	RetryPolicy: models.RetryPolicy{
 		BaseTimeout: 1 * time.Second,
@@ -83,4 +84,5 @@ var StorageRetryPolicy = struct {
 		Multiplier:  1.1,
 	},
 	MaxBackoffDuration: 2 * time.Minute,
+	MaxRequestTimeout:  1 * time.Hour,
 }
