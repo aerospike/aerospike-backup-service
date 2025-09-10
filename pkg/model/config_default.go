@@ -75,12 +75,12 @@ var defaultConfig = struct {
 // It is used in GCP, Azure and S3 client configurations.
 var StorageRetryPolicy = struct {
 	models.RetryPolicy
-	MaxDuration time.Duration
+	MaxBackoffDuration time.Duration
 }{
 	RetryPolicy: models.RetryPolicy{
 		BaseTimeout: 1 * time.Second,
 		MaxRetries:  100,
 		Multiplier:  1.1,
 	},
-	MaxDuration: 2 * time.Minute,
+	MaxBackoffDuration: 2 * time.Minute,
 }
