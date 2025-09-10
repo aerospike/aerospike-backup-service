@@ -39,8 +39,11 @@ func RestoreJobStatus(job *restoreJob) *model.RestoreJobStatus {
 	restoreStats := models.SumRestoreStats(stats...)
 
 	doneRecords := restoreStats.GetReadRecords()
-	runningJob := NewRunningJob(job.started, job.finished, doneRecords, job.totalRecords)
-	runningJob.Metrics = models.SumMetrics(metrics...)
+	var runningJob *model.RunningJob
+	if job.status == model.JobStatusRunning { // Metrics are only relevant for running restores.
+		runningJob = NewRunningJob(job.started, job.finished, doneRecords, job.totalRecords)
+		runningJob.Metrics = models.SumMetrics(metrics...)
+	}
 
 	return &model.RestoreJobStatus{
 		Status:         job.status,
