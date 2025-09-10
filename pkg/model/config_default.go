@@ -84,5 +84,5 @@ var StorageRetryPolicy = struct {
 		Multiplier:  1.1,
 	},
 	MaxBackoffDuration: 2 * time.Minute,
-	MaxRequestTimeout:  1 * time.Hour,
+	MaxRequestTimeout:  10 * time.Minute,
 }
