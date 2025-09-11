@@ -61,7 +61,7 @@ type RunningJob struct {
 	// The estimated time when the backup operation will be completed.
 	// It is calculated based on the current percentage done and duration.
 	// A nil value indicates that the estimation is not available yet.
-	EstimatedEndTime *time.Time `json:"estimated-end-time" example:"2006-01-02T15:04:05Z07:00"`
+	EstimatedEndTime *time.Time `json:"estimated-end-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
 	// Metrics provides real-time information about data flow performance.
 	Metrics Metrics `json:"metrics"`
 }
