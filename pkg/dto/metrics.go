@@ -23,10 +23,14 @@ type Metrics struct {
 }
 
 // NewMetricsFromModel creates a new Metrics DTO from a model.Metrics object.
-func NewMetricsFromModel(m *models.Metrics) Metrics {
+func NewMetricsFromModel(m *models.Metrics) *Metrics {
+	if m == nil {
+		return nil
+	}
+
 	var metrics Metrics
 	metrics.fromModel(m)
-	return metrics
+	return &metrics
 }
 
 // fromModel copies data from a model.Metrics into a DTO Metrics.

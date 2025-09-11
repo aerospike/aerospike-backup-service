@@ -65,9 +65,13 @@ func NewRunningJob(
 	}
 
 	percentage := float64(done) / float64(total)
-	var endTime *time.Time
+	var (
+		endTime          *time.Time
+		effectiveMetrics *models.Metrics
+	)
 	if withEstimates {
 		endTime = calculateEstimatedEndTime(startTime, percentage)
+		effectiveMetrics = metrics
 	}
 
 	return &model.RunningJob{
@@ -77,7 +81,7 @@ func NewRunningJob(
 		TotalRecords:     total,
 		EstimatedEndTime: endTime,
 		PercentageDone:   uint(percentage * 100),
-		Metrics:          metrics,
+		Metrics:          effectiveMetrics,
 	}
 }
 
