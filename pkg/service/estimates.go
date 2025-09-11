@@ -17,10 +17,8 @@ func currentBackupStatus(handlers CancelableBackupHandler) *model.RunningJob {
 		return nil
 	}
 
-	job := NewRunningJob(stats.StartTime, nil, stats.ReadRecords.Load(), stats.TotalRecords.Load())
-	job.Metrics = handlers.GetMetrics()
-
-	return job
+	return NewRunningJob(
+		stats.StartTime, nil, stats.ReadRecords.Load(), stats.TotalRecords.Load(), handlers.GetMetrics(), true)
 }
 
 // RestoreJobStatus returns the status of a restore job.
@@ -39,11 +37,9 @@ func RestoreJobStatus(job *restoreJob) *model.RestoreJobStatus {
 	restoreStats := models.SumRestoreStats(stats...)
 
 	doneRecords := restoreStats.GetReadRecords()
-	var runningJob *model.RunningJob
-	if job.status == model.JobStatusRunning { // Metrics are only relevant for running restores.
-		runningJob = NewRunningJob(job.started, job.finished, doneRecords, job.totalRecords)
-		runningJob.Metrics = models.SumMetrics(metrics...)
-	}
+	sumMetrics := models.SumMetrics(metrics...)
+	runningJob := NewRunningJob(
+		job.started, job.finished, doneRecords, job.totalRecords, sumMetrics, job.status == model.JobStatusRunning)
 
 	return &model.RestoreJobStatus{
 		Status:         job.status,
@@ -53,9 +49,15 @@ func RestoreJobStatus(job *restoreJob) *model.RestoreJobStatus {
 	}
 }
 
-// NewRunningJob created new RunningJob with calculated estimated time and percentage.
-func NewRunningJob(startTime time.Time, finishTime *time.Time, done, total uint64) *model.RunningJob {
-	if total == 0 {
+// NewRunningJob created new RunningJob (backup or restore) with calculated estimated time and percentage.
+func NewRunningJob(
+	startTime time.Time,
+	finishTime *time.Time,
+	done, total uint64,
+	metrics *models.Metrics,
+	withEstimates bool,
+) *model.RunningJob {
+	if total == 0 { // edge case for empty restore
 		return &model.RunningJob{
 			StartTime:  startTime,
 			FinishTime: finishTime,
@@ -63,13 +65,23 @@ func NewRunningJob(startTime time.Time, finishTime *time.Time, done, total uint6
 	}
 
 	percentage := float64(done) / float64(total)
+	var (
+		endTime          *time.Time
+		effectiveMetrics *models.Metrics
+	)
+	if withEstimates {
+		endTime = calculateEstimatedEndTime(startTime, percentage)
+		effectiveMetrics = metrics
+	}
+
 	return &model.RunningJob{
 		StartTime:        startTime,
 		FinishTime:       finishTime,
 		DoneRecords:      done,
 		TotalRecords:     total,
-		EstimatedEndTime: calculateEstimatedEndTime(startTime, percentage),
+		EstimatedEndTime: endTime,
 		PercentageDone:   uint(percentage * 100),
+		Metrics:          effectiveMetrics,
 	}
 }
 
