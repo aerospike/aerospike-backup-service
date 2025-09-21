@@ -95,7 +95,7 @@ func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, er
 		storage.WithBackoff(gax.Backoff{
 			Initial:    model.StorageRetryPolicy.BaseTimeout,
 			Multiplier: model.StorageRetryPolicy.Multiplier,
-			Max:        model.StorageRetryPolicy.MaxDuration,
+			Max:        model.StorageRetryPolicy.MaxBackoffDuration,
 		}),
 	)
 

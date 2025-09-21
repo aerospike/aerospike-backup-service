@@ -115,7 +115,7 @@ func clientFromAD(endpoint string, auth model.AzureADAuth, sa *model.SecretAgent
 			Retry: policy.RetryOptions{
 				MaxRetries:    int32(model.StorageRetryPolicy.MaxRetries),
 				RetryDelay:    model.StorageRetryPolicy.BaseTimeout,
-				MaxRetryDelay: model.StorageRetryPolicy.MaxDuration,
+				MaxRetryDelay: model.StorageRetryPolicy.MaxBackoffDuration,
 			},
 		},
 	})

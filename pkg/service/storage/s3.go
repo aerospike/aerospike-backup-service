@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"time"
 
@@ -42,6 +43,7 @@ func (a *S3StorageAccessor) createReader(
 	if err != nil {
 		return nil, err
 	}
+	opts = append(opts, ioStorage.WithRetryPolicy(&model.StorageRetryPolicy.RetryPolicy))
 
 	return s3.NewReader(ctx, client, s3s.Bucket, opts...)
 }
@@ -83,8 +85,8 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 				o.StandardOptions = append(o.StandardOptions,
 					func(so *retry.StandardOptions) {
 						so.MaxAttempts = int(model.StorageRetryPolicy.MaxRetries)
-						so.MaxBackoff = model.StorageRetryPolicy.MaxDuration
-						so.Backoff = retry.NewExponentialJitterBackoff(model.StorageRetryPolicy.MaxDuration)
+						so.MaxBackoff = model.StorageRetryPolicy.MaxBackoffDuration
+						so.Backoff = retry.NewExponentialJitterBackoff(model.StorageRetryPolicy.MaxBackoffDuration)
 					})
 			})
 		}),
@@ -101,15 +103,28 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 
 		o.UsePathStyle = true
 
-		if s.MaxConnsPerHost != nil {
-			o.HTTPClient = &http.Client{
-				Transport: &http.Transport{
-					MaxConnsPerHost:     *s.MaxConnsPerHost,
-					IdleConnTimeout:     90 * time.Second,
-					TLSHandshakeTimeout: 10 * time.Second,
-					ReadBufferSize:      64 * 1024, // 64KB read buffer (default is 4KB)
-				},
-			}
+		transport := &http.Transport{
+			// The DialContext function is responsible for creating the underlying TCP connection.
+			DialContext: (&net.Dialer{
+				// Timeout for establishing a new TCP connection. If a connection isn't
+				// established within this duration, the request will fail.
+				Timeout: 30 * time.Second,
+
+				//  KeepAlive specifies the interval between keep-alive probes for an active network connection.
+				// Setting this helps prevent network intermediaries (like NATs, firewalls) from dropping
+				// the connection during long transfers due to inactivity.
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+
+			MaxConnsPerHost:     util.ValueOrZero(s.MaxConnsPerHost),
+			IdleConnTimeout:     120 * time.Second,
+			TLSHandshakeTimeout: 10 * time.Second,
+			ReadBufferSize:      64 * 1024,
+		}
+
+		o.HTTPClient = &http.Client{
+			Transport: transport,
+			Timeout:   model.StorageRetryPolicy.MaxRequestTimeout,
 		}
 	})
 
