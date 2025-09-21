@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,7 +13,7 @@ func TestNewRunningJob(t *testing.T) {
 	finishTime := startTime.Add(time.Hour)
 
 	t.Run("zero total returns minimal job", func(t *testing.T) {
-		result := NewRunningJob(startTime, &finishTime, 0, 0)
+		result := NewRunningJob(startTime, &finishTime, 0, 0, nil, true)
 
 		assert.Equal(t, startTime, result.StartTime)
 		assert.Equal(t, &finishTime, result.FinishTime)
@@ -23,7 +24,7 @@ func TestNewRunningJob(t *testing.T) {
 	})
 
 	t.Run("zero progress", func(t *testing.T) {
-		result := NewRunningJob(startTime, nil, 0, 100)
+		result := NewRunningJob(startTime, nil, 0, 100, nil, true)
 
 		assert.Zero(t, result.DoneRecords)
 		assert.Zero(t, result.PercentageDone)
@@ -32,7 +33,7 @@ func TestNewRunningJob(t *testing.T) {
 	})
 
 	t.Run("50 percent completion", func(t *testing.T) {
-		result := NewRunningJob(startTime, nil, 50, 100)
+		result := NewRunningJob(startTime, nil, 50, 100, nil, true)
 
 		assert.Equal(t, uint64(50), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
@@ -41,11 +42,23 @@ func TestNewRunningJob(t *testing.T) {
 	})
 
 	t.Run("completed job", func(t *testing.T) {
-		result := NewRunningJob(startTime, &finishTime, 100, 100)
+		result := NewRunningJob(startTime, &finishTime, 100, 100, nil, true)
 
 		assert.Equal(t, uint64(100), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
 		assert.Equal(t, uint(100), result.PercentageDone)
 		assert.Equal(t, &finishTime, result.FinishTime)
 	})
+}
+
+func TestDoneRestoreJobStatus(t *testing.T) {
+	job := &restoreJob{
+		status: model.JobStatusDone,
+	}
+
+	status := RestoreJobStatus(job)
+
+	assert.Nil(t, status.Error)
+	assert.NotNil(t, status.CurrentRestore)
+	assert.Equal(t, status.Status, model.JobStatusDone)
 }
