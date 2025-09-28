@@ -146,7 +146,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	assert.Equal(t, timeBounds.ToTime, config.ModBefore)
 	assert.Nil(t, config.ModAfter)
 	assert.NotNil(t, config.ScanPolicy)
-	assert.Equal(t, 100, config.ScanPolicy.MaxRetries)
+	assert.Equal(t, 10, config.ScanPolicy.MaxRetries)
 	assert.Equal(t, config.MetricsEnabled, true)
 
 	assert.NotNil(t, config.SecretAgentConfig)
