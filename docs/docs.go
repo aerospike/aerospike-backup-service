@@ -1920,7 +1920,7 @@ const docTemplate = `{
                 "concurrent-incremental": {
                     "description": "Allows incremental backups to run concurrently.\nWhen false (default), incremental backups are skipped if another backup for same routine is in progress.",
                     "type": "boolean",
-                    "default": false
+                    "x-nullable": true
                 },
                 "encryption": {
                     "description": "Encryption details (algorithm and key). Default is no encryption.",
@@ -1934,6 +1934,11 @@ const docTemplate = `{
                     "description": "File size limit (in MB) for the backup directory. If an .asb backup file crosses this size threshold,\na new backup file will be created.",
                     "type": "integer",
                     "default": 250
+                },
+                "max-concurrent-nodes": {
+                    "description": "Maximum number of concurrent requests to server nodes.\nDefault (0) is to issue requests to all server nodes in parallel.",
+                    "type": "integer",
+                    "x-nullable": true
                 },
                 "no-indexes": {
                     "description": "Do not back up any secondary index definitions.",
@@ -2004,7 +2009,7 @@ const docTemplate = `{
                 "use-scan-compression": {
                     "description": "Enables built-in compression during scan operation.\nValid for Aerospike Server Enterprise Edition only.",
                     "type": "boolean",
-                    "default": false
+                    "x-nullable": true
                 },
                 "with-cluster-configuration": {
                     "description": "Back up Aerospike cluster configuration.",

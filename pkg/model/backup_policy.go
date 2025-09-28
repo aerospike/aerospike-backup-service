@@ -54,6 +54,8 @@ type BackupPolicy struct {
 	ConcurrentIncremental *bool
 	// Enables built-in compression during scan operation.
 	UseCompression *bool
+	// Maximum number of concurrent requests to server nodes.
+	MaxConcurrentNodes *int
 }
 
 // IsSealedOrDefault returns the value of the Sealed property.
