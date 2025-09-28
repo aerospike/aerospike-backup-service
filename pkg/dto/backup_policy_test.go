@@ -144,6 +144,11 @@ func TestBackupPolicy_Validate(t *testing.T) {
 			expectedErr: "non-positive value validation error: \"parallel-write\" -1 invalid, should be positive number",
 		},
 		{
+			name:        "invalid max concurrent nodes: negative",
+			policy:      &BackupPolicy{MaxConcurrentNodes: util.Ptr(-1)},
+			expectedErr: "negative value validation error: \"max-concurrent-nodes\" -1 invalid, should not be negative number",
+		},
+		{
 			name:        "nil policy",
 			policy:      nil,
 			expectedErr: "",
