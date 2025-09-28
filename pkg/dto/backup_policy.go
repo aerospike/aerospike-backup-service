@@ -69,7 +69,7 @@ type BackupPolicy struct {
 	// Valid for Aerospike Server Enterprise Edition only.
 	UseCompression *bool `yaml:"use-scan-compression,omitempty" json:"use-scan-compression,omitempty" extensions:"x-nullable"`
 	// Maximum number of concurrent requests to server nodes.
-	// Default (0) is to issue requests to all server nodes in parallel.
+	// Default is to issue requests to all server nodes in parallel.
 	MaxConcurrentNodes *int `yaml:"max-concurrent-nodes,omitempty" json:"max-concurrent-nodes,omitempty" extensions:"x-nullable"`
 }
 
