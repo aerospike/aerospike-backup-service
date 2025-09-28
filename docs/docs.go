@@ -2001,6 +2001,11 @@ const docTemplate = `{
                     "type": "integer",
                     "default": 0
                 },
+                "use-scan-compression": {
+                    "description": "Enables built-in compression during scan operation.\nValid for Aerospike Server Enterprise Edition only.",
+                    "type": "boolean",
+                    "default": false
+                },
                 "with-cluster-configuration": {
                     "description": "Back up Aerospike cluster configuration.",
                     "type": "boolean",
@@ -3008,7 +3013,7 @@ const docTemplate = `{
                     "example": 50
                 },
                 "estimated-end-time": {
-                    "description": "The estimated time when the backup operation will be completed.\nIt is calculated based on the current percentage done and duration.\nA nil value indicates that the estimation is not available yet.",
+                    "description": "The estimated time when the backup operation will be completed.\nIt is calculated based on the current percentage done and duration.\nA nil value indicates that the estimation is not available yet.\nThis value is not guaranteed to be accurate and may even be earlier than\nthe current time if PercentageDone exceeds 100%.",
                     "type": "string",
                     "example": "2006-01-02T15:04:05Z07:00"
                 },
@@ -3026,7 +3031,7 @@ const docTemplate = `{
                     ]
                 },
                 "percentage-done": {
-                    "description": "The progress of the backup operation as a percentage.",
+                    "description": "The progress of the backup operation as a percentage.\nFor backup jobs, this value can exceed 100% if:\n  * new data is written to the database during the backup, or\n  * the estimated total record count is lower than the actual count.",
                     "type": "integer",
                     "example": 50
                 },

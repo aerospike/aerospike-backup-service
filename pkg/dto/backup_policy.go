@@ -65,6 +65,10 @@ type BackupPolicy struct {
 	// Allows incremental backups to run concurrently.
 	// When false (default), incremental backups are skipped if another backup for same routine is in progress.
 	ConcurrentIncremental *bool `yaml:"concurrent-incremental,omitempty" json:"concurrent-incremental,omitempty" default:"false"`
+
+	// Enables built-in compression during scan operation.
+	// Valid for Aerospike Server Enterprise Edition only.
+	UseCompression *bool `yaml:"use-scan-compression,omitempty" json:"use-scan-compression,omitempty" default:"false"`
 }
 
 // NewBackupPolicyFromReader creates a new BackupPolicy object from a given reader.
@@ -167,6 +171,7 @@ func (p *BackupPolicy) ToModel() *model.BackupPolicy {
 		Sealed:            p.Sealed,
 		// XDRConfig:             p.XDRConfig.ToModel(),
 		ConcurrentIncremental: p.ConcurrentIncremental,
+		UseCompression:        p.UseCompression,
 	}
 }
 
@@ -221,6 +226,7 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.Sealed = m.Sealed
 	// p.XDRConfig = newXDRConfigFromModel(m.XDRConfig)
 	p.ConcurrentIncremental = m.ConcurrentIncremental
+	p.UseCompression = m.UseCompression
 }
 
 // RetentionPolicy specifies how many full and incremental backups to keep.
