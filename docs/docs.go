@@ -1936,7 +1936,7 @@ const docTemplate = `{
                     "default": 250
                 },
                 "max-concurrent-nodes": {
-                    "description": "Maximum number of concurrent requests to server nodes.\nDefault (0) is to issue requests to all server nodes in parallel.",
+                    "description": "Maximum number of concurrent requests to server nodes.\nDefault is to issue requests to all server nodes in parallel.",
                     "type": "integer",
                     "x-nullable": true
                 },
