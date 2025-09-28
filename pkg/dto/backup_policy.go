@@ -134,6 +134,7 @@ func (p *BackupPolicy) Validate() error {
 	if p.MaxConcurrentNodes != nil && *p.MaxConcurrentNodes < 0 {
 		return errValidationNegative("max-concurrent-nodes", *p.MaxConcurrentNodes)
 	}
+
 	return nil
 }
 
