@@ -85,7 +85,12 @@ func makeBackupConfig(
 	}
 
 	config.ScanPolicy.SocketTimeout = calculateSocketTimeout(backupRoutine, isFullBackup(timeBounds), time.Now())
-	config.ScanPolicy.MaxRetries = 100
+	config.ScanPolicy.UseCompression = util.ValueOrZero(backupPolicy.UseCompression)
+	config.ScanPolicy.MaxConcurrentNodes = util.ValueOrZero(backupPolicy.MaxConcurrentNodes)
+
+	config.ScanPolicy.MaxRetries = 10
+	config.ScanPolicy.SleepBetweenRetries = 1 * time.Second
+	config.ScanPolicy.SleepMultiplier = 2
 
 	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
 	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)

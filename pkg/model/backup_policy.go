@@ -52,6 +52,10 @@ type BackupPolicy struct {
 	XDRConfig *XDRConfig
 	// Allows incremental backups to run concurrently.
 	ConcurrentIncremental *bool
+	// Enables built-in compression during scan operation.
+	UseCompression *bool
+	// Maximum number of concurrent requests to server nodes.
+	MaxConcurrentNodes *int
 }
 
 // IsSealedOrDefault returns the value of the Sealed property.

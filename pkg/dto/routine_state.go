@@ -57,10 +57,15 @@ type RunningJob struct {
 	// A nil value indicates that the operation is still running.
 	FinishTime *time.Time `json:"finish-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
 	// The progress of the backup operation as a percentage.
+	// For backup jobs, this value can exceed 100% if:
+	//   * new data is written to the database during the backup, or
+	//   * the estimated total record count is lower than the actual count.
 	PercentageDone uint `json:"percentage-done" example:"50"`
 	// The estimated time when the backup operation will be completed.
 	// It is calculated based on the current percentage done and duration.
 	// A nil value indicates that the estimation is not available yet.
+	// This value is not guaranteed to be accurate and may even be earlier than
+	// the current time if PercentageDone exceeds 100%.
 	EstimatedEndTime *time.Time `json:"estimated-end-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
 	// Metrics provides real-time information about data flow performance.
 	Metrics *Metrics `json:"metrics,omitempty"`

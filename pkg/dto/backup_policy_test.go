@@ -32,15 +32,17 @@ func TestBackupPolicyConversionIsLossless(t *testing.T) {
 			FullBackups: util.Ptr(10),
 			IncrBackups: util.Ptr(5),
 		},
-		NoRecords:         &noRecords,
-		NoIndexes:         &noIndexes,
-		NoUdfs:            &noUdfs,
-		Bandwidth:         &bandwidth,
-		RecordsPerSecond:  &recordsPerSecond,
-		FileLimit:         &fileLimit,
-		EncryptionPolicy:  nil,
-		CompressionPolicy: compressionPolicy,
-		Sealed:            &sealed,
+		NoRecords:          &noRecords,
+		NoIndexes:          &noIndexes,
+		NoUdfs:             &noUdfs,
+		Bandwidth:          &bandwidth,
+		RecordsPerSecond:   &recordsPerSecond,
+		FileLimit:          &fileLimit,
+		EncryptionPolicy:   nil,
+		CompressionPolicy:  compressionPolicy,
+		Sealed:             &sealed,
+		MaxConcurrentNodes: util.Ptr(3),
+		UseCompression:     util.Ptr(true),
 	}
 
 	model := original.ToModel()
@@ -140,6 +142,11 @@ func TestBackupPolicy_Validate(t *testing.T) {
 			name:        "invalid parallel-write: negative",
 			policy:      &BackupPolicy{ParallelWrite: util.Ptr(-1)},
 			expectedErr: "non-positive value validation error: \"parallel-write\" -1 invalid, should be positive number",
+		},
+		{
+			name:        "invalid max concurrent nodes: negative",
+			policy:      &BackupPolicy{MaxConcurrentNodes: util.Ptr(-1)},
+			expectedErr: "negative value validation error: \"max-concurrent-nodes\" -1 invalid, should not be negative number",
 		},
 		{
 			name:        "nil policy",
