@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 func validConfig() *Config {
@@ -15,14 +15,14 @@ func validConfig() *Config {
 				SourceCluster: "cluster1",
 				BackupPolicy:  "policy1",
 				Storage:       "storage1",
-				Namespaces:    util.Ptr([]string{"ns1"}),
+				Namespaces:    ptr.Of([]string{"ns1"}),
 				IntervalCron:  "* * * * * *",
 			},
 			"routine2": {
 				SourceCluster: "cluster2",
 				BackupPolicy:  "policy2",
 				Storage:       "storage2",
-				Namespaces:    util.Ptr([]string{"ns2"}),
+				Namespaces:    ptr.Of([]string{"ns2"}),
 				IntervalCron:  "* * * * * *",
 			},
 		},
@@ -45,7 +45,7 @@ func validConfig() *Config {
 func NewLocalAerospikeCluster() *AerospikeCluster {
 	return &AerospikeCluster{
 		SeedNodes:   []SeedNode{{HostName: "localhost", Port: 3000}},
-		Credentials: &Credentials{User: util.Ptr("tester"), Password: util.Ptr("psw")},
+		Credentials: &Credentials{User: ptr.Of("tester"), Password: ptr.Of("psw")},
 	}
 }
 

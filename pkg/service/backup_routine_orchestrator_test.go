@@ -13,7 +13,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/prometheus/client_golang/prometheus/testutil"
@@ -32,7 +32,7 @@ func setupBaseConfig() *model.Config {
 				MaxRetries:  1,
 				Multiplier:  1,
 			},
-			WithClusterConfig: util.Ptr(true),
+			WithClusterConfig: ptr.Of(true),
 		},
 		IntervalCron: "@daily",
 		Namespaces:   []string{"ns1", "ns2"},
@@ -367,7 +367,7 @@ func TestSkipIncrementalBackup(t *testing.T) {
 			routine, _ := config.Routine(routineName)
 			routine.IntervalCron = tt.intervalCron
 			if tt.concurrent {
-				routine.BackupPolicy.ConcurrentIncremental = util.Ptr(true)
+				routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
 			}
 
 			mockRegistry := NewMockRunningBackupsRegistry(ctrl)
@@ -460,7 +460,7 @@ func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
 func configWithConcurrentIncremental() *model.Config {
 	config := setupBaseConfig()
 	routine, _ := config.Routine(routineName)
-	routine.BackupPolicy.ConcurrentIncremental = util.Ptr(true)
+	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
 	_ = config.UpdateRoutine(routineName, routine)
 
 	return config

@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 const nilString = "<nil>"
@@ -182,14 +182,14 @@ func (tls *TLS) String() string {
 	}
 	return fmt.Sprintf(
 		"%v:%v:%v:%v:%v:%v:%v:%v",
-		util.ValueOrZero(tls.CAFile),
-		util.ValueOrZero(tls.CAPath),
-		util.ValueOrZero(tls.Name),
-		util.ValueOrZero(tls.Protocols),
-		util.ValueOrZero(tls.CipherSuite),
-		util.ValueOrZero(tls.Keyfile),
-		util.ValueOrZero(tls.KeyfilePassword),
-		util.ValueOrZero(tls.Certfile),
+		ptr.ValueOrZero(tls.CAFile),
+		ptr.ValueOrZero(tls.CAPath),
+		ptr.ValueOrZero(tls.Name),
+		ptr.ValueOrZero(tls.Protocols),
+		ptr.ValueOrZero(tls.CipherSuite),
+		ptr.ValueOrZero(tls.Keyfile),
+		ptr.ValueOrZero(tls.KeyfilePassword),
+		ptr.ValueOrZero(tls.Certfile),
 	)
 }
 
@@ -214,10 +214,10 @@ func (c *Credentials) String() string {
 		return nilString
 	}
 	return fmt.Sprintf("%v:%v:%v:%v:%v",
-		util.ValueOrZero(c.User),
-		util.ValueOrZero(c.Password),
-		util.ValueOrZero(c.PasswordPath),
-		util.ValueOrZero(c.AuthMode),
+		ptr.ValueOrZero(c.User),
+		ptr.ValueOrZero(c.Password),
+		ptr.ValueOrZero(c.PasswordPath),
+		ptr.ValueOrZero(c.AuthMode),
 		c.SecretAgent.String())
 }
 

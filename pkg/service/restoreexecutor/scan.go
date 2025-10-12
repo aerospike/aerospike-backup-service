@@ -8,7 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asb"
@@ -46,9 +46,9 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 	config.RetryPolicy = restoreRequest.Policy.GetRetryPolicyOrDefault()
 
 	config.WritePolicy = makeWritePolicy(restoreRequest)
-	config.NoRecords = util.ValueOrZero(restoreRequest.Policy.NoRecords)
-	config.NoIndexes = util.ValueOrZero(restoreRequest.Policy.NoIndexes)
-	config.NoUDFs = util.ValueOrZero(restoreRequest.Policy.NoUdfs)
+	config.NoRecords = ptr.ValueOrZero(restoreRequest.Policy.NoRecords)
+	config.NoIndexes = ptr.ValueOrZero(restoreRequest.Policy.NoIndexes)
+	config.NoUDFs = ptr.ValueOrZero(restoreRequest.Policy.NoUdfs)
 
 	if restoreRequest.Policy.Namespace != nil {
 		config.Namespace = &backup.RestoreNamespaceConfig{
@@ -57,12 +57,12 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 		}
 	}
 
-	config.RecordsPerSecond = util.ValueOrZero(restoreRequest.Policy.Tps)
-	config.Bandwidth = util.ValueOrZero(restoreRequest.Policy.Bandwidth) * megabyte
+	config.RecordsPerSecond = ptr.ValueOrZero(restoreRequest.Policy.Tps)
+	config.Bandwidth = ptr.ValueOrZero(restoreRequest.Policy.Bandwidth) * megabyte
 	config.Parallel = restoreRequest.Policy.GetParallelOrDefault()
 	config.MaxAsyncBatches = restoreRequest.Policy.GetMaxAsyncBatchesOrDefault()
 	config.BatchSize = restoreRequest.Policy.GetBatchSizeOrDefault()
-	config.DisableBatchWrites = util.ValueOrZero(restoreRequest.Policy.DisableBatchWrites)
+	config.DisableBatchWrites = ptr.ValueOrZero(restoreRequest.Policy.DisableBatchWrites)
 
 	if restoreRequest.Policy.CompressionPolicy != nil {
 		config.CompressionPolicy = &backup.CompressionPolicy{
@@ -79,7 +79,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 		}
 	}
 
-	config.ExtraTTL = util.ValueOrZero(restoreRequest.Policy.ExtraTTL)
+	config.ExtraTTL = ptr.ValueOrZero(restoreRequest.Policy.ExtraTTL)
 
 	config.SecretAgentConfig = restoreRequest.SecretAgent.ToSecretAgentConfig()
 	config.MetricsEnabled = true

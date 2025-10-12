@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike/cluster"
@@ -16,6 +16,7 @@ import (
 
 // ClusterConfigWriter handles writing cluster configuration to storage.
 type ClusterConfigWriter interface {
+	// Write writes the cluster configuration for the given routine and timestamp.
 	Write(ctx context.Context, routineName string, timestamp time.Time) error
 }
 

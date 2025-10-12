@@ -6,6 +6,7 @@ import (
 
 // Validator interface for types that can be validated.
 type Validator interface {
+	// Validate validates the object.
 	Validate() error
 }
 

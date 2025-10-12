@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -178,10 +178,10 @@ func TestParseProtocols(t *testing.T) {
 		expectErr   bool
 	}{
 		{"NilInput", nil, tls.VersionTLS12, 0, false},
-		{"EmptyInput", util.Ptr(""), tls.VersionTLS12, 0, false},
-		{"WithSpaces", util.Ptr("  TLSv1.2  "), tls.VersionTLS12, tls.VersionTLS12, false},
-		{"InvalidVersion", util.Ptr("TLSv1.9"), 0, 0, true},
-		{"MixedValidity", util.Ptr("TLSv1.2 BOGUS"), 0, 0, true},
+		{"EmptyInput", ptr.Of(""), tls.VersionTLS12, 0, false},
+		{"WithSpaces", ptr.Of("  TLSv1.2  "), tls.VersionTLS12, tls.VersionTLS12, false},
+		{"InvalidVersion", ptr.Of("TLSv1.9"), 0, 0, true},
+		{"MixedValidity", ptr.Of("TLSv1.2 BOGUS"), 0, 0, true},
 	}
 
 	for _, tc := range testCases {
@@ -212,19 +212,19 @@ func TestParseCipherSuites(t *testing.T) {
 		expectErr  bool
 	}{
 		{"NilInput", nil, nil, false},
-		{"EmptyInput", util.Ptr(""), nil, false},
-		{"SingleSuite", util.Ptr(validSuite1), []uint16{validSuiteID1}, false},
+		{"EmptyInput", ptr.Of(""), nil, false},
+		{"SingleSuite", ptr.Of(validSuite1), []uint16{validSuiteID1}, false},
 		{"MultipleSuites",
-			util.Ptr(fmt.Sprintf("%s:%s", validSuite1, validSuite2)),
+			ptr.Of(fmt.Sprintf("%s:%s", validSuite1, validSuite2)),
 			[]uint16{validSuiteID1, validSuiteID2}, false},
 		{"WithWhitespace",
-			util.Ptr(fmt.Sprintf(" %s : %s ", validSuite1, validSuite2)),
+			ptr.Of(fmt.Sprintf(" %s : %s ", validSuite1, validSuite2)),
 			[]uint16{validSuiteID1, validSuiteID2}, false},
-		{"InvalidSuiteName", util.Ptr("TLS_BOGUS_SUITE"), nil, true},
+		{"InvalidSuiteName", ptr.Of("TLS_BOGUS_SUITE"), nil, true},
 		{"MixedValidity",
-			util.Ptr(fmt.Sprintf("%s:TLS_BOGUS_SUITE", validSuite1)), nil, true},
+			ptr.Of(fmt.Sprintf("%s:TLS_BOGUS_SUITE", validSuite1)), nil, true},
 		{"EmptyStringBetweenColons",
-			util.Ptr(fmt.Sprintf("%s::%s", validSuite1, validSuite2)),
+			ptr.Of(fmt.Sprintf("%s::%s", validSuite1, validSuite2)),
 			[]uint16{validSuiteID1, validSuiteID2}, false},
 	}
 

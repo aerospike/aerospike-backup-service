@@ -3,10 +3,10 @@ package cluster
 import (
 	"log/slog"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	_ "github.com/aerospike/aerospike-backup-service/v3/modules/schema" // it's required to load configuration schemas in init method
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/try"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/aerospike-management-lib/asconfig"
 	"github.com/aerospike/aerospike-management-lib/info"
@@ -22,7 +22,7 @@ func ReadConfiguration(client aerospike.Cluster, logger *slog.Logger) []asconfig
 	for _, host := range activeHosts {
 		asInfo := info.NewAsInfo(logr.Logger{}, host, &policy)
 
-		conf, err := util.TryAndRecoverError(func() (*asconfig.GenConf, error) {
+		conf, err := try.RecoverError(func() (*asconfig.GenConf, error) {
 			return asconfig.GenerateConf(logr.Discard(), asInfo, true)
 		})
 		if err != nil {
@@ -31,7 +31,7 @@ func ReadConfiguration(client aerospike.Cluster, logger *slog.Logger) []asconfig
 			continue
 		}
 
-		asconf, err := util.TryAndRecoverError(func() (*asconfig.AsConfig, error) {
+		asconf, err := try.RecoverError(func() (*asconfig.AsConfig, error) {
 			return asconfig.NewMapAsConfig(logr.Discard(), conf.Conf)
 		})
 		if err != nil {
@@ -40,7 +40,7 @@ func ReadConfiguration(client aerospike.Cluster, logger *slog.Logger) []asconfig
 			continue
 		}
 
-		configAsString, err := util.TryAndRecover(asconf.ToConfFile)
+		configAsString, err := try.Recover(asconf.ToConfFile)
 		if err != nil {
 			logger.Error("Error serialising configuration",
 				slog.Any("host", host), attr.Error(err))

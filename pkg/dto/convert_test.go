@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	ptr2 "github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/require"
@@ -20,7 +20,7 @@ var originalConfig = &Config{
 			Address: ptr.String("localhost"),
 		},
 		Logger: &LoggerConfig{
-			Level: util.Ptr("DEBUG"),
+			Level: ptr2.Of("DEBUG"),
 			FileWriter: &FileLoggerConfig{
 				Filename: "log",
 			},
@@ -30,16 +30,16 @@ var originalConfig = &Config{
 		"cluster1": {
 			SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 			Credentials: &Credentials{
-				User:              util.Ptr("tester"),
-				Password:          util.Ptr("psw"),
+				User:              ptr2.Of("tester"),
+				Password:          ptr2.Of("psw"),
 				SecretAgentConfig: secretAgentConfig,
 			},
 		},
 		"cluster2": {
 			SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 			Credentials: &Credentials{
-				User:     util.Ptr("tester"),
-				Password: util.Ptr("psw"),
+				User:     ptr2.Of("tester"),
+				Password: ptr2.Of("psw"),
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host2",
@@ -49,7 +49,7 @@ var originalConfig = &Config{
 			},
 		},
 		"cluster3": {
-			ClusterLabel: util.Ptr("No credentials"),
+			ClusterLabel: ptr2.Of("No credentials"),
 			SeedNodes:    []SeedNode{{HostName: "host", Port: 80}},
 		},
 	},
@@ -58,16 +58,16 @@ var originalConfig = &Config{
 			S3Storage: &S3Storage{
 				Bucket:          "bucket",
 				S3Region:        "region",
-				AccessKeyID:     util.Ptr("id"),
-				SecretAccessKey: util.Ptr("key"),
+				AccessKeyID:     ptr2.Of("id"),
+				SecretAccessKey: ptr2.Of("key"),
 			},
 		},
 		"aws 1": { // secret agent by name
 			S3Storage: &S3Storage{
 				Bucket:            "bucket",
 				S3Region:          "region",
-				AccessKeyID:       util.Ptr("id"),
-				SecretAccessKey:   util.Ptr("key"),
+				AccessKeyID:       ptr2.Of("id"),
+				SecretAccessKey:   ptr2.Of("key"),
 				SecretAgentConfig: secretAgentConfig,
 			},
 		},
@@ -75,8 +75,8 @@ var originalConfig = &Config{
 			S3Storage: &S3Storage{
 				Bucket:          "bucket2",
 				S3Region:        "region2",
-				AccessKeyID:     util.Ptr("id2"),
-				SecretAccessKey: util.Ptr("key2"),
+				AccessKeyID:     ptr2.Of("id2"),
+				SecretAccessKey: ptr2.Of("key2"),
 				SecretAgentConfig: SecretAgentConfig{
 					SecretAgent: &SecretAgent{
 						Address:        "host3",
@@ -146,7 +146,7 @@ var originalConfig = &Config{
 		SourceCluster: "cluster1",
 		Storage:       "aws 1",
 		IntervalCron:  "@daily",
-		Namespaces:    util.Ptr([]string{}),
+		Namespaces:    ptr2.Of([]string{}),
 	}},
 	SecretAgents: map[string]*SecretAgent{"agent1": {
 		Address:        "host",

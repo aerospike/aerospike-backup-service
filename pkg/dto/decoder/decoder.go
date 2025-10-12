@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"gopkg.in/yaml.v3"
 )
 

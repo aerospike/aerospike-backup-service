@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +24,7 @@ func TestCalculateSocketTimeout(t *testing.T) {
 			routine: &model.BackupRoutine{
 				IntervalCron: "@daily",
 				BackupPolicy: &model.BackupPolicy{
-					SocketTimeout: util.Ptr(5 * time.Minute),
+					SocketTimeout: ptr.Of(5 * time.Minute),
 				},
 			},
 			isFullBackup: true,
@@ -35,7 +35,7 @@ func TestCalculateSocketTimeout(t *testing.T) {
 			routine: &model.BackupRoutine{
 				IntervalCron: "0 */1 * * * *", // every minute
 				BackupPolicy: &model.BackupPolicy{
-					SocketTimeout: util.Ptr(2 * time.Minute),
+					SocketTimeout: ptr.Of(2 * time.Minute),
 				},
 			},
 			isFullBackup: true,
@@ -57,7 +57,7 @@ func TestCalculateSocketTimeout(t *testing.T) {
 			routine: &model.BackupRoutine{
 				IntervalCron: "@daily",
 				BackupPolicy: &model.BackupPolicy{
-					SocketTimeout: util.Ptr(0 * time.Second),
+					SocketTimeout: ptr.Of(0 * time.Second),
 				},
 			},
 			isFullBackup: true,
@@ -68,7 +68,7 @@ func TestCalculateSocketTimeout(t *testing.T) {
 			routine: &model.BackupRoutine{
 				IncrIntervalCron: "@hourly",
 				BackupPolicy: &model.BackupPolicy{
-					SocketTimeout: util.Ptr(3 * time.Minute),
+					SocketTimeout: ptr.Of(3 * time.Minute),
 				},
 			},
 			isFullBackup: false,
@@ -88,14 +88,14 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	namespace := "testNamespace"
 	routine := &model.BackupRoutine{
 		BackupPolicy: &model.BackupPolicy{
-			Parallel:      util.Ptr(4),
-			ParallelWrite: util.Ptr(8),
-			FileLimit:     util.Ptr(100),
-			NoRecords:     util.Ptr(true),
-			NoIndexes:     util.Ptr(true),
-			NoUdfs:        util.Ptr(true),
-			Bandwidth:     util.Ptr(int64(10)),
-			SocketTimeout: util.Ptr(5 * time.Minute),
+			Parallel:      ptr.Of(4),
+			ParallelWrite: ptr.Of(8),
+			FileLimit:     ptr.Of(100),
+			NoRecords:     ptr.Of(true),
+			NoIndexes:     ptr.Of(true),
+			NoUdfs:        ptr.Of(true),
+			Bandwidth:     ptr.Of(int64(10)),
+			SocketTimeout: ptr.Of(5 * time.Minute),
 
 			CompressionPolicy: &model.CompressionPolicy{
 				Mode:  "ZSTD",
@@ -103,9 +103,9 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 			},
 			EncryptionPolicy: &model.EncryptionPolicy{
 				Mode:      "aes-256",
-				KeyFile:   util.Ptr("path/to/key"),
-				KeySecret: util.Ptr("secret-name"),
-				KeyEnv:    util.Ptr("ENV_VAR"),
+				KeyFile:   ptr.Of("path/to/key"),
+				KeySecret: ptr.Of("secret-name"),
+				KeyEnv:    ptr.Of("ENV_VAR"),
 			},
 		},
 
@@ -116,17 +116,17 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 		SecretAgent: &model.SecretAgent{
 			ConnectionType: "tcp",
 			Address:        "localhost",
-			Port:           util.Ptr(model.Port(9000)),
-			Timeout:        util.Ptr(1000),
-			TLSCAString:    util.Ptr("ca-string"),
-			IsBase64:       util.Ptr(true),
+			Port:           ptr.Of(model.Port(9000)),
+			Timeout:        ptr.Of(1000),
+			TLSCAString:    ptr.Of("ca-string"),
+			IsBase64:       ptr.Of(true),
 		},
 	}
 
 	// Full backup has FromTime == nil
 	timeBounds := model.TimeBounds{
 		FromTime: nil,
-		ToTime:   util.Ptr(time.Now()),
+		ToTime:   ptr.Of(time.Now()),
 	}
 
 	config, err := makeBackupConfig(namespace, routine, timeBounds)
@@ -174,13 +174,13 @@ func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {
 	namespace := "testNamespace"
 	routine := &model.BackupRoutine{
 		BackupPolicy: &model.BackupPolicy{
-			Parallel:      util.Ptr(4),
-			ParallelWrite: util.Ptr(8),
-			FileLimit:     util.Ptr(100),
-			NoRecords:     util.Ptr(false),
-			NoIndexes:     util.Ptr(false),
-			NoUdfs:        util.Ptr(false),
-			Bandwidth:     util.Ptr(int64(10)),
+			Parallel:      ptr.Of(4),
+			ParallelWrite: ptr.Of(8),
+			FileLimit:     ptr.Of(100),
+			NoRecords:     ptr.Of(false),
+			NoIndexes:     ptr.Of(false),
+			NoUdfs:        ptr.Of(false),
+			Bandwidth:     ptr.Of(int64(10)),
 		},
 		SetList:          []string{"testSet"},
 		BinList:          []string{"bin1", "bin2"},
@@ -193,7 +193,7 @@ func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {
 	fromTime := time.Now().Add(-1 * time.Hour)
 	timeBounds := model.TimeBounds{
 		FromTime: &fromTime,
-		ToTime:   util.Ptr(time.Now()),
+		ToTime:   ptr.Of(time.Now()),
 	}
 
 	config, err := makeBackupConfig(namespace, routine, timeBounds)
@@ -237,7 +237,7 @@ func TestMakeBackupConfig_DefaultParallelWrite(t *testing.T) {
 	namespace := "testNamespace"
 	routine := &model.BackupRoutine{
 		BackupPolicy: &model.BackupPolicy{
-			Parallel: util.Ptr(4),
+			Parallel: ptr.Of(4),
 		},
 		IntervalCron: "@daily",
 	}

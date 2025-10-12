@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 	ioStorage "github.com/aerospike/backup-go/io/storage"
 	"github.com/aerospike/backup-go/io/storage/aws/s3"
@@ -19,12 +20,12 @@ import (
 )
 
 type S3StorageAccessor struct {
-	clientMap *util.LoadingCache[*model.S3Storage, *awsS3.Client]
+	clientMap *collections.LoadingCache[*model.S3Storage, *awsS3.Client]
 }
 
 func NewS3StorageAccessor() *S3StorageAccessor {
 	return &S3StorageAccessor{
-		clientMap: util.NewLoadingCache[*model.S3Storage, *awsS3.Client](context.Background(), getS3Client),
+		clientMap: collections.NewLoadingCache[*model.S3Storage, *awsS3.Client](context.Background(), getS3Client),
 	}
 }
 
@@ -116,7 +117,7 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 				KeepAlive: 30 * time.Second,
 			}).DialContext,
 
-			MaxConnsPerHost:     util.ValueOrZero(s.MaxConnsPerHost),
+			MaxConnsPerHost:     ptr.ValueOrZero(s.MaxConnsPerHost),
 			IdleConnTimeout:     120 * time.Second,
 			TLSHandshakeTimeout: 10 * time.Second,
 			ReadBufferSize:      64 * 1024,

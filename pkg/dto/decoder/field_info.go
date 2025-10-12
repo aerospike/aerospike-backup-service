@@ -4,7 +4,7 @@ import (
 	"log/slog"
 
 	_ "github.com/aerospike/aerospike-backup-service/v3/docs" // need to ensure swagger is initialized before.
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/swaggo/swag"
 )
 

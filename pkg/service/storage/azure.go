@@ -9,19 +9,19 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/backup-go"
 	ioStorage "github.com/aerospike/backup-go/io/storage"
 	azure "github.com/aerospike/backup-go/io/storage/azure/blob"
 )
 
 type AzureStorageAccessor struct {
-	clientMap *util.LoadingCache[*model.AzureStorage, *azblob.Client]
+	clientMap *collections.LoadingCache[*model.AzureStorage, *azblob.Client]
 }
 
 func NewAzureStorageAccessor() *AzureStorageAccessor {
 	return &AzureStorageAccessor{
-		clientMap: util.NewLoadingCache[*model.AzureStorage, *azblob.Client](context.Background(), getAzureClient),
+		clientMap: collections.NewLoadingCache[*model.AzureStorage, *azblob.Client](context.Background(), getAzureClient),
 	}
 }
 

@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -18,20 +18,20 @@ var defaultConfig = struct {
 	xdrConfig     XDRConfig
 }{
 	http: HTTPServerConfig{
-		Address: util.Ptr("0.0.0.0"),
+		Address: ptr.Of("0.0.0.0"),
 		Port:    NewPort(8080),
 		Rate: &RateLimiterConfig{
-			Tps:       util.Ptr(1024),
-			Size:      util.Ptr(1024),
+			Tps:       ptr.Of(1024),
+			Size:      ptr.Of(1024),
 			WhiteList: []string{},
 		},
-		ContextPath: util.Ptr("/"),
-		Timeout:     util.Ptr(5 * time.Second),
+		ContextPath: ptr.Of("/"),
+		Timeout:     ptr.Of(5 * time.Second),
 	},
 	logger: LoggerConfig{
-		Level:        util.Ptr("DEBUG"),
-		Format:       util.Ptr("PLAIN"),
-		StdoutWriter: util.Ptr(true),
+		Level:        ptr.Of("DEBUG"),
+		Format:       ptr.Of("PLAIN"),
+		StdoutWriter: ptr.Of(true),
 		FileWriter: &FileLoggerConfig{
 			MaxSize: 0,
 		},
@@ -42,27 +42,27 @@ var defaultConfig = struct {
 			MaxRetries:  5,
 			Multiplier:  1,
 		},
-		Parallel:  util.Ptr(8),
-		FileLimit: util.Ptr(250),
+		Parallel:  ptr.Of(8),
+		FileLimit: ptr.Of(250),
 	},
 	restorePolicy: RestorePolicy{
-		Parallel: util.Ptr(8),
+		Parallel: ptr.Of(8),
 		RetryPolicy: &models.RetryPolicy{
 			BaseTimeout: 2 * time.Second,
 			MaxRetries:  5,
 			Multiplier:  2,
 		},
-		MaxAsyncBatches: util.Ptr(128),
-		BatchSize:       util.Ptr(128),
+		MaxAsyncBatches: ptr.Of(128),
+		BatchSize:       ptr.Of(128),
 	},
 	xdrConfig: XDRConfig{
-		MaxConns:        util.Ptr(100),
-		ReadTimeout:     util.Ptr(1 * time.Second),
-		WriteTimeout:    util.Ptr(1 * time.Second),
-		StartTimeout:    util.Ptr(30 * time.Second),
-		PollingPeriod:   util.Ptr(1 * time.Second),
-		ResultQueueSize: util.Ptr(256),
-		AckQueueSize:    util.Ptr(256),
+		MaxConns:        ptr.Of(100),
+		ReadTimeout:     ptr.Of(1 * time.Second),
+		WriteTimeout:    ptr.Of(1 * time.Second),
+		StartTimeout:    ptr.Of(30 * time.Second),
+		PollingPeriod:   ptr.Of(1 * time.Second),
+		ResultQueueSize: ptr.Of(256),
+		AckQueueSize:    ptr.Of(256),
 		InfoRetryPolicy: &models.RetryPolicy{
 			BaseTimeout: 2 * time.Second,
 			MaxRetries:  5,

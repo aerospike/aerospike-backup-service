@@ -9,6 +9,7 @@ import (
 
 // Validator is used inside of backup.StreamingReader to filter files.
 type Validator interface {
+	// Run validates a file path and returns an error if it should be skipped.
 	Run(fileName string) error
 }
 

@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 	"github.com/aerospike/backup-go"
 )
 
@@ -83,7 +83,7 @@ func newOrchestrator(routineName string, config *model.Config, h *BackupComponen
 }
 
 func (h *BackupRoutineOrchestrator) runFullBackup(ctx context.Context, now time.Time) {
-	duration, err := util.MeasureDuration(func() error {
+	duration, err := timeutil.MeasureDuration(func() error {
 		return h.runFullBackupInternal(ctx, now)
 	})
 
@@ -221,7 +221,7 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackup(ctx context.Context, no
 		return
 	}
 
-	duration, err := util.MeasureDuration(func() error {
+	duration, err := timeutil.MeasureDuration(func() error {
 		return h.runIncrementalBackupInternal(ctx, now)
 	})
 	if err != nil {
@@ -255,7 +255,7 @@ func (h *BackupRoutineOrchestrator) skipIncrementalBackup(now time.Time) bool {
 	case currentStat.Incremental != nil:
 		h.logger.Debug("Skipping incremental backup: another incremental backup in progress")
 		return true
-	case util.IsCronFireTime(h.routine.IntervalCron, now):
+	case timeutil.IsCronFireTime(h.routine.IntervalCron, now):
 		h.logger.Debug("Skipping incremental backup: full backup scheduled at same time")
 		return true
 	}

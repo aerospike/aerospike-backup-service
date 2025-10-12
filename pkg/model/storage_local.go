@@ -5,8 +5,11 @@ import "fmt"
 // Storage represents the configuration for a backup storage details.
 // This interface is implemented by all specific storage types.
 type Storage interface {
+	// GetPath returns the path to store the backup files.
 	GetPath() string
+	// GetStorageClass returns the configured storage class of data and metadata.
 	GetStorageClass() StorageClass
+	// String returns a human-readable representation of the storage.
 	String() string
 }
 

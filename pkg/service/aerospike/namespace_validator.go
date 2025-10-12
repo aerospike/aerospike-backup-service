@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 // NamespaceValidator checks whether routines reference namespaces
 // that exist in their respective Aerospike source clusters.
 // This implementation logs warnings but never returns errors.
 type NamespaceValidator interface {
+	// Validate validates all routines in config against their respective clusters.
 	Validate(cfg *model.Config)
 }
 
@@ -111,7 +112,7 @@ func (nv *NamespaceValidatorImpl) diffRoutineNamespaces(
 			continue // no data for this cluster; warning already logged
 		}
 
-		missing := util.MissingElements(r.Namespaces, clusterNamespaces)
+		missing := collections.MissingElements(r.Namespaces, clusterNamespaces)
 		if len(missing) > 0 {
 			result[name] = missing
 		}

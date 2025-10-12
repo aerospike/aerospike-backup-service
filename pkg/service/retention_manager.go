@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 // RetentionManager defines the interface for deleting old backups.
@@ -24,7 +24,7 @@ type RetentionManagerImpl struct {
 	// Lock per routine. The restore service reads backup data,
 	// while the retention manager deletes backup data.
 	// Locks are required to avoid race conditions.
-	routineStorage *util.LockMap
+	routineStorage *collections.LockMap
 }
 
 var _ RetentionManager = (*RetentionManagerImpl)(nil)
@@ -32,7 +32,7 @@ var _ RetentionManager = (*RetentionManagerImpl)(nil)
 func NewBackupRetentionManager(
 	backendService BackupReaderWriter,
 	config *model.Config,
-	routineStorage *util.LockMap,
+	routineStorage *collections.LockMap,
 ) *RetentionManagerImpl {
 	return &RetentionManagerImpl{
 		backendService: backendService,

@@ -8,7 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/reugn/go-quartz/quartz"
@@ -61,10 +61,10 @@ func makeBackupConfig(
 	}
 
 	backupPolicy := backupRoutine.BackupPolicy
-	config.NoRecords = util.ValueOrZero(backupPolicy.NoRecords)
+	config.NoRecords = ptr.ValueOrZero(backupPolicy.NoRecords)
 	if isFullBackup(timeBounds) {
-		config.NoIndexes = util.ValueOrZero(backupPolicy.NoIndexes)
-		config.NoUDFs = util.ValueOrZero(backupPolicy.NoUdfs)
+		config.NoIndexes = ptr.ValueOrZero(backupPolicy.NoIndexes)
+		config.NoUDFs = ptr.ValueOrZero(backupPolicy.NoUdfs)
 	} else { // incremental backup don't include indexes or UDFs
 		config.NoIndexes = true
 		config.NoUDFs = true
@@ -73,8 +73,8 @@ func makeBackupConfig(
 	config.ParallelRead = backupPolicy.GetParallelOrDefault()
 	config.ParallelWrite = backupPolicy.GetParallelWriteOrDefault()
 	config.FileLimit = uint64(backupPolicy.GetFileLimitOrDefault() * megabyte) // lib expects limit in bytes.
-	config.RecordsPerSecond = util.ValueOrZero(backupPolicy.RecordsPerSecond)
-	config.Bandwidth = util.ValueOrZero(backupPolicy.Bandwidth) * megabyte // lib expects file size in bytes.
+	config.RecordsPerSecond = ptr.ValueOrZero(backupPolicy.RecordsPerSecond)
+	config.Bandwidth = ptr.ValueOrZero(backupPolicy.Bandwidth) * megabyte // lib expects file size in bytes.
 
 	config.ModBefore = timeBounds.ToTime
 	config.ModAfter = timeBounds.FromTime
@@ -85,8 +85,8 @@ func makeBackupConfig(
 	}
 
 	config.ScanPolicy.SocketTimeout = calculateSocketTimeout(backupRoutine, isFullBackup(timeBounds), time.Now())
-	config.ScanPolicy.UseCompression = util.ValueOrZero(backupPolicy.UseCompression)
-	config.ScanPolicy.MaxConcurrentNodes = util.ValueOrZero(backupPolicy.MaxConcurrentNodes)
+	config.ScanPolicy.UseCompression = ptr.ValueOrZero(backupPolicy.UseCompression)
+	config.ScanPolicy.MaxConcurrentNodes = ptr.ValueOrZero(backupPolicy.MaxConcurrentNodes)
 
 	config.ScanPolicy.MaxRetries = 10
 	config.ScanPolicy.SleepBetweenRetries = 1 * time.Second

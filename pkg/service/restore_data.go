@@ -12,7 +12,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 )
@@ -36,7 +37,7 @@ type dataRestorer struct {
 	restoreService restoreexecutor.Restore
 	backupReader   BackupReader
 	clientManager  aerospike.ClientManager
-	routineStorage *util.LockMap
+	routineStorage *collections.LockMap
 }
 
 var _ RestoreManager = (*dataRestorer)(nil)
@@ -47,7 +48,7 @@ func NewRestoreManager(
 	clientManager aerospike.ClientManager,
 	restoreJobs *RestoreJobsHolder,
 	backupReader BackupReader,
-	routineStorage *util.LockMap,
+	routineStorage *collections.LockMap,
 ) RestoreManager {
 	return &dataRestorer{
 		restoreJobs:    restoreJobs,
@@ -258,7 +259,7 @@ func (r *dataRestorer) restoreByTimeSync(
 	client, err := r.clientManager.GetClient(request.DestinationCluster)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
-			util.ValueOrZero(request.DestinationCluster.ClusterLabel), err)
+			ptr.ValueOrZero(request.DestinationCluster.ClusterLabel), err)
 	}
 	defer r.clientManager.Close(client)
 
@@ -316,7 +317,7 @@ func (r *dataRestorer) restoreNamespace(
 			slices.Reverse(backups)
 
 			// old values are not important, because they qualify how to handle existing data in db.
-			effectivePolicy.Unique = util.Ptr(true)
+			effectivePolicy.Unique = ptr.Of(true)
 			effectivePolicy.Replace = nil
 		}
 	}

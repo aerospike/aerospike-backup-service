@@ -4,16 +4,18 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 )
 
 // ClientFactory defines an interface for creating and checking clients.
 type ClientFactory interface {
+	// NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
 	NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error)
+	// NewBackupClient creates a new backup client using the given Aerospike client and options.
 	NewBackupClient(backup.AerospikeClient, ...backup.ClientOpt) (Client, error)
 }
 
@@ -55,8 +57,8 @@ func clientHosts(c *model.AerospikeCluster) []*as.Host {
 func clientPolicy(c *model.AerospikeCluster) *as.ClientPolicy {
 	policy := as.NewClientPolicy()
 	if c.Credentials != nil {
-		policy.User = util.ValueOrZero(c.GetUser())
-		policy.Password = util.ValueOrZero(c.GetPassword())
+		policy.User = ptr.ValueOrZero(c.GetUser())
+		policy.Password = ptr.ValueOrZero(c.GetPassword())
 		if c.Credentials.AuthMode != nil {
 			switch strings.ToUpper(*c.Credentials.AuthMode) {
 			case "INTERNAL":
@@ -87,7 +89,7 @@ func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
 	if !anySeedNodeHasTLSName(c) {
 		if c.TLS != nil {
 			slog.Warn("A TLS configuration is provided, but no seed nodes have TLS names. Ignoring TLS settings.",
-				slog.String("cluster", util.ValueOrZero(c.ClusterLabel)))
+				slog.String("cluster", ptr.ValueOrZero(c.ClusterLabel)))
 		}
 
 		return // no TLS configuration needed for this cluster
@@ -104,7 +106,7 @@ func setTLSConfig(c *model.AerospikeCluster, policy *as.ClientPolicy) {
 	policy.TlsConfig, err = NewTLSConfig(tlsToApply)
 	if err != nil {
 		slog.Error("Failed to initialize tls.Config",
-			slog.String("cluster", util.ValueOrZero(c.ClusterLabel)),
+			slog.String("cluster", ptr.ValueOrZero(c.ClusterLabel)),
 			attr.Error(err))
 	}
 }

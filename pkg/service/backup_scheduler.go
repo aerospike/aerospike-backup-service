@@ -7,9 +7,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/reugn/go-quartz/logger"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -28,10 +28,11 @@ const (
 )
 
 type Scheduler interface {
+	// ScheduleJob schedules a backup job with the given trigger.
 	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error
 }
 
-var jobStore = util.NewSafeMap[string, *quartz.JobDetail]()
+var jobStore = collections.NewSafeMap[string, *quartz.JobDetail]()
 
 // NewAdHocFullBackupJobForRoutine returns a new full backup job for the routine name.
 func NewAdHocFullBackupJobForRoutine(routineName string) *quartz.JobDetail {

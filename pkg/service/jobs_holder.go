@@ -7,10 +7,11 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // restoreJob encapsulates the state and details of a single restore operation.
@@ -45,13 +46,13 @@ type restoreJob struct {
 	cancel context.CancelFunc
 }
 type RestoreJobsHolder struct {
-	*util.SafeMap[model.RestoreJobID, *restoreJob]
+	*collections.SafeMap[model.RestoreJobID, *restoreJob]
 }
 
 // NewRestoreJobsHolder returns a new RestoreJobsHolder.
 func NewRestoreJobsHolder() *RestoreJobsHolder {
 	return &RestoreJobsHolder{
-		SafeMap: util.NewSafeMap[model.RestoreJobID, *restoreJob](),
+		SafeMap: collections.NewSafeMap[model.RestoreJobID, *restoreJob](),
 	}
 }
 
@@ -86,7 +87,7 @@ func (h *RestoreJobsHolder) addTotalRecords(id model.RestoreJobID, t uint64) {
 
 func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
 	h.Apply(id, func(job *restoreJob) {
-		job.finished = util.Ptr(time.Now())
+		job.finished = ptr.Of(time.Now())
 		if err == nil {
 			job.status = model.JobStatusDone
 			return

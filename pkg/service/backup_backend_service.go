@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"gopkg.in/yaml.v3"
 )
 
@@ -164,7 +164,7 @@ func ErrRoutineNotFound(routineName string) error {
 // BackupBackendServiceImpl default implementation of BackupReaderWriter.
 type BackupBackendServiceImpl struct {
 	config *model.Config
-	locks  util.LockMap // lock per routine
+	locks  collections.LockMap // lock per routine
 }
 
 var _ BackupReaderWriter = (*BackupBackendServiceImpl)(nil)
