@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -77,7 +77,7 @@ func (p *BackupPolicy) CopyWithNoRecords() *BackupPolicy {
 		TotalTimeout:     p.TotalTimeout,
 		RetryPolicy:      p.RetryPolicy,
 		RetentionPolicy:  p.RetentionPolicy,
-		NoRecords:        util.Ptr(true),
+		NoRecords:        ptr.Of(true),
 		NoIndexes:        p.NoIndexes,
 		NoUdfs:           p.NoUdfs,
 		Bandwidth:        p.Bandwidth,

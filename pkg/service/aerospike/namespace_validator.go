@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 // NamespaceValidator checks whether routines reference namespaces
@@ -111,7 +111,7 @@ func (nv *NamespaceValidatorImpl) diffRoutineNamespaces(
 			continue // no data for this cluster; warning already logged
 		}
 
-		missing := util.MissingElements(r.Namespaces, clusterNamespaces)
+		missing := collections.MissingElements(r.Namespaces, clusterNamespaces)
 		if len(missing) > 0 {
 			result[name] = missing
 		}

@@ -7,7 +7,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/backup-go"
 	ioStorage "github.com/aerospike/backup-go/io/storage"
 	gcp "github.com/aerospike/backup-go/io/storage/gcp/storage"
@@ -16,12 +16,12 @@ import (
 )
 
 type GcpStorageAccessor struct {
-	clientMap *util.LoadingCache[*model.GcpStorage, *storage.Client]
+	clientMap *collections.LoadingCache[*model.GcpStorage, *storage.Client]
 }
 
 func NewGcpStorageAccessor() *GcpStorageAccessor {
 	return &GcpStorageAccessor{
-		clientMap: util.NewLoadingCache[*model.GcpStorage, *storage.Client](context.Background(), getGcpClient),
+		clientMap: collections.NewLoadingCache[*model.GcpStorage, *storage.Client](context.Background(), getGcpClient),
 	}
 }
 

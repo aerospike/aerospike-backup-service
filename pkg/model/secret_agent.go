@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 )
 
@@ -27,7 +28,7 @@ type SecretAgent struct {
 	TLSCAString *string
 	// Flag that shows if secret agent responses are encrypted with base64.
 	IsBase64 *bool
-	cache    *util.LoadingCache[string, string]
+	cache    *collections.LoadingCache[string, string]
 }
 
 func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
@@ -65,7 +66,7 @@ func (s *SecretAgent) Read(path string) (string, error) {
 			return secret, nil
 		}
 
-		s.cache = util.NewLoadingCache(context.Background(), readFromSecretAgentfunc)
+		s.cache = collections.NewLoadingCache(context.Background(), readFromSecretAgentfunc)
 	})
 
 	return s.cache.Get(path)
@@ -79,8 +80,8 @@ func (s *SecretAgent) String() string {
 	return fmt.Sprintf("%v:%v:%v:%v:%v:%v",
 		s.ConnectionType,
 		s.Address,
-		util.ValueOrZero(s.Port),
-		util.ValueOrZero(s.Timeout),
-		util.ValueOrZero(s.TLSCAString),
-		util.ValueOrZero(s.IsBase64))
+		ptr.ValueOrZero(s.Port),
+		ptr.ValueOrZero(s.Timeout),
+		ptr.ValueOrZero(s.TLSCAString),
+		ptr.ValueOrZero(s.IsBase64))
 }

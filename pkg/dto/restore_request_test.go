@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/require"
 )
 
@@ -129,11 +129,11 @@ func TestDestinationClusterConfig_ToModel(t *testing.T) {
 			name: "convert from cluster config",
 			dstCluster: DestinationClusterConfig{
 				Cluster: &AerospikeCluster{
-					ClusterLabel: util.Ptr("new cluster"),
+					ClusterLabel: ptr.Of("new cluster"),
 				},
 			},
 			want: &model.AerospikeCluster{
-				ClusterLabel: util.Ptr("new cluster"),
+				ClusterLabel: ptr.Of("new cluster"),
 			},
 		},
 		{
@@ -344,7 +344,7 @@ func TestRestoreTimestampRequest_Validate(t *testing.T) {
 func TestRestoreRequest_ToModel(t *testing.T) {
 	config := model.NewConfig()
 	cluster := &model.AerospikeCluster{
-		ClusterLabel: util.Ptr("new cluster"),
+		ClusterLabel: ptr.Of("new cluster"),
 	}
 	storage := &model.LocalStorage{Path: "test-path"}
 	secretAgent := &model.SecretAgent{

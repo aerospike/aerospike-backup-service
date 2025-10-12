@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/backup-go/models"
 )
 

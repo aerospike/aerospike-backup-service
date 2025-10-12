@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 var protocolMap = map[string]uint16{
@@ -64,7 +64,7 @@ func NewTLSConfig(t *model.TLS) (*tls.Config, error) {
 	}
 
 	tlsConfig := &tls.Config{ //nolint:gosec
-		ServerName:   util.ValueOrZero(t.Name),
+		ServerName:   ptr.ValueOrZero(t.Name),
 		Certificates: clientCerts,
 		RootCAs:      rootCAs,
 		MinVersion:   minVersion,
@@ -129,8 +129,8 @@ func appendCertFile(pool *x509.CertPool, path string) error {
 
 // loadClientCerts loads the client certificate and key.
 func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
-	certFile := util.ValueOrZero(t.Certfile)
-	keyFile := util.ValueOrZero(t.Keyfile)
+	certFile := ptr.ValueOrZero(t.Certfile)
+	keyFile := ptr.ValueOrZero(t.Keyfile)
 
 	if certFile == "" || keyFile == "" {
 		return nil, nil // Not an error, just no client certs provided.

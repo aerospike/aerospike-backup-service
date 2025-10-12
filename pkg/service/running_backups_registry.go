@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/reugn/go-quartz/quartz"
 )
 
@@ -50,14 +50,14 @@ func makeRegistryKey(routineName string, job jobType) registryKey {
 
 // RunningBackupsRegistryImpl implements the RunningBackupsRegistry interface.
 type RunningBackupsRegistryImpl struct {
-	handlers       *util.SafeMap[registryKey, CancelableBackupHandler]
-	lastSuccessful *util.SafeMap[string, *model.BackupTime]
+	handlers       *collections.SafeMap[registryKey, CancelableBackupHandler]
+	lastSuccessful *collections.SafeMap[string, *model.BackupTime]
 
-	routineLocks  util.LockMap // Protects individual routines during synchronization
+	routineLocks  collections.LockMap // Protects individual routines during synchronization
 	ctx           context.Context
 	config        *model.Config
 	backupReader  BackupReader
-	routineCancel *util.SafeMap[string, context.CancelFunc]
+	routineCancel *collections.SafeMap[string, context.CancelFunc]
 }
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
@@ -72,9 +72,9 @@ func NewRunningBackupsRegistry(
 		ctx:            ctx,
 		config:         config,
 		backupReader:   backupReader,
-		handlers:       util.NewSafeMap[registryKey, CancelableBackupHandler](),
-		lastSuccessful: util.NewSafeMap[string, *model.BackupTime](),
-		routineCancel:  util.NewSafeMap[string, context.CancelFunc](),
+		handlers:       collections.NewSafeMap[registryKey, CancelableBackupHandler](),
+		lastSuccessful: collections.NewSafeMap[string, *model.BackupTime](),
+		routineCancel:  collections.NewSafeMap[string, context.CancelFunc](),
 	}
 }
 

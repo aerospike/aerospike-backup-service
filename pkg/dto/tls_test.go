@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -176,7 +176,7 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "valid complete mTLS configuration",
 			tls: &TLS{
-				Name:     util.Ptr("tls-name"),
+				Name:     ptr.Of("tls-name"),
 				Keyfile:  &certs.keyFile,
 				Certfile: &certs.certFile,
 			},
@@ -186,9 +186,9 @@ func TestTLS_Validate(t *testing.T) {
 			name: "valid mTLS with CA and password",
 			tls: &TLS{
 				CAFile:          &certs.caFile,
-				Name:            util.Ptr("tls-name"),
+				Name:            ptr.Of("tls-name"),
 				Keyfile:         &certs.keyFile,
-				KeyfilePassword: util.Ptr(""), // Empty password for unencrypted key
+				KeyfilePassword: ptr.Of(""), // Empty password for unencrypted key
 				Certfile:        &certs.certFile,
 			},
 			wantErr: false,
@@ -205,7 +205,7 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "mTLS missing keyfile",
 			tls: &TLS{
-				Name:     util.Ptr("tls-name"),
+				Name:     ptr.Of("tls-name"),
 				Certfile: &certs.certFile,
 			},
 			wantErr: true,
@@ -214,7 +214,7 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "mTLS missing certfile",
 			tls: &TLS{
-				Name:    util.Ptr("tls-name"),
+				Name:    ptr.Of("tls-name"),
 				Keyfile: &certs.keyFile,
 			},
 			wantErr: true,
@@ -223,7 +223,7 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "keyfile password without keyfile",
 			tls: &TLS{
-				KeyfilePassword: util.Ptr("password"),
+				KeyfilePassword: ptr.Of("password"),
 			},
 			wantErr: true,
 			errType: errMissingDependency,
@@ -231,7 +231,7 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "only name set should fail",
 			tls: &TLS{
-				Name: util.Ptr("tls-name"),
+				Name: ptr.Of("tls-name"),
 			},
 			wantErr: true,
 			errType: errMissingDependency,
@@ -255,8 +255,8 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "valid TLS with protocols and cipher suite",
 			tls: &TLS{
-				Protocols:   util.Ptr("TLSv1.2"),
-				CipherSuite: util.Ptr("TLS_AES_128_GCM_SHA256"),
+				Protocols:   ptr.Of("TLSv1.2"),
+				CipherSuite: ptr.Of("TLS_AES_128_GCM_SHA256"),
 			},
 			wantErr: false,
 		},
@@ -264,9 +264,9 @@ func TestTLS_Validate(t *testing.T) {
 			name: "complex valid configuration",
 			tls: &TLS{
 				CAFile:      &certs.caFile,
-				Protocols:   util.Ptr("TLSv1.2"),
-				CipherSuite: util.Ptr("TLS_AES_128_GCM_SHA256"),
-				Name:        util.Ptr("tls-name"),
+				Protocols:   ptr.Of("TLSv1.2"),
+				CipherSuite: ptr.Of("TLS_AES_128_GCM_SHA256"),
+				Name:        ptr.Of("tls-name"),
 				Keyfile:     &certs.keyFile,
 				Certfile:    &certs.certFile,
 			},
@@ -275,15 +275,15 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "invalid CA file path",
 			tls: &TLS{
-				CAFile: util.Ptr("/nonexistent/path/ca.pem"),
+				CAFile: ptr.Of("/nonexistent/path/ca.pem"),
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid key file path",
 			tls: &TLS{
-				Name:     util.Ptr("tls-name"),
-				Keyfile:  util.Ptr("/nonexistent/path/key.pem"),
+				Name:     ptr.Of("tls-name"),
+				Keyfile:  ptr.Of("/nonexistent/path/key.pem"),
 				Certfile: &certs.certFile,
 			},
 			wantErr: true,
@@ -291,9 +291,9 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "invalid cert file path",
 			tls: &TLS{
-				Name:     util.Ptr("tls-name"),
+				Name:     ptr.Of("tls-name"),
 				Keyfile:  &certs.keyFile,
-				Certfile: util.Ptr("/nonexistent/path/cert.pem"),
+				Certfile: ptr.Of("/nonexistent/path/cert.pem"),
 			},
 			wantErr: true,
 		},

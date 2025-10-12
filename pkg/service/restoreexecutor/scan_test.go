@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,20 +15,20 @@ func TestMakeRestoreConfig(t *testing.T) {
 		Policy: &model.RestorePolicy{
 			BinList:            []string{"bin1", "bin2"},
 			SetList:            []string{"set1", "set2"},
-			NoRecords:          util.Ptr(false),
-			NoIndexes:          util.Ptr(false),
-			NoUdfs:             util.Ptr(false),
-			Tps:                util.Ptr(500),
-			Bandwidth:          util.Ptr(int64(1024)),
-			ExtraTTL:           util.Ptr(int64(3600)),
-			Parallel:           util.Ptr(8),
-			BatchSize:          util.Ptr(128),
-			MaxAsyncBatches:    util.Ptr(10),
-			DisableBatchWrites: util.Ptr(true),
+			NoRecords:          ptr.Of(false),
+			NoIndexes:          ptr.Of(false),
+			NoUdfs:             ptr.Of(false),
+			Tps:                ptr.Of(500),
+			Bandwidth:          ptr.Of(int64(1024)),
+			ExtraTTL:           ptr.Of(int64(3600)),
+			Parallel:           ptr.Of(8),
+			BatchSize:          ptr.Of(128),
+			MaxAsyncBatches:    ptr.Of(10),
+			DisableBatchWrites: ptr.Of(true),
 
 			Namespace: &model.RestoreNamespace{
-				Source:      util.Ptr("ns_source"),
-				Destination: util.Ptr("ns_dest"),
+				Source:      ptr.Of("ns_source"),
+				Destination: ptr.Of("ns_dest"),
 			},
 
 			CompressionPolicy: &model.CompressionPolicy{
@@ -38,18 +38,18 @@ func TestMakeRestoreConfig(t *testing.T) {
 
 			EncryptionPolicy: &model.EncryptionPolicy{
 				Mode:      "aes-128",
-				KeyFile:   util.Ptr("key/file/path"),
-				KeySecret: util.Ptr("key-secret"),
-				KeyEnv:    util.Ptr("KEY_ENV_VAR"),
+				KeyFile:   ptr.Of("key/file/path"),
+				KeySecret: ptr.Of("key-secret"),
+				KeyEnv:    ptr.Of("KEY_ENV_VAR"),
 			},
 		},
 		SecretAgent: &model.SecretAgent{
 			ConnectionType: "tcp",
 			Address:        "127.0.0.1",
-			Port:           util.Ptr(model.Port(1234)),
-			Timeout:        util.Ptr(2000),
-			TLSCAString:    util.Ptr("ca-cert"),
-			IsBase64:       util.Ptr(true),
+			Port:           ptr.Of(model.Port(1234)),
+			Timeout:        ptr.Of(2000),
+			TLSCAString:    ptr.Of("ca-cert"),
+			IsBase64:       ptr.Of(true),
 		},
 	}
 

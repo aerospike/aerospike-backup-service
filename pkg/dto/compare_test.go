@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,22 +20,22 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			name: "identical configs",
 			current: BackupServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: util.Ptr("localhost"),
-					Port:    util.Ptr(Port(8080)),
+					Address: ptr.Of("localhost"),
+					Port:    ptr.Of(Port(8080)),
 				},
 				Logger: &LoggerConfig{
-					Level:  util.Ptr("INFO"),
-					Format: util.Ptr("JSON"),
+					Level:  ptr.Of("INFO"),
+					Format: ptr.Of("JSON"),
 				},
 			},
 			other: BackupServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: util.Ptr("localhost"),
-					Port:    util.Ptr(Port(8080)),
+					Address: ptr.Of("localhost"),
+					Port:    ptr.Of(Port(8080)),
 				},
 				Logger: &LoggerConfig{
-					Level:  util.Ptr("INFO"),
-					Format: util.Ptr("JSON"),
+					Level:  ptr.Of("INFO"),
+					Format: ptr.Of("JSON"),
 				},
 			},
 			errors: nil,
@@ -44,14 +44,14 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			name: "changed http server config",
 			current: BackupServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: util.Ptr("localhost"),
-					Port:    util.Ptr(Port(8080)),
+					Address: ptr.Of("localhost"),
+					Port:    ptr.Of(Port(8080)),
 				},
 			},
 			other: BackupServiceConfig{
 				HTTPServer: &HTTPServerConfig{
-					Address: util.Ptr("0.0.0.0"),
-					Port:    util.Ptr(Port(9090)),
+					Address: ptr.Of("0.0.0.0"),
+					Port:    ptr.Of(Port(9090)),
 				},
 			},
 			errors: []string{
@@ -63,16 +63,16 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 			name: "changed logger config",
 			current: BackupServiceConfig{
 				Logger: &LoggerConfig{
-					Level:        util.Ptr("INFO"),
-					Format:       util.Ptr("JSON"),
-					StdoutWriter: util.Ptr(true),
+					Level:        ptr.Of("INFO"),
+					Format:       ptr.Of("JSON"),
+					StdoutWriter: ptr.Of(true),
 				},
 			},
 			other: BackupServiceConfig{
 				Logger: &LoggerConfig{
-					Level:        util.Ptr("DEBUG"),
-					Format:       util.Ptr("PLAIN"),
-					StdoutWriter: util.Ptr(false),
+					Level:        ptr.Of("DEBUG"),
+					Format:       ptr.Of("PLAIN"),
+					StdoutWriter: ptr.Of(false),
 				},
 			},
 			errors: []string{
@@ -186,13 +186,13 @@ func TestRateLimiterConfig_Compare(t *testing.T) {
 		{
 			name: "identical configs",
 			current: &RateLimiterConfig{
-				Tps:       util.Ptr(100),
-				Size:      util.Ptr(1000),
+				Tps:       ptr.Of(100),
+				Size:      ptr.Of(1000),
 				WhiteList: []string{"127.0.0.1", "localhost"},
 			},
 			other: &RateLimiterConfig{
-				Tps:       util.Ptr(100),
-				Size:      util.Ptr(1000),
+				Tps:       ptr.Of(100),
+				Size:      ptr.Of(1000),
 				WhiteList: []string{"127.0.0.1", "localhost"},
 			},
 			errors: nil,
@@ -200,13 +200,13 @@ func TestRateLimiterConfig_Compare(t *testing.T) {
 		{
 			name: "changed values",
 			current: &RateLimiterConfig{
-				Tps:       util.Ptr(100),
-				Size:      util.Ptr(1000),
+				Tps:       ptr.Of(100),
+				Size:      ptr.Of(1000),
 				WhiteList: []string{"127.0.0.1"},
 			},
 			other: &RateLimiterConfig{
-				Tps:       util.Ptr(200),
-				Size:      util.Ptr(2000),
+				Tps:       ptr.Of(200),
+				Size:      ptr.Of(2000),
 				WhiteList: []string{"127.0.0.1", "localhost"},
 			},
 			errors: []string{
@@ -248,32 +248,32 @@ func TestHTTPServerConfig_Compare(t *testing.T) {
 		{
 			name: "identical configs",
 			current: &HTTPServerConfig{
-				Address:     util.Ptr("localhost"),
-				Port:        util.Ptr(Port(8080)),
-				ContextPath: util.Ptr("/api"),
-				Timeout:     util.Ptr(int64(5000)),
+				Address:     ptr.Of("localhost"),
+				Port:        ptr.Of(Port(8080)),
+				ContextPath: ptr.Of("/api"),
+				Timeout:     ptr.Of(int64(5000)),
 			},
 			other: &HTTPServerConfig{
-				Address:     util.Ptr("localhost"),
-				Port:        util.Ptr(Port(8080)),
-				ContextPath: util.Ptr("/api"),
-				Timeout:     util.Ptr(int64(5000)),
+				Address:     ptr.Of("localhost"),
+				Port:        ptr.Of(Port(8080)),
+				ContextPath: ptr.Of("/api"),
+				Timeout:     ptr.Of(int64(5000)),
 			},
 			errors: nil,
 		},
 		{
 			name: "all fields changed",
 			current: &HTTPServerConfig{
-				Address:     util.Ptr("localhost"),
-				Port:        util.Ptr(Port(8080)),
-				ContextPath: util.Ptr("/api"),
-				Timeout:     util.Ptr(int64(5000)),
+				Address:     ptr.Of("localhost"),
+				Port:        ptr.Of(Port(8080)),
+				ContextPath: ptr.Of("/api"),
+				Timeout:     ptr.Of(int64(5000)),
 			},
 			other: &HTTPServerConfig{
-				Address:     util.Ptr("0.0.0.0"),
-				Port:        util.Ptr(Port(9090)),
-				ContextPath: util.Ptr("/v1/api"),
-				Timeout:     util.Ptr(int64(10000)),
+				Address:     ptr.Of("0.0.0.0"),
+				Port:        ptr.Of(Port(9090)),
+				ContextPath: ptr.Of("/v1/api"),
+				Timeout:     ptr.Of(int64(10000)),
 			},
 			errors: []string{
 				"Address changed: localhost -> 0.0.0.0",
@@ -315,18 +315,18 @@ func TestLoggerConfig_Compare(t *testing.T) {
 		{
 			name: "identical configs",
 			current: &LoggerConfig{
-				Level:        util.Ptr("INFO"),
-				Format:       util.Ptr("JSON"),
-				StdoutWriter: util.Ptr(true),
+				Level:        ptr.Of("INFO"),
+				Format:       ptr.Of("JSON"),
+				StdoutWriter: ptr.Of(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
 					MaxSize:  100,
 				},
 			},
 			other: &LoggerConfig{
-				Level:        util.Ptr("INFO"),
-				Format:       util.Ptr("JSON"),
-				StdoutWriter: util.Ptr(true),
+				Level:        ptr.Of("INFO"),
+				Format:       ptr.Of("JSON"),
+				StdoutWriter: ptr.Of(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
 					MaxSize:  100,
@@ -337,17 +337,17 @@ func TestLoggerConfig_Compare(t *testing.T) {
 		{
 			name: "all fields changed",
 			current: &LoggerConfig{
-				Level:        util.Ptr("INFO"),
-				Format:       util.Ptr("JSON"),
-				StdoutWriter: util.Ptr(true),
+				Level:        ptr.Of("INFO"),
+				Format:       ptr.Of("JSON"),
+				StdoutWriter: ptr.Of(true),
 				FileWriter: &FileLoggerConfig{
 					Filename: "app.log",
 				},
 			},
 			other: &LoggerConfig{
-				Level:        util.Ptr("DEBUG"),
-				Format:       util.Ptr("PLAIN"),
-				StdoutWriter: util.Ptr(false),
+				Level:        ptr.Of("DEBUG"),
+				Format:       ptr.Of("PLAIN"),
+				StdoutWriter: ptr.Of(false),
 				FileWriter: &FileLoggerConfig{
 					Filename: "new.log",
 				},

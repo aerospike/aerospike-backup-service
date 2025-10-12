@@ -7,7 +7,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asbx"
@@ -57,8 +57,8 @@ func makeXdrRestoreConfig(restoreRequest *model.RestoreRequest,
 		}
 	}
 
-	config.RecordsPerSecond = util.ValueOrZero(restoreRequest.Policy.Tps)
-	config.Bandwidth = util.ValueOrZero(restoreRequest.Policy.Bandwidth)
+	config.RecordsPerSecond = ptr.ValueOrZero(restoreRequest.Policy.Tps)
+	config.Bandwidth = ptr.ValueOrZero(restoreRequest.Policy.Bandwidth)
 	config.Parallel = restoreRequest.Policy.GetParallelOrDefault()
 	config.MaxAsyncBatches = restoreRequest.Policy.GetMaxAsyncBatchesOrDefault()
 	config.BatchSize = restoreRequest.Policy.GetBatchSizeOrDefault()

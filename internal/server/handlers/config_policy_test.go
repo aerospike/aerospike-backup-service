@@ -10,7 +10,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,7 +25,7 @@ func TestAddPolicy(t *testing.T) {
 		{
 			name:           "successful add",
 			policyName:     "test-policy",
-			requestBody:    marshalToString(dto.BackupPolicy{Parallel: util.Ptr(8)}),
+			requestBody:    marshalToString(dto.BackupPolicy{Parallel: ptr.Of(8)}),
 			expectedStatus: http.StatusCreated,
 		},
 		{

@@ -7,6 +7,7 @@ linters:
     - dupl
     - errcheck
     - errorlint
+    - exhaustive
     - funlen
     - goconst
     - gocritic
@@ -21,6 +22,7 @@ linters:
     - nestif
     - nlreturn
     - nolintlint
+    - nilerr
     - prealloc
     - predeclared
     - promlinter

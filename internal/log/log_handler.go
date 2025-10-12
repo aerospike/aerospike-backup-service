@@ -1,4 +1,4 @@
-package util
+package log
 
 import (
 	"fmt"
@@ -17,9 +17,8 @@ func init() {
 	quartz.Sep = "_"
 }
 
-// LogHandler returns the application log handler with the
-// configured level.
-func LogHandler(config *model.LoggerConfig) slog.Handler {
+// NewHandler returns the application log handler with the configured level.
+func NewHandler(config *model.LoggerConfig) slog.Handler {
 	const addSource = true
 	writer := newRedactingWriter(logWriter(config))
 	switch strings.ToUpper(config.GetFormatOrDefault()) {

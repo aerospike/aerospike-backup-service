@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // NewTimeBoundsFromString creates a TimeBounds from the string representation of
@@ -38,5 +38,5 @@ func parseTimestamp(value, field string) (*time.Time, error) {
 		return nil, errValidationNegative(field, intValue)
 	}
 
-	return util.Ptr(time.UnixMilli(intValue)), nil
+	return ptr.Of(time.UnixMilli(intValue)), nil
 }

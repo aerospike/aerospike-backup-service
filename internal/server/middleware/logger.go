@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 )
 
 const maxLogSize = 10_000 // Maximum size of request body to log in bytes.

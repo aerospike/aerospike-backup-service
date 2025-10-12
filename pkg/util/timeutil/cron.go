@@ -1,10 +1,10 @@
-package util
+package timeutil
 
 import (
 	"log/slog"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/reugn/go-quartz/quartz"
 )
 

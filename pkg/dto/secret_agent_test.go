@@ -3,7 +3,7 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -116,7 +116,7 @@ func TestInvalidCertFile(t *testing.T) {
 	agent := &SecretAgent{
 		Address:        "localhost",
 		ConnectionType: "tcp",
-		TLSCAString:    util.Ptr("invalid-cert-file"),
+		TLSCAString:    ptr.Of("invalid-cert-file"),
 	}
 
 	err := agent.validate()

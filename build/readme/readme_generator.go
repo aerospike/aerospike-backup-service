@@ -12,7 +12,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
 )
@@ -54,8 +54,8 @@ var cluster = dto.AerospikeCluster{
 		HostName: "host.docker.internal", Port: 3000},
 	},
 	Credentials: &dto.Credentials{
-		User:     util.Ptr("user"),
-		Password: util.Ptr("password"),
+		User:     ptr.Of("user"),
+		Password: ptr.Of("password"),
 	},
 }
 
@@ -67,7 +67,7 @@ var jsonExamples = map[string]any{
 			SourceCluster: "absDefaultCluster",
 			Storage:       "local",
 			IntervalCron:  "@yearly",
-			Namespaces:    util.Ptr([]string{"test-namespace"}),
+			Namespaces:    ptr.Of([]string{"test-namespace"}),
 		},
 		"routine2": {
 			BackupPolicy:     "removeFilesPolicy",
@@ -75,7 +75,7 @@ var jsonExamples = map[string]any{
 			Storage:          "local",
 			IntervalCron:     "@monthly",
 			IncrIntervalCron: "@daily",
-			Namespaces:       util.Ptr([]string{"test-namespace"}),
+			Namespaces:       ptr.Of([]string{"test-namespace"}),
 			SetList:          []string{"backupSet"},
 			BinList:          []string{"backupBin"},
 		},
@@ -112,7 +112,7 @@ var jsonExamples = map[string]any{
 			Cluster: &cluster,
 		},
 		Policy: &dto.RestorePolicy{
-			NoGeneration: util.Ptr(true),
+			NoGeneration: ptr.Of(true),
 		},
 		StorageConfig: dto.StorageConfig{
 			Storage: &dto.Storage{
@@ -139,7 +139,7 @@ var jsonExamples = map[string]any{
 			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 			FinishTime:       nil,
 			PercentageDone:   50,
-			EstimatedEndTime: util.Ptr(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
 			Metrics: &dto.Metrics{
 				RecordsPerSecond:   1000,
 				KilobytesPerSecond: 30000,
@@ -165,7 +165,7 @@ var jsonExamples = map[string]any{
 			StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 			FinishTime:       nil,
 			PercentageDone:   50,
-			EstimatedEndTime: util.Ptr(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
 			Metrics: &dto.Metrics{
 				RecordsPerSecond:   1000,
 				KilobytesPerSecond: 30000,
@@ -194,7 +194,7 @@ var jsonExamples = map[string]any{
 				StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 				FinishTime:       nil,
 				PercentageDone:   50,
-				EstimatedEndTime: util.Ptr(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+				EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
 				Metrics: &dto.Metrics{
 					RecordsPerSecond:   1000,
 					KilobytesPerSecond: 30000,

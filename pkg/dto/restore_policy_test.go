@@ -3,26 +3,26 @@ package dto
 import (
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRestorePolicy_ValidPolicy(t *testing.T) {
 	policy := &RestorePolicy{
-		Parallel:           util.Ptr(8),
-		TotalTimeout:       util.Ptr(int64(2000)),
-		SocketTimeout:      util.Ptr(int64(1000)),
-		MaxAsyncBatches:    util.Ptr(32),
-		BatchSize:          util.Ptr(128),
-		Bandwidth:          util.Ptr(int64(50000)),
-		Tps:                util.Ptr(4000),
-		Replace:            util.Ptr(true),
-		NoGeneration:       util.Ptr(false),
-		ExtraTTL:           util.Ptr(int64(86400)),
-		DisableBatchWrites: util.Ptr(false),
-		NoRecords:          util.Ptr(false),
-		NoIndexes:          util.Ptr(false),
-		NoUdfs:             util.Ptr(false),
+		Parallel:           ptr.Of(8),
+		TotalTimeout:       ptr.Of(int64(2000)),
+		SocketTimeout:      ptr.Of(int64(1000)),
+		MaxAsyncBatches:    ptr.Of(32),
+		BatchSize:          ptr.Of(128),
+		Bandwidth:          ptr.Of(int64(50000)),
+		Tps:                ptr.Of(4000),
+		Replace:            ptr.Of(true),
+		NoGeneration:       ptr.Of(false),
+		ExtraTTL:           ptr.Of(int64(86400)),
+		DisableBatchWrites: ptr.Of(false),
+		NoRecords:          ptr.Of(false),
+		NoIndexes:          ptr.Of(false),
+		NoUdfs:             ptr.Of(false),
 		SetList:            []string{"set1", "set2"},
 		BinList:            []string{"bin1", "bin2"},
 	}
@@ -38,7 +38,7 @@ func TestRestorePolicy_NilPolicy(t *testing.T) {
 
 func TestRestorePolicy_InvalidTotalTimeout(t *testing.T) {
 	policy := &RestorePolicy{
-		TotalTimeout: util.Ptr(int64(-1)),
+		TotalTimeout: ptr.Of(int64(-1)),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)
@@ -48,7 +48,7 @@ func TestRestorePolicy_InvalidTotalTimeout(t *testing.T) {
 
 func TestRestorePolicy_InvalidSocketTimeout(t *testing.T) {
 	policy := &RestorePolicy{
-		SocketTimeout: util.Ptr(int64(-1)),
+		SocketTimeout: ptr.Of(int64(-1)),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)
@@ -58,7 +58,7 @@ func TestRestorePolicy_InvalidSocketTimeout(t *testing.T) {
 
 func TestRestorePolicy_SocketTimeoutZero(t *testing.T) {
 	policy := &RestorePolicy{
-		SocketTimeout: util.Ptr(int64(0)),
+		SocketTimeout: ptr.Of(int64(0)),
 	}
 	err := policy.Validate()
 	assert.NoError(t, err)
@@ -66,7 +66,7 @@ func TestRestorePolicy_SocketTimeoutZero(t *testing.T) {
 
 func TestRestorePolicy_InvalidParallel(t *testing.T) {
 	policy := &RestorePolicy{
-		Parallel: util.Ptr(0),
+		Parallel: ptr.Of(0),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)
@@ -76,7 +76,7 @@ func TestRestorePolicy_InvalidParallel(t *testing.T) {
 
 func TestRestorePolicy_InvalidMaxAsyncBatches(t *testing.T) {
 	policy := &RestorePolicy{
-		MaxAsyncBatches: util.Ptr(0),
+		MaxAsyncBatches: ptr.Of(0),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)
@@ -86,7 +86,7 @@ func TestRestorePolicy_InvalidMaxAsyncBatches(t *testing.T) {
 
 func TestRestorePolicy_InvalidBatchSize(t *testing.T) {
 	policy := &RestorePolicy{
-		BatchSize: util.Ptr(0),
+		BatchSize: ptr.Of(0),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)
@@ -96,7 +96,7 @@ func TestRestorePolicy_InvalidBatchSize(t *testing.T) {
 
 func TestRestorePolicy_InvalidBandwidth(t *testing.T) {
 	policy := &RestorePolicy{
-		Bandwidth: util.Ptr(int64(-1)),
+		Bandwidth: ptr.Of(int64(-1)),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)
@@ -106,7 +106,7 @@ func TestRestorePolicy_InvalidBandwidth(t *testing.T) {
 
 func TestRestorePolicy_InvalidTps(t *testing.T) {
 	policy := &RestorePolicy{
-		Tps: util.Ptr(0),
+		Tps: ptr.Of(0),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)
@@ -116,8 +116,8 @@ func TestRestorePolicy_InvalidTps(t *testing.T) {
 
 func TestRestorePolicy_MutuallyExclusiveReplaceUnique(t *testing.T) {
 	policy := &RestorePolicy{
-		Replace: util.Ptr(true),
-		Unique:  util.Ptr(true),
+		Replace: ptr.Of(true),
+		Unique:  ptr.Of(true),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)
@@ -128,7 +128,7 @@ func TestRestorePolicy_MutuallyExclusiveReplaceUnique(t *testing.T) {
 
 func TestRestorePolicy_InvalidExtraTTL(t *testing.T) {
 	policy := &RestorePolicy{
-		ExtraTTL: util.Ptr(int64(-1)),
+		ExtraTTL: ptr.Of(int64(-1)),
 	}
 	err := policy.Validate()
 	assert.Error(t, err)

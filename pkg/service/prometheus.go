@@ -238,5 +238,7 @@ func observeBackupEvent(routine string, backupType jobType, outcome BackupOutcom
 		} else {
 			incrBackupSkippedCounter.Inc()
 		}
+	case BackupOutcomeRetry:
+		// No deprecated counter for retry.
 	}
 }

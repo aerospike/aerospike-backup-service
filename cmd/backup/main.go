@@ -12,18 +12,18 @@ import (
 	"time"
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/handlers"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util"
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
-	u "github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	u "github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/reugn/go-quartz/quartz"
 	"github.com/spf13/cobra"
 )
@@ -73,7 +73,7 @@ func run() int {
 		slog.Error("Error in rootCmd.Execute", attr.Error(err))
 	}
 
-	return util.ToExitVal(err)
+	return log.ToExitVal(err)
 }
 
 func startService(configFile string, remote bool) error {
@@ -168,7 +168,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 
 func setDefaultLogger(loggerConfig *model.LoggerConfig) *slog.Logger {
 	appLogger := slog.New(
-		util.LogHandler(loggerConfig),
+		log.NewHandler(loggerConfig),
 	)
 	slog.SetDefault(appLogger)
 	return appLogger

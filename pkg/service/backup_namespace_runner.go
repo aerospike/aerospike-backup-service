@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/util/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -78,7 +78,7 @@ func (op *BackupNamespaceRunner) Run(
 				return nil
 			}
 			metadata := model.NewBackupMetadata(
-				stats, namespace, util.ValueOrZero(timeBounds.FromTime), startTime, backupRoutine.BackupPolicy,
+				stats, namespace, ptr.ValueOrZero(timeBounds.FromTime), startTime, backupRoutine.BackupPolicy,
 			)
 			return op.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
