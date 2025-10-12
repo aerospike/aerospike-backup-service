@@ -12,6 +12,7 @@ import (
 
 // ConfigApplier is responsible for applying new configuration to the service.
 type ConfigApplier interface {
+	// ApplyNewConfig applies new configuration to the service.
 	ApplyNewConfig() error
 }
 

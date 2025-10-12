@@ -22,6 +22,7 @@ type ClientManager interface {
 }
 
 type Cluster interface {
+	// Cluster exposes the cluster object to the user
 	Cluster() *as.Cluster
 }
 

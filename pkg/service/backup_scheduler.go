@@ -28,6 +28,7 @@ const (
 )
 
 type Scheduler interface {
+	// ScheduleJob schedules a backup job with the given trigger.
 	ScheduleJob(jobDetail *quartz.JobDetail, trigger quartz.Trigger) error
 }
 

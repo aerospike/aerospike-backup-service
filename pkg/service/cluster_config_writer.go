@@ -16,6 +16,7 @@ import (
 
 // ClusterConfigWriter handles writing cluster configuration to storage.
 type ClusterConfigWriter interface {
+	// Write writes the cluster configuration for the given routine and timestamp.
 	Write(ctx context.Context, routineName string, timestamp time.Time) error
 }
 

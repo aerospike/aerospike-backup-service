@@ -15,6 +15,7 @@ import (
 
 // ConfigRetriever is used to read saved Aerospike configuration from backup.
 type ConfigRetriever interface {
+	// RetrieveConfiguration returns backed up Aerospike configuration.
 	RetrieveConfiguration(context.Context, string, time.Time) ([]byte, error)
 }
 

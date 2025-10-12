@@ -13,6 +13,7 @@ import (
 // that exist in their respective Aerospike source clusters.
 // This implementation logs warnings but never returns errors.
 type NamespaceValidator interface {
+	// Validate validates all routines in config against their respective clusters.
 	Validate(cfg *model.Config)
 }
 

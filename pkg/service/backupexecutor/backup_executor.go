@@ -13,6 +13,7 @@ import (
 
 // Backup defines the interface for running backups.
 type Backup interface {
+	// Run runs the backup and returns a handler for monitoring progress.
 	Run(
 		ctx context.Context,
 		client aerospike.Backuper,

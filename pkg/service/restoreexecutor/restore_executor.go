@@ -11,6 +11,7 @@ import (
 
 // Restore represents a restore service.
 type Restore interface {
+	// Run executes the restore process and returns a restore handler for monitoring progress.
 	Run(
 		ctx context.Context,
 		client aerospike.Restorer,

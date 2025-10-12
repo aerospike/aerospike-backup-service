@@ -56,6 +56,13 @@ linters:
       key-naming-case: camel
       forbidden-keys:
         - err
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - checkPublicInterface
+          exclude:
+            - test
   exclusions:
     generated: lax
     presets:

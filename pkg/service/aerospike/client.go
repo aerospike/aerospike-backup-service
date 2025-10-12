@@ -42,6 +42,7 @@ type Client interface {
 	Backuper
 	Restorer
 
+	// AerospikeClient returns the underlying Aerospike client.
 	AerospikeClient() backup.AerospikeClient
 }
 

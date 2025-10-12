@@ -13,7 +13,9 @@ import (
 
 // ClientFactory defines an interface for creating and checking clients.
 type ClientFactory interface {
+	// NewClientWithPolicyAndHost creates a new Aerospike client with the given policy and hosts.
 	NewClientWithPolicyAndHost(*model.AerospikeCluster) (backup.AerospikeClient, error)
+	// NewBackupClient creates a new backup client using the given Aerospike client and options.
 	NewBackupClient(backup.AerospikeClient, ...backup.ClientOpt) (Client, error)
 }
 
