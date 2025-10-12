@@ -61,6 +61,7 @@ linters:
         - name: exported
           arguments:
             - checkPublicInterface
+            - checkPrivateReceivers
           exclude:
             - test
   exclusions:
