@@ -27,10 +27,10 @@ func setupBaseConfig() *model.Config {
 		Storage:       &model.LocalStorage{Path: "test-path"},
 		SourceCluster: &model.AerospikeCluster{},
 		BackupPolicy: &model.BackupPolicy{
-			RetryPolicy: &models.RetryPolicy{
-				BaseTimeout: 100 * time.Millisecond,
-				MaxRetries:  1,
-				Multiplier:  1,
+			RetryPolicy: &model.RetryPolicy{
+				BaseTimeout: ptr.Of(100 * time.Millisecond),
+				MaxRetries:  ptr.Of(1),
+				Multiplier:  ptr.Of(1.0),
 			},
 			WithClusterConfig: ptr.Of(true),
 		},

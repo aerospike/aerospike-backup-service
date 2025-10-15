@@ -46,6 +46,17 @@ func (p *CompressionPolicy) ToModel() *model.CompressionPolicy {
 	}
 }
 
+func newCompressionPolicyFromModel(m *model.CompressionPolicy) *CompressionPolicy {
+	if m == nil {
+		return nil
+	}
+
+	c := &CompressionPolicy{}
+	c.fromModel(m)
+
+	return c
+}
+
 func (p *CompressionPolicy) fromModel(m *model.CompressionPolicy) {
 	p.Mode = m.Mode
 	p.Level = m.Level

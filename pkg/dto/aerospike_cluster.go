@@ -1,4 +1,3 @@
-//nolint:lll
 package dto
 
 import (
@@ -158,6 +157,8 @@ func (a *AerospikeCluster) seedNodesToModel() []model.SeedNode {
 
 // Credentials represents authentication details to the Aerospike cluster.
 // @Description Credentials represents authentication details to the Aerospike cluster.
+//
+//nolint:lll
 type Credentials struct {
 	SecretAgentConfig `yaml:",inline"`
 	// The username for the cluster authentication.
