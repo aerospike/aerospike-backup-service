@@ -101,8 +101,14 @@ func (p *BackupPolicy) Validate() error {
 	if p.SocketTimeout != nil && *p.SocketTimeout < 0 {
 		return errValidationNegative("socket-timeout", *p.SocketTimeout)
 	}
+	if p.SocketTimeout != nil && *p.SocketTimeout > maxTimeout {
+		return errValidationInvalidValue("socket-timeout", *p.SocketTimeout, "should not exceed 24 hours")
+	}
 	if p.TotalTimeout != nil && *p.TotalTimeout < 0 {
 		return errValidationNegative("total-timeout", *p.TotalTimeout)
+	}
+	if p.TotalTimeout != nil && *p.TotalTimeout > maxTimeout {
+		return errValidationInvalidValue("total-timeout", *p.TotalTimeout, "should not exceed 24 hours")
 	}
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retryPolicy validation failed: %w", err)
