@@ -62,7 +62,8 @@ func TestNewRunningJob(t *testing.T) {
 
 func TestDoneRestoreJobStatus(t *testing.T) {
 	job := &restoreJob{
-		status: model.JobStatusDone,
+		status:       model.JobStatusDone,
+		totalRecords: 50,
 	}
 
 	status := RestoreJobStatus(job)
