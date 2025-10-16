@@ -252,8 +252,8 @@ func TestRetryPolicy_RoundTrip(t *testing.T) {
 	})
 }
 
-func RoundTrip[T ToModeler[M], M any](t *testing.T,
-	makeDTO func(t *rapid.T) T,
+func runRoundTripTest[T ToModeler[M], M any](t *testing.T,
+	makeDTO func(rt *rapid.T) T,
 	fromModel func(*M) T,
 ) {
 	t.Helper()

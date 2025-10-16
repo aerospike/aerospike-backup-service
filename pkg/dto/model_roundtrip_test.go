@@ -13,23 +13,29 @@ import (
 func Test_RetryPolicy_RoundTrip(t *testing.T) {
 	genDTO := RapidStruct[RetryPolicy](defaultRegistry())
 
-	RoundTrip[*RetryPolicy, model.RetryPolicy](t, func(t *rapid.T) *RetryPolicy {
-		return ptr.Of(genDTO.Draw(t, "retry-policy"))
-	}, newRetryPolicyFromModel)
+	runRoundTripTest[*RetryPolicy, model.RetryPolicy](
+		t,
+		func(rt *rapid.T) *RetryPolicy { return ptr.Of(genDTO.Draw(rt, "retry-policy")) },
+		newRetryPolicyFromModel,
+	)
 }
 
 func Test_PortRange_RoundTrip(t *testing.T) {
 	genDTO := RapidStruct[PortRange](defaultRegistry())
 
-	RoundTrip[*PortRange, model.PortRange](t, func(t *rapid.T) *PortRange {
-		return ptr.Of(genDTO.Draw(t, "port"))
-	}, newPortRangeFromModel)
+	runRoundTripTest[*PortRange, model.PortRange](
+		t,
+		func(rt *rapid.T) *PortRange { return ptr.Of(genDTO.Draw(rt, "port")) },
+		newPortRangeFromModel,
+	)
 }
 
 func Test_Compression_RoundTrip(t *testing.T) {
 	genDTO := RapidStruct[CompressionPolicy](defaultRegistry())
 
-	RoundTrip[*CompressionPolicy, model.CompressionPolicy](t, func(t *rapid.T) *CompressionPolicy {
-		return ptr.Of(genDTO.Draw(t, "port"))
-	}, newCompressionPolicyFromModel)
+	runRoundTripTest[*CompressionPolicy, model.CompressionPolicy](
+		t,
+		func(rt *rapid.T) *CompressionPolicy { return ptr.Of(genDTO.Draw(rt, "compression")) },
+		newCompressionPolicyFromModel,
+	)
 }
