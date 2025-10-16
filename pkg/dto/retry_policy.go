@@ -8,15 +8,15 @@ import (
 // @Description RetryPolicy defines the configuration for retry attempts in case of failures.
 type RetryPolicy struct {
 	// BaseTimeout is the initial delay between retry attempts, in milliseconds.
-	BaseTimeout *int64 `json:"base-timeout" yaml:"base-timeout" extensions:"x-nullable"`
+	BaseTimeout *int64 `json:"base-timeout,omitempty" yaml:"base-timeout,omitempty" extensions:"x-nullable"`
 
 	// Multiplier is used to increase the delay between subsequent retry attempts.
 	// The actual delay is calculated as: BaseTimeout * (Multiplier ^ attemptNumber)
-	Multiplier *float64 `json:"multiplier" yaml:"multiplier" extensions:"x-nullable"`
+	Multiplier *float64 `json:"multiplier,omitempty" yaml:"multiplier,omitempty" extensions:"x-nullable"`
 
 	// MaxRetries is the maximum number of retry attempts that will be made.
 	// If set to 0, no retries will be performed.
-	MaxRetries *int `json:"max-retries" yaml:"max-retries" extensions:"x-nullable"`
+	MaxRetries *int `json:"max-retries,omitempty" yaml:"max-retries,omitempty" extensions:"x-nullable"`
 }
 
 // Validate checks if the RetryPolicy fields are valid.
