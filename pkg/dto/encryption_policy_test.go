@@ -42,7 +42,7 @@ func TestEncryptionPolicy_Validate_Invalid(t *testing.T) {
 	tests := map[string]testCase{
 		"empty mode": {
 			policy:    EncryptionPolicy{},
-			wantIsErr: errInvalidValue, // expecting "empty field" for Mode
+			wantIsErr: errEmpty,
 		},
 		"invalid mode value": {
 			policy: EncryptionPolicy{

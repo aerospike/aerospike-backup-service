@@ -29,6 +29,9 @@ func (p *EncryptionPolicy) Validate() error {
 	if p == nil {
 		return nil
 	}
+	if p.Mode == "" {
+		return errValidationEmptyField("mode")
+	}
 	if p.Mode != EncryptNone && p.Mode != EncryptAES128 && p.Mode != EncryptAES256 {
 		return errValidationInvalidValue("mode", p.Mode, "NONE,AES128,AES256")
 	}
