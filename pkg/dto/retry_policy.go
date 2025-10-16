@@ -27,7 +27,7 @@ func (r *RetryPolicy) Validate() error {
 
 	if r.BaseTimeout != nil {
 		if *r.BaseTimeout > maxTimeout {
-			return errValidationInvalidValue("base-timeout", *r.BaseTimeout, "should not exceed 24 hours")
+			return errValidationExceed("base-timeout", *r.BaseTimeout, maxTimeout)
 		}
 
 		if *r.BaseTimeout <= 0 {
