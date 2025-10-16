@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/aerospike/backup-go/models"
 )
 
 // BackupPolicy represents a scheduled backup policy.
@@ -86,12 +87,12 @@ func (p *BackupPolicy) CopyWithNoRecords() *BackupPolicy {
 	}
 }
 
-func (p *BackupPolicy) GetRetryPolicyOrDefault() RetryPolicy {
+func (p *BackupPolicy) GetRetryPolicyOrDefault() *models.RetryPolicy {
 	if p != nil && p.RetryPolicy != nil {
-		return *p.RetryPolicy
+		return p.RetryPolicy.Backup()
 	}
 
-	return *defaultConfig.backupPolicy.RetryPolicy
+	return defaultConfig.backupPolicy.RetryPolicy.Backup()
 }
 
 func (p *BackupPolicy) GetParallelOrDefault() int {

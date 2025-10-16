@@ -68,7 +68,7 @@ func NewBackupComponents(
 func newOrchestrator(routineName string, config *model.Config, h *BackupComponents) *BackupRoutineOrchestrator {
 	routine, _ := config.Routine(routineName)
 	logger := slog.With(attr.Routine(routineName))
-	retry := newRetryExecutor(*routine.BackupPolicy.RetryPolicy.Backup(), logger)
+	retry := newRetryExecutor(*routine.BackupPolicy.GetRetryPolicyOrDefault(), logger)
 	return &BackupRoutineOrchestrator{
 		routineName:         routineName,
 		routine:             routine,
