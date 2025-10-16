@@ -45,7 +45,7 @@ func makeXdrRestoreConfig(restoreRequest *model.RestoreRequest,
 ) *backup.ConfigRestore {
 	config := backup.NewDefaultRestoreConfig()
 
-	config.RetryPolicy = restoreRequest.Policy.GetRetryPolicyOrDefault()
+	config.RetryPolicy = restoreRequest.Policy.RetryPolicy.Restore()
 
 	config.WritePolicy = makeWritePolicy(restoreRequest)
 	config.WritePolicy.RecordExistsAction = as.UPDATE

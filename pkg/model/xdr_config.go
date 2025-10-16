@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"github.com/aerospike/backup-go/models"
 )
 
 type XDRConfig struct {
@@ -39,7 +37,7 @@ type XDRConfig struct {
 	// To measure recovery state and lag.
 	PollingPeriod *time.Duration
 	// Retry policy for info commands.
-	InfoRetryPolicy *models.RetryPolicy
+	InfoRetryPolicy *RetryPolicy
 }
 
 // GetMaxConnsOrDefault returns MaxConns value or default.
@@ -99,7 +97,7 @@ func (c *XDRConfig) GetAckQueueSizeOrDefault() int {
 }
 
 // GetInfoRetryPolicyOrDefault returns InfoRetryPolicy value or default.
-func (c *XDRConfig) GetInfoRetryPolicyOrDefault() *models.RetryPolicy {
+func (c *XDRConfig) GetInfoRetryPolicyOrDefault() *RetryPolicy {
 	if c.InfoRetryPolicy != nil {
 		return c.InfoRetryPolicy
 	}

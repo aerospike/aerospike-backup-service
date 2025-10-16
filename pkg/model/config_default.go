@@ -37,20 +37,20 @@ var defaultConfig = struct {
 		},
 	},
 	backupPolicy: BackupPolicy{
-		RetryPolicy: &models.RetryPolicy{
-			BaseTimeout: 1 * time.Minute,
-			MaxRetries:  5,
-			Multiplier:  1,
+		RetryPolicy: &RetryPolicy{
+			BaseTimeout: ptr.Of(1 * time.Minute),
+			MaxRetries:  ptr.Of(5),
+			Multiplier:  ptr.Of(1.5),
 		},
 		Parallel:  ptr.Of(8),
 		FileLimit: ptr.Of(250),
 	},
 	restorePolicy: RestorePolicy{
 		Parallel: ptr.Of(8),
-		RetryPolicy: &models.RetryPolicy{
-			BaseTimeout: 2 * time.Second,
-			MaxRetries:  5,
-			Multiplier:  2,
+		RetryPolicy: &RetryPolicy{
+			BaseTimeout: ptr.Of(2 * time.Second),
+			MaxRetries:  ptr.Of(5),
+			Multiplier:  ptr.Of(2.0),
 		},
 		MaxAsyncBatches: ptr.Of(128),
 		BatchSize:       ptr.Of(128),
@@ -63,10 +63,10 @@ var defaultConfig = struct {
 		PollingPeriod:   ptr.Of(1 * time.Second),
 		ResultQueueSize: ptr.Of(256),
 		AckQueueSize:    ptr.Of(256),
-		InfoRetryPolicy: &models.RetryPolicy{
-			BaseTimeout: 2 * time.Second,
-			MaxRetries:  5,
-			Multiplier:  2,
+		InfoRetryPolicy: &RetryPolicy{
+			BaseTimeout: ptr.Of(2 * time.Second),
+			MaxRetries:  ptr.Of(5),
+			Multiplier:  ptr.Of(2.0),
 		},
 	},
 }

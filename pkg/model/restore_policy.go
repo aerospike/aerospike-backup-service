@@ -2,8 +2,6 @@ package model
 
 import (
 	"time"
-
-	"github.com/aerospike/backup-go/models"
 )
 
 // RestorePolicy represents a policy for the restore operation.
@@ -59,13 +57,13 @@ type RestorePolicy struct {
 	// Compression details.
 	CompressionPolicy *CompressionPolicy
 	// Configuration of retries for each restore write operation.
-	RetryPolicy *models.RetryPolicy
+	RetryPolicy *RetryPolicy
 	// Amount of extra time-to-live to add to records that have expirable void-times.
 	// Must be set in seconds.
 	ExtraTTL *int64
 }
 
-func (p *RestorePolicy) GetRetryPolicyOrDefault() *models.RetryPolicy {
+func (p *RestorePolicy) GetRetryPolicyOrDefault() *RetryPolicy {
 	if p.RetryPolicy != nil {
 		return p.RetryPolicy
 	}

@@ -19,7 +19,7 @@ type BackupPolicy struct {
 	// Total socket timeout. Default is 0, that is, no timeout.
 	TotalTimeout *time.Duration
 	// RetryPolicy defines the configuration for retry attempts in case of failures.
-	RetryPolicy *models.RetryPolicy
+	RetryPolicy *RetryPolicy
 	// Specifies how long to retain full and incremental backups.
 	RetentionPolicy *RetentionPolicy
 	// Do not back up any record data (metadata or bin data).
@@ -87,12 +87,12 @@ func (p *BackupPolicy) CopyWithNoRecords() *BackupPolicy {
 	}
 }
 
-func (p *BackupPolicy) GetRetryPolicyOrDefault() models.RetryPolicy {
+func (p *BackupPolicy) GetRetryPolicyOrDefault() *models.RetryPolicy {
 	if p != nil && p.RetryPolicy != nil {
-		return *p.RetryPolicy
+		return p.RetryPolicy.Backup()
 	}
 
-	return *defaultConfig.backupPolicy.RetryPolicy
+	return defaultConfig.backupPolicy.RetryPolicy.Backup()
 }
 
 func (p *BackupPolicy) GetParallelOrDefault() int {

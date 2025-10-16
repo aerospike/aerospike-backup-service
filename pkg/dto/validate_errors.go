@@ -41,6 +41,11 @@ func errValidationNegative[T ~int | ~int8 | ~int16 | ~int32 | ~int64](field stri
 	return fmt.Errorf("%w: %q %d invalid, should not be negative number", errNegative, field, value)
 }
 
+func errValidationExceed(field string, value, maxAllowed any) error {
+	return fmt.Errorf("%w: '%v' is not a valid %s. Should not exceed %v",
+		errInvalidValue, value, field, maxAllowed)
+}
+
 func errValidationInvalidValue(field string, value, allowed any) error {
 	return fmt.Errorf("%w: '%v' is not a valid %s. Allowed values: %v",
 		errInvalidValue, value, field, allowed)
