@@ -1,9 +1,6 @@
 package dto
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
@@ -32,12 +29,42 @@ func (p *EncryptionPolicy) Validate() error {
 	if p == nil {
 		return nil
 	}
+	if p.Mode == "" {
+		return errValidationEmptyField("mode")
+	}
 	if p.Mode != EncryptNone && p.Mode != EncryptAES128 && p.Mode != EncryptAES256 {
-		return fmt.Errorf("invalid encryption mode: %s", p.Mode)
+		return errValidationInvalidValue("mode", p.Mode, "NONE,AES128,AES256")
 	}
+
+	if p.Mode == EncryptNone {
+		if p.KeyFile != nil {
+			return errValidationMutuallyExclusive("key-file", "mode = NONE")
+		}
+		if p.KeyEnv != nil {
+			return errValidationMutuallyExclusive("key-env", "mode = NONE")
+		}
+		if p.KeySecret != nil {
+			return errValidationMutuallyExclusive("key-secret", "mode = NONE")
+		}
+
+		return nil // no more validation for mode = NONE
+	}
+
 	if p.KeyFile == nil && p.KeyEnv == nil && p.KeySecret == nil {
-		return errors.New("encryption key location not specified")
+		return errValidationRequiredEither("key-file", "key-env", "key-secret")
 	}
+
+	// Only one parameter allowed to be set.
+	if p.KeyFile != nil && p.KeyEnv != nil {
+		return errValidationMutuallyExclusive("key-file", "key-env")
+	}
+	if p.KeyFile != nil && p.KeySecret != nil {
+		return errValidationMutuallyExclusive("key-file", "key-secret")
+	}
+	if p.KeyEnv != nil && p.KeySecret != nil {
+		return errValidationMutuallyExclusive("key-env", "key-secret")
+	}
+
 	return nil
 }
 

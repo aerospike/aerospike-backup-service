@@ -2,6 +2,7 @@ package dto
 
 import (
 	"fmt"
+	"strings"
 )
 
 var (
@@ -16,8 +17,8 @@ var (
 	errMissingDependency = fmt.Errorf("missing dependent field %w", errValidation)
 )
 
-func errValidationRequiredEither(field1, field2 string) error {
-	return fmt.Errorf("%w: must specify either %q or %q", errRequiredEither, field1, field2)
+func errValidationRequiredEither(fields ...string) error {
+	return fmt.Errorf("%w: must specify either of: %v", errRequiredEither, strings.Join(fields, ","))
 }
 
 func errValidationMutuallyExclusive(field1, field2 string) error {
