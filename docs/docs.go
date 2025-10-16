@@ -2958,15 +2958,18 @@ const docTemplate = `{
             "properties": {
                 "base-timeout": {
                     "description": "BaseTimeout is the initial delay between retry attempts, in milliseconds.",
-                    "type": "integer"
+                    "type": "integer",
+                    "x-nullable": true
                 },
                 "max-retries": {
                     "description": "MaxRetries is the maximum number of retry attempts that will be made.\nIf set to 0, no retries will be performed.",
-                    "type": "integer"
+                    "type": "integer",
+                    "x-nullable": true
                 },
                 "multiplier": {
                     "description": "Multiplier is used to increase the delay between subsequent retry attempts.\nThe actual delay is calculated as: BaseTimeout * (Multiplier ^ attemptNumber)",
-                    "type": "number"
+                    "type": "number",
+                    "x-nullable": true
                 }
             }
         },

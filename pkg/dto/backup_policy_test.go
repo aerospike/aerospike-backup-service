@@ -12,7 +12,7 @@ func TestBackupPolicyConversionIsLossless(t *testing.T) {
 	parallelWrite := 8
 	socketTimeout := int64(5000)
 	totalTimeout := int64(10000)
-	retryPolicy := &RetryPolicy{MaxRetries: 3}
+	retryPolicy := &RetryPolicy{MaxRetries: ptr.Of(3)}
 	noRecords := true
 	noIndexes := false
 	noUdfs := true

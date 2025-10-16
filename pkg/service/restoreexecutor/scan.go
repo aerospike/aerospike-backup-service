@@ -43,7 +43,7 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 	config.BinList = restoreRequest.Policy.BinList
 	config.SetList = restoreRequest.Policy.SetList
 
-	config.RetryPolicy = restoreRequest.Policy.GetRetryPolicyOrDefault()
+	config.RetryPolicy = restoreRequest.Policy.RetryPolicy.Restore()
 
 	config.WritePolicy = makeWritePolicy(restoreRequest)
 	config.NoRecords = ptr.ValueOrZero(restoreRequest.Policy.NoRecords)
@@ -104,7 +104,6 @@ func makeWritePolicy(restoreRequest *model.RestoreRequest) *as.WritePolicy {
 	if restoreRequest.Policy.TotalTimeout != nil {
 		writePolicy.TotalTimeout = *restoreRequest.Policy.TotalTimeout
 	}
-	writePolicy.MaxRetries = int(restoreRequest.Policy.GetRetryPolicyOrDefault().MaxRetries)
 
 	return writePolicy
 }

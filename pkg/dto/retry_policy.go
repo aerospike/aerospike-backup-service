@@ -1,25 +1,22 @@
 package dto
 
 import (
-	"fmt"
-	"time"
-
-	"github.com/aerospike/backup-go/models"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 // RetryPolicy defines the configuration for retry attempts in case of failures.
 // @Description RetryPolicy defines the configuration for retry attempts in case of failures.
 type RetryPolicy struct {
 	// BaseTimeout is the initial delay between retry attempts, in milliseconds.
-	BaseTimeout int64 `json:"base-timeout" yaml:"base-timeout"`
+	BaseTimeout *int64 `json:"base-timeout,omitempty" yaml:"base-timeout,omitempty" extensions:"x-nullable"`
 
 	// Multiplier is used to increase the delay between subsequent retry attempts.
 	// The actual delay is calculated as: BaseTimeout * (Multiplier ^ attemptNumber)
-	Multiplier float64 `json:"multiplier" yaml:"multiplier"`
+	Multiplier *float64 `json:"multiplier,omitempty" yaml:"multiplier,omitempty" extensions:"x-nullable"`
 
 	// MaxRetries is the maximum number of retry attempts that will be made.
 	// If set to 0, no retries will be performed.
-	MaxRetries int `json:"max-retries" yaml:"max-retries"`
+	MaxRetries *int `json:"max-retries,omitempty" yaml:"max-retries,omitempty" extensions:"x-nullable"`
 }
 
 // Validate checks if the RetryPolicy fields are valid.
@@ -28,45 +25,46 @@ func (r *RetryPolicy) Validate() error {
 		return nil
 	}
 
-	if r.BaseTimeout <= 0 {
-		return errValidationNonPositive("base-timeout", r.BaseTimeout)
+	if r.BaseTimeout != nil {
+		if *r.BaseTimeout > maxTimeout {
+			return errValidationExceed("base-timeout", *r.BaseTimeout, maxTimeout)
+		}
+
+		if *r.BaseTimeout <= 0 {
+			return errValidationNonPositive("base-timeout", *r.BaseTimeout)
+		}
 	}
 
-	if r.Multiplier < 1 {
-		return fmt.Errorf("multiplier %f invalid, must be greater or equal than 1", r.Multiplier)
+	if r.Multiplier != nil && *r.Multiplier < 1 {
+		return errValidationInvalidValue("multiplier", *r.Multiplier, "must be greater or equal than 1")
 	}
 
-	if r.MaxRetries < 0 {
-		return errValidationNegative("max-retries", r.MaxRetries)
+	if r.MaxRetries != nil && *r.MaxRetries < 0 {
+		return errValidationNegative("max-retries", *r.MaxRetries)
 	}
 
 	return nil
 }
 
-// GetBaseTimeout converts the BaseTimeout from milliseconds to a time.Duration.
-func (r *RetryPolicy) GetBaseTimeout() time.Duration {
-	return time.Duration(r.BaseTimeout) * time.Millisecond
-}
-
-func (r *RetryPolicy) ToModel() *models.RetryPolicy {
+func (r *RetryPolicy) ToModel() *model.RetryPolicy {
 	if r == nil {
 		return nil
 	}
 
-	return &models.RetryPolicy{
-		BaseTimeout: r.GetBaseTimeout(),
+	return &model.RetryPolicy{
+		BaseTimeout: millisToDuration(r.BaseTimeout),
 		Multiplier:  r.Multiplier,
-		MaxRetries:  uint(r.MaxRetries),
+		MaxRetries:  r.MaxRetries,
 	}
 }
-func newRetryPolicyFromModel(m *models.RetryPolicy) *RetryPolicy {
+func newRetryPolicyFromModel(m *model.RetryPolicy) *RetryPolicy {
 	if m == nil {
 		return nil
 	}
 
 	return &RetryPolicy{
-		BaseTimeout: m.BaseTimeout.Milliseconds(),
+		BaseTimeout: durationToMillis(m.BaseTimeout),
 		Multiplier:  m.Multiplier,
-		MaxRetries:  int(m.MaxRetries),
+		MaxRetries:  m.MaxRetries,
 	}
 }
