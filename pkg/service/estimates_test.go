@@ -46,7 +46,7 @@ func TestNewRunningJob(t *testing.T) {
 
 		assert.Equal(t, uint64(100), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
-		assert.Equal(t, uint(100), result.PercentageDone)
+		assert.Equal(t, uint(99), result.PercentageDone)
 		assert.Equal(t, &finishTime, result.FinishTime)
 	})
 
@@ -55,7 +55,7 @@ func TestNewRunningJob(t *testing.T) {
 
 		assert.Equal(t, uint64(110), result.DoneRecords)
 		assert.Equal(t, uint64(100), result.TotalRecords)
-		assert.Equal(t, uint(100), result.PercentageDone)
+		assert.Equal(t, uint(99), result.PercentageDone)
 	})
 }
 
@@ -68,5 +68,6 @@ func TestDoneRestoreJobStatus(t *testing.T) {
 
 	assert.Nil(t, status.Error)
 	assert.NotNil(t, status.CurrentRestore)
+	assert.Equal(t, status.CurrentRestore.PercentageDone, uint(100))
 	assert.Equal(t, status.Status, model.JobStatusDone)
 }

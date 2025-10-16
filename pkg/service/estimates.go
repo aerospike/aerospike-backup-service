@@ -17,6 +17,7 @@ func currentBackupStatus(handlers CancelableBackupHandler) *model.RunningJob {
 		return nil
 	}
 
+	// for backups, we don't store info on finished jobs; If we have a backup handler => it's running.
 	return NewRunningJob(
 		stats.StartTime, nil, stats.ReadRecords.Load(), stats.TotalRecords.Load(), handlers.GetMetrics(), true)
 }
@@ -41,6 +42,10 @@ func RestoreJobStatus(job *restoreJob) *model.RestoreJobStatus {
 	runningJob := NewRunningJob(
 		job.started, job.finished, doneRecords, job.totalRecords, sumMetrics, job.status == model.JobStatusRunning)
 
+	if job.status == model.JobStatusDone {
+		runningJob.PercentageDone = 100 // 100% only for successfully finished jobs.
+	}
+
 	return &model.RestoreJobStatus{
 		Status:         job.status,
 		Error:          job.err,
@@ -64,7 +69,7 @@ func NewRunningJob(
 		}
 	}
 
-	percentage := min(float64(done)/float64(total), 1.0) // percentage should not exceed 100%.
+	percentage := min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
 	var (
 		endTime          *time.Time
 		effectiveMetrics *models.Metrics
