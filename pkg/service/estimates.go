@@ -64,7 +64,7 @@ func NewRunningJob(
 		}
 	}
 
-	percentage := min(float64(done)/float64(total), 100) // percentage should not exceed 100%.
+	percentage := min(float64(done)/float64(total), 1.0) // percentage should not exceed 100%.
 	var (
 		endTime          *time.Time
 		effectiveMetrics *models.Metrics

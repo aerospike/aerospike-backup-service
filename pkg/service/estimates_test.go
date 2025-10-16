@@ -49,6 +49,14 @@ func TestNewRunningJob(t *testing.T) {
 		assert.Equal(t, uint(100), result.PercentageDone)
 		assert.Equal(t, &finishTime, result.FinishTime)
 	})
+
+	t.Run("exceed 100%", func(t *testing.T) {
+		result := NewRunningJob(startTime, nil, 110, 100, nil, true)
+
+		assert.Equal(t, uint64(110), result.DoneRecords)
+		assert.Equal(t, uint64(100), result.TotalRecords)
+		assert.Equal(t, uint(100), result.PercentageDone)
+	})
 }
 
 func TestDoneRestoreJobStatus(t *testing.T) {
