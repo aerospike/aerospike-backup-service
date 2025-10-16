@@ -31,14 +31,11 @@ type RunningJob struct {
 	// nil value indicates that operation is still running.
 	FinishTime *time.Time
 	// PercentageDone is the current progress of the operation as a percentage.
-	// For backup jobs, this value can exceed 100% if:
-	//   * new data is written to the database during the backup, or
-	//   * the estimated total record count is lower than the actual count.
+	// This value is not guaranteed to be accurate.
 	PercentageDone uint
 	// EstimatedEndTime: the estimated time when the operation will be completed.
 	// A nil value indicates that the estimation is not available yet.
-	// This value is not guaranteed to be accurate and may even be earlier than
-	// the current time if PercentageDone exceeds 100%.
+	// This value is not guaranteed to be accurate.
 	EstimatedEndTime *time.Time
 	// Metrics contains performance metrics for the current operation.
 	Metrics *models.Metrics

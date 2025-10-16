@@ -17,8 +17,10 @@ func currentBackupStatus(handlers CancelableBackupHandler) *model.RunningJob {
 		return nil
 	}
 
+	// for backups, we don't store info on finished jobs; If we have a backup handler => it's running.
 	return NewRunningJob(
-		stats.StartTime, nil, stats.ReadRecords.Load(), stats.TotalRecords.Load(), handlers.GetMetrics(), true)
+		stats.StartTime, nil, stats.ReadRecords.Load(), stats.TotalRecords.Load(),
+		handlers.GetMetrics(), model.JobStatusRunning)
 }
 
 // RestoreJobStatus returns the status of a restore job.
@@ -39,7 +41,7 @@ func RestoreJobStatus(job *restoreJob) *model.RestoreJobStatus {
 	doneRecords := restoreStats.GetReadRecords()
 	sumMetrics := models.SumMetrics(metrics...)
 	runningJob := NewRunningJob(
-		job.started, job.finished, doneRecords, job.totalRecords, sumMetrics, job.status == model.JobStatusRunning)
+		job.started, job.finished, doneRecords, job.totalRecords, sumMetrics, job.status)
 
 	return &model.RestoreJobStatus{
 		Status:         job.status,
@@ -55,7 +57,7 @@ func NewRunningJob(
 	finishTime *time.Time,
 	done, total uint64,
 	metrics *models.Metrics,
-	withEstimates bool,
+	jobStatus model.JobStatus,
 ) *model.RunningJob {
 	if total == 0 { // edge case for empty restore
 		return &model.RunningJob{
@@ -64,14 +66,20 @@ func NewRunningJob(
 		}
 	}
 
-	percentage := float64(done) / float64(total)
 	var (
+		percentage       float64
 		endTime          *time.Time
 		effectiveMetrics *models.Metrics
 	)
-	if withEstimates {
+
+	switch jobStatus {
+	case model.JobStatusRunning:
+		percentage = min(float64(done)/float64(total), 0.99) // percentage should not exceed 99%.
 		endTime = calculateEstimatedEndTime(startTime, percentage)
 		effectiveMetrics = metrics
+	case model.JobStatusDone:
+		percentage = 1.0 // 100% only for successfully finished jobs.
+	default:
 	}
 
 	return &model.RunningJob{
