@@ -20,9 +20,10 @@ const (
 
 // Example:
 // prefix/fullBackup2/backup/1742795103082/data/source-ns11/metadata.yaml.
-var timestampPattern = regexp.MustCompile(fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})/`,
-	fullBackupDirectory,
-	incrementalBackupDirectory))
+var timestampPattern = regexp.MustCompile(
+	fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})(?:_[^/]*)?/`,
+		fullBackupDirectory,
+		incrementalBackupDirectory))
 
 func getBackupRootPath(routineName string, backupType jobType) string {
 	if backupType == jobTypeFull {
@@ -53,7 +54,8 @@ func getConfigurationFilePath(routineName string, timestamp time.Time, index int
 }
 
 func formatTimestamp(t time.Time) string {
-	return strconv.FormatInt(t.UnixMilli(), 10)
+	format := "02-Jan-2006-15-04-05"
+	return strconv.FormatInt(t.UnixMilli(), 10) + "_" + t.Format(format)
 }
 
 func getConfigFileName(index int) string {

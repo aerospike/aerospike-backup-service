@@ -50,7 +50,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	backups, err := service.GetBackups(ctx, NewFullBackupFilter(routineName))
 	require.NoError(t, err)
 	require.Len(t, backups, 5)
-	assert.Equal(t, "test-routine/backup/1609459200000/data/test-ns", backups[0].Key)
+	assert.Equal(t, "test-routine/backup/1609459200000_01-Jan-2021-00-00-00/data/test-ns", backups[0].Key)
 
 	// Test FromTime filter
 	fromFilter := NewFullBackupFilter(routineName).WithFromTime(times[2]) // From Jan 3
@@ -224,14 +224,14 @@ func TestIncrementalBackup(t *testing.T) {
 	assert.Equal(t, uint64(200), backups[0].RecordCount)
 	assert.Equal(t, incrementalTime, backups[0].Created)
 	assert.Equal(t, fullBackupTime, backups[0].From)
-	assert.Equal(t, "test-routine/incremental/1609545600000/data/test-ns", backups[0].Key)
+	assert.Equal(t, "test-routine/incremental/1609545600000_02-Jan-2021-00-00-00/data/test-ns", backups[0].Key)
 
 	// Test with time filter for incremental
 	timeFilter := NewIncrementalBackupFilter(routineName).WithFromTime(fullBackupTime)
 	timeBackups, err := service.GetBackups(ctx, timeFilter)
 	require.NoError(t, err)
 	require.Len(t, timeBackups, 1)
-	assert.Equal(t, "test-routine/incremental/1609545600000/data/test-ns", timeBackups[0].Key)
+	assert.Equal(t, "test-routine/incremental/1609545600000_02-Jan-2021-00-00-00/data/test-ns", timeBackups[0].Key)
 
 	// Verify independent from full backups
 	fullFilter := NewFullBackupFilter(routineName)
@@ -239,7 +239,7 @@ func TestIncrementalBackup(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, fullBackups, 1)
 	assert.Equal(t, fullBackupTime, fullBackups[0].Created)
-	assert.Equal(t, "test-routine/backup/1609459200000/data/test-ns", fullBackups[0].Key)
+	assert.Equal(t, "test-routine/backup/1609459200000_01-Jan-2021-00-00-00/data/test-ns", fullBackups[0].Key)
 }
 
 func TestReadPath(t *testing.T) {
