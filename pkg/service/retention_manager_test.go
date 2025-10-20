@@ -122,8 +122,8 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 		Return(incrementals, nil)
 
 	// Expect deletion of the older incrementals
-	backendService.EXPECT().Delete(ctx, routineName, "test-routine/incremental/1100").Return(nil)
-	backendService.EXPECT().Delete(ctx, routineName, "test-routine/incremental/1200").Return(nil)
+	backendService.EXPECT().Delete(ctx, routineName, "test-routine/incremental/1100_01-Jan-1970-02-00-01").Return(nil)
+	backendService.EXPECT().Delete(ctx, routineName, "test-routine/incremental/1200_01-Jan-1970-02-00-01").Return(nil)
 
 	err := retentionManager.deleteOldBackups(ctx, routineName)
 	assert.NoError(t, err)
