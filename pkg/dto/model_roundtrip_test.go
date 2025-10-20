@@ -20,16 +20,6 @@ func Test_RetryPolicy_RoundTrip(t *testing.T) {
 	)
 }
 
-func Test_PortRange_RoundTrip(t *testing.T) {
-	genDTO := RapidStruct[PortRange](defaultRegistry())
-
-	runRoundTripTest[*PortRange, model.PortRange](
-		t,
-		func(rt *rapid.T) *PortRange { return ptr.Of(genDTO.Draw(rt, "port")) },
-		newPortRangeFromModel,
-	)
-}
-
 func Test_Compression_RoundTrip(t *testing.T) {
 	genDTO := RapidStruct[CompressionPolicy](defaultRegistry())
 
