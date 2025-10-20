@@ -311,6 +311,6 @@ func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, Pa
 	err = config.AddRoutine("test-routine", routine)
 	require.NoError(t, err)
 
-	pathService := NewPathService("")
+	pathService := NewPathService(nil)
 	return NewBackupBackendService(config, pathService), pathService
 }

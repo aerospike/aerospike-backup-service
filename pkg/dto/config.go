@@ -124,12 +124,8 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	if err := c.ServiceConfig.HTTPServer.Validate(); err != nil {
-		return err
-	}
-
-	if err := c.ServiceConfig.Logger.Validate(); err != nil {
-		return err
+	if err := c.ServiceConfig.Validate(); err != nil {
+		return fmt.Errorf("service validation error: %w", err)
 	}
 
 	return nil

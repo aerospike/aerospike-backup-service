@@ -3,8 +3,10 @@ package dto
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // BackupServiceConfig represents the backup service configuration properties.
@@ -14,12 +16,31 @@ type BackupServiceConfig struct {
 	HTTPServer *HTTPServerConfig `yaml:"http,omitempty" json:"http,omitempty"`
 	// Logger is the backup service logger configuration.
 	Logger *LoggerConfig `yaml:"logger,omitempty" json:"logger,omitempty"`
+	// DateEncoding encoding for backup date in human-readable format
+	DateEncoding *string `yaml:"date-encoding,omitempty" json:"date-encoding,omitempty" enums:"ISO,US,EU"`
+}
+
+func (b *BackupServiceConfig) Validate() error {
+	if err := b.HTTPServer.Validate(); err != nil {
+		return fmt.Errorf("http validation error: %w", err)
+	}
+	if err := b.Logger.Validate(); err != nil {
+		return fmt.Errorf("logger validation error: %w", err)
+	}
+	if b.DateEncoding != nil {
+		if _, ok := model.DateFormatPresets[strings.ToUpper(*b.DateEncoding)]; !ok {
+			return errValidationInvalidValue("date-encoding", *b.DateEncoding, "ISO,US,EU")
+		}
+	}
+
+	return nil
 }
 
 func (b *BackupServiceConfig) ToModel() *model.BackupServiceConfig {
 	return &model.BackupServiceConfig{
-		HTTPServer: b.HTTPServer.ToModel(),
-		Logger:     b.Logger.ToModel(),
+		HTTPServer:   b.HTTPServer.ToModel(),
+		Logger:       b.Logger.ToModel(),
+		DateEncoding: b.DateEncoding,
 	}
 }
 
@@ -27,6 +48,7 @@ func (b *BackupServiceConfig) fromModel(m *model.BackupServiceConfig) {
 	if m == nil {
 		return
 	}
+
 	if m.HTTPServer != nil {
 		b.HTTPServer = &HTTPServerConfig{}
 		b.HTTPServer.fromModel(m.HTTPServer)
@@ -36,6 +58,8 @@ func (b *BackupServiceConfig) fromModel(m *model.BackupServiceConfig) {
 		b.Logger = &LoggerConfig{}
 		b.Logger.fromModel(m.Logger)
 	}
+
+	b.DateEncoding = m.DateEncoding
 }
 
 // Compare BackupServiceConfig with another and return detailed errors.
@@ -48,6 +72,16 @@ func (b *BackupServiceConfig) Compare(other BackupServiceConfig) error {
 
 	if e := b.Logger.Compare(other.Logger); e != nil {
 		err = errors.Join(err, fmt.Errorf("logger changes: %w", e))
+	}
+
+	if b.DateEncoding == nil && other.DateEncoding != nil {
+		err = errors.Join(err, errors.New("date encoding added"))
+	}
+	if b.DateEncoding != nil && other.DateEncoding == nil {
+		err = errors.Join(err, errors.New("date encoding removed"))
+	}
+	if ptr.ValueOrZero(b.DateEncoding) != ptr.ValueOrZero(other.DateEncoding) {
+		err = errors.Join(err, errors.New("date encoding changed"))
 	}
 
 	return err

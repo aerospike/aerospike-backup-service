@@ -42,14 +42,14 @@ type PathService interface {
 
 // PathServiceImpl implements the PathService interface.
 type PathServiceImpl struct {
-	format           string
+	formatName       *string
 	timestampPattern *regexp.Regexp
 }
 
 // NewPathService creates a new PathServiceImpl.
-func NewPathService(format string) *PathServiceImpl {
+func NewPathService(formatName *string) *PathServiceImpl {
 	return &PathServiceImpl{
-		format: format,
+		formatName: formatName,
 		timestampPattern: regexp.MustCompile(
 			fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})(?:_[^/]*)?/`,
 				fullBackupDirectory,
@@ -85,11 +85,11 @@ func (s *PathServiceImpl) GetConfigurationFilePath(routineName string, timestamp
 // FormatTimestamp formats a timestamp into a string.
 func (s *PathServiceImpl) formatTimestamp(t time.Time) string {
 	timestamp := strconv.FormatInt(t.UnixMilli(), 10)
-	if s.format == "" {
+	if s.formatName == nil {
 		return timestamp
 	}
 
-	return timestamp + "_" + t.Format(s.format)
+	return timestamp + "_" + t.Format(*s.formatName)
 }
 
 // ExtractTimestampFromPath extracts the timestamp part from a path.
