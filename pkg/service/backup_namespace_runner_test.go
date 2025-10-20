@@ -38,7 +38,7 @@ func initMocks(t *testing.T) (testMocks, *BackupNamespaceRunner) {
 		&simpleExecutor{},
 		mockBackendService,
 		slog.Default(),
-		NewPathService(),
+		NewPathService(""),
 	)
 
 	return testMocks{
@@ -51,7 +51,7 @@ func initMocks(t *testing.T) (testMocks, *BackupNamespaceRunner) {
 
 func TestRun_SuccessfulFullBackup(t *testing.T) {
 	now := time.UnixMilli(123456789000)
-	backupFolder := "test-routine/backup/123456789000_29-Nov-1973-23-33-09/data/test-ns"
+	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 
 	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
@@ -96,7 +96,7 @@ func TestRun_SuccessfulFullBackup(t *testing.T) {
 func TestSuccessfulIncrementalBackup(t *testing.T) {
 	now := time.UnixMilli(123456789000)
 	fromTime := time.UnixMilli(100000000000)
-	backupFolder := "test-routine/incremental/123456789000_29-Nov-1973-23-33-09/data/test-ns"
+	backupFolder := "test-routine/incremental/123456789000/data/test-ns"
 
 	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
@@ -143,7 +143,7 @@ func TestSuccessfulIncrementalBackup(t *testing.T) {
 func TestEmptyIncrementalBackup(t *testing.T) {
 	now := time.UnixMilli(123456789000)
 	fromTime := time.UnixMilli(100000000000)
-	backupFolder := "test-routine/incremental/123456789000_29-Nov-1973-23-33-09/data/test-ns"
+	backupFolder := "test-routine/incremental/123456789000/data/test-ns"
 
 	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
@@ -179,7 +179,7 @@ func TestEmptyIncrementalBackup(t *testing.T) {
 
 func TestBackupExecutorError(t *testing.T) {
 	now := time.UnixMilli(123456789000)
-	backupFolder := "test-routine/backup/123456789000_29-Nov-1973-23-33-09/data/test-ns"
+	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 
 	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
@@ -203,8 +203,8 @@ func TestBackupExecutorError(t *testing.T) {
 
 func TestBackupHandlerError(t *testing.T) {
 	now := time.UnixMilli(123456789000)
-	backupFolder := "test-routine/backup/123456789000_29-Nov-1973-23-33-09/data/test-ns"
-	timestampPath := "test-routine/backup/123456789000_29-Nov-1973-23-33-09"
+	backupFolder := "test-routine/backup/123456789000/data/test-ns"
+	timestampPath := "test-routine/backup/123456789000"
 
 	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
@@ -235,8 +235,8 @@ func TestBackupHandlerError(t *testing.T) {
 
 func TestMetadataWriteError(t *testing.T) {
 	now := time.UnixMilli(123456789000)
-	backupFolder := "test-routine/backup/123456789000_29-Nov-1973-23-33-09/data/test-ns"
-	timestampPath := "test-routine/backup/123456789000_29-Nov-1973-23-33-09"
+	backupFolder := "test-routine/backup/123456789000/data/test-ns"
+	timestampPath := "test-routine/backup/123456789000"
 
 	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()
@@ -278,8 +278,8 @@ func TestMetadataWriteError(t *testing.T) {
 
 func TestRetryableBackupHandler_Cancel(t *testing.T) {
 	now := time.UnixMilli(123456789000)
-	backupFolder := "test-routine/backup/123456789000_29-Nov-1973-23-33-09/data/test-ns"
-	timestampPath := "test-routine/backup/123456789000_29-Nov-1973-23-33-09"
+	backupFolder := "test-routine/backup/123456789000/data/test-ns"
+	timestampPath := "test-routine/backup/123456789000"
 
 	mocks, runner := initMocks(t)
 	defer mocks.ctrl.Finish()

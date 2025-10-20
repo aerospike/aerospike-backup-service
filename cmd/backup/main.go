@@ -126,7 +126,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		return nil, nil, nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
 
-	pathService := service.NewPathService()
+	pathService := service.NewPathService("02-Jan-2006-15-04-05")
 	backendService := service.NewBackupBackendService(config, pathService)
 	registry := service.NewRunningBackupsRegistry(ctx, backendService, config)
 

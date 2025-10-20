@@ -47,8 +47,7 @@ type PathServiceImpl struct {
 }
 
 // NewPathService creates a new PathServiceImpl.
-func NewPathService() *PathServiceImpl {
-	format := "02-Jan-2006-15-04-05"
+func NewPathService(format string) *PathServiceImpl {
 	return &PathServiceImpl{
 		format: format,
 		timestampPattern: regexp.MustCompile(
@@ -85,7 +84,12 @@ func (s *PathServiceImpl) GetConfigurationFilePath(routineName string, timestamp
 
 // FormatTimestamp formats a timestamp into a string.
 func (s *PathServiceImpl) formatTimestamp(t time.Time) string {
-	return strconv.FormatInt(t.UnixMilli(), 10) + "_" + t.Format(s.format)
+	timestamp := strconv.FormatInt(t.UnixMilli(), 10)
+	if s.format == "" {
+		return timestamp
+	}
+
+	return timestamp + "_" + t.Format(s.format)
 }
 
 // ExtractTimestampFromPath extracts the timestamp part from a path.
