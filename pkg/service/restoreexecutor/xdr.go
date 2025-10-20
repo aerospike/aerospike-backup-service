@@ -11,7 +11,7 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asbx"
-	ioStorage "github.com/aerospike/backup-go/io/storage"
+	"github.com/aerospike/backup-go/io/storage/options"
 )
 
 func runXDRRestore(
@@ -23,8 +23,8 @@ func runXDRRestore(
 		ctx,
 		request.SourceStorage,
 		request.BackupDataPath,
-		ioStorage.WithValidator(asbx.NewValidator()),
-		ioStorage.WithSorting(),
+		options.WithValidator(asbx.NewValidator()),
+		options.WithSorting(),
 	)
 
 	if err != nil {

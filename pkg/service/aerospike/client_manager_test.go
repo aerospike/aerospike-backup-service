@@ -1,6 +1,7 @@
 package aerospike
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/aerospike/backup-go/mocks"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -32,7 +34,7 @@ func Test_GetClient(t *testing.T) {
 	mockBackupClient := NewMockClient(ctrl)
 
 	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus().Return("ok", nil)
+	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
@@ -44,12 +46,12 @@ func Test_GetClient(t *testing.T) {
 	)
 
 	// First call will create a new client
-	client, err := clientManager.GetClient(cluster)
+	client, err := clientManager.GetClient(context.Background(), cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
 	// Second call will reuse the existing client
-	client2, err := clientManager.GetClient(cluster)
+	client2, err := clientManager.GetClient(context.Background(), cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client2)
 	assert.Equal(t, client, client2)
@@ -65,7 +67,7 @@ func Test_GetClientParallel(t *testing.T) {
 	mockBackupClient := NewMockClient(ctrl)
 
 	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus().Return("ok", nil)
+	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).
@@ -85,11 +87,11 @@ func Test_GetClientParallel(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
-		client, err = clientManager.GetClient(cluster)
+		client, err = clientManager.GetClient(context.Background(), cluster)
 		wg.Done()
 	}()
 	go func() {
-		client2, err2 = clientManager.GetClient(cluster)
+		client2, err2 = clientManager.GetClient(context.Background(), cluster)
 		wg.Done()
 	}()
 	wg.Wait()
@@ -119,9 +121,9 @@ func Test_GetTwoClients(t *testing.T) {
 		10*time.Second,
 	)
 
-	client, err := clientManager.GetClient(cluster)
+	client, err := clientManager.GetClient(context.Background(), cluster)
 	require.NoError(t, err)
-	client2, err := clientManager.GetClient(cluster2)
+	client2, err := clientManager.GetClient(context.Background(), cluster2)
 	require.NoError(t, err)
 
 	assert.NotSame(t, client, client2)
@@ -140,7 +142,7 @@ func Test_GetClient_UnhealthyConnection(t *testing.T) {
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
 
 	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus().Return("fail", nil)
+	infoGetter.EXPECT().GetStatus(mock.Anything).Return("fail", nil)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
 
 	clientManager := NewClientManager(
@@ -148,9 +150,9 @@ func Test_GetClient_UnhealthyConnection(t *testing.T) {
 		10*time.Second,
 	)
 
-	_, _ = clientManager.GetClient(cluster)
+	_, _ = clientManager.GetClient(context.Background(), cluster)
 	// Try to get client - should fail due to unhealthy connection
-	client, err := clientManager.GetClient(cluster)
+	client, err := clientManager.GetClient(context.Background(), cluster)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "aerospike cluster connection lost")
 	assert.Nil(t, client)
@@ -215,7 +217,7 @@ func Test_Close(t *testing.T) {
 		100*time.Millisecond,
 	)
 
-	client, err := clientManager.GetClient(cluster)
+	client, err := clientManager.GetClient(context.Background(), cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 	assertClientExists(t, clientManager, cluster, true)
@@ -241,7 +243,7 @@ func Test_Close_Multiple(t *testing.T) {
 	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient)
 
 	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus().Return("ok", nil)
+	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
@@ -252,10 +254,10 @@ func Test_Close_Multiple(t *testing.T) {
 		100*time.Millisecond,
 	)
 
-	client, err := clientManager.GetClient(cluster)
+	client, err := clientManager.GetClient(context.Background(), cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
-	client, err = clientManager.GetClient(cluster)
+	client, err = clientManager.GetClient(context.Background(), cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -280,7 +282,7 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
 
 	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus().Return("ok", nil)
+	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
 
 	clientManager := NewClientManager(
@@ -288,7 +290,7 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 		100*time.Millisecond,
 	)
 
-	client, err := clientManager.GetClient(cluster)
+	client, err := clientManager.GetClient(context.Background(), cluster)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -297,7 +299,7 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 
 	// Reuse the client before it's closed
 	time.Sleep(50 * time.Millisecond)
-	client2, err := clientManager.GetClient(cluster)
+	client2, err := clientManager.GetClient(context.Background(), cluster)
 	assert.NoError(t, err)
 	assert.Equal(t, client, client2)
 

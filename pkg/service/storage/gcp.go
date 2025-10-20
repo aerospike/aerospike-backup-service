@@ -9,8 +9,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/backup-go"
-	ioStorage "github.com/aerospike/backup-go/io/storage"
 	gcp "github.com/aerospike/backup-go/io/storage/gcp/storage"
+	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/googleapis/gax-go/v2"
 	"google.golang.org/api/option"
 )
@@ -33,7 +33,7 @@ func (a *GcpStorageAccessor) supports(storage model.Storage) bool {
 func (a *GcpStorageAccessor) createReader(
 	ctx context.Context,
 	storage model.Storage,
-	opts ...ioStorage.Opt,
+	opts ...options.Opt,
 ) (backup.StreamingReader, error) {
 	gcps := storage.(*model.GcpStorage)
 	client, err := a.clientMap.GetWithContext(ctx, gcps)
@@ -45,7 +45,7 @@ func (a *GcpStorageAccessor) createReader(
 }
 
 func (a *GcpStorageAccessor) createWriter(
-	ctx context.Context, storage model.Storage, opts ...ioStorage.Opt,
+	ctx context.Context, storage model.Storage, opts ...options.Opt,
 ) (backup.Writer, error) {
 	gcps := storage.(*model.GcpStorage)
 	client, err := a.clientMap.GetWithContext(ctx, gcps)
@@ -54,7 +54,7 @@ func (a *GcpStorageAccessor) createWriter(
 	}
 
 	if gcps.MinPartSize != nil {
-		opts = append(opts, ioStorage.WithChunkSize(*gcps.MinPartSize))
+		opts = append(opts, options.WithChunkSize(*gcps.MinPartSize))
 	}
 
 	return gcp.NewWriter(ctx, client, gcps.BucketName, opts...)

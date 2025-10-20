@@ -19,15 +19,6 @@ func (m *MockScheduler) ScheduleJob(detail *quartz.JobDetail, trigger quartz.Tri
 	return args.Error(0)
 }
 
-var components = NewBackupComponents(
-	new(mockClientManager),
-	new(mockBackupExecutor),
-	new(MockRunningBackupsRegistry),
-	new(mockRetentionManager),
-	new(MockBackupBackendService),
-	new(mockClusterConfigWriter),
-)
-
 func TestScheduleRoutines(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -79,8 +70,7 @@ func TestScheduleRoutines(t *testing.T) {
 			for name, routine := range tt.routines {
 				_ = config.AddRoutine(name, routine)
 			}
-			mockPathService := NewPathService()
-			err := scheduleRoutines(scheduler, config, components, mockPathService)
+			err := scheduleRoutines(scheduler, config, &BackupComponents{}, NewPathService())
 
 			require.NoError(t, err)
 			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)

@@ -21,7 +21,6 @@ var errBackupSkipped = errors.New("full backup skipped")
 // BackupRoutineOrchestrator orchestrates the execution of a single backup routine (both full and incremental).
 // It manages all necessary preparations, executes the backup process, handles post-processing, and updates metrics.
 type BackupRoutineOrchestrator struct {
-	retry               executor
 	logger              *slog.Logger
 	runner              *BackupNamespaceRunner
 	routineName         string
@@ -79,7 +78,6 @@ func newOrchestrator(
 		routineName:         routineName,
 		routine:             routine,
 		runner:              runner,
-		retry:               retry,
 		clusterConfigWriter: h.clusterConfigWriter,
 		clientManager:       h.clientManager,
 		registry:            h.registry,
@@ -114,7 +112,7 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 		return errBackupSkipped
 	}
 
-	client, namespaces, err := h.prepareCluster(h.retry)
+	client, namespaces, err := h.prepareCluster(ctx)
 	if err != nil {
 		h.fullBackupLock.Unlock()
 		return err
@@ -169,35 +167,30 @@ func (h *BackupRoutineOrchestrator) deleteOldBackups(ctx context.Context, routin
 	}
 }
 
-func (h *BackupRoutineOrchestrator) prepareCluster(retry executor) (aerospike.Client, []string, error) {
-	var (
-		client     aerospike.Client
-		namespaces []string
-	)
+func (h *BackupRoutineOrchestrator) prepareCluster(ctx context.Context) (aerospike.Client, []string, error) {
+	client, err := h.clientManager.GetClient(ctx, h.routine.SourceCluster)
+	if err != nil {
+		return nil, nil, fmt.Errorf("cannot get backup client: %w", err)
+	}
 
-	err := retry.run("cluster connection", func() error {
-		var err error
-		client, err = h.clientManager.GetClient(h.routine.SourceCluster)
-		if err != nil {
-			return fmt.Errorf("cannot get backup client: %w", err)
-		}
-		namespaces, err = h.resolveNamespaces(h.routine.Namespaces, client.InfoClient())
-		if err != nil {
-			h.clientManager.Close(client)
-			return fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
-		}
+	namespaces, err := h.resolveNamespaces(ctx, h.routine.Namespaces, client.InfoClient())
+	if err != nil {
+		h.clientManager.Close(client)
+		return nil, nil, fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
+	}
 
-		return nil
-	}, func() {})
-
-	return client, namespaces, err
+	return client, namespaces, nil
 }
 
 // resolveNamespaces returns the list of namespaces to back up.
 // If `namespaces` is empty, it fetches all namespaces from the cluster via the provided client.
-func (h *BackupRoutineOrchestrator) resolveNamespaces(namespaces []string, ig backup.InfoGetter) ([]string, error) {
+func (h *BackupRoutineOrchestrator) resolveNamespaces(
+	ctx context.Context,
+	namespaces []string,
+	ig backup.InfoGetter,
+) ([]string, error) {
 	if len(namespaces) == 0 {
-		return ig.GetNamespacesList()
+		return ig.GetNamespacesList(ctx)
 	}
 
 	return namespaces, nil
@@ -270,7 +263,7 @@ func (h *BackupRoutineOrchestrator) skipIncrementalBackup(now time.Time) bool {
 }
 
 func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Context, now time.Time) error {
-	client, namespaces, err := h.prepareCluster(&simpleExecutor{})
+	client, namespaces, err := h.prepareCluster(ctx)
 	if err != nil {
 		return err
 	}

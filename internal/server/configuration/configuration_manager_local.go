@@ -45,7 +45,7 @@ func (cm *fileConfigurationManager) Read(ctx context.Context) (*model.Config, er
 	}
 	defer file.Close()
 
-	return readConfig(file, cm.nsValidator)
+	return readConfig(ctx, file, cm.nsValidator)
 }
 
 // Write writes the configuration to the given file path.

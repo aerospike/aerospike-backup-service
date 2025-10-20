@@ -68,7 +68,7 @@ func (r *dataRestorer) Restore(ctx context.Context, request *model.RestoreReques
 	logger.Info("New restore job", slog.Any("request", *request))
 	go func() {
 		err := r.executeRestore(ctx, request, jobID, logger)
-		if err != nil { // if some of restore sub-operations failed, we need to cancel the rest.
+		if err != nil { // if some of the restore sub-operations failed, we need to cancel the rest.
 			cancel()
 		}
 		r.restoreJobs.finishJob(jobID, err)
@@ -83,13 +83,13 @@ func (r *dataRestorer) executeRestore(
 	jobID model.RestoreJobID,
 	logger *slog.Logger,
 ) error {
-	client, err := r.clientManager.GetClient(request.DestinationCluster)
+	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster)
 	if err != nil {
 		return err
 	}
 	defer r.clientManager.Close(client)
 
-	if err := r.validateDestinationNamespace(request, client.InfoClient()); err != nil {
+	if err := r.validateDestinationNamespace(ctx, request, client.InfoClient()); err != nil {
 		return err
 	}
 
@@ -168,10 +168,14 @@ func (r *dataRestorer) recordsInBackup(backups []model.BackupDetails) uint64 {
 }
 
 // validateDestinationNamespace checks if destination cluster contains namespace from restore request (if it is set).
-func (r *dataRestorer) validateDestinationNamespace(request *model.RestoreRequest, infoGetter backup.InfoGetter) error {
+func (r *dataRestorer) validateDestinationNamespace(
+	ctx context.Context,
+	request *model.RestoreRequest,
+	infoGetter backup.InfoGetter,
+) error {
 	if request.Policy.Namespace != nil {
 		destinationNS := *request.Policy.Namespace.Destination
-		namespaces, err := infoGetter.GetNamespacesList()
+		namespaces, err := infoGetter.GetNamespacesList(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to get namespaces from destination cluster: %w", err)
 		}
@@ -256,7 +260,7 @@ func (r *dataRestorer) restoreByTimeSync(
 		return err
 	}
 
-	client, err := r.clientManager.GetClient(request.DestinationCluster)
+	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
 			ptr.ValueOrZero(request.DestinationCluster.ClusterLabel), err)
@@ -305,7 +309,7 @@ func (r *dataRestorer) restoreNamespace(
 
 	// Now restore all backups in order
 	if !request.DisableReordering {
-		counter, err := client.InfoClient().GetRecordCount(namespace, request.Policy.SetList)
+		counter, err := client.InfoClient().GetRecordCount(ctx, namespace, request.Policy.SetList)
 		if err != nil {
 			return fmt.Errorf("could not determine if namespace %s is empty: %w", namespace, err)
 		}

@@ -22,7 +22,7 @@ func runXDRBackup(
 	namespace string,
 	writer backup.Writer,
 ) (BackupHandler, error) {
-	xdrConfig, err := makeXDRConfig(namespace, routine, timeBounds, client.InfoClient())
+	xdrConfig, err := makeXDRConfig(ctx, namespace, routine, timeBounds, client.InfoClient())
 	if err != nil {
 		return nil, fmt.Errorf("failed to build XDR configuration: %w", err)
 	}
@@ -36,6 +36,7 @@ func runXDRBackup(
 }
 
 func makeXDRConfig(
+	ctx context.Context,
 	namespace string,
 	routine *model.BackupRoutine,
 	timeBounds model.TimeBounds,
@@ -43,7 +44,7 @@ func makeXDRConfig(
 ) (*backup.ConfigBackupXDR, error) {
 	// Every xdr requests starts a server instance that listens for connections from other nodes in the cluster.
 	// It needs unique dc name and port.
-	dc, err := generateUniqueDCName(infoGetter)
+	dc, err := generateUniqueDCName(ctx, infoGetter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate unique DC name: %w", err)
 	}
@@ -119,8 +120,8 @@ var (
 	dcUpperBound int32 = 10_000
 )
 
-func generateUniqueDCName(infoGetter backup.InfoGetter) (string, error) {
-	existingDCs, err := infoGetter.GetDCsList()
+func generateUniqueDCName(ctx context.Context, infoGetter backup.InfoGetter) (string, error) {
+	existingDCs, err := infoGetter.GetDCsList(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to get existing DC names: %w", err)
 	}

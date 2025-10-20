@@ -11,8 +11,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/backup-go"
-	ioStorage "github.com/aerospike/backup-go/io/storage"
 	azure "github.com/aerospike/backup-go/io/storage/azure/blob"
+	"github.com/aerospike/backup-go/io/storage/options"
 )
 
 type AzureStorageAccessor struct {
@@ -30,7 +30,7 @@ func (a *AzureStorageAccessor) supports(storage model.Storage) bool {
 	return ok
 }
 
-func (a *AzureStorageAccessor) createReader(ctx context.Context, storage model.Storage, opts ...ioStorage.Opt,
+func (a *AzureStorageAccessor) createReader(ctx context.Context, storage model.Storage, opts ...options.Opt,
 ) (backup.StreamingReader, error) {
 	azures := storage.(*model.AzureStorage)
 	client, err := a.clientMap.Get(azures)
@@ -42,7 +42,7 @@ func (a *AzureStorageAccessor) createReader(ctx context.Context, storage model.S
 }
 
 func (a *AzureStorageAccessor) createWriter(
-	ctx context.Context, storage model.Storage, opts ...ioStorage.Opt,
+	ctx context.Context, storage model.Storage, opts ...options.Opt,
 ) (backup.Writer, error) {
 	azures := storage.(*model.AzureStorage)
 	client, err := a.clientMap.Get(azures)
@@ -51,7 +51,7 @@ func (a *AzureStorageAccessor) createWriter(
 	}
 
 	if azures.MinPartSize != nil {
-		opts = append(opts, ioStorage.WithChunkSize(*azures.MinPartSize))
+		opts = append(opts, options.WithChunkSize(*azures.MinPartSize))
 	}
 
 	return azure.NewWriter(ctx, client, azures.ContainerName, opts...)

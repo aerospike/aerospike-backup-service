@@ -10,8 +10,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
-	ioStorage "github.com/aerospike/backup-go/io/storage"
 	"github.com/aerospike/backup-go/io/storage/aws/s3"
+	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -37,20 +37,20 @@ func (a *S3StorageAccessor) supports(storage model.Storage) bool {
 func (a *S3StorageAccessor) createReader(
 	ctx context.Context,
 	storage model.Storage,
-	opts ...ioStorage.Opt,
+	opts ...options.Opt,
 ) (backup.StreamingReader, error) {
 	s3s := storage.(*model.S3Storage)
 	client, err := a.clientMap.GetWithContext(ctx, s3s)
 	if err != nil {
 		return nil, err
 	}
-	opts = append(opts, ioStorage.WithRetryPolicy(&model.StorageRetryPolicy.RetryPolicy))
+	opts = append(opts, options.WithRetryPolicy(&model.StorageRetryPolicy.RetryPolicy))
 
 	return s3.NewReader(ctx, client, s3s.Bucket, opts...)
 }
 
 func (a *S3StorageAccessor) createWriter(
-	ctx context.Context, storage model.Storage, opts ...ioStorage.Opt,
+	ctx context.Context, storage model.Storage, opts ...options.Opt,
 ) (backup.Writer, error) {
 	s3s := storage.(*model.S3Storage)
 	client, err := a.clientMap.GetWithContext(ctx, s3s)
@@ -59,7 +59,7 @@ func (a *S3StorageAccessor) createWriter(
 	}
 
 	if s3s.MinPartSize != nil {
-		opts = append(opts, ioStorage.WithChunkSize(*s3s.MinPartSize))
+		opts = append(opts, options.WithChunkSize(*s3s.MinPartSize))
 	}
 
 	return s3.NewWriter(ctx, client, s3s.Bucket, opts...)

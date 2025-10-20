@@ -55,18 +55,18 @@ func (mr *MockClientManagerMockRecorder) Close(arg0 any) *gomock.Call {
 }
 
 // GetClient mocks base method.
-func (m *MockClientManager) GetClient(arg0 *model.AerospikeCluster) (Client, error) {
+func (m *MockClientManager) GetClient(ctx context.Context, cluster *model.AerospikeCluster) (Client, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClient", arg0)
+	ret := m.ctrl.Call(m, "GetClient", ctx, cluster)
 	ret0, _ := ret[0].(Client)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetClient indicates an expected call of GetClient.
-func (mr *MockClientManagerMockRecorder) GetClient(arg0 any) *gomock.Call {
+func (mr *MockClientManagerMockRecorder) GetClient(ctx, cluster any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClient", reflect.TypeOf((*MockClientManager)(nil).GetClient), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClient", reflect.TypeOf((*MockClientManager)(nil).GetClient), ctx, cluster)
 }
 
 // MockNamespaceValidator is a mock of NamespaceValidator interface.
@@ -94,15 +94,15 @@ func (m *MockNamespaceValidator) EXPECT() *MockNamespaceValidatorMockRecorder {
 }
 
 // Validate mocks base method.
-func (m *MockNamespaceValidator) Validate(cfg *model.Config) {
+func (m *MockNamespaceValidator) Validate(ctx context.Context, cfg *model.Config) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Validate", cfg)
+	m.ctrl.Call(m, "Validate", ctx, cfg)
 }
 
 // Validate indicates an expected call of Validate.
-func (mr *MockNamespaceValidatorMockRecorder) Validate(cfg any) *gomock.Call {
+func (mr *MockNamespaceValidatorMockRecorder) Validate(ctx, cfg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockNamespaceValidator)(nil).Validate), cfg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockNamespaceValidator)(nil).Validate), ctx, cfg)
 }
 
 // MockClient is a mock of Client interface.

@@ -11,6 +11,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
+	"github.com/aerospike/backup-go/io/storage/common"
 )
 
 // ConfigRetriever is used to read saved Aerospike configuration from backup.
@@ -60,7 +61,7 @@ func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routin
 	}
 
 	configBackups, err := storage.ReadFiles(ctx, backupRoutine.Storage, path, configExt)
-	if err != nil && !errors.Is(err, storage.ErrEmptyStorage) {
+	if err != nil && !errors.Is(err, common.ErrEmptyStorage) {
 		return nil, err
 	}
 

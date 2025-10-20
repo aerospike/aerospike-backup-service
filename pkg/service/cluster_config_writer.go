@@ -51,7 +51,7 @@ func (w *DefaultClusterConfigWriter) Write(
 		return ErrRoutineNotFound(routineName)
 	}
 
-	client, err := w.clientManager.GetClient(routine.SourceCluster)
+	client, err := w.clientManager.GetClient(ctx, routine.SourceCluster)
 	if err != nil {
 		return fmt.Errorf("cannot get backup client: %w", err)
 	}
