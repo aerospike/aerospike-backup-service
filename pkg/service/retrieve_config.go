@@ -68,10 +68,10 @@ func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routin
 		return nil, fmt.Errorf("no configuration backups found for %s: %w", path, model.ErrNotFound)
 	}
 
-	return cr.packageFiles(configBackups)
+	return packageFiles(configBackups)
 }
 
-func (cr *ConfigRetrieverImpl) packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
+func packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
 	// Create a buffer to write our archive to
 	buf := new(bytes.Buffer)
 
@@ -79,7 +79,7 @@ func (cr *ConfigRetrieverImpl) packageFiles(buffers []*bytes.Buffer) ([]byte, er
 	w := zip.NewWriter(buf)
 
 	for i, data := range buffers {
-		fileName := cr.pathService.GetConfigFileName(i)
+		fileName := configFileName(i)
 
 		f, err := w.Create(fileName)
 		if err != nil {

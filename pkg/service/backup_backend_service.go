@@ -91,8 +91,8 @@ func (f *RoutineFilter) String() string {
 		f.routine, f.JobType, f.onlyLast, f.timeBounds().String())
 }
 
-func (f *RoutineFilter) getPath(pathService PathService) string {
-	return pathService.GetBackupRootPath(f.routine, f.JobType)
+func (f *RoutineFilter) getPath() string {
+	return backupRootPath(f.routine, f.JobType)
 }
 
 // PathFilter for filtering by explicit path.
@@ -202,7 +202,7 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 	lock.RLock()
 	defer lock.RUnlock()
 
-	files, err := storage.ReadFileNames(ctx, backupStorage, filter.getPath(b.pathService), metadataFile, filter.FromTime)
+	files, err := storage.ReadFileNames(ctx, backupStorage, filter.getPath(), metadataFile, filter.FromTime)
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.FromTime, err)
 	}

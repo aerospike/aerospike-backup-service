@@ -20,10 +20,6 @@ const (
 
 // PathService defines the interface for path-related operations.
 type PathService interface {
-	// GetBackupRootPath returns the root path for a backup.
-	// The path is composed of {routineName}/{backupType}.
-	GetBackupRootPath(routineName string, backupType jobType) string
-
 	// GetTimestampPath returns a timestamped path for a backup.
 	// The path is composed of {routineName}/{backupType}/{timestamp}.
 	GetTimestampPath(routineName string, timestamp time.Time, backupType jobType) string
@@ -39,12 +35,6 @@ type PathService interface {
 	// GetConfigurationFilePath returns the path for a specific configuration file within a configuration backup.
 	// The path is composed of {routineName}/backup/{timestamp}/configuration/{configFile}.
 	GetConfigurationFilePath(routineName string, timestamp time.Time, index int) string
-
-	// FormatTimestamp formats a time.Time object into a string representation used in the paths.
-	FormatTimestamp(t time.Time) string
-
-	// GetConfigFileName returns the name of a configuration file based on an index.
-	GetConfigFileName(index int) string
 
 	// ExtractTimestampFromPath extracts the timestamp string from a given path.
 	ExtractTimestampFromPath(path string) string
@@ -68,17 +58,9 @@ func NewPathService() *PathServiceImpl {
 	}
 }
 
-// GetBackupRootPath returns the root path for a backup.
-func (s *PathServiceImpl) GetBackupRootPath(routineName string, backupType jobType) string {
-	if backupType == jobTypeFull {
-		return filepath.Join(routineName, fullBackupDirectory)
-	}
-	return filepath.Join(routineName, incrementalBackupDirectory)
-}
-
 // GetTimestampPath returns the timestamped path for a backup.
 func (s *PathServiceImpl) GetTimestampPath(routineName string, timestamp time.Time, backupType jobType) string {
-	return filepath.Join(s.GetBackupRootPath(routineName, backupType), s.FormatTimestamp(timestamp))
+	return filepath.Join(backupRootPath(routineName, backupType), s.formatTimestamp(timestamp))
 }
 
 // GetBackupPath returns the path for a specific namespace backup.
@@ -93,22 +75,17 @@ func (s *PathServiceImpl) GetBackupPath(
 
 // GetConfigurationPath returns the path for the configuration backup.
 func (s *PathServiceImpl) GetConfigurationPath(routineName string, timestamp time.Time) string {
-	return filepath.Join(routineName, fullBackupDirectory, s.FormatTimestamp(timestamp), configurationBackupDirectory)
+	return filepath.Join(routineName, fullBackupDirectory, s.formatTimestamp(timestamp), configurationBackupDirectory)
 }
 
 // GetConfigurationFilePath returns the path for a specific configuration file.
 func (s *PathServiceImpl) GetConfigurationFilePath(routineName string, timestamp time.Time, index int) string {
-	return filepath.Join(s.GetConfigurationPath(routineName, timestamp), s.GetConfigFileName(index))
+	return filepath.Join(s.GetConfigurationPath(routineName, timestamp), configFileName(index))
 }
 
 // FormatTimestamp formats a timestamp into a string.
-func (s *PathServiceImpl) FormatTimestamp(t time.Time) string {
+func (s *PathServiceImpl) formatTimestamp(t time.Time) string {
 	return strconv.FormatInt(t.UnixMilli(), 10) + "_" + t.Format(s.format)
-}
-
-// GetConfigFileName returns the name of a configuration file.
-func (s *PathServiceImpl) GetConfigFileName(index int) string {
-	return fmt.Sprintf("aerospike_%d%s", index, configExt)
 }
 
 // ExtractTimestampFromPath extracts the timestamp part from a path.
@@ -120,4 +97,18 @@ func (s *PathServiceImpl) ExtractTimestampFromPath(path string) string {
 
 	slog.Warn("could not extract timestamp", slog.String("path", path))
 	return ""
+}
+
+// backupRootPath returns the root path for a backup.
+func backupRootPath(routineName string, backupType jobType) string {
+	if backupType == jobTypeFull {
+		return filepath.Join(routineName, fullBackupDirectory)
+	}
+
+	return filepath.Join(routineName, incrementalBackupDirectory)
+}
+
+// configFileName returns the name of a configuration file based on an index.
+func configFileName(index int) string {
+	return fmt.Sprintf("aerospike_%d%s", index, configExt)
 }

@@ -526,20 +526,6 @@ func (mr *MockPathServiceMockRecorder) ExtractTimestampFromPath(path any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractTimestampFromPath", reflect.TypeOf((*MockPathService)(nil).ExtractTimestampFromPath), path)
 }
 
-// FormatTimestamp mocks base method.
-func (m *MockPathService) FormatTimestamp(t time.Time) string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FormatTimestamp", t)
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// FormatTimestamp indicates an expected call of FormatTimestamp.
-func (mr *MockPathServiceMockRecorder) FormatTimestamp(t any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FormatTimestamp", reflect.TypeOf((*MockPathService)(nil).FormatTimestamp), t)
-}
-
 // GetBackupPath mocks base method.
 func (m *MockPathService) GetBackupPath(routineName string, backupType jobType, namespace string, timestamp time.Time) string {
 	m.ctrl.T.Helper()
@@ -552,34 +538,6 @@ func (m *MockPathService) GetBackupPath(routineName string, backupType jobType, 
 func (mr *MockPathServiceMockRecorder) GetBackupPath(routineName, backupType, namespace, timestamp any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackupPath", reflect.TypeOf((*MockPathService)(nil).GetBackupPath), routineName, backupType, namespace, timestamp)
-}
-
-// GetBackupRootPath mocks base method.
-func (m *MockPathService) GetBackupRootPath(routineName string, backupType jobType) string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBackupRootPath", routineName, backupType)
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetBackupRootPath indicates an expected call of GetBackupRootPath.
-func (mr *MockPathServiceMockRecorder) GetBackupRootPath(routineName, backupType any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackupRootPath", reflect.TypeOf((*MockPathService)(nil).GetBackupRootPath), routineName, backupType)
-}
-
-// GetConfigFileName mocks base method.
-func (m *MockPathService) GetConfigFileName(index int) string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConfigFileName", index)
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// GetConfigFileName indicates an expected call of GetConfigFileName.
-func (mr *MockPathServiceMockRecorder) GetConfigFileName(index any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfigFileName", reflect.TypeOf((*MockPathService)(nil).GetConfigFileName), index)
 }
 
 // GetConfigurationFilePath mocks base method.
