@@ -3,8 +3,6 @@ package storage
 import (
 	"fmt"
 	"strings"
-
-	"github.com/aerospike/backup-go/io/storage"
 )
 
 // Validator is used inside of backup.StreamingReader to filter files.
@@ -36,6 +34,3 @@ func (n *nameValidator) Run(path string) error {
 
 	return fmt.Errorf("skipped by filter '%s'", n.filter)
 }
-
-// ErrEmptyStorage indicates that there are no files to restore in the source directory.
-var ErrEmptyStorage = storage.ErrEmptyStorage

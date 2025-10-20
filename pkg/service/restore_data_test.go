@@ -14,6 +14,7 @@ import (
 	"github.com/aerospike/backup-go/mocks"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
@@ -126,7 +127,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 
 	clientErr := errors.New("connection error")
 	env.mockClientManager.EXPECT().
-		GetClient(cluster).
+		GetClient(gomock.Any(), cluster).
 		Return(nil, clientErr)
 
 	// Execute the restore
@@ -157,7 +158,7 @@ func TestRestoreFailsWithInvalidNamespace(t *testing.T) {
 
 	env.expectSuccessfulClientInteraction(t, cluster)
 
-	env.infoGetter.EXPECT().GetNamespacesList().Return([]string{"other NS"}, nil)
+	env.infoGetter.EXPECT().GetNamespacesList(mock.Anything).Return([]string{"other NS"}, nil)
 
 	// Execute the restore
 	jobID, err := env.restoreManager.Restore(ctx, request)
@@ -356,7 +357,7 @@ func (env *testRestoreEnv) expectSuccessfulClientInteraction(
 	client.EXPECT().InfoClient().Return(env.infoGetter).AnyTimes()
 
 	env.mockClientManager.EXPECT().
-		GetClient(cluster).
+		GetClient(gomock.Any(), cluster).
 		Return(client, nil).
 		Times(1)
 

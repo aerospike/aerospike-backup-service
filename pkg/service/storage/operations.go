@@ -12,7 +12,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go"
-	ioStorage "github.com/aerospike/backup-go/io/storage"
+	"github.com/aerospike/backup-go/io/storage/options"
 	"github.com/aerospike/backup-go/models"
 )
 
@@ -21,11 +21,11 @@ func CreateFileReader(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
-	opts ...ioStorage.Opt,
+	opts ...options.Opt,
 ) (backup.StreamingReader, error) {
 	opts = append(opts,
-		ioStorage.WithFile(filepath.Join(storage.GetPath(), path)),
-		ioStorage.WithLogger(slog.Default()))
+		options.WithFile(filepath.Join(storage.GetPath(), path)),
+		options.WithLogger(slog.Default()))
 	return getAccessor(storage).createReader(ctx, storage, opts...)
 }
 
@@ -34,12 +34,12 @@ func CreateDirReader(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
-	opts ...ioStorage.Opt,
+	opts ...options.Opt,
 ) (backup.StreamingReader, error) {
 	opts = append(opts,
-		ioStorage.WithDir(filepath.Join(storage.GetPath(), path)),
-		ioStorage.WithNestedDir(),
-		ioStorage.WithLogger(slog.Default()))
+		options.WithDir(filepath.Join(storage.GetPath(), path)),
+		options.WithNestedDir(),
+		options.WithLogger(slog.Default()))
 	return getAccessor(storage).createReader(ctx, storage, opts...)
 }
 
@@ -48,9 +48,9 @@ func CreateFileWriter(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
-	opts ...ioStorage.Opt,
+	opts ...options.Opt,
 ) (backup.Writer, error) {
-	opts = append(opts, ioStorage.WithFile(filepath.Join(storage.GetPath(), path)))
+	opts = append(opts, options.WithFile(filepath.Join(storage.GetPath(), path)))
 	return getAccessor(storage).createWriter(ctx, storage, opts...)
 }
 
@@ -59,9 +59,9 @@ func CreateDirWriter(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
-	opts ...ioStorage.Opt,
+	opts ...options.Opt,
 ) (backup.Writer, error) {
-	opts = append(opts, ioStorage.WithDir(filepath.Join(storage.GetPath(), path)))
+	opts = append(opts, options.WithDir(filepath.Join(storage.GetPath(), path)))
 	return getAccessor(storage).createWriter(ctx, storage, opts...)
 }
 
@@ -74,7 +74,7 @@ func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]by
 
 	readersCh := make(chan models.File, 1)
 	errorsCh := make(chan error, 1)
-	go reader.StreamFiles(ctx, readersCh, errorsCh)
+	go reader.StreamFiles(ctx, readersCh, errorsCh, nil)
 
 	select {
 	case err := <-errorsCh:
@@ -89,7 +89,7 @@ func ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]by
 
 func ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error) {
 	reader, err := CreateDirReader(ctx, storage, path,
-		ioStorage.WithValidator(newNameValidator(filterStr)),
+		options.WithValidator(newNameValidator(filterStr)),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reader: %w", err)
@@ -98,7 +98,7 @@ func ReadFiles(ctx context.Context, storage model.Storage, path string, filterSt
 	readersCh := make(chan models.File, 1)
 	errorsCh := make(chan error, 1)
 
-	go reader.StreamFiles(ctx, readersCh, errorsCh)
+	go reader.StreamFiles(ctx, readersCh, errorsCh, nil)
 
 	var files []*bytes.Buffer
 	for {
@@ -137,10 +137,10 @@ func ReadFileNames(
 	}
 
 	reader, err := CreateDirReader(ctx, storage, path,
-		ioStorage.WithValidator(newNameValidator(filterStr)),
-		ioStorage.WithStartAfter(startScanFrom),
-		ioStorage.WithNestedDir(),
-		ioStorage.WithSkipDirCheck(),
+		options.WithValidator(newNameValidator(filterStr)),
+		options.WithStartAfter(startScanFrom),
+		options.WithNestedDir(),
+		options.WithSkipDirCheck(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reader: %w", err)
@@ -158,7 +158,7 @@ func WriteDataFile(ctx context.Context, storage model.Storage, fileName string, 
 }
 
 func writeFile(ctx context.Context, storage model.Storage, fileName, storageClass string, content []byte) error {
-	writer, err := CreateFileWriter(ctx, storage, fileName, ioStorage.WithStorageClass(storageClass))
+	writer, err := CreateFileWriter(ctx, storage, fileName, options.WithStorageClass(storageClass))
 	if err != nil {
 		return fmt.Errorf("failed to create writer: %w", err)
 	}
@@ -175,7 +175,7 @@ func writeFile(ctx context.Context, storage model.Storage, fileName, storageClas
 }
 
 func DeleteFolder(ctx context.Context, storage model.Storage, path string) error {
-	writer, err := CreateDirWriter(ctx, storage, path, ioStorage.WithNestedDir(), ioStorage.WithRemoveFiles())
+	writer, err := CreateDirWriter(ctx, storage, path, options.WithNestedDir(), options.WithRemoveFiles())
 	if err != nil {
 		return err
 	}

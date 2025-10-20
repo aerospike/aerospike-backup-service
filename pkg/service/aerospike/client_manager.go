@@ -1,6 +1,7 @@
 package aerospike
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -16,7 +17,7 @@ import (
 // ClientManager is responsible for creating and closing backup clients.
 type ClientManager interface {
 	// GetClient returns a backup client by aerospike cluster name (new or cached).
-	GetClient(*model.AerospikeCluster) (Client, error)
+	GetClient(ctx context.Context, cluster *model.AerospikeCluster) (Client, error)
 	// Close ensures that the specified backup client is closed.
 	Close(Client)
 }
@@ -63,7 +64,7 @@ func (cm *ClientManagerImpl) SetLogger(logger *slog.Logger) {
 }
 
 // GetClient returns a backup client by aerospike cluster name (new or cached).
-func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (Client, error) {
+func (cm *ClientManagerImpl) GetClient(ctx context.Context, cluster *model.AerospikeCluster) (Client, error) {
 	if cluster == nil {
 		return nil, errors.New("cluster is nil")
 	}
@@ -81,7 +82,7 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (Client,
 	defer m.Unlock()
 
 	if exists {
-		return cm.checkHealthAndIncrement(info)
+		return cm.checkHealthAndIncrement(ctx, info)
 	}
 
 	// Check again since another goroutine might have created the client while we were waiting on lock.
@@ -90,7 +91,7 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (Client,
 	cm.mu.Unlock()
 
 	if exists {
-		return cm.checkHealthAndIncrement(info)
+		return cm.checkHealthAndIncrement(ctx, info)
 	}
 
 	client, err := cm.createClient(cluster)
@@ -104,8 +105,8 @@ func (cm *ClientManagerImpl) GetClient(cluster *model.AerospikeCluster) (Client,
 	return client, nil
 }
 
-func (cm *ClientManagerImpl) checkHealthAndIncrement(info *clientInfo) (Client, error) {
-	status, err := info.client.InfoClient().GetStatus()
+func (cm *ClientManagerImpl) checkHealthAndIncrement(ctx context.Context, info *clientInfo) (Client, error) {
+	status, err := info.client.InfoClient().GetStatus(ctx)
 	if err != nil {
 		return nil, err
 	}

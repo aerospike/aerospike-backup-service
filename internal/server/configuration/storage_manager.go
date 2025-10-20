@@ -31,7 +31,7 @@ func (m *storageManager) Read(ctx context.Context) (*model.Config, error) {
 		return nil, fmt.Errorf("failed to read configuration from storage: %w", err)
 	}
 
-	return readConfig(bytes.NewReader(content), m.nsValidator)
+	return readConfig(ctx, bytes.NewReader(content), m.nsValidator)
 }
 
 func (m *storageManager) Write(ctx context.Context, config *model.Config) error {

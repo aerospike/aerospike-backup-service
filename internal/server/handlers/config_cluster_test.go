@@ -185,7 +185,7 @@ func TestUpdateAerospikeCluster(t *testing.T) {
 			svc.nsValidator = mockNsValidator
 
 			if tt.runValidation {
-				mockNsValidator.EXPECT().Validate(gomock.Eq(svc.config))
+				mockNsValidator.EXPECT().Validate(gomock.Any(), gomock.Eq(svc.config))
 			}
 
 			initialCluster := &model.AerospikeCluster{}

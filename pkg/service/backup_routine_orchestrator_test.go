@@ -62,7 +62,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 
 	initialState := &model.RoutineState{}
 	mockRegistry.EXPECT().GetRoutineState(routineName).Return(initialState)
-	mockClientManager.EXPECT().GetClient(gomock.Any()).Return(mockClient, nil)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).Return(mockClient, nil)
 	mockClientManager.EXPECT().Close(mockClient)
 
 	mockBackupExecutor.EXPECT().Run(
@@ -189,7 +189,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
 
 	connectionError := errors.New("connection failed")
-	mockClientManager.EXPECT().GetClient(gomock.Any()).Return(nil, connectionError).Times(2) // retries
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(2) // retries
 
 	initialState := &model.RoutineState{}
 	mockRegistry.EXPECT().GetRoutineState(routineName).Return(initialState)
@@ -249,7 +249,7 @@ func TestBackupRoutineOrchestrator_runFullBackup_RaceCondition(t *testing.T) {
 	// The first call (from Process A) will fail.
 	// The second call (from Process A retry) will succeed.
 	// No third call because process B will skip.
-	mockClientManager.EXPECT().GetClient(gomock.Any()).
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).
 		DoAndReturn(func(_ *model.AerospikeCluster) (*backup.Client, error) {
 			slog.Info("get client called", slog.Bool("notFirstCall", notFirstCall.Load()))
 			if !notFirstCall.Swap(true) { // Process A fails
@@ -490,7 +490,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 	mockRegistry.EXPECT().GetRoutineState(routineName).Return(state).
 		Times(2) // in skipIncrementalBackup and createTimeBounds
 
-	mockClientManager.EXPECT().GetClient(gomock.Any()).Return(mockClient, nil)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).Return(mockClient, nil)
 	mockClientManager.EXPECT().Close(mockClient)
 
 	mockBackupExecutor.EXPECT().Run(
