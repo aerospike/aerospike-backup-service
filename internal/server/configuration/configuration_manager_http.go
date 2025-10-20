@@ -48,7 +48,7 @@ func (h *httpConfigurationManager) Read(ctx context.Context) (*model.Config, err
 		return nil, fmt.Errorf("unexpected HTTP status code: %d", resp.StatusCode)
 	}
 
-	return readConfig(resp.Body, h.nsValidator)
+	return readConfig(ctx, resp.Body, h.nsValidator)
 }
 
 // WriteConfiguration is unsupported for httpConfigurationManager.

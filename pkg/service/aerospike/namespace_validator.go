@@ -1,6 +1,7 @@
 package aerospike
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -14,7 +15,7 @@ import (
 // This implementation logs warnings but never returns errors.
 type NamespaceValidator interface {
 	// Validate validates all routines in config against their respective clusters.
-	Validate(cfg *model.Config)
+	Validate(ctx context.Context, cfg *model.Config)
 }
 
 // NamespaceValidatorImpl implements NamespaceValidator.
@@ -29,12 +30,12 @@ func NewNamespaceValidator(cm ClientManager) NamespaceValidator {
 // NamespacesByRoutine stores list of namespaces missing in each routine.
 type NamespacesByRoutine map[string][]string
 
-func (nv *NamespaceValidatorImpl) Validate(cfg *model.Config) {
+func (nv *NamespaceValidatorImpl) Validate(ctx context.Context, cfg *model.Config) {
 	if cfg == nil {
 		return
 	}
 
-	missing := nv.findMissingNamespaces(cfg.Routines())
+	missing := nv.findMissingNamespaces(ctx, cfg.Routines())
 
 	for routine, namespaces := range missing {
 		slog.Warn("namespaces referenced by routine are missing in the cluster",
@@ -44,9 +45,12 @@ func (nv *NamespaceValidatorImpl) Validate(cfg *model.Config) {
 	}
 }
 
-func (nv *NamespaceValidatorImpl) findMissingNamespaces(routines map[string]*model.BackupRoutine) NamespacesByRoutine {
+func (nv *NamespaceValidatorImpl) findMissingNamespaces(
+	ctx context.Context,
+	routines map[string]*model.BackupRoutine,
+) NamespacesByRoutine {
 	clusters := nv.collectClusters(routines)
-	namespacesByCluster := nv.fetchNamespacesByCluster(clusters)
+	namespacesByCluster := nv.fetchNamespacesByCluster(ctx, clusters)
 	return nv.diffRoutineNamespaces(routines, namespacesByCluster)
 }
 
@@ -66,11 +70,12 @@ func (nv *NamespaceValidatorImpl) collectClusters(
 
 // fetchNamespacesByCluster fetches namespaces for each cluster.
 func (nv *NamespaceValidatorImpl) fetchNamespacesByCluster(
+	ctx context.Context,
 	clusters map[*model.AerospikeCluster]struct{},
 ) map[*model.AerospikeCluster][]string {
 	namespacesByCluster := make(map[*model.AerospikeCluster][]string, len(clusters))
 	for cluster := range clusters {
-		namespaces, err := nv.fetchClusterNamespaces(cluster)
+		namespaces, err := nv.fetchClusterNamespaces(ctx, cluster)
 		if err != nil {
 			slog.Error("failed to fetch namespaces for cluster", attr.Error(err))
 			continue
@@ -82,14 +87,17 @@ func (nv *NamespaceValidatorImpl) fetchNamespacesByCluster(
 }
 
 // fetchClusterNamespaces gets the namespace list from the given cluster.
-func (nv *NamespaceValidatorImpl) fetchClusterNamespaces(cluster *model.AerospikeCluster) ([]string, error) {
-	client, err := nv.clientManager.GetClient(cluster)
+func (nv *NamespaceValidatorImpl) fetchClusterNamespaces(
+	ctx context.Context,
+	cluster *model.AerospikeCluster,
+) ([]string, error) {
+	client, err := nv.clientManager.GetClient(ctx, cluster)
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to cluster: %w", err)
 	}
 	defer nv.clientManager.Close(client)
 
-	namespaces, err := client.InfoClient().GetNamespacesList()
+	namespaces, err := client.InfoClient().GetNamespacesList(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve namespaces: %w", err)
 	}

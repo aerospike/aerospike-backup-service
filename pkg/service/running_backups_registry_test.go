@@ -12,7 +12,7 @@ import (
 )
 
 func TestRegisterAndCurrentStat(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, initConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
 
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
@@ -33,7 +33,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 }
 
 func TestFinishFull(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, initConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -53,7 +53,7 @@ func TestFinishFull(t *testing.T) {
 }
 
 func TestFinishIncremental(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, initConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -76,7 +76,7 @@ func TestFinishIncremental(t *testing.T) {
 
 func TestGetAllCurrentStats(t *testing.T) {
 	config := initConfig()
-	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, config)
+	registry := NewRunningBackupsRegistry(context.Background(), nil, config)
 
 	routine1 := "routine1"
 	routine2 := "routine2"
@@ -115,7 +115,7 @@ func TestGetAllCurrentStats(t *testing.T) {
 }
 
 func TestCancel(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), &MockBackupBackendService{}, initConfig())
+	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

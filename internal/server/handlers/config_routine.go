@@ -45,7 +45,7 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// validate that new routine has all required NSs (under the lock)
-		s.nsValidator.Validate(config)
+		s.nsValidator.Validate(r.Context(), config)
 		return nil
 	})
 
@@ -137,7 +137,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// validate that updated routine has all required NSs (under the lock)
-		s.nsValidator.Validate(config)
+		s.nsValidator.Validate(r.Context(), config)
 		return nil
 	})
 	if err != nil {

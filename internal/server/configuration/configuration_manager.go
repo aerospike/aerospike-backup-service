@@ -51,7 +51,11 @@ func Load(
 	return config, manager, nil
 }
 
-func readConfig(reader io.Reader, nsValidator aerospike.NamespaceValidator) (*model.Config, error) {
+func readConfig(
+	ctx context.Context,
+	reader io.Reader,
+	nsValidator aerospike.NamespaceValidator,
+) (*model.Config, error) {
 	configBytes, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration content: %w", err)
@@ -68,7 +72,7 @@ func readConfig(reader io.Reader, nsValidator aerospike.NamespaceValidator) (*mo
 		return nil, fmt.Errorf("failed to convert configuration to model: %w", err)
 	}
 
-	nsValidator.Validate(modelConfig)
+	nsValidator.Validate(ctx, modelConfig)
 
 	return modelConfig, nil
 }

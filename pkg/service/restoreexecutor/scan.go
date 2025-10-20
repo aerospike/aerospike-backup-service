@@ -12,7 +12,7 @@ import (
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/encoding/asb"
-	ioStorage "github.com/aerospike/backup-go/io/storage"
+	"github.com/aerospike/backup-go/io/storage/options"
 )
 
 const megabyte = 1_048_576
@@ -23,7 +23,7 @@ func runScanRestore(
 	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
 	reader, err := storage.CreateDirReader(ctx,
-		request.SourceStorage, request.BackupDataPath, ioStorage.WithValidator(asb.NewValidator()))
+		request.SourceStorage, request.BackupDataPath, options.WithValidator(asb.NewValidator()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)
 	}
