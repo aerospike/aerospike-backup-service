@@ -79,7 +79,8 @@ func TestScheduleRoutines(t *testing.T) {
 			for name, routine := range tt.routines {
 				_ = config.AddRoutine(name, routine)
 			}
-			err := scheduleRoutines(scheduler, config, components)
+			mockPathService := NewPathService()
+			err := scheduleRoutines(scheduler, config, components, mockPathService)
 
 			require.NoError(t, err)
 			scheduler.AssertNumberOfCalls(t, "ScheduleJob", tt.expectedCalls)

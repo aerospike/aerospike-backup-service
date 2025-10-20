@@ -24,13 +24,19 @@ type ClusterConfigWriter interface {
 type DefaultClusterConfigWriter struct {
 	config        *model.Config
 	clientManager aerospike.ClientManager
+	pathService   PathService
 }
 
 // NewClusterConfigWriter returns a new DefaultClusterConfigWriter instance.
-func NewClusterConfigWriter(clientManager aerospike.ClientManager, config *model.Config) *DefaultClusterConfigWriter {
+func NewClusterConfigWriter(
+	clientManager aerospike.ClientManager,
+	config *model.Config,
+	pathService PathService,
+) *DefaultClusterConfigWriter {
 	return &DefaultClusterConfigWriter{
 		config:        config,
 		clientManager: clientManager,
+		pathService:   pathService,
 	}
 }
 
@@ -58,7 +64,7 @@ func (w *DefaultClusterConfigWriter) Write(
 	}
 
 	for i, info := range infos {
-		confFilePath := getConfigurationFilePath(routineName, timestamp, i)
+		confFilePath := w.pathService.GetConfigurationFilePath(routineName, timestamp, i)
 		err := storage.WriteDataFile(ctx, routine.Storage, confFilePath, []byte(info))
 		if err != nil {
 			logger.Error("Failed to write cluster configuration backup",

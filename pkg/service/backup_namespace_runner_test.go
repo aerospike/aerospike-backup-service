@@ -38,6 +38,7 @@ func initMocks(t *testing.T) (testMocks, *BackupNamespaceRunner) {
 		&simpleExecutor{},
 		mockBackendService,
 		slog.Default(),
+		NewPathService(),
 	)
 
 	return testMocks{

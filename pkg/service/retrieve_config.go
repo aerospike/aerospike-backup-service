@@ -23,14 +23,20 @@ type ConfigRetriever interface {
 type ConfigRetrieverImpl struct {
 	backupReader BackupReader
 	config       *model.Config
+	pathService  PathService
 }
 
 var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
 
-func NewConfigRetriever(backupReader BackupReaderWriter, config *model.Config) *ConfigRetrieverImpl {
+func NewConfigRetriever(
+	backupReader BackupReaderWriter,
+	config *model.Config,
+	pathService PathService,
+) *ConfigRetrieverImpl {
 	return &ConfigRetrieverImpl{
 		backupReader: backupReader,
 		config:       config,
+		pathService:  pathService,
 	}
 }
 
@@ -46,7 +52,7 @@ func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routin
 		return nil, fmt.Errorf("no full backups found before %v: %w", toTime, model.ErrNotFound)
 	}
 
-	path := getConfigurationPath(routine, backups[0].Created)
+	path := cr.pathService.GetConfigurationPath(routine, backups[0].Created)
 
 	backupRoutine, found := cr.config.Routine(routine)
 	if !found {
@@ -62,10 +68,10 @@ func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routin
 		return nil, fmt.Errorf("no configuration backups found for %s: %w", path, model.ErrNotFound)
 	}
 
-	return packageFiles(configBackups)
+	return cr.packageFiles(configBackups)
 }
 
-func packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
+func (cr *ConfigRetrieverImpl) packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
 	// Create a buffer to write our archive to
 	buf := new(bytes.Buffer)
 
@@ -73,7 +79,7 @@ func packageFiles(buffers []*bytes.Buffer) ([]byte, error) {
 	w := zip.NewWriter(buf)
 
 	for i, data := range buffers {
-		fileName := getConfigFileName(i)
+		fileName := cr.pathService.GetConfigFileName(i)
 
 		f, err := w.Create(fileName)
 		if err != nil {

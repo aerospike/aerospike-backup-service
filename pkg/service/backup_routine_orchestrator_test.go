@@ -109,7 +109,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 		mockRetentionManager,
 		mockBackupBackend,
 		mockClusterConfigWriter,
-	))
+	), NewPathService())
 
 	backupCounters.Reset()
 	o.runFullBackup(context.Background(), now)
@@ -149,7 +149,7 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		mockRetentionManager,
 		mockBackupBackend,
 		mockClusterConfigWriter,
-	))
+	), NewPathService())
 
 	ctx := context.Background()
 	now := time.Now()
@@ -201,7 +201,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 		mockRetentionManager,
 		mockBackupBackend,
 		mockClusterConfigWriter,
-	))
+	), NewPathService())
 
 	backupCounters.Reset()
 	o.runFullBackup(context.Background(), time.Now())
@@ -239,7 +239,7 @@ func TestBackupRoutineOrchestrator_runFullBackup_RaceCondition(t *testing.T) {
 		mockRetentionManager,
 		mockBackupBackend,
 		mockClusterConfigWriter,
-	))
+	), NewPathService())
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -375,7 +375,7 @@ func TestSkipIncrementalBackup(t *testing.T) {
 
 			orchestrator := newOrchestrator(routineName, config, &BackupComponents{
 				registry: mockRegistry,
-			})
+			}, NewPathService())
 
 			assert.Equal(t, tt.expectedToSkip, orchestrator.skipIncrementalBackup(tt.now))
 		})
@@ -416,7 +416,7 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 		nil,
 		nil,
 		nil,
-	))
+	), NewPathService())
 
 	backupCounters.Reset()
 
@@ -518,7 +518,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 		mockRetentionManager,
 		mockBackupBackend,
 		mockClusterConfigWriter,
-	))
+	), NewPathService())
 
 	o.runIncrementalBackup(context.Background(), time.Now())
 	time.Sleep(10 * time.Millisecond) // time to unregister routine.

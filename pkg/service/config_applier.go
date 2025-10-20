@@ -17,11 +17,12 @@ type ConfigApplier interface {
 }
 
 type DefaultConfigApplier struct {
-	mu         sync.Mutex
-	scheduler  quartz.Scheduler
-	registry   RunningBackupsRegistry
-	components *BackupComponents
-	config     *model.Config
+	mu          sync.Mutex
+	scheduler   quartz.Scheduler
+	registry    RunningBackupsRegistry
+	components  *BackupComponents
+	config      *model.Config
+	pathService PathService
 }
 
 func NewDefaultConfigApplier(
@@ -29,12 +30,14 @@ func NewDefaultConfigApplier(
 	registry RunningBackupsRegistry,
 	components *BackupComponents,
 	config *model.Config,
+	pathService PathService,
 ) ConfigApplier {
 	return &DefaultConfigApplier{
-		scheduler:  scheduler,
-		registry:   registry,
-		components: components,
-		config:     config,
+		scheduler:   scheduler,
+		registry:    registry,
+		components:  components,
+		config:      config,
+		pathService: pathService,
 	}
 }
 
@@ -47,7 +50,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig() error {
 		return fmt.Errorf("failed to clear periodic jobs: %w", err)
 	}
 
-	err = scheduleRoutines(a.scheduler, a.config, a.components)
+	err = scheduleRoutines(a.scheduler, a.config, a.components, a.pathService)
 	if err != nil {
 		return fmt.Errorf("failed to schedule periodic backups: %w", err)
 	}
