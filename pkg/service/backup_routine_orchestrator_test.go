@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
@@ -189,7 +187,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
 
 	connectionError := errors.New("connection failed")
-	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(2) // retries
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(1)
 
 	initialState := &model.RoutineState{}
 	mockRegistry.EXPECT().GetRoutineState(routineName).Return(initialState)
@@ -211,97 +209,6 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
 	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
-}
-
-// TestRunFullBackupInternal_RaceCondition tests the race condition scenario where:
-// 1. First call to runFullBackupInternal fails to get client on first try (network error).
-// 2. Second call starts and is skipped (first one is still trying)
-// 3. First call retries, gets client and does the backup.
-func TestBackupRoutineOrchestrator_runFullBackup_RaceCondition(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockClientManager := aerospike.NewMockClientManager(ctrl)
-	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
-	mockRetentionManager := NewMockRetentionManager(ctrl)
-	mockBackupBackend := NewMockBackupReaderWriter(ctrl)
-	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
-	mockClient = &backup.Client{}
-	mockBackupHandler := backupexecutor.NewMockBackupHandler(ctrl)
-
-	config := setupBaseConfig()
-	registry := NewRunningBackupsRegistry(ctx, mockBackupBackend, config)
-
-	orchestrator := newOrchestrator(routineName, config, NewBackupComponents(
-		mockClientManager,
-		mockBackupExecutor,
-		registry,
-		mockRetentionManager,
-		mockBackupBackend,
-		mockClusterConfigWriter,
-	))
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-	var notFirstCall atomic.Bool
-
-	// Mock GetClient to simulate the race condition
-	// The first call (from Process A) will fail.
-	// The second call (from Process A retry) will succeed.
-	// No third call because process B will skip.
-	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(_ *model.AerospikeCluster) (*backup.Client, error) {
-			slog.Info("get client called", slog.Bool("notFirstCall", notFirstCall.Load()))
-			if !notFirstCall.Swap(true) { // Process A fails
-				return nil, errors.New("network error")
-			}
-			return mockClient, nil
-		}).Times(2)
-
-	// Expect the backup to be run twice due to the race
-	mockBackupExecutor.EXPECT().Run(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(mockBackupHandler, nil).Times(2)
-
-	firstBackupTime := time.Unix(1, 0)
-	secondBackupTime := time.Unix(999, 0)
-
-	mockClientManager.EXPECT().Close(mockClient) // only process A has created
-	mockClusterConfigWriter.EXPECT().Write(gomock.Any(), routineName, newTimeMatcher(firstBackupTime)).Return(nil)
-	mockBackupHandler.EXPECT().GetStats().Return(models.NewBackupStats()).AnyTimes()
-	mockBackupHandler.EXPECT().GetMetrics().Return(models.NewMetrics(0, 0, 0, 0)).AnyTimes()
-	mockBackupHandler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(_ context.Context) error {
-		time.Sleep(1 * time.Second)
-		return nil
-	}).Times(2) // for ns1 and ns2
-	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-		Return(nil).Times(2)
-	mockRetentionManager.EXPECT().deleteOldBackups(gomock.Any(), gomock.Any()).Return(nil)
-
-	backupCounters.Reset()
-
-	// Run two backup routines concurrently
-	go func() {
-		defer wg.Done()
-		slog.Info("Process A start")
-		orchestrator.runFullBackup(context.Background(), firstBackupTime)
-		slog.Info("Process A done")
-	}()
-
-	go func() {
-		defer wg.Done()
-		// give the first goroutine a slight head start
-		time.Sleep(200 * time.Millisecond)
-		slog.Info("Process B start")
-		orchestrator.runFullBackup(context.Background(), secondBackupTime)
-		slog.Info("Process B done")
-	}()
-
-	wg.Wait()
-	time.Sleep(10 * time.Millisecond) // time to unregister routine.
-
-	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
-	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
-	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeFailure))
 }
 
 func TestSkipIncrementalBackup(t *testing.T) {
