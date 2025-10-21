@@ -32,17 +32,15 @@ func (s *Service) AddAerospikeCluster(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
-	r.Body.Close()
 
-	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		cluster, err := newCluster.ToModel(config)
 		if err != nil {
 			return fmt.Errorf("invalid cluster %q: %w", name, err)
 		}
 
 		return config.AddCluster(name, cluster)
-	})
-	if err != nil {
+	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -118,14 +116,14 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
-	r.Body.Close()
+
 	cluster, err := updatedCluster.ToModel(s.config)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
 
-	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		err := config.UpdateCluster(clusterName, cluster)
 		if err != nil {
 			return err
@@ -134,9 +132,7 @@ func (s *Service) UpdateAerospikeCluster(w http.ResponseWriter, r *http.Request)
 		// validate that new cluster has all required NSs (under the lock)
 		s.nsValidator.Validate(r.Context(), config)
 		return nil
-	})
-
-	if err != nil {
+	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}

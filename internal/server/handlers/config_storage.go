@@ -31,17 +31,14 @@ func (s *Service) AddStorage(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
-	r.Body.Close()
 
-	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		storage, err := newStorage.ToModel(config)
 		if err != nil {
 			return fmt.Errorf("failed to convert storage: %w", err)
 		}
 		return config.AddStorage(name, storage)
-	})
-
-	if err != nil {
+	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -111,16 +108,14 @@ func (s *Service) UpdateStorage(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
-	defer r.Body.Close()
 
-	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		storage, err := updatedStorage.ToModel(config)
 		if err != nil {
 			return fmt.Errorf("failed to convert storage: %w", err)
 		}
 		return config.UpdateStorage(storageName, storage)
-	})
-	if err != nil {
+	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
