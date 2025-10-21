@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
 const (
@@ -16,6 +18,7 @@ const (
 	fullBackupDirectory          = "backup"
 	configurationBackupDirectory = "configuration"
 	dataDirectory                = "data"
+	configPrefix                 = "aerospike"
 )
 
 // PathService defines the interface for path-related operations.
@@ -42,14 +45,14 @@ type PathService interface {
 
 // PathServiceImpl implements the PathService interface.
 type PathServiceImpl struct {
-	formatName       *string
+	format           *model.DateFormat
 	timestampPattern *regexp.Regexp
 }
 
 // NewPathService creates a new PathServiceImpl.
-func NewPathService(formatName *string) *PathServiceImpl {
+func NewPathService(format *model.DateFormat) *PathServiceImpl {
 	return &PathServiceImpl{
-		formatName: formatName,
+		format: format,
 		timestampPattern: regexp.MustCompile(
 			fmt.Sprintf(`(?:[^/]+/)?[^/]+/(%s|%s)/(\d{13})(?:_[^/]*)?/`,
 				fullBackupDirectory,
@@ -85,11 +88,11 @@ func (s *PathServiceImpl) GetConfigurationFilePath(routineName string, timestamp
 // FormatTimestamp formats a timestamp into a string.
 func (s *PathServiceImpl) formatTimestamp(t time.Time) string {
 	timestamp := strconv.FormatInt(t.UnixMilli(), 10)
-	if s.formatName == nil {
+	if s.format == nil {
 		return timestamp
 	}
 
-	return timestamp + "_" + t.Format(*s.formatName)
+	return timestamp + "_" + t.Format(model.DateEncodingPresets[*s.format])
 }
 
 // ExtractTimestampFromPath extracts the timestamp part from a path.
@@ -114,5 +117,5 @@ func backupRootPath(routineName string, backupType jobType) string {
 
 // configFileName returns the name of a configuration file based on an index.
 func configFileName(index int) string {
-	return fmt.Sprintf("aerospike_%d%s", index, configExt)
+	return fmt.Sprintf("%s_%d%s", configPrefix, index, configExt)
 }

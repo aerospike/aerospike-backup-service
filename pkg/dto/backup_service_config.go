@@ -3,7 +3,8 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"strings"
+	"maps"
+	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
@@ -28,8 +29,9 @@ func (b *BackupServiceConfig) Validate() error {
 		return fmt.Errorf("logger validation error: %w", err)
 	}
 	if b.DateEncoding != nil {
-		if _, ok := model.DateFormatPresets[strings.ToUpper(*b.DateEncoding)]; !ok {
-			return errValidationInvalidValue("date-encoding", *b.DateEncoding, "ISO,US,EU")
+		if _, ok := model.DateEncodingPresets[model.DateFormat(*b.DateEncoding)]; !ok {
+			allowed := slices.Collect(maps.Keys(model.DateEncodingPresets))
+			return errValidationInvalidValue("date-encoding", *b.DateEncoding, allowed)
 		}
 	}
 
@@ -37,10 +39,15 @@ func (b *BackupServiceConfig) Validate() error {
 }
 
 func (b *BackupServiceConfig) ToModel() *model.BackupServiceConfig {
+	var dateEncoding *model.DateFormat
+	if b.DateEncoding != nil {
+		val := model.DateFormat(*b.DateEncoding)
+		dateEncoding = &val
+	}
 	return &model.BackupServiceConfig{
-		HTTPServer:   b.HTTPServer.ToModel(),
-		Logger:       b.Logger.ToModel(),
-		DateEncoding: b.DateEncoding,
+		HTTPServer: b.HTTPServer.ToModel(),
+		Logger:     b.Logger.ToModel(),
+		DateFormat: dateEncoding,
 	}
 }
 
@@ -59,7 +66,10 @@ func (b *BackupServiceConfig) fromModel(m *model.BackupServiceConfig) {
 		b.Logger.fromModel(m.Logger)
 	}
 
-	b.DateEncoding = m.DateEncoding
+	if m.DateFormat != nil {
+		val := string(*m.DateFormat)
+		b.DateEncoding = &val
+	}
 }
 
 // Compare BackupServiceConfig with another and return detailed errors.
