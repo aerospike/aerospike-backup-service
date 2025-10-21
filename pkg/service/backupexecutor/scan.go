@@ -75,22 +75,11 @@ func makeBackupConfig(
 	config.FileLimit = uint64(backupPolicy.GetFileLimitOrDefault() * megabyte) // lib expects limit in bytes.
 	config.RecordsPerSecond = ptr.ValueOrZero(backupPolicy.RecordsPerSecond)
 	config.Bandwidth = ptr.ValueOrZero(backupPolicy.Bandwidth) * megabyte // lib expects file size in bytes.
+	config.ScanPolicy = scanPolicy(backupPolicy, backupRoutine, timeBounds)
+	config.RackList = backupRoutine.RackList // backup only these racks
 
 	config.ModBefore = timeBounds.ToTime
 	config.ModAfter = timeBounds.FromTime
-
-	config.ScanPolicy = as.NewScanPolicy()
-	if backupPolicy.TotalTimeout != nil {
-		config.ScanPolicy.TotalTimeout = *backupPolicy.TotalTimeout
-	}
-
-	config.ScanPolicy.SocketTimeout = calculateSocketTimeout(backupRoutine, isFullBackup(timeBounds), time.Now())
-	config.ScanPolicy.UseCompression = ptr.ValueOrZero(backupPolicy.UseCompression)
-	config.ScanPolicy.MaxConcurrentNodes = ptr.ValueOrZero(backupPolicy.MaxConcurrentNodes)
-
-	config.ScanPolicy.MaxRetries = 10
-	config.ScanPolicy.SleepBetweenRetries = 1 * time.Second
-	config.ScanPolicy.SleepMultiplier = 2
 
 	config.CompressionPolicy = makeCompressionPolicy(backupPolicy)
 	config.EncryptionPolicy = makeEncryptionPolicy(backupPolicy)
@@ -98,9 +87,32 @@ func makeBackupConfig(
 
 	config.MetricsEnabled = true
 
-	config.RackList = backupRoutine.RackList // backup only these racks
-
 	return config, nil
+}
+
+func scanPolicy(
+	backupPolicy *model.BackupPolicy,
+	backupRoutine *model.BackupRoutine,
+	timeBounds model.TimeBounds,
+) *as.ScanPolicy {
+	scanPolicy := as.NewScanPolicy()
+	if backupPolicy.TotalTimeout != nil {
+		scanPolicy.TotalTimeout = *backupPolicy.TotalTimeout
+	}
+
+	scanPolicy.SocketTimeout = calculateSocketTimeout(backupRoutine, isFullBackup(timeBounds), time.Now())
+	scanPolicy.UseCompression = ptr.ValueOrZero(backupPolicy.UseCompression)
+	scanPolicy.MaxConcurrentNodes = ptr.ValueOrZero(backupPolicy.MaxConcurrentNodes)
+
+	scanPolicy.MaxRetries = 10
+	scanPolicy.SleepBetweenRetries = 1 * time.Second
+	scanPolicy.SleepMultiplier = 2
+
+	if len(backupRoutine.SourceCluster.PreferRacks) > 0 {
+		scanPolicy.ReplicaPolicy = as.PREFER_RACK
+	}
+
+	return scanPolicy
 }
 
 // calculateSocketTimeout calculates socket timeout for the given backup routine and timestamp.
