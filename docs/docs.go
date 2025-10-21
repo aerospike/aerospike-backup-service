@@ -1688,7 +1688,7 @@ const docTemplate = `{
                     "example": 100
                 },
                 "prefer-racks": {
-                    "description": "PreferRacks defines the list of acceptable racks in order of preference.",
+                    "description": "The list of acceptable racks in order of preference.",
                     "type": "array",
                     "items": {
                         "type": "integer"

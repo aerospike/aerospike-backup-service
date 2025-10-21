@@ -31,7 +31,7 @@ type AerospikeCluster struct {
 	// This property helps reduce the load on the cluster and is shared among all backups using the cluster.
 	// Default: unlimited.
 	MaxParallelScans *int `yaml:"max-parallel-scans,omitempty" json:"max-parallel-scans,omitempty" example:"100" extensions:"x-nullable"`
-	// PreferRacks defines the list of acceptable racks in order of preference.
+	// The list of acceptable racks in order of preference.
 	PreferRacks []int `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty" extensions:"x-nullable"`
 }
 
