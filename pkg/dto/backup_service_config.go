@@ -17,8 +17,8 @@ type BackupServiceConfig struct {
 	HTTPServer *HTTPServerConfig `yaml:"http,omitempty" json:"http,omitempty"`
 	// Logger is the backup service logger configuration.
 	Logger *LoggerConfig `yaml:"logger,omitempty" json:"logger,omitempty"`
-	// DateEncoding encoding for backup date in human-readable format
-	DateEncoding *string `yaml:"date-encoding,omitempty" json:"date-encoding,omitempty" enums:"ISO,US,EU"`
+	// Encoding for backup date in human-readable format
+	DateEncoding *string `yaml:"date-encoding,omitempty" json:"date-encoding,omitempty" enums:"ISO,US,EU" extensions:"x-nullable"` //nolint:lll
 }
 
 func (b *BackupServiceConfig) Validate() error {

@@ -2125,6 +2125,16 @@ const docTemplate = `{
             "description": "BackupServiceConfig represents the backup service configuration properties.",
             "type": "object",
             "properties": {
+                "date-encoding": {
+                    "description": "Encoding for backup date in human-readable format",
+                    "type": "string",
+                    "enum": [
+                        "ISO",
+                        "US",
+                        "EU"
+                    ],
+                    "x-nullable": true
+                },
                 "http": {
                     "description": "HTTPServer is the backup service HTTP server configuration.",
                     "allOf": [
