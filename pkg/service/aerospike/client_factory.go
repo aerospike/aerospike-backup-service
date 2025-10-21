@@ -82,6 +82,11 @@ func clientPolicy(c *model.AerospikeCluster) *as.ClientPolicy {
 	policy.ConnectionQueueSize = 256
 	policy.LimitConnectionsToQueueSize = false
 
+	if len(c.PreferRacks) > 0 {
+		policy.RackAware = true
+		policy.RackIds = c.PreferRacks // prioritise these racks
+	}
+
 	return policy
 }
 

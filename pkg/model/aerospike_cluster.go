@@ -33,6 +33,8 @@ type AerospikeCluster struct {
 	TLS *TLS
 	// Specifies the maximum number of parallel scans per the cluster.
 	MaxParallelScans *int
+	// PreferRacks defines the list of acceptable racks in order of preference.
+	PreferRacks []int
 }
 
 // GetUser safely returns the username.
@@ -103,6 +105,10 @@ func (c *AerospikeCluster) Hash() string {
 
 	if c.MaxParallelScans != nil {
 		fmt.Fprintf(hasher, "%d:", *c.MaxParallelScans)
+	}
+
+	for _, rackID := range c.PreferRacks {
+		fmt.Fprintf(hasher, "%d:", rackID)
 	}
 
 	return hex.EncodeToString(hasher.Sum(nil))

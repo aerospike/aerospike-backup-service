@@ -2019,6 +2019,14 @@
                         "example": 100,
                         "nullable": true
                     },
+                    "prefer-racks": {
+                        "description": "PreferRacks defines the list of acceptable racks in order of preference.",
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "nullable": true
+                    },
                     "seed-nodes": {
                         "description": "The seed nodes details.",
                         "type": "array",
@@ -2415,15 +2423,12 @@
                         "type": "string",
                         "nullable": true
                     },
-                    "prefer-racks": {
-                        "description": "The list of Aerospike Server rack IDs to prioritize when reading records during backup.\nThis is optional and can be used to optimize for rack-aware deployments.",
+                    "racks": {
+                        "description": "The list of Aerospike Server rack IDs to use when reading records during backup.",
                         "type": "array",
                         "items": {
                             "type": "integer"
                         },
-                        "example": [
-                            0
-                        ],
                         "nullable": true
                     },
                     "secret-agent": {

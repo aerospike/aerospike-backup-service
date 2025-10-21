@@ -1687,6 +1687,14 @@ const docTemplate = `{
                     "x-nullable": true,
                     "example": 100
                 },
+                "prefer-racks": {
+                    "description": "PreferRacks defines the list of acceptable racks in order of preference.",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "x-nullable": true
+                },
                 "seed-nodes": {
                     "description": "The seed nodes details.",
                     "type": "array",
@@ -2083,16 +2091,13 @@ const docTemplate = `{
                     "type": "string",
                     "x-nullable": true
                 },
-                "prefer-racks": {
-                    "description": "The list of Aerospike Server rack IDs to prioritize when reading records during backup.\nThis is optional and can be used to optimize for rack-aware deployments.",
+                "racks": {
+                    "description": "The list of Aerospike Server rack IDs to use when reading records during backup.",
                     "type": "array",
                     "items": {
                         "type": "integer"
                     },
-                    "x-nullable": true,
-                    "example": [
-                        0
-                    ]
+                    "x-nullable": true
                 },
                 "secret-agent": {
                     "description": "The name of a Secret Agent to read secrets from (optional).",
