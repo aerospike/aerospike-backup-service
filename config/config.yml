@@ -276,4 +276,4 @@ service:
     level: INFO
     file-writer:
       filename: "log/backup-service.log"
-    date-format
+  date-format: EU
