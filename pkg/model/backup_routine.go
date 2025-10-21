@@ -2,11 +2,11 @@ package model
 
 // BackupRoutine represents a scheduled backup operation routine.
 type BackupRoutine struct {
-	// The name of the corresponding backup policy.
+	// The corresponding backup policy.
 	BackupPolicy *BackupPolicy
-	// The name of the corresponding source cluster.
+	// The corresponding source cluster.
 	SourceCluster *AerospikeCluster
-	// The name of the corresponding storage provider configuration.
+	// The corresponding storage provider configuration.
 	Storage Storage
 	// The Secret Agent configuration for the routine (optional).
 	SecretAgent *SecretAgent
