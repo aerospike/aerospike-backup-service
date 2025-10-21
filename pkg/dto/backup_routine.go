@@ -37,7 +37,7 @@ type BackupRoutine struct {
 	// The list of backup bin names (optional, an empty list implies backing up all bins) extensions:"x-nullable".
 	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty" example:"dataBin" extensions:"x-nullable"`
 	// The list of Aerospike Server rack IDs to use when reading records during backup.
-	Racks []int `yaml:"racks,omitempty" json:"racks,omitempty" extensions:"x-nullable"`
+	RackList []int `yaml:"rack-list,omitempty" json:"rack-list,omitempty" extensions:"x-nullable"`
 
 	// PartitionList defines the list of partitions to include in the backup.
 	// The format supports individual partitions or ranges.
@@ -80,7 +80,7 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
 	}
-	for i, rack := range r.Racks {
+	for i, rack := range r.RackList {
 		if rack < 0 {
 			return errValidationNegative(fmt.Sprintf("racks[%d]", i), rack)
 		}
@@ -196,7 +196,7 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig) (*model.BackupRoutin
 		Namespaces:       *r.Namespaces,
 		SetList:          r.SetList,
 		BinList:          r.BinList,
-		Racks:            r.Racks,
+		RackList:         r.RackList,
 		PartitionList:    r.PartitionList,
 		NodeList:         r.NodeList,
 		Disabled:         r.Disabled,
@@ -252,7 +252,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	r.Namespaces = &m.Namespaces
 	r.SetList = m.SetList
 	r.BinList = m.BinList
-	r.Racks = m.Racks
+	r.RackList = m.RackList
 	r.PartitionList = m.PartitionList
 	r.NodeList = m.NodeList
 	r.Disabled = m.Disabled

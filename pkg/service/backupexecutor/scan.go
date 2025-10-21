@@ -98,7 +98,7 @@ func makeBackupConfig(
 
 	config.MetricsEnabled = true
 
-	config.RackList = backupRoutine.Racks // backup only these racks
+	config.RackList = backupRoutine.RackList // backup only these racks
 
 	return config, nil
 }
