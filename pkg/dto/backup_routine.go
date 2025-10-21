@@ -37,6 +37,7 @@ type BackupRoutine struct {
 	// The list of backup bin names (optional, an empty list implies backing up all bins) extensions:"x-nullable".
 	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty" example:"dataBin" extensions:"x-nullable"`
 	// The list of Aerospike Server rack IDs to use when reading records during backup.
+	// Only nodes from selected racks will be scanned.
 	RackList []int `yaml:"rack-list,omitempty" json:"rack-list,omitempty" extensions:"x-nullable"`
 
 	// PartitionList defines the list of partitions to include in the backup.
