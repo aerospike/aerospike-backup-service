@@ -18,7 +18,7 @@ type BackupServiceConfig struct {
 	// Logger is the backup service logger configuration.
 	Logger *LoggerConfig `yaml:"logger,omitempty" json:"logger,omitempty"`
 	// Encoding for backup date in human-readable format
-	DateEncoding *string `yaml:"date-encoding,omitempty" json:"date-encoding,omitempty" enums:"ISO,US,EU" extensions:"x-nullable"` //nolint:lll
+	DateFormat *string `yaml:"date-format,omitempty" json:"date-format,omitempty" enums:"ISO,US,EU" extensions:"x-nullable"` //nolint:lll
 }
 
 func (b *BackupServiceConfig) Validate() error {
@@ -28,10 +28,11 @@ func (b *BackupServiceConfig) Validate() error {
 	if err := b.Logger.Validate(); err != nil {
 		return fmt.Errorf("logger validation error: %w", err)
 	}
-	if b.DateEncoding != nil {
-		if _, ok := model.DateEncodingPresets[model.DateFormat(*b.DateEncoding)]; !ok {
+	if b.DateFormat != nil {
+		format := model.DateFormatFromString(*b.DateFormat)
+		if _, ok := model.DateEncodingPresets[format]; !ok {
 			allowed := slices.Collect(maps.Keys(model.DateEncodingPresets))
-			return errValidationInvalidValue("date-encoding", *b.DateEncoding, allowed)
+			return errValidationInvalidValue("date-encoding", *b.DateFormat, allowed)
 		}
 	}
 
@@ -40,8 +41,8 @@ func (b *BackupServiceConfig) Validate() error {
 
 func (b *BackupServiceConfig) ToModel() *model.BackupServiceConfig {
 	var dateEncoding *model.DateFormat
-	if b.DateEncoding != nil {
-		val := model.DateFormat(*b.DateEncoding)
+	if b.DateFormat != nil {
+		val := model.DateFormatFromString(*b.DateFormat)
 		dateEncoding = &val
 	}
 	return &model.BackupServiceConfig{
@@ -68,7 +69,7 @@ func (b *BackupServiceConfig) fromModel(m *model.BackupServiceConfig) {
 
 	if m.DateFormat != nil {
 		val := string(*m.DateFormat)
-		b.DateEncoding = &val
+		b.DateFormat = &val
 	}
 }
 
@@ -84,13 +85,13 @@ func (b *BackupServiceConfig) Compare(other BackupServiceConfig) error {
 		err = errors.Join(err, fmt.Errorf("logger changes: %w", e))
 	}
 
-	if b.DateEncoding == nil && other.DateEncoding != nil {
+	if b.DateFormat == nil && other.DateFormat != nil {
 		err = errors.Join(err, errors.New("date encoding added"))
 	}
-	if b.DateEncoding != nil && other.DateEncoding == nil {
+	if b.DateFormat != nil && other.DateFormat == nil {
 		err = errors.Join(err, errors.New("date encoding removed"))
 	}
-	if ptr.ValueOrZero(b.DateEncoding) != ptr.ValueOrZero(other.DateEncoding) {
+	if ptr.ValueOrZero(b.DateFormat) != ptr.ValueOrZero(other.DateFormat) {
 		err = errors.Join(err, errors.New("date encoding changed"))
 	}
 

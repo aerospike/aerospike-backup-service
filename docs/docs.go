@@ -2125,7 +2125,7 @@ const docTemplate = `{
             "description": "BackupServiceConfig represents the backup service configuration properties.",
             "type": "object",
             "properties": {
-                "date-encoding": {
+                "date-format": {
                     "description": "Encoding for backup date in human-readable format",
                     "type": "string",
                     "enum": [

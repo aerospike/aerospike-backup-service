@@ -1,8 +1,6 @@
 package model
 
-import (
-	"strings"
-)
+import "strings"
 
 // DateFormat represents the encoding for backup date in human-readable format.
 type DateFormat string
@@ -13,9 +11,8 @@ const (
 	DateFormatEU  DateFormat = "EU"
 )
 
-// ToUpper returns the uppercase string representation of the DateFormat.
-func (d DateFormat) ToUpper() string {
-	return strings.ToUpper(string(d))
+func DateFormatFromString(s string) DateFormat {
+	return DateFormat(strings.ToUpper(s))
 }
 
 var DateEncodingPresets = map[DateFormat]string{
