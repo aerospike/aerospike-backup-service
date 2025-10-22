@@ -34,8 +34,8 @@ func (b *BackupServiceConfig) Validate() error {
 	}
 	if b.DateFormat != nil {
 		format := model.DateFormatFromString(*b.DateFormat)
-		if _, ok := model.DateEncodingPresets[format]; !ok {
-			allowed := slices.Collect(maps.Keys(model.DateEncodingPresets))
+		if _, ok := model.DateFormatPresets[format]; !ok {
+			allowed := slices.Collect(maps.Keys(model.DateFormatPresets))
 			return errValidationInvalidValue("date-format", *b.DateFormat, allowed)
 		}
 	}
@@ -44,15 +44,15 @@ func (b *BackupServiceConfig) Validate() error {
 }
 
 func (b *BackupServiceConfig) ToModel() *model.BackupServiceConfig {
-	var dateEncoding *model.DateFormat
+	var dateFormat *model.DateFormat
 	if b.DateFormat != nil {
 		val := model.DateFormatFromString(*b.DateFormat)
-		dateEncoding = &val
+		dateFormat = &val
 	}
 	return &model.BackupServiceConfig{
 		HTTPServer: b.HTTPServer.ToModel(),
 		Logger:     b.Logger.ToModel(),
-		DateFormat: dateEncoding,
+		DateFormat: dateFormat,
 	}
 }
 

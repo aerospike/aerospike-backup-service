@@ -15,7 +15,7 @@ func DateFormatFromString(s string) DateFormat {
 	return DateFormat(strings.ToUpper(s))
 }
 
-var DateEncodingPresets = map[DateFormat]string{
+var DateFormatPresets = map[DateFormat]string{
 	DateFormatISO: "2006-01-02T15-04-05",
 	DateFormatUS:  "Jan-02-2006-15-04-05",
 	DateFormatEU:  "02-Jan-2006-15-04-05",

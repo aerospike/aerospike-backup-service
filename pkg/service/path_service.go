@@ -92,7 +92,7 @@ func (s *PathServiceImpl) formatTimestamp(t time.Time) string {
 		return timestamp
 	}
 
-	return timestamp + "_" + t.Format(model.DateEncodingPresets[*s.format])
+	return timestamp + "_" + t.Format(model.DateFormatPresets[*s.format])
 }
 
 // ExtractTimestampFromPath extracts the timestamp part from a path.
