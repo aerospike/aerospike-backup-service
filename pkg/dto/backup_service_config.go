@@ -32,7 +32,7 @@ func (b *BackupServiceConfig) Validate() error {
 		format := model.DateFormatFromString(*b.DateFormat)
 		if _, ok := model.DateEncodingPresets[format]; !ok {
 			allowed := slices.Collect(maps.Keys(model.DateEncodingPresets))
-			return errValidationInvalidValue("date-encoding", *b.DateFormat, allowed)
+			return errValidationInvalidValue("date-format", *b.DateFormat, allowed)
 		}
 	}
 
