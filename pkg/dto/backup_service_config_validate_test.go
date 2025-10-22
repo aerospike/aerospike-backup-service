@@ -37,20 +37,20 @@ func TestBackupServiceConfig_Validate_PropagatesLoggerError(t *testing.T) {
 	require.Contains(t, err.Error(), "invalid logger level")
 }
 
-func TestBackupServiceConfig_Validate_InvalidDateFormat(t *testing.T) {
+func TestBackupServiceConfig_Validate_InvalidTimestampFormat(t *testing.T) {
 	cfg := &BackupServiceConfig{
-		DateFormat: ptr.Of("UK"),
+		Backup: &ServiceBackupConfig{TimestampFormat: ptr.Of("UK")},
 	}
 
 	err := cfg.Validate()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "is not a valid date-format")
+	require.Contains(t, err.Error(), "is not a valid timestamp-format")
 }
 
-func TestBackupServiceConfig_Validate_ValidDateFormats(t *testing.T) {
+func TestBackupServiceConfig_Validate_ValidTimestampFormats(t *testing.T) {
 	for _, v := range []string{"ISO", "US", "EU", "iso", "us", "eu"} {
 		cfg := &BackupServiceConfig{
-			DateFormat: &v,
+			Backup: &ServiceBackupConfig{TimestampFormat: &v},
 		}
 		err := cfg.Validate()
 		require.NoError(t, err)

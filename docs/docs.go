@@ -2125,15 +2125,13 @@ const docTemplate = `{
             "description": "BackupServiceConfig represents the backup service configuration properties.",
             "type": "object",
             "properties": {
-                "date-format": {
-                    "description": "Encoding for backup date in human-readable format (optional)\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
-                    "type": "string",
-                    "enum": [
-                        "ISO",
-                        "US",
-                        "EU"
-                    ],
-                    "x-nullable": true
+                "backup": {
+                    "description": "Backup contains service-level backup settings.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.ServiceBackupConfig"
+                        }
+                    ]
                 },
                 "http": {
                     "description": "HTTPServer is the backup service HTTP server configuration.",
@@ -3267,6 +3265,22 @@ const docTemplate = `{
                     "type": "string",
                     "x-nullable": true,
                     "example": "certName"
+                }
+            }
+        },
+        "dto.ServiceBackupConfig": {
+            "description": "ServiceBackupConfig represents service-level backup settings.",
+            "type": "object",
+            "properties": {
+                "timestamp-format": {
+                    "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
+                    "type": "string",
+                    "enum": [
+                        "ISO",
+                        "US",
+                        "EU"
+                    ],
+                    "x-nullable": true
                 }
             }
         },

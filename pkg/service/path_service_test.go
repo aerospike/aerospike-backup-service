@@ -28,7 +28,7 @@ func TestExtractTimestampFromPath(t *testing.T) {
 	t.Run("path with human date", func(t *testing.T) {
 		now := time.Now()
 
-		for format := range maps.Keys(model.DateFormatPresets) {
+		for format := range maps.Keys(model.TimestampFormatPresets) {
 			service := NewPathService(&format)
 			formatTimestamp := service.GetBackupPath("routine", jobTypeFull, "ns1", now)
 			timestamp := service.ExtractTimestampFromPath(formatTimestamp)

@@ -6,8 +6,8 @@ type BackupServiceConfig struct {
 	HTTPServer *HTTPServerConfig
 	// Logger is the backup service logger configuration.
 	Logger *LoggerConfig
-	// DateFormat for human-readable dates in backup file paths.
-	DateFormat *DateFormat
+	// Backup contains service-level backup settings.
+	Backup *ServiceBackupConfig
 }
 
 func (c BackupServiceConfig) GetHTTPServerOrDefault() *HTTPServerConfig {
@@ -24,4 +24,13 @@ func (c BackupServiceConfig) GetLoggerOrDefault() *LoggerConfig {
 	}
 
 	return &defaultConfig.logger
+}
+
+// GetBackupOrDefault returns the backup subsection or an empty default.
+func (c BackupServiceConfig) GetBackupOrDefault() *ServiceBackupConfig {
+	if c.Backup != nil {
+		return c.Backup
+	}
+
+	return &ServiceBackupConfig{}
 }

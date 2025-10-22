@@ -45,12 +45,12 @@ type PathService interface {
 
 // PathServiceImpl implements the PathService interface.
 type PathServiceImpl struct {
-	format           *model.DateFormat
+	format           *model.TimestampFormat
 	timestampPattern *regexp.Regexp
 }
 
 // NewPathService creates a new PathServiceImpl.
-func NewPathService(format *model.DateFormat) *PathServiceImpl {
+func NewPathService(format *model.TimestampFormat) *PathServiceImpl {
 	return &PathServiceImpl{
 		format: format,
 		timestampPattern: regexp.MustCompile(
@@ -92,7 +92,7 @@ func (s *PathServiceImpl) formatTimestamp(t time.Time) string {
 		return timestamp
 	}
 
-	return timestamp + "_" + t.Format(model.DateFormatPresets[*s.format])
+	return timestamp + "_" + t.Format(model.TimestampFormatPresets[*s.format])
 }
 
 // ExtractTimestampFromPath extracts the timestamp part from a path.

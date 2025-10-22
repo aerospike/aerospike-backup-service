@@ -3,11 +3,8 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"maps"
-	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // BackupServiceConfig represents the backup service configuration properties.
@@ -17,12 +14,8 @@ type BackupServiceConfig struct {
 	HTTPServer *HTTPServerConfig `yaml:"http,omitempty" json:"http,omitempty"`
 	// Logger is the backup service logger configuration.
 	Logger *LoggerConfig `yaml:"logger,omitempty" json:"logger,omitempty"`
-	// Encoding for backup date in human-readable format (optional)
-	// Allowed values:
-	// * ISO (e.g. 2006-01-02T15-04-05)
-	// * EU (e.g. 02-Jan-2006-15-04-05)
-	// * US (e.g. Jan-02-2006-15-04-05)
-	DateFormat *string `yaml:"date-format,omitempty" json:"date-format,omitempty" enums:"ISO,US,EU" extensions:"x-nullable"` //nolint:lll
+	// Backup contains service-level backup settings.
+	Backup *ServiceBackupConfig `yaml:"backup,omitempty" json:"backup,omitempty"`
 }
 
 func (b *BackupServiceConfig) Validate() error {
@@ -32,27 +25,18 @@ func (b *BackupServiceConfig) Validate() error {
 	if err := b.Logger.Validate(); err != nil {
 		return fmt.Errorf("`logger` validation error: %w", err)
 	}
-	if b.DateFormat != nil {
-		format := model.DateFormatFromString(*b.DateFormat)
-		if _, ok := model.DateFormatPresets[format]; !ok {
-			allowed := slices.Collect(maps.Keys(model.DateFormatPresets))
-			return errValidationInvalidValue("date-format", *b.DateFormat, allowed)
-		}
+	if err := b.Backup.Validate(); err != nil {
+		return fmt.Errorf("`backup` validation error: %w", err)
 	}
 
 	return nil
 }
 
 func (b *BackupServiceConfig) ToModel() *model.BackupServiceConfig {
-	var dateFormat *model.DateFormat
-	if b.DateFormat != nil {
-		val := model.DateFormatFromString(*b.DateFormat)
-		dateFormat = &val
-	}
 	return &model.BackupServiceConfig{
 		HTTPServer: b.HTTPServer.ToModel(),
 		Logger:     b.Logger.ToModel(),
-		DateFormat: dateFormat,
+		Backup:     b.Backup.ToModel(),
 	}
 }
 
@@ -71,9 +55,9 @@ func (b *BackupServiceConfig) fromModel(m *model.BackupServiceConfig) {
 		b.Logger.fromModel(m.Logger)
 	}
 
-	if m.DateFormat != nil {
-		val := string(*m.DateFormat)
-		b.DateFormat = &val
+	if m.Backup != nil {
+		b.Backup = &ServiceBackupConfig{}
+		b.Backup.fromModel(m.Backup)
 	}
 }
 
@@ -89,14 +73,8 @@ func (b *BackupServiceConfig) Compare(other BackupServiceConfig) error {
 		err = errors.Join(err, fmt.Errorf("logger changes: %w", e))
 	}
 
-	if b.DateFormat == nil && other.DateFormat != nil {
-		err = errors.Join(err, errors.New("date format added"))
-	}
-	if b.DateFormat != nil && other.DateFormat == nil {
-		err = errors.Join(err, errors.New("date format removed"))
-	}
-	if ptr.ValueOrZero(b.DateFormat) != ptr.ValueOrZero(other.DateFormat) {
-		err = errors.Join(err, errors.New("date format changed"))
+	if e := b.Backup.Compare(other.Backup); e != nil {
+		err = errors.Join(err, fmt.Errorf("backup changes: %w", e))
 	}
 
 	return err
