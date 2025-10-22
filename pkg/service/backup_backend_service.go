@@ -149,10 +149,10 @@ type BackupReader interface {
 // BackupWriter defines operations for writing backups metadata.
 type BackupWriter interface {
 	// WriteBackupMetadata stores metadata for a specific backup.
-	WriteBackupMetadata(ctx context.Context, routineName string, path string, metadata model.BackupMetadata) error
+	WriteBackupMetadata(ctx context.Context, routineName, path string, metadata model.BackupMetadata) error
 
 	// Delete removes a specific backup folder.
-	Delete(ctx context.Context, routineName string, path string) error
+	Delete(ctx context.Context, routineName, path string) error
 }
 
 var ErrNotFound = fmt.Errorf("not found")
