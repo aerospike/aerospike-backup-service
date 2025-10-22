@@ -17,7 +17,11 @@ type BackupServiceConfig struct {
 	HTTPServer *HTTPServerConfig `yaml:"http,omitempty" json:"http,omitempty"`
 	// Logger is the backup service logger configuration.
 	Logger *LoggerConfig `yaml:"logger,omitempty" json:"logger,omitempty"`
-	// Encoding for backup date in human-readable format
+	// Encoding for backup date in human-readable format (optional)
+	// Allowed values:
+	// * ISO (e.g. 2006-01-02T15-04-05)
+	// * EU (e.g. 02-Jan-2006-15-04-05)
+	// * US (e.g. Jan-02-2006-15-04-05)
 	DateFormat *string `yaml:"date-format,omitempty" json:"date-format,omitempty" enums:"ISO,US,EU" extensions:"x-nullable"` //nolint:lll
 }
 
