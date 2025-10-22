@@ -6,7 +6,7 @@ type BackupServiceConfig struct {
 	HTTPServer *HTTPServerConfig
 	// Logger is the backup service logger configuration.
 	Logger *LoggerConfig
-	// DateFormat for human-readable dates in path.
+	// DateFormat for human-readable dates in backup file paths.
 	DateFormat *DateFormat
 }
 
