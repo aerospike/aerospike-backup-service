@@ -27,10 +27,10 @@ type BackupServiceConfig struct {
 
 func (b *BackupServiceConfig) Validate() error {
 	if err := b.HTTPServer.Validate(); err != nil {
-		return fmt.Errorf("http validation error: %w", err)
+		return fmt.Errorf("`http` validation error: %w", err)
 	}
 	if err := b.Logger.Validate(); err != nil {
-		return fmt.Errorf("logger validation error: %w", err)
+		return fmt.Errorf("`logger` validation error: %w", err)
 	}
 	if b.DateFormat != nil {
 		format := model.DateFormatFromString(*b.DateFormat)
@@ -90,13 +90,13 @@ func (b *BackupServiceConfig) Compare(other BackupServiceConfig) error {
 	}
 
 	if b.DateFormat == nil && other.DateFormat != nil {
-		err = errors.Join(err, errors.New("date encoding added"))
+		err = errors.Join(err, errors.New("date format added"))
 	}
 	if b.DateFormat != nil && other.DateFormat == nil {
-		err = errors.Join(err, errors.New("date encoding removed"))
+		err = errors.Join(err, errors.New("date format removed"))
 	}
 	if ptr.ValueOrZero(b.DateFormat) != ptr.ValueOrZero(other.DateFormat) {
-		err = errors.Join(err, errors.New("date encoding changed"))
+		err = errors.Join(err, errors.New("date format changed"))
 	}
 
 	return err

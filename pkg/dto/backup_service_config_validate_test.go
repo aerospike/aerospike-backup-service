@@ -24,7 +24,7 @@ func TestBackupServiceConfig_Validate_PropagatesHTTPServerError(t *testing.T) {
 
 	err := cfg.Validate()
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "http validation error")
+	require.Contains(t, err.Error(), "`http` validation error")
 }
 
 func TestBackupServiceConfig_Validate_PropagatesLoggerError(t *testing.T) {
