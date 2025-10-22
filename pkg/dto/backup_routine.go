@@ -36,9 +36,11 @@ type BackupRoutine struct {
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1" extensions:"x-nullable"`
 	// The list of backup bin names (optional, an empty list implies backing up all bins) extensions:"x-nullable".
 	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty" example:"dataBin" extensions:"x-nullable"`
-	// The list of Aerospike Server rack IDs to prioritize when reading records during backup.
-	// This is optional and can be used to optimize for rack-aware deployments.
-	PreferRacks []int `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty" example:"0" extensions:"x-nullable"`
+	// RackList specifies the Aerospike Server rack IDs from which to read records
+	// during backup.
+	// If provided, only nodes belonging to these specified racks will be scanned.
+	// If the list is empty or omitted, no rack filtering is applied.
+	RackList []int `yaml:"rack-list,omitempty" json:"rack-list,omitempty" extensions:"x-nullable"`
 
 	// PartitionList defines the list of partitions to include in the backup.
 	// The format supports individual partitions or ranges.
@@ -81,9 +83,9 @@ func (r *BackupRoutine) Validate() error {
 			return fmt.Errorf("incremental backup interval string '%s' invalid: %w", r.IntervalCron, err)
 		}
 	}
-	for i, rack := range r.PreferRacks {
+	for i, rack := range r.RackList {
 		if rack < 0 {
-			return errValidationNegative(fmt.Sprintf("prefer-racks[%d]", i), rack)
+			return errValidationNegative(fmt.Sprintf("rack-list[%d]", i), rack)
 		}
 		if rack > maxRack {
 			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)
@@ -197,7 +199,7 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig) (*model.BackupRoutin
 		Namespaces:       *r.Namespaces,
 		SetList:          r.SetList,
 		BinList:          r.BinList,
-		PreferRacks:      r.PreferRacks,
+		RackList:         r.RackList,
 		PartitionList:    r.PartitionList,
 		NodeList:         r.NodeList,
 		Disabled:         r.Disabled,
@@ -253,7 +255,7 @@ func (r *BackupRoutine) fromModel(m *model.BackupRoutine, config *model.BackupCo
 	r.Namespaces = &m.Namespaces
 	r.SetList = m.SetList
 	r.BinList = m.BinList
-	r.PreferRacks = m.PreferRacks
+	r.RackList = m.RackList
 	r.PartitionList = m.PartitionList
 	r.NodeList = m.NodeList
 	r.Disabled = m.Disabled

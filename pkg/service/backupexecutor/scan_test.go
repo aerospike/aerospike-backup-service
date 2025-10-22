@@ -121,6 +121,7 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 			TLSCAString:    ptr.Of("ca-string"),
 			IsBase64:       ptr.Of(true),
 		},
+		SourceCluster: &model.AerospikeCluster{},
 	}
 
 	// Full backup has FromTime == nil
@@ -187,6 +188,7 @@ func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {
 		NodeList:         []string{"node1", "node2"},
 		IncrIntervalCron: "@hourly",
 		SecretAgent:      &model.SecretAgent{},
+		SourceCluster:    &model.AerospikeCluster{},
 	}
 
 	// Incremental backup has FromTime != nil
@@ -221,6 +223,7 @@ func TestMakeBackupConfigWithPartitionList(t *testing.T) {
 		BackupPolicy:  &model.BackupPolicy{},
 		PartitionList: "0-100",
 		IntervalCron:  "@daily",
+		SourceCluster: &model.AerospikeCluster{},
 	}
 
 	config, err := makeBackupConfig(namespace, routine, model.TimeBounds{})
@@ -239,7 +242,8 @@ func TestMakeBackupConfig_DefaultParallelWrite(t *testing.T) {
 		BackupPolicy: &model.BackupPolicy{
 			Parallel: ptr.Of(4),
 		},
-		IntervalCron: "@daily",
+		IntervalCron:  "@daily",
+		SourceCluster: &model.AerospikeCluster{},
 	}
 
 	config, err := makeBackupConfig(namespace, routine, model.TimeBounds{})

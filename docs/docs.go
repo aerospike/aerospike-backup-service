@@ -1687,6 +1687,14 @@ const docTemplate = `{
                     "x-nullable": true,
                     "example": 100
                 },
+                "prefer-racks": {
+                    "description": "The list of acceptable racks in order of preference.\nNodes in prefer-racks[0] are chosen first.\nIf a node is not found in prefer-racks[0], then nodes in prefer-racks[1] are searched, and so on.",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "x-nullable": true
+                },
                 "seed-nodes": {
                     "description": "The seed nodes details.",
                     "type": "array",
@@ -2083,16 +2091,13 @@ const docTemplate = `{
                     "type": "string",
                     "x-nullable": true
                 },
-                "prefer-racks": {
-                    "description": "The list of Aerospike Server rack IDs to prioritize when reading records during backup.\nThis is optional and can be used to optimize for rack-aware deployments.",
+                "rack-list": {
+                    "description": "RackList specifies the Aerospike Server rack IDs from which to read records\nduring backup.\nIf provided, only nodes belonging to these specified racks will be scanned.\nIf the list is empty or omitted, no rack filtering is applied.",
                     "type": "array",
                     "items": {
                         "type": "integer"
                     },
-                    "x-nullable": true,
-                    "example": [
-                        0
-                    ]
+                    "x-nullable": true
                 },
                 "secret-agent": {
                     "description": "The name of a Secret Agent to read secrets from (optional).",
