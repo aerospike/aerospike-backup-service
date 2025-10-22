@@ -83,8 +83,12 @@ func readRequestBody(r *http.Request) ([]byte, error) {
 		return nil, err
 	}
 
-	r.Body.Close()
+	if err = r.Body.Close(); err != nil {
+		return nil, err
+	}
+
 	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
 	return bodyBytes, nil
 }
 

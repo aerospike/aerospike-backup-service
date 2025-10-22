@@ -31,14 +31,14 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
-	r.Body.Close()
+
 	toModel, err := newRoutine.ToModel(s.config.BackupConfigCopy())
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
 
-	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		err := config.AddRoutine(name, toModel)
 		if err != nil {
 			return err
@@ -47,9 +47,7 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		// validate that new routine has all required NSs (under the lock)
 		s.nsValidator.Validate(r.Context(), config)
 		return nil
-	})
-
-	if err != nil {
+	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -122,7 +120,6 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
-	r.Body.Close()
 
 	toModel, err := updatedRoutine.ToModel(s.config.BackupConfigCopy())
 	if err != nil {
@@ -130,7 +127,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		err := config.UpdateRoutine(name, toModel)
 		if err != nil {
 			return err
@@ -139,8 +136,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		// validate that updated routine has all required NSs (under the lock)
 		s.nsValidator.Validate(r.Context(), config)
 		return nil
-	})
-	if err != nil {
+	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}

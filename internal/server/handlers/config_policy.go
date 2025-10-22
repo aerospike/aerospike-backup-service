@@ -24,16 +24,16 @@ func (s *Service) AddPolicy(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
-	r.Body.Close()
+
 	name := r.PathValue("name")
 	if name == "" {
 		httpError(w, errMissingPolicyName)
 		return
 	}
-	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+
+	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		return config.AddPolicy(name, newPolicy.ToModel())
-	})
-	if err != nil {
+	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -96,17 +96,16 @@ func (s *Service) UpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errInvalidJSONPayload(err))
 		return
 	}
-	r.Body.Close()
+
 	name := r.PathValue("name")
 	if name == "" {
 		httpError(w, errMissingPolicyName)
 		return
 	}
 
-	err = s.changeConfig(r.Context(), func(config *model.Config) error {
+	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
 		return config.UpdatePolicy(name, updatedPolicy.ToModel())
-	})
-	if err != nil {
+	}); err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
