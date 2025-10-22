@@ -486,7 +486,7 @@
             "nullable": true
           },
           "rack-list": {
-            "description": "The list of Aerospike Server rack IDs to use when reading records during backup.\nOnly nodes from selected racks will be scanned.",
+            "description": "RackList specifies the Aerospike Server rack IDs from which to read records\nduring backup.\nIf provided, only nodes belonging to these specified racks will be scanned.\nIf the list is empty or omitted, no rack filtering is applied.",
             "type": "array",
             "items": {
               "type": "integer"
