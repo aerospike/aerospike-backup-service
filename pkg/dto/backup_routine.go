@@ -36,7 +36,7 @@ type BackupRoutine struct {
 	SetList []string `yaml:"set-list,omitempty" json:"set-list,omitempty" example:"set1" extensions:"x-nullable"`
 	// The list of backup bin names (optional, an empty list implies backing up all bins) extensions:"x-nullable".
 	BinList []string `yaml:"bin-list,omitempty" json:"bin-list,omitempty" example:"dataBin" extensions:"x-nullable"`
-	// RackList specifies the Aerospike Server rack IDs from which to read records 
+	// RackList specifies the Aerospike Server rack IDs from which to read records
 	// during backup.
 	// If provided, only nodes belonging to these specified racks will be scanned.
 	// If the list is empty or omitted, no rack filtering is applied.
