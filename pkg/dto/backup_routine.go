@@ -83,7 +83,7 @@ func (r *BackupRoutine) Validate() error {
 	}
 	for i, rack := range r.RackList {
 		if rack < 0 {
-			return errValidationNegative(fmt.Sprintf("racks[%d]", i), rack)
+			return errValidationNegative(fmt.Sprintf("rack-list[%d]", i), rack)
 		}
 		if rack > maxRack {
 			return fmt.Errorf("rack id %d invalid, should not exceed %d", rack, maxRack)
