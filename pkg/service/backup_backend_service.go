@@ -235,16 +235,6 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 	return backups, nil
 }
 
-func backupKey(fileName, storagePrefix string) string {
-	/* backup key is a substring between root path and metadata file name.
-	fileName example: "storage/test-routine/backup/1609632000000/data/test-ns/metadata.yaml"
-	                   |------|----------------------------------------------|------------|
-	                   Storage|                   Backup Key                 |    Filename
-	                   prefix |                                              |    (metadata.yaml)
-	*/
-	return strings.Trim(strings.TrimPrefix(filepath.Dir(fileName), storagePrefix), "/")
-}
-
 // filterEligibleFiles returns files that meet the timestamp criteria.
 func (b *BackupBackendServiceImpl) filterEligibleFiles(
 	files []string,

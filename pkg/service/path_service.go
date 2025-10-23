@@ -3,9 +3,10 @@ package service
 import (
 	"fmt"
 	"log/slog"
-	"path/filepath"
+	"path"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -62,7 +63,7 @@ func NewPathService(format *model.TimestampFormat) *PathServiceImpl {
 
 // GetTimestampPath returns the timestamped path for a backup.
 func (s *PathServiceImpl) GetTimestampPath(routineName string, timestamp time.Time, backupType jobType) string {
-	return filepath.Join(backupRootPath(routineName, backupType), s.formatTimestamp(timestamp))
+	return path.Join(backupRootPath(routineName, backupType), s.formatTimestamp(timestamp))
 }
 
 // GetBackupPath returns the path for a specific namespace backup.
@@ -72,17 +73,17 @@ func (s *PathServiceImpl) GetBackupPath(
 	namespace string,
 	timestamp time.Time,
 ) string {
-	return filepath.Join(s.GetTimestampPath(routineName, timestamp, backupType), dataDirectory, namespace)
+	return path.Join(s.GetTimestampPath(routineName, timestamp, backupType), dataDirectory, namespace)
 }
 
 // GetConfigurationPath returns the path for the configuration backup.
 func (s *PathServiceImpl) GetConfigurationPath(routineName string, timestamp time.Time) string {
-	return filepath.Join(routineName, fullBackupDirectory, s.formatTimestamp(timestamp), configurationBackupDirectory)
+	return path.Join(routineName, fullBackupDirectory, s.formatTimestamp(timestamp), configurationBackupDirectory)
 }
 
 // GetConfigurationFilePath returns the path for a specific configuration file.
 func (s *PathServiceImpl) GetConfigurationFilePath(routineName string, timestamp time.Time, index int) string {
-	return filepath.Join(s.GetConfigurationPath(routineName, timestamp), configFileName(index))
+	return path.Join(s.GetConfigurationPath(routineName, timestamp), configFileName(index))
 }
 
 // FormatTimestamp formats a timestamp into a string.
@@ -109,13 +110,30 @@ func (s *PathServiceImpl) ExtractTimestampFromPath(path string) string {
 // backupRootPath returns the root path for a backup.
 func backupRootPath(routineName string, backupType jobType) string {
 	if backupType == jobTypeFull {
-		return filepath.Join(routineName, fullBackupDirectory)
+		return path.Join(routineName, fullBackupDirectory)
 	}
 
-	return filepath.Join(routineName, incrementalBackupDirectory)
+	return path.Join(routineName, incrementalBackupDirectory)
 }
 
 // configFileName returns the name of a configuration file based on an index.
 func configFileName(index int) string {
 	return fmt.Sprintf("%s_%d%s", configPrefix, index, configExt)
+}
+
+// extractBackupDirFromKey return backup folder
+// input: "storage/test-routine/backup/1609632000000/data/test-ns"
+// output: "storage/test-routine/backup/1609632000000"
+func extractBackupDirFromKey(key string) string {
+	return path.Dir(path.Dir(path.Clean(key)))
+}
+
+func backupKey(fileName, storagePrefix string) string {
+	/* backup key is a substring between root path and metadata file name.
+	fileName example: "storage/test-routine/backup/1609632000000/data/test-ns/metadata.yaml"
+	                   |------|----------------------------------------------|------------|
+	                   Storage|                   Backup Key                 |    Filename
+	                   prefix |                                              |    (metadata.yaml)
+	*/
+	return strings.Trim(strings.TrimPrefix(path.Dir(fileName), storagePrefix), "/")
 }

@@ -131,7 +131,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	registry := service.NewRunningBackupsRegistry(ctx, backendService, config)
 
 	var routineStorage u.LockMap
-	retentionManager := service.NewBackupRetentionManager(backendService, config, &routineStorage, pathService)
+	retentionManager := service.NewBackupRetentionManager(backendService, config, &routineStorage)
 	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, config, pathService)
 	backupExecutor := backupexecutor.NewDefaultBackupExecutor()
 	backupComponents := service.NewBackupComponents(

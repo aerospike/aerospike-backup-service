@@ -20,7 +20,6 @@ type RetentionManager interface {
 type RetentionManagerImpl struct {
 	backendService BackupReaderWriter
 	config         *model.Config
-	pathService    PathService
 
 	// Lock per routine. The restore service reads backup data,
 	// while the retention manager deletes backup data.
@@ -34,13 +33,11 @@ func NewBackupRetentionManager(
 	backendService BackupReaderWriter,
 	config *model.Config,
 	routineStorage *collections.LockMap,
-	pathService PathService,
 ) *RetentionManagerImpl {
 	return &RetentionManagerImpl{
 		backendService: backendService,
 		config:         config,
 		routineStorage: routineStorage,
-		pathService:    pathService,
 	}
 }
 
@@ -68,7 +65,7 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routineName
 
 	timestamps := getTimestamps(fullBackups)
 	if policy.FullBackups != nil {
-		if err := e.deleteFullBackups(ctx, timestamps, *policy.FullBackups, routineName); err != nil {
+		if err := e.deleteFullBackups(ctx, timestamps, *policy.FullBackups, routineName, fullBackups); err != nil {
 			return fmt.Errorf("failed to delete excess full backups: %w", err)
 		}
 	}
@@ -84,17 +81,24 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routineName
 }
 
 func (e *RetentionManagerImpl) deleteFullBackups(
-	ctx context.Context, timestamps []time.Time, retainCount int, routineName string,
+	ctx context.Context,
+	timestamps []time.Time,
+	retainCount int,
+	routineName string,
+	backups []model.BackupDetails,
 ) error {
 	if len(timestamps) <= retainCount {
 		return nil
 	}
 
+	earliest := timestamps[len(timestamps)-retainCount]
 	var errs error
-	for _, t := range timestamps[:len(timestamps)-retainCount] {
-		path := e.pathService.GetTimestampPath(routineName, t, jobTypeFull)
-		if err := e.backendService.Delete(ctx, routineName, path); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", path, err))
+	for _, b := range backups {
+		if !b.Created.Before(earliest) {
+			continue
+		}
+		if err := e.backendService.Delete(ctx, routineName, extractBackupDirFromKey(b.Key)); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", b.Key, err))
 		}
 	}
 
@@ -121,9 +125,8 @@ func (e *RetentionManagerImpl) deleteIncrementalBackups(
 
 	var errs error
 	for _, b := range incrBackups {
-		path := e.pathService.GetTimestampPath(routineName, b.Created, jobTypeIncremental)
-		if err := e.backendService.Delete(ctx, routineName, path); err != nil {
-			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", path, err))
+		if err := e.backendService.Delete(ctx, routineName, extractBackupDirFromKey(b.Key)); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("failed to delete folder at %v: %w", b.Key, err))
 		}
 	}
 
