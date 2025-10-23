@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,4 +55,26 @@ func TestPathService_GetConfigurationFilePath(t *testing.T) {
 	path := pathService.GetConfigurationFilePath("routine", time.Now(), 1)
 	assert.Contains(t, path, "routine/backup/")
 	assert.Contains(t, path, "/configuration/aerospike_1.conf")
+}
+
+func TestExtractBackupDirFromKey(t *testing.T) {
+	routineName := "test-routine"
+	namespace := "test-ns"
+	backupType := jobTypeFull
+	now := time.Now()
+
+	for _, format := range []*model.TimestampFormat{nil, ptr.Of(model.TimestampFormatEU)} {
+		pathService := NewPathService(format)
+
+		t.Run(string(ptr.ValueOrZero(format)), func(t *testing.T) {
+			// construct path
+			backupPath := pathService.GetBackupPath(routineName, backupType, namespace, now)
+			// deconstruct path
+			backupDir := extractBackupDirFromKey(backupPath)
+			// get expected path
+			expectedPath := pathService.GetTimestampPath(routineName, now, backupType)
+
+			assert.Equal(t, expectedPath, backupDir)
+		})
+	}
 }
