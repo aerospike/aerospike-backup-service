@@ -72,9 +72,9 @@ func (f *RoutineFilter) WithToTime(toTime time.Time) *RoutineFilter {
 	return f
 }
 
-func (f *RoutineFilter) getUpperBoundary() string {
+func (f *RoutineFilter) getUpperBoundary(pathService PathService) string {
 	if f.ToTime != nil {
-		return getTimestampPath(f.routine, *f.ToTime, f.JobType)
+		return pathService.GetTimestampPath(f.routine, *f.ToTime, f.JobType)
 	}
 
 	return "\uffff"
@@ -92,7 +92,7 @@ func (f *RoutineFilter) String() string {
 }
 
 func (f *RoutineFilter) getPath() string {
-	return getBackupRootPath(f.routine, f.JobType)
+	return backupRootPath(f.routine, f.JobType)
 }
 
 // PathFilter for filtering by explicit path.
@@ -163,15 +163,17 @@ func ErrRoutineNotFound(routineName string) error {
 
 // BackupBackendServiceImpl default implementation of BackupReaderWriter.
 type BackupBackendServiceImpl struct {
-	config *model.Config
-	locks  collections.LockMap // lock per routine
+	config      *model.Config
+	locks       collections.LockMap // lock per routine
+	pathService PathService
 }
 
 var _ BackupReaderWriter = (*BackupBackendServiceImpl)(nil)
 
-func NewBackupBackendService(config *model.Config) *BackupBackendServiceImpl {
+func NewBackupBackendService(config *model.Config, pathService PathService) *BackupBackendServiceImpl {
 	return &BackupBackendServiceImpl{
-		config: config,
+		config:      config,
+		pathService: pathService,
 	}
 }
 
@@ -205,13 +207,13 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.FromTime, err)
 	}
 
-	// Storage returned all files >= fromTime. We need to find the one with highest timestamp that's still < ToTime.
+	// Storage returned all files >= fromTime. We need to find the one with the highest timestamp that's still < ToTime.
 	// We use the timestamps that are part of file path.
-	maxString := filter.getUpperBoundary()
+	maxString := filter.getUpperBoundary(b.pathService)
 
 	// Filter files based on timestamp criteria
 	storagePrefix := filepath.Clean(backupStorage.GetPath())
-	eligibleFiles := filterEligibleFiles(files, filepath.Join(storagePrefix, maxString), filter)
+	eligibleFiles := b.filterEligibleFiles(files, filepath.Join(storagePrefix, maxString), filter)
 
 	var backups []model.BackupDetails
 	for _, fileName := range eligibleFiles {
@@ -233,18 +235,12 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 	return backups, nil
 }
 
-func backupKey(fileName, storagePrefix string) string {
-	/* backup key is a substring between root path and metadata file name.
-	fileName example: "storage/test-routine/backup/1609632000000/data/test-ns/metadata.yaml"
-	                   |------|----------------------------------------------|------------|
-	                   Storage|                   Backup Key                 |    Filename
-	                   prefix |                                              |    (metadata.yaml)
-	*/
-	return strings.Trim(strings.TrimPrefix(filepath.Dir(fileName), storagePrefix), "/")
-}
-
 // filterEligibleFiles returns files that meet the timestamp criteria.
-func filterEligibleFiles(files []string, maxString string, filter *RoutineFilter) []string {
+func (b *BackupBackendServiceImpl) filterEligibleFiles(
+	files []string,
+	maxString string,
+	filter *RoutineFilter,
+) []string {
 	var lessThenMaxString []string
 	for _, fileName := range files {
 		if fileName < maxString || strings.HasPrefix(fileName, maxString) {
@@ -257,12 +253,12 @@ func filterEligibleFiles(files []string, maxString string, filter *RoutineFilter
 		return lessThenMaxString
 	}
 
-	highestTimestamp := findHighestTimestamp(lessThenMaxString)
+	highestTimestamp := b.findHighestTimestamp(lessThenMaxString)
 
 	// Filter further to keep only files with the highest timestamp
 	var latestFiles []string
 	for _, fileName := range lessThenMaxString {
-		if extractTimestampFromPath(fileName) == highestTimestamp {
+		if b.pathService.ExtractTimestampFromPath(fileName) == highestTimestamp {
 			latestFiles = append(latestFiles, fileName)
 		}
 	}
@@ -270,10 +266,10 @@ func filterEligibleFiles(files []string, maxString string, filter *RoutineFilter
 	return latestFiles
 }
 
-func findHighestTimestamp(files []string) string {
+func (b *BackupBackendServiceImpl) findHighestTimestamp(files []string) string {
 	var highestTimestamp string
 	for _, fileName := range files {
-		timestamp := extractTimestampFromPath(fileName)
+		timestamp := b.pathService.ExtractTimestampFromPath(fileName)
 		if timestamp > highestTimestamp {
 			highestTimestamp = timestamp
 		}

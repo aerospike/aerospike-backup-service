@@ -126,17 +126,18 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		return nil, nil, nil, nil, fmt.Errorf("failed to create scheduler: %w", err)
 	}
 
-	backendService := service.NewBackupBackendService(config)
+	pathService := service.NewPathService(config.ServiceConfig.GetBackupOrDefault().TimestampFormat)
+	backendService := service.NewBackupBackendService(config, pathService)
 	registry := service.NewRunningBackupsRegistry(ctx, backendService, config)
 
 	var routineStorage u.LockMap
 	retentionManager := service.NewBackupRetentionManager(backendService, config, &routineStorage)
-	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, config)
+	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, config, pathService)
 	backupExecutor := backupexecutor.NewDefaultBackupExecutor()
 	backupComponents := service.NewBackupComponents(
 		clientManager, backupExecutor, registry, retentionManager,
 		backendService, clusterConfigWriter)
-	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config)
+	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config, pathService)
 
 	err = configApplier.ApplyNewConfig()
 	if err != nil {
@@ -149,7 +150,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	restoreMgr := service.NewRestoreManager(
 		restoreexecutor.NewRestore(), clientManager, restoreJobs, backendService, &routineStorage)
 
-	configRetriever := service.NewConfigRetriever(backendService, config)
+	configRetriever := service.NewConfigRetriever(backendService, config, pathService)
 	httpService := handlers.NewService(
 		ctx,
 		config,

@@ -24,6 +24,7 @@ type BackupNamespaceRunner struct {
 	retry          executor
 	backendService BackupWriter
 	logger         *slog.Logger
+	pathService    PathService
 }
 
 // NewBackupNamespaceRunner creates a new BackupNamespaceRunner instance.
@@ -33,6 +34,7 @@ func NewBackupNamespaceRunner(
 	retry executor,
 	backendService BackupWriter,
 	logger *slog.Logger,
+	pathService PathService,
 ) *BackupNamespaceRunner {
 	return &BackupNamespaceRunner{
 		routineName:    routineName,
@@ -40,6 +42,7 @@ func NewBackupNamespaceRunner(
 		retry:          retry,
 		backendService: backendService,
 		logger:         logger,
+		pathService:    pathService,
 	}
 }
 
@@ -61,7 +64,7 @@ func (op *BackupNamespaceRunner) Run(
 	startTime time.Time,
 	timeBounds model.TimeBounds,
 ) CancelableBackupHandler {
-	backupFolder := getBackupPath(op.routineName, backupType, namespace, startTime)
+	backupFolder := op.pathService.GetBackupPath(op.routineName, backupType, namespace, startTime)
 
 	return newRetryableBackupHandler(
 		ctx,
@@ -70,7 +73,7 @@ func (op *BackupNamespaceRunner) Run(
 			return op.backupExecutor.Run(ctx, client, backupRoutine, timeBounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) { // on fail
-			op.deleteFolder(ctx, getTimestampPath(op.routineName, startTime, backupType))
+			op.deleteFolder(ctx, op.pathService.GetTimestampPath(op.routineName, startTime, backupType))
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success
 			// For incremental backups, skip metadata for empty backups

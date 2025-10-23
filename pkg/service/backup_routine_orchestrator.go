@@ -64,14 +64,20 @@ func NewBackupComponents(
 	}
 }
 
-func newOrchestrator(routineName string, config *model.Config, h *BackupComponents) *BackupRoutineOrchestrator {
+func newOrchestrator(
+	routineName string,
+	config *model.Config,
+	h *BackupComponents,
+	pathService PathService,
+) *BackupRoutineOrchestrator {
 	routine, _ := config.Routine(routineName)
 	logger := slog.With(attr.Routine(routineName))
 	retry := newRetryExecutor(*routine.BackupPolicy.GetRetryPolicyOrDefault(), logger)
+	runner := NewBackupNamespaceRunner(routineName, h.backupExecutor, retry, h.backendService, logger, pathService)
 	return &BackupRoutineOrchestrator{
 		routineName:         routineName,
 		routine:             routine,
-		runner:              NewBackupNamespaceRunner(routineName, h.backupExecutor, retry, h.backendService, logger),
+		runner:              runner,
 		clusterConfigWriter: h.clusterConfigWriter,
 		clientManager:       h.clientManager,
 		registry:            h.registry,

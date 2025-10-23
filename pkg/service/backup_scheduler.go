@@ -59,7 +59,7 @@ func NewScheduler(ctx context.Context, appLogger *slog.Logger) (quartz.Scheduler
 
 // scheduleRoutines schedules the given handlers using the scheduler.
 func scheduleRoutines(
-	scheduler Scheduler, config *model.Config, components *BackupComponents,
+	scheduler Scheduler, config *model.Config, components *BackupComponents, pathService PathService,
 ) error {
 	newJobs := map[string]*quartz.JobDetail{}
 	var errs error
@@ -69,7 +69,7 @@ func scheduleRoutines(
 			continue
 		}
 
-		runner := newOrchestrator(routineName, config, components)
+		runner := newOrchestrator(routineName, config, components, pathService)
 		// schedule a full backup job for the routine
 		job, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routineName)
 		if err != nil {

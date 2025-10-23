@@ -23,7 +23,7 @@ var (
 )
 
 func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
-	service := setupLocalBackupBackendService(t)
+	service, pathService := setupLocalBackupBackendService(t)
 
 	// Create backups with different timestamps
 	times := []time.Time{
@@ -35,7 +35,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	}
 
 	for _, tm := range times {
-		backupPath := getBackupPath(routineName, jobTypeFull, testNamespace, tm)
+		backupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, tm)
 
 		metadata := model.BackupMetadata{
 			Created:   tm,
@@ -106,7 +106,7 @@ func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 }
 
 func TestLocalGetBackups_RoutineNotFound(t *testing.T) {
-	service := setupLocalBackupBackendService(t)
+	service, _ := setupLocalBackupBackendService(t)
 
 	ctx := context.Background()
 	filter := NewFullBackupFilter("non-existent-routine")
@@ -118,11 +118,11 @@ func TestLocalGetBackups_RoutineNotFound(t *testing.T) {
 }
 
 func TestLocalDeleteBackup(t *testing.T) {
-	service := setupLocalBackupBackendService(t)
+	service, pathService := setupLocalBackupBackendService(t)
 
 	// Create backup
 	created := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-	backupPath := getBackupPath(routineName, jobTypeFull, testNamespace, created)
+	backupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, created)
 
 	metadata := model.BackupMetadata{
 		Created:   created,
@@ -149,11 +149,11 @@ func TestLocalDeleteBackup(t *testing.T) {
 }
 
 func TestWriteBackupMetadata_RoutineNotFound(t *testing.T) {
-	service := setupLocalBackupBackendService(t)
+	service, pathService := setupLocalBackupBackendService(t)
 
 	ctx := context.Background()
 	routineName := "non-existent-routine"
-	backupPath := getBackupPath(routineName, jobTypeFull, testNamespace, time.Now())
+	backupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, time.Now())
 	metadata := model.BackupMetadata{
 		Created:   time.Now(),
 		Namespace: testNamespace,
@@ -167,11 +167,11 @@ func TestWriteBackupMetadata_RoutineNotFound(t *testing.T) {
 }
 
 func TestDelete_RoutineNotFound(t *testing.T) {
-	service := setupLocalBackupBackendService(t)
+	service, pathService := setupLocalBackupBackendService(t)
 
 	ctx := context.Background()
 	routineName := "non-existent-routine"
-	backupPath := getBackupPath(routineName, jobTypeFull, testNamespace, time.Now())
+	backupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, time.Now())
 
 	// Attempt to delete backup
 	err := service.Delete(ctx, routineName, backupPath)
@@ -181,11 +181,11 @@ func TestDelete_RoutineNotFound(t *testing.T) {
 }
 
 func TestIncrementalBackup(t *testing.T) {
-	service := setupLocalBackupBackendService(t)
+	service, pathService := setupLocalBackupBackendService(t)
 
 	// First create a full backup as baseline
 	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-	fullBackupPath := getBackupPath(routineName, jobTypeFull, testNamespace, fullBackupTime)
+	fullBackupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, fullBackupTime)
 
 	fullMetadata := model.BackupMetadata{
 		Created:     fullBackupTime,
@@ -200,7 +200,7 @@ func TestIncrementalBackup(t *testing.T) {
 
 	// Now create an incremental backup
 	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
-	incrementalPath := getBackupPath(routineName, jobTypeIncremental, testNamespace, incrementalTime)
+	incrementalPath := pathService.GetBackupPath(routineName, jobTypeIncremental, testNamespace, incrementalTime)
 
 	incMetadata := model.BackupMetadata{
 		Created:     incrementalTime,
@@ -243,11 +243,11 @@ func TestIncrementalBackup(t *testing.T) {
 }
 
 func TestReadPath(t *testing.T) {
-	service := setupLocalBackupBackendService(t)
+	service, pathService := setupLocalBackupBackendService(t)
 
 	// First create a full backup as baseline
 	fullBackupTime := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-	fullBackupPath := getBackupPath(routineName, jobTypeFull, testNamespace, fullBackupTime)
+	fullBackupPath := pathService.GetBackupPath(routineName, jobTypeFull, testNamespace, fullBackupTime)
 
 	fullMetadata := model.BackupMetadata{
 		Created: fullBackupTime,
@@ -258,7 +258,7 @@ func TestReadPath(t *testing.T) {
 
 	// Now create an incremental backup
 	incrementalTime := time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC)
-	incrementalPath := getBackupPath(routineName, jobTypeIncremental, testNamespace, incrementalTime)
+	incrementalPath := pathService.GetBackupPath(routineName, jobTypeIncremental, testNamespace, incrementalTime)
 
 	incMetadata := model.BackupMetadata{
 		Created: incrementalTime,
@@ -291,7 +291,7 @@ func TestReadPath(t *testing.T) {
 }
 
 // Setup test helpers for local storage tests.
-func setupLocalBackupBackendService(t *testing.T) *BackupBackendServiceImpl {
+func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, PathService) {
 	t.Helper()
 
 	tempDir, err := os.MkdirTemp("", "backup-test-*")
@@ -311,5 +311,6 @@ func setupLocalBackupBackendService(t *testing.T) *BackupBackendServiceImpl {
 	err = config.AddRoutine("test-routine", routine)
 	require.NoError(t, err)
 
-	return NewBackupBackendService(config)
+	pathService := NewPathService(nil)
+	return NewBackupBackendService(config, pathService), pathService
 }
