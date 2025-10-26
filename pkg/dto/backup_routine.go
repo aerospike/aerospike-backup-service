@@ -176,6 +176,11 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig) (*model.BackupRoutin
 		return nil, errValidationNotFound("Aerospike cluster", r.SourceCluster)
 	}
 
+	// Enforce mutual exclusivity between routine-level rack-list and cluster-level prefer-racks
+	if len(r.RackList) > 0 && len(cluster.PreferRacks) > 0 {
+		return nil, errValidationMutuallyExclusive("rack-list", "prefer-racks")
+	}
+
 	storage, found := config.Storage[r.Storage]
 	if !found {
 		return nil, errValidationNotFound("storage", r.Storage)
