@@ -189,7 +189,93 @@ func TestBackupRoutine_ToModel_SecretAgentNotFound(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestBackupRoutine_ToModel_RackListMutualExclusivity(t *testing.T) {
+func TestBackupRoutine_Validate_MutualExclusive_RackAndPartition(t *testing.T) {
+	r := &BackupRoutine{
+		SourceCluster: "cluster1",
+		Storage:       "storage1",
+		IntervalCron:  "0 0 * * * *",
+		Namespaces:    &[]string{"ns1"},
+		RackList:      []int{1},
+		PartitionList: "0-1",
+	}
+	assert.Error(t, r.Validate())
+}
+
+func TestBackupRoutine_Validate_MutualExclusive_RackAndNode(t *testing.T) {
+	r := &BackupRoutine{
+		SourceCluster: "cluster1",
+		Storage:       "storage1",
+		IntervalCron:  "0 0 * * * *",
+		Namespaces:    &[]string{"ns1"},
+		RackList:      []int{1},
+		NodeList:      []string{"node1"},
+	}
+	assert.Error(t, r.Validate())
+}
+
+func TestBackupRoutine_Validate_MutualExclusive_PartitionAndNode(t *testing.T) {
+	r := &BackupRoutine{
+		SourceCluster: "cluster1",
+		Storage:       "storage1",
+		IntervalCron:  "0 0 * * * *",
+		Namespaces:    &[]string{"ns1"},
+		PartitionList: "0-1",
+		NodeList:      []string{"node1"},
+	}
+	assert.Error(t, r.Validate())
+}
+
+func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithPartitionList(t *testing.T) {
+	routineDTO := &BackupRoutine{
+		BackupPolicy:  "policy1",
+		SourceCluster: "cluster1",
+		Storage:       "storage1",
+		Namespaces:    &[]string{"ns1"},
+		PartitionList: "0-1",
+	}
+
+	config := &model.BackupConfig{
+		BackupPolicies: map[string]*model.BackupPolicy{
+			"policy1": {},
+		},
+		AerospikeClusters: map[string]*model.AerospikeCluster{
+			"cluster1": {PreferRacks: []int{2}},
+		},
+		Storage: map[string]model.Storage{
+			"storage1": &model.S3Storage{},
+		},
+	}
+
+	_, err := routineDTO.ToModel(config)
+	assert.Error(t, err)
+}
+
+func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithNodeList(t *testing.T) {
+	routineDTO := &BackupRoutine{
+		BackupPolicy:  "policy1",
+		SourceCluster: "cluster1",
+		Storage:       "storage1",
+		Namespaces:    &[]string{"ns1"},
+		NodeList:      []string{"node1"},
+	}
+
+	config := &model.BackupConfig{
+		BackupPolicies: map[string]*model.BackupPolicy{
+			"policy1": {},
+		},
+		AerospikeClusters: map[string]*model.AerospikeCluster{
+			"cluster1": {PreferRacks: []int{2}},
+		},
+		Storage: map[string]model.Storage{
+			"storage1": &model.S3Storage{},
+		},
+	}
+
+	_, err := routineDTO.ToModel(config)
+	assert.Error(t, err)
+}
+
+func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
 	routineDTO := &BackupRoutine{
 		BackupPolicy:  "policy1",
 		SourceCluster: "cluster1",
