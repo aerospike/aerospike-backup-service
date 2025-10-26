@@ -40,6 +40,8 @@ type BackupRoutine struct {
 	// during backup.
 	// If provided, only nodes belonging to these specified racks will be scanned.
 	// If the list is empty or omitted, no rack filtering is applied.
+	// Mutually exclusive with partition-list and node-list in this routine,
+	// and also mutually exclusive with the cluster's prefer-racks setting.
 	RackList []int `yaml:"rack-list,omitempty" json:"rack-list,omitempty" extensions:"x-nullable"`
 
 	// PartitionList defines the list of partitions to include in the backup.
@@ -48,7 +50,8 @@ type BackupRoutine struct {
 	// - A single partition is specified as a number (e.g., "0").
 	// Multiple entries can be comma-separated: e.g., "0,100,200,300,400,500".
 	// By default, all partitions (0 to 4095) are backed up.
-	// This field is mutually exclusive with node-list.
+	// Mutually exclusive with node-list and rack-list in this routine,
+	// and also mutually exclusive with the cluster's prefer-racks setting.
 	PartitionList string `yaml:"partition-list,omitempty" json:"partition-list,omitempty" extensions:"x-nullable"`
 
 	// NodeList specifies which Aerospike nodes to include in the backup.
@@ -59,7 +62,8 @@ type BackupRoutine struct {
 	// - "<node ID>"
 	// To obtain node identifiers, run: `asinfo -v "service:"`.
 	// If using IP addresses or hostnames, ensure they match the values returned by the `asinfo` command.
-	// This field is mutually exclusive with partition-list.
+	// Mutually exclusive with partition-list and rack-list in this routine,
+	// and also mutually exclusive with the cluster's prefer-racks setting.
 	// Parallelism is determined by the number of listed nodes unless `BackupPolicy.Parallel` is set to a lower value.
 	NodeList []string `yaml:"node-list,omitempty" json:"node-list,omitempty" extensions:"x-nullable"`
 
@@ -99,8 +103,15 @@ func (r *BackupRoutine) Validate() error {
 	if err := validatePartitionList(r.PartitionList); err != nil {
 		return fmt.Errorf("invalid partition list: %q", r.PartitionList)
 	}
+	// Mutual exclusivity within routine: rack-list, partition-list, node-list
 	if len(r.PartitionList) > 0 && len(r.NodeList) > 0 {
 		return errValidationMutuallyExclusive("partition-list", "node-list")
+	}
+	if len(r.RackList) > 0 && len(r.PartitionList) > 0 {
+		return errValidationMutuallyExclusive("rack-list", "partition-list")
+	}
+	if len(r.RackList) > 0 && len(r.NodeList) > 0 {
+		return errValidationMutuallyExclusive("rack-list", "node-list")
 	}
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
@@ -174,6 +185,19 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig) (*model.BackupRoutin
 	cluster, found := config.AerospikeClusters[r.SourceCluster]
 	if !found {
 		return nil, errValidationNotFound("Aerospike cluster", r.SourceCluster)
+	}
+
+	// Enforce mutual exclusivity between routine-level selectors and cluster-level prefer-racks
+	if len(cluster.PreferRacks) > 0 {
+		if len(r.RackList) > 0 {
+			return nil, errValidationMutuallyExclusive("rack-list", "prefer-racks")
+		}
+		if len(r.PartitionList) > 0 {
+			return nil, errValidationMutuallyExclusive("partition-list", "prefer-racks")
+		}
+		if len(r.NodeList) > 0 {
+			return nil, errValidationMutuallyExclusive("node-list", "prefer-racks")
+		}
 	}
 
 	storage, found := config.Storage[r.Storage]
