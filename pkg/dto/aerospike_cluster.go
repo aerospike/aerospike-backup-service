@@ -34,6 +34,7 @@ type AerospikeCluster struct {
 	// The list of acceptable racks in order of preference.
 	// Nodes in prefer-racks[0] are chosen first.
 	// If a node is not found in prefer-racks[0], then nodes in prefer-racks[1] are searched, and so on.
+	// Mutually exclusive with the routine's rack-list, node-list and partition-list properties.
 	PreferRacks []int `yaml:"prefer-racks,omitempty" json:"prefer-racks,omitempty" extensions:"x-nullable"`
 }
 

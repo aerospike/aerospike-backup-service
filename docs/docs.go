@@ -1688,7 +1688,7 @@ const docTemplate = `{
                     "example": 100
                 },
                 "prefer-racks": {
-                    "description": "The list of acceptable racks in order of preference.\nNodes in prefer-racks[0] are chosen first.\nIf a node is not found in prefer-racks[0], then nodes in prefer-racks[1] are searched, and so on.",
+                    "description": "The list of acceptable racks in order of preference.\nNodes in prefer-racks[0] are chosen first.\nIf a node is not found in prefer-racks[0], then nodes in prefer-racks[1] are searched, and so on.\nMutually exclusive with the routine's rack-list, node-list and partition-list properties.",
                     "type": "array",
                     "items": {
                         "type": "integer"
@@ -2079,7 +2079,7 @@ const docTemplate = `{
                     ]
                 },
                 "node-list": {
-                    "description": "NodeList specifies which Aerospike nodes to include in the backup.\nOnly the listed nodes will be backed up.\nEach node can be specified as one of the following:\n- \"\u003cIP address\u003e:\u003cport\u003e\"\n- \"\u003chostname\u003e:\u003cport\u003e\"\n- \"\u003cnode ID\u003e\"\nTo obtain node identifiers, run: ` + "`" + `asinfo -v \"service:\"` + "`" + `.\nIf using IP addresses or hostnames, ensure they match the values returned by the ` + "`" + `asinfo` + "`" + ` command.\nThis field is mutually exclusive with partition-list.\nParallelism is determined by the number of listed nodes unless ` + "`" + `BackupPolicy.Parallel` + "`" + ` is set to a lower value.",
+                    "description": "NodeList specifies which Aerospike nodes to include in the backup.\nOnly the listed nodes will be backed up.\nEach node can be specified as one of the following:\n- \"\u003cIP address\u003e:\u003cport\u003e\"\n- \"\u003chostname\u003e:\u003cport\u003e\"\n- \"\u003cnode ID\u003e\"\nTo obtain node identifiers, run: ` + "`" + `asinfo -v \"service:\"` + "`" + `.\nIf using IP addresses or hostnames, ensure they match the values returned by the ` + "`" + `asinfo` + "`" + ` command.\nMutually exclusive with partition-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.\nParallelism is determined by the number of listed nodes unless ` + "`" + `BackupPolicy.Parallel` + "`" + ` is set to a lower value.",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -2087,12 +2087,12 @@ const docTemplate = `{
                     "x-nullable": true
                 },
                 "partition-list": {
-                    "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"\u003cstart\u003e-\u003ccount\u003e\" (e.g., \"100-50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nThis field is mutually exclusive with node-list.",
+                    "description": "PartitionList defines the list of partitions to include in the backup.\nThe format supports individual partitions or ranges.\n- A range is specified as \"\u003cstart\u003e-\u003ccount\u003e\" (e.g., \"100-50\" backs up 50 partitions starting from 100).\n- A single partition is specified as a number (e.g., \"0\").\nMultiple entries can be comma-separated: e.g., \"0,100,200,300,400,500\".\nBy default, all partitions (0 to 4095) are backed up.\nMutually exclusive with node-list and rack-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.",
                     "type": "string",
                     "x-nullable": true
                 },
                 "rack-list": {
-                    "description": "RackList specifies the Aerospike Server rack IDs from which to read records\nduring backup.\nIf provided, only nodes belonging to these specified racks will be scanned.\nIf the list is empty or omitted, no rack filtering is applied.",
+                    "description": "RackList specifies the Aerospike Server rack IDs from which to read records\nduring backup.\nIf provided, only nodes belonging to these specified racks will be scanned.\nIf the list is empty or omitted, no rack filtering is applied.\nMutually exclusive with partition-list and node-list in this routine,\nand also mutually exclusive with the cluster's prefer-racks setting.",
                     "type": "array",
                     "items": {
                         "type": "integer"
