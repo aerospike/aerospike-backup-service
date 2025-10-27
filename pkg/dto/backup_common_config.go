@@ -20,53 +20,53 @@ type BackupCommonConfig struct {
 }
 
 // Validate validates the backup subsection configuration.
-func (c *BackupCommonConfig) Validate() error {
-	if c == nil {
+func (b *BackupCommonConfig) Validate() error {
+	if b == nil {
 		return nil
 	}
 
-	if c.TimestampFormat != nil {
-		format := model.TimestampFormatFromString(*c.TimestampFormat)
+	if b.TimestampFormat != nil {
+		format := model.TimestampFormatFromString(*b.TimestampFormat)
 		if _, ok := model.TimestampFormatPresets[format]; !ok {
 			allowed := slices.Collect(maps.Keys(model.TimestampFormatPresets))
-			return errValidationInvalidValue("timestamp-format", *c.TimestampFormat, allowed)
+			return errValidationInvalidValue("timestamp-format", *b.TimestampFormat, allowed)
 		}
 	}
 
 	return nil
 }
 
-func (c *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
-	if c == nil {
+func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
+	if b == nil {
 		return nil
 	}
 
 	var df *model.TimestampFormat
-	if c.TimestampFormat != nil {
-		v := model.TimestampFormatFromString(*c.TimestampFormat)
+	if b.TimestampFormat != nil {
+		v := model.TimestampFormatFromString(*b.TimestampFormat)
 		df = &v
 	}
 
 	return &model.BackupCommonConfig{TimestampFormat: df}
 }
 
-func (c *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
+func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
 	if m.TimestampFormat != nil {
 		v := string(*m.TimestampFormat)
-		c.TimestampFormat = &v
+		b.TimestampFormat = &v
 	}
 }
 
 // Compare compares two BackupCommonConfig instances and returns detailed errors.
-func (c *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
-	if c == nil && other == nil {
+func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
+	if b == nil && other == nil {
 		return nil
 	}
-	if c == nil {
+	if b == nil {
 		return errors.New("backup added")
 	}
 	if other == nil {
 		return errors.New("backup removed")
 	}
-	return comparePointers("TimestampFormat", c.TimestampFormat, other.TimestampFormat)
+	return comparePointers("TimestampFormat", b.TimestampFormat, other.TimestampFormat)
 }
