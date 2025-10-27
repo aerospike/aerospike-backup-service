@@ -10,7 +10,7 @@ import (
 type Config struct {
 	mu            sync.RWMutex
 	backupConfig  BackupConfig
-	ServiceConfig BackupServiceConfig
+	ServiceConfig ServiceConfig
 }
 
 type BackupConfig struct {
