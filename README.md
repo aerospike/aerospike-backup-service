@@ -918,6 +918,35 @@ git push
 
 # Migration Guide
 
+### v3.3 → v3.4
+
+This release delivers bug fixes and incremental improvements based on customer feedback. The primary addition is rack‑aware backups.
+
+#### Breaking changes
+
+- The `prefer-racks` configuration field has moved from the [Backup routine](docs/readme/dto/dto.backuproutine.md) to the [Aerospike Cluster](docs/readme/dto/dto.aerospikecluster.md) configuration. Update your configuration accordingly.
+
+#### New features
+
+- Rack‑aware backup
+    - A new `rack-list` field has been added to the [Backup routine](docs/readme/dto/dto.backuproutine.md).
+    - It allows you to specify a list of racks to back up. Only nodes belonging to the specified racks will be scanned.
+    - This field is mutually exclusive with `prefer-racks`, `node-list`, and `partition-list`.
+
+- Human‑readable timestamps in backup paths
+    - A new `timestamp-format` field is available in the [Service backup config](docs/readme/dto/dto.servicebackupconfig.md).
+    - Allowed values:
+        - ISO (e.g., `2006-01-02T15-04-05`)
+        - EU (e.g., `02-Jan-2006-15-04-05`)
+        - US (e.g., `Jan-02-2006-15-04-05`)
+    - This field is optional. By default, ABS uses the Unix epoch timestamp to differentiate backups. When `timestamp-format` is set, a human‑readable timestamp is appended as a suffix to the epoch value. Functionality is unaffected.
+
+- Scan policy configuration properties
+    - The [Backup policy](docs/readme/dto/dto.backuppolicy.md) adds two optional fields:
+        - `max-concurrent-nodes` — Maximum number of concurrent requests to server nodes. Default: issue requests to all nodes in parallel.
+        - `use-scan-compression` — Enables built‑in compression during scan operations (Aerospike Server Enterprise Edition only).
+    - Both fields are optional; they do not change functionality but may affect performance.
+
 ## v3.2 -> v3.3
 
 This release includes minor breaking changes and numerous fixes to improve the
