@@ -46,10 +46,10 @@ github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapp
 github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.53.0/go.mod h1:cSgYe11MCNYunTnRXrKiR/tHc0eoKjICUuWpNZoVCOo=
 github.com/KyleBanks/depth v1.2.1 h1:5h8fQADFrWtarTdtDudMmGsC7GPbOAu6RVB3ffsVFHc=
 github.com/KyleBanks/depth v1.2.1/go.mod h1:jzSb9d0L43HxTQfT+oSA1EEp2q+ne2uh6XgeJcm8brE=
-github.com/aerospike/aerospike-client-go/v8 v8.3.0 h1:Np/fui+h0iV6glbsSJqQUh/n51l6Rl1suKzzSLLsFbo=
-github.com/aerospike/aerospike-client-go/v8 v8.3.0/go.mod h1:t1LXZ3QVi4B4lR9qEkyei1eMbuohBJBGs1YY5b5fYEI=
-github.com/aerospike/aerospike-management-lib v1.7.0 h1:XUtJKN/+WT3fSXIAQsZAk5rtm70PLCFoEXd5QMENLS8=
-github.com/aerospike/aerospike-management-lib v1.7.0/go.mod h1:m57ZBKHvC4vKM/qnX8md1vizjYLXOUiH8QnHK45KBFg=
+github.com/aerospike/aerospike-client-go/v8 v8.4.0 h1:bcFaOMIT09DnWPiXjepHQ7sgZNraqojQBuzEaZnW00I=
+github.com/aerospike/aerospike-client-go/v8 v8.4.0/go.mod h1:t1LXZ3QVi4B4lR9qEkyei1eMbuohBJBGs1YY5b5fYEI=
+github.com/aerospike/aerospike-management-lib v1.8.0 h1:oXxuXqCpMD0f8KXXOaCdIZofNUTovef/T8wAnPGUnx8=
+github.com/aerospike/aerospike-management-lib v1.8.0/go.mod h1:RNKlkSnppiaBaLEdAiCeBv68M+odPR5JR+ziO0NfaHQ=
 github.com/aerospike/backup-go v0.7.1-0.20251026100552-8369d18fa28e h1:b6FfV4/8tV6PNSn/S0nmdwOwA68hWQf1a54l7yUJoek=
 github.com/aerospike/backup-go v0.7.1-0.20251026100552-8369d18fa28e/go.mod h1:vKFOUa09BTHKXd7U+ok/LEqQzN3C/cKPy4UjB2tuRQg=
 github.com/aws/aws-sdk-go-v2 v1.39.0 h1:xm5WV/2L4emMRmMjHFykqiA4M/ra0DJVSWUkDyBjbg4=
