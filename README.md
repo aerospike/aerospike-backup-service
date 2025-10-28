@@ -920,11 +920,13 @@ git push
 
 ### v3.3 → v3.4
 
-This release delivers bug fixes and incremental improvements based on customer feedback. The primary addition is rack‑aware backups.
+reaThis release delivers bug fixes and incremental improvements based on customer feedback. The primary addition is
+rack‑aware backups.
 
 #### Breaking changes
 
-- The `prefer-racks` configuration field has moved from the [Backup routine](docs/readme/dto/dto.backuproutine.md) to the [Aerospike Cluster](docs/readme/dto/dto.aerospikecluster.md) configuration. Update your configuration accordingly.
+- The `prefer-racks` configuration field has moved from the [Backup routine](docs/readme/dto/dto.backuproutine.md) to
+  the [Aerospike Cluster](docs/readme/dto/dto.aerospikecluster.md) configuration. Update your configuration accordingly.
 
 #### New features
 
@@ -934,12 +936,15 @@ This release delivers bug fixes and incremental improvements based on customer f
     - This field is mutually exclusive with `prefer-racks`, `node-list`, and `partition-list`.
 
 - Human‑readable timestamps in backup paths
-    - A new `timestamp-format` field is available in the [Service backup config](docs/readme/dto/dto.servicebackupconfig.md).
+    - A new `timestamp-format` field is available in
+      the [Backup common config](docs/readme/dto/dto.backupcommonconfig.md).
     - Allowed values:
         - ISO (e.g., `2006-01-02T15-04-05`)
         - EU (e.g., `02-Jan-2006-15-04-05`)
         - US (e.g., `Jan-02-2006-15-04-05`)
-    - This field is optional. By default, ABS uses the Unix epoch timestamp to differentiate backups. When `timestamp-format` is set, a human‑readable timestamp is appended as a suffix to the epoch value. Functionality is unaffected.
+    - This field is optional. By default, ABS uses the Unix epoch timestamp to differentiate backups. When
+      `timestamp-format` is set, a human‑readable timestamp is appended as a suffix to the epoch value. Functionality is
+      unaffected.
 
 - Scan policy configuration properties
     - The [Backup policy](docs/readme/dto/dto.backuppolicy.md) adds two optional fields:
