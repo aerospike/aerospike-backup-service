@@ -12,13 +12,13 @@ import (
 func TestBackupServiceConfig_Compare(t *testing.T) {
 	tests := []struct {
 		name    string
-		current BackupServiceConfig
-		other   BackupServiceConfig
+		current ServiceConfig
+		other   ServiceConfig
 		errors  []string
 	}{
 		{
 			name: "identical configs",
-			current: BackupServiceConfig{
+			current: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
 					Address: ptr.Of("localhost"),
 					Port:    ptr.Of(Port(8080)),
@@ -28,7 +28,7 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 					Format: ptr.Of("JSON"),
 				},
 			},
-			other: BackupServiceConfig{
+			other: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
 					Address: ptr.Of("localhost"),
 					Port:    ptr.Of(Port(8080)),
@@ -42,13 +42,13 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 		},
 		{
 			name: "changed http server config",
-			current: BackupServiceConfig{
+			current: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
 					Address: ptr.Of("localhost"),
 					Port:    ptr.Of(Port(8080)),
 				},
 			},
-			other: BackupServiceConfig{
+			other: ServiceConfig{
 				HTTPServer: &HTTPServerConfig{
 					Address: ptr.Of("0.0.0.0"),
 					Port:    ptr.Of(Port(9090)),
@@ -61,14 +61,14 @@ func TestBackupServiceConfig_Compare(t *testing.T) {
 		},
 		{
 			name: "changed logger config",
-			current: BackupServiceConfig{
+			current: ServiceConfig{
 				Logger: &LoggerConfig{
 					Level:        ptr.Of("INFO"),
 					Format:       ptr.Of("JSON"),
 					StdoutWriter: ptr.Of(true),
 				},
 			},
-			other: BackupServiceConfig{
+			other: ServiceConfig{
 				Logger: &LoggerConfig{
 					Level:        ptr.Of("DEBUG"),
 					Format:       ptr.Of("PLAIN"),

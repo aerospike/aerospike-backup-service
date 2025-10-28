@@ -8,9 +8,9 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// ServiceBackupConfig represents service-level backup settings.
-// @Description ServiceBackupConfig represents service-level backup settings.
-type ServiceBackupConfig struct {
+// BackupCommonConfig represents service-level backup settings.
+// @Description BackupCommonConfig represents service-level backup settings.
+type BackupCommonConfig struct {
 	// Encoding for backup date in human-readable format in backup file paths (optional).
 	// Allowed values:
 	// * ISO (e.g. 2006-01-02T15-04-05)
@@ -20,7 +20,7 @@ type ServiceBackupConfig struct {
 }
 
 // Validate validates the backup subsection configuration.
-func (b *ServiceBackupConfig) Validate() error {
+func (b *BackupCommonConfig) Validate() error {
 	if b == nil {
 		return nil
 	}
@@ -36,7 +36,7 @@ func (b *ServiceBackupConfig) Validate() error {
 	return nil
 }
 
-func (b *ServiceBackupConfig) ToModel() *model.ServiceBackupConfig {
+func (b *BackupCommonConfig) ToModel() *model.BackupCommonConfig {
 	if b == nil {
 		return nil
 	}
@@ -47,18 +47,18 @@ func (b *ServiceBackupConfig) ToModel() *model.ServiceBackupConfig {
 		df = &v
 	}
 
-	return &model.ServiceBackupConfig{TimestampFormat: df}
+	return &model.BackupCommonConfig{TimestampFormat: df}
 }
 
-func (b *ServiceBackupConfig) fromModel(m *model.ServiceBackupConfig) {
+func (b *BackupCommonConfig) fromModel(m *model.BackupCommonConfig) {
 	if m.TimestampFormat != nil {
 		v := string(*m.TimestampFormat)
 		b.TimestampFormat = &v
 	}
 }
 
-// Compare compares two ServiceBackupConfig instances and returns detailed errors.
-func (b *ServiceBackupConfig) Compare(other *ServiceBackupConfig) error {
+// Compare compares two BackupCommonConfig instances and returns detailed errors.
+func (b *BackupCommonConfig) Compare(other *BackupCommonConfig) error {
 	if b == nil && other == nil {
 		return nil
 	}

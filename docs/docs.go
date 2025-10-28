@@ -1820,6 +1820,22 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.BackupCommonConfig": {
+            "description": "BackupCommonConfig represents service-level backup settings.",
+            "type": "object",
+            "properties": {
+                "timestamp-format": {
+                    "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
+                    "type": "string",
+                    "enum": [
+                        "ISO",
+                        "US",
+                        "EU"
+                    ],
+                    "x-nullable": true
+                }
+            }
+        },
         "dto.BackupDetails": {
             "description": "BackupDetails contains information about a backup.",
             "type": "object",
@@ -2126,36 +2142,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.BackupServiceConfig": {
-            "description": "BackupServiceConfig represents the backup service configuration properties.",
-            "type": "object",
-            "properties": {
-                "backup": {
-                    "description": "Backup contains service-level backup settings.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.ServiceBackupConfig"
-                        }
-                    ]
-                },
-                "http": {
-                    "description": "HTTPServer is the backup service HTTP server configuration.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.HTTPServerConfig"
-                        }
-                    ]
-                },
-                "logger": {
-                    "description": "Logger is the backup service logger configuration.",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LoggerConfig"
-                        }
-                    ]
-                }
-            }
-        },
         "dto.CompressionPolicy": {
             "description": "CompressionPolicy contains backup compression information.",
             "type": "object",
@@ -2214,7 +2200,7 @@ const docTemplate = `{
                     "description": "ServiceConfig contains general service settings.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/dto.BackupServiceConfig"
+                            "$ref": "#/definitions/dto.ServiceConfig"
                         }
                     ]
                 },
@@ -3273,19 +3259,33 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.ServiceBackupConfig": {
-            "description": "ServiceBackupConfig represents service-level backup settings.",
+        "dto.ServiceConfig": {
+            "description": "ServiceConfig represents the backup service configuration properties.",
             "type": "object",
             "properties": {
-                "timestamp-format": {
-                    "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
-                    "type": "string",
-                    "enum": [
-                        "ISO",
-                        "US",
-                        "EU"
-                    ],
-                    "x-nullable": true
+                "backup": {
+                    "description": "Backup contains service-level backup settings.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.BackupCommonConfig"
+                        }
+                    ]
+                },
+                "http": {
+                    "description": "HTTPServer is the backup service HTTP server configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.HTTPServerConfig"
+                        }
+                    ]
+                },
+                "logger": {
+                    "description": "Logger is the backup service logger configuration.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LoggerConfig"
+                        }
+                    ]
                 }
             }
         },

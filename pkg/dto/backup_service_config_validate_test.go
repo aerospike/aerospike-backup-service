@@ -8,7 +8,7 @@ import (
 )
 
 func TestBackupServiceConfig_Validate_Success(t *testing.T) {
-	cfg := &BackupServiceConfig{
+	cfg := &ServiceConfig{
 		HTTPServer: &HTTPServerConfig{ContextPath: ptr.Of("/")},
 		Logger:     &LoggerConfig{Level: ptr.Of("INFO")},
 	}
@@ -18,7 +18,7 @@ func TestBackupServiceConfig_Validate_Success(t *testing.T) {
 }
 
 func TestBackupServiceConfig_Validate_PropagatesHTTPServerError(t *testing.T) {
-	cfg := &BackupServiceConfig{
+	cfg := &ServiceConfig{
 		HTTPServer: &HTTPServerConfig{ContextPath: ptr.Of("FOO")}, // missing leading slash => invalid
 	}
 
@@ -28,7 +28,7 @@ func TestBackupServiceConfig_Validate_PropagatesHTTPServerError(t *testing.T) {
 }
 
 func TestBackupServiceConfig_Validate_PropagatesLoggerError(t *testing.T) {
-	cfg := &BackupServiceConfig{
+	cfg := &ServiceConfig{
 		Logger: &LoggerConfig{Level: ptr.Of("FOO")},
 	}
 
@@ -38,8 +38,8 @@ func TestBackupServiceConfig_Validate_PropagatesLoggerError(t *testing.T) {
 }
 
 func TestBackupServiceConfig_Validate_InvalidTimestampFormat(t *testing.T) {
-	cfg := &BackupServiceConfig{
-		Backup: &ServiceBackupConfig{TimestampFormat: ptr.Of("UK")},
+	cfg := &ServiceConfig{
+		Backup: &BackupCommonConfig{TimestampFormat: ptr.Of("UK")},
 	}
 
 	err := cfg.Validate()
@@ -49,8 +49,8 @@ func TestBackupServiceConfig_Validate_InvalidTimestampFormat(t *testing.T) {
 
 func TestBackupServiceConfig_Validate_ValidTimestampFormats(t *testing.T) {
 	for _, v := range []string{"ISO", "US", "EU", "iso", "us", "eu"} {
-		cfg := &BackupServiceConfig{
-			Backup: &ServiceBackupConfig{TimestampFormat: &v},
+		cfg := &ServiceConfig{
+			Backup: &BackupCommonConfig{TimestampFormat: &v},
 		}
 		err := cfg.Validate()
 		require.NoError(t, err)

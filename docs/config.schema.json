@@ -34,7 +34,7 @@
       "description": "ServiceConfig contains general service settings.",
       "allOf": [
         {
-          "$ref": "#/components/schemas/dto.BackupServiceConfig"
+          "$ref": "#/components/schemas/dto.ServiceConfig"
         }
       ]
     },
@@ -209,6 +209,22 @@
               "Hot",
               "Cool",
               "Cold"
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "dto.BackupCommonConfig": {
+        "description": "BackupCommonConfig represents service-level backup settings.",
+        "type": "object",
+        "properties": {
+          "timestamp-format": {
+            "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
+            "type": "string",
+            "enum": [
+              "ISO",
+              "US",
+              "EU"
             ],
             "nullable": true
           }
@@ -517,36 +533,6 @@
           "storage": {
             "description": "The name of the corresponding storage provider configuration.",
             "type": "string"
-          }
-        }
-      },
-      "dto.BackupServiceConfig": {
-        "description": "BackupServiceConfig represents the backup service configuration properties.",
-        "type": "object",
-        "properties": {
-          "backup": {
-            "description": "Backup contains service-level backup settings.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/dto.ServiceBackupConfig"
-              }
-            ]
-          },
-          "http": {
-            "description": "HTTPServer is the backup service HTTP server configuration.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/dto.HTTPServerConfig"
-              }
-            ]
-          },
-          "logger": {
-            "description": "Logger is the backup service logger configuration.",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/dto.LoggerConfig"
-              }
-            ]
           }
         }
       },
@@ -1618,19 +1604,33 @@
           }
         }
       },
-      "dto.ServiceBackupConfig": {
-        "description": "ServiceBackupConfig represents service-level backup settings.",
+      "dto.ServiceConfig": {
+        "description": "ServiceConfig represents the backup service configuration properties.",
         "type": "object",
         "properties": {
-          "timestamp-format": {
-            "description": "Encoding for backup date in human-readable format in backup file paths (optional).\nAllowed values:\n* ISO (e.g. 2006-01-02T15-04-05)\n* EU (e.g. 02-Jan-2006-15-04-05)\n* US (e.g. Jan-02-2006-15-04-05)",
-            "type": "string",
-            "enum": [
-              "ISO",
-              "US",
-              "EU"
-            ],
-            "nullable": true
+          "backup": {
+            "description": "Backup contains service-level backup settings.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/dto.BackupCommonConfig"
+              }
+            ]
+          },
+          "http": {
+            "description": "HTTPServer is the backup service HTTP server configuration.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/dto.HTTPServerConfig"
+              }
+            ]
+          },
+          "logger": {
+            "description": "Logger is the backup service logger configuration.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/dto.LoggerConfig"
+              }
+            ]
           }
         }
       },

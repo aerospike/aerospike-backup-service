@@ -15,7 +15,7 @@ var secretAgentConfig = SecretAgentConfig{
 }
 
 var originalConfig = &Config{
-	ServiceConfig: BackupServiceConfig{
+	ServiceConfig: ServiceConfig{
 		HTTPServer: &HTTPServerConfig{
 			Address: ptr.String("localhost"),
 		},
