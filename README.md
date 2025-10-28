@@ -920,7 +920,7 @@ git push
 
 ### v3.3 → v3.4
 
-reaThis release delivers bug fixes and incremental improvements based on customer feedback. The primary addition is
+This release delivers bug fixes and incremental improvements based on customer feedback. The primary addition is
 rack‑aware backups.
 
 #### Breaking changes
@@ -948,8 +948,10 @@ rack‑aware backups.
 
 - Scan policy configuration properties
     - The [Backup policy](docs/readme/dto/dto.backuppolicy.md) adds two optional fields:
-        - `max-concurrent-nodes` — Maximum number of concurrent requests to server nodes. Default: issue requests to all nodes in parallel.
-        - `use-scan-compression` — Enables built‑in compression during scan operations (Aerospike Server Enterprise Edition only).
+        - `max-concurrent-nodes` — Maximum number of concurrent requests to server nodes. Default: issue requests to all
+          nodes in parallel.
+        - `use-scan-compression` — Enables built‑in compression during scan operations (Aerospike Server Enterprise
+          Edition only).
     - Both fields are optional; they do not change functionality but may affect performance.
 
 ## v3.2 -> v3.3
