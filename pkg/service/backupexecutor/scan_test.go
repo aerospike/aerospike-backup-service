@@ -6,6 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -251,4 +252,59 @@ func TestMakeBackupConfig_DefaultParallelWrite(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 4, config.ParallelRead)
 	assert.Equal(t, 4, config.ParallelWrite)
+}
+
+func TestMakeBackupConfigWithPreferRacks(t *testing.T) {
+	namespace := "testNamespace"
+	routine := &model.BackupRoutine{
+		BackupPolicy: &model.BackupPolicy{},
+		IntervalCron: "@daily",
+		SourceCluster: &model.AerospikeCluster{
+			PreferRacks: []int{1, 2, 3},
+		},
+	}
+
+	config, err := makeBackupConfig(namespace, routine, model.TimeBounds{})
+
+	require.NoError(t, err)
+	assert.NotNil(t, config.ScanPolicy)
+	assert.Equal(t, config.ScanPolicy.ReplicaPolicy, as.PREFER_RACK)
+	assert.Nil(t, config.EncryptionPolicy)
+	assert.Nil(t, config.CompressionPolicy)
+}
+
+func TestMakeBackupConfigWithRackList(t *testing.T) {
+	namespace := "testNamespace"
+	routine := &model.BackupRoutine{
+		RackList:      []int{1, 2, 3},
+		BackupPolicy:  &model.BackupPolicy{},
+		IntervalCron:  "@daily",
+		SourceCluster: &model.AerospikeCluster{},
+	}
+
+	config, err := makeBackupConfig(namespace, routine, model.TimeBounds{})
+
+	require.NoError(t, err)
+	assert.NotNil(t, config.ScanPolicy)
+	assert.Equal(t, config.ScanPolicy.ReplicaPolicy, as.MASTER)
+	assert.Nil(t, config.EncryptionPolicy)
+	assert.Nil(t, config.CompressionPolicy)
+}
+
+func TestMakeBackupConfigWithNodeList(t *testing.T) {
+	namespace := "testNamespace"
+	routine := &model.BackupRoutine{
+		NodeList:      []string{"node1", "node2", "node3"},
+		BackupPolicy:  &model.BackupPolicy{},
+		IntervalCron:  "@daily",
+		SourceCluster: &model.AerospikeCluster{},
+	}
+
+	config, err := makeBackupConfig(namespace, routine, model.TimeBounds{})
+
+	require.NoError(t, err)
+	assert.NotNil(t, config.ScanPolicy)
+	assert.Equal(t, config.ScanPolicy.ReplicaPolicy, as.MASTER)
+	assert.Nil(t, config.EncryptionPolicy)
+	assert.Nil(t, config.CompressionPolicy)
 }
