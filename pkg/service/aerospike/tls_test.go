@@ -282,13 +282,3 @@ func TestParseCipherSuites(t *testing.T) {
 		})
 	}
 }
-
-// caCertFromPEM is a helper to parse a cert from PEM bytes for assertion.
-func caCertFromPEM(t *testing.T, pemBytes []byte) *x509.Certificate {
-	t.Helper()
-	block, _ := pem.Decode(pemBytes)
-	require.NotNil(t, block, "Failed to decode PEM block")
-	cert, err := x509.ParseCertificate(block.Bytes)
-	require.NoError(t, err, "Failed to parse certificate")
-	return cert
-}
