@@ -168,6 +168,7 @@ func TestNewTLSConfig(t *testing.T) {
 		systemPool, err := x509.SystemCertPool()
 		require.NoError(t, err)
 
+		//nolint:staticcheck
 		assert.Equal(t, len(systemPool.Subjects())+1, len(cfg.RootCAs.Subjects()))
 	})
 
