@@ -128,6 +128,48 @@ func TestNewTLSConfig(t *testing.T) {
 		assert.NotEmpty(t, cfg.RootCAs.Subjects(), "RootCAs should be populated") //nolint:staticcheck
 	})
 
+	// This test reproduces the Kubernetes secret volume mount structure
+	t.Run("With K8s-style CAPath Symlinks", func(t *testing.T) {
+		// 1. Create the base directory (e.g., /etc/aerospike/secret/cacerts/)
+		baseDir := t.TempDir()
+		caPathK8s := filepath.Join(baseDir, "cacerts")
+		require.NoError(t, os.Mkdir(caPathK8s, 0755))
+
+		// 2. Create the actual data directory (e.g., ..2025_10_27_12_34_56_789/)
+		actualDataDirName := "..2025_10_27_12_34_56_789"
+		actualDataDir := filepath.Join(caPathK8s, actualDataDirName)
+		require.NoError(t, os.Mkdir(actualDataDir, 0755))
+
+		// 3. Create the symlink to the data directory (e.g., ..data -> ..2025_10_27_12_34_56_789/)
+		symlinkDataDirName := "..data"
+		symlinkDataDirPath := filepath.Join(caPathK8s, symlinkDataDirName)
+		require.NoError(t, os.Symlink(actualDataDirName, symlinkDataDirPath))
+
+		// 4. Write the certificate files into the *actual* data directory
+		cert1Path := filepath.Join(actualDataDir, "cert1.pem")
+		require.NoError(t, os.WriteFile(cert1Path, caCertPEM, 0600))
+
+		// 5. Create the file symlinks in the base directory
+		// e.g., cert1.pem -> ..data/cert1.pem
+		target1 := filepath.Join(symlinkDataDirName, "cert1.pem")
+		symlinkCert1Path := filepath.Join(caPathK8s, "cert1.pem")
+		require.NoError(t, os.Symlink(target1, symlinkCert1Path))
+
+		// 6. Test NewTLSConfig with this path
+		// The loadCertPool function will scan `caPathK8s` and find:
+		// - `..2025_10_27_12_34_56_789` (dir, skipped)
+		// - `..data` (symlink to dir, skipped)
+		// - `cert1.pem` (symlink to file, loaded)
+		cfg, err := NewTLSConfig(&model.TLS{CAPath: &caPathK8s})
+		require.NoError(t, err)
+		require.NotNil(t, cfg.RootCAs, "RootCAs should be populated")
+
+		// 7. Assert based on your request
+		// Note: This assertion may be fragile as it includes system certs.
+		poolSubjects := cfg.RootCAs.Subjects() //nolint:staticcheck
+		assert.Equal(t, 1, len(poolSubjects))
+	})
+
 	t.Run("With Client Certs", func(t *testing.T) {
 		cfg, err := NewTLSConfig(&model.TLS{
 			Certfile: &serverCertFile,
@@ -239,4 +281,14 @@ func TestParseCipherSuites(t *testing.T) {
 			}
 		})
 	}
+}
+
+// caCertFromPEM is a helper to parse a cert from PEM bytes for assertion.
+func caCertFromPEM(t *testing.T, pemBytes []byte) *x509.Certificate {
+	t.Helper()
+	block, _ := pem.Decode(pemBytes)
+	require.NotNil(t, block, "Failed to decode PEM block")
+	cert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err, "Failed to parse certificate")
+	return cert
 }
