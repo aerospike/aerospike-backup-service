@@ -4,5 +4,5 @@ package dto
 type ValidationOption int
 
 const (
-	SkipTLSFiles ValidationOption = iota
+	ValidationSkipTLSFiles ValidationOption = iota
 )

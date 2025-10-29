@@ -119,6 +119,6 @@ func TestInvalidTlsFile(t *testing.T) {
 	_, err := config.ToModel()
 	require.Error(t, err)
 
-	_, err = config.ToModel(SkipTLSFiles)
+	_, err = config.ToModel(ValidationSkipTLSFiles)
 	require.NoError(t, err)
 }

@@ -112,7 +112,7 @@ func (t *TLS) validateKeyfilePassword() error {
 
 // validateTLSConfig attempts to create a TLS config to catch low-level issues.
 func (t *TLS) validateTLSConfig(opts ...ValidationOption) error {
-	if slices.Contains(opts, SkipTLSFiles) {
+	if slices.Contains(opts, ValidationSkipTLSFiles) {
 		return nil
 	}
 
