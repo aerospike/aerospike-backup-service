@@ -164,10 +164,11 @@ func TestNewTLSConfig(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, cfg.RootCAs, "RootCAs should be populated")
 
-		// 7. Assert based on your request
-		// Note: This assertion may be fragile as it includes system certs.
-		poolSubjects := cfg.RootCAs.Subjects() //nolint:staticcheck
-		assert.Equal(t, 1, len(poolSubjects))
+		// 7. Should have one more cert than the system pool
+		systemPool, err := x509.SystemCertPool()
+		require.NoError(t, err)
+
+		assert.Equal(t, len(systemPool.Subjects())+1, len(cfg.RootCAs.Subjects()))
 	})
 
 	t.Run("With Client Certs", func(t *testing.T) {
