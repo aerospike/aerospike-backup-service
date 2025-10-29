@@ -112,7 +112,7 @@ func scanPolicy(
 		scanPolicy.ReplicaPolicy = as.PREFER_RACK
 	}
 
-	if len(backupRoutine.RackList) > 0 {
+	if len(backupRoutine.RackList) > 0 || len(backupRoutine.NodeList) > 0 {
 		scanPolicy.ReplicaPolicy = as.MASTER
 	}
 
