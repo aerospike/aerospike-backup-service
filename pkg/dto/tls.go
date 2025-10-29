@@ -2,6 +2,7 @@ package dto
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
@@ -33,7 +34,7 @@ type TLS struct {
 	Certfile *string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/certfile.pem" extensions:"x-nullable"`
 }
 
-func (t *TLS) Validate() error {
+func (t *TLS) Validate(opts ...ValidationOption) error {
 	if t == nil {
 		return nil // TLS is optional
 	}
@@ -50,7 +51,7 @@ func (t *TLS) Validate() error {
 		return err
 	}
 
-	return t.validateTLSConfig()
+	return t.validateTLSConfig(opts...)
 }
 
 // validateCACertificates ensures CA file and path are mutually exclusive.
@@ -110,7 +111,11 @@ func (t *TLS) validateKeyfilePassword() error {
 }
 
 // validateTLSConfig attempts to create a TLS config to catch low-level issues.
-func (t *TLS) validateTLSConfig() error {
+func (t *TLS) validateTLSConfig(opts ...ValidationOption) error {
+	if slices.Contains(opts, SkipTLSFiles) {
+		return nil
+	}
+
 	if _, err := aerospike.NewTLSConfig(t.toModel()); err != nil {
 		return fmt.Errorf("tls %w: %w", errValidation, err)
 	}

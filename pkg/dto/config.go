@@ -78,7 +78,7 @@ func NewConfigFromReader(r io.Reader, format decoder.SerializationFormat) (*Conf
 }
 
 // Validate validates the configuration.
-func (c *Config) Validate() error {
+func (c *Config) Validate(opts ...ValidationOption) error {
 	for name, routine := range c.BackupRoutines {
 		if name == "" {
 			return errValidationEmptyField("routine name")
@@ -101,7 +101,7 @@ func (c *Config) Validate() error {
 		if name == "" {
 			return errValidationEmptyField("cluster name")
 		}
-		if err := cluster.Validate(); err != nil {
+		if err := cluster.Validate(opts...); err != nil {
 			return fmt.Errorf("cluster '%s' validation error: %w", name, err)
 		}
 	}
@@ -131,8 +131,8 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func (c *Config) ToModel() (*model.Config, error) {
-	if err := c.Validate(); err != nil {
+func (c *Config) ToModel(opts ...ValidationOption) (*model.Config, error) {
+	if err := c.Validate(opts...); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
 

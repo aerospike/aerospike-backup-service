@@ -17,7 +17,7 @@ func ValidateConfiguration(conf *dto.Config) error {
 		return fmt.Errorf("config is nil")
 	}
 
-	_, err := conf.ToModel()
+	_, err := conf.ToModel(dto.SkipTLSFiles)
 	return err
 }
 
@@ -29,7 +29,7 @@ func ValidateRestoreRequest(request *dto.RestoreRequest, conf *dto.Config) error
 		return fmt.Errorf("restore request is nil")
 	}
 
-	model, err := conf.ToModel()
+	model, err := conf.ToModel(dto.SkipTLSFiles)
 	if err != nil {
 		return fmt.Errorf("config invalid: %w", err)
 	}
@@ -52,7 +52,7 @@ func ValidateRestoreTimestampRequest(request *dto.RestoreTimestampRequest, conf 
 		return fmt.Errorf("restore request is nil")
 	}
 
-	model, err := conf.ToModel()
+	model, err := conf.ToModel(dto.SkipTLSFiles)
 	if err != nil {
 		return fmt.Errorf("config invalid: %w", err)
 	}
