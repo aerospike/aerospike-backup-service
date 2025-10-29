@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/stretchr/testify/require"
 )
 
 func validConfig() *Config {
@@ -101,4 +102,23 @@ func TestInvalidStorageReference(t *testing.T) {
 	if errors.Is(err, expectedError) {
 		t.Errorf("Expected error message '%s', but got '%s'", expectedError, err.Error())
 	}
+}
+
+func TestInvalidTlsFile(t *testing.T) {
+	config := validConfig()
+
+	cluster := config.AerospikeClusters["cluster1"]
+	cluster.SeedNodes[0].TLSName = "tls name"
+	cluster.TLS = &TLS{
+		Name:     ptr.Of("tls name"),
+		Keyfile:  ptr.Of("path to key file"),
+		Certfile: ptr.Of("path to cert file"),
+		CAFile:   ptr.Of("path to ca file"),
+	}
+
+	_, err := config.ToModel()
+	require.Error(t, err)
+
+	_, err = config.ToModel(ValidationSkipTLSFiles)
+	require.NoError(t, err)
 }

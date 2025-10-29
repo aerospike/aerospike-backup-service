@@ -39,7 +39,7 @@ type AerospikeCluster struct {
 }
 
 // Validate validates the Aerospike cluster entity.
-func (a *AerospikeCluster) Validate() error {
+func (a *AerospikeCluster) Validate(opts ...ValidationOption) error {
 	if a == nil {
 		return errors.New("cluster is not specified")
 	}
@@ -61,7 +61,7 @@ func (a *AerospikeCluster) Validate() error {
 		return fmt.Errorf("credentials validation error: %w", err)
 	}
 
-	if err := a.TLS.Validate(); err != nil {
+	if err := a.TLS.Validate(opts...); err != nil {
 		return fmt.Errorf("tls validation error: %w", err)
 	}
 
