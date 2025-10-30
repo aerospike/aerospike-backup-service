@@ -15,6 +15,7 @@ var (
 	errNegative          = fmt.Errorf("negative value %w", errValidation)
 	errInvalidValue      = fmt.Errorf("invalid value %w", errValidation)
 	errMissingDependency = fmt.Errorf("missing dependent field %w", errValidation)
+	errDuplicate         = fmt.Errorf("duplicate value %w", errValidation)
 )
 
 func errValidationRequiredEither(fields ...string) error {
@@ -53,4 +54,8 @@ func errValidationInvalidValue(field string, value, allowed any) error {
 
 func errValidationRequires(setField, requiredField string) error {
 	return fmt.Errorf("%w: %q requires %q to be set", errMissingDependency, setField, requiredField)
+}
+
+func errValidationDuplicate[T any](field string, value T) error {
+	return fmt.Errorf("%w: %s contains duplicate value: %v", errDuplicate, field, value)
 }

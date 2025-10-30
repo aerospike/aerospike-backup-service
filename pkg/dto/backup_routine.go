@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aws/smithy-go/ptr"
 	"github.com/reugn/go-quartz/quartz"
 )
@@ -115,6 +116,22 @@ func (r *BackupRoutine) Validate() error {
 	}
 	if r.Namespaces == nil {
 		return errValidationEmptyField("namespaces")
+	}
+
+	if duplicates := collections.CheckDuplicates(*r.Namespaces); len(duplicates) > 0 {
+		return errValidationDuplicate("namespaces", duplicates)
+	}
+	if duplicates := collections.CheckDuplicates(r.SetList); len(duplicates) > 0 {
+		return errValidationDuplicate("set-list", duplicates)
+	}
+	if duplicates := collections.CheckDuplicates(r.BinList); len(duplicates) > 0 {
+		return errValidationDuplicate("bin-list", duplicates)
+	}
+	if duplicates := collections.CheckDuplicates(r.RackList); len(duplicates) > 0 {
+		return errValidationDuplicate("rack-list", duplicates)
+	}
+	if duplicates := collections.CheckDuplicates(r.NodeList); len(duplicates) > 0 {
+		return errValidationDuplicate("node-list", duplicates)
 	}
 
 	return nil

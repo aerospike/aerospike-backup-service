@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 // HTTPServerConfig represents the service's HTTP server configuration.
@@ -34,6 +35,10 @@ func (s *HTTPServerConfig) Validate() error {
 	}
 	if s.Timeout != nil && *s.Timeout < 0 {
 		return errValidationNegative("timeout", *s.Timeout)
+	}
+
+	if err := s.Rate.Validate(); err != nil {
+		return fmt.Errorf("rate-limiter validation error: %w", err)
 	}
 
 	return nil
@@ -103,6 +108,18 @@ type RateLimiterConfig struct {
 	// The list of ips to whitelist in rate limiting (optional).
 	// Default: allow all.
 	WhiteList []string `yaml:"white-list,omitempty" json:"white-list,omitempty" extensions:"x-nullable"`
+}
+
+// Validate validates the rate limiter configuration.
+func (r *RateLimiterConfig) Validate() error {
+	if r == nil {
+		return nil
+	}
+	if duplicates := collections.CheckDuplicates(r.WhiteList); len(duplicates) > 0 {
+		return errValidationDuplicate("white-list", duplicates)
+	}
+
+	return nil
 }
 
 func (r *RateLimiterConfig) ToModel() *model.RateLimiterConfig {
