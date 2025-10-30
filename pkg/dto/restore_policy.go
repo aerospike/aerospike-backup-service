@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 // RestorePolicy represents a policy for the restore operation.
@@ -108,6 +109,14 @@ func (p *RestorePolicy) Validate() error {
 			return fmt.Errorf("restore namespace invalid: %w", err)
 		}
 	}
+
+	if duplicates := collections.CheckDuplicates(p.SetList); len(duplicates) > 0 {
+		return errValidationDuplicate("set-list", duplicates)
+	}
+	if duplicates := collections.CheckDuplicates(p.BinList); len(duplicates) > 0 {
+		return errValidationDuplicate("bin-list", duplicates)
+	}
+
 	if err := p.EncryptionPolicy.Validate(); err != nil {
 		return err
 	}

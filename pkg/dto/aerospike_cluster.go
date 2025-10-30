@@ -8,6 +8,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
 // AerospikeCluster represents the configuration for an Aerospike cluster for backup.
@@ -46,6 +47,9 @@ func (a *AerospikeCluster) Validate(opts ...ValidationOption) error {
 	if len(a.SeedNodes) == 0 {
 		return errors.New("seed nodes are not specified")
 	}
+	if duplicates := collections.CheckDuplicates(a.SeedNodes); len(duplicates) > 0 {
+		return errValidationDuplicate("seed-nodes", duplicates)
+	}
 
 	withTLS := a.TLS != nil
 	for _, node := range a.SeedNodes {
@@ -65,6 +69,9 @@ func (a *AerospikeCluster) Validate(opts ...ValidationOption) error {
 		return fmt.Errorf("tls validation error: %w", err)
 	}
 
+	if duplicates := collections.CheckDuplicates(a.PreferRacks); len(duplicates) > 0 {
+		return errValidationDuplicate("prefer-racks", duplicates)
+	}
 	for i, rack := range a.PreferRacks {
 		if rack < 0 {
 			return errValidationNegative(fmt.Sprintf("prefer-racks[%d]", i), rack)
