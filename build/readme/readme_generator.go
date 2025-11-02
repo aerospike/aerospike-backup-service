@@ -18,6 +18,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const examplesDir = "docs/examples"
+
 var allStorageTypes = map[string]dto.Storage{
 	"local": {
 		LocalStorage: &dto.LocalStorage{
@@ -221,8 +223,10 @@ var yamlExamples = map[string]any{
 func main() {
 	// generate markdown dto descriptions from open-api
 	generateMarkdownFiles()
+	// generate example files from jsonExamples and yamlExamples
 	generateExampleFiles()
 
+	// Update README sections
 	readme, err := os.ReadFile("README.md")
 	if err != nil {
 		panic(err)
@@ -242,7 +246,6 @@ func main() {
 }
 
 func generateExampleFiles() {
-	const examplesDir = "docs/examples"
 	_ = os.RemoveAll(examplesDir)
 	_ = os.MkdirAll(examplesDir, 0755)
 
@@ -256,7 +259,6 @@ func generateExampleFiles() {
 		if err != nil {
 			panic(fmt.Errorf("failed to write json example file %q: %w", fileName, err))
 		}
-		fmt.Printf("Generated %s\n", fileName)
 	}
 
 	for name, example := range yamlExamples {
@@ -269,7 +271,6 @@ func generateExampleFiles() {
 		if err != nil {
 			panic(fmt.Errorf("failed to write yaml example file %q: %w", fileName, err))
 		}
-		fmt.Printf("Generated %s\n", fileName)
 	}
 }
 
