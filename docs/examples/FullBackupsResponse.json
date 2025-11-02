@@ -1,0 +1,27 @@
+{
+  "routine1": [
+    {
+      "created": "2024-01-01T12:00:00Z",
+      "timestamp": 1704110400000,
+      "finished": "2024-01-01T12:05:00Z",
+      "duration": 300,
+      "from": "0001-01-01T00:00:00Z",
+      "namespace": "source-ns1",
+      "record-count": 42,
+      "byte-count": 480000,
+      "file-count": 1,
+      "secondary-index-count": 5,
+      "udf-count": 1,
+      "key": "routine1/backup/1704110400000/source-ns1",
+      "storage": {
+        "s3-storage": {
+          "bucket": "as-backup-bucket",
+          "path": "backups",
+          "s3-region": "eu-central-1"
+        }
+      },
+      "compression": "ZSTD",
+      "encryption": "NONE"
+    }
+  ]
+}

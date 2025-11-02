@@ -1,0 +1,14 @@
+[
+  {
+    "seed-nodes": [
+      {
+        "host-name": "host.docker.internal",
+        "port": 3000
+      }
+    ],
+    "credentials": {
+      "user": "user",
+      "password": "password"
+    }
+  }
+]

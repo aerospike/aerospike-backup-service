@@ -1,0 +1,31 @@
+{
+  "aws-s3": {
+    "s3-storage": {
+      "bucket": "as-backup-bucket",
+      "path": "backups",
+      "s3-region": "eu-central-1"
+    }
+  },
+  "azure-blob-storage": {
+    "azure-storage": {
+      "endpoint": "http://127.0.0.1:6000/devstoreaccount1",
+      "container-name": "testcontainer",
+      "path": "backups",
+      "account-name": "devstoreaccount1",
+      "account-key": "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=="
+    }
+  },
+  "gcp-gcs": {
+    "gcp-storage": {
+      "key-file-path": "key-file.json",
+      "bucket-name": "gcp-backup-bucket",
+      "path": "backups",
+      "endpoint": "http://127.0.0.1:9020"
+    }
+  },
+  "local": {
+    "local-storage": {
+      "path": "backups"
+    }
+  }
+}
