@@ -367,36 +367,8 @@ type MetricRow struct {
 // updateMetrics generates a Markdown table from a list of Prometheus collectors
 // and replaces a placeholder section in a given README file.
 func updateMetrics(readme []byte) []byte {
-	var rows []MetricRow
-
-	// This regex extracts the name, help text, and variable labels from the
-	// description string of a Prometheus metric.
-	prometheusRE := regexp.MustCompile(
-		`Desc{fqName:\s*"([^"]+)",\s*help:\s*"([^"]+)",\s*constLabels:\s*{[^}]*},\s*variableLabels:\s*{([^}]*)}}`)
-
-	// Iterate over all registered metrics.
-	for _, metric := range service.AllMetrics {
-		ch := make(chan *prometheus.Desc, 1)
-		metric.Describe(ch)
-		close(ch)
-		for desc := range ch {
-			str := desc.String()
-			matches := prometheusRE.FindStringSubmatch(str)
-			if len(matches) != 4 {
-				panic("Failed to match Prometheus description: " + str)
-			}
-			helpText := matches[2]
-			deprecated := strings.Contains(helpText, "(Deprecated")
-
-			var labels []string
-			if matches[3] != "" {
-				labels = strings.Split(matches[3], ",")
-			}
-			rows = append(rows, MetricRow{matches[1], metricsType(metric), helpText, labels, deprecated})
-		}
-	}
-
-	writeMetrics(rows)
+	rows := extractRows()
+	writeMetricsToFile(rows)
 
 	maxName := len("Name")
 	maxType := len("Type")
@@ -446,7 +418,39 @@ func updateMetrics(readme []byte) []byte {
 	return metricsRe.ReplaceAll(readme, []byte("${1}"+table+"${3}"))
 }
 
-func writeMetrics(rows []MetricRow) {
+func extractRows() []MetricRow {
+	var rows []MetricRow
+	// This regex extracts the name, help text, and variable labels from the
+	// description string of a Prometheus metric.
+	prometheusRE := regexp.MustCompile(
+		`Desc{fqName:\s*"([^"]+)",\s*help:\s*"([^"]+)",\s*constLabels:\s*{[^}]*},\s*variableLabels:\s*{([^}]*)}}`)
+
+	// Iterate over all registered metrics.
+	for _, metric := range service.AllMetrics {
+		ch := make(chan *prometheus.Desc, 1)
+		metric.Describe(ch)
+		close(ch)
+		for desc := range ch {
+			str := desc.String()
+			matches := prometheusRE.FindStringSubmatch(str)
+			if len(matches) != 4 {
+				panic("Failed to match Prometheus description: " + str)
+			}
+			helpText := matches[2]
+			deprecated := strings.Contains(helpText, "(Deprecated")
+
+			var labels []string
+			if matches[3] != "" {
+				labels = strings.Split(matches[3], ",")
+			}
+			rows = append(rows, MetricRow{matches[1], metricsType(metric), helpText, labels, deprecated})
+		}
+	}
+
+	return rows
+}
+
+func writeMetricsToFile(rows []MetricRow) {
 	// write metrics to json file
 	jsonBytes, err := json.MarshalIndent(rows, "", "  ")
 	if err != nil {
