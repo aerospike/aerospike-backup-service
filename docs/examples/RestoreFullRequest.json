@@ -1,0 +1,25 @@
+{
+  "destination": {
+    "seed-nodes": [
+      {
+        "host-name": "host.docker.internal",
+        "port": 3000
+      }
+    ],
+    "credentials": {
+      "user": "user",
+      "password": "password"
+    }
+  },
+  "source": {
+    "s3-storage": {
+      "bucket": "as-backup-bucket",
+      "path": "backups",
+      "s3-region": "eu-central-1"
+    }
+  },
+  "policy": {
+    "no-generation": true
+  },
+  "backup-data-path": "routine1/backup/1704110400000/source-ns1"
+}

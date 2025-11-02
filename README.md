@@ -41,6 +41,7 @@ format [here](https://aerospike.github.io/aerospike-backup-service/).
     + [Build Linux packages](#build-linux-packages)
     + [Release](#release)
 - [Migration Guide](#migration-guide)
+    * [v3.3 -> v3.4](#v33---v34)
     * [v3.2 -> v3.3](#v32---v33)
     * [v3.1 -> v3.2](#v31---v32)
     * [v3 -> v3.1](#v3---v31)
@@ -474,7 +475,7 @@ This endpoint retrieves the current statistics for a backup in progress, identif
     "metrics": {
       "records-per-second": 1000,
       "kilobytes-per-second": 30000,
-      "pipeline": 0
+      "pipeline": 167
     }
   }
 }
@@ -734,7 +735,7 @@ It works identical for both restore types.
     "metrics": {
       "records-per-second": 1000,
       "kilobytes-per-second": 30000,
-      "pipeline": 0
+      "pipeline": 8192
     }
   },
   "status": "Running"
@@ -918,7 +919,7 @@ git push
 
 # Migration Guide
 
-### v3.3 → v3.4
+## v3.3 -> v3.4
 
 This release delivers bug fixes and incremental improvements based on customer feedback. The primary addition is
 rack‑aware backups.

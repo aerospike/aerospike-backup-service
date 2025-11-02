@@ -1,0 +1,27 @@
+{
+  "routine1": {
+    "backup-policy": "keepFilesPolicy",
+    "source-cluster": "absDefaultCluster",
+    "storage": "local",
+    "interval-cron": "@yearly",
+    "namespaces": [
+      "test-namespace"
+    ]
+  },
+  "routine2": {
+    "backup-policy": "removeFilesPolicy",
+    "source-cluster": "absDefaultCluster",
+    "storage": "local",
+    "interval-cron": "@monthly",
+    "incr-interval-cron": "@daily",
+    "namespaces": [
+      "test-namespace"
+    ],
+    "set-list": [
+      "backupSet"
+    ],
+    "bin-list": [
+      "backupBin"
+    ]
+  }
+}

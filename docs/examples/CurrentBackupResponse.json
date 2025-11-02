@@ -1,0 +1,14 @@
+{
+  "full": {
+    "total-records": 100000,
+    "done-records": 50000,
+    "start-time": "2024-01-01T12:00:00Z",
+    "percentage-done": 50,
+    "estimated-end-time": "2024-01-01T13:00:00Z",
+    "metrics": {
+      "records-per-second": 1000,
+      "kilobytes-per-second": 30000,
+      "pipeline": 167
+    }
+  }
+}

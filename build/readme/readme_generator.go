@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -143,7 +144,7 @@ var jsonExamples = map[string]any{
 			Metrics: &dto.Metrics{
 				RecordsPerSecond:   1000,
 				KilobytesPerSecond: 30000,
-				Pipeline:           0,
+				Pipeline:           167,
 			},
 		},
 	},
@@ -169,7 +170,7 @@ var jsonExamples = map[string]any{
 			Metrics: &dto.Metrics{
 				RecordsPerSecond:   1000,
 				KilobytesPerSecond: 30000,
-				Pipeline:           0,
+				Pipeline:           8192,
 			},
 		},
 		Status: dto.JobStatusRunning,
@@ -220,6 +221,7 @@ var yamlExamples = map[string]any{
 func main() {
 	// generate markdown dto descriptions from open-api
 	generateMarkdownFiles()
+	generateExampleFiles()
 
 	readme, err := os.ReadFile("README.md")
 	if err != nil {
@@ -236,6 +238,38 @@ func main() {
 	err = os.WriteFile("README.md", readme, 0600)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func generateExampleFiles() {
+	const examplesDir = "docs/examples"
+	_ = os.RemoveAll(examplesDir)
+	_ = os.MkdirAll(examplesDir, 0755)
+
+	for name, example := range jsonExamples {
+		fileName := filepath.Join(examplesDir, name+".json")
+		fileContent, err := json.MarshalIndent(example, "", "  ")
+		if err != nil {
+			panic(fmt.Errorf("failed to marshal json example %q: %w", name, err))
+		}
+		err = os.WriteFile(fileName, fileContent, 0600)
+		if err != nil {
+			panic(fmt.Errorf("failed to write json example file %q: %w", fileName, err))
+		}
+		fmt.Printf("Generated %s\n", fileName)
+	}
+
+	for name, example := range yamlExamples {
+		fileName := filepath.Join(examplesDir, name+".yaml")
+		fileContent, err := marshalYAML(example)
+		if err != nil {
+			panic(fmt.Errorf("failed to marshal yaml example %q: %w", name, err))
+		}
+		err = os.WriteFile(fileName, fileContent, 0600)
+		if err != nil {
+			panic(fmt.Errorf("failed to write yaml example file %q: %w", fileName, err))
+		}
+		fmt.Printf("Generated %s\n", fileName)
 	}
 }
 
@@ -323,10 +357,11 @@ func marshalYAML(v any) ([]byte, error) {
 }
 
 type MetricRow struct {
-	Name   string
-	Type   string
-	Help   string
-	Labels string
+	Name        string   `json:"name"`
+	Type        string   `json:"type"`
+	Description string   `json:"description"`
+	Labels      []string `json:"labels"`
+	Deprecated  bool     `json:"deprecated"`
 }
 
 // updateMetrics generates a Markdown table from a list of Prometheus collectors
@@ -350,10 +385,18 @@ func updateMetrics(readme []byte) []byte {
 			if len(matches) != 4 {
 				panic("Failed to match Prometheus description: " + str)
 			}
-			labels := strings.ReplaceAll(matches[3], ",", ", ")
-			rows = append(rows, MetricRow{matches[1], metricsType(metric), matches[2], labels})
+			helpText := matches[2]
+			deprecated := strings.Contains(helpText, "(Deprecated")
+
+			var labels []string
+			if matches[3] != "" {
+				labels = strings.Split(matches[3], ",")
+			}
+			rows = append(rows, MetricRow{matches[1], metricsType(metric), helpText, labels, deprecated})
 		}
 	}
+
+	writeMetrics(rows)
 
 	maxName := len("Name")
 	maxType := len("Type")
@@ -366,11 +409,12 @@ func updateMetrics(readme []byte) []byte {
 		if len(r.Type) > maxType {
 			maxType = len(r.Type)
 		}
-		if len(r.Help) > maxHelp {
-			maxHelp = len(r.Help)
+		if len(r.Description) > maxHelp {
+			maxHelp = len(r.Description)
 		}
-		if len(r.Labels) > maxLabels {
-			maxLabels = len(r.Labels)
+		labelsStr := strings.Join(r.Labels, ", ")
+		if len(labelsStr) > maxLabels {
+			maxLabels = len(labelsStr)
 		}
 	}
 
@@ -390,8 +434,9 @@ func updateMetrics(readme []byte) []byte {
 	// Body
 	for _, r := range rows {
 		name := "`" + r.Name + "`"
+		labelsStr := strings.Join(r.Labels, ", ")
 		sb.WriteString(fmt.Sprintf("| %-*s | %-*s | %-*s | %-*s |\n",
-			maxName+quotes, name, maxType, r.Type, maxHelp, r.Help, maxLabels, r.Labels))
+			maxName+quotes, name, maxType, r.Type, maxHelp, r.Description, maxLabels, labelsStr))
 	}
 	table := sb.String()
 
@@ -399,6 +444,18 @@ func updateMetrics(readme []byte) []byte {
 	metricsRe := regexp.MustCompile(`(?s)(<!-- Metrics -->\n\n)(\|.*?\|\n)(\n)`)
 
 	return metricsRe.ReplaceAll(readme, []byte("${1}"+table+"${3}"))
+}
+
+func writeMetrics(rows []MetricRow) {
+	// write metrics to json file
+	jsonBytes, err := json.MarshalIndent(rows, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	err = os.WriteFile("docs/metrics.json", jsonBytes, 0600)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func metricsType(metric prometheus.Collector) string {
