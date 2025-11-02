@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -447,6 +448,14 @@ func extractRows() []MetricRow {
 			rows = append(rows, MetricRow{matches[1], metricsType(metric), helpText, labels, deprecated})
 		}
 	}
+
+	// Sort rows to have non-deprecated metrics on top.
+	sort.Slice(rows, func(i, j int) bool {
+		if rows[i].Deprecated != rows[j].Deprecated {
+			return !rows[i].Deprecated
+		}
+		return rows[i].Name < rows[j].Name
+	})
 
 	return rows
 }
