@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"testing"
@@ -92,4 +93,27 @@ func Test_retry_attempts_expected_count(t *testing.T) {
 
 	require.Error(t, err)
 	require.Equal(t, expectedAttempts, attempts, "Function was not retried the expected number of times")
+}
+
+func Test_non_retryable_error_stops_retries(t *testing.T) {
+	sentinel := errors.New("permanent failure")
+
+	attempts := 0
+	onRetryCalls := 0
+
+	re := newRetryExecutor(models.RetryPolicy{
+		MaxRetries:  5,
+		BaseTimeout: time.Millisecond,
+		Multiplier:  1,
+	}, slog.Default(), sentinel)
+
+	err := re.run("non-retryable", func() error {
+		attempts++
+		return fmt.Errorf("wrapped: %w", sentinel)
+	}, func() { onRetryCalls++ })
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, sentinel)
+	require.Equal(t, 1, attempts, "should attempt only once for non-retryable error")
+	require.Equal(t, 0, onRetryCalls, "onRetry should not be called for non-retryable error")
 }

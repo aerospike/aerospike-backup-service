@@ -27,15 +27,18 @@ func (e *simpleExecutor) run(_ string, f func() error, _ func()) error {
 // retryExecutor is a service for retrying a function with a specified interval
 // and a maximum number of attempts.
 type retryExecutor struct {
-	logger *slog.Logger
-	policy models.RetryPolicy
+	logger       *slog.Logger
+	policy       models.RetryPolicy
+	nonRetryable []error
 }
 
 // newRetryExecutor returns a new retryExecutor instance.
-func newRetryExecutor(policy models.RetryPolicy, logger *slog.Logger) executor {
+// nonRetryable is an optional list of errors that should not be retried.
+func newRetryExecutor(policy models.RetryPolicy, logger *slog.Logger, nonRetryable ...error) executor {
 	return &retryExecutor{
-		logger: logger,
-		policy: policy,
+		logger:       logger,
+		policy:       policy,
+		nonRetryable: nonRetryable,
 	}
 }
 
@@ -51,7 +54,17 @@ func (r *retryExecutor) run(label string, f func() error, onRetry func()) error 
 	for attempt := uint(1); attempt <= totalAttempts; attempt++ {
 		lastErr = f()
 		if lastErr == nil || errors.Is(lastErr, context.Canceled) {
-			return lastErr // success
+			return lastErr // success or canceled
+		}
+
+		// If error is configured as non-retryable, abort immediately
+		for _, nre := range r.nonRetryable {
+			if nre != nil && errors.Is(lastErr, nre) {
+				r.logger.Info("Non-retryable error encountered, aborting without retry",
+					slog.String("label", label),
+					attr.Error(lastErr))
+				return lastErr
+			}
 		}
 
 		if attempt < totalAttempts { // Log and wait only if there are attempts left
