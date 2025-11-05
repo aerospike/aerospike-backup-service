@@ -14,9 +14,13 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 	"github.com/aerospike/backup-go"
+	"github.com/aerospike/backup-go/pkg/asinfo"
 )
 
-var errBackupSkipped = errors.New("full backup skipped")
+var (
+	errBackupSkipped   = errors.New("full backup skipped")
+	nonRetryableErrors = []error{asinfo.ErrNoNode}
+)
 
 // BackupRoutineOrchestrator orchestrates the execution of a single backup routine (both full and incremental).
 // It manages all necessary preparations, executes the backup process, handles post-processing, and updates metrics.
@@ -72,7 +76,7 @@ func newOrchestrator(
 ) *BackupRoutineOrchestrator {
 	routine, _ := config.Routine(routineName)
 	logger := slog.With(attr.Routine(routineName))
-	retry := newRetryExecutor(*routine.BackupPolicy.GetRetryPolicyOrDefault(), logger)
+	retry := newRetryExecutor(*routine.BackupPolicy.GetRetryPolicyOrDefault(), logger, nonRetryableErrors...)
 	runner := NewBackupNamespaceRunner(routineName, h.backupExecutor, retry, h.backendService, logger, pathService)
 	return &BackupRoutineOrchestrator{
 		routineName:         routineName,
