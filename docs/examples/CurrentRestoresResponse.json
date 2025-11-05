@@ -21,7 +21,8 @@
         "records-per-second": 1000,
         "kilobytes-per-second": 30000,
         "pipeline": 0
-      }
+      },
+      "duration": 1800
     },
     "status": "Running"
   }

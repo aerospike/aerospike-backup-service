@@ -476,7 +476,8 @@ This endpoint retrieves the current statistics for a backup in progress, identif
       "records-per-second": 1000,
       "kilobytes-per-second": 30000,
       "pipeline": 167
-    }
+    },
+    "duration": 1800
   }
 }
 ```
@@ -736,7 +737,8 @@ It works identical for both restore types.
       "records-per-second": 1000,
       "kilobytes-per-second": 30000,
       "pipeline": 8192
-    }
+    },
+    "duration": 1800
   },
   "status": "Running"
 }
@@ -788,7 +790,8 @@ Provides a list of all restore jobs, with optional filtering by time range and s
         "records-per-second": 1000,
         "kilobytes-per-second": 30000,
         "pipeline": 0
-      }
+      },
+      "duration": 1800
     },
     "status": "Running"
   }

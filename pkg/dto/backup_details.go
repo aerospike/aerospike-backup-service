@@ -6,8 +6,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 )
 
-// BackupDetails contains information about a backup.
-// @Description BackupDetails contains information about a backup.
+// BackupDetails contains information about a finished backup.
+// @Description BackupDetails contains information about a finished backup.
 type BackupDetails struct {
 	// The backup time in the ISO 8601 format.
 	Created time.Time `yaml:"created" json:"created" example:"2023-03-20T14:50:00Z"`
@@ -15,8 +15,8 @@ type BackupDetails struct {
 	Timestamp int64 `yaml:"timestamp" json:"timestamp" example:"1685458200000" format:"int64"`
 	// The time the backup operation completed.
 	Finished time.Time `yaml:"finished" json:"finished" example:"2023-03-20T14:50:00Z"`
-	// DurationSec represents the elapsed time taken by the backup process in seconds.
-	DurationSec uint `yaml:"duration" json:"duration"`
+	// Duration represents the elapsed time taken by the backup process in seconds.
+	Duration uint `yaml:"duration" json:"duration"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).
 	From time.Time `yaml:"from,omitempty" json:"from,omitempty" example:"2023-03-19T14:50:00Z"`
 	// The namespace of a backup.
@@ -58,7 +58,7 @@ func (d *BackupDetails) fromModel(m *model.BackupDetails, config *model.BackupCo
 	d.Created = m.Created
 	d.Timestamp = m.Created.UnixMilli()
 	d.Finished = m.Finished
-	d.DurationSec = uint(m.Finished.Sub(d.Created) / time.Second)
+	d.Duration = uint(m.Finished.Sub(d.Created) / time.Second)
 	d.From = m.From
 	d.Namespace = m.Namespace
 	d.RecordCount = m.RecordCount

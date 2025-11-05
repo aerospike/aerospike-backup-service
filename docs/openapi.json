@@ -2169,7 +2169,7 @@
                 }
             },
             "dto.BackupDetails": {
-                "description": "BackupDetails contains information about a backup.",
+                "description": "BackupDetails contains information about a finished backup.",
                 "type": "object",
                 "properties": {
                     "byte-count": {
@@ -2188,7 +2188,7 @@
                         "example": "2023-03-20T14:50:00Z"
                     },
                     "duration": {
-                        "description": "DurationSec represents the elapsed time taken by the backup process in seconds.",
+                        "description": "Duration represents the elapsed time taken by the backup process in seconds.",
                         "type": "integer"
                     },
                     "encryption": {
@@ -3350,6 +3350,10 @@
                         "description": "The number of records that have been successfully done.",
                         "type": "integer",
                         "example": 50
+                    },
+                    "duration": {
+                        "description": "Duration represents the elapsed time taken by the job in seconds.",
+                        "type": "integer"
                     },
                     "estimated-end-time": {
                         "description": "The estimated time when the backup operation will be completed.\nIt is calculated based on the current percentage done and duration.\nA nil value indicates that the estimation is not available yet.\nThis value is not guaranteed to be accurate.",

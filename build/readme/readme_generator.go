@@ -90,7 +90,7 @@ var jsonExamples = map[string]any{
 			Created:             time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 			Timestamp:           time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC).UnixMilli(),
 			Finished:            time.Date(2024, 01, 01, 12, 5, 0, 0, time.UTC),
-			DurationSec:         300,
+			Duration:            300,
 			From:                time.Time{},
 			Namespace:           "source-ns1",
 			RecordCount:         42,
@@ -144,6 +144,7 @@ var jsonExamples = map[string]any{
 			FinishTime:       nil,
 			PercentageDone:   50,
 			EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			Duration:         1800,
 			Metrics: &dto.Metrics{
 				RecordsPerSecond:   1000,
 				KilobytesPerSecond: 30000,
@@ -170,6 +171,7 @@ var jsonExamples = map[string]any{
 			FinishTime:       nil,
 			PercentageDone:   50,
 			EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
+			Duration:         1800,
 			Metrics: &dto.Metrics{
 				RecordsPerSecond:   1000,
 				KilobytesPerSecond: 30000,
@@ -198,6 +200,7 @@ var jsonExamples = map[string]any{
 				StartTime:        time.Date(2024, 01, 01, 12, 0, 0, 0, time.UTC),
 				FinishTime:       nil,
 				PercentageDone:   50,
+				Duration:         1800,
 				EstimatedEndTime: ptr.Of(time.Date(2024, 01, 01, 13, 0, 0, 0, time.UTC)),
 				Metrics: &dto.Metrics{
 					RecordsPerSecond:   1000,
