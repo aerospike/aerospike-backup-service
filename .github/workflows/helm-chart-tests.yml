@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
-          python-version: '3.x'
+          python-version: '3.11'
           check-latest: true
 
       - name: Set up chart-testing
@@ -78,8 +78,7 @@ jobs:
         run: |
           echo "Deploying AKO"
 
-          OLM_VERSION="$(curl --silent https://api.github.com/repos/operator-framework/operator-lifecycle-manager/releases/latest | jq -r '.tag_name' | head -n 1 | tr -d '\n')"
-          curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/$OLM_VERSION/install.sh | bash -s "$OLM_VERSION"
+          curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.35.0/install.sh | bash -s v0.35.0
 
           kubectl create -f https://operatorhub.io/install/aerospike-kubernetes-operator.yaml
           AKO_CSV_NAME="aerospike-kubernetes-operator.$(curl -s https://api.github.com/repos/aerospike/aerospike-kubernetes-operator/releases/latest | jq -r '.tag_name')"
