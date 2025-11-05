@@ -78,8 +78,8 @@ jobs:
         run: |
           echo "Deploying AKO"
 
-          OLM_VERSION="$(curl --silent https://api.github.com/repos/operator-framework/operator-lifecycle-manager/releases/latest | jq -r '.tag_name' | head -n 1 | tr -d '\n')"
-          curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/$OLM_VERSION/install.sh | bash -s "$OLM_VERSION"
+#          OLM_VERSION="$(curl --silent https://api.github.com/repos/operator-framework/operator-lifecycle-manager/releases/latest | jq -r '.tag_name' | head -n 1 | tr -d '\n')"
+          curl -sL https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.35.0/install.sh | bash -s "v0.35.0"
 
           kubectl create -f https://operatorhub.io/install/aerospike-kubernetes-operator.yaml
           AKO_CSV_NAME="aerospike-kubernetes-operator.$(curl -s https://api.github.com/repos/aerospike/aerospike-kubernetes-operator/releases/latest | jq -r '.tag_name')"
