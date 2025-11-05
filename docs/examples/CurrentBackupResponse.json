@@ -9,6 +9,7 @@
       "records-per-second": 1000,
       "kilobytes-per-second": 30000,
       "pipeline": 167
-    }
+    },
+    "duration": 0
   }
 }

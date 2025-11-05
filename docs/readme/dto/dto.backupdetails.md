@@ -1,12 +1,12 @@
 ## dto.BackupDetails
-BackupDetails contains information about a backup.
+BackupDetails contains information about a finished backup.
 
 | Field                   | Description                                                                                                                                        |
 |-------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
 | `byte-count`            | The size of the backup in bytes.                                                                                                                   |
 | `compression`           | Compression specifies the compression mode used for the backup (ZSTD or NONE).                                                                     |
 | `created`               | The backup time in the ISO 8601 format.                                                                                                            |
-| `duration`              | DurationSec represents the elapsed time taken by the backup process in seconds.                                                                    |
+| `duration`              | Duration represents the elapsed time taken by the backup process in seconds.                                                                       |
 | `encryption`            | Encryption specifies the encryption mode used for the backup (NONE, AES128, AES256).                                                               |
 | `file-count`            | The number of backup files created.                                                                                                                |
 | `finished`              | The time the backup operation completed.                                                                                                           |

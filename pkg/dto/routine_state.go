@@ -66,6 +66,8 @@ type RunningJob struct {
 	EstimatedEndTime *time.Time `json:"estimated-end-time,omitempty" example:"2006-01-02T15:04:05Z07:00"`
 	// Metrics provides real-time information about data flow performance.
 	Metrics *Metrics `json:"metrics,omitempty"`
+	// Duration represents the elapsed time taken by the job in seconds.
+	Duration uint `yaml:"duration" json:"duration"`
 }
 
 func NewRunningJobFromModel(m *model.RunningJob) *RunningJob {
@@ -86,4 +88,9 @@ func (r *RunningJob) fromModel(m *model.RunningJob) {
 	r.PercentageDone = m.PercentageDone
 	r.EstimatedEndTime = m.EstimatedEndTime
 	r.Metrics = NewMetricsFromModel(m.Metrics)
+	if r.FinishTime != nil {
+		r.Duration = uint(r.FinishTime.Sub(r.StartTime).Seconds())
+	} else {
+		r.Duration = uint(time.Now().Sub(r.StartTime).Seconds())
+	}
 }
