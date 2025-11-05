@@ -22,7 +22,7 @@
         "kilobytes-per-second": 30000,
         "pipeline": 0
       },
-      "duration": 0
+      "duration": 1800
     },
     "status": "Running"
   }
