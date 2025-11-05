@@ -91,6 +91,6 @@ func (r *RunningJob) fromModel(m *model.RunningJob) {
 	if r.FinishTime != nil {
 		r.Duration = uint(r.FinishTime.Sub(r.StartTime).Seconds())
 	} else {
-		r.Duration = uint(time.Now().Sub(r.StartTime).Seconds())
+		r.Duration = uint(time.Since(r.StartTime).Seconds())
 	}
 }
