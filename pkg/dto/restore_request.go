@@ -61,11 +61,11 @@ func NewRestoreTimestampRequestFromReader(r io.Reader) (*RestoreTimestampRequest
 }
 
 // Validate validates the restore operation request.
-func (r *RestoreRequest) Validate() error {
+func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
 	if len(r.BackupDataPath) == 0 {
 		return errValidationEmptyField("backup-data-path")
 	}
-	if err := r.DestinationClusterConfig.Validate(); err != nil {
+	if err := r.DestinationClusterConfig.Validate(opts...); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
@@ -79,8 +79,8 @@ func (r *RestoreRequest) Validate() error {
 }
 
 // Validate validates the restore operation request.
-func (r *RestoreTimestampRequest) Validate() error {
-	if err := r.DestinationClusterConfig.Validate(); err != nil {
+func (r *RestoreTimestampRequest) Validate(opts ...ValidationOption) error {
+	if err := r.DestinationClusterConfig.Validate(opts...); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
@@ -162,7 +162,7 @@ type DestinationClusterConfig struct {
 	Name string `json:"destination-name,omitempty" extensions:"x-nullable"`
 }
 
-func (c *DestinationClusterConfig) Validate() error {
+func (c *DestinationClusterConfig) Validate(opts ...ValidationOption) error {
 	if c.Cluster == nil && c.Name == "" {
 		return errValidationRequiredEither("destination", "destination-name")
 	}
@@ -170,7 +170,7 @@ func (c *DestinationClusterConfig) Validate() error {
 		return errValidationMutuallyExclusive("destination", "destination-name")
 	}
 	if c.Cluster != nil {
-		if err := c.Cluster.Validate(); err != nil {
+		if err := c.Cluster.Validate(opts...); err != nil {
 			return err
 		}
 	}

@@ -34,7 +34,7 @@ func ValidateRestoreRequest(request *dto.RestoreRequest, conf *dto.Config) error
 		return fmt.Errorf("config invalid: %w", err)
 	}
 
-	err = request.Validate()
+	err = request.Validate(dto.ValidationSkipTLSFiles)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func ValidateRestoreTimestampRequest(request *dto.RestoreTimestampRequest, conf 
 		return fmt.Errorf("config invalid: %w", err)
 	}
 
-	err = request.Validate()
+	err = request.Validate(dto.ValidationSkipTLSFiles)
 	if err != nil {
 		return err
 	}
