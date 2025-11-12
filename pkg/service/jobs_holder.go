@@ -69,15 +69,12 @@ func (j *restoreJob) finish(err error) {
 	defer j.Unlock()
 
 	j.finished = ptr.Of(time.Now())
-	status := RestoreJobStatus(j).Counters
-	_ = status
+	j.err = err
 
 	if err == nil {
 		j.status = model.JobStatusDone
 		return
 	}
-
-	j.err = err
 
 	if errors.Is(err, context.Canceled) {
 		j.status = model.JobStatusCancelled
