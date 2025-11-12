@@ -71,14 +71,12 @@ func (j *restoreJob) finish(err error) {
 	j.finished = ptr.Of(time.Now())
 	j.err = err
 
-	if err == nil {
+	switch {
+	case err == nil:
 		j.status = model.JobStatusDone
-		return
-	}
-
-	if errors.Is(err, context.Canceled) {
+	case errors.Is(err, context.Canceled):
 		j.status = model.JobStatusCancelled
-	} else {
+	default:
 		j.status = model.JobStatusFailed
 	}
 }
