@@ -3,11 +3,10 @@ package service
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"math/rand"
+	"sync"
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
@@ -17,6 +16,8 @@ import (
 // restoreJob encapsulates the state and details of a single restore operation.
 // A restore job can consist multiple backups (one full backup and several incremental) across multiple namespaces.
 type restoreJob struct {
+	sync.RWMutex
+
 	// handlers contains the list of active restore handlers from the underlying backup library.
 	// Each handler corresponds to a specific backup being restored.
 	handlers []restoreexecutor.RestoreHandler
@@ -45,6 +46,55 @@ type restoreJob struct {
 	// effectively stopping the operation.
 	cancel context.CancelFunc
 }
+
+// addHandler adds a new restore handler to the job.
+func (j *restoreJob) addHandler(handler restoreexecutor.RestoreHandler) {
+	j.Lock()
+	defer j.Unlock()
+
+	j.handlers = append(j.handlers, handler)
+}
+
+// addTotalRecords adds to the total records count for the job.
+func (j *restoreJob) addTotalRecords(t uint64) {
+	j.Lock()
+	defer j.Unlock()
+
+	j.totalRecords += t
+}
+
+// finish marks the job as finished with a given status and error.
+func (j *restoreJob) finish(err error) {
+	j.Lock()
+	defer j.Unlock()
+
+	j.finished = ptr.Of(time.Now())
+	status := RestoreJobStatus(j).Counters
+	_ = status
+
+	if err == nil {
+		j.status = model.JobStatusDone
+		return
+	}
+
+	j.err = err
+
+	if errors.Is(err, context.Canceled) {
+		j.status = model.JobStatusCancelled
+	} else {
+		j.status = model.JobStatusFailed
+	}
+}
+
+// buildStatus constructs a model.RestoreJobStatus from the current job state.
+func (j *restoreJob) buildStatus() *model.RestoreJobStatus {
+	j.RLock()
+	defer j.RUnlock()
+
+	return RestoreJobStatus(j)
+}
+
+// RestoreJobsHolder is a thread-safe map of restore jobs.
 type RestoreJobsHolder struct {
 	*collections.SafeMap[model.RestoreJobID, *restoreJob]
 }
@@ -72,47 +122,32 @@ func (h *RestoreJobsHolder) newJob(label string, cancel context.CancelFunc) mode
 
 // addHandler should be called for each backup (full or incremental) handler.
 func (h *RestoreJobsHolder) addHandler(id model.RestoreJobID, handler restoreexecutor.RestoreHandler) {
-	h.Apply(id, func(job *restoreJob) {
-		job.handlers = append(job.handlers, handler)
-	})
+	if job, ok := h.Load(id); ok {
+		job.addHandler(handler)
+	}
 }
 
 // addTotalRecords should be called once for each namespace in the beginning
 // of the restore process.
 func (h *RestoreJobsHolder) addTotalRecords(id model.RestoreJobID, t uint64) {
-	h.Apply(id, func(job *restoreJob) {
-		job.totalRecords += t
-	})
+	if job, ok := h.Load(id); ok {
+		job.addTotalRecords(t)
+	}
 }
 
 func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
-	h.Apply(id, func(job *restoreJob) {
-		job.finished = ptr.Of(time.Now())
-		if err == nil {
-			job.status = model.JobStatusDone
-			return
-		}
-		if errors.Is(err, context.Canceled) {
-			job.status = model.JobStatusCancelled
-			job.err = err
-			return
-		}
-		job.status = model.JobStatusFailed
-		job.err = err
-		slog.Error("Failed to restore", slog.Any("jobId", id), attr.Error(err))
-	})
+	if job, ok := h.Load(id); ok {
+		job.finish(err)
+	}
 }
 
 func (h *RestoreJobsHolder) getStatus(id model.RestoreJobID) (*model.RestoreJobStatus, error) {
-	var result *model.RestoreJobStatus
-	h.Apply(id, func(value *restoreJob) {
-		result = RestoreJobStatus(value)
-	})
-
-	if result != nil {
-		return result, nil
+	job, exists := h.Load(id)
+	if !exists {
+		return nil, NewErrJobNotFound(id)
 	}
-	return nil, NewErrJobNotFound(id)
+	// buildStatus handles its own locking
+	return job.buildStatus(), nil
 }
 
 func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*restoreJob, error) {
