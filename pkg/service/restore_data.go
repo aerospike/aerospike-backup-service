@@ -418,15 +418,21 @@ func (r *dataRestorer) GetFilteredJobs(
 	results := make(map[model.RestoreJobID]*model.RestoreJobStatus)
 
 	r.restoreJobs.Iterate(func(id model.RestoreJobID, job *restoreJob) {
+		// Build the status first to get a consistent snapshot of the job.
+		// This prevents a race condition where the job's status changes
+		// between filtering and building the result.
+		status := job.buildStatus()
+
+		// Now, filter based on the consistent snapshot.
 		if !timeBounds.Contains(job.started) {
 			return
 		}
 
-		if !statusFilter.Matches(job.status) {
+		if !statusFilter.Matches(status.Status) {
 			return
 		}
 
-		results[id] = RestoreJobStatus(job)
+		results[id] = status
 	})
 
 	return results
