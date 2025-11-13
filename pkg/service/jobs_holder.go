@@ -51,6 +51,15 @@ type restoreJob struct {
 	cancel context.CancelFunc
 }
 
+func newRestoreJob(label string, cancel context.CancelFunc) *restoreJob {
+	return &restoreJob{
+		status:  model.JobStatusRunning,
+		started: time.Now(),
+		label:   label,
+		cancel:  cancel,
+	}
+}
+
 // addHandler adds a new restore handler to the job.
 func (j *restoreJob) addHandler(handler restoreexecutor.RestoreHandler) {
 	j.Lock()
@@ -109,12 +118,7 @@ func NewRestoreJobsHolder() *RestoreJobsHolder {
 func (h *RestoreJobsHolder) newJob(label string, cancel context.CancelFunc) model.RestoreJobID {
 	// #nosec G404
 	id := model.RestoreJobID(rand.Int63())
-	h.Store(id, &restoreJob{
-		status:  model.JobStatusRunning,
-		started: time.Now(),
-		label:   label,
-		cancel:  cancel,
-	})
+	h.Store(id, newRestoreJob(label, cancel))
 
 	return id
 }
