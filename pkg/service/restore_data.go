@@ -395,7 +395,12 @@ func (r *dataRestorer) restoreFromPath(
 
 // JobStatus returns the status of the job with the given id.
 func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
-	return r.restoreJobs.getStatus(jobID)
+	job, err := r.restoreJobs.getJob(jobID)
+	if err != nil {
+		return nil, err
+	}
+
+	return job.buildStatus(), nil
 }
 
 // CancelRestore cancels an ongoing restore.

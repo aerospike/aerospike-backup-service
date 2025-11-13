@@ -144,18 +144,10 @@ func (h *RestoreJobsHolder) finishJob(id model.RestoreJobID, err error) {
 	}
 }
 
-func (h *RestoreJobsHolder) getStatus(id model.RestoreJobID) (*model.RestoreJobStatus, error) {
-	job, exists := h.Load(id)
-	if !exists {
-		return nil, NewErrJobNotFound(id)
-	}
-	// buildStatus handles its own locking
-	return job.buildStatus(), nil
-}
-
 func (h *RestoreJobsHolder) getJob(id model.RestoreJobID) (*restoreJob, error) {
 	if job, exists := h.Load(id); exists {
 		return job, nil
 	}
+
 	return nil, NewErrJobNotFound(id)
 }

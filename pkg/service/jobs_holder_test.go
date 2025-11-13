@@ -62,8 +62,9 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 
 		wg.Wait()
 
-		status, err := holder.getStatus(jobID)
+		job, err := holder.getJob(jobID)
 		assert.NoError(t, err)
+		status := job.buildStatus()
 		assert.NotNil(t, status)
 
 		// Assert against the fields of the returned status object
@@ -81,7 +82,11 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 
 		// finish job
 		holder.finishJob(jobID, nil)
-		status, err = holder.getStatus(jobID)
+		job, err = holder.getJob(jobID)
+		assert.NoError(t, err)
+		status = job.buildStatus()
+		assert.NotNil(t, status)
+
 		assert.NoError(t, err)
 		assert.NotNil(t, status)
 
@@ -115,12 +120,16 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 
 		wg.Wait()
 
-		status, err := holder.getStatus(jobID)
+		job, err := holder.getJob(jobID)
+		assert.NoError(t, err)
+		status := job.buildStatus()
+		assert.NotNil(t, status)
+
 		assert.NoError(t, err)
 		assert.NotNil(t, status)
 
 		assert.Equal(t, model.JobStatusCancelled, status.Status)
-		job, err := holder.getJob(jobID)
+		job, err = holder.getJob(jobID)
 		assert.NoError(t, err)
 		assert.ErrorIs(t, job.err, context.Canceled)
 	})
@@ -153,12 +162,16 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 
 		wg.Wait()
 
-		status, err := holder.getStatus(jobID)
+		job, err := holder.getJob(jobID)
+		assert.NoError(t, err)
+		status := job.buildStatus()
+		assert.NotNil(t, status)
+
 		assert.NoError(t, err)
 		assert.NotNil(t, status)
 
 		assert.Equal(t, model.JobStatusFailed, status.Status)
-		job, err := holder.getJob(jobID)
+		job, err = holder.getJob(jobID)
 		assert.NoError(t, err)
 		assert.ErrorIs(t, job.err, failErr)
 	})
