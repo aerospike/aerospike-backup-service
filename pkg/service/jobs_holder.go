@@ -18,7 +18,7 @@ import (
 type restoreJob struct {
 	sync.RWMutex
 
-	// The following fields are protected by the mutex and should only be accessed under lock.
+	// Volatile fields, should only be accessed under lock:
 
 	// handlers contains the list of active restore handlers from the underlying backup library.
 	// Each handler corresponds to a specific backup being restored.
