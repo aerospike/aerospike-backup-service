@@ -18,6 +18,8 @@ import (
 type restoreJob struct {
 	sync.RWMutex
 
+	// The following fields are protected by the mutex and should only be accessed under lock.
+
 	// handlers contains the list of active restore handlers from the underlying backup library.
 	// Each handler corresponds to a specific backup being restored.
 	handlers []restoreexecutor.RestoreHandler
@@ -32,12 +34,14 @@ type restoreJob struct {
 	// totalRecords is the aggregated count of records to be restored across all backups.
 	totalRecords uint64
 
-	// started is the timestamp marking the initiation of the restore job.
-	started time.Time
-
 	// finished is the timestamp marking the completion of the restore job.
 	// It is nil for jobs that are still running.
 	finished *time.Time
+
+	// Immutable fields, set at creation:
+
+	// started is the timestamp marking the initiation of the restore job.
+	started time.Time
 
 	// label provides a user-friendly name for the restore job, used for metrics.
 	label string
