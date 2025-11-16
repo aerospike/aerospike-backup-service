@@ -129,8 +129,6 @@ func (t *routineTracker) clearFailedBackup(job jobType) {
 func (t *routineTracker) setLastRun(lastRun *model.BackupTime) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.signalSyncDone()
-
 	t.lastRun = lastRun
 }
 

@@ -83,28 +83,28 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Contex
 	)
 
 	duration, err := timeutil.MeasureDuration(func() error {
-		return scan(ctx, invalidatedRoutines, r)
+		return r.scan(ctx, invalidatedRoutines)
 	})
 
 	if err != nil {
 		slog.Error("History synchronization failed", attr.Error(err))
+	} else {
+		slog.Info("History synchronization completed",
+			slog.Any("routines", invalidatedRoutines),
+			slog.Int("len", len(invalidatedRoutines)),
+			slog.Duration("duration", duration),
+		)
 	}
-
-	slog.Info("History synchronization completed",
-		slog.Any("routines", invalidatedRoutines),
-		slog.Int("len", len(invalidatedRoutines)),
-		slog.Duration("duration", duration),
-	)
 }
 
-func scan(ctx context.Context, invalidatedRoutines []string, r *RunningBackupsRegistryImpl) error {
+func (r *RunningBackupsRegistryImpl) scan(ctx context.Context, routines []string) error {
 	var (
 		errs  error
 		errMu sync.Mutex
 	)
 
 	g, gCtx := errgroup.WithContext(ctx)
-	for _, routine := range invalidatedRoutines {
+	for _, routine := range routines {
 		g.Go(func() error {
 			err := r.syncRoutineHistory(gCtx, routine)
 
