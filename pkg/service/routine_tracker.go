@@ -125,7 +125,9 @@ func (t *routineTracker) clearFailedBackup(job jobType) {
 func (t *routineTracker) setLastRun(lastRun *model.BackupTime) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
 	t.lastRun = lastRun
+	t.scanCancel = nil // cannot cancel finished scan
 }
 
 // cancel stops all ongoing backups for this routine.
