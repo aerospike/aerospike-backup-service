@@ -27,6 +27,7 @@ type routineTracker struct {
 	// initialSyncDone is closed when the *first* history scan is completed.
 	// This ensures getState calls block until history is populated.
 	initialSyncDone chan struct{}
+	syncOnce        sync.Once
 
 	// --- Scan State ---
 	// scanCancel is a function to cancel a currently running history scan
@@ -88,11 +89,6 @@ func (t *routineTracker) recordSuccessfulBackup(routineName string, job jobType,
 		slog.String("time", timestamp.String()),
 		slog.String("job", string(job)),
 	)
-
-	// Ensure lastRun is not nil
-	if t.lastRun == nil {
-		t.lastRun = model.NewNoBackupTime()
-	}
 
 	switch job {
 	case jobTypeFull:
@@ -170,12 +166,7 @@ func (t *routineTracker) cancelScan() {
 
 // signalSyncDone safely closes the initialSyncDone channel.
 func (t *routineTracker) signalSyncDone() {
-	// This select prevents a panic if the channel is already closed
-	select {
-	case <-t.initialSyncDone:
-		// Channel already closed.
-	default:
-		// Channel is open, close it.
+	t.syncOnce.Do(func() {
 		close(t.initialSyncDone)
-	}
+	})
 }

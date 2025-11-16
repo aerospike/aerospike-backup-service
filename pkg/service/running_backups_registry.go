@@ -12,7 +12,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
-	"golang.org/x/sync/errgroup"
 )
 
 // RunningBackupsRegistry defines the interface for managing running backups and their statuses.
@@ -101,23 +100,22 @@ func (r *RunningBackupsRegistryImpl) scan(ctx context.Context, routines []string
 	var (
 		errs  error
 		errMu sync.Mutex
+		wg    sync.WaitGroup
 	)
 
-	g, gCtx := errgroup.WithContext(ctx)
 	for _, routine := range routines {
-		g.Go(func() error {
-			err := r.syncRoutineHistory(gCtx, routine)
+		wg.Add(1)
+		go func(routine string) {
+			defer wg.Done()
+			err := r.syncRoutineHistory(ctx, routine)
 
 			errMu.Lock()
-			defer errMu.Unlock()
-
 			errs = errors.Join(errs, err)
-
-			return nil // errors are handled with errs
-		})
+			errMu.Unlock()
+		}(routine)
 	}
 
-	_ = g.Wait() // errors are handled with errs
+	wg.Wait()
 
 	return errs
 }
