@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -13,7 +14,7 @@ import (
 // ConfigApplier is responsible for applying new configuration to the service.
 type ConfigApplier interface {
 	// ApplyNewConfig applies new configuration to the service.
-	ApplyNewConfig() error
+	ApplyNewConfig(ctx context.Context) error
 }
 
 type DefaultConfigApplier struct {
@@ -41,7 +42,7 @@ func NewDefaultConfigApplier(
 	}
 }
 
-func (a *DefaultConfigApplier) ApplyNewConfig() error {
+func (a *DefaultConfigApplier) ApplyNewConfig(ctx context.Context) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -56,7 +57,7 @@ func (a *DefaultConfigApplier) ApplyNewConfig() error {
 	}
 
 	// Scan existing backups to find the last successful runs for every routine.
-	go a.registry.SynchroniseBackupHistory()
+	go a.registry.SynchroniseBackupHistory(ctx)
 
 	return nil
 }

@@ -128,7 +128,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
 	backendService := service.NewBackupBackendService(config, pathService)
-	registry := service.NewRunningBackupsRegistry(ctx, backendService, config)
+	registry := service.NewRunningBackupsRegistry(backendService, config)
 
 	var routineStorage u.LockMap
 	retentionManager := service.NewBackupRetentionManager(backendService, config, &routineStorage)
@@ -139,7 +139,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		backendService, clusterConfigWriter)
 	configApplier := service.NewDefaultConfigApplier(scheduler, registry, backupComponents, config, pathService)
 
-	err = configApplier.ApplyNewConfig()
+	err = configApplier.ApplyNewConfig(ctx)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("failed to apply new config: %w", err)
 	}

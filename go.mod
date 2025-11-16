@@ -17,6 +17,7 @@ require (
 	github.com/aws/smithy-go v1.23.1
 	github.com/go-logr/logr v1.4.3
 	github.com/google/go-cmp v0.7.0
+	github.com/google/martian/v3 v3.3.3
 	github.com/googleapis/gax-go/v2 v2.15.0
 	github.com/prometheus/client_golang v1.21.1
 	github.com/reugn/go-quartz v0.15.2

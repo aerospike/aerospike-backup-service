@@ -2,29 +2,26 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
-	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/reugn/go-quartz/quartz"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 )
 
 // RunningBackupsRegistry defines the interface for managing running backups and their statuses.
 type RunningBackupsRegistry interface {
 	// register adds a new backup handler for a specific routine and job type.
 	register(routineName string, jt jobType, handler CancelableBackupHandler)
-	// remove deletes a backup from the registry.
+	// clearFailedBackup deletes a backup from the registry.
 	// Should be called for failed backups.
-	remove(routineName string, jt jobType)
-	// unregister removes a backup from the registry and updates the last success timestamp.
+	clearFailedBackup(routineName string, jt jobType)
+	// recordSuccessfulBackup removes a backup from the registry and updates the last success timestamp.
 	// Should be called after successful backup completion.
-	unregister(routineName string, jt jobType, timestamp time.Time)
+	recordSuccessfulBackup(routineName string, jt jobType, timestamp time.Time)
 
 	// GetRoutineState returns the current backup statistics for a routine.
 	GetRoutineState(routineName string) *model.RoutineState
@@ -34,55 +31,44 @@ type RunningBackupsRegistry interface {
 	Cancel(routineName string)
 	// SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
 	// found in the storage backends. It scans all backup routines in parallel.
-	SynchroniseBackupHistory()
-}
-type registryKey struct {
-	routineName string
-	job         jobType
-}
-
-func makeRegistryKey(routineName string, job jobType) registryKey {
-	return registryKey{
-		routineName: routineName,
-		job:         job,
-	}
+	SynchroniseBackupHistory(ctx context.Context)
 }
 
 // RunningBackupsRegistryImpl implements the RunningBackupsRegistry interface.
+// It acts as a coordinator, managing a map of per-routine trackers.
 type RunningBackupsRegistryImpl struct {
-	handlers       *collections.SafeMap[registryKey, CancelableBackupHandler]
-	lastSuccessful *collections.SafeMap[string, *model.BackupTime]
+	// trackers holds the state for all known routines
+	trackers *collections.SafeMap[string, *routineTracker]
 
-	routineLocks  collections.LockMap // Protects individual routines during synchronization
-	ctx           context.Context
-	config        *model.Config
-	backupReader  BackupReader
-	routineCancel *collections.SafeMap[string, context.CancelFunc]
+	// history is a stateless service for performing I/O scans
+	history *HistoryManager
+
+	// config is needed to calculate next run times
+	config *model.Config
 }
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
 func NewRunningBackupsRegistry(
-	ctx context.Context,
 	backupReader BackupReader,
 	config *model.Config,
 ) *RunningBackupsRegistryImpl {
 	return &RunningBackupsRegistryImpl{
-		ctx:            ctx,
-		config:         config,
-		backupReader:   backupReader,
-		handlers:       collections.NewSafeMap[registryKey, CancelableBackupHandler](),
-		lastSuccessful: collections.NewSafeMap[string, *model.BackupTime](),
-		routineCancel:  collections.NewSafeMap[string, context.CancelFunc](),
+		trackers: collections.NewSafeMap[string, *routineTracker](),
+		history:  NewHistoryManager(backupReader),
+		config:   config,
 	}
+}
+
+// getTracker atomically retrieves or creates a new tracker for a routine.
+func (r *RunningBackupsRegistryImpl) getTracker(routineName string) *routineTracker {
+	return r.trackers.LoadOrStore(routineName, newRoutineTracker())
 }
 
 // SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
 // found in the storage backends. It scans all backup routines in parallel.
-func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
-	totalStart := time.Now()
-
+func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Context) {
 	invalidatedRoutines := r.config.PopInvalidatedRoutines()
 	if len(invalidatedRoutines) == 0 {
 		return
@@ -93,137 +79,96 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory() {
 		slog.Int("len", len(invalidatedRoutines)),
 	)
 
-	var wg sync.WaitGroup
-	for _, routineName := range invalidatedRoutines {
-		wg.Add(1)
-		go func(routineName string) {
-			defer wg.Done()
-			// cancel previous scan
-			r.routineCancel.Apply(routineName, func(cancel context.CancelFunc) {
-				cancel()
-			})
+	lastDurations, duration, err := timeutil.MeasureDurationValue(func() (map[string]*model.BackupTime, error) {
+		return r.history.FindLastRunBatch(ctx, invalidatedRoutines)
+	})
 
-			r.scanForRoutine(routineName)
-		}(routineName)
-	}
-
-	wg.Wait()
-	slog.Info("History synchronization completed",
-		slog.Any("routines", invalidatedRoutines),
-		slog.Any("len", len(invalidatedRoutines)),
-		slog.Duration("duration", time.Since(totalStart)),
-	)
-}
-
-func (r *RunningBackupsRegistryImpl) scanForRoutine(routineName string) {
-	routineLock := r.routineLocks.Get(routineName)
-	routineLock.Lock()
-	defer routineLock.Unlock()
-
-	ctx, cancelFunc := context.WithCancel(r.ctx)
-	r.routineCancel.Store(routineName, cancelFunc)
-	defer cancelFunc()
-
-	logger := slog.Default().With(attr.Routine(routineName))
-	routineStart := time.Now()
-	lastRun, err := r.findLastRun(ctx, routineName)
 	if err != nil {
-		switch {
-		case errors.Is(err, context.Canceled):
-			logger.Info("Backup history scan cancelled")
-		default:
-			logger.Error("Failed to read last backup time", attr.Error(err))
+		slog.Info("Failed to synchronize backup history", attr.Error(err))
+	} else {
+		slog.Info("History synchronization completed",
+			slog.Any("routines", invalidatedRoutines),
+			slog.Int("len", len(invalidatedRoutines)),
+			slog.Duration("duration", duration),
+		)
+
+		for routineName, lastRun := range lastDurations {
+			r.getTracker(routineName).setLastRun(lastRun)
+			if ts := lastRun.LatestRun(); ts != nil { // update prometheus metric
+				lastBackupTimestamp.WithLabelValues(routineName).Set(float64(ts.Unix()))
+			}
 		}
-		r.lastSuccessful.Remove(routineName)
-
-		return
 	}
-
-	logger.Info("Last backup time scan completed",
-		slog.Duration("duration", time.Since(routineStart)),
-		slog.String("lastRun", lastRun.String()))
-
-	// set last successful backup time for backups done before ABS started
-	if lastRun.LatestRun() != nil {
-		lastBackupTimestamp.WithLabelValues(routineName).Set(float64(lastRun.LatestRun().Unix()))
-	}
-	r.lastSuccessful.Store(routineName, lastRun)
 }
 
 // register adds a new backup handler for a specific routine and job type.
 func (r *RunningBackupsRegistryImpl) register(routineName string, job jobType, handler CancelableBackupHandler) {
-	r.handlers.Store(makeRegistryKey(routineName, job), handler)
+	r.getTracker(routineName).register(job, handler)
 }
 
-// unregister removes a backup from the registry and updates the last success timestamp.
-// Should be called after successful backup completion.
-func (r *RunningBackupsRegistryImpl) unregister(routineName string, job jobType, timestamp time.Time) {
-	r.setLastTime(routineName, job, timestamp)
-	r.remove(routineName, job)
+// recordSuccessfulBackup removes a backup from the registry and updates the last success timestamp.
+func (r *RunningBackupsRegistryImpl) recordSuccessfulBackup(routineName string, job jobType, timestamp time.Time) {
+	r.getTracker(routineName).recordSuccessfulBackup(routineName, job, timestamp)
 }
 
-func (r *RunningBackupsRegistryImpl) setLastTime(routineName string, job jobType, timestamp time.Time) {
-	routineLock := r.routineLocks.Get(routineName)
-	routineLock.Lock()
-	defer routineLock.Unlock()
-
-	logger := slog.Default().With(attr.Routine(routineName))
-	logger.Info("set last backup time",
-		slog.String("time", timestamp.String()),
-		slog.String("job", string(job)),
-	)
-
-	updateLastTimestamp := func(lastBackupRun *model.BackupTime) {
-		switch job {
-		case jobTypeFull:
-			lastBackupRun.SetFullBackupTime(&timestamp)
-		case jobTypeIncremental:
-			lastBackupRun.SetIncrementalBackupTime(&timestamp)
-		}
-	}
-
-	// set last successful backup time for just finished backup
-	lastBackupTimestamp.WithLabelValues(routineName).Set(float64(timestamp.Unix()))
-	r.lastSuccessful.ApplyOrCreate(
-		routineName,
-		updateLastTimestamp,
-		model.NewFullBackupTime(timestamp), // it was first backup, always full.
-	)
-}
-
-// remove deletes a backup from the registry.
-// Should be called for failed backups.
-func (r *RunningBackupsRegistryImpl) remove(routineName string, job jobType) {
-	r.handlers.Remove(makeRegistryKey(routineName, job))
+// clearFailedBackup deletes a backup from the registry.
+func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, job jobType) {
+	r.getTracker(routineName).clearFailedBackup(job)
 }
 
 // GetRoutineState returns the current backup statistics for a routine.
 func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.RoutineState {
-	fullBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeFull))
-	incrBackupHandler, _ := r.handlers.Load(makeRegistryKey(routineName, jobTypeIncremental))
+	// 1. Get or create the tracker.
+	tracker := r.getTracker(routineName)
 
-	routineLock := r.routineLocks.Get(routineName)
-	routineLock.RLock()
-	defer routineLock.RUnlock()
-
-	logger := slog.Default().With(attr.Routine(routineName))
-	lastRun, found := r.lastSuccessful.Load(routineName)
-	if !found {
-		logger.Info("No last backup info available")
-		lastRun = model.NewNoBackupTime()
+	// 2. Get a consistent, point-in-time snapshot of the routine's state.
+	// This call internally waits for the initial sync to complete.
+	full, incr, lastRun, err := tracker.getState(5 * time.Second)
+	if err != nil {
+		slog.Default().With(attr.Routine(routineName)).
+			Warn("Failed to get routine state within timeout", attr.Error(err))
+		// Return a state indicating that history is not available yet
+		return &model.RoutineState{
+			Full:        full,
+			Incremental: incr,
+			LastRunTime: model.NewNoBackupTime(), // Indicate no history available
+			NextRunTime: model.NewNoBackupTime(),
+		}
 	}
 
+	// 3. Calculate the next run time (this logic lives in the main registry)
 	nextRunTime, err := nextBackup(routineName, r.config)
 	if err != nil {
-		logger.Warn("Could not calculate next fire time", attr.Error(err))
+		slog.Default().With(attr.Routine(routineName)).
+			Warn("Could not calculate next fire time", attr.Error(err))
 		nextRunTime = model.NewNoBackupTime()
 	}
 
+	// 4. Assemble the final state object
 	return &model.RoutineState{
-		Full:        currentBackupStatus(fullBackupHandler),
-		Incremental: currentBackupStatus(incrBackupHandler),
+		Full:        full,
+		Incremental: incr,
 		LastRunTime: lastRun,
 		NextRunTime: nextRunTime,
+	}
+}
+
+// GetRunningState returns statistics for all current backups.
+func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]*model.RoutineState {
+	stats := make(map[string]*model.RoutineState)
+
+	// Iterate over all trackers we are aware of
+	r.trackers.Iterate(func(routineName string, tracker *routineTracker) {
+		stats[routineName] = r.GetRoutineState(routineName)
+	})
+
+	return stats
+}
+
+// Cancel stops all ongoing backups for a specific routine.
+func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
+	if tracker, ok := r.trackers.Load(routineName); ok {
+		tracker.cancel()
 	}
 }
 
@@ -233,7 +178,7 @@ func nextBackup(routineName string, config *model.Config) (*model.BackupTime, er
 		return nil, fmt.Errorf("routine %q not found", routineName)
 	}
 
-	nextFullBackup, err := nextTrigger(routine.IntervalCron)
+	nextFullBackup, err := timeutil.NextTrigger(routine.IntervalCron)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse full backup cron: %w", err)
 	}
@@ -242,78 +187,10 @@ func nextBackup(routineName string, config *model.Config) (*model.BackupTime, er
 		return model.NewFullBackupTime(nextFullBackup), nil
 	}
 
-	nextIncrementalBackup, err := nextTrigger(routine.IncrIntervalCron)
+	nextIncrementalBackup, err := timeutil.NextTrigger(routine.IncrIntervalCron)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse incremental backup cron: %w", err)
 	}
 
 	return model.NewBackupTime(nextFullBackup, nextIncrementalBackup), nil
-}
-
-func nextTrigger(cron string) (time.Time, error) {
-	trigger, err := quartz.NewCronTrigger(cron)
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	fireTime, err := trigger.NextFireTime(time.Now().UnixNano())
-	if err != nil {
-		return time.Time{}, err
-	}
-
-	return time.Unix(0, fireTime), nil
-}
-
-// GetRunningState returns statistics for all current backups.
-func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]*model.RoutineState {
-	var routines []string
-	r.handlers.Iterate(func(key registryKey, _ CancelableBackupHandler) {
-		if !slices.Contains(routines, key.routineName) { // same routine can be stored twice: as full and incr.
-			routines = append(routines, key.routineName)
-		}
-	})
-
-	stats := make(map[string]*model.RoutineState, len(routines))
-	for _, routineName := range routines {
-		stats[routineName] = r.GetRoutineState(routineName)
-	}
-
-	return stats
-}
-
-// Cancel stops all ongoing backups for a specific routine.
-func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
-	for _, job := range []jobType{jobTypeFull, jobTypeIncremental} {
-		key := makeRegistryKey(routineName, job)
-		r.handlers.Apply(key, func(handler CancelableBackupHandler) {
-			handler.Cancel()
-		})
-	}
-}
-
-func (r *RunningBackupsRegistryImpl) findLastRun(
-	ctx context.Context,
-	routineName string,
-) (*model.BackupTime, error) {
-	lastFullBackup, err := r.backupReader.GetBackups(ctx, NewFullBackupFilter(routineName).Last())
-	if err != nil {
-		return nil, fmt.Errorf("read last full backup failed: %w", err)
-	}
-
-	if len(lastFullBackup) == 0 {
-		return model.NewNoBackupTime(), nil
-	}
-	lastFullTime := lastFullBackup[0].Created
-
-	lastIncrBackup, err := r.backupReader.GetBackups(ctx,
-		NewIncrementalBackupFilter(routineName).WithFromTime(lastFullTime).Last())
-	if err != nil {
-		return nil, fmt.Errorf("read last incremental backup failed: %w", err)
-	}
-
-	if len(lastIncrBackup) > 0 {
-		return model.NewBackupTime(lastFullTime, lastIncrBackup[0].Created), nil
-	}
-
-	return model.NewFullBackupTime(lastFullTime), nil
 }
