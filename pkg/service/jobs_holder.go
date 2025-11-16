@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/aerospike/backup-go/models"
 )
 
 // restoreJob encapsulates the state and details of a single restore operation.
@@ -99,7 +100,25 @@ func (j *restoreJob) buildStatus() *model.RestoreJobStatus {
 	j.RLock()
 	defer j.RUnlock()
 
-	return RestoreJobStatus(j)
+	metrics := make([]*models.Metrics, 0, len(j.handlers))
+	stats := make([]*models.RestoreStats, 0, len(j.handlers))
+	for _, handler := range j.handlers {
+		metrics = append(metrics, handler.GetMetrics())
+		stats = append(stats, handler.GetStats())
+	}
+
+	sumMetrics := models.SumMetrics(metrics...)
+	restoreStats := models.SumRestoreStats(stats...)
+	doneRecords := restoreStats.GetReadRecords()
+	runningJob := NewRunningJob(
+		j.started, j.finished, doneRecords, j.totalRecords, sumMetrics, j.status)
+
+	return &model.RestoreJobStatus{
+		Status:         j.status,
+		Error:          j.err,
+		Counters:       restoreStats,
+		CurrentRestore: runningJob,
+	}
 }
 
 // RestoreJobsHolder is a thread-safe map of restore jobs.
