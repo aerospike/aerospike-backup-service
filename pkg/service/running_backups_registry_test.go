@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func TestRegisterAndCurrentStat(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
+	registry := NewRunningBackupsRegistry(nil, initConfig())
 
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
@@ -33,7 +32,7 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 }
 
 func TestFinishFull(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
+	registry := NewRunningBackupsRegistry(nil, initConfig())
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -44,7 +43,7 @@ func TestFinishFull(t *testing.T) {
 	registry.register(routineName, jobTypeFull, handler)
 
 	now := time.Now()
-	registry.unregister(routineName, jobTypeFull, now)
+	registry.recordSuccessfulBackup(routineName, jobTypeFull, now)
 
 	stat := registry.GetRoutineState(routineName)
 	assert.Nil(t, stat.Full)
@@ -53,7 +52,7 @@ func TestFinishFull(t *testing.T) {
 }
 
 func TestFinishIncremental(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
+	registry := NewRunningBackupsRegistry(nil, initConfig())
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -65,8 +64,8 @@ func TestFinishIncremental(t *testing.T) {
 	registry.register(routineName, jobTypeIncremental, handler)
 
 	now := time.Now()
-	registry.unregister(routineName, jobTypeFull, now.Add(-1*time.Second))
-	registry.unregister(routineName, jobTypeIncremental, now)
+	registry.recordSuccessfulBackup(routineName, jobTypeFull, now.Add(-1*time.Second))
+	registry.recordSuccessfulBackup(routineName, jobTypeIncremental, now)
 
 	stat := registry.GetRoutineState(routineName)
 	assert.Nil(t, stat.Full)
@@ -76,7 +75,7 @@ func TestFinishIncremental(t *testing.T) {
 
 func TestGetAllCurrentStats(t *testing.T) {
 	config := initConfig()
-	registry := NewRunningBackupsRegistry(context.Background(), nil, config)
+	registry := NewRunningBackupsRegistry(nil, config)
 
 	routine1 := "routine1"
 	routine2 := "routine2"
@@ -115,7 +114,7 @@ func TestGetAllCurrentStats(t *testing.T) {
 }
 
 func TestCancel(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
+	registry := NewRunningBackupsRegistry(nil, initConfig())
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

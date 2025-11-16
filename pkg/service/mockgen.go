@@ -287,15 +287,39 @@ func (mr *MockRunningBackupsRegistryMockRecorder) GetRunningState() *gomock.Call
 }
 
 // SynchroniseBackupHistory mocks base method.
-func (m *MockRunningBackupsRegistry) SynchroniseBackupHistory() {
+func (m *MockRunningBackupsRegistry) SynchroniseBackupHistory(ctx context.Context) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SynchroniseBackupHistory")
+	m.ctrl.Call(m, "SynchroniseBackupHistory", ctx)
 }
 
 // SynchroniseBackupHistory indicates an expected call of SynchroniseBackupHistory.
-func (mr *MockRunningBackupsRegistryMockRecorder) SynchroniseBackupHistory() *gomock.Call {
+func (mr *MockRunningBackupsRegistryMockRecorder) SynchroniseBackupHistory(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SynchroniseBackupHistory", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).SynchroniseBackupHistory))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SynchroniseBackupHistory", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).SynchroniseBackupHistory), ctx)
+}
+
+// clearFailedBackup mocks base method.
+func (m *MockRunningBackupsRegistry) clearFailedBackup(routineName string, jt jobType) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "clearFailedBackup", routineName, jt)
+}
+
+// clearFailedBackup indicates an expected call of clearFailedBackup.
+func (mr *MockRunningBackupsRegistryMockRecorder) clearFailedBackup(routineName, jt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "clearFailedBackup", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).clearFailedBackup), routineName, jt)
+}
+
+// recordSuccessfulBackup mocks base method.
+func (m *MockRunningBackupsRegistry) recordSuccessfulBackup(routineName string, jt jobType, timestamp time.Time) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "recordSuccessfulBackup", routineName, jt, timestamp)
+}
+
+// recordSuccessfulBackup indicates an expected call of recordSuccessfulBackup.
+func (mr *MockRunningBackupsRegistryMockRecorder) recordSuccessfulBackup(routineName, jt, timestamp any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "recordSuccessfulBackup", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).recordSuccessfulBackup), routineName, jt, timestamp)
 }
 
 // register mocks base method.
@@ -308,30 +332,6 @@ func (m *MockRunningBackupsRegistry) register(routineName string, jt jobType, ha
 func (mr *MockRunningBackupsRegistryMockRecorder) register(routineName, jt, handler any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "register", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).register), routineName, jt, handler)
-}
-
-// remove mocks base method.
-func (m *MockRunningBackupsRegistry) remove(routineName string, jt jobType) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "remove", routineName, jt)
-}
-
-// remove indicates an expected call of remove.
-func (mr *MockRunningBackupsRegistryMockRecorder) remove(routineName, jt any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "remove", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).remove), routineName, jt)
-}
-
-// unregister mocks base method.
-func (m *MockRunningBackupsRegistry) unregister(routineName string, jt jobType, timestamp time.Time) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "unregister", routineName, jt, timestamp)
-}
-
-// unregister indicates an expected call of unregister.
-func (mr *MockRunningBackupsRegistryMockRecorder) unregister(routineName, jt, timestamp any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "unregister", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).unregister), routineName, jt, timestamp)
 }
 
 // MockRetentionManager is a mock of RetentionManager interface.

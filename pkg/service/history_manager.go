@@ -4,13 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
-	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/google/martian/v3"
-	"golang.org/x/sync/errgroup"
 )
 
 // HistoryManager is a stateless service responsible for scanning
@@ -28,42 +24,11 @@ func NewHistoryManager(
 	}
 }
 
-// FindLastRunBatch finds the last backup for each of the given routines in parallel.
-func (hm *HistoryManager) FindLastRunBatch(
-	ctx context.Context,
-	routineNames []string,
-) (map[string]*model.BackupTime, error) {
-	results := make(map[string]*model.BackupTime, len(routineNames))
-	mu := &sync.Mutex{}
-	g := errgroup.Group{}
-	errs := martian.NewMultiError() // thread-safe error collector
-
-	for _, routineName := range routineNames {
-		g.Go(func() error {
-			lastRun, err := hm.findLastRunInternal(ctx, routineName)
-			if err != nil {
-				errs.Add(err)
-			} else {
-				mu.Lock()
-				results[routineName] = lastRun
-				mu.Unlock()
-			}
-
-			return nil // errors are collected in errs
-		})
-	}
-
-	_ = g.Wait()
-
-	return results, errs
-}
-
-// findLastRunInternal performs the actual I/O to find the last backup for a single routine.
-func (hm *HistoryManager) findLastRunInternal(
+// FindLastRun performs the I/O to find the last backup for a single routine.
+func (hm *HistoryManager) FindLastRun(
 	ctx context.Context,
 	routineName string,
 ) (*model.BackupTime, error) {
-	routineStart := time.Now()
 	lastFullBackup, err := hm.backupReader.GetBackups(ctx, NewFullBackupFilter(routineName).Last())
 	if err != nil {
 		return nil, fmt.Errorf("read last full backup failed: %w", err)
@@ -89,7 +54,6 @@ func (hm *HistoryManager) findLastRunInternal(
 
 	slog.Debug("Last backup time scan completed for routine",
 		attr.Routine(routineName),
-		slog.Duration("duration", time.Since(routineStart)),
 		slog.String("lastRun", lastRun.String()))
 
 	return lastRun, nil

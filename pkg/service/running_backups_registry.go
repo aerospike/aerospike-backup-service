@@ -2,14 +2,17 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
+	"golang.org/x/sync/errgroup"
 )
 
 // RunningBackupsRegistry defines the interface for managing running backups and their statuses.
@@ -79,26 +82,75 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Contex
 		slog.Int("len", len(invalidatedRoutines)),
 	)
 
-	lastDurations, duration, err := timeutil.MeasureDurationValue(func() (map[string]*model.BackupTime, error) {
-		return r.history.FindLastRunBatch(ctx, invalidatedRoutines)
+	duration, err := timeutil.MeasureDuration(func() error {
+		return scan(ctx, invalidatedRoutines, r)
 	})
 
 	if err != nil {
-		slog.Info("Failed to synchronize backup history", attr.Error(err))
-	} else {
-		slog.Info("History synchronization completed",
-			slog.Any("routines", invalidatedRoutines),
-			slog.Int("len", len(invalidatedRoutines)),
-			slog.Duration("duration", duration),
-		)
-
-		for routineName, lastRun := range lastDurations {
-			r.getTracker(routineName).setLastRun(lastRun)
-			if ts := lastRun.LatestRun(); ts != nil { // update prometheus metric
-				lastBackupTimestamp.WithLabelValues(routineName).Set(float64(ts.Unix()))
-			}
-		}
+		slog.Error("History synchronization failed", attr.Error(err))
 	}
+
+	slog.Info("History synchronization completed",
+		slog.Any("routines", invalidatedRoutines),
+		slog.Int("len", len(invalidatedRoutines)),
+		slog.Duration("duration", duration),
+	)
+}
+
+func scan(ctx context.Context, invalidatedRoutines []string, r *RunningBackupsRegistryImpl) error {
+	var (
+		errs  error
+		errMu sync.Mutex
+	)
+
+	g, gCtx := errgroup.WithContext(ctx)
+	for _, routine := range invalidatedRoutines {
+		g.Go(func() error {
+			err := r.syncRoutineHistory(gCtx, routine)
+
+			errMu.Lock()
+			defer errMu.Unlock()
+
+			errs = errors.Join(errs, err)
+
+			return nil // errors are handled with errs
+		})
+	}
+
+	_ = g.Wait() // errors are handled with errs
+
+	return errs
+}
+
+func (r *RunningBackupsRegistryImpl) syncRoutineHistory(ctx context.Context, routineName string) error {
+	tracker := r.getTracker(routineName)
+
+	// Cancel any previous scan that might still be running
+	tracker.cancelScan()
+
+	// Always signal that the (first) sync is done, even on failure.
+	defer tracker.signalSyncDone()
+
+	ctxWithCancel, cancelFunc := context.WithCancel(ctx)
+	defer cancelFunc()
+	tracker.setScanCancel(cancelFunc)
+
+	lastRun, err := r.history.FindLastRun(ctxWithCancel, routineName)
+	if err != nil {
+		if !errors.Is(err, context.Canceled) {
+			slog.Error("Failed to read last backup time during sync", attr.Error(err), attr.Routine(routineName))
+		}
+		tracker.setLastRun(model.NewNoBackupTime())
+		return err
+	}
+
+	// On success, update the tracker's history
+	tracker.setLastRun(lastRun)
+	if lastRun.LatestRun() != nil {
+		lastBackupTimestamp.WithLabelValues(routineName).Set(float64(lastRun.LatestRun().Unix()))
+	}
+
+	return nil
 }
 
 // register adds a new backup handler for a specific routine and job type.
@@ -125,8 +177,7 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 	// This call internally waits for the initial sync to complete.
 	full, incr, lastRun, err := tracker.getState(5 * time.Second)
 	if err != nil {
-		slog.Default().With(attr.Routine(routineName)).
-			Warn("Failed to get routine state within timeout", attr.Error(err))
+		slog.Error("Failed to get routine state within timeout", attr.Error(err), attr.Routine(routineName))
 		// Return a state indicating that history is not available yet
 		return &model.RoutineState{
 			Full:        full,

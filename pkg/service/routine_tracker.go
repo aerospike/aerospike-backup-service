@@ -27,6 +27,10 @@ type routineTracker struct {
 	// initialSyncDone is closed when the *first* history scan is completed.
 	// This ensures getState calls block until history is populated.
 	initialSyncDone chan struct{}
+
+	// --- Scan State ---
+	// scanCancel is a function to cancel a currently running history scan
+	scanCancel context.CancelFunc
 }
 
 // newRoutineTracker creates a new, initialized tracker.
@@ -140,6 +144,29 @@ func (t *routineTracker) cancel() {
 	}
 	if t.incrHandler != nil {
 		t.incrHandler.Cancel()
+	}
+}
+
+// setScanCancel stores the cancel function for the current history scan.
+// It cancels any previously running scan.
+func (t *routineTracker) setScanCancel(cancel context.CancelFunc) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if t.scanCancel != nil {
+		t.scanCancel()
+	}
+	t.scanCancel = cancel
+}
+
+// cancelScan actively cancels a running history scan.
+func (t *routineTracker) cancelScan() {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	if t.scanCancel != nil {
+		t.scanCancel()
+		t.scanCancel = nil
 	}
 }
 
