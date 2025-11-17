@@ -4,10 +4,11 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/backup-go/models"
 )
 
-func currentBackupStatus(handlers CancelableBackupHandler) *model.RunningJob {
+func currentBackupStatus(handlers backupexecutor.BackupHandler) *model.RunningJob {
 	if handlers == nil {
 		return nil
 	}

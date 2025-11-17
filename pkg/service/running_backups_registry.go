@@ -51,6 +51,8 @@ type RunningBackupsRegistryImpl struct {
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
+const getStateTimeout = 5 * time.Second
+
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
 func NewRunningBackupsRegistry(
 	history HistoryManager,
@@ -168,12 +170,9 @@ func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, job j
 
 // GetRoutineState returns the current backup statistics for a routine.
 func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.RoutineState {
-	// 1. Get or create the tracker.
 	tracker := r.getTracker(routineName)
 
-	// 2. Get a consistent, point-in-time snapshot of the routine's state.
-	// This call internally waits for the initial sync to complete.
-	full, incr, lastRun, err := tracker.getState(5 * time.Second)
+	full, incr, lastRun, err := tracker.getState(getStateTimeout)
 	if err != nil {
 		slog.Error("Failed to get routine state within timeout", attr.Error(err), attr.Routine(routineName))
 		// Return a state indicating that history is not available yet
@@ -185,7 +184,6 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 		}
 	}
 
-	// 3. Calculate the next run time (this logic lives in the main registry)
 	nextRunTime, err := nextBackup(routineName, r.config)
 	if err != nil {
 		slog.Default().With(attr.Routine(routineName)).
@@ -193,7 +191,6 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 		nextRunTime = model.NewNoBackupTime()
 	}
 
-	// 4. Assemble the final state object
 	return &model.RoutineState{
 		Full:        full,
 		Incremental: incr,
