@@ -25,8 +25,13 @@ func (a *LocalStorageAccessor) createReader(
 }
 
 func (a *LocalStorageAccessor) createWriter(
-	ctx context.Context, _ model.Storage, opts ...options.Opt,
+	ctx context.Context, storage model.Storage, opts ...options.Opt,
 ) (backup.Writer, error) {
+	s := storage.(*model.LocalStorage)
+	if s.MinPartSize != nil {
+		opts = append(opts, options.WithChunkSize(*s.MinPartSize))
+	}
+
 	return local.NewWriter(ctx, opts...)
 }
 
