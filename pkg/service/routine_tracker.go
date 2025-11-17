@@ -42,29 +42,34 @@ func newRoutineTracker() *routineTracker {
 	}
 }
 
+// trackerSnapshot holds a point-in-time snapshot of a routine's state.
+type trackerSnapshot struct {
+	full    *model.RunningJob
+	incr    *model.RunningJob
+	lastRun *model.BackupTime
+}
+
 // getState returns a consistent, point-in-time snapshot of the routine's state.
 // It will block until the initial history synchronization is complete.
-func (t *routineTracker) getState(timeout time.Duration) (
-	full *model.RunningJob,
-	incr *model.RunningJob,
-	lastRun *model.BackupTime,
-	err error,
-) {
+func (t *routineTracker) getState(timeout time.Duration) (*trackerSnapshot, error) {
 	select {
 	case <-t.initialSyncDone:
 		// Sync is done, proceed
 	case <-time.After(timeout):
-		return nil, nil, nil, context.DeadlineExceeded
+		return nil, context.DeadlineExceeded
 	}
 
 	// Now that sync is done, get a consistent snapshot of the state
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	return currentBackupStatus(t.fullHandler),
-		currentBackupStatus(t.incrHandler),
-		t.lastRun,
-		nil
+	snapshot := &trackerSnapshot{
+		full:    currentBackupStatus(t.fullHandler),
+		incr:    currentBackupStatus(t.incrHandler),
+		lastRun: t.lastRun,
+	}
+
+	return snapshot, nil
 }
 
 // register adds a new running backup handler.

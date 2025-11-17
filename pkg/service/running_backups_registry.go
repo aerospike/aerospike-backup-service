@@ -172,14 +172,12 @@ func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, job j
 func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.RoutineState {
 	tracker := r.getTracker(routineName)
 
-	full, incr, lastRun, err := tracker.getState(getStateTimeout)
+	snapshot, err := tracker.getState(getStateTimeout)
 	if err != nil {
 		slog.Error("Failed to get routine state within timeout", attr.Error(err), attr.Routine(routineName))
 		// Return a state indicating that history is not available yet
 		return &model.RoutineState{
-			Full:        full,
-			Incremental: incr,
-			LastRunTime: model.NewNoBackupTime(), // Indicate no history available
+			LastRunTime: model.NewNoBackupTime(),
 			NextRunTime: model.NewNoBackupTime(),
 		}
 	}
@@ -192,9 +190,9 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 	}
 
 	return &model.RoutineState{
-		Full:        full,
-		Incremental: incr,
-		LastRunTime: lastRun,
+		Full:        snapshot.full,
+		Incremental: snapshot.incr,
+		LastRunTime: snapshot.lastRun,
 		NextRunTime: nextRunTime,
 	}
 }

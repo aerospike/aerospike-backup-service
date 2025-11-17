@@ -30,8 +30,9 @@ func TestGetState_BlockingAndTimeout(t *testing.T) {
 	tracker := newRoutineTracker()
 
 	// Test timeout
-	_, _, _, err := tracker.getState(10 * time.Millisecond)
+	snapshot, err := tracker.getState(10 * time.Millisecond)
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Nil(t, snapshot)
 
 	// Test blocking and unblocking
 	go func() {
@@ -40,10 +41,11 @@ func TestGetState_BlockingAndTimeout(t *testing.T) {
 	}()
 
 	start := time.Now()
-	_, _, _, err = tracker.getState(100 * time.Millisecond)
+	snapshot, err = tracker.getState(100 * time.Millisecond)
 	duration := time.Since(start)
 
 	assert.NoError(t, err)
+	assert.NotNil(t, snapshot)
 	assert.GreaterOrEqual(t, duration, 50*time.Millisecond)
 }
 
@@ -72,12 +74,12 @@ func TestRegisterAndGetState(t *testing.T) {
 	tracker.register(jobTypeFull, fullHandler)
 	tracker.register(jobTypeIncremental, incrHandler)
 
-	full, incr, _, err := tracker.getState(1 * time.Second)
+	snapshot, err := tracker.getState(1 * time.Second)
 	assert.NoError(t, err)
-	assert.NotNil(t, full)
-	assert.NotNil(t, incr)
-	assert.Equal(t, uint64(100), full.TotalRecords)
-	assert.Equal(t, uint64(50), incr.TotalRecords)
+	assert.NotNil(t, snapshot.full)
+	assert.NotNil(t, snapshot.incr)
+	assert.Equal(t, uint64(100), snapshot.full.TotalRecords)
+	assert.Equal(t, uint64(50), snapshot.incr.TotalRecords)
 }
 
 func TestRecordSuccessfulBackup(t *testing.T) {
@@ -94,22 +96,22 @@ func TestRecordSuccessfulBackup(t *testing.T) {
 	now := time.Now()
 	tracker.recordSuccessfulBackup(routineName, jobTypeFull, now)
 
-	full, _, lastRun, err := tracker.getState(1 * time.Second)
+	snapshot, err := tracker.getState(1 * time.Second)
 	assert.NoError(t, err)
-	assert.Nil(t, full) // handler should be removed
-	assert.Equal(t, now, *lastRun.FullBackupTime())
-	assert.Nil(t, lastRun.IncrementalBackupTime())
+	assert.Nil(t, snapshot.full) // handler should be removed
+	assert.Equal(t, now, *snapshot.lastRun.FullBackupTime())
+	assert.Nil(t, snapshot.lastRun.IncrementalBackupTime())
 
 	// record a successful incremental backup
 	tracker.register(jobTypeIncremental, handler)
 	nowIncr := time.Now()
 	tracker.recordSuccessfulBackup(routineName, jobTypeIncremental, nowIncr)
 
-	_, incr, lastRun, err := tracker.getState(1 * time.Second)
+	snapshotIncr, err := tracker.getState(1 * time.Second)
 	assert.NoError(t, err)
-	assert.Nil(t, incr) // handler should be removed
-	assert.Equal(t, now, *lastRun.FullBackupTime())
-	assert.Equal(t, nowIncr, *lastRun.IncrementalBackupTime())
+	assert.Nil(t, snapshotIncr.incr) // handler should be removed
+	assert.Equal(t, now, *snapshotIncr.lastRun.FullBackupTime())
+	assert.Equal(t, nowIncr, *snapshotIncr.lastRun.IncrementalBackupTime())
 }
 
 func TestClearFailedBackup(t *testing.T) {
@@ -125,10 +127,10 @@ func TestClearFailedBackup(t *testing.T) {
 	// clear a failed backup
 	tracker.clearFailedBackup(jobTypeFull)
 
-	full, _, lastRun, err := tracker.getState(1 * time.Second)
+	snapshot, err := tracker.getState(1 * time.Second)
 	assert.NoError(t, err)
-	assert.Nil(t, full)                     // handler should be removed
-	assert.Nil(t, lastRun.FullBackupTime()) // lastRun should not be updated
+	assert.Nil(t, snapshot.full)                     // handler should be removed
+	assert.Nil(t, snapshot.lastRun.FullBackupTime()) // lastRun should not be updated
 }
 
 func TestSetLastRun(t *testing.T) {
@@ -139,9 +141,9 @@ func TestSetLastRun(t *testing.T) {
 	backupTime := model.NewFullBackupTime(time.Now())
 	tracker.setLastRun(backupTime)
 
-	_, _, lastRun, err := tracker.getState(1 * time.Second)
+	snapshot, err := tracker.getState(1 * time.Second)
 	assert.NoError(t, err)
-	assert.Equal(t, backupTime, lastRun)
+	assert.Equal(t, backupTime, snapshot.lastRun)
 }
 
 func TestScanCancellation(t *testing.T) {
