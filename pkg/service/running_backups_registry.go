@@ -84,7 +84,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Contex
 	)
 
 	duration, err := timeutil.MeasureDuration(func() error {
-		return r.scan(ctx, invalidatedRoutines)
+		return r.scanRoutinesHistory(ctx, invalidatedRoutines)
 	})
 
 	if err != nil {
@@ -98,7 +98,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Contex
 	}
 }
 
-func (r *RunningBackupsRegistryImpl) scan(ctx context.Context, routines []string) error {
+func (r *RunningBackupsRegistryImpl) scanRoutinesHistory(ctx context.Context, routines []string) error {
 	var (
 		errs  error
 		errMu sync.Mutex
@@ -109,7 +109,7 @@ func (r *RunningBackupsRegistryImpl) scan(ctx context.Context, routines []string
 		wg.Add(1)
 		go func(routine string) {
 			defer wg.Done()
-			err := r.syncRoutineHistory(ctx, routine)
+			err := r.scanSingleRoutineHistory(ctx, routine)
 
 			errMu.Lock()
 			errs = errors.Join(errs, err)
@@ -122,7 +122,7 @@ func (r *RunningBackupsRegistryImpl) scan(ctx context.Context, routines []string
 	return errs
 }
 
-func (r *RunningBackupsRegistryImpl) syncRoutineHistory(ctx context.Context, routineName string) error {
+func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Context, routineName string) error {
 	tracker := r.getTracker(routineName)
 
 	// Cancel any previous scan that might still be running
