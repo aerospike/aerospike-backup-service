@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -25,10 +26,39 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 
 	// Register a full backup handler
 	registry.register(routineName, jobTypeFull, handler)
+	registry.getTracker(routineName).signalSyncDone() // no need to scan history
 
 	stat := registry.GetRoutineState(routineName)
-	assert.Equal(t, stat.Full.TotalRecords, uint64(100))
+	assert.NotNil(t, stat.Full)
+	assert.Equal(t, uint64(100), stat.Full.TotalRecords)
 	assert.Nil(t, stat.Incremental)
+}
+
+func TestHistoryScan(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	historyMgr := NewMockHistoryManager(ctrl)
+	backupTime := model.NewBackupTime(time.Now(), time.Now().Add(-1*time.Hour))
+	historyMgr.EXPECT().FindLastRun(gomock.Any(), routineName).Return(backupTime, nil)
+
+	registry := NewRunningBackupsRegistry(historyMgr, initConfig())
+	registry.SynchroniseBackupHistory(context.Background())
+
+	backupStats := models.NewBackupStats()
+	backupStats.TotalRecords.Store(100)
+
+	handler := NewMockCancelableBackupHandler(ctrl)
+	handler.EXPECT().GetStats().Return(backupStats).AnyTimes()
+	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+
+	registry.register(routineName, jobTypeFull, handler)
+
+	stat := registry.GetRoutineState(routineName)
+	assert.NotNil(t, stat.Full)
+	assert.Equal(t, uint64(100), stat.Full.TotalRecords)
+	assert.Nil(t, stat.Incremental)
+	assert.Equal(t, stat.LastRunTime, backupTime)
 }
 
 func TestFinishFull(t *testing.T) {
@@ -41,6 +71,7 @@ func TestFinishFull(t *testing.T) {
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
 	registry.register(routineName, jobTypeFull, handler)
+	registry.getTracker(routineName).signalSyncDone() // no need to scan history
 
 	now := time.Now()
 	registry.recordSuccessfulBackup(routineName, jobTypeFull, now)
@@ -58,10 +89,10 @@ func TestFinishIncremental(t *testing.T) {
 	defer ctrl.Finish()
 
 	handler := NewMockCancelableBackupHandler(ctrl)
-	// handler.EXPECT().GetStats().Return(backupStats).AnyTimes()
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
 	registry.register(routineName, jobTypeIncremental, handler)
+	registry.getTracker(routineName).signalSyncDone() // no need to scan history
 
 	now := time.Now()
 	registry.recordSuccessfulBackup(routineName, jobTypeFull, now.Add(-1*time.Second))
@@ -98,7 +129,9 @@ func TestGetAllCurrentStats(t *testing.T) {
 
 	// Register handlers for multiple routines
 	registry.register(routine1, jobTypeFull, handler)
+	registry.getTracker(routine1).signalSyncDone() // no need to scan history
 	registry.register(routine2, jobTypeIncremental, handler)
+	registry.getTracker(routine2).signalSyncDone() // no need to scan history
 
 	// Get all current stats
 	stats := registry.GetRunningState()
