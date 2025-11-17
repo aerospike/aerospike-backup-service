@@ -121,7 +121,7 @@ func (t *routineTracker) clearFailedBackup(job jobType) {
 }
 
 // setLastRun updates the history state.
-// This is called by the HistoryManager after a scan.
+// This is called by the HistoryManagerImpl after a scan.
 func (t *routineTracker) setLastRun(lastRun *model.BackupTime) {
 	t.mu.Lock()
 	defer t.mu.Unlock()

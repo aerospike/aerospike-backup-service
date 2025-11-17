@@ -42,8 +42,8 @@ type RunningBackupsRegistryImpl struct {
 	// trackers holds the state for all known routines
 	trackers *collections.SafeMap[string, *routineTracker]
 
-	// history is a stateless service for performing I/O scans
-	history *HistoryManager
+	// history fetches last existing backup
+	history HistoryManager
 
 	// config is needed to calculate next run times
 	config *model.Config
@@ -53,12 +53,12 @@ var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
 func NewRunningBackupsRegistry(
-	backupReader BackupReader,
+	history HistoryManager,
 	config *model.Config,
 ) *RunningBackupsRegistryImpl {
 	return &RunningBackupsRegistryImpl{
 		trackers: collections.NewSafeMap[string, *routineTracker](),
-		history:  NewHistoryManager(backupReader),
+		history:  history,
 		config:   config,
 	}
 }

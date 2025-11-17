@@ -128,7 +128,8 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
 	backendService := service.NewBackupBackendService(config, pathService)
-	registry := service.NewRunningBackupsRegistry(backendService, config)
+	history := service.NewHistoryManager(backendService)
+	registry := service.NewRunningBackupsRegistry(history, config)
 
 	var routineStorage u.LockMap
 	retentionManager := service.NewBackupRetentionManager(backendService, config, &routineStorage)
