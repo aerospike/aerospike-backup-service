@@ -89,7 +89,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockRegistry.EXPECT().register(routineName, jobTypeFull, gomock.Any()).Do(func(_, _, _ any) {
 		registryWG.Done()
 	})
-	mockRegistry.EXPECT().unregister(routineName, jobTypeFull, gomock.Any()).Do(func(_, _, _ any) {
+	mockRegistry.EXPECT().recordSuccessfulBackup(routineName, jobTypeFull, gomock.Any()).Do(func(_, _, _ any) {
 		registryWG.Done()
 	})
 	mockRetentionManager.EXPECT().deleteOldBackups(gomock.Any(), gomock.Any()).Return(nil)
@@ -413,7 +413,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 	mockBackupHandler.EXPECT().Wait(gomock.Any()).Return(nil).Times(2) // for ns1 and ns2
 
 	mockRegistry.EXPECT().register(routineName, jobTypeIncremental, gomock.Any())
-	mockRegistry.EXPECT().unregister(routineName, jobTypeIncremental, gomock.Any())
+	mockRegistry.EXPECT().recordSuccessfulBackup(routineName, jobTypeIncremental, gomock.Any())
 
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2)

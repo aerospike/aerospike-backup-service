@@ -36,8 +36,8 @@ func validConfig() *Config {
 			"policy2": {},
 		},
 		Storage: map[string]*Storage{
-			"storage1": {LocalStorage: &LocalStorage{"/"}},
-			"storage2": {LocalStorage: &LocalStorage{"/"}},
+			"storage1": {LocalStorage: &LocalStorage{Path: "/"}},
+			"storage2": {LocalStorage: &LocalStorage{Path: "/"}},
 		},
 	}
 }

@@ -24,3 +24,18 @@ func IsCronFireTime(cronExpr string, t time.Time) bool {
 
 	return fireTime == t.UnixNano()
 }
+
+// NextTrigger returns the next scheduled fire time for the given cron expression.
+func NextTrigger(cron string) (time.Time, error) {
+	trigger, err := quartz.NewCronTrigger(cron)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	fireTime, err := trigger.NextFireTime(time.Now().UnixNano())
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return time.Unix(0, fireTime), nil
+}

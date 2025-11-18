@@ -133,11 +133,11 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	h.backupClusterConfiguration(ctx, now)
 
 	if err = backupHandler.Wait(ctx); err != nil {
-		h.registry.remove(h.routineName, jobTypeFull)
+		h.registry.clearFailedBackup(h.routineName, jobTypeFull)
 		return fmt.Errorf("backup failed: %w", err)
 	}
 
-	go h.registry.unregister(h.routineName, jobTypeFull, now)
+	go h.registry.recordSuccessfulBackup(h.routineName, jobTypeFull, now)
 	go h.deleteOldBackups(ctx, h.routineName)
 
 	return nil
@@ -280,11 +280,11 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 	h.registry.register(h.routineName, jobTypeIncremental, backupHandler)
 
 	if err := backupHandler.Wait(ctx); err != nil {
-		h.registry.remove(h.routineName, jobTypeIncremental)
+		h.registry.clearFailedBackup(h.routineName, jobTypeIncremental)
 		return err
 	}
 
-	go h.registry.unregister(h.routineName, jobTypeIncremental, now)
+	go h.registry.recordSuccessfulBackup(h.routineName, jobTypeIncremental, now)
 
 	return nil
 }
