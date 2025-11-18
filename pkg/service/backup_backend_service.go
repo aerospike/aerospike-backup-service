@@ -227,7 +227,7 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 		}
 		if filter.timeBounds().Contains(metadata.Created) {
 			key := backupKey(fileName, storagePrefix)
-			details := model.NewBackupDetails(*metadata, key, backupStorage, filter.routine)
+			details := model.NewBackupDetails(*metadata, key, backupStorage)
 			backups = append(backups, details)
 		}
 	}
@@ -345,7 +345,7 @@ func (b *BackupBackendServiceImpl) getPathBackups(
 
 		if filter.timeBounds().Contains(metadata.Created) {
 			key := backupKey(fileName, storagePrefix)
-			details := model.NewBackupDetails(*metadata, key, filter.storage, "")
+			details := model.NewBackupDetails(*metadata, key, filter.storage)
 			backups = append(backups, details)
 		}
 	}

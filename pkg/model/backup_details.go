@@ -19,15 +19,13 @@ type BackupDetails struct {
 
 	Key     string
 	Storage Storage
-	Routine string
 }
 
-func NewBackupDetails(md BackupMetadata, key string, storage Storage, routine string) BackupDetails {
+func NewBackupDetails(md BackupMetadata, key string, storage Storage) BackupDetails {
 	return BackupDetails{
 		BackupMetadata: md,
 		Key:            key,
 		Storage:        storage,
-		Routine:        routine,
 	}
 }
 
