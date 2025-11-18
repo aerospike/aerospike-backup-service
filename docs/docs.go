@@ -2464,6 +2464,12 @@ const docTemplate = `{
                 "path"
             ],
             "properties": {
+                "min-part-size": {
+                    "description": "The minimum size in bytes of individual storage chunks.",
+                    "type": "integer",
+                    "minimum": 1,
+                    "x-nullable": true
+                },
                 "path": {
                     "description": "The root path for the backup repository.",
                     "type": "string",
