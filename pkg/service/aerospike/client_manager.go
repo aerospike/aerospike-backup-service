@@ -40,7 +40,7 @@ var _ ClientManager = (*ClientManagerImpl)(nil)
 
 type clientInfo struct {
 	// mu protects the fields below (count, closeTimer, aeroClient)
-	mu          sync.Mutex
+	mu          sync.RWMutex
 	aeroClient  backup.AerospikeClient
 	scanLimiter *semaphore.Weighted
 
@@ -101,7 +101,7 @@ func (cm *ClientManagerImpl) GetClient(
 	if status != "ok" {
 		// Connection is dead.
 		// The caller will have to retry (which will trigger a new connection).
-		return nil, fmt.Errorf("aerospike cluster is not healthy: %s", status)
+		return nil, fmt.Errorf("aerospike cluster connection lost: %s", status)
 	}
 
 	// 3. Increment Reference
@@ -135,8 +135,10 @@ func (cm *ClientManagerImpl) createBackupClient(info *clientInfo, label string) 
 
 // Close ensures that the specified backup client is released.
 func (cm *ClientManagerImpl) Close(client Client) {
-	var targetInfo *clientInfo
-	var targetKey string
+	var (
+		targetInfo *clientInfo
+		targetKey  string
+	)
 
 	// We need to find which info struct owns this client.
 	// Since Client interface wraps the underlying AerospikeClient, we compare pointers.
@@ -148,20 +150,20 @@ func (cm *ClientManagerImpl) Close(client Client) {
 
 		// We must lock to read info.aeroClient safely,
 		// just in case it's being modified (though unlikely after init).
-		info.mu.Lock()
+		info.mu.RLock()
+		defer info.mu.RUnlock()
+
 		if info.aeroClient == client.AerospikeClient() {
 			targetInfo = info
 			targetKey = key
 			found = true
 		}
-		info.mu.Unlock()
 	})
 
 	if found {
 		cm.decrementRef(targetInfo, targetKey)
 	} else {
-		// Logic fix: If it's not in our cache, we must close it immediately
-		// because we aren't managing its lifecycle.
+		// If it's not in our cache, we must close it immediately because we aren't managing its lifecycle.
 		client.AerospikeClient().Close()
 		slog.Info("Closed Aerospike client not managed by the cache",
 			slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()))
@@ -174,10 +176,7 @@ func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey string) {
 	defer info.mu.Unlock()
 
 	info.count--
-	if info.count <= 0 {
-		// Sanity check to prevent negative counts
-		info.count = 0
-
+	if info.count == 0 {
 		// If a timer is already running (edge case), stop it first
 		if info.closeTimer != nil {
 			info.closeTimer.Stop()
@@ -189,8 +188,6 @@ func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey string) {
 // scheduleClosing schedules client closing after the configured delay.
 func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 	return time.AfterFunc(cm.closeDelay, func() {
-		// Timer callback runs in its own goroutine.
-
 		// 1. Retrieve the info struct
 		info, exists := cm.clients.Load(clusterKey)
 		if !exists {
@@ -202,7 +199,7 @@ func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 		defer info.mu.Unlock()
 
 		// 3. Verify condition: Is count still 0?
-		// Someone might have called GetClient() in the milliseconds before this lock was acquired.
+		// Someone might have called GetClient() before this lock was acquired.
 		if info.count == 0 {
 			// Remove from map to prevent new users from picking up this dying client
 			cm.clients.Remove(clusterKey)
@@ -211,7 +208,6 @@ func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 			if info.aeroClient != nil {
 				info.aeroClient.Close()
 				slog.Info("Aerospike client closed (idle)",
-					slog.Any("hosts", info.aeroClient.Cluster().GetSeeds()),
 					slog.Int("len", cm.clients.Size()),
 					slog.Any("id", clusterKey),
 				)
