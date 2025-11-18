@@ -24,34 +24,6 @@ func currentBackupStatus(handlers backupexecutor.BackupHandler) *model.RunningJo
 		handlers.GetMetrics(), model.JobStatusRunning)
 }
 
-// RestoreJobStatus returns the status of a restore job.
-// The information included in the response depends on the job status:
-//   - model.JobStatusRunning -> current statistics and estimation.
-//   - model.JobStatusDone -> statistics.
-//   - status model.JobStatusFailed -> error.
-func RestoreJobStatus(job *restoreJob) *model.RestoreJobStatus {
-	metrics := make([]*models.Metrics, 0, len(job.handlers))
-	stats := make([]*models.RestoreStats, 0, len(job.handlers))
-	for _, handler := range job.handlers {
-		metrics = append(metrics, handler.GetMetrics())
-		stats = append(stats, handler.GetStats())
-	}
-
-	restoreStats := models.SumRestoreStats(stats...)
-
-	doneRecords := restoreStats.GetReadRecords()
-	sumMetrics := models.SumMetrics(metrics...)
-	runningJob := NewRunningJob(
-		job.started, job.finished, doneRecords, job.totalRecords, sumMetrics, job.status)
-
-	return &model.RestoreJobStatus{
-		Status:         job.status,
-		Error:          job.err,
-		Counters:       restoreStats,
-		CurrentRestore: runningJob,
-	}
-}
-
 // NewRunningJob created new RunningJob (backup or restore) with calculated estimated time and percentage.
 func NewRunningJob(
 	startTime time.Time,

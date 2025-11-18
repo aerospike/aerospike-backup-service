@@ -395,7 +395,12 @@ func (r *dataRestorer) restoreFromPath(
 
 // JobStatus returns the status of the job with the given id.
 func (r *dataRestorer) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
-	return r.restoreJobs.getStatus(jobID)
+	job, err := r.restoreJobs.getJob(jobID)
+	if err != nil {
+		return nil, err
+	}
+
+	return job.buildStatus(), nil
 }
 
 // CancelRestore cancels an ongoing restore.
@@ -422,11 +427,17 @@ func (r *dataRestorer) GetFilteredJobs(
 			return
 		}
 
-		if !statusFilter.Matches(job.status) {
+		// Build the status first to get a consistent snapshot of the job.
+		// This prevents a race condition where the job's status changes
+		// between filtering and building the result.
+		status := job.buildStatus()
+
+		// Now, filter based on the consistent snapshot.
+		if !statusFilter.Matches(status.Status) {
 			return
 		}
 
-		results[id] = RestoreJobStatus(job)
+		results[id] = status
 	})
 
 	return results

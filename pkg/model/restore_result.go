@@ -12,6 +12,10 @@ const (
 )
 
 // RestoreJobStatus represents a restore job status.
+// The information included depends on the Status field:
+//   - JobStatusRunning -> current statistics and estimation.
+//   - JobStatusDone -> statistics.
+//   - JobStatusFailed -> error.
 type RestoreJobStatus struct {
 	Counters       *models.RestoreStats
 	CurrentRestore *RunningJob

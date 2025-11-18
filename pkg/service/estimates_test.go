@@ -66,7 +66,7 @@ func TestDoneRestoreJobStatus(t *testing.T) {
 		totalRecords: 50,
 	}
 
-	status := RestoreJobStatus(job)
+	status := job.buildStatus()
 
 	assert.Nil(t, status.Error)
 	assert.NotNil(t, status.CurrentRestore)
