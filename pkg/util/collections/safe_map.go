@@ -29,10 +29,11 @@ func (s *SafeMap[K, V]) Load(key K) (V, bool) {
 }
 
 // LoadOrStore retrieves a value by key if it exists; otherwise, it stores the provided default value.
-func (s *SafeMap[K, V]) LoadOrStore(key K, defaultValue V) V {
+// Returns the stored value for the given key and a boolean indicating whether the key was present.
+func (s *SafeMap[K, V]) LoadOrStore(key K, defaultValue V) (V, bool) {
 	if s == nil {
 		var zeroValue V
-		return zeroValue
+		return zeroValue, false
 	}
 
 	// First try with a read lock
@@ -42,7 +43,7 @@ func (s *SafeMap[K, V]) LoadOrStore(key K, defaultValue V) V {
 
 	// If found, return immediately
 	if ok {
-		return value
+		return value, true
 	}
 
 	// Not found, need to acquire write lock to store
@@ -53,12 +54,12 @@ func (s *SafeMap[K, V]) LoadOrStore(key K, defaultValue V) V {
 	// because another goroutine might have stored a value
 	// between our RUnlock() and Lock()
 	if value, ok := s.m[key]; ok {
-		return value
+		return value, true
 	}
 
 	s.m[key] = defaultValue
 
-	return defaultValue
+	return defaultValue, false
 }
 
 // Store inserts or updates a key-value pair.

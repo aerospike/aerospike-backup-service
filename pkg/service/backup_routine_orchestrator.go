@@ -172,7 +172,7 @@ func (h *BackupRoutineOrchestrator) deleteOldBackups(ctx context.Context, routin
 }
 
 func (h *BackupRoutineOrchestrator) prepareCluster(ctx context.Context) (aerospike.Client, []string, error) {
-	client, err := h.clientManager.GetClient(ctx, h.routine.SourceCluster)
+	client, err := h.clientManager.GetClient(ctx, h.routine.SourceCluster, h.routineName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot get backup client: %w", err)
 	}

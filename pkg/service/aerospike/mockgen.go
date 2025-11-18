@@ -55,18 +55,18 @@ func (mr *MockClientManagerMockRecorder) Close(arg0 any) *gomock.Call {
 }
 
 // GetClient mocks base method.
-func (m *MockClientManager) GetClient(ctx context.Context, cluster *model.AerospikeCluster) (Client, error) {
+func (m *MockClientManager) GetClient(ctx context.Context, cluster *model.AerospikeCluster, label string) (Client, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClient", ctx, cluster)
+	ret := m.ctrl.Call(m, "GetClient", ctx, cluster, label)
 	ret0, _ := ret[0].(Client)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetClient indicates an expected call of GetClient.
-func (mr *MockClientManagerMockRecorder) GetClient(ctx, cluster any) *gomock.Call {
+func (mr *MockClientManagerMockRecorder) GetClient(ctx, cluster, label any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClient", reflect.TypeOf((*MockClientManager)(nil).GetClient), ctx, cluster)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClient", reflect.TypeOf((*MockClientManager)(nil).GetClient), ctx, cluster, label)
 }
 
 // MockNamespaceValidator is a mock of NamespaceValidator interface.
