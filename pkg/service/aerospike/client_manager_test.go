@@ -34,11 +34,11 @@ func Test_GetClient(t *testing.T) {
 	mockBackupClient := NewMockClient(ctrl)
 
 	infoGetter := mocks.NewMockInfoGetter(t)
-	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil)
-	mockBackupClient.EXPECT().InfoClient().Return(infoGetter)
+	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil).Times(2)
+	mockBackupClient.EXPECT().InfoClient().Return(infoGetter).Times(2)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
-	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil).Times(2)
 
 	clientManager := NewClientManager(
 		clientFactory,

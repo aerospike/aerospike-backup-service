@@ -68,7 +68,7 @@ func (cm *ClientManagerImpl) GetClient(
 
 	clusterKey := cluster.Hash()
 
-	info, exists := cm.clients.LoadOrStore(clusterKey, &clientInfo{})
+	info, exists := cm.clients.LoadOrStore(clusterKey, newInfo(cluster))
 	if exists {
 		return cm.checkHealthAndIncrement(ctx, info, label)
 	}
@@ -82,6 +82,14 @@ func (cm *ClientManagerImpl) GetClient(
 	info.aeroClient = aeroClient
 
 	return cm.checkHealthAndIncrement(ctx, info, label)
+}
+
+func newInfo(cluster *model.AerospikeCluster) *clientInfo {
+	value := &clientInfo{}
+	if cluster.MaxParallelScans != nil {
+		value.scanLimiter = semaphore.NewWeighted(int64(*cluster.MaxParallelScans))
+	}
+	return value
 }
 
 func (cm *ClientManagerImpl) checkHealthAndIncrement(ctx context.Context, info *clientInfo, label string) (Client, error) {
