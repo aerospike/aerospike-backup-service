@@ -93,17 +93,15 @@ func (cm *ClientManagerImpl) GetClient(
 
 	// 2. Check health
 	// We have a valid aeroClient, but is it connected?
-	// NOTE: It is better to check health before incrementing ref,
-	// but we are holding the lock. To keep it simple, we check here.
-	// If GetStatus is slow, this blocks other goroutines for THIS cluster only.
 	status, err := client.InfoClient().GetStatus(ctx)
-	if err != nil || status != "ok" {
+	if err != nil {
+		return nil, err
+	}
+
+	if status != "ok" {
 		// Connection is dead.
 		// The caller will have to retry (which will trigger a new connection).
-		info.aeroClient.Close()
-		// Resetting aeroClient to nil handles the case where info is still held by someone else
-		info.aeroClient = nil
-		return nil, errors.New("aerospike cluster connection lost")
+		return nil, fmt.Errorf("aerospike cluster is not healthy: %s", status)
 	}
 
 	// 3. Increment Reference
