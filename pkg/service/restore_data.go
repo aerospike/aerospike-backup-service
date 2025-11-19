@@ -83,7 +83,7 @@ func (r *dataRestorer) executeRestore(
 	jobID model.RestoreJobID,
 	logger *slog.Logger,
 ) error {
-	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster)
+	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster, logger)
 	if err != nil {
 		return err
 	}
@@ -260,7 +260,7 @@ func (r *dataRestorer) restoreByTimeSync(
 		return err
 	}
 
-	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster)
+	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster, logger)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
 			ptr.ValueOrZero(request.DestinationCluster.ClusterLabel), err)

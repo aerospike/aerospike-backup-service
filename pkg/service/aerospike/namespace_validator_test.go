@@ -37,7 +37,7 @@ func newTestEnv(t *testing.T) *testEnv {
 // expectSingleCluster sets expectations for a single (possibly shared) cluster.
 func (e *testEnv) expectSingleClusterFetch(c *model.AerospikeCluster, namespaces []string, err error) {
 	e.mockClient.EXPECT().InfoClient().Return(e.mockInfoGetter).AnyTimes()
-	e.mockClientManager.EXPECT().GetClient(gomock.Any(), c).Return(e.mockClient, nil)
+	e.mockClientManager.EXPECT().GetClient(gomock.Any(), c, gomock.Any()).Return(e.mockClient, nil)
 	e.mockInfoGetter.EXPECT().GetNamespacesList(mock.Anything).Return(namespaces, err)
 
 	e.mockClientManager.EXPECT().Close(e.mockClient)
@@ -56,7 +56,7 @@ func expectPerCluster(
 	client := NewMockClient(ctrl)
 	info := mocks.NewMockInfoGetter(t)
 
-	mgr.EXPECT().GetClient(gomock.Any(), c).Return(client, nil)
+	mgr.EXPECT().GetClient(gomock.Any(), c, gomock.Any()).Return(client, nil)
 	client.EXPECT().InfoClient().Return(info)
 	info.EXPECT().GetNamespacesList(mock.Anything).Return(returned, err)
 	mgr.EXPECT().Close(client)
@@ -102,7 +102,7 @@ func TestFindMissingByRoutine_FetchError_SkipsCluster(t *testing.T) {
 	}
 
 	env.mockClientManager.EXPECT().
-		GetClient(gomock.Any(), cluster).
+		GetClient(gomock.Any(), cluster, gomock.Any()).
 		Return(nil, errors.New("boom")).
 		Times(1)
 

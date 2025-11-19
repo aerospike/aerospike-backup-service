@@ -118,8 +118,6 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		slog.String("buildTime", buildTime),
 		slog.String("config", string(configStr)))
 
-	clientManager.SetLogger(appLogger)
-
 	// schedule all configured backup routines
 	scheduler, err := service.NewScheduler(ctx, appLogger)
 	if err != nil {

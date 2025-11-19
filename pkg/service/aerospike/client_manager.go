@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	as "github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"golang.org/x/sync/semaphore"
@@ -17,8 +18,8 @@ import (
 // ClientManager is responsible for creating and closing backup clients.
 type ClientManager interface {
 	// GetClient returns a backup client by aerospike cluster name (new or cached).
-	GetClient(ctx context.Context, cluster *model.AerospikeCluster) (Client, error)
-	// Close ensures that the specified backup client is closed.
+	GetClient(ctx context.Context, cluster *model.AerospikeCluster, logger *slog.Logger) (Client, error)
+	// Close ensures that the specified backup client is released (ref count decremented).
 	Close(Client)
 }
 
@@ -28,22 +29,21 @@ type Cluster interface {
 }
 
 // ClientManagerImpl implements [ClientManager].
-// Is responsible for creating and closing backup clients.
 type ClientManagerImpl struct {
-	mu sync.Mutex
-
-	clients       map[string]*clientInfo
+	// clients holds the state for each cluster.
+	clients       *collections.SafeMap[string, *clientInfo]
 	clientFactory ClientFactory
 	closeDelay    time.Duration
-
-	logger *slog.Logger
-	locks  sync.Map
 }
 
 var _ ClientManager = (*ClientManagerImpl)(nil)
 
 type clientInfo struct {
-	client     Client
+	// mu protects the fields below (count, closeTimer, aeroClient)
+	mu          sync.RWMutex
+	aeroClient  backup.AerospikeClient
+	scanLimiter *semaphore.Weighted
+
 	count      int
 	closeTimer *time.Timer
 }
@@ -51,177 +51,172 @@ type clientInfo struct {
 // NewClientManager creates a new ClientManagerImpl.
 func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Duration) *ClientManagerImpl {
 	return &ClientManagerImpl{
-		clients:       make(map[string]*clientInfo),
+		clients:       collections.NewSafeMap[string, *clientInfo](),
 		clientFactory: aerospikeClientFactory,
 		closeDelay:    closeDelay,
 	}
 }
 
-// SetLogger sets the logger for the ClientManagerImpl.
-// Needs to be set after instantiation due to the initialization order in main.
-func (cm *ClientManagerImpl) SetLogger(logger *slog.Logger) {
-	cm.logger = logger
-}
-
 // GetClient returns a backup client by aerospike cluster name (new or cached).
-func (cm *ClientManagerImpl) GetClient(ctx context.Context, cluster *model.AerospikeCluster) (Client, error) {
+// The returned client must be closed by calling Close().
+// logger will be passed to the backup client. If not set, a default logger will be used.
+func (cm *ClientManagerImpl) GetClient(
+	ctx context.Context,
+	cluster *model.AerospikeCluster,
+	logger *slog.Logger,
+) (Client, error) {
 	if cluster == nil {
 		return nil, errors.New("cluster is nil")
 	}
 
 	clusterKey := cluster.Hash()
 
-	// Try getting an existing client under the global lock.
-	cm.mu.Lock()
-	info, exists := cm.clients[clusterKey]
-	cm.mu.Unlock()
+	// Get or create the info struct.
+	// Note: If created, info.aeroClient is still nil. We handle initialization under the lock below.
+	info := cm.clients.LoadOrStore(clusterKey, newInfo(cluster))
 
-	// Get or create mutex for this client.
-	m := cm.mutexForCluster(clusterKey)
-	m.Lock()
-	defer m.Unlock()
+	// We must lock to ensure atomic initialization and reference counting.
+	info.mu.Lock()
+	defer info.mu.Unlock()
 
-	if exists {
-		return cm.checkHealthAndIncrement(ctx, info)
+	// 1. Initialize connection if needed
+	if info.aeroClient == nil {
+		aeroClient, err := cm.clientFactory.NewClientWithPolicyAndHost(cluster)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to aerospike cluster: %w", err)
+		}
+		info.aeroClient = aeroClient
 	}
 
-	// Check again since another goroutine might have created the client while we were waiting on lock.
-	cm.mu.Lock()
-	info, exists = cm.clients[clusterKey]
-	cm.mu.Unlock()
-
-	if exists {
-		return cm.checkHealthAndIncrement(ctx, info)
-	}
-
-	client, err := cm.createClient(cluster)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create backup client: %w", err)
-	}
-
-	// Store the newly created client (under the global lock).
-	cm.storeClient(clusterKey, client)
-
-	return client, nil
-}
-
-func (cm *ClientManagerImpl) checkHealthAndIncrement(ctx context.Context, info *clientInfo) (Client, error) {
-	status, err := info.client.InfoClient().GetStatus(ctx)
+	client, err := cm.createBackupClient(info, logger)
 	if err != nil {
 		return nil, err
 	}
-	if status != "ok" {
-		return nil, errors.New("aerospike cluster connection lost")
-	}
 
-	cm.incrementRef(info)
-	return info.client, nil
-}
-
-func (cm *ClientManagerImpl) mutexForCluster(clusterKey string) *sync.Mutex {
-	stored, _ := cm.locks.LoadOrStore(clusterKey, &sync.Mutex{})
-	return stored.(*sync.Mutex)
-}
-
-func (cm *ClientManagerImpl) storeClient(clusterKey string, client Client) {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
-	cm.clients[clusterKey] = &clientInfo{
-		client: client,
-		count:  1,
-	}
-
-	if cm.logger != nil {
-		cm.logger.Info("Created new backup client",
-			slog.Int("len", len(cm.clients)),
-			slog.String("id", clusterKey))
-	}
-}
-
-// createClient creates a new backup client given the aerospike cluster configuration.
-func (cm *ClientManagerImpl) createClient(cluster *model.AerospikeCluster) (Client, error) {
-	aeroClient, err := cm.clientFactory.NewClientWithPolicyAndHost(cluster)
+	// 2. Check health
+	// We have a valid aeroClient, but is it connected?
+	status, err := client.InfoClient().GetStatus(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to aerospike cluster, %w", err)
+		return nil, err
 	}
 
-	var options []backup.ClientOpt
-	if cluster.MaxParallelScans != nil {
-		options = append(options, backup.WithScanLimiter(
-			semaphore.NewWeighted(int64(*cluster.MaxParallelScans))))
-	}
-	if cluster.ClusterLabel != nil {
-		options = append(options, backup.WithID(*cluster.ClusterLabel))
+	if status != "ok" {
+		// Connection is dead.
+		// The caller will have to retry (which will trigger a new connection).
+		return nil, fmt.Errorf("aerospike cluster connection lost: %s", status)
 	}
 
-	if cm.logger != nil {
-		options = append(options, backup.WithLogger(cm.logger))
-	}
-
-	return cm.clientFactory.NewBackupClient(aeroClient, options...)
-}
-
-// Close ensures that the specified backup client is closed.
-func (cm *ClientManagerImpl) Close(client Client) {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
-	for id, info := range cm.clients {
-		if info.client == client {
-			cm.decrementRef(info, id)
-			return
-		}
-	}
-
-	// Close client even if it was not found in the cache
-	client.AerospikeClient().Close()
-	if cm.logger != nil {
-		cm.logger.Info("Closed Aerospike client not managed by the cache",
-			slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()))
-	}
-}
-
-// incrementRef increases the reference count and cancels any pending close operation.
-func (cm *ClientManagerImpl) incrementRef(info *clientInfo) {
+	// 3. Increment Reference
 	if info.closeTimer != nil {
 		info.closeTimer.Stop()
 		info.closeTimer = nil
 	}
 	info.count++
+
+	// 4. Create the wrapper for this specific request
+	return client, nil
+}
+
+func newInfo(cluster *model.AerospikeCluster) *clientInfo {
+	value := &clientInfo{}
+	if cluster.MaxParallelScans != nil {
+		value.scanLimiter = semaphore.NewWeighted(int64(*cluster.MaxParallelScans))
+	}
+	return value
+}
+
+func (cm *ClientManagerImpl) createBackupClient(info *clientInfo, logger *slog.Logger) (Client, error) {
+	var options []backup.ClientOpt
+	options = append(options, backup.WithScanLimiter(info.scanLimiter))
+	if logger != nil {
+		options = append(options, backup.WithLogger(logger))
+	} else {
+		options = append(options, backup.WithLogger(slog.Default()))
+	}
+
+	return cm.clientFactory.NewBackupClient(info.aeroClient, options...)
+}
+
+// Close ensures that the specified backup client is released.
+func (cm *ClientManagerImpl) Close(client Client) {
+	var (
+		targetInfo *clientInfo
+		targetKey  string
+	)
+
+	// We need to find which info struct owns this client.
+	// Since Client interface wraps the underlying AerospikeClient, we compare pointers.
+	found := false
+	cm.clients.Iterate(func(key string, info *clientInfo) {
+		if found {
+			return // Optimization: stop if already found
+		}
+
+		// We must lock to read info.aeroClient safely,
+		// just in case it's being modified (though unlikely after init).
+		info.mu.RLock()
+		if info.aeroClient == client.AerospikeClient() {
+			targetInfo = info
+			targetKey = key
+			found = true
+		}
+		info.mu.RUnlock()
+	})
+
+	if found {
+		cm.decrementRef(targetInfo, targetKey)
+	} else {
+		// If it's not in our cache, we must close it immediately because we aren't managing its lifecycle.
+		client.AerospikeClient().Close()
+		slog.Info("Closed Aerospike client not managed by the cache",
+			slog.Any("hosts", client.AerospikeClient().Cluster().GetSeeds()))
+	}
 }
 
 // decrementRef decreases the reference count and schedules closing if count reaches zero.
 func (cm *ClientManagerImpl) decrementRef(info *clientInfo, clusterKey string) {
+	info.mu.Lock()
+	defer info.mu.Unlock()
+
 	info.count--
 	if info.count == 0 {
+		// If a timer is already running (edge case), stop it first
+		if info.closeTimer != nil {
+			info.closeTimer.Stop()
+		}
 		info.closeTimer = cm.scheduleClosing(clusterKey)
 	}
 }
 
 // scheduleClosing schedules client closing after the configured delay.
-// Returns a timer that can be used to cancel the scheduled closing if needed.
 func (cm *ClientManagerImpl) scheduleClosing(clusterKey string) *time.Timer {
 	return time.AfterFunc(cm.closeDelay, func() {
-		cm.mu.Lock()
-		// Check if the client still exists and count is still 0
-		if info, exists := cm.clients[clusterKey]; exists && info.count == 0 {
-			client := info.client.AerospikeClient()
-			delete(cm.clients, clusterKey)
-			cm.locks.Delete(clusterKey)
-			cm.mu.Unlock()
-
-			client.Close()
-			if cm.logger != nil {
-				cm.logger.Info("Aerospike client closed",
-					slog.Any("hosts", client.Cluster().GetSeeds()),
-					slog.Int("len", len(cm.clients)),
-					slog.Any("id", clusterKey),
-				)
-			}
-
+		// 1. Retrieve the info struct
+		info, exists := cm.clients.Load(clusterKey)
+		if !exists {
 			return
 		}
-		cm.mu.Unlock()
+
+		// 2. Lock to check state safely
+		info.mu.Lock()
+		defer info.mu.Unlock()
+
+		// 3. Verify condition: Is count still 0?
+		// Someone might have called GetClient() before this lock was acquired.
+		if info.count == 0 {
+			// Remove from map to prevent new users from picking up this dying client
+			cm.clients.Remove(clusterKey)
+
+			// Close the physical connection
+			if info.aeroClient != nil {
+				info.aeroClient.Close()
+				slog.Info("Aerospike client closed (idle)",
+					slog.Int("len", cm.clients.Size()),
+					slog.Any("id", clusterKey),
+				)
+				info.aeroClient = nil
+			}
+			info.closeTimer = nil
+		}
 	})
 }
