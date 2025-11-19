@@ -155,13 +155,12 @@ func (cm *ClientManagerImpl) Close(client Client) {
 		// We must lock to read info.aeroClient safely,
 		// just in case it's being modified (though unlikely after init).
 		info.mu.RLock()
-		defer info.mu.RUnlock()
-
 		if info.aeroClient == client.AerospikeClient() {
 			targetInfo = info
 			targetKey = key
 			found = true
 		}
+		info.mu.RUnlock()
 	})
 
 	if found {
