@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-client-go/v8"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/mocks"
 	"github.com/aws/smithy-go/ptr"
@@ -227,14 +228,14 @@ func Test_Close_Multiple(t *testing.T) {
 	mockAsClient.EXPECT().Close()
 
 	mockBackupClient := NewMockClient(ctrl)
-	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient)
+	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient).Times(2)
 
 	infoGetter := mocks.NewMockInfoGetter(t)
 	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil).Times(2)
 	mockBackupClient.EXPECT().InfoClient().Return(infoGetter).Times(2)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
-	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil).Times(2)
 
 	clientManager := NewClientManager(
 		clientFactory,
@@ -264,9 +265,10 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 	mockAsClient := mocks.NewMockAerospikeClient(t)
 
 	mockBackupClient := NewMockClient(ctrl)
+	mockBackupClient.EXPECT().AerospikeClient().Return(mockAsClient)
 
 	clientFactory.EXPECT().NewClientWithPolicyAndHost(gomock.Any()).Return(mockAsClient, nil)
-	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil)
+	clientFactory.EXPECT().NewBackupClient(gomock.Any(), gomock.Any()).Return(mockBackupClient, nil).Times(2)
 
 	infoGetter := mocks.NewMockInfoGetter(t)
 	infoGetter.EXPECT().GetStatus(mock.Anything).Return("ok", nil).Times(2)
@@ -309,7 +311,8 @@ func Test_Close_NotExisting(t *testing.T) {
 	aeroClient.EXPECT().Close()
 
 	client := NewMockClient(ctrl)
-	client.EXPECT().AerospikeClient().Return(aeroClient)
+	client.EXPECT().AerospikeClient().Return(aeroClient).Times(2)
+	aeroClient.EXPECT().Cluster().Return(&aerospike.Cluster{})
 
 	clientManager.Close(client)
 
