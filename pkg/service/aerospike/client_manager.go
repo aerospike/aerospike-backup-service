@@ -18,7 +18,7 @@ import (
 // ClientManager is responsible for creating and closing backup clients.
 type ClientManager interface {
 	// GetClient returns a backup client by aerospike cluster name (new or cached).
-	GetClient(ctx context.Context, cluster *model.AerospikeCluster, label string) (Client, error)
+	GetClient(ctx context.Context, cluster *model.AerospikeCluster, logger *slog.Logger) (Client, error)
 	// Close ensures that the specified backup client is released (ref count decremented).
 	Close(Client)
 }
@@ -58,10 +58,12 @@ func NewClientManager(aerospikeClientFactory ClientFactory, closeDelay time.Dura
 }
 
 // GetClient returns a backup client by aerospike cluster name (new or cached).
+// The returned client must be closed by calling Close().
+// logger will be passed to the backup client. If not set, a default logger will be used.
 func (cm *ClientManagerImpl) GetClient(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
-	label string,
+	logger *slog.Logger,
 ) (Client, error) {
 	if cluster == nil {
 		return nil, errors.New("cluster is nil")
@@ -86,7 +88,7 @@ func (cm *ClientManagerImpl) GetClient(
 		info.aeroClient = aeroClient
 	}
 
-	client, err := cm.createBackupClient(info, label)
+	client, err := cm.createBackupClient(info, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -123,11 +125,13 @@ func newInfo(cluster *model.AerospikeCluster) *clientInfo {
 	return value
 }
 
-func (cm *ClientManagerImpl) createBackupClient(info *clientInfo, label string) (Client, error) {
+func (cm *ClientManagerImpl) createBackupClient(info *clientInfo, logger *slog.Logger) (Client, error) {
 	var options []backup.ClientOpt
 	options = append(options, backup.WithScanLimiter(info.scanLimiter))
-	if len(label) > 0 {
-		options = append(options, backup.WithLogger(slog.With(slog.String("label", label))))
+	if logger != nil {
+		options = append(options, backup.WithLogger(logger))
+	} else {
+		options = append(options, backup.WithLogger(slog.Default()))
 	}
 
 	return cm.clientFactory.NewBackupClient(info.aeroClient, options...)

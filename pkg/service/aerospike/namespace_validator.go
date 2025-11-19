@@ -8,7 +8,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
 // NamespaceValidator checks whether routines reference namespaces
@@ -92,7 +91,7 @@ func (nv *NamespaceValidatorImpl) fetchClusterNamespaces(
 	ctx context.Context,
 	cluster *model.AerospikeCluster,
 ) ([]string, error) {
-	client, err := nv.clientManager.GetClient(ctx, cluster, ptr.ValueOrZero(cluster.ClusterLabel))
+	client, err := nv.clientManager.GetClient(ctx, cluster, nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to cluster: %w", err)
 	}

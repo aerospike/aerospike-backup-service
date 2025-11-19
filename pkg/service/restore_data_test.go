@@ -127,7 +127,7 @@ func TestRestoreFailsWithClientError(t *testing.T) {
 
 	clientErr := errors.New("connection error")
 	env.mockClientManager.EXPECT().
-		GetClient(gomock.Any(), cluster).
+		GetClient(gomock.Any(), cluster, gomock.Any()).
 		Return(nil, clientErr)
 
 	// Execute the restore
@@ -357,7 +357,7 @@ func (env *testRestoreEnv) expectSuccessfulClientInteraction(
 	client.EXPECT().InfoClient().Return(env.infoGetter).AnyTimes()
 
 	env.mockClientManager.EXPECT().
-		GetClient(gomock.Any(), cluster).
+		GetClient(gomock.Any(), cluster, gomock.Any()).
 		Return(client, nil).
 		Times(1)
 

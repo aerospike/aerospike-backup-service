@@ -11,6 +11,7 @@ package aerospike
 
 import (
 	context "context"
+	slog "log/slog"
 	reflect "reflect"
 
 	model "github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -55,18 +56,18 @@ func (mr *MockClientManagerMockRecorder) Close(arg0 any) *gomock.Call {
 }
 
 // GetClient mocks base method.
-func (m *MockClientManager) GetClient(ctx context.Context, cluster *model.AerospikeCluster, label string) (Client, error) {
+func (m *MockClientManager) GetClient(ctx context.Context, cluster *model.AerospikeCluster, logger *slog.Logger) (Client, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClient", ctx, cluster, label)
+	ret := m.ctrl.Call(m, "GetClient", ctx, cluster, logger)
 	ret0, _ := ret[0].(Client)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetClient indicates an expected call of GetClient.
-func (mr *MockClientManagerMockRecorder) GetClient(ctx, cluster, label any) *gomock.Call {
+func (mr *MockClientManagerMockRecorder) GetClient(ctx, cluster, logger any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClient", reflect.TypeOf((*MockClientManager)(nil).GetClient), ctx, cluster, label)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClient", reflect.TypeOf((*MockClientManager)(nil).GetClient), ctx, cluster, logger)
 }
 
 // MockNamespaceValidator is a mock of NamespaceValidator interface.
