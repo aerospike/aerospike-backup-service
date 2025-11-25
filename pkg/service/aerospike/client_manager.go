@@ -130,7 +130,7 @@ func (cm *ClientManagerImpl) createBackupClient(info *clientInfo, logger *slog.L
 		logger = slog.Default()
 	}
 	var options = []backup.ClientOpt{
-		backup.WithInfoPolicies(as.NewInfoPolicy(), model.ScanRetryPolicy),
+		backup.WithInfoPolicies(as.NewInfoPolicy(), model.InfoRetryPolicy),
 		backup.WithScanLimiter(info.scanLimiter),
 		backup.WithLogger(logger),
 	}

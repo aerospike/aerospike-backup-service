@@ -104,9 +104,9 @@ func scanPolicy(
 	scanPolicy.UseCompression = ptr.ValueOrZero(backupPolicy.UseCompression)
 	scanPolicy.MaxConcurrentNodes = ptr.ValueOrZero(backupPolicy.MaxConcurrentNodes)
 
-	scanPolicy.MaxRetries = 10
-	scanPolicy.SleepBetweenRetries = 1 * time.Second
-	scanPolicy.SleepMultiplier = 2
+	scanPolicy.MaxRetries = int(model.ScanRetryPolicy.MaxRetries)
+	scanPolicy.SleepBetweenRetries = model.ScanRetryPolicy.BaseTimeout
+	scanPolicy.SleepMultiplier = model.ScanRetryPolicy.Multiplier
 
 	if len(backupRoutine.SourceCluster.PreferRacks) > 0 {
 		scanPolicy.ReplicaPolicy = as.PREFER_RACK
