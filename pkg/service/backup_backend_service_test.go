@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/backup-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,8 +17,7 @@ const (
 )
 
 var (
-	ctx        = context.Background()
-	mockClient = &backup.Client{}
+	ctx = context.Background()
 )
 
 func TestLocalGetBackupsWithTimeFilters(t *testing.T) {

@@ -16,17 +16,23 @@ func WaitForMigrations(ctx context.Context, ic backup.InfoGetter, namespace stri
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, maxDuration)
 	defer cancel()
 
-	logger := slog.Default().With("namespace", namespace)
+	logger := slog.Default().With(slog.String("namespace", namespace))
 	// Initial immediate check before starting the ticker.
 	totalPending, err := ic.GetPendingMigrations(ctxWithTimeout, namespace)
-	if err != nil {
+
+	switch {
+	case err != nil:
 		// Log error but continue with periodic checks (cluster might be unstable during rebalance).
-		logger.Warn("Failed to fetch initial migration stats, retrying periodically...", slog.Any("error", err))
-	} else if totalPending == 0 {
+		logger.Warn("Failed to fetch initial migration stats, retrying periodically...",
+			slog.Any("error", err))
+
+	case totalPending == 0:
 		logger.Debug("Cluster is stable. No migrations in progress.")
 		return nil
-	} else {
-		logger.Debug("Migrations active on initial check", slog.Uint64("pending", totalPending))
+
+	default:
+		logger.Debug("Migrations active on initial check",
+			slog.Uint64("pending", totalPending))
 	}
 
 	// Wait for migrations to complete with periodic checks.
