@@ -16,9 +16,7 @@ const (
 	testNamespace = "test-ns"
 )
 
-var (
-	ctx = context.Background()
-)
+var ctx = context.Background()
 
 func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	service, pathService := setupLocalBackupBackendService(t)
