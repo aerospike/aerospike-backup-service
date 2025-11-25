@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike/cluster"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/timeutil"
 	"github.com/aerospike/backup-go"
@@ -181,6 +182,14 @@ func (h *BackupRoutineOrchestrator) prepareCluster(ctx context.Context) (aerospi
 	if err != nil {
 		h.clientManager.Close(client)
 		return nil, nil, fmt.Errorf("cannot retrieve namespaces from source cluster: %w", err)
+	}
+
+	for _, namespace := range namespaces {
+		// Ensure there is no running migrations
+		err := cluster.WaitForMigrations(ctx, client.InfoClient(), namespace)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return client, namespaces, nil
