@@ -126,12 +126,13 @@ func newInfo(cluster *model.AerospikeCluster) *clientInfo {
 }
 
 func (cm *ClientManagerImpl) createBackupClient(info *clientInfo, logger *slog.Logger) (Client, error) {
-	var options []backup.ClientOpt
-	options = append(options, backup.WithScanLimiter(info.scanLimiter))
-	if logger != nil {
-		options = append(options, backup.WithLogger(logger))
-	} else {
-		options = append(options, backup.WithLogger(slog.Default()))
+	if logger == nil {
+		logger = slog.Default()
+	}
+	var options = []backup.ClientOpt{
+		backup.WithInfoPolicies(as.NewInfoPolicy(), model.ScanRetryPolicy),
+		backup.WithScanLimiter(info.scanLimiter),
+		backup.WithLogger(logger),
 	}
 
 	return cm.clientFactory.NewBackupClient(info.aeroClient, options...)
