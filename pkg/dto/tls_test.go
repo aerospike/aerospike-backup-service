@@ -126,7 +126,7 @@ func setupTestCertificates(t *testing.T) *testCertificates {
 // cleanupTestCertificates removes temporary certificate files.
 func cleanupTestCertificates(certs *testCertificates) {
 	if certs != nil && certs.tempDir != "" {
-		os.RemoveAll(certs.tempDir)
+		_ = os.RemoveAll(certs.tempDir)
 	}
 }
 

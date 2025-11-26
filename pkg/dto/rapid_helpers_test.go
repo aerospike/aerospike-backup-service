@@ -94,7 +94,7 @@ func defaultRegistry() genRegistry {
 		return reflect.ValueOf(v)
 	}
 
-	r[reflect.TypeOf(int(0))] = func(t *rapid.T) reflect.Value {
+	r[reflect.TypeOf(0)] = func(t *rapid.T) reflect.Value {
 		v := rapid.SampledFrom(IntInterestingValues).Draw(t, "int")
 		return reflect.ValueOf(v)
 	}

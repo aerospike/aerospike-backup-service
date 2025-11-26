@@ -67,49 +67,26 @@ func (c *AerospikeCluster) GetPassword() *string {
 
 // Hash returns a unique string identifier for the AerospikeCluster.
 func (c *AerospikeCluster) Hash() string {
+	nodeStrings := make([]string, len(c.SeedNodes))
+	for i, node := range c.SeedNodes {
+		nodeStrings[i] = node.String()
+	}
+	sort.Strings(nodeStrings)
+
+	// Build a slice of all fields to be hashed.
+	hashData := []any{
+		ptr.ValueOrZero(c.ClusterLabel),
+		nodeStrings,
+		c.ConnTimeout.String(),
+		ptr.ValueOrZero(c.UseServicesAlternate),
+		c.Credentials.String(),
+		c.TLS.String(),
+		ptr.ValueOrZero(c.MaxParallelScans),
+		c.PreferRacks,
+	}
+
 	hasher := sha256.New()
-
-	if c.ClusterLabel != nil {
-		hasher.Write([]byte(*c.ClusterLabel))
-		hasher.Write([]byte(":"))
-	}
-
-	nodes := make([]SeedNode, len(c.SeedNodes))
-	copy(nodes, c.SeedNodes)
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].String() < nodes[j].String()
-	})
-	for _, node := range nodes {
-		hasher.Write([]byte(node.String()))
-		hasher.Write([]byte(":"))
-	}
-
-	if c.ConnTimeout != nil {
-		hasher.Write([]byte(c.ConnTimeout.String()))
-		hasher.Write([]byte(":"))
-	}
-
-	if c.UseServicesAlternate != nil {
-		fmt.Fprintf(hasher, "%v:", *c.UseServicesAlternate)
-	}
-
-	if c.Credentials != nil {
-		hasher.Write([]byte(c.Credentials.String()))
-		hasher.Write([]byte(":"))
-	}
-
-	if c.TLS != nil {
-		hasher.Write([]byte(c.TLS.String()))
-		hasher.Write([]byte(":"))
-	}
-
-	if c.MaxParallelScans != nil {
-		fmt.Fprintf(hasher, "%d:", *c.MaxParallelScans)
-	}
-
-	for _, rackID := range c.PreferRacks {
-		fmt.Fprintf(hasher, "%d:", rackID)
-	}
+	_, _ = fmt.Fprintf(hasher, "%v", hashData)
 
 	return hex.EncodeToString(hasher.Sum(nil))
 }
