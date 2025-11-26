@@ -16,4 +16,8 @@ var deprecatedFields = map[string]map[string]string{
 	"dto.BackupRoutine": {
 		"prefer-racks": "is moved to aerospike-cluster.prefer-racks",
 	},
+	"dto.RestoreTimestampRequest": {
+		"storage":      "is deprecated, will use storage from routine",
+		"storage-name": "is deprecated, will use storage from routine",
+	},
 }

@@ -77,7 +77,7 @@ func (c *AerospikeCluster) Hash() string {
 	hashData := []any{
 		ptr.ValueOrZero(c.ClusterLabel),
 		nodeStrings,
-		c.ConnTimeout.String(),
+		ptr.ValueOrZero(c.ConnTimeout).String(),
 		ptr.ValueOrZero(c.UseServicesAlternate),
 		c.Credentials.String(),
 		c.TLS.String(),
