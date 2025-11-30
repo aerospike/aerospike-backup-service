@@ -1,4 +1,4 @@
-import { AppConfig, Job, Backup } from '../types';
+import { AppConfig, CurrentBackup, Backup } from '../types';
 
 const RealApi = {
     // --- Config Endpoints ---
@@ -18,9 +18,9 @@ const RealApi = {
     },
 
     // --- Monitoring Endpoints ---
-    fetchRunningJobs: async (): Promise<Job[]> => {
-        const res = await fetch('/v1/jobs');
-        if (!res.ok) throw new Error('Failed to fetch jobs');
+    fetchCurrentBackup: async (routine: string): Promise<CurrentBackup> => {
+        const res = await fetch(`/v1/backups/currentBackup/${routine}`);
+        if (!res.ok) throw new Error('Failed to fetch current backup');
         return res.json();
     },
     fetchHistory: async (routine: string): Promise<Backup[]> => {

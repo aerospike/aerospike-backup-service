@@ -74,14 +74,30 @@ export interface AppConfig {
 
 // --- Monitoring Types ---
 
-export interface Job {
-  id: string;
-  routine: string;
-  type: string;
-  progress: number;
-  speed: string;
-  records: string;
-  started: string;
+export interface Metrics {
+  "kilobytes-per-second": number;
+  "pipeline": number;
+  "records-per-second": number;
+}
+
+export interface RunningJob {
+  "done-records": number;
+  "duration": number;
+  "estimated-end-time": string;
+  "finish-time": string;
+  "metrics": Metrics;
+  "percentage-done": number;
+  "start-time": string;
+  "total-records": number;
+}
+
+export interface CurrentBackup {
+  "full": RunningJob | null;
+  "incremental": RunningJob | null;
+  "last-full": string;
+  "last-incremental": string;
+  "next-full": string;
+  "next-incremental": string;
 }
 
 export interface Backup {

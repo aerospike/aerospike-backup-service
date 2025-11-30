@@ -3,18 +3,34 @@ import { Activity, History, Info, RotateCcw } from 'lucide-react';
 import { api } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Badge, Modal } from '@/components/ui/Feedback';
-import { AppConfig, Job, Backup } from '@/types';
+import { AppConfig, CurrentBackup, Backup, RunningJob } from '@/types';
 
 interface MonitoringDashboardProps {
   config: AppConfig;
 }
 
+const JobCard = ({ routine, type, job }: { routine: string, type: string, job: RunningJob }) => (
+    <div className="bg-gray-900 border border-gray-800 p-4 rounded-lg shadow-lg">
+       <div className="flex justify-between mb-2">
+          <span className="font-bold">{routine} - {type}</span>
+          <Badge status="Running" />
+       </div>
+       <div className="w-full bg-gray-800 rounded-full h-1.5">
+          <div className="bg-red-600 h-1.5 rounded-full" style={{ width: `${job['percentage-done']}%` }}></div>
+       </div>
+       <div className="flex justify-between mt-2 text-xs text-gray-400">
+            <span>{job.metrics['records-per-second']} rps</span>
+            <span>{job['done-records']} / {job['total-records']} records</span>
+       </div>
+    </div>
+);
+
 export default function MonitoringDashboard({ config }: MonitoringDashboardProps) {
   // We can safely cast the keys because we know the shape of config
-  const routineKeys = Object.keys(config['backup-routines']);
+  const routineKeys = Object.keys(config['backup-routines'] || {});
   const [activeRoutine, setActiveRoutine] = useState<string>(routineKeys[0] || '');
 
-  const [runningJobs, setRunningJobs] = useState<Job[]>([]);
+  const [currentBackup, setCurrentBackup] = useState<CurrentBackup | null>(null);
   const [history, setHistory] = useState<Backup[]>([]);
 
   const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
@@ -42,14 +58,21 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
   useEffect(() => {
     const loadData = async () => {
       try {
-        const jobs = await api.fetchRunningJobs();
-        setRunningJobs(jobs);
         if (activeRoutine) {
-          const hist = await api.fetchHistory(activeRoutine);
+          const [backup, hist] = await Promise.all([
+            api.fetchCurrentBackup(activeRoutine),
+            api.fetchHistory(activeRoutine)
+          ]);
+          setCurrentBackup(backup);
           setHistory(hist.sort((a, b) => b.timestamp - a.timestamp));
+        } else {
+            setCurrentBackup(null);
+            setHistory([]);
         }
       } catch (error) {
         console.error("Failed to load monitoring data", error);
+        setCurrentBackup(null);
+        setHistory([]);
       }
     };
     loadData();
@@ -87,6 +110,10 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
     return b ? b.timestamp : 0;
   };
 
+  const runningJobs = [];
+  if (currentBackup?.full) runningJobs.push({ ...currentBackup.full, type: 'Full' });
+  if (currentBackup?.incremental) runningJobs.push({ ...currentBackup.incremental, type: 'Incremental' });
+
   return (
     <div className="flex h-full">
       {/* Sidebar */}
@@ -102,7 +129,7 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
               }`}
             >
               {r}
-              {runningJobs.find(j => j.routine === r) && (
+              {activeRoutine === r && (currentBackup?.full || currentBackup?.incremental) && (
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
               )}
             </button>
@@ -119,25 +146,12 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
             </h2>
             {runningJobs.length === 0 ? (
                 <div className="p-8 bg-gray-900/50 rounded border border-gray-800 text-center text-gray-500">
-                    No active jobs running at the moment.
+                    No active jobs running for {activeRoutine} at the moment.
                 </div>
             ) : (
                 <div className="grid gap-4">
-                    {runningJobs.map(job => (
-                        <div key={job.id} className="bg-gray-900 border border-gray-800 p-4 rounded-lg shadow-lg">
-                           <div className="flex justify-between mb-2">
-                              <span className="font-bold">{job.routine}</span>
-                              <Badge status="Running" />
-                           </div>
-                           <div className="w-full bg-gray-800 rounded-full h-1.5">
-                              <div className="bg-red-600 h-1.5 rounded-full" style={{ width: `${job.progress}%` }}></div>
-                           </div>
-                           <div className="flex justify-between mt-2 text-xs text-gray-400">
-                                <span>{job.speed}</span>
-                                <span>{job.records} records</span>
-                           </div>
-                        </div>
-                    ))}
+                    {currentBackup?.full && <JobCard routine={activeRoutine} type="Full" job={currentBackup.full} />}
+                    {currentBackup?.incremental && <JobCard routine={activeRoutine} type="Incremental" job={currentBackup.incremental} />}
                 </div>
             )}
         </div>
@@ -146,7 +160,7 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
         <div>
           <div className="flex justify-between items-end mb-4">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <History className="text-gray-400"/> Backup History
+                <History className="text-gray-400"/> Backup History for {activeRoutine}
             </h2>
             <div className="flex gap-2">
                 {selectedBackupId && (
