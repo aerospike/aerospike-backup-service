@@ -17,6 +17,7 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
     const [currentBackup, setCurrentBackup] = useState<DtoRoutineState | null>(null);
     const [history, setHistory] = useState<Backup[]>([]);
     const [isSchedulingBackup, setIsSchedulingBackup] = useState(false);
+    const [isCancellingBackup, setIsCancellingBackup] = useState(false);
 
     const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
     const [chain, setChain] = useState<string[]>([]);
@@ -80,6 +81,22 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
         }
     };
 
+    const handleCancelBackup = async () => {
+        if (!activeRoutine) return;
+        setIsCancellingBackup(true);
+        try {
+            await api.cancelBackup(activeRoutine);
+            // Delay refresh by 100ms
+            setTimeout(() => {
+                loadData(); //refresh active jobs after cancelling
+            }, 100);
+        } catch (error: any) {
+            console.error("Failed to cancel backup", error);
+        } finally {
+            setIsCancellingBackup(false);
+        }
+    };
+
     useEffect(() => {
         loadData();
         const interval = setInterval(loadData, 5000);
@@ -140,7 +157,9 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
                     activeRoutine={activeRoutine}
                     runningJobs={runningJobs}
                     isSchedulingBackup={isSchedulingBackup}
+                    isCancellingBackup={isCancellingBackup}
                     handleScheduleFullBackup={handleScheduleFullBackup}
+                    handleCancelBackup={handleCancelBackup}
                 />
 
                 <BackupHistory

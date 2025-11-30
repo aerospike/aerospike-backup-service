@@ -55,5 +55,9 @@ export const api = {
         };
         const response = await restoreApi.restoreTimestampRaw({dtoRestoreTimestampRequest: request});
         return response.raw;
+    },
+
+    cancelBackup: async (routine: string): Promise<void> => {
+        await backupApi.cancelCurrentBackup({name: routine});
     }
 };

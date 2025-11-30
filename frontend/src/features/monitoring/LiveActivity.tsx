@@ -8,7 +8,9 @@ interface LiveActivityProps {
   activeRoutine: string;
   runningJobs: ({ type: string } & DtoRunningJob)[];
   isSchedulingBackup: boolean;
+  isCancellingBackup: boolean;
   handleScheduleFullBackup: () => Promise<void>;
+  handleCancelBackup: () => Promise<void>;
 }
 
 const formatBytes = (bytes?: number, decimals = 2) => {
@@ -36,20 +38,33 @@ const JobCard = ({ routine, type, job }: { routine: string, type: string, job: D
     </div>
 );
 
-export const LiveActivity = ({ activeRoutine, runningJobs, isSchedulingBackup, handleScheduleFullBackup }: LiveActivityProps) => {
+export const LiveActivity = ({ activeRoutine, runningJobs, isSchedulingBackup, isCancellingBackup, handleScheduleFullBackup, handleCancelBackup }: LiveActivityProps) => {
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Activity className="text-red-500"/> Live Activity
         </h2>
-        <Button
-            onClick={handleScheduleFullBackup}
-            disabled={!activeRoutine || isSchedulingBackup}
-            loading={isSchedulingBackup}
-        >
-            Backup Now
-        </Button>
+        <div className="flex gap-2">
+            {runningJobs.length > 0 ? (
+                <Button
+                    onClick={handleCancelBackup}
+                    disabled={!activeRoutine || isCancellingBackup}
+                    loading={isCancellingBackup}
+                    variant="danger"
+                >
+                    Cancel
+                </Button>
+            ) : (
+                <Button
+                    onClick={handleScheduleFullBackup}
+                    disabled={!activeRoutine || isSchedulingBackup}
+                    loading={isSchedulingBackup}
+                >
+                    Backup Now
+                </Button>
+            )}
+        </div>
       </div>
       {runningJobs.length === 0 ? (
         <div className="p-8 bg-gray-900/50 rounded border border-gray-800 text-center text-gray-500">
