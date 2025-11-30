@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, Settings, Loader, AlertTriangle } from 'lucide-react';
+import React, {useEffect, useState} from 'react';
+import {Activity, AlertTriangle, Loader, Settings} from 'lucide-react';
 import ConfigEditor from './features/config/ConfigEditor';
 import MonitoringDashboard from './features/monitoring/MonitoringDashboard';
-import { AppConfig } from './types';
-import { api } from './api/client';
+import {api} from './api';
+import type {DtoConfig} from './api/generated';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'monitor' | 'config'>('monitor');
-  const [config, setConfig] = useState<AppConfig | null>(null);
+  const [config, setConfig] = useState<DtoConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

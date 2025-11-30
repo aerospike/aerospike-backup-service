@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, History, Info, RotateCcw } from 'lucide-react';
-import { api } from '@/api/client';
-import { Button } from '@/components/ui/Button';
-import { Badge, Modal } from '@/components/ui/Feedback';
-import { AppConfig, CurrentBackup, Backup, RunningJob } from '@/types';
+import React, {useEffect, useState} from 'react';
+import {Activity, History, Info, RotateCcw} from 'lucide-react';
+import type {Backup, DtoConfig, DtoRoutineState, DtoRunningJob} from '@/api';
+import {api} from '@/api';
+import {Button} from '@/components/ui/Button';
+import {Badge, Modal} from '@/components/ui/Feedback';
 
 interface MonitoringDashboardProps {
-  config: AppConfig;
+  config: DtoConfig;
 }
 
-const formatBytes = (bytes: number, decimals = 2) => {
-    if (bytes === 0) return '0 Bytes';
+const formatBytes = (bytes?: number, decimals = 2) => {
+    if (!bytes || bytes === 0) return '0 Bytes';
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
@@ -18,28 +18,28 @@ const formatBytes = (bytes: number, decimals = 2) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-const JobCard = ({ routine, type, job }: { routine: string, type: string, job: RunningJob }) => (
+const JobCard = ({ routine, type, job }: { routine: string, type: string, job: DtoRunningJob }) => (
     <div className="bg-gray-900 border border-gray-800 p-4 rounded-lg shadow-lg">
        <div className="flex justify-between mb-2">
           <span className="font-bold">{routine} - {type}</span>
           <Badge status="Running" />
        </div>
        <div className="w-full bg-gray-800 rounded-full h-1.5">
-          <div className="bg-red-600 h-1.5 rounded-full" style={{ width: `${job['percentage-done']}%` }}></div>
+          <div className="bg-red-600 h-1.5 rounded-full" style={{ width: `${job.percentageDone}%` }}></div>
        </div>
        <div className="flex justify-between mt-2 text-xs text-gray-400">
-            <span>{job.metrics['records-per-second']} rps</span>
-            <span>{job['done-records']} / {job['total-records']} records</span>
+            <span>{job.metrics?.recordsPerSecond} rps</span>
+            <span>{job.doneRecords} / {job.totalRecords} records</span>
        </div>
     </div>
 );
 
 export default function MonitoringDashboard({ config }: MonitoringDashboardProps) {
   // We can safely cast the keys because we know the shape of config
-  const routineKeys = Object.keys(config['backup-routines'] || {});
+  const routineKeys = Object.keys(config.backupRoutines || {});
   const [activeRoutine, setActiveRoutine] = useState<string>(routineKeys[0] || '');
 
-  const [currentBackup, setCurrentBackup] = useState<CurrentBackup | null>(null);
+  const [currentBackup, setCurrentBackup] = useState<DtoRoutineState | null>(null);
   const [history, setHistory] = useState<Backup[]>([]);
 
   const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
@@ -73,7 +73,7 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
             api.fetchHistory(activeRoutine)
           ]);
           setCurrentBackup(backup);
-          setHistory(hist.sort((a, b) => b.timestamp - a.timestamp));
+          setHistory(hist.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
         } else {
             setCurrentBackup(null);
             setHistory([]);
@@ -101,12 +101,14 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
     const selectedIndex = history.findIndex(b => b.key === key); // Use key here
     if (selectedIndex === -1) return;
     const selectedBackup = history[selectedIndex];
+    if (!selectedBackup.key) return;
     const newChain = [selectedBackup.key]; // Use key here
 
     if (selectedBackup.type === 'Incremental') {
       // Look forward in the array (backward in time) to find the nearest Full backup
       for (let i = selectedIndex + 1; i < history.length; i++) {
         const b = history[i];
+        if (!b.key) continue;
         newChain.push(b.key); // Use key here
         if (b.type === 'Full') break;
       }
@@ -116,10 +118,10 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
 
   const getSelectedTimestamp = () => {
     const b = history.find(h => h.key === selectedBackupId); // Use key here
-    return b ? b.timestamp : 0;
+    return b?.timestamp || 0;
   };
 
-  const runningJobs = [];
+  const runningJobs: ({ type: string } & DtoRunningJob)[] = [];
   if (currentBackup?.full) runningJobs.push({ ...currentBackup.full, type: 'Full' });
   if (currentBackup?.incremental) runningJobs.push({ ...currentBackup.incremental, type: 'Incremental' });
 
@@ -203,6 +205,7 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
               </thead>
               <tbody>
                 {history.map((b) => {
+                   if (!b.key) return null;
                    const isSelected = selectedBackupId === b.key;
                    const inChain = chain.includes(b.key);
                    let rowClass = "border-b border-gray-800 transition-colors cursor-pointer ";
@@ -211,7 +214,7 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
                    else rowClass += "hover:bg-gray-800/50 ";
 
                    return (
-                     <tr key={b.key} onClick={() => handleBackupSelect(b.key)} className={rowClass}>
+                     <tr key={b.key} onClick={() => handleBackupSelect(b.key as string)} className={rowClass}>
                         <td className="px-6 py-4 relative">
                             {inChain && (
                                 <div className="flex flex-col items-center justify-center h-full absolute inset-0">
@@ -220,10 +223,10 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
                                 </div>
                             )}
                         </td>
-                        <td className="px-6 py-4 font-medium text-gray-200">{new Date(b.timestamp).toLocaleString()}</td>
+                        <td className="px-6 py-4 font-medium text-gray-200">{new Date(b.timestamp || 0).toLocaleString()}</td>
                         <td className="px-6 py-4"><Badge type={b.type} /></td>
-                        <td className="px-6 py-4 text-gray-400 font-mono">{formatBytes(b['byte-count'])}</td>
-                        <td className="px-6 py-4 text-gray-400 font-mono">{b['record-count']}</td>
+                        <td className="px-6 py-4 text-gray-400 font-mono">{formatBytes(b.byteCount)}</td>
+                        <td className="px-6 py-4 text-gray-400 font-mono">{b.recordCount}</td>
                         <td className="px-6 py-4 text-gray-400 font-mono">{b.duration}s</td>
                      </tr>
                    );

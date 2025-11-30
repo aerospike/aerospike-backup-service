@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
-import {
-  Database, Clock, Server, HardDrive, Shield, Key, Play, CheckCircle,
-  Settings, Plus, Trash2, Copy
-} from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { Input, Select } from '@/components/ui/Inputs';
-import { toYaml } from '@/utils/yaml';
-import { AppConfig } from '@/types';
+import React, {useState} from 'react';
+import {CheckCircle, Clock, Copy, HardDrive, Key, Play, Plus, Server, Settings, Shield, Trash2} from 'lucide-react';
+import {Button} from '@/components/ui/Button';
+import {Input, Select} from '@/components/ui/Inputs';
+import {toYaml} from '@/utils/yaml';
+import type {DtoConfig} from '@/api';
+import {api} from '@/api';
 
 // --- Local Components ---
 
@@ -53,13 +51,11 @@ const Card = ({ title, sub, active, onClick, onDelete }: { title: string, sub?: 
   </div>
 );
 
-import { api } from '@/api/client';
-
 // --- Main Editor ---
 
 interface ConfigEditorProps {
-  config: AppConfig;
-  setConfig: React.Dispatch<React.SetStateAction<AppConfig>>;
+  config: DtoConfig;
+  setConfig: React.Dispatch<React.SetStateAction<DtoConfig>>;
 }
 
 type SectionId = 'routines' | 'clusters' | 'storage' | 'policies' | 'secrets' | 'service' | 'yaml';
@@ -88,7 +84,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
   const generateId = (prefix: string) => `${prefix}-${Math.random().toString(36).substr(2, 6)}`;
 
   // Generic updater for top-level maps (clusters, policies, etc.)
-  const updateItem = (sectionKey: keyof AppConfig, id: string, field: string, value: any) => {
+  const updateItem = (sectionKey: keyof DtoConfig, id: string, field: string, value: any) => {
     setConfig(prev => ({
       ...prev,
       [sectionKey]: {
@@ -99,7 +95,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
   };
 
   // Deep updater for nested properties (e.g. cluster.credentials.user)
-  const updateNested = (sectionKey: keyof AppConfig, id: string, parent: string, field: string, value: any) => {
+  const updateNested = (sectionKey: keyof DtoConfig, id: string, parent: string, field: string, value: any) => {
     setConfig(prev => {
         const item = (prev[sectionKey] as any)[id];
         return {
@@ -115,7 +111,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
     });
   };
 
-  const deleteItem = (sectionKey: keyof AppConfig, id: string) => {
+  const deleteItem = (sectionKey: keyof DtoConfig, id: string) => {
     if (!window.confirm(`Delete ${id}?`)) return;
     setConfig(prev => {
       const next = { ...(prev[sectionKey] as any) };
@@ -125,7 +121,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
     if (selectedId === id) setSelectedId(null);
   };
 
-  const renameItem = (sectionKey: keyof AppConfig, oldId: string, newId: string) => {
+  const renameItem = (sectionKey: keyof DtoConfig, oldId: string, newId: string) => {
     if (oldId === newId || !newId) return;
     setConfig(prev => {
         const collection = { ...(prev[sectionKey] as any) };
@@ -139,7 +135,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
   // --- Renderers ---
 
   const renderRoutines = () => {
-    const items = config['backup-routines'];
+    const items = config.backupRoutines || {};
     return (
       <div className="flex h-full">
         <div className="w-1/3 border-r border-gray-800 p-4 flex flex-col">
@@ -148,7 +144,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
             icon={Plus}
             onClick={() => {
               const id = generateId('routine');
-              setConfig(p => ({...p, 'backup-routines': {...p['backup-routines'], [id]: { "source-cluster": "", storage: "", "interval-cron": "@daily", namespaces: [] }}}));
+              setConfig(p => ({...p, backupRoutines: {...p.backupRoutines, [id]: { sourceCluster: "", storage: "", intervalCron: "@daily", namespaces: [] }}}));
               setSelectedId(id);
             }}
           >
@@ -159,10 +155,10 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
               <Card
                 key={k}
                 title={k}
-                sub={v['interval-cron']}
+                sub={v.intervalCron}
                 active={selectedId === k}
                 onClick={() => setSelectedId(k)}
-                onDelete={() => deleteItem('backup-routines', k)}
+                onDelete={() => deleteItem('backupRoutines', k)}
               />
             ))}
           </div>
@@ -171,60 +167,60 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
           {selectedId && items[selectedId] ? (
             <div className="animate-in fade-in slide-in-from-right-4 duration-200">
                <div className="mb-6">
-                  <Input label="Routine Name" value={selectedId} onChange={(e) => renameItem('backup-routines', selectedId, e.target.value)} />
+                  <Input label="Routine Name" value={selectedId} onChange={(e) => renameItem('backupRoutines', selectedId, e.target.value)} />
                </div>
 
                <SectionHeader title="Core Bindings" icon={Clock} />
                <div className="grid grid-cols-2 gap-4">
                   <Select
                     label="Source Cluster"
-                    value={items[selectedId]['source-cluster']}
-                    options={[{label: "Select...", value: ""}, ...Object.keys(config['aerospike-clusters']).map(k => ({ label: k, value: k }))]}
-                    onChange={(e) => updateItem('backup-routines', selectedId, 'source-cluster', e.target.value)}
+                    value={items[selectedId].sourceCluster}
+                    options={[{label: "Select...", value: ""}, ...Object.keys(config.aerospikeClusters || {}).map(k => ({ label: k, value: k }))]}
+                    onChange={(e) => updateItem('backupRoutines', selectedId, 'sourceCluster', e.target.value)}
                   />
                   <Select
                     label="Storage"
-                    value={items[selectedId]['storage']}
-                    options={[{label: "Select...", value: ""}, ...Object.keys(config['storage']).map(k => ({ label: k, value: k }))]}
-                    onChange={(e) => updateItem('backup-routines', selectedId, 'storage', e.target.value)}
+                    value={items[selectedId].storage}
+                    options={[{label: "Select...", value: ""}, ...Object.keys(config.storage || {}).map(k => ({ label: k, value: k }))]}
+                    onChange={(e) => updateItem('backupRoutines', selectedId, 'storage', e.target.value)}
                   />
                   <Select
                     label="Policy (Optional)"
-                    value={items[selectedId]['backup-policy'] || ''}
-                    options={[{label: "None (Default)", value: ""}, ...Object.keys(config['backup-policies']).map(k => ({ label: k, value: k }))]}
-                    onChange={(e) => updateItem('backup-routines', selectedId, 'backup-policy', e.target.value)}
+                    value={items[selectedId].backupPolicy || ''}
+                    options={[{label: "None (Default)", value: ""}, ...Object.keys(config.backupPolicies || {}).map(k => ({ label: k, value: k }))]}
+                    onChange={(e) => updateItem('backupRoutines', selectedId, 'backupPolicy', e.target.value)}
                   />
                   <Select
                     label="Secret Agent (Optional)"
-                    value={(items[selectedId] as any)['secret-agent'] || ''}
-                    options={[{label: "None", value: ""}, ...Object.keys(config['secret-agents']).map(k => ({ label: k, value: k }))]}
-                    onChange={(e) => updateItem('backup-routines', selectedId, 'secret-agent', e.target.value)}
+                    value={(items[selectedId] as any).secretAgent || ''}
+                    options={[{label: "None", value: ""}, ...Object.keys(config.secretAgents || {}).map(k => ({ label: k, value: k }))]}
+                    onChange={(e) => updateItem('backupRoutines', selectedId, 'secretAgent', e.target.value)}
                   />
                </div>
 
                <SectionHeader title="Scheduling" />
                <div className="grid grid-cols-2 gap-4">
-                  <Input label="Full Backup Cron" value={items[selectedId]['interval-cron']} onChange={e => updateItem('backup-routines', selectedId, 'interval-cron', e.target.value)} placeholder="@daily" />
-                  <Input label="Incremental Cron" value={items[selectedId]['incr-interval-cron']} onChange={e => updateItem('backup-routines', selectedId, 'incr-interval-cron', e.target.value)} placeholder="Optional" />
+                  <Input label="Full Backup Cron" value={items[selectedId].intervalCron} onChange={e => updateItem('backupRoutines', selectedId, 'intervalCron', e.target.value)} placeholder="@daily" />
+                  <Input label="Incremental Cron" value={items[selectedId].incrIntervalCron} onChange={e => updateItem('backupRoutines', selectedId, 'incrIntervalCron', e.target.value)} placeholder="Optional" />
                </div>
 
                <SectionHeader title="Scope" />
                <Input
                  label="Namespaces (Comma separated)"
                  value={items[selectedId].namespaces?.join(', ') || ''}
-                 onChange={e => updateItem('backup-routines', selectedId, 'namespaces', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                 onChange={e => updateItem('backupRoutines', selectedId, 'namespaces', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
                  placeholder="All namespaces if empty"
                />
                <Input
                  label="Set List (Comma separated)"
-                 value={items[selectedId]["set-list"]?.join(', ') || ''}
-                 onChange={e => updateItem('backup-routines', selectedId, 'set-list', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                 value={items[selectedId].setList?.join(', ') || ''}
+                 onChange={e => updateItem('backupRoutines', selectedId, 'setList', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
                  placeholder="Optional"
                />
                <Checkbox
                  label="Disable Routine"
                  checked={items[selectedId].disabled || false}
-                 onChange={v => updateItem('backup-routines', selectedId, 'disabled', v)}
+                 onChange={v => updateItem('backupRoutines', selectedId, 'disabled', v)}
                />
             </div>
           ) : (
@@ -239,7 +235,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
   };
 
   const renderClusters = () => {
-    const items = config['aerospike-clusters'];
+    const items = config.aerospikeClusters || {};
     return (
       <div className="flex h-full">
         <div className="w-1/3 border-r border-gray-800 p-4 flex flex-col">
@@ -248,7 +244,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
             icon={Plus}
             onClick={() => {
               const id = generateId('cluster');
-              setConfig(p => ({...p, 'aerospike-clusters': {...p['aerospike-clusters'], [id]: { "seed-nodes": [{ "host-name": "localhost", "port": 3000 }], "credentials": { user: "" } }}}));
+              setConfig(p => ({...p, aerospikeClusters: {...p.aerospikeClusters, [id]: { seedNodes: [{ hostName: "localhost", port: 3000 }], credentials: { user: "" } }}}));
               setSelectedId(id);
             }}
           >
@@ -259,10 +255,10 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
               <Card
                 key={k}
                 title={k}
-                sub={`${v['seed-nodes']?.length || 0} nodes`}
+                sub={`${v.seedNodes?.length || 0} nodes`}
                 active={selectedId === k}
                 onClick={() => setSelectedId(k)}
-                onDelete={() => deleteItem('aerospike-clusters', k)}
+                onDelete={() => deleteItem('aerospikeClusters', k)}
               />
             ))}
           </div>
@@ -271,49 +267,49 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
           {selectedId && items[selectedId] ? (
             <div className="animate-in fade-in slide-in-from-right-4 duration-200">
                <div className="mb-6">
-                  <Input label="Cluster Name" value={selectedId} onChange={(e) => renameItem('aerospike-clusters', selectedId, e.target.value)} />
+                  <Input label="Cluster Name" value={selectedId} onChange={(e) => renameItem('aerospikeClusters', selectedId, e.target.value)} />
                </div>
 
                <SectionHeader title="Seed Nodes" icon={Server} />
                <div className="space-y-2 mb-6">
-                 {items[selectedId]['seed-nodes'].map((node, idx) => (
+                 {items[selectedId].seedNodes?.map((node, idx) => (
                    <div key={idx} className="flex gap-2">
-                      <Input className="flex-1" placeholder="Hostname" value={node['host-name']} onChange={e => {
-                        const nodes = [...items[selectedId]['seed-nodes']];
-                        nodes[idx]['host-name'] = e.target.value;
-                        updateItem('aerospike-clusters', selectedId, 'seed-nodes', nodes);
+                      <Input className="flex-1" placeholder="Hostname" value={node.hostName} onChange={e => {
+                        const nodes = [...items[selectedId].seedNodes || []];
+                        nodes[idx].hostName = e.target.value;
+                        updateItem('aerospikeClusters', selectedId, 'seedNodes', nodes);
                       }} />
                       <Input className="w-24" type="number" placeholder="Port" value={node.port} onChange={e => {
-                        const nodes = [...items[selectedId]['seed-nodes']];
+                        const nodes = [...items[selectedId].seedNodes || []];
                         nodes[idx].port = Number(e.target.value);
-                        updateItem('aerospike-clusters', selectedId, 'seed-nodes', nodes);
+                        updateItem('aerospikeClusters', selectedId, 'seedNodes', nodes);
                       }} />
                       <Button variant="ghost" className="px-2 text-gray-500 hover:text-red-500" onClick={() => {
-                         const nodes = items[selectedId]['seed-nodes'].filter((_, i) => i !== idx);
-                         updateItem('aerospike-clusters', selectedId, 'seed-nodes', nodes);
+                         const nodes = (items[selectedId].seedNodes || []).filter((_, i) => i !== idx);
+                         updateItem('aerospikeClusters', selectedId, 'seedNodes', nodes);
                       }}><Trash2 size={16}/></Button>
                    </div>
                  ))}
                  <Button variant="secondary" className="w-full justify-center py-1 text-xs" onClick={() => {
-                    const nodes = [...items[selectedId]['seed-nodes'], { "host-name": "localhost", "port": 3000 }];
-                    updateItem('aerospike-clusters', selectedId, 'seed-nodes', nodes);
+                    const nodes = [...items[selectedId].seedNodes || [], { hostName: "localhost", port: 3000 }];
+                    updateItem('aerospikeClusters', selectedId, 'seedNodes', nodes);
                  }}>+ Add Node</Button>
                </div>
 
                <SectionHeader title="Authentication" icon={Key} />
-               <Input label="User" value={items[selectedId].credentials?.user} onChange={e => updateNested('aerospike-clusters', selectedId, 'credentials', 'user', e.target.value)} />
-               <Input label="Password" type="password" value={items[selectedId].credentials?.password} onChange={e => updateNested('aerospike-clusters', selectedId, 'credentials', 'password', e.target.value)} />
+               <Input label="User" value={items[selectedId].credentials?.user} onChange={e => updateNested('aerospikeClusters', selectedId, 'credentials', 'user', e.target.value)} />
+               <Input label="Password" type="password" value={items[selectedId].credentials?.password} onChange={e => updateNested('aerospikeClusters', selectedId, 'credentials', 'password', e.target.value)} />
                <Select
                  label="Auth Mode"
-                 value={items[selectedId].credentials?.["auth-mode"] || "INTERNAL"}
+                 value={items[selectedId].credentials?.authMode || "INTERNAL"}
                  options={[{label: "INTERNAL", value: "INTERNAL"}, {label: "EXTERNAL", value: "EXTERNAL"}, {label: "PKI", value: "PKI"}]}
-                 onChange={e => updateNested('aerospike-clusters', selectedId, 'credentials', 'auth-mode', e.target.value)}
+                 onChange={e => updateNested('aerospikeClusters', selectedId, 'credentials', 'authMode', e.target.value)}
                />
 
                <SectionHeader title="Advanced" />
                <div className="grid grid-cols-2 gap-4">
-                 <Input label="Max Parallel Scans" type="number" value={items[selectedId]["max-parallel-scans"]} onChange={e => updateItem('aerospike-clusters', selectedId, 'max-parallel-scans', Number(e.target.value))} />
-                 <Input label="Connection Timeout (ms)" type="number" value={items[selectedId]["conn-timeout"]} onChange={e => updateItem('aerospike-clusters', selectedId, 'conn-timeout', Number(e.target.value))} />
+                 <Input label="Max Parallel Scans" type="number" value={items[selectedId].maxParallelScans} onChange={e => updateItem('aerospikeClusters', selectedId, 'maxParallelScans', Number(e.target.value))} />
+                 <Input label="Connection Timeout (ms)" type="number" value={items[selectedId].connTimeout} onChange={e => updateItem('aerospikeClusters', selectedId, 'connTimeout', Number(e.target.value))} />
                </div>
             </div>
           ) : (
@@ -328,21 +324,21 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
   };
 
   const renderStorage = () => {
-    const items = config['storage'];
+    const items = config.storage || {};
     const getStorageType = (s: any) => {
-        if (s["s3-storage"]) return "s3-storage";
-        if (s["local-storage"]) return "local-storage";
-        if (s["gcp-storage"]) return "gcp-storage";
-        if (s["azure-storage"]) return "azure-storage";
-        return "s3-storage";
+        if (s.s3Storage) return "s3Storage";
+        if (s.localStorage) return "localStorage";
+        if (s.gcpStorage) return "gcpStorage";
+        if (s.azureStorage) return "azureStorage";
+        return "s3Storage";
     };
 
     const changeStorageType = (id: string, type: string) => {
         const defaults: any = {
-            "s3-storage": { "bucket": "new-bucket", "s3-region": "us-east-1" },
-            "local-storage": { "path": "/backups" },
-            "gcp-storage": { "bucket-name": "new-bucket" },
-            "azure-storage": { "container-name": "backup-container", "endpoint": "" }
+            s3Storage: { bucket: "new-bucket", s3Region: "us-east-1" },
+            localStorage: { path: "/backups" },
+            gcpStorage: { bucketName: "new-bucket" },
+            azureStorage: { containerName: "backup-container", endpoint: "" }
         };
         setConfig(prev => ({
             ...prev,
@@ -361,7 +357,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
             icon={Plus}
             onClick={() => {
               const id = generateId('storage');
-              setConfig(p => ({...p, storage: {...p.storage, [id]: { "s3-storage": { bucket: "my-bucket", "s3-region": "us-east-1" } }}}));
+              setConfig(p => ({...p, storage: {...p.storage, [id]: { s3Storage: { bucket: "my-bucket", s3Region: "us-east-1" } }}}));
               setSelectedId(id);
             }}
           >
@@ -372,7 +368,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
               <Card
                 key={k}
                 title={k}
-                sub={getStorageType(v).split('-')[0].toUpperCase()}
+                sub={getStorageType(v).replace('Storage','').toUpperCase()}
                 active={selectedId === k}
                 onClick={() => setSelectedId(k)}
                 onDelete={() => deleteItem('storage', k)}
@@ -389,53 +385,53 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
                     label="Type"
                     value={getStorageType(items[selectedId])}
                     options={[
-                        { label: "Amazon S3 / MinIO", value: "s3-storage" },
-                        { label: "Local Filesystem", value: "local-storage" },
-                        { label: "Google Cloud Storage", value: "gcp-storage" },
-                        { label: "Azure Blob Storage", value: "azure-storage" },
+                        { label: "Amazon S3 / MinIO", value: "s3Storage" },
+                        { label: "Local Filesystem", value: "localStorage" },
+                        { label: "Google Cloud Storage", value: "gcpStorage" },
+                        { label: "Azure Blob Storage", value: "azureStorage" },
                     ]}
                     onChange={(e) => changeStorageType(selectedId, e.target.value)}
                   />
                </div>
 
-               {items[selectedId]["s3-storage"] && (
+               {items[selectedId].s3Storage && (
                    <>
                      <SectionHeader title="S3 Configuration" icon={HardDrive} />
                      <div className="grid grid-cols-2 gap-4">
-                        <Input label="Bucket" value={items[selectedId]["s3-storage"]!.bucket} onChange={e => updateNested('storage', selectedId, 's3-storage', 'bucket', e.target.value)} />
-                        <Input label="Region" value={items[selectedId]["s3-storage"]!["s3-region"]} onChange={e => updateNested('storage', selectedId, 's3-storage', 's3-region', e.target.value)} />
-                        <Input label="Path Prefix" value={items[selectedId]["s3-storage"]!.path} onChange={e => updateNested('storage', selectedId, 's3-storage', 'path', e.target.value)} />
-                        <Input label="Endpoint (Optional)" value={items[selectedId]["s3-storage"]!["s3-endpoint-override"]} onChange={e => updateNested('storage', selectedId, 's3-storage', 's3-endpoint-override', e.target.value)} placeholder="e.g. localhost:9000" />
+                        <Input label="Bucket" value={items[selectedId].s3Storage!.bucket} onChange={e => updateNested('storage', selectedId, 's3Storage', 'bucket', e.target.value)} />
+                        <Input label="Region" value={items[selectedId].s3Storage!.s3Region} onChange={e => updateNested('storage', selectedId, 's3Storage', 's3Region', e.target.value)} />
+                        <Input label="Path Prefix" value={items[selectedId].s3Storage!.path} onChange={e => updateNested('storage', selectedId, 's3Storage', 'path', e.target.value)} />
+                        <Input label="Endpoint (Optional)" value={items[selectedId].s3Storage!.s3EndpointOverride} onChange={e => updateNested('storage', selectedId, 's3Storage', 's3EndpointOverride', e.target.value)} placeholder="e.g. localhost:9000" />
                      </div>
                      <SectionHeader title="Credentials" />
                      <div className="grid grid-cols-2 gap-4">
-                        <Input label="Access Key ID" value={items[selectedId]["s3-storage"]!["access-key-id"]} onChange={e => updateNested('storage', selectedId, 's3-storage', 'access-key-id', e.target.value)} />
-                        <Input label="Secret Access Key" type="password" value={items[selectedId]["s3-storage"]!["secret-access-key"]} onChange={e => updateNested('storage', selectedId, 's3-storage', 'secret-access-key', e.target.value)} />
+                        <Input label="Access Key ID" value={items[selectedId].s3Storage!.accessKeyId} onChange={e => updateNested('storage', selectedId, 's3Storage', 'accessKeyId', e.target.value)} />
+                        <Input label="Secret Access Key" type="password" value={items[selectedId].s3Storage!.secretAccessKey} onChange={e => updateNested('storage', selectedId, 's3Storage', 'secretAccessKey', e.target.value)} />
                      </div>
                    </>
                )}
 
-               {items[selectedId]["local-storage"] && (
+               {items[selectedId].localStorage && (
                    <>
                      <SectionHeader title="Local Filesystem" icon={HardDrive} />
-                     <Input label="Root Path" value={items[selectedId]["local-storage"]!.path} onChange={e => updateNested('storage', selectedId, 'local-storage', 'path', e.target.value)} />
+                     <Input label="Root Path" value={items[selectedId].localStorage!.path} onChange={e => updateNested('storage', selectedId, 'localStorage', 'path', e.target.value)} />
                    </>
                )}
 
-               {items[selectedId]["gcp-storage"] && (
+               {items[selectedId].gcpStorage && (
                    <>
                      <SectionHeader title="Google Cloud" icon={HardDrive} />
-                     <Input label="Bucket Name" value={items[selectedId]["gcp-storage"]!["bucket-name"]} onChange={e => updateNested('storage', selectedId, 'gcp-storage', 'bucket-name', e.target.value)} />
-                     <Input label="Key File Path" value={items[selectedId]["gcp-storage"]!["key-file-path"]} onChange={e => updateNested('storage', selectedId, 'gcp-storage', 'key-file-path', e.target.value)} />
+                     <Input label="Bucket Name" value={items[selectedId].gcpStorage!.bucketName} onChange={e => updateNested('storage', selectedId, 'gcpStorage', 'bucketName', e.target.value)} />
+                     <Input label="Key File Path" value={items[selectedId].gcpStorage!.keyFilePath} onChange={e => updateNested('storage', selectedId, 'gcpStorage', 'keyFilePath', e.target.value)} />
                    </>
                )}
 
-               {items[selectedId]["azure-storage"] && (
+               {items[selectedId].azureStorage && (
                    <>
                      <SectionHeader title="Azure Blob" icon={HardDrive} />
                      <div className="grid grid-cols-2 gap-4">
-                        <Input label="Container Name" value={items[selectedId]["azure-storage"]!["container-name"]} onChange={e => updateNested('storage', selectedId, 'azure-storage', 'container-name', e.target.value)} />
-                        <Input label="Account Name" value={items[selectedId]["azure-storage"]!["account-name"]} onChange={e => updateNested('storage', selectedId, 'azure-storage', 'account-name', e.target.value)} />
+                        <Input label="Container Name" value={items[selectedId].azureStorage!.containerName} onChange={e => updateNested('storage', selectedId, 'azureStorage', 'containerName', e.target.value)} />
+                        <Input label="Account Name" value={items[selectedId].azureStorage!.accountName} onChange={e => updateNested('storage', selectedId, 'azureStorage', 'accountName', e.target.value)} />
                      </div>
                    </>
                )}
@@ -452,7 +448,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
   };
 
   const renderPolicies = () => {
-    const items = config['backup-policies'];
+    const items = config.backupPolicies || {};
     return (
       <div className="flex h-full">
         <div className="w-1/3 border-r border-gray-800 p-4 flex flex-col">
@@ -461,7 +457,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
             icon={Plus}
             onClick={() => {
               const id = generateId('policy');
-              setConfig(p => ({...p, 'backup-policies': {...p['backup-policies'], [id]: { parallel: 8, retention: { full: 3, incremental: 0 }, compression: { mode: "NONE" }, encryption: { mode: "NONE" } }}}));
+              setConfig(p => ({...p, backupPolicies: {...p.backupPolicies, [id]: { parallel: 8, retention: { full: 3, incremental: 0 }, compression: { mode: "NONE" }, encryption: { mode: "NONE" } }}}));
               setSelectedId(id);
             }}
           >
@@ -475,7 +471,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
                 sub={`Parallel: ${v.parallel}`}
                 active={selectedId === k}
                 onClick={() => setSelectedId(k)}
-                onDelete={() => deleteItem('backup-policies', k)}
+                onDelete={() => deleteItem('backupPolicies', k)}
               />
             ))}
           </div>
@@ -484,20 +480,20 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
           {selectedId && items[selectedId] ? (
             <div className="animate-in fade-in slide-in-from-right-4 duration-200">
                <div className="mb-6">
-                  <Input label="Policy Name" value={selectedId} onChange={(e) => renameItem('backup-policies', selectedId, e.target.value)} />
+                  <Input label="Policy Name" value={selectedId} onChange={(e) => renameItem('backupPolicies', selectedId, e.target.value)} />
                </div>
 
                <SectionHeader title="Performance" icon={Settings} />
                <div className="grid grid-cols-2 gap-4">
-                  <Input label="Parallel Scans" type="number" value={items[selectedId].parallel} onChange={e => updateItem('backup-policies', selectedId, 'parallel', Number(e.target.value))} />
-                  <Input label="Parallel Writes" type="number" value={items[selectedId]["parallel-write"]} onChange={e => updateItem('backup-policies', selectedId, 'parallel-write', Number(e.target.value))} />
+                  <Input label="Parallel Scans" type="number" value={items[selectedId].parallel} onChange={e => updateItem('backupPolicies', selectedId, 'parallel', Number(e.target.value))} />
+                  <Input label="Parallel Writes" type="number" value={items[selectedId].parallelWrite} onChange={e => updateItem('backupPolicies', selectedId, 'parallelWrite', Number(e.target.value))} />
                </div>
 
                <SectionHeader title="Retention & Compression" icon={Shield} />
                <div className="p-4 bg-gray-900/30 rounded border border-gray-800 mb-4">
                    <div className="grid grid-cols-2 gap-4">
-                       <Input label="Keep Full Backups" type="number" value={items[selectedId].retention?.full} onChange={e => updateNested('backup-policies', selectedId, 'retention', 'full', Number(e.target.value))} />
-                       <Input label="Keep Incremental" type="number" value={items[selectedId].retention?.incremental} onChange={e => updateNested('backup-policies', selectedId, 'retention', 'incremental', Number(e.target.value))} />
+                       <Input label="Keep Full Backups" type="number" value={items[selectedId].retention?.full} onChange={e => updateNested('backupPolicies', selectedId, 'retention', 'full', Number(e.target.value))} />
+                       <Input label="Keep Incremental" type="number" value={items[selectedId].retention?.incremental} onChange={e => updateNested('backupPolicies', selectedId, 'retention', 'incremental', Number(e.target.value))} />
                    </div>
                </div>
                <div className="grid grid-cols-2 gap-4">
@@ -505,16 +501,16 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
                      label="Compression"
                      value={items[selectedId].compression?.mode || "NONE"}
                      options={[{label: "None", value: "NONE"}, {label: "ZSTD", value: "ZSTD"}]}
-                     onChange={e => updateNested('backup-policies', selectedId, 'compression', 'mode', e.target.value)}
+                     onChange={e => updateNested('backupPolicies', selectedId, 'compression', 'mode', e.target.value)}
                    />
                    {items[selectedId].compression?.mode === "ZSTD" && (
-                       <Input label="Level (1-22)" type="number" value={items[selectedId].compression?.level} onChange={e => updateNested('backup-policies', selectedId, 'compression', 'level', Number(e.target.value))} />
+                       <Input label="Level (1-22)" type="number" value={items[selectedId].compression?.level} onChange={e => updateNested('backupPolicies', selectedId, 'compression', 'level', Number(e.target.value))} />
                    )}
                    <Select
                      label="Encryption"
                      value={items[selectedId].encryption?.mode || "NONE"}
                      options={[{label: "None", value: "NONE"}, {label: "AES128", value: "AES128"}, {label: "AES256", value: "AES256"}]}
-                     onChange={e => updateNested('backup-policies', selectedId, 'encryption', 'mode', e.target.value)}
+                     onChange={e => updateNested('backupPolicies', selectedId, 'encryption', 'mode', e.target.value)}
                    />
                </div>
             </div>
@@ -530,7 +526,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
   };
 
   const renderSecrets = () => {
-    const items = config['secret-agents'];
+    const items = config.secretAgents || {};
     return (
       <div className="flex h-full">
         <div className="w-1/3 border-r border-gray-800 p-4 flex flex-col">
@@ -539,7 +535,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
             icon={Plus}
             onClick={() => {
               const id = generateId('agent');
-              setConfig(p => ({...p, 'secret-agents': {...p['secret-agents'], [id]: { address: "localhost", port: 8081 }}}));
+              setConfig(p => ({...p, secretAgents: {...p.secretAgents, [id]: { address: "localhost", port: 8081 }}}));
               setSelectedId(id);
             }}
           >
@@ -553,7 +549,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
                 sub={`${(v as any).address}:${(v as any).port}`}
                 active={selectedId === k}
                 onClick={() => setSelectedId(k)}
-                onDelete={() => deleteItem('secret-agents', k)}
+                onDelete={() => deleteItem('secretAgents', k)}
               />
             ))}
           </div>
@@ -562,12 +558,12 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
           {selectedId && items[selectedId] ? (
             <div className="animate-in fade-in slide-in-from-right-4 duration-200">
                <div className="mb-6">
-                  <Input label="Agent Name" value={selectedId} onChange={(e) => renameItem('secret-agents', selectedId, e.target.value)} />
+                  <Input label="Agent Name" value={selectedId} onChange={(e) => renameItem('secretAgents', selectedId, e.target.value)} />
                </div>
                <SectionHeader title="Connection Info" icon={Key} />
-               <Input label="Address" value={(items[selectedId] as any).address} onChange={e => updateItem('secret-agents', selectedId, 'address', e.target.value)} />
-               <Input label="Port" type="number" value={(items[selectedId] as any).port} onChange={e => updateItem('secret-agents', selectedId, 'port', Number(e.target.value))} />
-               <Input label="TLS CA File" value={(items[selectedId] as any)["tls-ca-file"]} onChange={e => updateItem('secret-agents', selectedId, 'tls-ca-file', e.target.value)} />
+               <Input label="Address" value={(items[selectedId] as any).address} onChange={e => updateItem('secretAgents', selectedId, 'address', e.target.value)} />
+               <Input label="Port" type="number" value={(items[selectedId] as any).port} onChange={e => updateItem('secretAgents', selectedId, 'port', Number(e.target.value))} />
+               <Input label="TLS CA File" value={(items[selectedId] as any).tlsCaFile} onChange={e => updateItem('secretAgents', selectedId, 'tlsCaFile', e.target.value)} />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-gray-500">
@@ -585,7 +581,7 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
       const updateSrv = (parent: 'http' | 'logger', field: string, value: any) => {
           setConfig(p => ({
               ...p,
-              service: { ...p.service, [parent]: { ...p.service[parent], [field]: value } }
+              service: { ...p.service, [parent]: { ...p.service?.[parent], [field]: value } }
           }))
       }
       return (
@@ -594,21 +590,21 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
 
               <SectionHeader title="HTTP Server" />
               <div className="grid grid-cols-2 gap-4">
-                  <Input label="Port" type="number" value={srv.http?.port} onChange={e => updateSrv('http', 'port', Number(e.target.value))} />
-                  <Input label="Context Path" value={srv.http?.["context-path"]} onChange={e => updateSrv('http', 'context-path', e.target.value)} placeholder="/" />
+                  <Input label="Port" type="number" value={srv?.http?.port} onChange={e => updateSrv('http', 'port', Number(e.target.value))} />
+                  <Input label="Context Path" value={srv?.http?.contextPath} onChange={e => updateSrv('http', 'contextPath', e.target.value)} placeholder="/" />
               </div>
 
               <SectionHeader title="Logging" />
               <div className="grid grid-cols-2 gap-4">
                   <Select
                     label="Level"
-                    value={srv.logger?.level}
+                    value={srv?.logger?.level}
                     options={['DEBUG', 'INFO', 'WARN', 'ERROR'].map(l => ({label: l, value: l}))}
                     onChange={e => updateSrv('logger', 'level', e.target.value)}
                   />
                   <Select
                     label="Format"
-                    value={srv.logger?.format}
+                    value={srv?.logger?.format}
                     options={['PLAIN', 'JSON'].map(l => ({label: l, value: l}))}
                     onChange={e => updateSrv('logger', 'format', e.target.value)}
                   />
