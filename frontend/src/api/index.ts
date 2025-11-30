@@ -8,6 +8,10 @@ export type {
     DtoRestoreTimestampRequest
 };
 
+export {
+    BackupApi
+};
+
 const backupApi = new BackupApi();
 const configurationApi = new ConfigurationApi();
 const restoreApi = new RestoreApi();
