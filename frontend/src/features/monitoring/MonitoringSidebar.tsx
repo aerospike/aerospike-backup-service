@@ -12,7 +12,8 @@ export const MonitoringSidebar = ({ routineKeys, activeRoutine, setActiveRoutine
   return (
     <div className="w-64 border-r border-gray-800 bg-gray-900/30 p-4">
       <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Monitored Routines</h3>
-      <div className="space-y-1">
+      <div className="overflow-auto max-h-full">
+        <div className="space-y-1">
         {routineKeys.map(r => (
           <button
             key={r}
@@ -27,6 +28,7 @@ export const MonitoringSidebar = ({ routineKeys, activeRoutine, setActiveRoutine
             )}
           </button>
         ))}
+        </div>
       </div>
     </div>
   );
