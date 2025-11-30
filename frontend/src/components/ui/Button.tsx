@@ -1,7 +1,7 @@
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import {Loader, LucideIcon} from 'lucide-react';
+import {type ClassValue, clsx} from 'clsx';
+import {twMerge} from 'tailwind-merge';
 
 // Utility for merging tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -13,6 +13,7 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'action';
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   icon?: LucideIcon;
+  loading?: boolean;
 }
 
 const variants: Record<ButtonVariant, string> = {
@@ -23,7 +24,7 @@ const variants: Record<ButtonVariant, string> = {
   action: "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500"
 };
 
-export const Button = ({ children, variant = 'primary', icon: Icon, className, ...props }: ButtonProps) => {
+export const Button = ({ children, variant = 'primary', icon: Icon, className, loading, ...props }: ButtonProps) => {
   return (
     <button
       className={cn(
@@ -31,9 +32,10 @@ export const Button = ({ children, variant = 'primary', icon: Icon, className, .
         variants[variant],
         className
       )}
+      disabled={loading || props.disabled}
       {...props}
     >
-      {Icon && <Icon size={16} />}
+      {loading ? <Loader size={16} className="animate-spin" /> : (Icon && <Icon size={16} />)}
       {children}
     </button>
   );

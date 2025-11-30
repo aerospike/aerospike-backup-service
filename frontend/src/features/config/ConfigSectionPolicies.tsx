@@ -79,19 +79,19 @@ export const ConfigSectionPolicies = (
 
                         <SectionHeader title="Performance" icon={Settings}/>
                         <div className="grid grid-cols-2 gap-4">
-                            <Input label="Parallel Scans" type="number" value={items[selectedId].parallel}
+                            <Input label="Parallel Scans" type="number" value={items[selectedId].parallel || ''}
                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('backupPolicies', selectedId, 'parallel', Number(e.target.value))}/>
-                            <Input label="Parallel Writes" type="number" value={items[selectedId].parallelWrite}
+                            <Input label="Parallel Writes" type="number" value={items[selectedId].parallelWrite || ''}
                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('backupPolicies', selectedId, 'parallelWrite', Number(e.target.value))}/>
                         </div>
 
                         <SectionHeader title="Retention & Compression" icon={Shield}/>
                         <div className="p-4 bg-gray-900/30 rounded border border-gray-800 mb-4">
                             <div className="grid grid-cols-2 gap-4">
-                                <Input label="Keep Full Backups" type="number" value={items[selectedId].retention?.full}
+                                <Input label="Keep Full Backups" type="number" value={items[selectedId].retention?.full || ''}
                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('backupPolicies', selectedId, 'retention', 'full', Number(e.target.value))}/>
                                 <Input label="Keep Incremental" type="number"
-                                       value={items[selectedId].retention?.incremental}
+                                       value={items[selectedId].retention?.incremental || ''}
                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('backupPolicies', selectedId, 'retention', 'incremental', Number(e.target.value))}/>
                             </div>
                         </div>
@@ -103,7 +103,7 @@ export const ConfigSectionPolicies = (
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateNested('backupPolicies', selectedId, 'compression', 'mode', e.target.value)}
                             />
                             {items[selectedId].compression?.mode === "ZSTD" && (
-                                <Input label="Level (1-22)" type="number" value={items[selectedId].compression?.level}
+                                <Input label="Level (1-22)" type="number" value={items[selectedId].compression?.level || ''}
                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('backupPolicies', selectedId, 'compression', 'level', Number(e.target.value))}/>
                             )}
                             <Select

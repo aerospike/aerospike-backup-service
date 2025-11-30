@@ -34,7 +34,7 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
                     api.fetchHistory(activeRoutine)
                 ]);
                 setCurrentBackup(backup);
-                setHistory(hist.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
+                setHistory(hist.sort((a: Backup, b: Backup) => (b.timestamp || 0) - (a.timestamp || 0)));
             } else {
                 setCurrentBackup(null);
                 setHistory([]);
@@ -98,14 +98,14 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
         const selectedIndex = history.findIndex(b => b.key === key); // Use key here
         if (selectedIndex === -1) return;
         const selectedBackup = history[selectedIndex];
-        if (!selectedBackup.key) return;
+        if (!selectedBackup || !selectedBackup.key) return;
         const newChain = [selectedBackup.key]; // Use key here
 
         if (selectedBackup.type === 'Incremental') {
             // Look forward in the array (backward in time) to find the nearest Full backup
             for (let i = selectedIndex + 1; i < history.length; i++) {
                 const b = history[i];
-                if (!b.key) continue;
+                if (!b || !b.key) continue;
                 newChain.push(b.key); // Use key here
                 if (b.type === 'Full') break;
             }

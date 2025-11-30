@@ -70,7 +70,7 @@ export default function App() {
     }
     if (config) {
        return activeTab === 'config' ? (
-          <ConfigEditor config={config} setConfig={setConfig} />
+          <ConfigEditor config={config} setConfig={setConfig as React.Dispatch<React.SetStateAction<DtoConfig>>} />
         ) : (
           <MonitoringDashboard config={config} />
         );

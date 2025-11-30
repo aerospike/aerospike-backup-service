@@ -2,7 +2,7 @@ import React from 'react';
 import {Key, Plus} from 'lucide-react';
 import {Button} from '@/components/ui/Button';
 import {Input} from '@/components/ui/Inputs';
-import {DtoConfig} from '@/api';
+import {DtoConfig, DtoSecretAgent} from '@/api';
 import {Card, SectionHeader} from './ConfigEditorShared';
 
 interface ConfigSectionSecretsProps {
@@ -28,18 +28,18 @@ export const ConfigSectionSecrets = (
           icon={Plus}
           onClick={() => {
             const id = generateId('agent');
-            setConfig(p => ({...p, secretAgents: {...p.secretAgents, [id]: { address: "localhost", port: 8081 }}}));
+            setConfig((p: DtoConfig) => ({...p, secretAgents: {...p.secretAgents, [id]: { address: "localhost", port: 8081, connectionType: "tcp" }}}));
             setSelectedId(id);
           }}
         >
           New Agent
         </Button>
         <div className="overflow-y-auto flex-1 custom-scroll">
-          {Object.entries(items).map(([k, v]) => (
+          {Object.entries(items).map(([k, v]: [string, DtoSecretAgent]) => (
             <Card
               key={k}
               title={k}
-              sub={`${(v as any).address}:${(v as any).port}`}
+              sub={`${v.address}:${v.port}`}
               active={selectedId === k}
               onClick={() => setSelectedId(k)}
               onDelete={() => deleteItem('secretAgents', k)}
@@ -51,12 +51,12 @@ export const ConfigSectionSecrets = (
         {selectedId && items[selectedId] ? (
           <div className="animate-in fade-in slide-in-from-right-4 duration-200">
              <div className="mb-6">
-                <Input label="Agent Name" value={selectedId} onChange={(e) => renameItem('secretAgents', selectedId, e.target.value)} />
+                <Input label="Agent Name" value={selectedId} onChange={(e: React.ChangeEvent<HTMLInputElement>) => renameItem('secretAgents', selectedId, e.target.value)} />
              </div>
              <SectionHeader title="Connection Info" icon={Key} />
-             <Input label="Address" value={(items[selectedId] as any).address} onChange={e => updateItem('secretAgents', selectedId, 'address', e.target.value)} />
-             <Input label="Port" type="number" value={(items[selectedId] as any).port} onChange={e => updateItem('secretAgents', selectedId, 'port', Number(e.target.value))} />
-             <Input label="TLS CA File" value={(items[selectedId] as any).tlsCaFile} onChange={e => updateItem('secretAgents', selectedId, 'tlsCaFile', e.target.value)} />
+             <Input label="Address" value={items[selectedId].address} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('secretAgents', selectedId, 'address', e.target.value)} />
+             <Input label="Port" type="number" value={items[selectedId].port || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('secretAgents', selectedId, 'port', Number(e.target.value))} />
+             <Input label="TLS CA File" value={items[selectedId].tlsCaFile || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('secretAgents', selectedId, 'tlsCaFile', e.target.value)} />
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">

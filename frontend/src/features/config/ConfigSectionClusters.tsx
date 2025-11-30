@@ -60,30 +60,48 @@ export const ConfigSectionClusters = (
                {items[selectedId].seedNodes?.map((node: { hostName: string; port: number; }, idx: number) => (
                  <div key={idx} className="flex gap-2">
                     <Input className="flex-1" placeholder="Hostname" value={node.hostName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      const nodes = [...items[selectedId].seedNodes || []];
-                      nodes[idx].hostName = e.target.value;
+                      if (!selectedId) return;
+                      const item = items[selectedId];
+                      if (!item) return;
+                      const nodes = [...item.seedNodes || []];
+                      const nodeToUpdate = nodes[idx];
+                      if (nodeToUpdate) {
+                        nodeToUpdate.hostName = e.target.value;
+                      }
                       updateItem('aerospikeClusters', selectedId, 'seedNodes', nodes);
                     }} />
                     <Input className="w-24" type="number" placeholder="Port" value={node.port} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      const nodes = [...items[selectedId].seedNodes || []];
-                      nodes[idx].port = Number(e.target.value);
+                      if (!selectedId) return;
+                      const item = items[selectedId];
+                      if (!item) return;
+                      const nodes = [...item.seedNodes || []];
+                      const nodeToUpdate = nodes[idx];
+                      if (nodeToUpdate) {
+                        nodeToUpdate.port = Number(e.target.value);
+                      }
                       updateItem('aerospikeClusters', selectedId, 'seedNodes', nodes);
                     }} />
                     <Button variant="ghost" className="px-2 text-gray-500 hover:text-red-500" onClick={() => {
-                       const nodes = (items[selectedId].seedNodes || []).filter((_: { hostName: string; port: number; }, i: number) => i !== idx);
+                       if (!selectedId) return;
+                       const item = items[selectedId];
+                       if (!item) return;
+                       const nodes = (item.seedNodes || []).filter((_: { hostName: string; port: number; }, i: number) => i !== idx);
                        updateItem('aerospikeClusters', selectedId, 'seedNodes', nodes);
                     }}><Trash2 size={16}/></Button>
                  </div>
                ))}
                <Button variant="secondary" className="w-full justify-center py-1 text-xs" onClick={() => {
-                  const nodes = [...items[selectedId].seedNodes || [], { hostName: "localhost", port: 3000 }];
+                  if (!selectedId) return;
+                  const item = items[selectedId];
+                  if (!item) return;
+                  const nodes = [...item.seedNodes || [], { hostName: "localhost", port: 3000 }];
                   updateItem('aerospikeClusters', selectedId, 'seedNodes', nodes);
                }}>+ Add Node</Button>
              </div>
 
              <SectionHeader title="Authentication" icon={Key} />
-             <Input label="User" value={items[selectedId].credentials?.user} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'user', e.target.value)} />
-             <Input label="Password" type="password" value={items[selectedId].credentials?.password} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'password', e.target.value)} />
+             <Input label="User" value={items[selectedId].credentials?.user || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'user', e.target.value)} />
+             <Input label="Password" type="password" value={items[selectedId].credentials?.password || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'password', e.target.value)} />
              <Select
                label="Auth Mode"
                value={items[selectedId].credentials?.authMode || "INTERNAL"}
@@ -93,7 +111,7 @@ export const ConfigSectionClusters = (
 
              <SectionHeader title="Advanced" />
              <div className="grid grid-cols-2 gap-4">
-               <Input label="Max Parallel Scans" type="number" value={items[selectedId].maxParallelScans} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('aerospikeClusters', selectedId, 'maxParallelScans', Number(e.target.value))} />
+               <Input label="Max Parallel Scans" type="number" value={items[selectedId].maxParallelScans || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('aerospikeClusters', selectedId, 'maxParallelScans', Number(e.target.value))} />
                <Input label="Connection Timeout (ms)" type="number" value={items[selectedId].connTimeout} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('aerospikeClusters', selectedId, 'connTimeout', Number(e.target.value))} />
              </div>
           </div>

@@ -2,7 +2,7 @@ import React from 'react';
 import {Clock, Plus} from 'lucide-react';
 import {Button} from '@/components/ui/Button';
 import {Input, Select} from '@/components/ui/Inputs';
-import {DtoConfig} from '@/api';
+import {DtoBackupRoutine, DtoConfig} from '@/api';
 import {Card, SectionHeader} from './ConfigEditorShared';
 
 interface ConfigSectionRoutinesProps {
@@ -40,14 +40,14 @@ export const ConfigSectionRoutines = (
           icon={Plus}
           onClick={() => {
             const id = generateId('routine');
-            setConfig(p => ({...p, backupRoutines: {...p.backupRoutines, [id]: { sourceCluster: "", storage: "", intervalCron: "@daily", namespaces: [] }}}));
+            setConfig((p: DtoConfig) => ({...p, backupRoutines: {...p.backupRoutines, [id]: { sourceCluster: "", storage: "", intervalCron: "@daily", namespaces: [] }}}));
             setSelectedId(id);
           }}
         >
           New Routine
         </Button>
         <div className="overflow-y-auto flex-1 custom-scroll">
-          {Object.entries(items).map(([k, v]) => (
+          {Object.entries(items).map(([k, v]: [string, DtoBackupRoutine]) => (
             <Card
               key={k}
               title={k}
@@ -63,7 +63,7 @@ export const ConfigSectionRoutines = (
         {selectedId && items[selectedId] ? (
           <div className="animate-in fade-in slide-in-from-right-4 duration-200">
              <div className="mb-6">
-                <Input label="Routine Name" value={selectedId} onChange={(e) => renameItem('backupRoutines', selectedId, e.target.value)} />
+                <Input label="Routine Name" value={selectedId} onChange={(e: React.ChangeEvent<HTMLInputElement>) => renameItem('backupRoutines', selectedId, e.target.value)} />
              </div>
 
              <SectionHeader title="Core Bindings" icon={Clock} />
@@ -72,45 +72,45 @@ export const ConfigSectionRoutines = (
                   label="Source Cluster"
                   value={items[selectedId].sourceCluster}
                   options={[{label: "Select...", value: ""}, ...Object.keys(config.aerospikeClusters || {}).map(k => ({ label: k, value: k }))]}
-                  onChange={(e) => updateItem('backupRoutines', selectedId, 'sourceCluster', e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateItem('backupRoutines', selectedId, 'sourceCluster', e.target.value)}
                 />
                 <Select
                   label="Storage"
                   value={items[selectedId].storage}
                   options={[{label: "Select...", value: ""}, ...Object.keys(config.storage || {}).map(k => ({ label: k, value: k }))]}
-                  onChange={(e) => updateItem('backupRoutines', selectedId, 'storage', e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateItem('backupRoutines', selectedId, 'storage', e.target.value)}
                 />
                 <Select
                   label="Policy (Optional)"
                   value={items[selectedId].backupPolicy || ''}
                   options={[{label: "None (Default)", value: ""}, ...Object.keys(config.backupPolicies || {}).map(k => ({ label: k, value: k }))]}
-                  onChange={(e) => updateItem('backupRoutines', selectedId, 'backupPolicy', e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateItem('backupRoutines', selectedId, 'backupPolicy', e.target.value)}
                 />
                 <Select
                   label="Secret Agent (Optional)"
                   value={(items[selectedId] as any).secretAgent || ''}
                   options={[{label: "None", value: ""}, ...Object.keys(config.secretAgents || {}).map(k => ({ label: k, value: k }))]}
-                  onChange={(e) => updateItem('backupRoutines', selectedId, 'secretAgent', e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateItem('backupRoutines', selectedId, 'secretAgent', e.target.value)}
                 />
              </div>
 
              <SectionHeader title="Scheduling" />
              <div className="grid grid-cols-2 gap-4">
-                <Input label="Full Backup Cron" value={items[selectedId].intervalCron} onChange={e => updateItem('backupRoutines', selectedId, 'intervalCron', e.target.value)} placeholder="@daily" />
-                <Input label="Incremental Cron" value={items[selectedId].incrIntervalCron} onChange={e => updateItem('backupRoutines', selectedId, 'incrIntervalCron', e.target.value)} placeholder="Optional" />
+                <Input label="Full Backup Cron" value={items[selectedId].intervalCron} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('backupRoutines', selectedId, 'intervalCron', e.target.value)} placeholder="@daily" />
+                <Input label="Incremental Cron" value={items[selectedId].incrIntervalCron || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('backupRoutines', selectedId, 'incrIntervalCron', e.target.value)} placeholder="Optional" />
              </div>
 
              <SectionHeader title="Scope" />
              <Input
                label="Namespaces (Comma separated)"
                value={items[selectedId].namespaces?.join(', ') || ''}
-               onChange={e => updateItem('backupRoutines', selectedId, 'namespaces', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('backupRoutines', selectedId, 'namespaces', e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))}
                placeholder="All namespaces if empty"
              />
              <Input
                label="Set List (Comma separated)"
                value={items[selectedId].setList?.join(', ') || ''}
-               onChange={e => updateItem('backupRoutines', selectedId, 'setList', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('backupRoutines', selectedId, 'setList', e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))}
                placeholder="Optional"
              />
              <Checkbox
