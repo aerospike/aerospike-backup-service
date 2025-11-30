@@ -1,8 +1,9 @@
 import React from 'react';
-import {Activity} from 'lucide-react';
+import {Activity, Clock, Database, Gauge, Server} from 'lucide-react';
 import {DtoRunningJob} from '@/api';
 import {Button} from '@/components/ui/Button';
 import {Badge} from '@/components/ui/Feedback';
+import {format as formatTimeAgo} from 'timeago.js';
 
 interface LiveActivityProps {
   activeRoutine: string;
@@ -13,27 +14,30 @@ interface LiveActivityProps {
   handleCancelBackup: () => Promise<void>;
 }
 
-const formatBytes = (bytes?: number, decimals = 2) => {
-    if (!bytes || bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
+const Stat = ({ icon: Icon, label, value }: { icon: any, label: string, value: string | number }) => (
+    <div className="flex items-center gap-2 text-sm text-gray-400">
+        <Icon size={14} className="text-gray-500" />
+        <div>
+            <span className="font-bold text-white">{value}</span>
+            <span className="text-gray-500 ml-1">{label}</span>
+        </div>
+    </div>
+);
 
 const JobCard = ({ routine, type, job }: { routine: string, type: string, job: DtoRunningJob }) => (
     <div className="bg-gray-900 border border-gray-800 p-4 rounded-lg shadow-lg">
-       <div className="flex justify-between mb-2">
+       <div className="flex justify-between mb-4">
           <span className="font-bold">{routine} - {type}</span>
           <Badge status="Running" />
        </div>
-       <div className="w-full bg-gray-800 rounded-full h-1.5">
+       <div className="w-full bg-gray-800 rounded-full h-1.5 mb-4">
           <div className="bg-red-600 h-1.5 rounded-full" style={{ width: `${job.percentageDone}%` }}></div>
        </div>
-       <div className="flex justify-between mt-2 text-xs text-gray-400">
-            <span>{job.metrics?.recordsPerSecond} rps</span>
-            <span>{job.doneRecords} / {job.totalRecords} records</span>
+       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-gray-400">
+            <Stat icon={Database} label="records" value={`${job.doneRecords} / ${job.totalRecords}`} />
+            <Stat icon={Gauge} label="rps" value={job.metrics?.recordsPerSecond || 0} />
+            <Stat icon={Server} label="MB/s" value={((job.metrics?.kilobytesPerSecond || 0) / 1024).toFixed(2)} />
+            {job.estimatedEndTime && <Stat icon={Clock} label="ETA" value={formatTimeAgo(job.estimatedEndTime)} />}
        </div>
     </div>
 );
