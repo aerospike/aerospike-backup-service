@@ -4,12 +4,17 @@ import ConfigEditor from './features/config/ConfigEditor';
 import MonitoringDashboard from './features/monitoring/MonitoringDashboard';
 import {api} from './api';
 import type {DtoConfig} from './api/generated';
+import {SystemApi} from './api/generated/apis/SystemApi';
+import {Configuration} from './api/generated/runtime';
+
+const systemApi = new SystemApi(new Configuration({basePath: ''}));
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'monitor' | 'config'>('monitor');
   const [config, setConfig] = useState<DtoConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSystemHealthy, setIsSystemHealthy] = useState(false);
 
   useEffect(() => {
     const loadConfig = async () => {
@@ -25,6 +30,24 @@ export default function App() {
       }
     };
     loadConfig();
+
+    const checkHealth = async () => {
+      try {
+        await systemApi.health();
+        setIsSystemHealthy(true);
+      } catch (e) {
+        setIsSystemHealthy(false);
+      }
+    };
+
+    // Initial health check
+    checkHealth();
+
+    // Set up interval for periodic health checks
+    const healthInterval = setInterval(checkHealth, 5000); // Check every 5 seconds
+
+    // Clean up interval on component unmount
+    return () => clearInterval(healthInterval);
   }, []);
 
   const renderContent = () => {
@@ -70,9 +93,9 @@ export default function App() {
                 <Settings size={16}/> Configuration
              </button>
           </nav>
-          <div className={`flex items-center gap-2 text-xs rounded border px-2 py-1 ${error ? 'text-red-500 bg-red-900/20 border-red-900/30' : 'text-green-500 bg-green-900/20 border-green-900/30'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${error ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`}></span>
-            {error ? 'System Error' : 'System Online'}
+          <div className={`flex items-center gap-2 text-xs rounded border px-2 py-1 ${isSystemHealthy ? 'text-green-500 bg-green-900/20 border-green-900/30' : 'text-red-500 bg-red-900/20 border-red-900/30'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isSystemHealthy ? 'bg-green-500' : 'bg-red-500'}`}></span>
+            {isSystemHealthy ? 'System Online' : 'System Offline'}
           </div>
        </header>
        <main className="flex-1 overflow-hidden">
