@@ -44,7 +44,7 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
 
     // Generic updater for top-level maps (clusters, policies, etc.)
     const updateItem = (sectionKey: keyof DtoConfig, id: string, field: string, value: any) => {
-        setConfig(prev => ({
+        setConfig((prev: DtoConfig) => ({
             ...prev,
             [sectionKey]: {
                 ...(prev[sectionKey] as any),
@@ -55,7 +55,7 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
 
     // Deep updater for nested properties (e.g. cluster.credentials.user)
     const updateNested = (sectionKey: keyof DtoConfig, id: string, parent: string, field: string, value: any) => {
-        setConfig(prev => {
+        setConfig((prev: DtoConfig) => {
             const item = (prev[sectionKey] as any)[id];
             return {
                 ...prev,
@@ -72,7 +72,7 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
 
     const deleteItem = (sectionKey: keyof DtoConfig, id: string) => {
         if (!window.confirm(`Delete ${id}?`)) return;
-        setConfig(prev => {
+        setConfig((prev: DtoConfig) => {
             const next = {...(prev[sectionKey] as any)};
             delete next[id];
             return {...prev, [sectionKey]: next};
@@ -82,7 +82,7 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
 
     const renameItem = (sectionKey: keyof DtoConfig, oldId: string, newId: string) => {
         if (oldId === newId || !newId) return;
-        setConfig(prev => {
+        setConfig((prev: DtoConfig) => {
             const collection = {...(prev[sectionKey] as any)};
             collection[newId] = collection[oldId];
             delete collection[oldId];
@@ -130,11 +130,9 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
                         setSelectedId={setSelectedId}
                         generateId={generateId}
                         updateItem={updateItem}
-                        updateNested={updateNested}
                         deleteItem={deleteItem}
                         renameItem={renameItem}
-                    />
-                }
+                    />}
                 {section === 'clusters' &&
                     <ConfigSectionClusters
                         config={config}

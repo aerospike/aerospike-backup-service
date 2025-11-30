@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {Activity, AlertTriangle, Loader, Settings} from 'lucide-react';
 import ConfigEditor from './features/config/ConfigEditor';
 import MonitoringDashboard from './features/monitoring/MonitoringDashboard';

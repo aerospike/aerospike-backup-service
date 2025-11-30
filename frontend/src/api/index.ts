@@ -27,7 +27,7 @@ export const api = {
     },
 
     applyConfig: async (config: DtoConfig): Promise<Response> => {
-        const response = await configurationApi.updateConfigRaw({ config });
+        const response = await configurationApi.updateConfigRaw({ dtoConfig: config });
         return response.raw;
     },
 
@@ -64,7 +64,7 @@ export const api = {
             routine: routine,
             time: timestamp
         };
-        const response = await restoreApi.restoreTimestampRaw({ restoreTimestampRequest: request });
+        const response = await restoreApi.restoreTimestampRaw({ dtoRestoreTimestampRequest: request });
         return response.raw;
     }
 };

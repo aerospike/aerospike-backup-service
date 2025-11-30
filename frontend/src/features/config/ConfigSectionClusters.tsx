@@ -2,7 +2,7 @@ import React from 'react';
 import {Key, Plus, Server, Trash2} from 'lucide-react';
 import {Button} from '@/components/ui/Button';
 import {Input, Select} from '@/components/ui/Inputs';
-import {DtoConfig} from '@/api';
+import {DtoAerospikeCluster, DtoConfig} from '@/api';
 import {Card, SectionHeader} from './ConfigEditorShared';
 
 interface ConfigSectionClustersProps {
@@ -29,14 +29,14 @@ export const ConfigSectionClusters = (
           icon={Plus}
           onClick={() => {
             const id = generateId('cluster');
-            setConfig(p => ({...p, aerospikeClusters: {...p.aerospikeClusters, [id]: { seedNodes: [{ hostName: "localhost", port: 3000 }], credentials: { user: "" } }}}));
+            setConfig((p: DtoConfig) => ({...p, aerospikeClusters: {...p.aerospikeClusters, [id]: { seedNodes: [{ hostName: "localhost", port: 3000 }], credentials: { user: "" } }}}));
             setSelectedId(id);
           }}
         >
           New Cluster
         </Button>
         <div className="overflow-y-auto flex-1 custom-scroll">
-          {Object.entries(items).map(([k, v]) => (
+          {Object.entries(items).map(([k, v]: [string, DtoAerospikeCluster]) => (
             <Card
               key={k}
               title={k}
@@ -52,25 +52,25 @@ export const ConfigSectionClusters = (
         {selectedId && items[selectedId] ? (
           <div className="animate-in fade-in slide-in-from-right-4 duration-200">
              <div className="mb-6">
-                <Input label="Cluster Name" value={selectedId} onChange={(e) => renameItem('aerospikeClusters', selectedId, e.target.value)} />
+                <Input label="Cluster Name" value={selectedId} onChange={(e: React.ChangeEvent<HTMLInputElement>) => renameItem('aerospikeClusters', selectedId, e.target.value)} />
              </div>
 
              <SectionHeader title="Seed Nodes" icon={Server} />
              <div className="space-y-2 mb-6">
-               {items[selectedId].seedNodes?.map((node, idx) => (
+               {items[selectedId].seedNodes?.map((node: { hostName: string; port: number; }, idx: number) => (
                  <div key={idx} className="flex gap-2">
-                    <Input className="flex-1" placeholder="Hostname" value={node.hostName} onChange={e => {
+                    <Input className="flex-1" placeholder="Hostname" value={node.hostName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       const nodes = [...items[selectedId].seedNodes || []];
                       nodes[idx].hostName = e.target.value;
                       updateItem('aerospikeClusters', selectedId, 'seedNodes', nodes);
                     }} />
-                    <Input className="w-24" type="number" placeholder="Port" value={node.port} onChange={e => {
+                    <Input className="w-24" type="number" placeholder="Port" value={node.port} onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       const nodes = [...items[selectedId].seedNodes || []];
                       nodes[idx].port = Number(e.target.value);
                       updateItem('aerospikeClusters', selectedId, 'seedNodes', nodes);
                     }} />
                     <Button variant="ghost" className="px-2 text-gray-500 hover:text-red-500" onClick={() => {
-                       const nodes = (items[selectedId].seedNodes || []).filter((_, i) => i !== idx);
+                       const nodes = (items[selectedId].seedNodes || []).filter((_: { hostName: string; port: number; }, i: number) => i !== idx);
                        updateItem('aerospikeClusters', selectedId, 'seedNodes', nodes);
                     }}><Trash2 size={16}/></Button>
                  </div>
@@ -82,19 +82,19 @@ export const ConfigSectionClusters = (
              </div>
 
              <SectionHeader title="Authentication" icon={Key} />
-             <Input label="User" value={items[selectedId].credentials?.user} onChange={e => updateNested('aerospikeClusters', selectedId, 'credentials', 'user', e.target.value)} />
-             <Input label="Password" type="password" value={items[selectedId].credentials?.password} onChange={e => updateNested('aerospikeClusters', selectedId, 'credentials', 'password', e.target.value)} />
+             <Input label="User" value={items[selectedId].credentials?.user} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'user', e.target.value)} />
+             <Input label="Password" type="password" value={items[selectedId].credentials?.password} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'password', e.target.value)} />
              <Select
                label="Auth Mode"
                value={items[selectedId].credentials?.authMode || "INTERNAL"}
                options={[{label: "INTERNAL", value: "INTERNAL"}, {label: "EXTERNAL", value: "EXTERNAL"}, {label: "PKI", value: "PKI"}]}
-               onChange={e => updateNested('aerospikeClusters', selectedId, 'credentials', 'authMode', e.target.value)}
+               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'authMode', e.target.value)}
              />
 
              <SectionHeader title="Advanced" />
              <div className="grid grid-cols-2 gap-4">
-               <Input label="Max Parallel Scans" type="number" value={items[selectedId].maxParallelScans} onChange={e => updateItem('aerospikeClusters', selectedId, 'maxParallelScans', Number(e.target.value))} />
-               <Input label="Connection Timeout (ms)" type="number" value={items[selectedId].connTimeout} onChange={e => updateItem('aerospikeClusters', selectedId, 'connTimeout', Number(e.target.value))} />
+               <Input label="Max Parallel Scans" type="number" value={items[selectedId].maxParallelScans} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('aerospikeClusters', selectedId, 'maxParallelScans', Number(e.target.value))} />
+               <Input label="Connection Timeout (ms)" type="number" value={items[selectedId].connTimeout} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('aerospikeClusters', selectedId, 'connTimeout', Number(e.target.value))} />
              </div>
           </div>
         ) : (
