@@ -20,6 +20,24 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
   const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
   const [chain, setChain] = useState<string[]>([]);
   const [isRestoreModalOpen, setRestoreModalOpen] = useState<boolean>(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreError, setRestoreError] = useState<string|null>(null);
+
+  const handleRestore = async () => {
+    if (!activeRoutine || !selectedBackupId) return;
+
+    setIsRestoring(true);
+    setRestoreError(null);
+    try {
+        await api.restoreBackup(activeRoutine, getSelectedTimestamp());
+        // Ideally, show a success toast
+        setRestoreModalOpen(false);
+    } catch(e: any) {
+        setRestoreError(e.message || 'An unknown error occurred.');
+    } finally {
+        setIsRestoring(false);
+    }
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -140,7 +158,7 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
                 <Button
                   variant="action"
                   disabled={!selectedBackupId}
-                  onClick={() => setRestoreModalOpen(true)}
+                  onClick={() => { setRestoreModalOpen(true); setRestoreError(null); }}
                   icon={RotateCcw}
                 >
                   Restore Selection
@@ -198,11 +216,18 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
                 <span className="font-mono text-white font-bold">{new Date(getSelectedTimestamp()).toLocaleString()}</span>
              </p>
              <div className="p-3 bg-blue-900/20 border border-blue-800 rounded text-sm text-blue-200">
-                This operation will automatically restore {chain.length} backups in sequence (1 Full + {chain.length - 1} Incrementals).
+                This operation will automatically restore {chain.length} backups in sequence.
              </div>
+             {restoreError && (
+                <div className="bg-red-900/30 border border-red-800 text-red-400 text-sm p-3 rounded">
+                    <strong>Error:</strong> {restoreError}
+                </div>
+             )}
              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="ghost" onClick={() => setRestoreModalOpen(false)}>Cancel</Button>
-                <Button variant="action" onClick={() => { alert('Restore triggered via API!'); setRestoreModalOpen(false); }}>Start Restore</Button>
+                <Button variant="ghost" onClick={() => setRestoreModalOpen(false)} disabled={isRestoring}>Cancel</Button>
+                <Button variant="action" onClick={handleRestore} disabled={isRestoring}>
+                    {isRestoring ? 'Restoring...' : 'Start Restore'}
+                </Button>
              </div>
          </div>
       </Modal>

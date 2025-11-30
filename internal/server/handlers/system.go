@@ -8,6 +8,7 @@ import (
 
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	_ "github.com/aerospike/aerospike-backup-service/v3/docs" // auto-generated Swagger spec
+	"github.com/aerospike/aerospike-backup-service/v3/frontend"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
@@ -19,14 +20,14 @@ import (
 // @Tags        System
 // @Router      / [get]
 // @Success 	200
-func RootActionHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		w.WriteHeader(http.StatusNotFound)
-	}
-	_, err := fmt.Fprintf(w, "")
+func RootActionHandler(w http.ResponseWriter, _ *http.Request) {
+	data, err := frontend.Dist.ReadFile("dist/index.html")
 	if err != nil {
-		slog.Error("failed to write response", attr.Error(err))
+		http.Error(w, "index not found", http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(data)
 }
 
 // HealthActionHandler

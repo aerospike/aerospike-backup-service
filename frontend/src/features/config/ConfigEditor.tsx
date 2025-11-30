@@ -53,6 +53,8 @@ const Card = ({ title, sub, active, onClick, onDelete }: { title: string, sub?: 
   </div>
 );
 
+import { api } from '@/api/client';
+
 // --- Main Editor ---
 
 interface ConfigEditorProps {
@@ -65,6 +67,21 @@ type SectionId = 'routines' | 'clusters' | 'storage' | 'policies' | 'secrets' | 
 export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
   const [section, setSection] = useState<SectionId>('routines');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const handleApply = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await api.applyConfig(config);
+      // Maybe show a success toast here
+    } catch (e: any) {
+      setSaveError(e.message || 'Failed to save.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // --- Helpers ---
 
@@ -607,9 +624,16 @@ export default function ConfigEditor({ config, setConfig }: ConfigEditorProps) {
         <div className="w-full bg-gray-900 p-4 rounded text-left font-mono text-xs text-gray-400 border border-gray-800 mb-6 h-96 overflow-y-auto">
             <pre>{toYaml(config)}</pre>
         </div>
+        {saveError && (
+          <div className="bg-red-900/30 border border-red-800 text-red-400 text-sm p-3 rounded mb-4">
+            <strong>Error:</strong> {saveError}
+          </div>
+        )}
         <div className="flex justify-center gap-4">
             <Button variant="secondary" onClick={() => navigator.clipboard.writeText(toYaml(config))} icon={Copy}>Copy to Clipboard</Button>
-            <Button variant="primary" onClick={() => alert("Applied")} icon={Play}>Apply Configuration</Button>
+            <Button variant="primary" onClick={handleApply} icon={isSaving ? Loader : Play} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Apply Configuration'}
+            </Button>
         </div>
     </div>
   );
