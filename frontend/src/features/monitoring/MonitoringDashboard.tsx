@@ -9,6 +9,15 @@ interface MonitoringDashboardProps {
   config: AppConfig;
 }
 
+const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
 const JobCard = ({ routine, type, job }: { routine: string, type: string, job: RunningJob }) => (
     <div className="bg-gray-900 border border-gray-800 p-4 rounded-lg shadow-lg">
        <div className="flex justify-between mb-2">
@@ -80,25 +89,25 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
     return () => clearInterval(interval);
   }, [activeRoutine]);
 
-  const handleBackupSelect = (id: string) => {
-    if (selectedBackupId === id) {
+  const handleBackupSelect = (key: string) => { // Changed id to key
+    if (selectedBackupId === key) { // Use key here
       setSelectedBackupId(null);
       setChain([]);
       return;
     }
-    setSelectedBackupId(id);
+    setSelectedBackupId(key); // Use key here
 
     // Chain Logic
-    const selectedIndex = history.findIndex(b => b.id === id);
+    const selectedIndex = history.findIndex(b => b.key === key); // Use key here
     if (selectedIndex === -1) return;
     const selectedBackup = history[selectedIndex];
-    const newChain = [selectedBackup.id];
+    const newChain = [selectedBackup.key]; // Use key here
 
     if (selectedBackup.type === 'Incremental') {
       // Look forward in the array (backward in time) to find the nearest Full backup
       for (let i = selectedIndex + 1; i < history.length; i++) {
         const b = history[i];
-        newChain.push(b.id);
+        newChain.push(b.key); // Use key here
         if (b.type === 'Full') break;
       }
     }
@@ -106,7 +115,7 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
   };
 
   const getSelectedTimestamp = () => {
-    const b = history.find(h => h.id === selectedBackupId);
+    const b = history.find(h => h.key === selectedBackupId); // Use key here
     return b ? b.timestamp : 0;
   };
 
@@ -193,15 +202,15 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
               </thead>
               <tbody>
                 {history.map((b) => {
-                   const isSelected = selectedBackupId === b.id;
-                   const inChain = chain.includes(b.id);
+                   const isSelected = selectedBackupId === b.key; // Changed b.id to b.key
+                   const inChain = chain.includes(b.key); // Changed b.id to b.key
                    let rowClass = "border-b border-gray-800 transition-colors cursor-pointer ";
                    if (isSelected) rowClass += "bg-blue-900/40 border-blue-500/50 ";
                    else if (inChain) rowClass += "bg-blue-900/10 border-blue-800/30 ";
                    else rowClass += "hover:bg-gray-800/50 ";
 
                    return (
-                     <tr key={b.id} onClick={() => handleBackupSelect(b.id)} className={rowClass}>
+                     <tr key={b.key} onClick={() => handleBackupSelect(b.key)} className={rowClass}> // Changed b.id to b.key
                         <td className="px-6 py-4 relative">
                             {inChain && (
                                 <div className="flex flex-col items-center justify-center h-full absolute inset-0">
@@ -213,7 +222,7 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
                         <td className="px-6 py-4"><Badge status={b.status} /></td>
                         <td className="px-6 py-4 font-medium text-gray-200">{new Date(b.timestamp).toLocaleString()}</td>
                         <td className="px-6 py-4"><Badge type={b.type} /></td>
-                        <td className="px-6 py-4 text-gray-400 font-mono">{b.size}</td>
+                        <td className="px-6 py-4 text-gray-400 font-mono">{formatBytes(b['byte-count'])}</td> // Changed b.size to formatBytes(b['byte-count'])
                      </tr>
                    );
                 })}

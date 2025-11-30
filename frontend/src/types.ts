@@ -101,10 +101,21 @@ export interface CurrentBackup {
 }
 
 export interface Backup {
-  id: string;
-  timestamp: number; // epoch millis
-  type: 'Full' | 'Incremental';
-  size: string;
-  duration: string;
-  status: 'Success' | 'Failed' | 'Running' | 'Warning';
+  "byte-count": number;
+  compression: string;
+  created: string;
+  duration: number; // now a number in seconds
+  encryption: string;
+  "file-count": number;
+  finished: string;
+  from: string;
+  key: string; // Renamed from 'id' to 'key'
+  namespace: string;
+  "record-count": number;
+  "secondary-index-count": number;
+  storage: any; // Using any for now as dto.Storage definition is not provided
+  timestamp: number;
+  "udf-count": number;
+  type: 'Full' | 'Incremental'; // Added for UI logic
+  status: 'Success' | 'Failed' | 'Running' | 'Warning'; // Added for UI logic
 }

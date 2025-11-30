@@ -24,9 +24,37 @@ const RealApi = {
         return res.json();
     },
     fetchHistory: async (routine: string): Promise<Backup[]> => {
-        const res = await fetch(`/v1/history/${routine}`);
-        if (!res.ok) throw new Error('Failed to fetch history');
-        return res.json();
+        // Based on the new API, we need to fetch full and incremental backups separately
+        // and then combine them into a single list for the UI.
+
+        const mapBackupDetailsToBackup = (b: any, type: 'Full' | 'Incremental'): Backup => ({
+            ...b,
+            type: type,
+            status: 'Success', // Assuming finished backups are successful
+        });
+
+        try {
+            const [fullBackupsRes, incrementalBackupsRes] = await Promise.all([
+                fetch(`/v1/backups/full/${routine}`),
+                fetch(`/v1/backups/incremental/${routine}`)
+            ]);
+
+            if (!fullBackupsRes.ok) throw new Error(`Failed to fetch full backups: ${fullBackupsRes.statusText}`);
+            if (!incrementalBackupsRes.ok) throw new Error(`Failed to fetch incremental backups: ${incrementalBackupsRes.statusText}`);
+
+            const fullBackups = await fullBackupsRes.json();
+            const incrementalBackups = await incrementalBackupsRes.json();
+
+            const allBackups = [
+                ...fullBackups.map((b: any) => mapBackupDetailsToBackup(b, 'Full')),
+                ...incrementalBackups.map((b: any) => mapBackupDetailsToBackup(b, 'Incremental')),
+            ];
+
+            return allBackups;
+        } catch (error) {
+            console.error("Failed to fetch backup history:", error);
+            throw new Error('Failed to fetch backup history');
+        }
     },
     restoreBackup: async (routine: string, timestamp: number): Promise<Response> => {
         const res = await fetch(`/v1/restore/${routine}/${timestamp}`, { method: 'POST' });
