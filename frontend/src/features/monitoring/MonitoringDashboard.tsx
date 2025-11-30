@@ -194,23 +194,24 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
               <thead className="bg-gray-850 text-gray-400 uppercase text-xs font-semibold">
                 <tr>
                    <th className="px-6 py-3 w-8"></th>
-                   <th className="px-6 py-3">Status</th>
                    <th className="px-6 py-3">Time</th>
                    <th className="px-6 py-3">Type</th>
                    <th className="px-6 py-3">Size</th>
+                   <th className="px-6 py-3">Records</th>
+                   <th className="px-6 py-3">Duration</th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((b) => {
-                   const isSelected = selectedBackupId === b.key; // Changed b.id to b.key
-                   const inChain = chain.includes(b.key); // Changed b.id to b.key
+                   const isSelected = selectedBackupId === b.key;
+                   const inChain = chain.includes(b.key);
                    let rowClass = "border-b border-gray-800 transition-colors cursor-pointer ";
                    if (isSelected) rowClass += "bg-blue-900/40 border-blue-500/50 ";
                    else if (inChain) rowClass += "bg-blue-900/10 border-blue-800/30 ";
                    else rowClass += "hover:bg-gray-800/50 ";
 
                    return (
-                     <tr key={b.key} onClick={() => handleBackupSelect(b.key)} className={rowClass}> // Changed b.id to b.key
+                     <tr key={b.key} onClick={() => handleBackupSelect(b.key)} className={rowClass}>
                         <td className="px-6 py-4 relative">
                             {inChain && (
                                 <div className="flex flex-col items-center justify-center h-full absolute inset-0">
@@ -219,10 +220,11 @@ export default function MonitoringDashboard({ config }: MonitoringDashboardProps
                                 </div>
                             )}
                         </td>
-                        <td className="px-6 py-4"><Badge status={b.status} /></td>
                         <td className="px-6 py-4 font-medium text-gray-200">{new Date(b.timestamp).toLocaleString()}</td>
                         <td className="px-6 py-4"><Badge type={b.type} /></td>
-                        <td className="px-6 py-4 text-gray-400 font-mono">{formatBytes(b['byte-count'])}</td> // Changed b.size to formatBytes(b['byte-count'])
+                        <td className="px-6 py-4 text-gray-400 font-mono">{formatBytes(b['byte-count'])}</td>
+                        <td className="px-6 py-4 text-gray-400 font-mono">{b['record-count']}</td>
+                        <td className="px-6 py-4 text-gray-400 font-mono">{b.duration}s</td>
                      </tr>
                    );
                 })}

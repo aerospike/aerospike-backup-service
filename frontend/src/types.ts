@@ -117,5 +117,4 @@ export interface Backup {
   timestamp: number;
   "udf-count": number;
   type: 'Full' | 'Incremental'; // Added for UI logic
-  status: 'Success' | 'Failed' | 'Running' | 'Warning'; // Added for UI logic
 }

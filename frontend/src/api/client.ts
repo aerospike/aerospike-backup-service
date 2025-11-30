@@ -30,7 +30,6 @@ const RealApi = {
         const mapBackupDetailsToBackup = (b: any, type: 'Full' | 'Incremental'): Backup => ({
             ...b,
             type: type,
-            status: 'Success', // Assuming finished backups are successful
         });
 
         try {
