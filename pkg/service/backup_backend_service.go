@@ -157,10 +157,6 @@ type BackupWriter interface {
 
 var ErrNotFound = fmt.Errorf("not found")
 
-func ErrRoutineNotFound(routineName string) error {
-	return fmt.Errorf("routine %s %w", routineName, ErrNotFound)
-}
-
 // BackupBackendServiceImpl default implementation of BackupReaderWriter.
 type BackupBackendServiceImpl struct {
 	config      *model.Config
