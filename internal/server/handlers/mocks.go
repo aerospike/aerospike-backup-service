@@ -33,7 +33,7 @@ func (m *MockBackupBackendService) WriteBackupMetadata(
 }
 
 // Delete removes a specific backup folder.
-func (m *MockBackupBackendService) Delete(ctx context.Context, routineName, path string) error {
+func (m *MockBackupBackendService) Delete(ctx context.Context, routineName *model.BackupRoutine, path string) error {
 	args := m.Called(ctx, routineName, path)
 	return args.Error(0)
 }

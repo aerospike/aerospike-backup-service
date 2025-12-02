@@ -17,13 +17,12 @@ import (
 // ConfigRetriever is used to read saved Aerospike configuration from backup.
 type ConfigRetriever interface {
 	// RetrieveConfiguration returns backed up Aerospike configuration.
-	RetrieveConfiguration(context.Context, string, time.Time) ([]byte, error)
+	RetrieveConfiguration(context.Context, *model.BackupRoutine, time.Time) ([]byte, error)
 }
 
 // ConfigRetrieverImpl default implementation of ConfigRetriever.
 type ConfigRetrieverImpl struct {
 	backupReader BackupReader
-	config       *model.Config
 	pathService  PathService
 }
 
@@ -31,18 +30,16 @@ var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
 
 func NewConfigRetriever(
 	backupReader BackupReaderWriter,
-	config *model.Config,
 	pathService PathService,
 ) *ConfigRetrieverImpl {
 	return &ConfigRetrieverImpl{
 		backupReader: backupReader,
-		config:       config,
 		pathService:  pathService,
 	}
 }
 
 // RetrieveConfiguration return backed up Aerospike configuration.
-func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routine string, toTime time.Time,
+func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routine *model.BackupRoutine, toTime time.Time,
 ) ([]byte, error) {
 	backups, err := cr.backupReader.GetBackups(ctx, NewFullBackupFilter(routine).WithToTime(toTime).Last())
 	if err != nil {
@@ -53,14 +50,8 @@ func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routin
 		return nil, fmt.Errorf("no full backups found before %v: %w", toTime, model.ErrNotFound)
 	}
 
-	path := cr.pathService.GetConfigurationPath(routine, backups[0].Created)
-
-	backupRoutine, found := cr.config.Routine(routine)
-	if !found {
-		return nil, ErrRoutineNotFound(routine)
-	}
-
-	configBackups, err := storage.ReadFiles(ctx, backupRoutine.Storage, path, configExt)
+	path := cr.pathService.GetConfigurationPath(routine.Name, backups[0].Created)
+	configBackups, err := storage.ReadFiles(ctx, routine.Storage, path, configExt)
 	if err != nil && !errors.Is(err, common.ErrEmptyStorage) {
 		return nil, err
 	}

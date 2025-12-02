@@ -19,7 +19,7 @@ import (
 // managing metadata, and handling cleanup.
 // Every routine has its own BackupNamespaceRunner.
 type BackupNamespaceRunner struct {
-	routineName    string
+	routine        *model.BackupRoutine
 	backupExecutor backupexecutor.Backup
 	retry          executor
 	backendService BackupWriter
@@ -29,7 +29,7 @@ type BackupNamespaceRunner struct {
 
 // NewBackupNamespaceRunner creates a new BackupNamespaceRunner instance.
 func NewBackupNamespaceRunner(
-	routineName string,
+	routine *model.BackupRoutine,
 	backupExecutor backupexecutor.Backup,
 	retry executor,
 	backendService BackupWriter,
@@ -37,7 +37,7 @@ func NewBackupNamespaceRunner(
 	pathService PathService,
 ) *BackupNamespaceRunner {
 	return &BackupNamespaceRunner{
-		routineName:    routineName,
+		routine:        routine,
 		backupExecutor: backupExecutor,
 		retry:          retry,
 		backendService: backendService,
@@ -64,7 +64,7 @@ func (op *BackupNamespaceRunner) Run(
 	startTime time.Time,
 	timeBounds model.TimeBounds,
 ) CancelableBackupHandler {
-	backupFolder := op.pathService.GetBackupPath(op.routineName, backupType, namespace, startTime)
+	backupFolder := op.pathService.GetBackupPath(op.routine.Name, backupType, namespace, startTime)
 
 	return newRetryableBackupHandler(
 		ctx,
@@ -73,7 +73,7 @@ func (op *BackupNamespaceRunner) Run(
 			return op.backupExecutor.Run(ctx, client, backupRoutine, timeBounds, namespace, backupFolder)
 		},
 		func(ctx context.Context) { // on fail
-			op.deleteFolder(ctx, op.pathService.GetTimestampPath(op.routineName, startTime, backupType))
+			op.deleteFolder(ctx, op.pathService.GetTimestampPath(op.routine.Name, startTime, backupType))
 		},
 		func(ctx context.Context, stats *models.BackupStats) error { // on success
 			// For incremental backups, skip metadata for empty backups
@@ -86,13 +86,13 @@ func (op *BackupNamespaceRunner) Run(
 			return op.writeBackupMetadata(ctx, metadata, backupFolder)
 		},
 		func() { // on retry
-			observeBackupEvent(op.routineName, backupType, BackupOutcomeRetry, 0)
+			observeBackupEvent(op.routine.Name, backupType, BackupOutcomeRetry, 0)
 		},
 	)
 }
 
 func (op *BackupNamespaceRunner) deleteFolder(ctx context.Context, path string) {
-	err := op.backendService.Delete(ctx, op.routineName, path)
+	err := op.backendService.Delete(ctx, op.routine, path)
 	if err != nil {
 		op.logger.Error("Could not delete folder", attr.Error(err))
 		return
@@ -102,7 +102,7 @@ func (op *BackupNamespaceRunner) deleteFolder(ctx context.Context, path string) 
 func (op *BackupNamespaceRunner) writeBackupMetadata(
 	ctx context.Context, metadata model.BackupMetadata, backupFolder string,
 ) error {
-	if err := op.backendService.WriteBackupMetadata(ctx, op.routineName, backupFolder, metadata); err != nil {
+	if err := op.backendService.WriteBackupMetadata(ctx, op.routine, backupFolder, metadata); err != nil {
 		return fmt.Errorf("could not write backup metadata to %q: %w", backupFolder, err)
 	}
 

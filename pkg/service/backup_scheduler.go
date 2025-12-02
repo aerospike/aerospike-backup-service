@@ -69,7 +69,7 @@ func scheduleRoutines(
 			continue
 		}
 
-		runner := newOrchestrator(routineName, config, components, pathService)
+		runner := newOrchestrator(routine, components, pathService)
 		// schedule a full backup job for the routine
 		job, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routineName)
 		if err != nil {

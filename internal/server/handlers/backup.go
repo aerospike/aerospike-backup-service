@@ -31,7 +31,7 @@ func (s *Service) GetAllFullBackups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := s.readAllBackups(r.Context(), func(routine string) service.BackupFilter {
+	result, err := s.readAllBackups(r.Context(), func(routine *model.BackupRoutine) service.BackupFilter {
 		return service.NewFullBackupFilter(routine).WithTimeBounds(timeBounds)
 	})
 	if err != nil {
@@ -61,15 +61,15 @@ func (s *Service) GetFullBackupsForRoutine(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	routine := r.PathValue("name")
-	if routine == "" {
+	routineName := r.PathValue("name")
+	if routineName == "" {
 		httpError(w, errMissingRoutineName)
 		return
 	}
 
-	_, found := s.config.Routine(routine)
+	routine, found := s.config.Routine(routineName)
 	if !found {
-		httpError(w, errRoutineNotFound(routine))
+		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
 
@@ -101,7 +101,7 @@ func (s *Service) GetAllIncrementalBackups(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	result, err := s.readAllBackups(r.Context(), func(routine string) service.BackupFilter {
+	result, err := s.readAllBackups(r.Context(), func(routine *model.BackupRoutine) service.BackupFilter {
 		return service.NewIncrementalBackupFilter(routine).WithTimeBounds(timeBounds)
 	})
 	if err != nil {
@@ -131,15 +131,15 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 		return
 	}
 
-	routine := r.PathValue("name")
-	if routine == "" {
+	routineName := r.PathValue("name")
+	if routineName == "" {
 		httpError(w, errMissingRoutineName)
 		return
 	}
 
-	_, found := s.config.Routine(routine)
+	routine, found := s.config.Routine(routineName)
 	if !found {
-		httpError(w, errRoutineNotFound(routine))
+		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
 
@@ -155,10 +155,10 @@ func (s *Service) GetIncrementalBackupsForRoutine(w http.ResponseWriter, r *http
 
 func (s *Service) readAllBackups(
 	ctx context.Context,
-	filter func(routine string) service.BackupFilter,
+	filter func(routine *model.BackupRoutine) service.BackupFilter,
 ) (map[string][]*dto.BackupDetails, error) {
 	result := make(map[string][]*dto.BackupDetails)
-	for routine := range s.config.Routines() {
+	for _, routine := range s.config.Routines() {
 		routineBackups, err := s.readBackupsForRoutine(ctx, filter(routine))
 		if err != nil {
 			if errors.Is(err, service.ErrNotFound) {
@@ -168,7 +168,7 @@ func (s *Service) readAllBackups(
 			return nil, err
 		}
 
-		result[routine] = routineBackups
+		result[routine.Name] = routineBackups
 	}
 
 	return result, nil
@@ -262,13 +262,13 @@ func (s *Service) GetCurrentBackupInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, found := s.config.Routine(routineName)
+	routine, found := s.config.Routine(routineName)
 	if !found {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
 
-	currentBackups := dto.NewRoutineStateFromModel(s.registry.GetRoutineState(routineName))
+	currentBackups := dto.NewRoutineStateFromModel(s.registry.GetRoutineState(routine))
 	httpOK(w, currentBackups)
 }
 

@@ -27,8 +27,8 @@ type RestoreTimestampRequest struct {
 	SecretAgent *SecretAgent
 	// Required epoch time for recovery. The closest backup before the timestamp will be applied.
 	Time time.Time
-	// The backup routine name.
-	RoutineName string
+	// The backup routine.
+	Routine *BackupRoutine
 	// Disable reverse order of incremental backups optimization.
 	DisableReordering bool
 }

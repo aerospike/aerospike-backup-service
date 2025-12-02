@@ -141,7 +141,7 @@ func (m *MockBackupReaderWriter) EXPECT() *MockBackupReaderWriterMockRecorder {
 }
 
 // Delete mocks base method.
-func (m *MockBackupReaderWriter) Delete(ctx context.Context, routineName, path string) error {
+func (m *MockBackupReaderWriter) Delete(ctx context.Context, routineName *model.BackupRoutine, path string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", ctx, routineName, path)
 	ret0, _ := ret[0].(error)
