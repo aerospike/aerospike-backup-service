@@ -19,7 +19,6 @@ type RetentionManager interface {
 
 type RetentionManagerImpl struct {
 	backendService BackupReaderWriter
-	config         *model.Config
 
 	// Lock per routine. The restore service reads backup data,
 	// while the retention manager deletes backup data.

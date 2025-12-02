@@ -452,9 +452,10 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 	config := model.NewConfig()
 	cluster := &model.AerospikeCluster{}
 	_ = config.AddCluster("test-cluster", cluster)
-	_ = config.AddRoutine(&model.BackupRoutine{
+	routine := &model.BackupRoutine{
 		Name: "daily",
-	})
+	}
+	_ = config.AddRoutine(routine)
 
 	tests := []struct {
 		name    string
@@ -475,7 +476,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 			want: &model.RestoreTimestampRequest{
 				DestinationCluster: cluster,
 				Time:               time.UnixMilli(1739538000000),
-				RoutineName:        "daily",
+				Routine:            routine,
 				Policy:             &model.RestorePolicy{},
 			},
 		},
@@ -513,7 +514,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 			require.NoError(t, err)
 			if tt.want != nil {
 				require.Equal(t, tt.want.Time, got.Time)
-				require.Equal(t, tt.want.RoutineName, got.RoutineName)
+				require.Equal(t, tt.want.Routine, got.Routine)
 				if tt.want.DestinationCluster != nil {
 					require.Equal(t, tt.want.DestinationCluster.Hash(), got.DestinationCluster.Hash())
 				}

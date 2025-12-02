@@ -39,11 +39,12 @@ func NewConfigRetriever(
 }
 
 // RetrieveConfiguration return backed up Aerospike configuration.
-func (cr *ConfigRetrieverImpl) RetrieveConfiguration(ctx context.Context, routine *model.BackupRoutine, toTime time.Time,
+func (cr *ConfigRetrieverImpl) RetrieveConfiguration(
+	ctx context.Context, routine *model.BackupRoutine, toTime time.Time,
 ) ([]byte, error) {
 	backups, err := cr.backupReader.GetBackups(ctx, NewFullBackupFilter(routine).WithToTime(toTime).Last())
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve backups for routine %s: %w", routine, err)
+		return nil, fmt.Errorf("failed to retrieve backups for routine %s: %w", routine.Name, err)
 	}
 
 	if len(backups) == 0 {

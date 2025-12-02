@@ -44,6 +44,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	config := setupBaseConfig()
+	routine, _ := config.Routine(routineName)
 
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
@@ -60,7 +61,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	stats.ReadRecords.Add(10)
 
 	initialState := &model.RoutineState{}
-	mockRegistry.EXPECT().GetRoutineState(routineName).Return(initialState)
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).Return(mockClient, nil)
 	mockClientManager.EXPECT().Close(mockClient)
 
@@ -96,12 +97,12 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockRetentionManager.EXPECT().deleteOldBackups(gomock.Any(), gomock.Any()).Return(nil)
 
 	now := time.Now()
-	mockClusterConfigWriter.EXPECT().Write(gomock.Any(), routineName, newTimeMatcher(now)).Return(nil)
+	mockClusterConfigWriter.EXPECT().Write(gomock.Any(), routine, newTimeMatcher(now)).Return(nil)
 
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2) // for ns1 and ns2
 
-	o := newOrchestrator(routineName, config, NewBackupComponents(
+	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
@@ -126,6 +127,7 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 	defer ctrl.Finish()
 
 	config := setupBaseConfig()
+	routine, _ := config.Routine(routineName)
 
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
@@ -135,13 +137,13 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
 
 	// Simulate an ongoing full backup
-	mockRegistry.EXPECT().GetRoutineState(routineName).Return(&model.RoutineState{
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(&model.RoutineState{
 		Full: &model.RunningJob{
 			StartTime: time.Now(),
 		},
 	})
 
-	o := newOrchestrator(routineName, config, NewBackupComponents(
+	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
@@ -179,6 +181,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	defer ctrl.Finish()
 
 	config := setupBaseConfig()
+	routine, _ := config.Routine(routineName)
 
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
@@ -191,9 +194,9 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(1)
 
 	initialState := &model.RoutineState{}
-	mockRegistry.EXPECT().GetRoutineState(routineName).Return(initialState)
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
 
-	o := newOrchestrator(routineName, config, NewBackupComponents(
+	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,
@@ -279,9 +282,9 @@ func TestSkipIncrementalBackup(t *testing.T) {
 			}
 
 			mockRegistry := NewMockRunningBackupsRegistry(ctrl)
-			mockRegistry.EXPECT().GetRoutineState(routineName).Return(tt.routineState).AnyTimes()
+			mockRegistry.EXPECT().GetRoutineState(routine).Return(tt.routineState).AnyTimes()
 
-			orchestrator := newOrchestrator(routineName, config, &BackupComponents{
+			orchestrator := newOrchestrator(routine, &BackupComponents{
 				registry: mockRegistry,
 			}, NewPathService(nil))
 
@@ -309,15 +312,17 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	config := setupBaseConfig()
+	routine, _ := config.Routine(routineName)
 	routineState := &model.RoutineState{
 		// no full or incremental backups exists
 		LastRunTime: model.NewNoBackupTime(),
 	}
 
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
-	mockRegistry.EXPECT().GetRoutineState(routineName).Return(routineState)
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(routineState)
 
-	o := newOrchestrator(routineName, setupBaseConfig(), NewBackupComponents(
+	o := newOrchestrator(routine, NewBackupComponents(
 		nil,
 		nil,
 		mockRegistry,
@@ -379,6 +384,8 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	routine, _ := config.Routine(routineName)
+
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
@@ -395,7 +402,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 	stats.ReadRecords.Add(5)
 
 	// Simulate an ongoing full backup
-	mockRegistry.EXPECT().GetRoutineState(routineName).Return(state).
+	mockRegistry.EXPECT().GetRoutineState(routine).Return(state).
 		Times(2) // in skipIncrementalBackup and createTimeBounds
 
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).Return(mockClient, nil)
@@ -419,7 +426,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2)
 
-	o := newOrchestrator(routineName, config, NewBackupComponents(
+	o := newOrchestrator(routine, NewBackupComponents(
 		mockClientManager,
 		mockBackupExecutor,
 		mockRegistry,

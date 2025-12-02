@@ -12,7 +12,9 @@ import (
 )
 
 func TestRegisterAndCurrentStat(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
+	config := initConfig()
+	registry := NewRunningBackupsRegistry(context.Background(), nil, config)
+	routine, _ := config.Routine(routineName)
 
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
@@ -27,13 +29,15 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 	// Register a full backup handler
 	registry.register(routineName, jobTypeFull, handler)
 
-	stat := registry.GetRoutineState(routineName)
+	stat := registry.GetRoutineState(routine)
 	assert.Equal(t, stat.Full.TotalRecords, uint64(100))
 	assert.Nil(t, stat.Incremental)
 }
 
 func TestFinishFull(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
+	config := initConfig()
+	registry := NewRunningBackupsRegistry(context.Background(), nil, config)
+	routine, _ := config.Routine(routineName)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -46,14 +50,16 @@ func TestFinishFull(t *testing.T) {
 	now := time.Now()
 	registry.unregister(routineName, jobTypeFull, now)
 
-	stat := registry.GetRoutineState(routineName)
+	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)
 	assert.Nil(t, stat.Incremental)
 	assert.Equal(t, now, *stat.LastRunTime.FullBackupTime())
 }
 
 func TestFinishIncremental(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
+	config := initConfig()
+	registry := NewRunningBackupsRegistry(context.Background(), nil, config)
+	routine, _ := config.Routine(routineName)
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -68,14 +74,14 @@ func TestFinishIncremental(t *testing.T) {
 	registry.unregister(routineName, jobTypeFull, now.Add(-1*time.Second))
 	registry.unregister(routineName, jobTypeIncremental, now)
 
-	stat := registry.GetRoutineState(routineName)
+	stat := registry.GetRoutineState(routine)
 	assert.Nil(t, stat.Full)
 	assert.Nil(t, stat.Incremental)
 	assert.Equal(t, now, *stat.LastRunTime.IncrementalBackupTime())
 }
 
 func TestGetAllCurrentStats(t *testing.T) {
-	config := initConfig()
+	config := model.NewConfig()
 	registry := NewRunningBackupsRegistry(context.Background(), nil, config)
 
 	routine1 := "routine1"

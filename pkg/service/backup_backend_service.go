@@ -149,7 +149,7 @@ type BackupReader interface {
 // BackupWriter defines operations for writing backups metadata.
 type BackupWriter interface {
 	// WriteBackupMetadata stores metadata for a specific backup.
-	WriteBackupMetadata(ctx context.Context, routine *model.BackupRoutine, path string, metadata model.BackupMetadata) error
+	WriteBackupMetadata(context.Context, *model.BackupRoutine, string, model.BackupMetadata) error
 
 	// Delete removes a specific backup folder.
 	Delete(ctx context.Context, routine *model.BackupRoutine, path string) error

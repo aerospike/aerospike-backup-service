@@ -141,17 +141,17 @@ func (m *MockBackupReaderWriter) EXPECT() *MockBackupReaderWriterMockRecorder {
 }
 
 // Delete mocks base method.
-func (m *MockBackupReaderWriter) Delete(ctx context.Context, routineName *model.BackupRoutine, path string) error {
+func (m *MockBackupReaderWriter) Delete(ctx context.Context, routine *model.BackupRoutine, path string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, routineName, path)
+	ret := m.ctrl.Call(m, "Delete", ctx, routine, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockBackupReaderWriterMockRecorder) Delete(ctx, routineName, path any) *gomock.Call {
+func (mr *MockBackupReaderWriterMockRecorder) Delete(ctx, routine, path any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockBackupReaderWriter)(nil).Delete), ctx, routineName, path)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockBackupReaderWriter)(nil).Delete), ctx, routine, path)
 }
 
 // GetBackups mocks base method.
@@ -170,17 +170,17 @@ func (mr *MockBackupReaderWriterMockRecorder) GetBackups(ctx, filter any) *gomoc
 }
 
 // WriteBackupMetadata mocks base method.
-func (m *MockBackupReaderWriter) WriteBackupMetadata(ctx context.Context, routineName, path string, metadata model.BackupMetadata) error {
+func (m *MockBackupReaderWriter) WriteBackupMetadata(arg0 context.Context, arg1 *model.BackupRoutine, arg2 string, arg3 model.BackupMetadata) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WriteBackupMetadata", ctx, routineName, path, metadata)
+	ret := m.ctrl.Call(m, "WriteBackupMetadata", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WriteBackupMetadata indicates an expected call of WriteBackupMetadata.
-func (mr *MockBackupReaderWriterMockRecorder) WriteBackupMetadata(ctx, routineName, path, metadata any) *gomock.Call {
+func (mr *MockBackupReaderWriterMockRecorder) WriteBackupMetadata(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteBackupMetadata", reflect.TypeOf((*MockBackupReaderWriter)(nil).WriteBackupMetadata), ctx, routineName, path, metadata)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteBackupMetadata", reflect.TypeOf((*MockBackupReaderWriter)(nil).WriteBackupMetadata), arg0, arg1, arg2, arg3)
 }
 
 // MockBackupReader is a mock of BackupReader interface.
@@ -259,17 +259,17 @@ func (mr *MockRunningBackupsRegistryMockRecorder) Cancel(routineName any) *gomoc
 }
 
 // GetRoutineState mocks base method.
-func (m *MockRunningBackupsRegistry) GetRoutineState(routineName string) *model.RoutineState {
+func (m *MockRunningBackupsRegistry) GetRoutineState(routine *model.BackupRoutine) *model.RoutineState {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetRoutineState", routineName)
+	ret := m.ctrl.Call(m, "GetRoutineState", routine)
 	ret0, _ := ret[0].(*model.RoutineState)
 	return ret0
 }
 
 // GetRoutineState indicates an expected call of GetRoutineState.
-func (mr *MockRunningBackupsRegistryMockRecorder) GetRoutineState(routineName any) *gomock.Call {
+func (mr *MockRunningBackupsRegistryMockRecorder) GetRoutineState(routine any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRoutineState", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).GetRoutineState), routineName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRoutineState", reflect.TypeOf((*MockRunningBackupsRegistry)(nil).GetRoutineState), routine)
 }
 
 // GetRunningState mocks base method.
@@ -359,17 +359,17 @@ func (m *MockRetentionManager) EXPECT() *MockRetentionManagerMockRecorder {
 }
 
 // deleteOldBackups mocks base method.
-func (m *MockRetentionManager) deleteOldBackups(ctx context.Context, routineName string) error {
+func (m *MockRetentionManager) deleteOldBackups(ctx context.Context, routine *model.BackupRoutine) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "deleteOldBackups", ctx, routineName)
+	ret := m.ctrl.Call(m, "deleteOldBackups", ctx, routine)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // deleteOldBackups indicates an expected call of deleteOldBackups.
-func (mr *MockRetentionManagerMockRecorder) deleteOldBackups(ctx, routineName any) *gomock.Call {
+func (mr *MockRetentionManagerMockRecorder) deleteOldBackups(ctx, routine any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "deleteOldBackups", reflect.TypeOf((*MockRetentionManager)(nil).deleteOldBackups), ctx, routineName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "deleteOldBackups", reflect.TypeOf((*MockRetentionManager)(nil).deleteOldBackups), ctx, routine)
 }
 
 // MockClusterConfigWriter is a mock of ClusterConfigWriter interface.
@@ -397,17 +397,17 @@ func (m *MockClusterConfigWriter) EXPECT() *MockClusterConfigWriterMockRecorder 
 }
 
 // Write mocks base method.
-func (m *MockClusterConfigWriter) Write(ctx context.Context, routineName string, timestamp time.Time) error {
+func (m *MockClusterConfigWriter) Write(ctx context.Context, routine *model.BackupRoutine, timestamp time.Time) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Write", ctx, routineName, timestamp)
+	ret := m.ctrl.Call(m, "Write", ctx, routine, timestamp)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Write indicates an expected call of Write.
-func (mr *MockClusterConfigWriterMockRecorder) Write(ctx, routineName, timestamp any) *gomock.Call {
+func (mr *MockClusterConfigWriterMockRecorder) Write(ctx, routine, timestamp any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockClusterConfigWriter)(nil).Write), ctx, routineName, timestamp)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Write", reflect.TypeOf((*MockClusterConfigWriter)(nil).Write), ctx, routine, timestamp)
 }
 
 // MockCancelableBackupHandler is a mock of CancelableBackupHandler interface.

@@ -195,8 +195,8 @@ type mockRunningBackupsRegistry struct {
 	mock.Mock
 }
 
-func (m *mockRunningBackupsRegistry) GetRoutineState(routineName string) *model.RoutineState {
-	args := m.Called(routineName)
+func (m *mockRunningBackupsRegistry) GetRoutineState(routine *model.BackupRoutine) *model.RoutineState {
+	args := m.Called(routine)
 	if state, ok := args.Get(0).(*model.RoutineState); ok {
 		return state
 	}
