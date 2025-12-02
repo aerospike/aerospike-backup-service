@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import {X} from 'lucide-react';
 
 interface BadgeProps {
   status?: 'Success' | 'Failed' | 'Running' | 'Warning';
@@ -37,13 +37,14 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
-export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-lg" }: ModalProps) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className={`bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${maxWidth}`}>
         <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-850">
           <h3 className="font-bold text-lg text-white">{title}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={20}/></button>

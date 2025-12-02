@@ -48,11 +48,7 @@ export const api = {
         }
     },
 
-    restoreBackup: async (routine: string, timestamp: number): Promise<Response> => {
-        const request: allGenerated.DtoRestoreTimestampRequest = {
-            routine: routine,
-            time: timestamp
-        };
+    restoreBackup: async (request: allGenerated.DtoRestoreTimestampRequest): Promise<Response> => {
         const response = await restoreApi.restoreTimestampRaw({dtoRestoreTimestampRequest: request});
         return response.raw;
     },

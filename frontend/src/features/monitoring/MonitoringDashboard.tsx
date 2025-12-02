@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import type {Backup, DtoConfig, DtoRoutineState, DtoRunningJob} from '@/api';
+import * as allGenerated from '@/api'; // Import allGenerated here
 import {api, BackupApi} from '@/api';
 import {MonitoringSidebar} from './MonitoringSidebar';
 import {LiveActivity} from './LiveActivity';
@@ -48,13 +49,13 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
     };
 
 
-    const handleRestore = async () => {
+    const handleRestore = async (request: allGenerated.DtoRestoreTimestampRequest) => {
         if (!activeRoutine || !selectedBackupId) return;
 
         setIsRestoring(true);
         setRestoreError(null);
         try {
-            await api.restoreBackup(activeRoutine, getSelectedTimestamp());
+            await api.restoreBackup(request);
             setRestoreModalOpen(false);
             await loadData(); // Refresh data after restore
         } catch (e: any) {
@@ -163,6 +164,7 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
                 />
 
                 <BackupHistory
+                    config={config}
                     activeRoutine={activeRoutine}
                     history={history}
                     selectedBackupId={selectedBackupId}

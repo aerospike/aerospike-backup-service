@@ -1,12 +1,31 @@
 import React from 'react';
-import {Trash2} from 'lucide-react';
+import {ChevronDown, Trash2} from 'lucide-react';
 
-export const SectionHeader = ({ title, icon: Icon }: { title: string, icon?: any }) => (
-    <div className="flex items-center gap-2 mb-4 border-b border-gray-800 pb-2 mt-6 first:mt-0">
-        {Icon && <Icon size={16} className="text-red-500" />}
-        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</h3>
+interface SectionHeaderProps {
+  title: string;
+  icon?: any;
+  isCollapsible?: boolean;
+  isCollapsed?: boolean;
+  onToggle?: () => void;
+}
+
+export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, icon: Icon, isCollapsible, isCollapsed, onToggle }) => {
+  return (
+    <div
+      className={`flex items-center gap-2 mb-4 border-b border-gray-800 pb-2 mt-6 first:mt-0 ${isCollapsible ? 'cursor-pointer hover:text-white' : ''}`}
+      onClick={isCollapsible ? onToggle : undefined}
+    >
+      {Icon && <Icon size={16} className="text-red-500" />}
+      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex-1">{title}</h3>
+      {isCollapsible && (
+        <ChevronDown
+          size={16}
+          className={`text-gray-500 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
+        />
+      )}
     </div>
-);
+  );
+};
 
 export const Card = ({ title, sub, active, onClick, onDelete }: { title: string, sub?: string, active: boolean, onClick: () => void, onDelete?: () => void }) => (
   <div
@@ -19,7 +38,7 @@ export const Card = ({ title, sub, active, onClick, onDelete }: { title: string,
   >
     <div className="overflow-hidden">
       <div className="font-bold text-sm text-gray-200 truncate">{title}</div>
-      {sub && <div className="text-xs text-gray-500 truncate">{sub}</div>}
+      {sub && <div className="text-xs text-500 truncate">{sub}</div>}
     </div>
     {onDelete && (
       <button

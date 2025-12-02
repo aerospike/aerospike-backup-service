@@ -1,10 +1,12 @@
 import React from 'react';
 import {History, Info, RotateCcw} from 'lucide-react';
-import {Backup} from '@/api';
+import {Backup, DtoConfig, DtoRestoreTimestampRequest} from '@/api';
 import {Button} from '@/components/ui/Button';
-import {Badge, Modal} from '@/components/ui/Feedback';
+import {Badge} from '@/components/ui/Feedback';
+import {RestoreForm} from './RestoreForm';
 
 interface BackupHistoryProps {
+    config: DtoConfig;
     activeRoutine: string;
     history: Backup[];
     selectedBackupId: string | null;
@@ -15,7 +17,7 @@ interface BackupHistoryProps {
     setRestoreModalOpen: (isOpen: boolean) => void;
     isRestoring: boolean;
     restoreError: string | null;
-    handleRestore: () => Promise<void>;
+    handleRestore: (request: DtoRestoreTimestampRequest) => Promise<void>;
     handleBackupSelect: (key: string) => void;
     getSelectedTimestamp: () => number;
 }
@@ -31,6 +33,7 @@ const formatBytes = (bytes?: number, decimals = 2) => {
 
 export const BackupHistory = (
     {
+        config,
         activeRoutine,
         history,
         selectedBackupId,
@@ -65,8 +68,6 @@ export const BackupHistory = (
                         disabled={!selectedBackupId}
                         onClick={() => {
                             setRestoreModalOpen(true);
-                            // reset restoreError only when opening the modal
-                            // setRestoreError(null);
                         }}
                         icon={RotateCcw}
                     >
@@ -122,30 +123,17 @@ export const BackupHistory = (
                 </table>
             </div>
 
-            <Modal isOpen={isRestoreModalOpen} onClose={() => setRestoreModalOpen(false)} title="Confirm Restore">
-                <div className="space-y-4">
-                    <p className="text-gray-300">
-                        You are about to restore to point-in-time: <br/>
-                        <span
-                            className="font-mono text-white font-bold">{new Date(getSelectedTimestamp()).toLocaleString()}</span>
-                    </p>
-                    <div className="p-3 bg-blue-900/20 border border-blue-800 rounded text-sm text-blue-200">
-                        This operation will automatically restore {chain.length} backups in sequence.
-                    </div>
-                    {restoreError && (
-                        <div className="bg-red-900/30 border border-red-800 text-red-400 text-sm p-3 rounded">
-                            <strong>Error:</strong> {restoreError}
-                        </div>
-                    )}
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="ghost" onClick={() => setRestoreModalOpen(false)}
-                                disabled={isRestoring}>Cancel</Button>
-                        <Button variant="action" onClick={handleRestore} disabled={isRestoring}>
-                            {isRestoring ? 'Restoring...' : 'Start Restore'}
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
+            <RestoreForm
+                isOpen={isRestoreModalOpen}
+                onClose={() => setRestoreModalOpen(false)}
+                config={config}
+                activeRoutine={activeRoutine}
+                timestamp={getSelectedTimestamp()}
+                chainLength={chain.length}
+                onRestore={handleRestore}
+                isRestoring={isRestoring}
+                restoreError={restoreError}
+            />
         </div>
     );
 };
