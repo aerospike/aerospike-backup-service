@@ -452,7 +452,9 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 	config := model.NewConfig()
 	cluster := &model.AerospikeCluster{}
 	_ = config.AddCluster("test-cluster", cluster)
-	_ = config.AddRoutine("daily", &model.BackupRoutine{})
+	_ = config.AddRoutine(&model.BackupRoutine{
+		Name: "daily",
+	})
 
 	tests := []struct {
 		name    string

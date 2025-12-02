@@ -19,7 +19,7 @@ import (
 // @Success     201
 // @Failure     400 {string} string
 //
-//nolint:dupl
+
 func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -32,14 +32,14 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	toModel, err := newRoutine.ToModel(s.config.BackupConfigCopy())
+	toModel, err := newRoutine.ToModel(s.config.BackupConfigCopy(), name)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
 
 	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		err := config.AddRoutine(name, toModel)
+		err := config.AddRoutine(toModel)
 		if err != nil {
 			return err
 		}
@@ -107,7 +107,7 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 // @Success      200
 // @Failure      400 {string} string
 //
-//nolint:dupl
+
 func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -121,7 +121,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	toModel, err := updatedRoutine.ToModel(s.config.BackupConfigCopy())
+	toModel, err := updatedRoutine.ToModel(s.config.BackupConfigCopy(), name)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return

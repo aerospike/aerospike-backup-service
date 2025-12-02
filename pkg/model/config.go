@@ -203,15 +203,19 @@ func (c *Config) Routine(name string) (*BackupRoutine, bool) {
 	return routine, found
 }
 
-func (c *Config) AddRoutine(name string, r *BackupRoutine) error {
+func (c *Config) AddRoutine(r *BackupRoutine) error {
+	if r.Name == "" {
+		return fmt.Errorf("backup routine name is empty")
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if _, exists := c.backupConfig.BackupRoutines[name]; exists {
-		return fmt.Errorf("add backup routine %q: %w", name, ErrAlreadyExists)
+	if _, exists := c.backupConfig.BackupRoutines[r.Name]; exists {
+		return fmt.Errorf("add backup routine %q: %w", r.Name, ErrAlreadyExists)
 	}
-	c.backupConfig.BackupRoutines[name] = r
-	c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, name)
+	c.backupConfig.BackupRoutines[r.Name] = r
+	c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, r.Name)
 
 	return nil
 }

@@ -265,11 +265,12 @@ func TestRetentionManager_PolicyWithNilCounts(t *testing.T) {
 func configWithRetentionPolicy(retentionPolicy *model.RetentionPolicy) *model.Config {
 	config := model.NewConfig()
 	testRoutine := &model.BackupRoutine{
+		Name: routineName,
 		BackupPolicy: &model.BackupPolicy{
 			RetentionPolicy: retentionPolicy,
 		},
 	}
 
-	_ = config.AddRoutine(routineName, testRoutine)
+	_ = config.AddRoutine(testRoutine)
 	return config
 }

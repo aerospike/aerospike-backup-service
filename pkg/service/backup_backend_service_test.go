@@ -303,12 +303,13 @@ func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, Pa
 
 	config := model.NewConfig()
 	routine := &model.BackupRoutine{
+		Name: "test-routine",
 		Storage: &model.LocalStorage{
 			Path: tempDir,
 		},
 	}
 
-	err = config.AddRoutine("test-routine", routine)
+	err = config.AddRoutine(routine)
 	require.NoError(t, err)
 
 	pathService := NewPathService(nil)

@@ -63,7 +63,7 @@ func TestService_GetAllFullBackups(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockBackends := &MockBackupBackendService{}
 			cfg := model.NewConfig()
-			_ = cfg.AddRoutine("routine1", &model.BackupRoutine{})
+			_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 
 			tt.setupMock(mockBackends)
 

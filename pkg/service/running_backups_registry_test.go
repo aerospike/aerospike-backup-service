@@ -80,10 +80,12 @@ func TestGetAllCurrentStats(t *testing.T) {
 
 	routine1 := "routine1"
 	routine2 := "routine2"
-	_ = config.AddRoutine(routine1, &model.BackupRoutine{
+	_ = config.AddRoutine(&model.BackupRoutine{
+		Name:         routine1,
 		IntervalCron: "@daily",
 	})
-	_ = config.AddRoutine(routine2, &model.BackupRoutine{
+	_ = config.AddRoutine(&model.BackupRoutine{
+		Name:         routine2,
 		IntervalCron: "@daily",
 	})
 
@@ -134,7 +136,8 @@ func TestCancel(t *testing.T) {
 
 func initConfig() *model.Config {
 	config := model.NewConfig()
-	_ = config.AddRoutine(routineName, &model.BackupRoutine{
+	_ = config.AddRoutine(&model.BackupRoutine{
+		Name:         routineName,
 		IntervalCron: "@daily",
 	})
 	return config

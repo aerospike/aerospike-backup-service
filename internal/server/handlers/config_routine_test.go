@@ -58,8 +58,8 @@ func TestAddRoutine(t *testing.T) {
 func TestReadRoutines(t *testing.T) {
 	svc := setupTestService()
 	svc.config = model.NewConfig()
-	_ = svc.config.AddRoutine("routine1", &model.BackupRoutine{})
-	_ = svc.config.AddRoutine("routine2", &model.BackupRoutine{})
+	_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "routine1"})
+	_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "routine2"})
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/config/routines", nil)
 	w := httptest.NewRecorder()
@@ -87,12 +87,11 @@ func TestReadRoutine(t *testing.T) {
 		{
 			name:           "existing routine",
 			routineName:    "test-routine",
-			routine:        &model.BackupRoutine{},
+			routine:        &model.BackupRoutine{Name: "test-routine"},
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "missing routine name",
-			routineName:    "",
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  errMissingRoutineName.Error(),
 		},
@@ -108,7 +107,7 @@ func TestReadRoutine(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
 			if tt.routine != nil {
-				_ = svc.config.AddRoutine(tt.routineName, tt.routine)
+				_ = svc.config.AddRoutine(tt.routine)
 			}
 
 			req := httptest.NewRequest(http.MethodGet, "/v1/config/routines/"+tt.routineName, nil)
@@ -167,7 +166,6 @@ func TestUpdateRoutine(t *testing.T) {
 	}
 }
 
-//nolint:dupl
 func TestDeleteRoutine(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -197,7 +195,7 @@ func TestDeleteRoutine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			svc := setupTestService()
-			_ = svc.config.AddRoutine("test-routine", &model.BackupRoutine{})
+			_ = svc.config.AddRoutine(&model.BackupRoutine{Name: "test-routine"})
 
 			req := httptest.NewRequest(http.MethodDelete, "/v1/config/routines/"+tt.routineName, nil)
 			req.SetPathValue("name", tt.routineName)
@@ -219,16 +217,19 @@ func TestEnableRoutine(t *testing.T) {
 		routineName    string
 		expectedStatus int
 		expectedError  string
+		addRoutine     bool
 	}{
 		{
 			name:           "successful enable",
 			routineName:    "test-routine",
+			addRoutine:     true,
 			expectedStatus: http.StatusNoContent,
 		},
 		{
 			name:           "missing routine name",
 			routineName:    "",
 			expectedStatus: http.StatusBadRequest,
+			addRoutine:     true,
 			expectedError:  errMissingRoutineName.Error(),
 		},
 		{
@@ -244,8 +245,12 @@ func TestEnableRoutine(t *testing.T) {
 			svc := setupTestService()
 			routine := &model.BackupRoutine{
 				Disabled: true,
+				Name:     tt.routineName,
 			}
-			_ = svc.config.AddRoutine("test-routine", routine)
+
+			if tt.addRoutine {
+				_ = svc.config.AddRoutine(routine)
+			}
 
 			req := httptest.NewRequest(http.MethodPut, "/v1/config/routines/"+tt.routineName+"/enable", nil)
 			req.SetPathValue("name", tt.routineName)
@@ -297,8 +302,10 @@ func TestDisableRoutine(t *testing.T) {
 			svc.registry = mockRegistry
 			mockRegistry.On("Cancel", "test-routine").Once()
 
-			routine := &model.BackupRoutine{}
-			_ = svc.config.AddRoutine("test-routine", routine)
+			routine := &model.BackupRoutine{
+				Name: "test-routine",
+			}
+			_ = svc.config.AddRoutine(routine)
 
 			req := httptest.NewRequest(http.MethodPut, "/v1/config/routines/"+tt.routineName+"/disable", nil)
 			req.SetPathValue("name", tt.routineName)

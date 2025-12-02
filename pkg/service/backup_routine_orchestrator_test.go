@@ -21,7 +21,8 @@ import (
 
 func setupBaseConfig() *model.Config {
 	config := model.NewConfig()
-	_ = config.AddRoutine(routineName, &model.BackupRoutine{
+	_ = config.AddRoutine(&model.BackupRoutine{
+		Name:          routineName,
 		Storage:       &model.LocalStorage{Path: "test-path"},
 		SourceCluster: &model.AerospikeCluster{},
 		BackupPolicy: &model.BackupPolicy{
