@@ -87,8 +87,8 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	routine, ok := s.config.Routine(routineName)
-	if !ok {
+	routine, found := s.config.Routine(routineName)
+	if !found {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}

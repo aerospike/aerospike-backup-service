@@ -69,6 +69,7 @@ func scheduleRoutines(
 			continue
 		}
 
+		routine = routine.Copy() // orchestrator will work with it's own copy
 		runner := newOrchestrator(routine, components, pathService)
 		// schedule a full backup job for the routine
 		job, err := scheduleFullBackup(scheduler, runner, routine.IntervalCron, routineName)

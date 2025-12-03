@@ -190,9 +190,7 @@ func (c *Config) Routines() map[string]*BackupRoutine {
 	defer c.mu.RUnlock()
 
 	routines := make(map[string]*BackupRoutine, len(c.backupConfig.BackupRoutines))
-	for name, routine := range c.backupConfig.BackupRoutines {
-		routines[name] = routine.Copy()
-	}
+	maps.Copy(routines, c.backupConfig.BackupRoutines)
 
 	return routines
 }
@@ -206,7 +204,7 @@ func (c *Config) Routine(name string) (*BackupRoutine, bool) {
 		return nil, false
 	}
 
-	return routine.Copy(), true
+	return routine, true
 }
 
 func (c *Config) RoutineExists(name string) bool {
@@ -366,7 +364,7 @@ func (c *Config) PopInvalidatedRoutines() []*BackupRoutine {
 			continue // skip duplicate
 		}
 		seen[name] = struct{}{}
-		routines = append(routines, c.backupConfig.BackupRoutines[name].Copy())
+		routines = append(routines, c.backupConfig.BackupRoutines[name])
 	}
 
 	return routines

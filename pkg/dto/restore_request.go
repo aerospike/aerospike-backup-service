@@ -107,8 +107,8 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 	if err != nil {
 		return nil, fmt.Errorf("invalid cluster: %w", err)
 	}
-	routine, ok := config.Routine(r.Routine)
-	if !ok {
+	routine, found := config.Routine(r.Routine)
+	if !found {
 		return nil, errValidationNotFound("routine", r.Routine)
 	}
 
@@ -122,7 +122,7 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 		Policy:             r.Policy.ToModel(),
 		SecretAgent:        secretAgent,
 		Time:               time.UnixMilli(r.Time),
-		Routine:            routine,
+		Routine:            routine.Copy(), // restore will work on it's own copy.
 		DisableReordering:  r.DisableReordering,
 	}, nil
 }
