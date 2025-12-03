@@ -19,10 +19,9 @@ func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 
 	backendService := NewMockBackupReaderWriter(ctrl)
 
-	config := configWithRetentionPolicy(&model.RetentionPolicy{
+	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: ptr.Of(2),
 	})
-	routine, _ := config.Routine(routineName)
 
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
 
@@ -68,10 +67,9 @@ func TestRetentionManager_FullAndIncremental(t *testing.T) {
 
 	backendService := NewMockBackupReaderWriter(ctrl)
 
-	config := configWithRetentionPolicy(&model.RetentionPolicy{
+	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: ptr.Of(1),
 	})
-	routine, _ := config.Routine(routineName)
 
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
 
@@ -116,11 +114,10 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	config := configWithRetentionPolicy(&model.RetentionPolicy{
+	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: ptr.Of(2),
 		IncrBackups: ptr.Of(1),
 	})
-	routine, _ := config.Routine(routineName)
 
 	backendService := NewMockBackupReaderWriter(ctrl)
 
@@ -164,8 +161,7 @@ func TestRetentionManager_NoPolicy(t *testing.T) {
 
 	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
 
-	config := configWithRetentionPolicy(nil)
-	routine, _ := config.Routine(routineName)
+	routine := routineWithRetentionPolicy(nil)
 
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
 
@@ -181,10 +177,9 @@ func TestRetentionManager_NoneToDelete(t *testing.T) {
 
 	backendService := NewMockBackupReaderWriter(ctrl)
 
-	config := configWithRetentionPolicy(&model.RetentionPolicy{
+	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: ptr.Of(5),
 	})
-	routine, _ := config.Routine(routineName)
 
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
 
@@ -208,10 +203,9 @@ func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	config := configWithRetentionPolicy(&model.RetentionPolicy{
+	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		IncrBackups: ptr.Of(0),
 	})
-	routine, _ := config.Routine(routineName)
 
 	backendService := NewMockBackupReaderWriter(ctrl)
 
@@ -234,10 +228,9 @@ func TestRetentionManager_ConcurrencyLock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	config := configWithRetentionPolicy(&model.RetentionPolicy{
+	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
 		FullBackups: ptr.Of(1),
 	})
-	routine, _ := config.Routine(routineName)
 
 	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
 
@@ -262,8 +255,7 @@ func TestRetentionManager_PolicyWithNilCounts(t *testing.T) {
 
 	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
 
-	config := configWithRetentionPolicy(&model.RetentionPolicy{})
-	routine, _ := config.Routine(routineName)
+	routine := routineWithRetentionPolicy(&model.RetentionPolicy{})
 
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
 
@@ -271,15 +263,11 @@ func TestRetentionManager_PolicyWithNilCounts(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func configWithRetentionPolicy(retentionPolicy *model.RetentionPolicy) *model.Config {
-	config := model.NewConfig()
-	testRoutine := &model.BackupRoutine{
+func routineWithRetentionPolicy(retentionPolicy *model.RetentionPolicy) *model.BackupRoutine {
+	return &model.BackupRoutine{
 		Name: routineName,
 		BackupPolicy: &model.BackupPolicy{
 			RetentionPolicy: retentionPolicy,
 		},
 	}
-
-	_ = config.AddRoutine(testRoutine)
-	return config
 }
