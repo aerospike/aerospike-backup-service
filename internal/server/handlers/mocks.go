@@ -153,7 +153,7 @@ func (mock configurationManagerMock) Write(_ context.Context, config *model.Conf
 
 type MockConfigApplier struct{}
 
-func (a *MockConfigApplier) ApplyNewConfig() error {
+func (a *MockConfigApplier) ApplyNewConfig(_ context.Context) error {
 	return nil
 }
 

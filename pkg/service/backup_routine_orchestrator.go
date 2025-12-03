@@ -129,11 +129,11 @@ func (h *BackupRoutineOrchestrator) runFullBackupInternal(ctx context.Context, n
 	h.backupClusterConfiguration(ctx, now)
 
 	if err = backupHandler.Wait(ctx); err != nil {
-		h.registry.remove(h.routine.Name, jobTypeFull)
+		h.registry.clearFailedBackup(h.routine.Name, jobTypeFull)
 		return fmt.Errorf("backup failed: %w", err)
 	}
 
-	go h.registry.unregister(h.routine.Name, jobTypeFull, now)
+	go h.registry.recordSuccessfulBackup(h.routine.Name, jobTypeFull, now)
 	go h.deleteOldBackups(ctx, h.routine)
 
 	return nil
@@ -168,7 +168,7 @@ func (h *BackupRoutineOrchestrator) deleteOldBackups(ctx context.Context, routin
 }
 
 func (h *BackupRoutineOrchestrator) prepareCluster(ctx context.Context) (aerospike.Client, []string, error) {
-	client, err := h.clientManager.GetClient(ctx, h.routine.SourceCluster)
+	client, err := h.clientManager.GetClient(ctx, h.routine.SourceCluster, h.logger)
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot get backup client: %w", err)
 	}
@@ -276,11 +276,11 @@ func (h *BackupRoutineOrchestrator) runIncrementalBackupInternal(ctx context.Con
 	h.registry.register(h.routine.Name, jobTypeIncremental, backupHandler)
 
 	if err := backupHandler.Wait(ctx); err != nil {
-		h.registry.remove(h.routine.Name, jobTypeIncremental)
+		h.registry.clearFailedBackup(h.routine.Name, jobTypeIncremental)
 		return err
 	}
 
-	go h.registry.unregister(h.routine.Name, jobTypeIncremental, now)
+	go h.registry.recordSuccessfulBackup(h.routine.Name, jobTypeIncremental, now)
 
 	return nil
 }

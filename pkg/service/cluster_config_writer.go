@@ -45,7 +45,7 @@ func (w *DefaultClusterConfigWriter) Write(
 ) error {
 	logger := slog.Default().With(attr.Routine(routine.Name))
 
-	client, err := w.clientManager.GetClient(ctx, routine.SourceCluster)
+	client, err := w.clientManager.GetClient(ctx, routine.SourceCluster, logger)
 	if err != nil {
 		return fmt.Errorf("cannot get backup client: %w", err)
 	}

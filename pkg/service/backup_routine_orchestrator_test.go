@@ -58,7 +58,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 
 	initialState := &model.RoutineState{}
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
-	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).Return(mockClient, nil)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockClient, nil)
 	mockClientManager.EXPECT().Close(mockClient)
 
 	mockBackupExecutor.EXPECT().Run(
@@ -87,7 +87,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	mockRegistry.EXPECT().register(routineName, jobTypeFull, gomock.Any()).Do(func(_, _, _ any) {
 		registryWG.Done()
 	})
-	mockRegistry.EXPECT().unregister(routineName, jobTypeFull, gomock.Any()).Do(func(_, _, _ any) {
+	mockRegistry.EXPECT().recordSuccessfulBackup(routineName, jobTypeFull, gomock.Any()).Do(func(_, _, _ any) {
 		registryWG.Done()
 	})
 	mockRetentionManager.EXPECT().deleteOldBackups(gomock.Any(), gomock.Any()).Return(nil)
@@ -185,7 +185,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	mockClusterConfigWriter := NewMockClusterConfigWriter(ctrl)
 
 	connectionError := errors.New("connection failed")
-	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(1)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, connectionError).Times(1)
 
 	initialState := &model.RoutineState{}
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(initialState)
@@ -390,7 +390,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *mode
 	mockRegistry.EXPECT().GetRoutineState(routine).Return(state).
 		Times(2) // in skipIncrementalBackup and createTimeBounds
 
-	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any()).Return(mockClient, nil)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockClient, nil)
 	mockClientManager.EXPECT().Close(mockClient)
 
 	mockBackupExecutor.EXPECT().Run(
@@ -406,7 +406,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *mode
 	mockBackupHandler.EXPECT().Wait(gomock.Any()).Return(nil).Times(2) // for ns1 and ns2
 
 	mockRegistry.EXPECT().register(routineName, jobTypeIncremental, gomock.Any())
-	mockRegistry.EXPECT().unregister(routineName, jobTypeIncremental, gomock.Any())
+	mockRegistry.EXPECT().recordSuccessfulBackup(routineName, jobTypeIncremental, gomock.Any())
 
 	mockBackupBackend.EXPECT().WriteBackupMetadata(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).Times(2)
