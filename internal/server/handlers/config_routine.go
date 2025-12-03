@@ -184,8 +184,7 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	_, found := s.config.Routine(routineName)
-	if !found {
+	if !s.config.RoutineExists(routineName) {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
@@ -216,8 +215,7 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	_, found := s.config.Routine(routineName)
-	if !found {
+	if !s.config.RoutineExists(routineName) {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}

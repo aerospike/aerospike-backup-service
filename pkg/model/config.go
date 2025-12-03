@@ -203,6 +203,14 @@ func (c *Config) Routine(name string) (*BackupRoutine, bool) {
 	return routine, found
 }
 
+func (c *Config) RoutineExists(name string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	_, found := c.backupConfig.BackupRoutines[name]
+	return found
+}
+
 func (c *Config) AddRoutine(r *BackupRoutine) error {
 	if r.Name == "" {
 		return fmt.Errorf("backup routine name is empty")
