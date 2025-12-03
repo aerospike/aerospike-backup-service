@@ -12,15 +12,22 @@ import (
 )
 
 func TestRegisterAndCurrentStat(t *testing.T) {
-	config := initConfig()
-	registry := NewRunningBackupsRegistry(context.Background(), nil, config)
-	routine, _ := config.Routine(routineName)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockReader := NewMockroutineProvider(ctrl)
+	routine := &model.BackupRoutine{
+		Name:         routineName,
+		IntervalCron: "@daily",
+	}
+	mockReader.EXPECT().Routines().Return(map[string]*model.BackupRoutine{
+		routineName: routine,
+	}).AnyTimes()
+
+	registry := NewRunningBackupsRegistry(context.Background(), nil, mockReader)
 
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	handler := NewMockCancelableBackupHandler(ctrl)
 	handler.EXPECT().GetStats().Return(backupStats).AnyTimes()
@@ -35,12 +42,19 @@ func TestRegisterAndCurrentStat(t *testing.T) {
 }
 
 func TestFinishFull(t *testing.T) {
-	config := initConfig()
-	registry := NewRunningBackupsRegistry(context.Background(), nil, config)
-	routine, _ := config.Routine(routineName)
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	mockReader := NewMockroutineProvider(ctrl)
+	routine := &model.BackupRoutine{
+		Name:         routineName,
+		IntervalCron: "@daily",
+	}
+	mockReader.EXPECT().Routines().Return(map[string]*model.BackupRoutine{
+		routineName: routine,
+	}).AnyTimes()
+
+	registry := NewRunningBackupsRegistry(context.Background(), nil, mockReader)
 
 	handler := NewMockCancelableBackupHandler(ctrl)
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
@@ -57,15 +71,21 @@ func TestFinishFull(t *testing.T) {
 }
 
 func TestFinishIncremental(t *testing.T) {
-	config := initConfig()
-	registry := NewRunningBackupsRegistry(context.Background(), nil, config)
-	routine, _ := config.Routine(routineName)
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	mockReader := NewMockroutineProvider(ctrl)
+	routine := &model.BackupRoutine{
+		Name:         routineName,
+		IntervalCron: "@daily",
+	}
+	mockReader.EXPECT().Routines().Return(map[string]*model.BackupRoutine{
+		routineName: routine,
+	}).AnyTimes()
+
+	registry := NewRunningBackupsRegistry(context.Background(), nil, mockReader)
+
 	handler := NewMockCancelableBackupHandler(ctrl)
-	// handler.EXPECT().GetStats().Return(backupStats).AnyTimes()
 	handler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
 
 	registry.register(routineName, jobTypeIncremental, handler)
@@ -81,25 +101,28 @@ func TestFinishIncremental(t *testing.T) {
 }
 
 func TestGetAllCurrentStats(t *testing.T) {
-	config := model.NewConfig()
-	registry := NewRunningBackupsRegistry(context.Background(), nil, config)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
 	routine1 := "routine1"
 	routine2 := "routine2"
-	_ = config.AddRoutine(&model.BackupRoutine{
-		Name:         routine1,
-		IntervalCron: "@daily",
-	})
-	_ = config.AddRoutine(&model.BackupRoutine{
-		Name:         routine2,
-		IntervalCron: "@daily",
-	})
+
+	mockReader := NewMockroutineProvider(ctrl)
+	mockReader.EXPECT().Routines().Return(map[string]*model.BackupRoutine{
+		routine1: {
+			Name:         routine1,
+			IntervalCron: "@daily",
+		},
+		routine2: {
+			Name:         routine2,
+			IntervalCron: "@daily",
+		},
+	}).AnyTimes()
+
+	registry := NewRunningBackupsRegistry(context.Background(), nil, mockReader)
 
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
 	handler := NewMockCancelableBackupHandler(ctrl)
 	handler.EXPECT().GetStats().Return(backupStats).AnyTimes()
@@ -123,10 +146,19 @@ func TestGetAllCurrentStats(t *testing.T) {
 }
 
 func TestCancel(t *testing.T) {
-	registry := NewRunningBackupsRegistry(context.Background(), nil, initConfig())
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	mockReader := NewMockroutineProvider(ctrl)
+	routine := &model.BackupRoutine{
+		Name:         routineName,
+		IntervalCron: "@daily",
+	}
+	mockReader.EXPECT().Routines().Return(map[string]*model.BackupRoutine{
+		routineName: routine,
+	}).AnyTimes()
+
+	registry := NewRunningBackupsRegistry(context.Background(), nil, mockReader)
 
 	handlerFull := NewMockCancelableBackupHandler(ctrl)
 	handlerFull.EXPECT().Cancel()
@@ -138,13 +170,4 @@ func TestCancel(t *testing.T) {
 	registry.register(routineName, jobTypeIncremental, handlerIncr)
 
 	registry.Cancel(routineName)
-}
-
-func initConfig() *model.Config {
-	config := model.NewConfig()
-	_ = config.AddRoutine(&model.BackupRoutine{
-		Name:         routineName,
-		IntervalCron: "@daily",
-	})
-	return config
 }

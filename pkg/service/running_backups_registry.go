@@ -35,6 +35,12 @@ type RunningBackupsRegistry interface {
 	// found in the storage backends. It scans all backup routines in parallel.
 	SynchroniseBackupHistory()
 }
+
+type routineProvider interface {
+	PopInvalidatedRoutines() []*model.BackupRoutine
+	Routines() map[string]*model.BackupRoutine
+}
+
 type registryKey struct {
 	routineName string
 	job         jobType
@@ -54,7 +60,7 @@ type RunningBackupsRegistryImpl struct {
 
 	routineLocks  collections.LockMap // Protects individual routines during synchronization
 	ctx           context.Context
-	config        *model.Config
+	config        routineProvider
 	backupReader  BackupReader
 	routineCancel *collections.SafeMap[string, context.CancelFunc]
 }
@@ -65,7 +71,7 @@ var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
 func NewRunningBackupsRegistry(
 	ctx context.Context,
 	backupReader BackupReader,
-	config *model.Config,
+	config routineProvider,
 ) *RunningBackupsRegistryImpl {
 	return &RunningBackupsRegistryImpl{
 		ctx:            ctx,

@@ -19,9 +19,8 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func setupBaseConfig() *model.Config {
-	config := model.NewConfig()
-	_ = config.AddRoutine(&model.BackupRoutine{
+func testRoutine() *model.BackupRoutine {
+	return &model.BackupRoutine{
 		Name:          routineName,
 		Storage:       &model.LocalStorage{Path: "test-path"},
 		SourceCluster: &model.AerospikeCluster{},
@@ -35,17 +34,14 @@ func setupBaseConfig() *model.Config {
 		},
 		IntervalCron: "@daily",
 		Namespaces:   []string{"ns1", "ns2"},
-	})
-	return config
+	}
 }
 
 func TestRunFullBackupInternal_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	config := setupBaseConfig()
-	routine, _ := config.Routine(routineName)
-
+	routine := testRoutine()
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
 	mockBackupHandler := backupexecutor.NewMockBackupHandler(ctrl)
@@ -126,8 +122,7 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	config := setupBaseConfig()
-	routine, _ := config.Routine(routineName)
+	routine := testRoutine()
 
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
@@ -180,8 +175,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	config := setupBaseConfig()
-	routine, _ := config.Routine(routineName)
+	routine := testRoutine()
 
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
@@ -274,8 +268,7 @@ func TestSkipIncrementalBackup(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := setupBaseConfig()
-			routine, _ := config.Routine(routineName)
+			routine := testRoutine()
 			routine.IntervalCron = tt.intervalCron
 			if tt.concurrent {
 				routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
@@ -301,7 +294,7 @@ func TestRunIncrementalBackup_Success(t *testing.T) {
 
 	backupCounters.Reset()
 
-	runIncrementalBackup(t, routineState, setupBaseConfig())
+	runIncrementalBackup(t, routineState, testRoutine())
 
 	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeFailure))
@@ -312,8 +305,7 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	config := setupBaseConfig()
-	routine, _ := config.Routine(routineName)
+	routine := testRoutine()
 	routineState := &model.RoutineState{
 		// no full or incremental backups exists
 		LastRunTime: model.NewNoBackupTime(),
@@ -350,7 +342,9 @@ func TestRunIncrementalBackup_AllowConcurrentFull(t *testing.T) {
 
 	backupCounters.Reset()
 
-	runIncrementalBackup(t, routineState, configWithConcurrentIncremental())
+	routine := testRoutine()
+	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
+	runIncrementalBackup(t, routineState, routine)
 
 	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
 }
@@ -365,26 +359,17 @@ func TestRunIncrementalBackup_ConcurrentIncremental(t *testing.T) {
 
 	backupCounters.Reset()
 
-	runIncrementalBackup(t, routineState, configWithConcurrentIncremental())
+	routine := testRoutine()
+	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
+	runIncrementalBackup(t, routineState, routine)
 
 	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
 }
 
-func configWithConcurrentIncremental() *model.Config {
-	config := setupBaseConfig()
-	routine, _ := config.Routine(routineName)
-	routine.BackupPolicy.ConcurrentIncremental = ptr.Of(true)
-	_ = config.UpdateRoutine(routineName, routine)
-
-	return config
-}
-
-func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model.Config) {
+func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *model.BackupRoutine) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	routine, _ := config.Routine(routineName)
 
 	mockClientManager := aerospike.NewMockClientManager(ctrl)
 
