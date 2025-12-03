@@ -1,5 +1,10 @@
 package model
 
+import (
+	"bytes"
+	"encoding/gob"
+)
+
 // BackupRoutine represents a scheduled backup operation routine.
 type BackupRoutine struct {
 	// The unique name of the routine (key in routines map).
@@ -32,4 +37,31 @@ type BackupRoutine struct {
 	NodeList []string
 	// Whether this routine is disabled and should not run.
 	Disabled bool
+}
+
+func init() {
+	gob.Register(&LocalStorage{})
+	gob.Register(&S3Storage{})
+	gob.Register(&GcpStorage{})
+	gob.Register(&AzureStorage{})
+	gob.Register(&AzureADAuth{})
+	gob.Register(&AzureSharedKeyAuth{})
+}
+
+func (r *BackupRoutine) Copy() *BackupRoutine {
+	if r == nil {
+		return nil
+	}
+
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(r); err != nil {
+		panic(err) // if happens, registered failed types in init()
+	}
+
+	var out BackupRoutine
+	if err := gob.NewDecoder(&buf).Decode(&out); err != nil {
+		panic(err) // should never happen
+	}
+
+	return &out
 }

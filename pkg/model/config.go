@@ -19,7 +19,7 @@ type BackupConfig struct {
 	BackupPolicies      map[string]*BackupPolicy
 	BackupRoutines      map[string]*BackupRoutine
 	SecretAgents        map[string]*SecretAgent
-	invalidatedRoutines []*BackupRoutine // routines that need to be rescanned after a change
+	invalidatedRoutines []string // routines that need to be rescanned after a change
 }
 
 func (bc *BackupConfig) copy() *BackupConfig {
@@ -121,7 +121,7 @@ func (c *Config) UpdateStorage(name string, s Storage) error {
 	for _, r := range c.backupConfig.BackupRoutines {
 		if r.Storage == oldStorage {
 			r.Storage = s
-			c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, r)
+			c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, r.Name)
 		}
 	}
 
@@ -190,7 +190,9 @@ func (c *Config) Routines() map[string]*BackupRoutine {
 	defer c.mu.RUnlock()
 
 	routines := make(map[string]*BackupRoutine, len(c.backupConfig.BackupRoutines))
-	maps.Copy(routines, c.backupConfig.BackupRoutines)
+	for name, routine := range c.backupConfig.BackupRoutines {
+		routines[name] = routine.Copy()
+	}
 
 	return routines
 }
@@ -200,7 +202,11 @@ func (c *Config) Routine(name string) (*BackupRoutine, bool) {
 	defer c.mu.RUnlock()
 
 	routine, found := c.backupConfig.BackupRoutines[name]
-	return routine, found
+	if !found {
+		return nil, false
+	}
+
+	return routine.Copy(), true
 }
 
 func (c *Config) RoutineExists(name string) bool {
@@ -223,7 +229,7 @@ func (c *Config) AddRoutine(r *BackupRoutine) error {
 		return fmt.Errorf("add backup routine %q: %w", r.Name, ErrAlreadyExists)
 	}
 	c.backupConfig.BackupRoutines[r.Name] = r
-	c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, r)
+	c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, r.Name)
 
 	return nil
 }
@@ -248,7 +254,7 @@ func (c *Config) UpdateRoutine(name string, r *BackupRoutine) error {
 		return fmt.Errorf("update backup routine %q: %w", name, ErrNotFound)
 	}
 	c.backupConfig.BackupRoutines[name] = r
-	c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, r)
+	c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, r.Name)
 
 	return nil
 }
@@ -325,7 +331,7 @@ func (c *Config) SetBackupConfig(other *BackupConfig) {
 	defer c.mu.Unlock()
 	c.backupConfig = *other
 	for _, r := range c.backupConfig.BackupRoutines {
-		c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, r)
+		c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, r.Name)
 	}
 }
 
@@ -341,7 +347,7 @@ func (c *Config) ToggleRoutineDisabled(name string, isDisabled bool) error {
 
 	c.backupConfig.BackupRoutines[name].Disabled = isDisabled
 	if !isDisabled { // only invalidate if we are enabling the routine
-		c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, routine)
+		c.backupConfig.invalidatedRoutines = append(c.backupConfig.invalidatedRoutines, routine.Name)
 	}
 
 	return nil
@@ -352,8 +358,16 @@ func (c *Config) PopInvalidatedRoutines() []*BackupRoutine {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	result := c.backupConfig.invalidatedRoutines
-	c.backupConfig.invalidatedRoutines = nil
+	seen := make(map[string]struct{}, len(c.backupConfig.invalidatedRoutines))
+	routines := make([]*BackupRoutine, 0, len(c.backupConfig.invalidatedRoutines))
 
-	return result
+	for _, name := range c.backupConfig.invalidatedRoutines {
+		if _, exists := seen[name]; exists {
+			continue // skip duplicate
+		}
+		seen[name] = struct{}{}
+		routines = append(routines, c.backupConfig.BackupRoutines[name].Copy())
+	}
+
+	return routines
 }
