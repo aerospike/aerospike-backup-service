@@ -36,7 +36,9 @@ export const ConfigSectionClusters = (
           New Cluster
         </Button>
         <div className="overflow-y-auto flex-1 custom-scroll">
-          {Object.entries(items).map(([k, v]: [string, DtoAerospikeCluster]) => (
+          {Object.entries(items)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([k, v]: [string, DtoAerospikeCluster]) => (
             <Card
               key={k}
               title={k}

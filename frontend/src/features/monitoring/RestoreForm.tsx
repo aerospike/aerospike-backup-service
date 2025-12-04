@@ -186,16 +186,16 @@ export const RestoreForm = ({
             case 'general':
                 return (
                     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700 mb-4">
-                            <h3 className="text-sm font-bold text-white mb-2">Restore Summary</h3>
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                            <h3 className="text-sm font-bold text-gray-900 mb-2">Restore Summary</h3>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
-                                    <p className="text-gray-400 text-xs uppercase font-bold">Point-in-time</p>
-                                    <p className="font-mono text-white">{new Date(timestamp).toLocaleString()}</p>
+                                    <p className="text-gray-600 text-xs uppercase font-bold">Point-in-time</p>
+                                    <p className="font-mono text-gray-900">{new Date(timestamp).toLocaleString()}</p>
                                 </div>
                                 <div>
-                                    <p className="text-gray-400 text-xs uppercase font-bold">Backups in sequence</p>
-                                    <p className="font-mono text-blue-300">{chainLength}</p>
+                                    <p className="text-gray-600 text-xs uppercase font-bold">Backups in sequence</p>
+                                    <p className="font-mono text-aerospike-dark">{chainLength}</p>
                                 </div>
                             </div>
                         </div>
@@ -298,8 +298,8 @@ export const RestoreForm = ({
                                 description="Comma separated list of sets to restore. Only the sets specified here will be restored. Empty implies restoring all sets."
                             />
                         </div>
-                        <div className="border-t border-gray-700 pt-4 space-y-4">
-                            <h4 className="text-sm font-semibold text-gray-400">Namespace Remapping</h4>
+                        <div className="border-t border-gray-200 pt-4 space-y-4">
+                            <h4 className="text-sm font-semibold text-gray-700">Namespace Remapping</h4>
                             <Input
                                 label="Source Namespace"
                                 value={namespaceSource}
@@ -319,7 +319,7 @@ export const RestoreForm = ({
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
                         <div className="space-y-4">
-                            <h4 className="text-sm font-semibold text-gray-400">Compression</h4>
+                            <h4 className="text-sm font-semibold text-gray-700">Compression</h4>
                             <Select
                                 label="Compression Mode"
                                 value={compressionMode || ''}
@@ -341,8 +341,8 @@ export const RestoreForm = ({
                                 />
                             )}
                         </div>
-                        <div className="border-t border-gray-700 pt-4 space-y-4">
-                            <h4 className="text-sm font-semibold text-gray-400">Encryption</h4>
+                        <div className="border-t border-gray-200 pt-4 space-y-4">
+                            <h4 className="text-sm font-semibold text-gray-700">Encryption</h4>
                             <Select
                                 label="Encryption Mode"
                                 value={encryptionMode || ''}
@@ -416,8 +416,8 @@ export const RestoreForm = ({
                                 }
                             ]}
                         />
-                        <div className="space-y-3 border-t border-gray-700 pt-4">
-                            <h4 className="text-sm font-semibold text-gray-400">Flags</h4>
+                        <div className="space-y-3 border-t border-gray-200 pt-4">
+                            <h4 className="text-sm font-semibold text-gray-700">Flags</h4>
                             <Checkbox
                                 label="No Indexes"
                                 checked={noIndexes}
@@ -476,7 +476,7 @@ export const RestoreForm = ({
                 {/* Sidebar and Main Content Area */}
                 <div className="flex flex-1 min-h-0">
                     {/* Sidebar */}
-                    <div className="w-64 bg-gray-900 border-r border-gray-800 p-4 flex flex-col gap-1">
+                    <div className="w-64 bg-gray-50 border-r border-gray-200 p-4 flex flex-col gap-1">
                         {SECTIONS.map((section) => {
                             const Icon = section.icon;
                             return (
@@ -485,8 +485,8 @@ export const RestoreForm = ({
                                     onClick={() => setActiveSection(section.id)}
                                     className={`w-full text-left px-3 py-2 rounded flex items-center gap-3 text-sm font-medium transition-colors ${
                                         activeSection === section.id
-                                            ? 'bg-blue-600 text-white'
-                                            : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                                            ? 'bg-aerospike-primary text-black'
+                                            : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
                                     }`}
                                 >
                                     <Icon size={16}/>
@@ -497,14 +497,14 @@ export const RestoreForm = ({
                     </div>
 
                     {/* Content Area */}
-                    <div className="flex-1 bg-gray-850 p-6 overflow-y-scroll custom-scrollbar">
+                    <div className="flex-1 bg-white p-6 overflow-y-scroll custom-scrollbar">
                         {renderContent()}
                     </div>
                 </div>
 
                 {/* Footer with buttons and error message */}
-                <div className="flex justify-between items-center pt-4 border-t border-gray-800">
-                    <div className="text-red-400 text-sm font-semibold flex-grow">
+                <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                    <div className="text-red-600 text-sm font-semibold flex-grow">
                         {restoreError && `Error: ${restoreError}`}
                     </div>
                     <div className="flex gap-2">

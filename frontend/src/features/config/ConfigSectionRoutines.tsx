@@ -47,7 +47,9 @@ export const ConfigSectionRoutines = (
           New Routine
         </Button>
         <div className="overflow-y-auto flex-1 custom-scroll">
-          {Object.entries(items).map(([k, v]: [string, DtoBackupRoutine]) => (
+          {Object.entries(items)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([k, v]: [string, DtoBackupRoutine]) => (
             <Card
               key={k}
               title={k}

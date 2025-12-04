@@ -52,13 +52,13 @@ export const BackupHistory = (
     return (
         <div>
             <div className="flex justify-between items-end mb-4">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <History className="text-gray-400"/> Backup History for {activeRoutine}
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <History className="text-gray-500"/> Backup History for {activeRoutine}
                 </h2>
                 <div className="flex gap-2">
                     {selectedBackupId && (
                         <div
-                            className="text-xs text-blue-400 flex items-center gap-2 bg-blue-900/20 px-3 py-1 rounded border border-blue-900/30 animate-in fade-in">
+                            className="text-xs text-aerospike-dark flex items-center gap-2 bg-aerospike-primary/10 px-3 py-1 rounded border border-aerospike-primary/30 animate-in fade-in">
                             <Info size={14}/>
                             <span>Selected Chain: {chain.length} backup{chain.length > 1 ? 's' : ''}</span>
                         </div>
@@ -76,9 +76,9 @@ export const BackupHistory = (
                 </div>
             </div>
 
-            <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
                 <table className="w-full text-sm text-left border-collapse">
-                    <thead className="bg-gray-850 text-gray-400 uppercase text-xs font-semibold">
+                    <thead className="bg-gray-50 text-gray-500 uppercase text-xs font-semibold">
                     <tr>
                         <th className="px-6 py-3 w-8"></th>
                         <th className="px-6 py-3">Time</th>
@@ -93,10 +93,10 @@ export const BackupHistory = (
                         if (!b.key) return null;
                         const isSelected = selectedBackupId === b.key;
                         const inChain = chain.includes(b.key);
-                        let rowClass = "border-b border-gray-800 transition-colors cursor-pointer ";
-                        if (isSelected) rowClass += "bg-blue-900/40 border-blue-500/50 ";
-                        else if (inChain) rowClass += "bg-blue-900/10 border-blue-800/30 ";
-                        else rowClass += "hover:bg-gray-800/50 ";
+                        let rowClass = "border-b border-gray-200 transition-colors cursor-pointer ";
+                        if (isSelected) rowClass += "bg-aerospike-primary/20 border-aerospike-primary/50 ";
+                        else if (inChain) rowClass += "bg-aerospike-primary/5 border-aerospike-primary/30 ";
+                        else rowClass += "hover:bg-gray-50 ";
 
                         return (
                             <tr key={b.key} onClick={() => handleBackupSelect(b.key as string)}
@@ -107,15 +107,15 @@ export const BackupHistory = (
                                             className="flex flex-col items-center justify-center h-full absolute inset-0">
                                             {/* Simple visual connector logic can go here (CSS lines) */}
                                             <div
-                                                className={`relative z-10 w-2.5 h-2.5 rounded-full ${isSelected ? 'bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.5)]' : 'bg-blue-600'}`}></div>
+                                                className={`relative z-10 w-2.5 h-2.5 rounded-full ${isSelected ? 'bg-aerospike-primary shadow-[0_0_10px_rgba(250,204,21,0.5)]' : 'bg-aerospike-primary'}`}></div>
                                         </div>
                                     )}
                                 </td>
-                                <td className="px-6 py-4 font-medium text-gray-200">{new Date(b.timestamp || 0).toLocaleString()}</td>
+                                <td className="px-6 py-4 font-medium text-gray-900">{new Date(b.timestamp || 0).toLocaleString()}</td>
                                 <td className="px-6 py-4"><Badge type={b.type}/></td>
-                                <td className="px-6 py-4 text-gray-400 font-mono">{formatBytes(b.byteCount)}</td>
-                                <td className="px-6 py-4 text-gray-400 font-mono">{b.recordCount}</td>
-                                <td className="px-6 py-4 text-gray-400 font-mono">{b.duration}s</td>
+                                <td className="px-6 py-4 text-gray-600 font-mono">{formatBytes(b.byteCount)}</td>
+                                <td className="px-6 py-4 text-gray-600 font-mono">{b.recordCount}</td>
+                                <td className="px-6 py-4 text-gray-600 font-mono">{b.duration}s</td>
                             </tr>
                         );
                     })}

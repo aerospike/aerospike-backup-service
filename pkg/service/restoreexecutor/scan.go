@@ -50,7 +50,9 @@ func makeRestoreConfig(restoreRequest *model.RestoreRequest,
 	config.NoIndexes = ptr.ValueOrZero(restoreRequest.Policy.NoIndexes)
 	config.NoUDFs = ptr.ValueOrZero(restoreRequest.Policy.NoUdfs)
 
-	if restoreRequest.Policy.Namespace != nil {
+	if restoreRequest.Policy.Namespace != nil &&
+		(ptr.ValueOrZero(restoreRequest.Policy.Namespace.Source) != "" ||
+			ptr.ValueOrZero(restoreRequest.Policy.Namespace.Destination) != "") {
 		config.Namespace = &backup.RestoreNamespaceConfig{
 			Source:      restoreRequest.Policy.Namespace.Source,
 			Destination: restoreRequest.Policy.Namespace.Destination,

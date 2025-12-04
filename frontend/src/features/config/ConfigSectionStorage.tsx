@@ -60,7 +60,9 @@ export const ConfigSectionStorage = (
           New Storage
         </Button>
         <div className="overflow-y-auto flex-1 custom-scroll">
-          {Object.entries(items).map(([k, v]: [string, DtoStorage]) => (
+          {Object.entries(items)
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([k, v]: [string, DtoStorage]) => (
             <Card
               key={k}
               title={k}

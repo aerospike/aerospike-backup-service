@@ -98,7 +98,7 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
                 setSelectedId(null);
             }}
             className={`flex items-center gap-3 w-full px-3 py-2 rounded-md transition-all text-sm mb-1 ${
-                section === id ? 'bg-red-600/10 text-red-500 border-l-2 border-red-500' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                section === id ? 'bg-aerospike-light-blue text-gray-900 border-l-2 border-aerospike-border-blue' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
             }`}
         >
             <Icon size={16}/>
@@ -108,7 +108,7 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
 
     return (
         <div className="grid grid-cols-12 h-full">
-            <div className="col-span-2 border-r border-gray-800 bg-gray-900/30 flex flex-col py-4">
+            <div className="col-span-2 border-r border-gray-200 bg-gray-50 flex flex-col py-4">
                 <div className="px-4 mb-2">
                     <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Definitions</h3>
                 </div>
@@ -118,10 +118,10 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
                 <NavItem id="policies" label="Policies" icon={Shield}/>
                 <NavItem id="secrets" label="Secrets" icon={Key}/>
                 <NavItem id="service" label="Service" icon={Settings}/>
-                <div className="my-4 border-t border-gray-800"></div>
+                <div className="my-4 border-t border-gray-200"></div>
                 <NavItem id="yaml" label="Apply Config" icon={Play}/>
             </div>
-            <div className="col-span-10 bg-gray-950 overflow-hidden">
+            <div className="col-span-10 bg-white overflow-hidden">
                 {section === 'routines' &&
                     <ConfigSectionRoutines
                         config={config}

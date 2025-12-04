@@ -25,7 +25,7 @@ export const Input = ({label, className, hint, description, ...props}: InputProp
             </label>
         )}
         <input
-            className={`w-full bg-gray-900 border border-gray-700 rounded p-2.5 text-sm text-gray-200 focus:border-red-500 focus:ring-1 focus:ring-red-500 focus:outline-none transition-colors ${className || ''}`}
+            className={`w-full bg-white border border-gray-300 rounded p-2.5 text-sm text-gray-900 focus:border-aerospike-primary focus:ring-1 focus:ring-aerospike-primary focus:outline-none transition-colors ${className || ''}`}
             {...props}
         />
         {description && <p className="mt-1 text-xs text-gray-500">{description}</p>}
@@ -48,11 +48,11 @@ export const Select = ({label, options, hint, description, ...props}: SelectProp
     <div className="mb-3">
         {label && (
             <label
-                className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide flex items-center gap-1">
+                className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide flex items-center gap-1">
                 {label}
                 {hint && (
                     <span className="relative group">
-            <Info size={14} className="text-gray-500 cursor-help"/>
+            <Info size={14} className="text-gray-400 cursor-help"/>
             <span
                 className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case">
               {hint}
@@ -63,7 +63,7 @@ export const Select = ({label, options, hint, description, ...props}: SelectProp
         )}
         <div className="relative">
             <select
-                className="w-full bg-gray-900 border border-gray-700 rounded p-2.5 text-sm text-gray-200 focus:border-red-500 focus:outline-none appearance-none"
+                className="w-full bg-white border border-gray-300 rounded p-2.5 text-sm text-gray-900 focus:border-aerospike-primary focus:outline-none appearance-none"
                 {...props}
             >
                 {options.map(opt => (
@@ -91,14 +91,14 @@ export const Checkbox = ({label, checked, onChange, hint, description}: Checkbox
                 type="checkbox"
                 checked={checked}
                 onChange={(e) => onChange(e.target.checked)}
-                className="w-4 h-4 text-red-600 bg-gray-900 border-gray-700 rounded focus:ring-red-500 focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900"
+                className="w-4 h-4 text-aerospike-primary bg-white border-gray-300 rounded focus:ring-aerospike-primary focus:ring-2 focus:ring-offset-2 focus:ring-offset-white"
             />
-            <label className="ml-2 text-sm font-medium text-gray-300 select-none cursor-pointer flex items-center gap-1"
+            <label className="ml-2 text-sm font-medium text-gray-900 select-none cursor-pointer flex items-center gap-1"
                    onClick={() => onChange(!checked)}>
                 {label}
                 {hint && (
                     <span className="relative group">
-                  <Info size={14} className="text-gray-500 cursor-help"/>
+                  <Info size={14} className="text-gray-400 cursor-help"/>
                   <span
                       className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case">
                       {hint}
@@ -129,11 +129,11 @@ export const RadioGroup = ({label, options, value, onChange, hint}: RadioGroupPr
     <div className="mb-3">
         {label && (
             <label
-                className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide flex items-center gap-1">
+                className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide flex items-center gap-1">
                 {label}
                 {hint && (
                     <span className="relative group">
-            <Info size={14} className="text-gray-500 cursor-help"/>
+            <Info size={14} className="text-gray-400 cursor-help"/>
             <span
                 className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case">
               {hint}
@@ -152,11 +152,11 @@ export const RadioGroup = ({label, options, value, onChange, hint}: RadioGroupPr
                             value={option.value}
                             checked={value === option.value}
                             onChange={(e) => onChange(e.target.value)}
-                            className="w-4 h-4 text-red-600 bg-gray-900 border-gray-700 focus:ring-red-500 focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900"
+                            className="w-4 h-4 text-aerospike-primary bg-white border-gray-300 focus:ring-aerospike-primary focus:ring-2 focus:ring-offset-2 focus:ring-offset-white"
                         />
                     </div>
                     <div className="ml-3 text-sm" onClick={() => onChange(option.value)}>
-                        <label className="font-medium text-gray-300 cursor-pointer">
+                        <label className="font-medium text-gray-900 cursor-pointer">
                             {option.label}
                         </label>
                         {option.description && (

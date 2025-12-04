@@ -33,7 +33,7 @@ export const ConfigSectionPolicies = (
     const items = config.backupPolicies || {};
     return (
         <div className="flex h-full">
-            <div className="w-1/3 border-r border-gray-800 p-4 flex flex-col">
+            <div className="w-1/3 border-r border-gray-200 p-4 flex flex-col">
                 <Button
                     className="mb-4 w-full justify-center"
                     icon={Plus}
@@ -57,7 +57,9 @@ export const ConfigSectionPolicies = (
                     New Policy
                 </Button>
                 <div className="overflow-y-auto flex-1 custom-scroll">
-                    {Object.entries(items).map(([k, v]: [string, DtoBackupPolicy]) => (
+                    {Object.entries(items)
+                        .sort((a, b) => a[0].localeCompare(b[0]))
+                        .map(([k, v]: [string, DtoBackupPolicy]) => (
                         <Card
                             key={k}
                             title={k}
@@ -86,7 +88,7 @@ export const ConfigSectionPolicies = (
                         </div>
 
                         <SectionHeader title="Retention & Compression" icon={Shield}/>
-                        <div className="p-4 bg-gray-900/30 rounded border border-gray-800 mb-4">
+                        <div className="p-4 bg-gray-50 rounded border border-gray-200 mb-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <Input label="Keep Full Backups" type="number" value={items[selectedId].retention?.full || ''}
                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('backupPolicies', selectedId, 'retention', 'full', Number(e.target.value))}/>
