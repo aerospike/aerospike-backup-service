@@ -18,8 +18,6 @@ import (
 // @Param       routine body dto.BackupRoutine true "Backup routine details"
 // @Success     201
 // @Failure     400 {string} string
-//
-
 func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -106,8 +104,6 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 // @Param        routine body dto.BackupRoutine true "Backup routine details"
 // @Success      200
 // @Failure      400 {string} string
-//
-
 func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
