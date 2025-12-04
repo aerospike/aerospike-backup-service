@@ -5,6 +5,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidSecretAgent(t *testing.T) {
@@ -56,7 +57,7 @@ func TestInvalidSecretAgent(t *testing.T) {
 	}
 
 	err := config.validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "secret-agent validation error")
 }
 

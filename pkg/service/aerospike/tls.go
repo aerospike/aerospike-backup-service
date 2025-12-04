@@ -161,6 +161,7 @@ func loadClientCerts(t *model.TLS) ([]tls.Certificate, error) {
 	}
 
 	// Check and Decrypt the Key Block using passphrase
+	//noinspection GoDeprecation
 	if t.KeyfilePassword != nil && x509.IsEncryptedPEMBlock(keyBlock) { //nolint:staticcheck
 		decryptedDERBytes, err := x509.DecryptPEMBlock(keyBlock, []byte(*t.KeyfilePassword)) //nolint:staticcheck
 		if err != nil {

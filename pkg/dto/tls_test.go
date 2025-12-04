@@ -30,10 +30,7 @@ type testCertificates struct {
 func setupTestCertificates(t *testing.T) *testCertificates {
 	t.Helper()
 
-	tempDir, err := os.MkdirTemp("", "tls_test_*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
+	tempDir := t.TempDir()
 
 	// Generate a test CA certificate
 	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -123,16 +120,8 @@ func setupTestCertificates(t *testing.T) *testCertificates {
 	}
 }
 
-// cleanupTestCertificates removes temporary certificate files.
-func cleanupTestCertificates(certs *testCertificates) {
-	if certs != nil && certs.tempDir != "" {
-		os.RemoveAll(certs.tempDir)
-	}
-}
-
 func TestTLS_Validate(t *testing.T) {
 	certs := setupTestCertificates(t)
-	defer cleanupTestCertificates(certs)
 
 	tests := []struct {
 		name    string
@@ -318,7 +307,6 @@ func TestTLS_Validate(t *testing.T) {
 
 func TestTLS_validateCACertificates(t *testing.T) {
 	certs := setupTestCertificates(t)
-	defer cleanupTestCertificates(certs)
 
 	tests := []struct {
 		name    string

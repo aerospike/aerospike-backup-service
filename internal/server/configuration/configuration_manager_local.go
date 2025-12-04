@@ -43,7 +43,7 @@ func (cm *fileConfigurationManager) Read(ctx context.Context) (*model.Config, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file %q: %w", cm.FilePath, err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return readConfig(ctx, file, cm.nsValidator)
 }
@@ -65,10 +65,15 @@ func (cm *fileConfigurationManager) Write(ctx context.Context, config *model.Con
 	if err != nil {
 		return fmt.Errorf("failed to open file for writing %q: %w", cm.FilePath, err)
 	}
-	defer file.Close()
 
 	if err := writeConfig(file, config); err != nil {
-		return fmt.Errorf("failed to write configuration to file %q: %w", cm.FilePath, err)
+		return errors.Join(
+			fmt.Errorf("failed to write configuration to file %q: %w", cm.FilePath, err),
+			file.Close())
+	}
+
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close file %q: %w", cm.FilePath, err)
 	}
 
 	return nil

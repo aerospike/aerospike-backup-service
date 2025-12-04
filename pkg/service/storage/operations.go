@@ -167,11 +167,17 @@ func writeFile(ctx context.Context, storage model.Storage, fileName, storageClas
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer w.Close()
 
-	_, err = w.Write(content)
+	if _, err := w.Write(content); err != nil {
+		return errors.Join(fmt.Errorf("failed to write content: %w", err),
+			w.Close())
+	}
 
-	return err
+	if err := w.Close(); err != nil {
+		return fmt.Errorf("failed to close file: %w", err)
+	}
+
+	return nil
 }
 
 func DeleteFolder(ctx context.Context, storage model.Storage, path string) error {
