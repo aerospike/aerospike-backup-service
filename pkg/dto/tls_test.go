@@ -30,10 +30,7 @@ type testCertificates struct {
 func setupTestCertificates(t *testing.T) *testCertificates {
 	t.Helper()
 
-	tempDir, err := os.MkdirTemp("", "tls_test_*")
-	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
-	}
+	tempDir := t.TempDir()
 
 	// Generate a test CA certificate
 	caKey, err := rsa.GenerateKey(rand.Reader, 2048)

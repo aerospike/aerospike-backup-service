@@ -130,7 +130,6 @@ func drawValue(t *rapid.T, reg genRegistry, ft reflect.Type) (reflect.Value, boo
 		return f(t), true
 	}
 
-	//nolint:exhaustive
 	switch ft.Kind() {
 	case reflect.Struct:
 		// Recursively fill nested structs
