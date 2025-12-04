@@ -91,7 +91,6 @@ func runLineByLineLogging(b *testing.B, name string, wrapWriter func(io.Writer) 
 			if err != nil {
 				b.Fatal(err)
 			}
-			defer os.Remove(f.Name())
 
 			writer := wrapWriter(f)
 
@@ -103,7 +102,8 @@ func runLineByLineLogging(b *testing.B, name string, wrapWriter func(io.Writer) 
 				}
 			}
 
-			f.Close()
+			_ = f.Close()
+			_ = os.Remove(f.Name())
 		}
 	})
 }

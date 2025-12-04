@@ -2,12 +2,10 @@ package service
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/backup-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,10 +15,7 @@ const (
 	testNamespace = "test-ns"
 )
 
-var (
-	ctx        = context.Background()
-	mockClient = &backup.Client{}
-)
+var ctx = context.Background()
 
 func TestLocalGetBackupsWithTimeFilters(t *testing.T) {
 	service, pathService := setupLocalBackupBackendService(t)
@@ -294,12 +289,7 @@ func TestReadPath(t *testing.T) {
 func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, PathService) {
 	t.Helper()
 
-	tempDir, err := os.MkdirTemp("", "backup-test-*")
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		_ = os.RemoveAll(tempDir)
-	})
+	tempDir := t.TempDir()
 
 	config := model.NewConfig()
 	routine := &model.BackupRoutine{
@@ -308,7 +298,7 @@ func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, Pa
 		},
 	}
 
-	err = config.AddRoutine("test-routine", routine)
+	err := config.AddRoutine("test-routine", routine)
 	require.NoError(t, err)
 
 	pathService := NewPathService(nil)

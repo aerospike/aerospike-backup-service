@@ -81,7 +81,7 @@ func enhanceJSONError(jsonError error) error {
 	// If not deprecated, look for similar fields across all structs
 	suggestion := findSimilarField(field, allFields)
 	if suggestion != "" {
-		return fmt.Errorf("unknown field %q - did you mean: %q?", field, suggestion)
+		return fmt.Errorf("field %q not found, perhaps you meant %q", field, suggestion)
 	}
 
 	// If no suggestion was found, just return the original error
@@ -131,7 +131,7 @@ func processYamlError(errMsg string) error {
 	if ok {
 		suggestion := findSimilarField(field, fieldsForStruct)
 		if suggestion != "" {
-			return fmt.Errorf("line %d: field %q not found - did you mean: %q?", line, field, suggestion)
+			return fmt.Errorf("line %d: field %q not found, perhaps you meant %q", line, field, suggestion)
 		}
 	}
 

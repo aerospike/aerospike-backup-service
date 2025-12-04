@@ -113,7 +113,7 @@ func TestDeserialize_JSONSimilarField(t *testing.T) {
 	err := Deserialize(&result, strings.NewReader(jsonStr), JSON)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "did you mean: \"new-field\"?")
+	assert.Contains(t, err.Error(), "new-field")
 }
 
 func TestDeserialize_YAMLSimilarField(t *testing.T) {
@@ -129,7 +129,7 @@ new-feild: value
 	err := Deserialize(&result, strings.NewReader(yamlStr), YAML)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "did you mean: \"new-field\"?")
+	assert.Contains(t, err.Error(), "new-field")
 }
 
 func TestDeserialize_JSONExtraFields(t *testing.T) {

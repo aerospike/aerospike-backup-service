@@ -80,7 +80,6 @@ func (p *PortRange) ToModel() *model.PortRange {
 	}
 }
 
-//nolint:unused
 func newPortRangeFromModel(m *model.PortRange) *PortRange {
 	if m == nil {
 		return nil
