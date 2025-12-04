@@ -29,7 +29,6 @@ type DefaultClusterConfigWriter struct {
 // NewClusterConfigWriter returns a new DefaultClusterConfigWriter instance.
 func NewClusterConfigWriter(
 	clientManager aerospike.ClientManager,
-	config *model.Config,
 	pathService PathService,
 ) *DefaultClusterConfigWriter {
 	return &DefaultClusterConfigWriter{
