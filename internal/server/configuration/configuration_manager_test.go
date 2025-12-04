@@ -14,9 +14,7 @@ import (
 
 func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 	// Create a temporary directory for local file tests
-	tempDir, err := os.MkdirTemp("", "config-test")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	tempDir := t.TempDir()
 
 	// Create an HTTP test server
 	storageDto := "local-storage:\n    path: ./config.yaml"

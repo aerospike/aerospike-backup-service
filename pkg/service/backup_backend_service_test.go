@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -244,12 +243,7 @@ func TestReadPath(t *testing.T) {
 func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, PathService, *model.BackupRoutine) {
 	t.Helper()
 
-	tempDir, err := os.MkdirTemp("", "backup-test-*")
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		_ = os.RemoveAll(tempDir)
-	})
+	tempDir := t.TempDir()
 
 	config := model.NewConfig()
 	routine := &model.BackupRoutine{
@@ -259,7 +253,7 @@ func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, Pa
 		},
 	}
 
-	err = config.AddRoutine(routine)
+	err := config.AddRoutine(routine)
 	require.NoError(t, err)
 
 	pathService := NewPathService(nil)

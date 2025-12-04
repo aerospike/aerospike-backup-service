@@ -94,7 +94,7 @@ func defaultRegistry() genRegistry {
 		return reflect.ValueOf(v)
 	}
 
-	r[reflect.TypeOf(int(0))] = func(t *rapid.T) reflect.Value {
+	r[reflect.TypeOf(0)] = func(t *rapid.T) reflect.Value {
 		v := rapid.SampledFrom(IntInterestingValues).Draw(t, "int")
 		return reflect.ValueOf(v)
 	}
@@ -130,7 +130,6 @@ func drawValue(t *rapid.T, reg genRegistry, ft reflect.Type) (reflect.Value, boo
 		return f(t), true
 	}
 
-	//nolint:exhaustive
 	switch ft.Kind() {
 	case reflect.Struct:
 		// Recursively fill nested structs
@@ -194,8 +193,9 @@ func drawValue(t *rapid.T, reg genRegistry, ft reflect.Type) (reflect.Value, boo
 	case reflect.Bool:
 		v := rapid.Bool().Draw(t, "bool")
 		return reflect.ValueOf(v), true
+	default:
+		return reflect.Value{}, false
 	}
-	return reflect.Value{}, false
 }
 
 // Helper to generate a struct for an arbitrary reflect.Type (used for nested structs).

@@ -99,7 +99,7 @@ func isPortAvailable(port model.Port) bool {
 	if err != nil {
 		return false
 	}
-	listener.Close()
+	_ = listener.Close()
 	return true
 }
 
@@ -109,9 +109,10 @@ func getFreePort() (model.Port, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer listener.Close()
+	port := listener.Addr().(*net.TCPAddr).Port
+	_ = listener.Close()
 
-	return model.Port(listener.Addr().(*net.TCPAddr).Port), nil
+	return model.Port(port), nil
 }
 
 var (
