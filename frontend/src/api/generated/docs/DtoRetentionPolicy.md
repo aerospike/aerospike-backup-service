@@ -1,34 +1,37 @@
+
 # DtoRetentionPolicy
 
 RetentionPolicy specifies how many full and incremental backups to keep.
 
 ## Properties
 
-| Name          | Type   |
-| ------------- | ------ |
-| `full`        | number |
-| `incremental` | number |
+ Name          | Type   
+---------------|--------
+ `full`        | number 
+ `incremental` | number 
 
 ## Example
 
 ```typescript
-import type { DtoRetentionPolicy } from "";
+import type { DtoRetentionPolicy } from ''
 
 // TODO: Update the object below with actual values
 const example = {
-  full: null,
-  incremental: null,
-} satisfies DtoRetentionPolicy;
+  "full": null,
+  "incremental": null,
+} satisfies DtoRetentionPolicy
 
-console.log(example);
+console.log(example)
 
 // Convert the instance to a JSON string
-const exampleJSON: string = JSON.stringify(example);
-console.log(exampleJSON);
+const exampleJSON: string = JSON.stringify(example)
+console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as DtoRetentionPolicy;
-console.log(exampleParsed);
+const exampleParsed = JSON.parse(exampleJSON) as DtoRetentionPolicy
+console.log(exampleParsed)
 ```
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+

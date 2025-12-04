@@ -1,9 +1,9 @@
 # RestoreApi
 
-All URIs are relative to _http://localhost:8080_
+All URIs are relative to *http://localhost:8080*
 
 | Method                                                           | HTTP request                                          | Description                                                          |
-| ---------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------- |
+|------------------------------------------------------------------|-------------------------------------------------------|----------------------------------------------------------------------|
 | [**cancelRestore**](RestoreApi.md#cancelrestore)                 | **POST** /v1/restore/cancel/{jobId}                   | Cancel a running restore operation.                                  |
 | [**restoreFull**](RestoreApi.md#restorefull)                     | **POST** /v1/restore/full                             | Trigger an asynchronous full restore operation.                      |
 | [**restoreIncremental**](RestoreApi.md#restoreincremental)       | **POST** /v1/restore/incremental                      | Trigger an asynchronous incremental restore operation.               |
@@ -21,8 +21,11 @@ Cancel a running restore operation.
 ### Example
 
 ```ts
-import { Configuration, RestoreApi } from "";
-import type { CancelRestoreRequest } from "";
+import {
+  Configuration,
+  RestoreApi,
+} from '';
+import type { CancelRestoreRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -47,8 +50,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name      | Type     | Description    | Notes                     |
-| --------- | -------- | -------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **jobId** | `number` | Restore job ID | [Defaults to `undefined`] |
 
 ### Return type
@@ -64,16 +67,18 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `*/*`
 
+
 ### HTTP response details
 
 | Status code | Description                       | Response headers |
-| ----------- | --------------------------------- | ---------------- |
+|-------------|-----------------------------------|------------------|
 | **202**     | Restore job canceled successfully | -                |
 | **400**     | Invalid job ID                    | -                |
 | **404**     | Job not found                     | -                |
 | **500**     | Internal server error             | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## restoreFull
 
@@ -113,9 +118,9 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name                  | Type                                      | Description             | Notes |
-| --------------------- | ----------------------------------------- | ----------------------- | ----- |
-| **dtoRestoreRequest** | [DtoRestoreRequest](DtoRestoreRequest.md) | Restore request details |       |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **dtoRestoreRequest** | [DtoRestoreRequest](DtoRestoreRequest.md) | Restore request details | |
 
 ### Return type
 
@@ -130,15 +135,17 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `*/*`
 
+
 ### HTTP response details
 
 | Status code | Description              | Response headers |
-| ----------- | ------------------------ | ---------------- |
+|-------------|--------------------------|------------------|
 | **202**     | Restore operation job id | -                |
 | **400**     | Bad Request              | -                |
 | **405**     | Method Not Allowed       | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## restoreIncremental
 
@@ -178,9 +185,9 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name                  | Type                                      | Description             | Notes |
-| --------------------- | ----------------------------------------- | ----------------------- | ----- |
-| **dtoRestoreRequest** | [DtoRestoreRequest](DtoRestoreRequest.md) | Restore request details |       |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **dtoRestoreRequest** | [DtoRestoreRequest](DtoRestoreRequest.md) | Restore request details | |
 
 ### Return type
 
@@ -195,15 +202,17 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `*/*`
 
+
 ### HTTP response details
 
 | Status code | Description              | Response headers |
-| ----------- | ------------------------ | ---------------- |
+|-------------|--------------------------|------------------|
 | **202**     | Restore operation job id | -                |
 | **400**     | Bad Request              | -                |
 | **405**     | Method Not Allowed       | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## restoreStatus
 
@@ -214,8 +223,11 @@ Retrieve status for a restore job.
 ### Example
 
 ```ts
-import { Configuration, RestoreApi } from "";
-import type { RestoreStatusRequest } from "";
+import {
+  Configuration,
+  RestoreApi,
+} from '';
+import type { RestoreStatusRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -240,8 +252,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name      | Type     | Description                   | Notes                     |
-| --------- | -------- | ----------------------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **jobId** | `number` | Job ID to retrieve the status | [Defaults to `undefined`] |
 
 ### Return type
@@ -257,14 +269,16 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
+
 ### HTTP response details
 
 | Status code | Description                | Response headers |
-| ----------- | -------------------------- | ---------------- |
+|-------------|----------------------------|------------------|
 | **200**     | Restore job status details | -                |
 | **400**     | Bad Request                | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## restoreTimestamp
 
@@ -306,9 +320,9 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name                           | Type                                                        | Description             | Notes |
-| ------------------------------ | ----------------------------------------------------------- | ----------------------- | ----- |
-| **dtoRestoreTimestampRequest** | [DtoRestoreTimestampRequest](DtoRestoreTimestampRequest.md) | Restore request details |       |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **dtoRestoreTimestampRequest** | [DtoRestoreTimestampRequest](DtoRestoreTimestampRequest.md) | Restore request details | |
 
 ### Return type
 
@@ -326,7 +340,7 @@ No authorization required
 ### HTTP response details
 
 | Status code | Description              | Response headers |
-| ----------- | ------------------------ | ---------------- |
+|-------------|--------------------------|------------------|
 | **202**     | Restore operation job id | -                |
 | **400**     | Bad Request              | -                |
 | **405**     | Method Not Allowed       | -                |
@@ -342,8 +356,11 @@ Retrieve Aerospike cluster configuration backup
 ### Example
 
 ```ts
-import { Configuration, RestoreApi } from "";
-import type { RetrieveConfigurationRequest } from "";
+import {
+  Configuration,
+  RestoreApi,
+} from '';
+import type { RetrieveConfigurationRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -370,10 +387,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name          | Type     | Description         | Notes                     |
-| ------------- | -------- | ------------------- | ------------------------- |
-| **name**      | `string` | Backup routine name | [Defaults to `undefined`] |
-| **timestamp** | `number` | Backup timestamp    | [Defaults to `undefined`] |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Backup routine name | [Defaults to `undefined`] |
+| **timestamp** | `number` | Backup timestamp | [Defaults to `undefined`] |
 
 ### Return type
 
@@ -391,7 +408,7 @@ No authorization required
 ### HTTP response details
 
 | Status code | Description        | Response headers |
-| ----------- | ------------------ | ---------------- |
+|-------------|--------------------|------------------|
 | **200**     | OK                 | -                |
 | **400**     | Bad Request        | -                |
 | **405**     | Method Not Allowed | -                |
@@ -407,8 +424,11 @@ Retrieve restore jobs.
 ### Example
 
 ```ts
-import { Configuration, RestoreApi } from "";
-import type { RetrieveRestoreJobsRequest } from "";
+import {
+  Configuration,
+  RestoreApi,
+} from '';
+import type { RetrieveRestoreJobsRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -437,10 +457,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name       | Type     | Description                                                                                                              | Notes                                |
-| ---------- | -------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
-| **from**   | `number` | Lower bound timestamp filter                                                                                             | [Optional] [Defaults to `undefined`] |
-| **to**     | `number` | Upper bound timestamp filter                                                                                             | [Optional] [Defaults to `undefined`] |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **from** | `number` | Lower bound timestamp filter | [Optional] [Defaults to `undefined`] |
+| **to** | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
 | **status** | `string` | Comma-separated status filter (Running,Done,Failed,Cancelled). Use ! prefix for exclude filter (e.g., !Failed,Cancelled) | [Optional] [Defaults to `undefined`] |
 
 ### Return type
@@ -459,9 +479,10 @@ No authorization required
 ### HTTP response details
 
 | Status code | Description           | Response headers |
-| ----------- | --------------------- | ---------------- |
+|-------------|-----------------------|------------------|
 | **200**     | Restore jobs          | -                |
 | **400**     | Bad Request           | -                |
 | **500**     | Internal Server Error | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+

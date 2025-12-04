@@ -1,19 +1,20 @@
+
 # DtoTLS
 
 TLS represents the Aerospike cluster TLS configuration options.
 
 ## Properties
 
-| Name              | Type   |
-| ----------------- | ------ |
-| `caFile`          | string |
-| `caPath`          | string |
-| `certFile`        | string |
-| `cipherSuite`     | string |
-| `keyFile`         | string |
-| `keyFilePassword` | string |
-| `name`            | string |
-| `protocols`       | string |
+ Name              | Type   
+-------------------|--------
+ `caFile`          | string 
+ `caPath`          | string 
+ `certFile`        | string 
+ `cipherSuite`     | string 
+ `keyFile`         | string 
+ `keyFilePassword` | string 
+ `name`            | string 
+ `protocols`       | string 
 
 ## Example
 
@@ -44,3 +45,5 @@ console.log(exampleParsed)
 ```
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+

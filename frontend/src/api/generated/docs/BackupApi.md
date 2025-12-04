@@ -1,9 +1,9 @@
 # BackupApi
 
-All URIs are relative to _http://localhost:8080_
+All URIs are relative to *http://localhost:8080*
 
 | Method                                                                              | HTTP request                             | Description                                   |
-| ----------------------------------------------------------------------------------- | ---------------------------------------- | --------------------------------------------- |
+|-------------------------------------------------------------------------------------|------------------------------------------|-----------------------------------------------|
 | [**cancelCurrentBackup**](BackupApi.md#cancelcurrentbackup)                         | **POST** /v1/backups/cancel/{name}       | Cancel current backup.                        |
 | [**getCurrentBackup**](BackupApi.md#getcurrentbackup)                               | **GET** /v1/backups/currentBackup/{name} | Get current backup statistics.                |
 | [**getFullBackups**](BackupApi.md#getfullbackups)                                   | **GET** /v1/backups/full                 | Get available full backups.                   |
@@ -21,8 +21,11 @@ Cancel current backup.
 ### Example
 
 ```ts
-import { Configuration, BackupApi } from "";
-import type { CancelCurrentBackupRequest } from "";
+import {
+  Configuration,
+  BackupApi,
+} from '';
+import type { CancelCurrentBackupRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -47,8 +50,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description         | Notes                     |
-| -------- | -------- | ------------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup routine name | [Defaults to `undefined`] |
 
 ### Return type
@@ -64,15 +67,17 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `*/*`
 
+
 ### HTTP response details
 
 | Status code | Description           | Response headers |
-| ----------- | --------------------- | ---------------- |
+|-------------|-----------------------|------------------|
 | **202**     | Accepted              | -                |
 | **404**     | Not Found             | -                |
 | **500**     | Internal Server Error | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## getCurrentBackup
 
@@ -83,8 +88,11 @@ Get current backup statistics.
 ### Example
 
 ```ts
-import { Configuration, BackupApi } from "";
-import type { GetCurrentBackupRequest } from "";
+import {
+  Configuration,
+  BackupApi,
+} from '';
+import type { GetCurrentBackupRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -109,8 +117,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description         | Notes                     |
-| -------- | -------- | ------------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup routine name | [Defaults to `undefined`] |
 
 ### Return type
@@ -126,16 +134,18 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
+
 ### HTTP response details
 
 | Status code | Description               | Response headers |
-| ----------- | ------------------------- | ---------------- |
+|-------------|---------------------------|------------------|
 | **200**     | Current backup statistics | -                |
 | **400**     | Bad Request               | -                |
 | **404**     | Not Found                 | -                |
 | **500**     | Internal Server Error     | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## getFullBackups
 
@@ -146,8 +156,11 @@ Get available full backups.
 ### Example
 
 ```ts
-import { Configuration, BackupApi } from "";
-import type { GetFullBackupsRequest } from "";
+import {
+  Configuration,
+  BackupApi,
+} from '';
+import type { GetFullBackupsRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -175,7 +188,7 @@ example().catch(console.error);
 ### Parameters
 
 | Name     | Type     | Description                  | Notes                                |
-| -------- | -------- | ---------------------------- | ------------------------------------ |
+|----------|----------|------------------------------|--------------------------------------|
 | **from** | `number` | Lower bound timestamp filter | [Optional] [Defaults to `undefined`] |
 | **to**   | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
 
@@ -192,15 +205,17 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
+
 ### HTTP response details
 
 | Status code | Description             | Response headers |
-| ----------- | ----------------------- | ---------------- |
+|-------------|-------------------------|------------------|
 | **200**     | Full backups by routine | -                |
 | **400**     | Bad Request             | -                |
 | **500**     | Internal Server Error   | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## getFullBackupsForRoutine
 
@@ -211,8 +226,11 @@ Get available full backups for routine.
 ### Example
 
 ```ts
-import { Configuration, BackupApi } from "";
-import type { GetFullBackupsForRoutineRequest } from "";
+import {
+  Configuration,
+  BackupApi,
+} from '';
+import type { GetFullBackupsForRoutineRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -242,7 +260,7 @@ example().catch(console.error);
 ### Parameters
 
 | Name     | Type     | Description                  | Notes                                |
-| -------- | -------- | ---------------------------- | ------------------------------------ |
+|----------|----------|------------------------------|--------------------------------------|
 | **name** | `string` | Backup routine name          | [Defaults to `undefined`]            |
 | **from** | `number` | Lower bound timestamp filter | [Optional] [Defaults to `undefined`] |
 | **to**   | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
@@ -260,15 +278,17 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
+
 ### HTTP response details
 
 | Status code | Description              | Response headers |
-| ----------- | ------------------------ | ---------------- |
+|-------------|--------------------------|------------------|
 | **200**     | Full backups for routine | -                |
 | **400**     | Bad Request              | -                |
 | **500**     | Internal Server Error    | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## getIncrementalBackups
 
@@ -279,8 +299,11 @@ Get available incremental backups.
 ### Example
 
 ```ts
-import { Configuration, BackupApi } from "";
-import type { GetIncrementalBackupsRequest } from "";
+import {
+  Configuration,
+  BackupApi,
+} from '';
+import type { GetIncrementalBackupsRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -308,7 +331,7 @@ example().catch(console.error);
 ### Parameters
 
 | Name     | Type     | Description                  | Notes                                |
-| -------- | -------- | ---------------------------- | ------------------------------------ |
+|----------|----------|------------------------------|--------------------------------------|
 | **from** | `number` | Lower bound timestamp filter | [Optional] [Defaults to `undefined`] |
 | **to**   | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
 
@@ -328,7 +351,7 @@ No authorization required
 ### HTTP response details
 
 | Status code | Description                    | Response headers |
-| ----------- | ------------------------------ | ---------------- |
+|-------------|--------------------------------|------------------|
 | **200**     | Incremental backups by routine | -                |
 | **400**     | Bad Request                    | -                |
 | **500**     | Internal Server Error          | -                |
@@ -344,8 +367,11 @@ Get incremental backups for routine.
 ### Example
 
 ```ts
-import { Configuration, BackupApi } from "";
-import type { GetIncrementalBackupsForRoutineRequest } from "";
+import {
+  Configuration,
+  BackupApi,
+} from '';
+import type { GetIncrementalBackupsForRoutineRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -375,7 +401,7 @@ example().catch(console.error);
 ### Parameters
 
 | Name     | Type     | Description                  | Notes                                |
-| -------- | -------- | ---------------------------- | ------------------------------------ |
+|----------|----------|------------------------------|--------------------------------------|
 | **name** | `string` | Backup routine name          | [Defaults to `undefined`]            |
 | **from** | `number` | Lower bound timestamp filter | [Optional] [Defaults to `undefined`] |
 | **to**   | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
@@ -396,7 +422,7 @@ No authorization required
 ### HTTP response details
 
 | Status code | Description                     | Response headers |
-| ----------- | ------------------------------- | ---------------- |
+|-------------|---------------------------------|------------------|
 | **200**     | Incremental backups for routine | -                |
 | **400**     | Bad Request                     | -                |
 | **500**     | Internal Server Error           | -                |
@@ -412,8 +438,11 @@ Schedule a full backup once per routine name.
 ### Example
 
 ```ts
-import { Configuration, BackupApi } from "";
-import type { ScheduleFullBackupRequest } from "";
+import {
+  Configuration,
+  BackupApi,
+} from '';
+import type { ScheduleFullBackupRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -440,9 +469,9 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name      | Type     | Description                    | Notes                                |
-| --------- | -------- | ------------------------------ | ------------------------------------ |
-| **name**  | `string` | Backup routine name            | [Defaults to `undefined`]            |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Backup routine name | [Defaults to `undefined`] |
 | **delay** | `number` | Delay interval in milliseconds | [Optional] [Defaults to `undefined`] |
 
 ### Return type
@@ -461,10 +490,11 @@ No authorization required
 ### HTTP response details
 
 | Status code | Description           | Response headers |
-| ----------- | --------------------- | ---------------- |
+|-------------|-----------------------|------------------|
 | **202**     | Accepted              | -                |
 | **400**     | Bad Request           | -                |
 | **404**     | Not Found             | -                |
 | **500**     | Internal Server Error | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+

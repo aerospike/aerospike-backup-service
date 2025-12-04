@@ -1,34 +1,35 @@
 # ConfigurationApi
 
-All URIs are relative to _http://localhost:8080_
+All URIs are relative to *http://localhost:8080*
 
-| Method                                                     | HTTP request                               | Description                                                               |
-| ---------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------- |
-| [**addCluster**](ConfigurationApi.md#addcluster)           | **POST** /v1/config/clusters/{name}        | Adds an Aerospike cluster to the config.                                  |
-| [**addPolicy**](ConfigurationApi.md#addpolicy)             | **POST** /v1/config/policies/{name}        | Adds a policy to the config.                                              |
-| [**addRoutine**](ConfigurationApi.md#addroutine)           | **POST** /v1/config/routines/{name}        | Adds a backup routine to the config.                                      |
-| [**addStorage**](ConfigurationApi.md#addstorage)           | **POST** /v1/config/storage/{name}         | Adds a storage to the config.                                             |
-| [**applyConfig**](ConfigurationApi.md#applyconfig)         | **POST** /v1/config/apply                  | Reloads the configuration from the config file.                           |
-| [**deleteCluster**](ConfigurationApi.md#deletecluster)     | **DELETE** /v1/config/clusters/{name}      | Deletes a cluster from the configuration by name.                         |
-| [**deletePolicy**](ConfigurationApi.md#deletepolicy)       | **DELETE** /v1/config/policies/{name}      | Deletes a policy from the configuration by name.                          |
-| [**deleteRoutine**](ConfigurationApi.md#deleteroutine)     | **DELETE** /v1/config/routines/{name}      | Deletes a backup routine from the configuration by name.                  |
-| [**deleteStorage**](ConfigurationApi.md#deletestorage)     | **DELETE** /v1/config/storage/{name}       | Deletes a storage from the configuration by name.                         |
-| [**disableRoutine**](ConfigurationApi.md#disableroutine)   | **PUT** /v1/config/routines/{name}/disable | Disable a backup routine.                                                 |
-| [**enableRoutine**](ConfigurationApi.md#enableroutine)     | **PUT** /v1/config/routines/{name}/enable  | Enable a backup routine.                                                  |
-| [**readAllClusters**](ConfigurationApi.md#readallclusters) | **GET** /v1/config/clusters                | Reads all Aerospike clusters from the configuration.                      |
-| [**readAllStorage**](ConfigurationApi.md#readallstorage)   | **GET** /v1/config/storage                 | Reads all storage from the configuration.                                 |
-| [**readCluster**](ConfigurationApi.md#readcluster)         | **GET** /v1/config/clusters/{name}         | Reads a specific Aerospike cluster from the configuration given its name. |
-| [**readConfig**](ConfigurationApi.md#readconfig)           | **GET** /v1/config                         | Returns the configuration for the service.                                |
-| [**readPolicies**](ConfigurationApi.md#readpolicies)       | **GET** /v1/config/policies                | Reads all policies from the configuration.                                |
-| [**readPolicy**](ConfigurationApi.md#readpolicy)           | **GET** /v1/config/policies/{name}         | Reads a backup policy from the configuration given its name.              |
-| [**readRoutine**](ConfigurationApi.md#readroutine)         | **GET** /v1/config/routines/{name}         | Reads a specific routine from the configuration given its name.           |
-| [**readRoutines**](ConfigurationApi.md#readroutines)       | **GET** /v1/config/routines                | Reads all routines from the configuration.                                |
-| [**readStorage**](ConfigurationApi.md#readstorage)         | **GET** /v1/config/storage/{name}          | Reads a specific storage from the configuration given its name.           |
-| [**updateCluster**](ConfigurationApi.md#updatecluster)     | **PUT** /v1/config/clusters/{name}         | Updates an existing Aerospike cluster in the configuration.               |
-| [**updateConfig**](ConfigurationApi.md#updateconfig)       | **PUT** /v1/config                         | Updates the configuration for the service.                                |
-| [**updatePolicy**](ConfigurationApi.md#updatepolicy)       | **PUT** /v1/config/policies/{name}         | Updates an existing policy in the configuration.                          |
-| [**updateRoutine**](ConfigurationApi.md#updateroutine)     | **PUT** /v1/config/routines/{name}         | Updates an existing routine in the configuration.                         |
-| [**updateStorage**](ConfigurationApi.md#updatestorage)     | **PUT** /v1/config/storage/{name}          | Updates an existing storage in the configuration.                         |
+| Method                                                                       | HTTP request                                    | Description                                                               |
+|------------------------------------------------------------------------------|-------------------------------------------------|---------------------------------------------------------------------------|
+| [**addCluster**](ConfigurationApi.md#addcluster)                             | **POST** /v1/config/clusters/{name}             | Adds an Aerospike cluster to the config.                                  |
+| [**addPolicy**](ConfigurationApi.md#addpolicy)                               | **POST** /v1/config/policies/{name}             | Adds a policy to the config.                                              |
+| [**addRoutine**](ConfigurationApi.md#addroutine)                             | **POST** /v1/config/routines/{name}             | Adds a backup routine to the config.                                      |
+| [**addStorage**](ConfigurationApi.md#addstorage)                             | **POST** /v1/config/storage/{name}              | Adds a storage to the config.                                             |
+| [**applyConfig**](ConfigurationApi.md#applyconfig)                           | **POST** /v1/config/apply                       | Reloads the configuration from the config file.                           |
+| [**checkClusterConnectivity**](ConfigurationApi.md#checkclusterconnectivity) | **POST** /v1/config/clusters/check-connectivity | Checks connectivity to an Aerospike cluster.                              |
+| [**deleteCluster**](ConfigurationApi.md#deletecluster)                       | **DELETE** /v1/config/clusters/{name}           | Deletes a cluster from the configuration by name.                         |
+| [**deletePolicy**](ConfigurationApi.md#deletepolicy)                         | **DELETE** /v1/config/policies/{name}           | Deletes a policy from the configuration by name.                          |
+| [**deleteRoutine**](ConfigurationApi.md#deleteroutine)                       | **DELETE** /v1/config/routines/{name}           | Deletes a backup routine from the configuration by name.                  |
+| [**deleteStorage**](ConfigurationApi.md#deletestorage)                       | **DELETE** /v1/config/storage/{name}            | Deletes a storage from the configuration by name.                         |
+| [**disableRoutine**](ConfigurationApi.md#disableroutine)                     | **PUT** /v1/config/routines/{name}/disable      | Disable a backup routine.                                                 |
+| [**enableRoutine**](ConfigurationApi.md#enableroutine)                       | **PUT** /v1/config/routines/{name}/enable       | Enable a backup routine.                                                  |
+| [**readAllClusters**](ConfigurationApi.md#readallclusters)                   | **GET** /v1/config/clusters                     | Reads all Aerospike clusters from the configuration.                      |
+| [**readAllStorage**](ConfigurationApi.md#readallstorage)                     | **GET** /v1/config/storage                      | Reads all storage from the configuration.                                 |
+| [**readCluster**](ConfigurationApi.md#readcluster)                           | **GET** /v1/config/clusters/{name}              | Reads a specific Aerospike cluster from the configuration given its name. |
+| [**readConfig**](ConfigurationApi.md#readconfig)                             | **GET** /v1/config                              | Returns the configuration for the service.                                |
+| [**readPolicies**](ConfigurationApi.md#readpolicies)                         | **GET** /v1/config/policies                     | Reads all policies from the configuration.                                |
+| [**readPolicy**](ConfigurationApi.md#readpolicy)                             | **GET** /v1/config/policies/{name}              | Reads a backup policy from the configuration given its name.              |
+| [**readRoutine**](ConfigurationApi.md#readroutine)                           | **GET** /v1/config/routines/{name}              | Reads a specific routine from the configuration given its name.           |
+| [**readRoutines**](ConfigurationApi.md#readroutines)                         | **GET** /v1/config/routines                     | Reads all routines from the configuration.                                |
+| [**readStorage**](ConfigurationApi.md#readstorage)                           | **GET** /v1/config/storage/{name}               | Reads a specific storage from the configuration given its name.           |
+| [**updateCluster**](ConfigurationApi.md#updatecluster)                       | **PUT** /v1/config/clusters/{name}              | Updates an existing Aerospike cluster in the configuration.               |
+| [**updateConfig**](ConfigurationApi.md#updateconfig)                         | **PUT** /v1/config                              | Updates the configuration for the service.                                |
+| [**updatePolicy**](ConfigurationApi.md#updatepolicy)                         | **PUT** /v1/config/policies/{name}              | Updates an existing policy in the configuration.                          |
+| [**updateRoutine**](ConfigurationApi.md#updateroutine)                       | **PUT** /v1/config/routines/{name}              | Updates an existing routine in the configuration.                         |
+| [**updateStorage**](ConfigurationApi.md#updatestorage)                       | **PUT** /v1/config/storage/{name}               | Updates an existing storage in the configuration.                         |
 
 ## addCluster
 
@@ -70,10 +71,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name                    | Type                                          | Description               | Notes                     |
-| ----------------------- | --------------------------------------------- | ------------------------- | ------------------------- |
-| **name**                | `string`                                      | Aerospike cluster name    | [Defaults to `undefined`] |
-| **dtoAerospikeCluster** | [DtoAerospikeCluster](DtoAerospikeCluster.md) | Aerospike cluster details |                           |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Aerospike cluster name | [Defaults to `undefined`] |
+| **dtoAerospikeCluster** | [DtoAerospikeCluster](DtoAerospikeCluster.md) | Aerospike cluster details | |
 
 ### Return type
 
@@ -88,15 +89,17 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `*/*`
 
+
 ### HTTP response details
 
 | Status code | Description           | Response headers |
-| ----------- | --------------------- | ---------------- |
+|-------------|-----------------------|------------------|
 | **201**     | Created               | -                |
 | **400**     | Bad Request           | -                |
 | **500**     | Internal Server Error | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## addPolicy
 
@@ -138,10 +141,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name                | Type                                  | Description           | Notes                     |
-| ------------------- | ------------------------------------- | --------------------- | ------------------------- |
-| **name**            | `string`                              | Backup policy name    | [Defaults to `undefined`] |
-| **dtoBackupPolicy** | [DtoBackupPolicy](DtoBackupPolicy.md) | Backup policy details |                           |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Backup policy name | [Defaults to `undefined`] |
+| **dtoBackupPolicy** | [DtoBackupPolicy](DtoBackupPolicy.md) | Backup policy details | |
 
 ### Return type
 
@@ -156,14 +159,15 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `*/*`
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **201**     | Created     | -                |
 | **400**     | Bad Request | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## addRoutine
 
@@ -205,10 +209,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name                 | Type                                    | Description            | Notes                     |
-| -------------------- | --------------------------------------- | ---------------------- | ------------------------- |
-| **name**             | `string`                                | Backup routine name    | [Defaults to `undefined`] |
-| **dtoBackupRoutine** | [DtoBackupRoutine](DtoBackupRoutine.md) | Backup routine details |                           |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Backup routine name | [Defaults to `undefined`] |
+| **dtoBackupRoutine** | [DtoBackupRoutine](DtoBackupRoutine.md) | Backup routine details | |
 
 ### Return type
 
@@ -223,14 +227,15 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `*/*`
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **201**     | Created     | -                |
 | **400**     | Bad Request | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## addStorage
 
@@ -272,10 +277,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name           | Type                        | Description            | Notes                     |
-| -------------- | --------------------------- | ---------------------- | ------------------------- |
-| **name**       | `string`                    | Backup storage name    | [Defaults to `undefined`] |
-| **dtoStorage** | [DtoStorage](DtoStorage.md) | Backup storage details |                           |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Backup storage name | [Defaults to `undefined`] |
+| **dtoStorage** | [DtoStorage](DtoStorage.md) | Backup storage details | |
 
 ### Return type
 
@@ -290,14 +295,15 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `*/*`
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **201**     | Created     | -                |
 | **400**     | Bad Request | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## applyConfig
 
@@ -308,8 +314,11 @@ Reloads the configuration from the config file.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { ApplyConfigRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { ApplyConfigRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -344,12 +353,77 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `*/*`
 
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200**     | OK          | -                |
+| **400**     | Bad Request | -                |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+## checkClusterConnectivity
+
+> string checkClusterConnectivity(dtoAerospikeCluster)
+
+Checks connectivity to an Aerospike cluster.
+
+### Example
+
+```ts
+import {
+    Configuration,
+    ConfigurationApi,
+} from '';
+import type {CheckClusterConnectivityRequest} from '';
+
+async function example() {
+    console.log("🚀 Testing  SDK...");
+    const api = new ConfigurationApi();
+
+    const body = {
+        // DtoAerospikeCluster | Aerospike cluster details
+        dtoAerospikeCluster: ...,
+    } satisfies CheckClusterConnectivityRequest;
+
+    try {
+        const data = await api.checkClusterConnectivity(body);
+        console.log(data);
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **dtoAerospikeCluster** | [DtoAerospikeCluster](DtoAerospikeCluster.md) | Aerospike cluster details | |
+
+### Return type
+
+**string**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `*/*`
+
 ### HTTP response details
 
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
-| **200**     | OK          | -                |
-| **400**     | Bad Request | -                |
+|-------------|-------------|------------------|
+| **200** | Connection successful |  -  |
+| **400** | Bad Request |  -  |
+| **500** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -362,8 +436,11 @@ Deletes a cluster from the configuration by name.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { DeleteClusterRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { DeleteClusterRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -388,8 +465,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description            | Notes                     |
-| -------- | -------- | ---------------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Aerospike cluster name | [Defaults to `undefined`] |
 
 ### Return type
@@ -405,14 +482,15 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `*/*`
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **204**     | No Content  | -                |
 | **400**     | Bad Request | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## deletePolicy
 
@@ -423,8 +501,11 @@ Deletes a policy from the configuration by name.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { DeletePolicyRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { DeletePolicyRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -449,8 +530,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description        | Notes                     |
-| -------- | -------- | ------------------ | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup policy name | [Defaults to `undefined`] |
 
 ### Return type
@@ -466,14 +547,15 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `*/*`
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **204**     | No Content  | -                |
 | **400**     | Bad Request | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## deleteRoutine
 
@@ -484,8 +566,11 @@ Deletes a backup routine from the configuration by name.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { DeleteRoutineRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { DeleteRoutineRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -510,8 +595,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description         | Notes                     |
-| -------- | -------- | ------------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup routine name | [Defaults to `undefined`] |
 
 ### Return type
@@ -527,14 +612,15 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `*/*`
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **204**     | No Content  | -                |
 | **400**     | Bad Request | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## deleteStorage
 
@@ -545,8 +631,11 @@ Deletes a storage from the configuration by name.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { DeleteStorageRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { DeleteStorageRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -571,8 +660,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description         | Notes                     |
-| -------- | -------- | ------------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup storage name | [Defaults to `undefined`] |
 
 ### Return type
@@ -588,14 +677,15 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `*/*`
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **204**     | No Content  | -                |
 | **400**     | Bad Request | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## disableRoutine
 
@@ -606,8 +696,11 @@ Disable a backup routine.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { DisableRoutineRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { DisableRoutineRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -632,8 +725,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description                     | Notes                     |
-| -------- | -------- | ------------------------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | The name of the backup routine. | [Defaults to `undefined`] |
 
 ### Return type
@@ -649,15 +742,17 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `*/*`
 
+
 ### HTTP response details
 
 | Status code | Description                    | Response headers |
-| ----------- | ------------------------------ | ---------------- |
+|-------------|--------------------------------|------------------|
 | **204**     | Routine successfully disabled. | -                |
 | **404**     | Not Found                      | -                |
 | **500**     | Unexpected error occurred.     | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## enableRoutine
 
@@ -668,8 +763,11 @@ Enable a backup routine.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { EnableRoutineRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { EnableRoutineRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -694,8 +792,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description         | Notes                     |
-| -------- | -------- | ------------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup routine name | [Defaults to `undefined`] |
 
 ### Return type
@@ -711,14 +809,16 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `*/*`
 
+
 ### HTTP response details
 
 | Status code | Description                   | Response headers |
-| ----------- | ----------------------------- | ---------------- |
+|-------------|-------------------------------|------------------|
 | **204**     | Routine successfully enabled. | -                |
 | **404**     | Not Found                     | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## readAllClusters
 
@@ -729,8 +829,11 @@ Reads all Aerospike clusters from the configuration.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { ReadAllClustersRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { ReadAllClustersRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -765,14 +868,16 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
+
 ### HTTP response details
 
 | Status code | Description           | Response headers |
-| ----------- | --------------------- | ---------------- |
+|-------------|-----------------------|------------------|
 | **200**     | OK                    | -                |
 | **500**     | Internal Server Error | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## readAllStorage
 
@@ -783,8 +888,11 @@ Reads all storage from the configuration.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { ReadAllStorageRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { ReadAllStorageRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -819,14 +927,16 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
+
 ### HTTP response details
 
 | Status code | Description           | Response headers |
-| ----------- | --------------------- | ---------------- |
+|-------------|-----------------------|------------------|
 | **200**     | OK                    | -                |
 | **500**     | Internal Server Error | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## readCluster
 
@@ -837,8 +947,11 @@ Reads a specific Aerospike cluster from the configuration given its name.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { ReadClusterRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { ReadClusterRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -863,8 +976,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description            | Notes                     |
-| -------- | -------- | ---------------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Aerospike cluster name | [Defaults to `undefined`] |
 
 ### Return type
@@ -880,10 +993,11 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
+
 ### HTTP response details
 
 | Status code | Description                              | Response headers |
-| ----------- | ---------------------------------------- | ---------------- |
+|-------------|------------------------------------------|------------------|
 | **200**     | OK                                       | -                |
 | **400**     | Bad Request                              | -                |
 | **404**     | The specified cluster could not be found | -                |
@@ -900,8 +1014,11 @@ Returns the configuration for the service.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { ReadConfigRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { ReadConfigRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -939,7 +1056,7 @@ No authorization required
 ### HTTP response details
 
 | Status code | Description           | Response headers |
-| ----------- | --------------------- | ---------------- |
+|-------------|-----------------------|------------------|
 | **200**     | OK                    | -                |
 | **500**     | Internal Server Error | -                |
 
@@ -954,8 +1071,11 @@ Reads all policies from the configuration.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { ReadPoliciesRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { ReadPoliciesRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -993,7 +1113,7 @@ No authorization required
 ### HTTP response details
 
 | Status code | Description           | Response headers |
-| ----------- | --------------------- | ---------------- |
+|-------------|-----------------------|------------------|
 | **200**     | OK                    | -                |
 | **500**     | Internal Server Error | -                |
 
@@ -1008,8 +1128,11 @@ Reads a backup policy from the configuration given its name.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { ReadPolicyRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { ReadPolicyRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -1034,8 +1157,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description        | Notes                     |
-| -------- | -------- | ------------------ | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup policy name | [Defaults to `undefined`] |
 
 ### Return type
@@ -1054,7 +1177,7 @@ No authorization required
 ### HTTP response details
 
 | Status code | Description                             | Response headers |
-| ----------- | --------------------------------------- | ---------------- |
+|-------------|-----------------------------------------|------------------|
 | **200**     | OK                                      | -                |
 | **400**     | Bad Request                             | -                |
 | **404**     | The specified policy could not be found | -                |
@@ -1071,8 +1194,11 @@ Reads a specific routine from the configuration given its name.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { ReadRoutineRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { ReadRoutineRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -1097,8 +1223,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description         | Notes                     |
-| -------- | -------- | ------------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup routine name | [Defaults to `undefined`] |
 
 ### Return type
@@ -1117,7 +1243,7 @@ No authorization required
 ### HTTP response details
 
 | Status code | Description                              | Response headers |
-| ----------- | ---------------------------------------- | ---------------- |
+|-------------|------------------------------------------|------------------|
 | **200**     | OK                                       | -                |
 | **400**     | Bad Request                              | -                |
 | **404**     | The specified routine could not be found | -                |
@@ -1133,8 +1259,11 @@ Reads all routines from the configuration.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { ReadRoutinesRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { ReadRoutinesRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -1170,9 +1299,8 @@ No authorization required
 - **Accept**: `application/json`
 
 ### HTTP response details
-
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | OK          | -                |
 | **400**     | Bad Request | -                |
 
@@ -1187,8 +1315,11 @@ Reads a specific storage from the configuration given its name.
 ### Example
 
 ```ts
-import { Configuration, ConfigurationApi } from "";
-import type { ReadStorageRequest } from "";
+import {
+  Configuration,
+  ConfigurationApi,
+} from '';
+import type { ReadStorageRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -1213,8 +1344,8 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description         | Notes                     |
-| -------- | -------- | ------------------- | ------------------------- |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup storage name | [Defaults to `undefined`] |
 
 ### Return type
@@ -1233,7 +1364,7 @@ No authorization required
 ### HTTP response details
 
 | Status code | Description                              | Response headers |
-| ----------- | ---------------------------------------- | ---------------- |
+|-------------|------------------------------------------|------------------|
 | **200**     | OK                                       | -                |
 | **400**     | Bad Request                              | -                |
 | **404**     | The specified storage could not be found | -                |
@@ -1281,10 +1412,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name                    | Type                                          | Description               | Notes                     |
-| ----------------------- | --------------------------------------------- | ------------------------- | ------------------------- |
-| **name**                | `string`                                      | Aerospike cluster name    | [Defaults to `undefined`] |
-| **dtoAerospikeCluster** | [DtoAerospikeCluster](DtoAerospikeCluster.md) | Aerospike cluster details |                           |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Aerospike cluster name | [Defaults to `undefined`] |
+| **dtoAerospikeCluster** | [DtoAerospikeCluster](DtoAerospikeCluster.md) | Aerospike cluster details | |
 
 ### Return type
 
@@ -1300,9 +1431,8 @@ No authorization required
 - **Accept**: `*/*`
 
 ### HTTP response details
-
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | OK          | -                |
 | **400**     | Bad Request | -                |
 
@@ -1346,9 +1476,9 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name          | Type                      | Description           | Notes |
-| ------------- | ------------------------- | --------------------- | ----- |
-| **dtoConfig** | [DtoConfig](DtoConfig.md) | Configuration details |       |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **dtoConfig** | [DtoConfig](DtoConfig.md) | Configuration details | |
 
 ### Return type
 
@@ -1364,9 +1494,8 @@ No authorization required
 - **Accept**: `*/*`
 
 ### HTTP response details
-
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | OK          | -                |
 | **400**     | Bad Request | -                |
 
@@ -1412,10 +1541,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name                | Type                                  | Description           | Notes                     |
-| ------------------- | ------------------------------------- | --------------------- | ------------------------- |
-| **name**            | `string`                              | Backup policy name    | [Defaults to `undefined`] |
-| **dtoBackupPolicy** | [DtoBackupPolicy](DtoBackupPolicy.md) | Backup policy details |                           |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Backup policy name | [Defaults to `undefined`] |
+| **dtoBackupPolicy** | [DtoBackupPolicy](DtoBackupPolicy.md) | Backup policy details | |
 
 ### Return type
 
@@ -1431,9 +1560,8 @@ No authorization required
 - **Accept**: `*/*`
 
 ### HTTP response details
-
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | OK          | -                |
 | **400**     | Bad Request | -                |
 
@@ -1479,10 +1607,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name                 | Type                                    | Description            | Notes                     |
-| -------------------- | --------------------------------------- | ---------------------- | ------------------------- |
-| **name**             | `string`                                | Backup routine name    | [Defaults to `undefined`] |
-| **dtoBackupRoutine** | [DtoBackupRoutine](DtoBackupRoutine.md) | Backup routine details |                           |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Backup routine name | [Defaults to `undefined`] |
+| **dtoBackupRoutine** | [DtoBackupRoutine](DtoBackupRoutine.md) | Backup routine details | |
 
 ### Return type
 
@@ -1498,9 +1626,8 @@ No authorization required
 - **Accept**: `*/*`
 
 ### HTTP response details
-
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | OK          | -                |
 | **400**     | Bad Request | -                |
 
@@ -1546,10 +1673,10 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name           | Type                        | Description            | Notes                     |
-| -------------- | --------------------------- | ---------------------- | ------------------------- |
-| **name**       | `string`                    | Backup storage name    | [Defaults to `undefined`] |
-| **dtoStorage** | [DtoStorage](DtoStorage.md) | Backup storage details |                           |
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Backup storage name | [Defaults to `undefined`] |
+| **dtoStorage** | [DtoStorage](DtoStorage.md) | Backup storage details | |
 
 ### Return type
 
@@ -1565,10 +1692,10 @@ No authorization required
 - **Accept**: `*/*`
 
 ### HTTP response details
-
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | OK          | -                |
 | **400**     | Bad Request | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+

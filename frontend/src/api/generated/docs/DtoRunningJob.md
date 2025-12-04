@@ -1,19 +1,20 @@
+
 # DtoRunningJob
 
 RunningJob tracks progress of currently running job.
 
 ## Properties
 
-| Name               | Type                        |
-| ------------------ | --------------------------- |
-| `doneRecords`      | number                      |
-| `duration`         | number                      |
-| `estimatedEndTime` | string                      |
-| `finishTime`       | string                      |
-| `metrics`          | [DtoMetrics](DtoMetrics.md) |
-| `percentageDone`   | number                      |
-| `startTime`        | string                      |
-| `totalRecords`     | number                      |
+ Name               | Type                        
+--------------------|-----------------------------
+ `doneRecords`      | number                      
+ `duration`         | number                      
+ `estimatedEndTime` | string                      
+ `finishTime`       | string                      
+ `metrics`          | [DtoMetrics](DtoMetrics.md) 
+ `percentageDone`   | number                      
+ `startTime`        | string                      
+ `totalRecords`     | number                      
 
 ## Example
 
@@ -44,3 +45,5 @@ console.log(exampleParsed)
 ```
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+

@@ -1,9 +1,9 @@
 # SystemApi
 
-All URIs are relative to _http://localhost:8080_
+All URIs are relative to *http://localhost:8080*
 
 | Method                              | HTTP request       | Description                     |
-| ----------------------------------- | ------------------ | ------------------------------- |
+|-------------------------------------|--------------------|---------------------------------|
 | [**apiDocs**](SystemApi.md#apidocs) | **GET** /api-docs/ | OpenAPI specification endpoint. |
 | [**health**](SystemApi.md#health)   | **GET** /health    | Health endpoint.                |
 | [**metrics**](SystemApi.md#metrics) | **GET** /metrics   | Prometheus metrics endpoint.    |
@@ -22,8 +22,11 @@ Serves the API documentation in Swagger UI format.
 ### Example
 
 ```ts
-import { Configuration, SystemApi } from "";
-import type { ApiDocsRequest } from "";
+import {
+  Configuration,
+  SystemApi,
+} from '';
+import type { ApiDocsRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -58,13 +61,14 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `text/html`
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | OK          | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## health
 
@@ -75,8 +79,11 @@ Health endpoint.
 ### Example
 
 ```ts
-import { Configuration, SystemApi } from "";
-import type { HealthRequest } from "";
+import {
+  Configuration,
+  SystemApi,
+} from '';
+import type { HealthRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -111,13 +118,14 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: Not defined
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | OK          | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## metrics
 
@@ -128,8 +136,11 @@ Prometheus metrics endpoint.
 ### Example
 
 ```ts
-import { Configuration, SystemApi } from "";
-import type { MetricsRequest } from "";
+import {
+  Configuration,
+  SystemApi,
+} from '';
+import type { MetricsRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -164,13 +175,14 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: Not defined
 
-### HTTP response details
 
+### HTTP response details
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | OK          | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## ready
 
@@ -181,8 +193,11 @@ Readiness endpoint.
 ### Example
 
 ```ts
-import { Configuration, SystemApi } from "";
-import type { ReadyRequest } from "";
+import {
+  Configuration,
+  SystemApi,
+} from '';
+import type { ReadyRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -218,9 +233,8 @@ No authorization required
 - **Accept**: Not defined
 
 ### HTTP response details
-
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | OK          | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
@@ -234,8 +248,11 @@ Root endpoint.
 ### Example
 
 ```ts
-import { Configuration, SystemApi } from "";
-import type { RootRequest } from "";
+import {
+  Configuration,
+  SystemApi,
+} from '';
+import type { RootRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -271,9 +288,8 @@ No authorization required
 - **Accept**: Not defined
 
 ### HTTP response details
-
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | OK          | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
@@ -287,8 +303,11 @@ Returns application version.
 ### Example
 
 ```ts
-import { Configuration, SystemApi } from "";
-import type { VersionRequest } from "";
+import {
+  Configuration,
+  SystemApi,
+} from '';
+import type { VersionRequest } from '';
 
 async function example() {
   console.log("🚀 Testing  SDK...");
@@ -324,9 +343,9 @@ No authorization required
 - **Accept**: `*/*`
 
 ### HTTP response details
-
 | Status code | Description | Response headers |
-| ----------- | ----------- | ---------------- |
+|-------------|-------------|------------------|
 | **200**     | version     | -                |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+

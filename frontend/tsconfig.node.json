@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowSyntheticDefaultImports": true,
+    // --- CHANGE THESE LINES ---
+    // Change noEmit to false (so it CAN emit)
+    "noEmit": false,
+    // Add this so it only emits type definitions, not .js files
+    "emitDeclarationOnly": true
+  },
+  "include": [
+    "vite.config.ts"
+  ]
+}
