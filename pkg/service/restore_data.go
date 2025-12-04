@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
@@ -69,7 +70,10 @@ func (r *dataRestorer) Restore(ctx context.Context, request *model.RestoreReques
 	go func() {
 		err := r.executeRestore(ctx, request, jobID, logger)
 		if err != nil { // if some of the restore sub-operations failed, we need to cancel the rest.
+			logger.Info("Restore job finished with error", attr.Error(err))
 			cancel()
+		} else {
+			logger.Info("Restore job completed")
 		}
 		r.restoreJobs.finishJob(jobID, err)
 	}()
@@ -197,6 +201,12 @@ func (r *dataRestorer) RestoreByTime(
 
 	go func() {
 		err := r.restoreByTimeSync(ctx, request, jobID, logger)
+		if err != nil {
+			logger.Info("Restore job finished with error", attr.Error(err))
+		} else {
+			logger.Info("Restore job completed")
+		}
+
 		r.restoreJobs.finishJob(jobID, err)
 	}()
 

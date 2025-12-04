@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import type {Backup, DtoConfig, DtoRoutineState, DtoRunningJob} from '@/api';
+import type {Backup, DtoConfig, DtoRestoreJobStatus, DtoRoutineState, DtoRunningJob} from '@/api';
 import * as allGenerated from '@/api'; // Import allGenerated here
 import {api, BackupApi} from '@/api';
 import {MonitoringSidebar} from './MonitoringSidebar';
@@ -16,9 +16,11 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
     const [activeRoutine, setActiveRoutine] = useState<string>(routineKeys[0] || '');
 
     const [currentBackup, setCurrentBackup] = useState<DtoRoutineState | null>(null);
+    const [restoreJobs, setRestoreJobs] = useState<{ [key: string]: DtoRestoreJobStatus }>({});
     const [history, setHistory] = useState<Backup[]>([]);
     const [isSchedulingBackup, setIsSchedulingBackup] = useState(false);
     const [isCancellingBackup, setIsCancellingBackup] = useState(false);
+    const [isCancellingRestore, setIsCancellingRestore] = useState(false);
 
     const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
     const [chain, setChain] = useState<string[]>([]);
@@ -30,6 +32,9 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
 
     const loadData = async () => {
         try {
+            const rJobs = await api.fetchRestoreJobs();
+            setRestoreJobs(rJobs);
+
             if (activeRoutine) {
                 const [backup, hist] = await Promise.all([
                     api.fetchCurrentBackup(activeRoutine),
@@ -98,6 +103,20 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
         }
     };
 
+    const handleCancelRestore = async (jobId: number) => {
+        setIsCancellingRestore(true);
+        try {
+            await api.cancelRestore(jobId);
+            setTimeout(() => {
+                loadData();
+            }, 100);
+        } catch (error: any) {
+            console.error("Failed to cancel restore", error);
+        } finally {
+            setIsCancellingRestore(false);
+        }
+    };
+
     useEffect(() => {
         loadData();
         const interval = setInterval(loadData, 5000);
@@ -157,10 +176,13 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
                 <LiveActivity
                     activeRoutine={activeRoutine}
                     runningJobs={runningJobs}
+                    restoreJobs={restoreJobs}
                     isSchedulingBackup={isSchedulingBackup}
                     isCancellingBackup={isCancellingBackup}
+                    isCancellingRestore={isCancellingRestore}
                     handleScheduleFullBackup={handleScheduleFullBackup}
                     handleCancelBackup={handleCancelBackup}
+                    handleCancelRestore={handleCancelRestore}
                 />
 
                 <BackupHistory

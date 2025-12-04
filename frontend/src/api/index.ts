@@ -53,6 +53,14 @@ export const api = {
         return response.raw;
     },
 
+    fetchRestoreJobs: async (): Promise<{ [key: string]: allGenerated.DtoRestoreJobStatus }> => {
+        return await restoreApi.retrieveRestoreJobs({});
+    },
+
+    cancelRestore: async (jobId: number): Promise<void> => {
+        await restoreApi.cancelRestore({jobId});
+    },
+
     cancelBackup: async (routine: string): Promise<void> => {
         await backupApi.cancelCurrentBackup({name: routine});
     }
