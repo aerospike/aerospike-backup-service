@@ -169,7 +169,8 @@ func writeFile(ctx context.Context, storage model.Storage, fileName, storageClas
 	}
 
 	if _, err := w.Write(content); err != nil {
-		return fmt.Errorf("failed to write content: %w", err)
+		return errors.Join(fmt.Errorf("failed to write content: %w", err),
+			w.Close())
 	}
 
 	if err := w.Close(); err != nil {
