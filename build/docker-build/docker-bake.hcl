@@ -45,7 +45,7 @@ variable REGISTRY {
 }
 
 variable GO_VERSION {
-  default = "1.23.4"
+  default = "1.24.0"
 }
 
 variable CACHE_FROM {
