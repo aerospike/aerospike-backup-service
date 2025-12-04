@@ -27,12 +27,22 @@ func TestBackupRoutineCopy_GobRegistrations(t *testing.T) {
 			storage: &GcpStorage{BucketName: "b", Path: "p"},
 		},
 		{
-			name:    "AzureStorage with AzureSharedKeyAuth",
-			storage: &AzureStorage{Path: "p", Endpoint: "e", ContainerName: "c", Auth: &AzureSharedKeyAuth{AccountName: "a", AccountKey: "k"}},
+			name: "AzureStorage with AzureSharedKeyAuth",
+			storage: &AzureStorage{
+				Path:          "p",
+				Endpoint:      "e",
+				ContainerName: "c",
+				Auth:          &AzureSharedKeyAuth{AccountName: "a", AccountKey: "k"},
+			},
 		},
 		{
-			name:    "AzureStorage with AzureADAuth",
-			storage: &AzureStorage{Path: "p", Endpoint: "e", ContainerName: "c", Auth: &AzureADAuth{TenantID: "t", ClientID: "i", ClientSecret: "s"}},
+			name: "AzureStorage with AzureADAuth",
+			storage: &AzureStorage{
+				Path:          "p",
+				Endpoint:      "e",
+				ContainerName: "c",
+				Auth:          &AzureADAuth{TenantID: "t", ClientID: "i", ClientSecret: "s"},
+			},
 		},
 	}
 
@@ -48,7 +58,9 @@ func TestBackupRoutineCopy_GobRegistrations(t *testing.T) {
 
 			require.NotNil(t, out, "Copy() returned nil for non-nil receiver")
 			require.NotSame(t, r, out, "Copy() returned the same pointer; expected a new instance")
-			require.True(t, reflect.DeepEqual(r, out), "Copy() result is not deeply equal to source.\nsource: %#v\ncopy:   %#v", r, out)
+			require.True(t,
+				reflect.DeepEqual(r, out),
+				"Copy() result is not deeply equal to source.\nsource: %#v\ncopy:   %#v", r, out)
 		})
 	}
 }
