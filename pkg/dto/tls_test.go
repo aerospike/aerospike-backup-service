@@ -120,16 +120,8 @@ func setupTestCertificates(t *testing.T) *testCertificates {
 	}
 }
 
-// cleanupTestCertificates removes temporary certificate files.
-func cleanupTestCertificates(certs *testCertificates) {
-	if certs != nil && certs.tempDir != "" {
-		_ = os.RemoveAll(certs.tempDir)
-	}
-}
-
 func TestTLS_Validate(t *testing.T) {
 	certs := setupTestCertificates(t)
-	defer cleanupTestCertificates(certs)
 
 	tests := []struct {
 		name    string
@@ -315,7 +307,6 @@ func TestTLS_Validate(t *testing.T) {
 
 func TestTLS_validateCACertificates(t *testing.T) {
 	certs := setupTestCertificates(t)
-	defer cleanupTestCertificates(certs)
 
 	tests := []struct {
 		name    string
