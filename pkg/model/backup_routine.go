@@ -40,6 +40,10 @@ type BackupRoutine struct {
 }
 
 func init() {
+	// Register all concrete types that can appear in interface fields of BackupRoutine
+	// with encoding/gob. BackupRoutine.Copy() uses gob to perform a deep copy via
+	// encode/decode round-trip. If a concrete implementation of an interface
+	// is not registered here, gob will panic at runtime when encoding/decoding that value.
 	gob.Register(&LocalStorage{})
 	gob.Register(&S3Storage{})
 	gob.Register(&GcpStorage{})
@@ -48,6 +52,7 @@ func init() {
 	gob.Register(&AzureSharedKeyAuth{})
 }
 
+// Copy returns a deep copy of the BackupRoutine.
 func (r *BackupRoutine) Copy() *BackupRoutine {
 	if r == nil {
 		return nil
