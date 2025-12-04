@@ -83,12 +83,14 @@ func (t *TLS) validateMutualTLS() error {
 		if !nameSet {
 			return errValidationRequires("key-file", "name")
 		}
+		// certfileSet is always set here
 	}
 
 	if certfileSet {
 		if !nameSet {
 			return errValidationRequires("cert-file", "name")
 		}
+		// keyfileSet is always set here
 	}
 
 	// no mTLS fields are set
