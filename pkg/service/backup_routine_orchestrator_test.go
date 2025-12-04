@@ -13,13 +13,14 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
-	"github.com/aerospike/backup-go/mocks"
+	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"go.uber.org/mock/gomock"
 )
+
+var mockClient = &backup.Client{}
 
 func setupBaseConfig() *model.Config {
 	config := model.NewConfig()
@@ -60,19 +61,10 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	stats.IncFiles()
 	stats.ReadRecords.Add(10)
 
-	ig := mocks.NewMockInfoGetter(t)
-	ig.EXPECT().
-		GetPendingMigrations(mock.Anything, mock.Anything).
-		Return(uint64(0), nil)
-
-	mockClient := aerospike.NewMockClient(ctrl)
-	mockClient.EXPECT().InfoClient().AnyTimes().Return(ig)
-
-	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockClient, nil)
-	mockClientManager.EXPECT().Close(mockClient)
-
 	initialState := &model.RoutineState{}
 	mockRegistry.EXPECT().GetRoutineState(routineName).Return(initialState)
+	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockClient, nil)
+	mockClientManager.EXPECT().Close(mockClient)
 
 	mockBackupExecutor.EXPECT().Run(
 		gomock.Any(),
@@ -389,6 +381,8 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	mockClientManager := aerospike.NewMockClientManager(ctrl)
+
 	mockBackupExecutor := backupexecutor.NewMockBackup(ctrl)
 	mockBackupHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	mockRegistry := NewMockRunningBackupsRegistry(ctrl)
@@ -406,15 +400,6 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, config *model
 	mockRegistry.EXPECT().GetRoutineState(routineName).Return(state).
 		Times(2) // in skipIncrementalBackup and createTimeBounds
 
-	ig := mocks.NewMockInfoGetter(t)
-	ig.EXPECT().
-		GetPendingMigrations(mock.Anything, mock.Anything).
-		Return(uint64(0), nil)
-
-	mockClient := aerospike.NewMockClient(ctrl)
-	mockClient.EXPECT().InfoClient().AnyTimes().Return(ig)
-
-	mockClientManager := aerospike.NewMockClientManager(ctrl)
 	mockClientManager.EXPECT().GetClient(gomock.Any(), gomock.Any(), gomock.Any()).Return(mockClient, nil)
 	mockClientManager.EXPECT().Close(mockClient)
 
