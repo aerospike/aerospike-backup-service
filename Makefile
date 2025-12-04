@@ -103,8 +103,13 @@ checksums:
 
 .PHONY: docker-build
 docker-build:
+	@GO_VERSION="$$(curl -s 'https://go.dev/dl/?mode=json&include=all' | \
+		jq -r --arg ver "go$$($(GO) mod edit -json | \
+		jq -r '.Go' | cut -d. -f1-2)" '.[] | select(.version | startswith($$ver)) | .version' | \
+		sort -V | tail -n1 | cut -c3- | tr -d '\n')"; \
 	DOCKER_BUILDKIT=1 docker build --progress=plain \
 	--tag $(IMAGE_REPO):$(IMAGE_TAG) \
+	--build-arg GO_VERSION="$$GO_VERSION" \
 	--build-arg REGISTRY=$(REGISTRY) \
 	--file $(WORKSPACE)/Dockerfile .
 
