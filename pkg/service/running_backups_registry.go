@@ -26,7 +26,7 @@ type RunningBackupsRegistry interface {
 	recordSuccessfulBackup(routineName string, jt jobType, timestamp time.Time)
 
 	// GetRoutineState returns the current backup statistics for a routine.
-	GetRoutineState(routineName string) *model.RoutineState
+	GetRoutineState(routine *model.BackupRoutine) *model.RoutineState
 	// GetRunningState returns statistics for all current backups.
 	GetRunningState() map[string]*model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.
@@ -34,6 +34,11 @@ type RunningBackupsRegistry interface {
 	// SynchroniseBackupHistory updates the backup registry with the most recent backup timestamps
 	// found in the storage backends. It scans all backup routines in parallel.
 	SynchroniseBackupHistory(ctx context.Context)
+}
+
+type routineProvider interface {
+	PopInvalidatedRoutines() []*model.BackupRoutine
+	Routines() map[string]*model.BackupRoutine
 }
 
 // RunningBackupsRegistryImpl implements the RunningBackupsRegistry interface.
@@ -46,7 +51,7 @@ type RunningBackupsRegistryImpl struct {
 	history HistoryManager
 
 	// config is needed to calculate next run times
-	config *model.Config
+	config routineProvider
 }
 
 var _ RunningBackupsRegistry = (*RunningBackupsRegistryImpl)(nil)
@@ -56,7 +61,7 @@ const getStateTimeout = 5 * time.Second
 // NewRunningBackupsRegistry creates a new instance of RunningBackupsRegistryImpl.
 func NewRunningBackupsRegistry(
 	history HistoryManager,
-	config *model.Config,
+	config routineProvider,
 ) *RunningBackupsRegistryImpl {
 	return &RunningBackupsRegistryImpl{
 		trackers: collections.NewSafeMap[string, *routineTracker](),
@@ -98,7 +103,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Contex
 	}
 }
 
-func (r *RunningBackupsRegistryImpl) scanRoutinesHistory(ctx context.Context, routines []string) error {
+func (r *RunningBackupsRegistryImpl) scanRoutinesHistory(ctx context.Context, routines []*model.BackupRoutine) error {
 	var (
 		errs  error
 		errMu sync.Mutex
@@ -107,7 +112,7 @@ func (r *RunningBackupsRegistryImpl) scanRoutinesHistory(ctx context.Context, ro
 
 	for _, routine := range routines {
 		wg.Add(1)
-		go func(routine string) {
+		go func(routine *model.BackupRoutine) {
 			defer wg.Done()
 			err := r.scanSingleRoutineHistory(ctx, routine)
 
@@ -122,8 +127,8 @@ func (r *RunningBackupsRegistryImpl) scanRoutinesHistory(ctx context.Context, ro
 	return errs
 }
 
-func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Context, routineName string) error {
-	tracker := r.getTracker(routineName)
+func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Context, routine *model.BackupRoutine) error {
+	tracker := r.getTracker(routine.Name)
 
 	// Cancel any previous scan that might still be running
 	tracker.cancelScan()
@@ -135,20 +140,20 @@ func (r *RunningBackupsRegistryImpl) scanSingleRoutineHistory(ctx context.Contex
 	defer cancelFunc()
 	tracker.setScanCancel(cancelFunc)
 
-	lastRun, err := r.history.FindLastRun(ctxWithCancel, routineName)
+	lastRun, err := r.history.FindLastRun(ctxWithCancel, routine)
 	if err != nil {
 		if !errors.Is(err, context.Canceled) {
-			slog.Error("Failed to read last backup time during sync", attr.Error(err), attr.Routine(routineName))
+			slog.Error("Failed to read last backup time during sync", attr.Error(err), attr.Routine(routine.Name))
 		}
 		tracker.setLastRun(model.NewNoBackupTime())
 		return err
 	}
 
 	// On success, update the tracker's history
-	slog.Info("Last existing backup", attr.Routine(routineName), slog.Any("time", lastRun))
+	slog.Info("Last existing backup", attr.Routine(routine.Name), slog.Any("time", lastRun))
 	tracker.setLastRun(lastRun)
 	if lastRun.LatestRun() != nil {
-		lastBackupTimestamp.WithLabelValues(routineName).Set(float64(lastRun.LatestRun().Unix()))
+		lastBackupTimestamp.WithLabelValues(routine.Name).Set(float64(lastRun.LatestRun().Unix()))
 	}
 
 	return nil
@@ -170,12 +175,12 @@ func (r *RunningBackupsRegistryImpl) clearFailedBackup(routineName string, job j
 }
 
 // GetRoutineState returns the current backup statistics for a routine.
-func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.RoutineState {
-	tracker := r.getTracker(routineName)
+func (r *RunningBackupsRegistryImpl) GetRoutineState(routine *model.BackupRoutine) *model.RoutineState {
+	tracker := r.getTracker(routine.Name)
 
 	snapshot, err := tracker.getState(getStateTimeout)
 	if err != nil {
-		slog.Error("Failed to get routine state within timeout", attr.Error(err), attr.Routine(routineName))
+		slog.Error("Failed to get routine state within timeout", attr.Error(err), attr.Routine(routine.Name))
 		// Return a state indicating that history is not available yet
 		return &model.RoutineState{
 			LastRunTime: model.NewNoBackupTime(),
@@ -183,9 +188,9 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 		}
 	}
 
-	nextRunTime, err := nextBackup(routineName, r.config)
+	nextRunTime, err := nextBackup(routine)
 	if err != nil {
-		slog.Default().With(attr.Routine(routineName)).
+		slog.Default().With(attr.Routine(routine.Name)).
 			Warn("Could not calculate next fire time", attr.Error(err))
 		nextRunTime = model.NewNoBackupTime()
 	}
@@ -202,10 +207,12 @@ func (r *RunningBackupsRegistryImpl) GetRoutineState(routineName string) *model.
 func (r *RunningBackupsRegistryImpl) GetRunningState() map[string]*model.RoutineState {
 	stats := make(map[string]*model.RoutineState)
 
-	// Iterate over all trackers we are aware of
-	r.trackers.Iterate(func(routineName string, tracker *routineTracker) {
-		stats[routineName] = r.GetRoutineState(routineName)
-	})
+	for _, routine := range r.config.Routines() {
+		state := r.GetRoutineState(routine)
+		if state.Full != nil || state.Incremental != nil {
+			stats[routine.Name] = state
+		}
+	}
 
 	return stats
 }
@@ -217,12 +224,7 @@ func (r *RunningBackupsRegistryImpl) Cancel(routineName string) {
 	}
 }
 
-func nextBackup(routineName string, config *model.Config) (*model.BackupTime, error) {
-	routine, ok := config.Routine(routineName)
-	if !ok {
-		return nil, fmt.Errorf("routine %q not found", routineName)
-	}
-
+func nextBackup(routine *model.BackupRoutine) (*model.BackupTime, error) {
 	nextFullBackup, err := timeutil.NextTrigger(routine.IntervalCron)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse full backup cron: %w", err)
