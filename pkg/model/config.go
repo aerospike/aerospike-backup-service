@@ -207,14 +207,6 @@ func (c *Config) Routine(name string) (*BackupRoutine, bool) {
 	return routine, true
 }
 
-func (c *Config) RoutineExists(name string) bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	_, found := c.backupConfig.BackupRoutines[name]
-	return found
-}
-
 func (c *Config) AddRoutine(r *BackupRoutine) error {
 	if r.Name == "" {
 		return fmt.Errorf("backup routine name is empty")
@@ -364,7 +356,9 @@ func (c *Config) PopInvalidatedRoutines() []*BackupRoutine {
 			continue // skip duplicate
 		}
 		seen[name] = struct{}{}
-		routines = append(routines, c.backupConfig.BackupRoutines[name])
+		if routine, exists := c.backupConfig.BackupRoutines[name]; exists { // ensure the routine still exists in the config
+			routines = append(routines, routine)
+		}
 	}
 
 	return routines

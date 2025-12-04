@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -180,15 +181,15 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	if !s.config.RoutineExists(routineName) {
-		httpError(w, errRoutineNotFound(routineName))
-		return
-	}
 
 	err := s.changeConfig(r.Context(), func(config *model.Config) error {
 		return config.ToggleRoutineDisabled(routineName, false)
 	})
 	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			httpError(w, errRoutineNotFound(routineName))
+			return
+		}
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -211,15 +212,15 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	if !s.config.RoutineExists(routineName) {
-		httpError(w, errRoutineNotFound(routineName))
-		return
-	}
 
 	err := s.changeConfig(r.Context(), func(config *model.Config) error {
 		return config.ToggleRoutineDisabled(routineName, true)
 	})
 	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			httpError(w, errRoutineNotFound(routineName))
+			return
+		}
 		httpError(w, errBadRequest(err))
 		return
 	}

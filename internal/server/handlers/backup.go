@@ -288,7 +288,7 @@ func (s *Service) CancelCurrentBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !s.config.RoutineExists(routineName) {
+	if _, found := s.config.Routine(routineName); !found {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
