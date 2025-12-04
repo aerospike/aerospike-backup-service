@@ -194,8 +194,9 @@ func drawValue(t *rapid.T, reg genRegistry, ft reflect.Type) (reflect.Value, boo
 	case reflect.Bool:
 		v := rapid.Bool().Draw(t, "bool")
 		return reflect.ValueOf(v), true
+	default:
+		return reflect.Value{}, false
 	}
-	return reflect.Value{}, false
 }
 
 // Helper to generate a struct for an arbitrary reflect.Type (used for nested structs).
