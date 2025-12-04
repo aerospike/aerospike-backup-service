@@ -126,6 +126,7 @@ func TestNewTLSConfig(t *testing.T) {
 
 		cfg, err := NewTLSConfig(&model.TLS{CAFile: &caCertFile, CAPath: &caSubDir})
 		require.NoError(t, err)
+		//noinspection GoDeprecation
 		assert.NotEmpty(t, cfg.RootCAs.Subjects(), "RootCAs should be populated") //nolint:staticcheck
 	})
 
@@ -170,6 +171,7 @@ func TestNewTLSConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		//nolint:staticcheck
+		//noinspection GoDeprecation
 		assert.Equal(t, len(systemPool.Subjects())+1, len(cfg.RootCAs.Subjects()))
 	})
 

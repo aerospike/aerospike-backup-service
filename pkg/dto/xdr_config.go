@@ -113,9 +113,6 @@ func (x *XDRConfig) ToModel() *model.XDRConfig {
 	}
 }
 
-// noinspection GoUnusedFunction
-//
-//nolint:unused
 func newXDRConfigFromModel(m *model.XDRConfig) *XDRConfig {
 	if m == nil {
 		return nil
