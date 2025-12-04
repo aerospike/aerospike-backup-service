@@ -67,7 +67,9 @@ func (cm *fileConfigurationManager) Write(ctx context.Context, config *model.Con
 	}
 
 	if err := writeConfig(file, config); err != nil {
-		return fmt.Errorf("failed to write configuration to file %q: %w", cm.FilePath, err)
+		return errors.Join(
+			fmt.Errorf("failed to write configuration to file %q: %w", cm.FilePath, err),
+			file.Close())
 	}
 
 	if err := file.Close(); err != nil {
