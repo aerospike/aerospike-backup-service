@@ -559,6 +559,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/config/clusters/check-connectivity": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Checks connectivity to an Aerospike cluster.",
+                "operationId": "checkClusterConnectivity",
+                "parameters": [
+                    {
+                        "description": "Aerospike cluster details",
+                        "name": "cluster",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AerospikeCluster"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Connection successful",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/config/clusters/{name}": {
             "get": {
                 "produces": [

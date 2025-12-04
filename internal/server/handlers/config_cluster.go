@@ -165,3 +165,36 @@ func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// CheckAerospikeClusterConnectivity
+// @Summary     Checks connectivity to an Aerospike cluster.
+// @ID          checkClusterConnectivity
+// @Tags        Configuration
+// @Router      /v1/config/clusters/check-connectivity [post]
+// @Accept      json
+// @Param       cluster body dto.AerospikeCluster true "Aerospike cluster details"
+// @Success     200 {string} string "Connection successful"
+// @Failure     400 {string} string
+// @Failure     500 {string} string
+func (s *Service) CheckAerospikeClusterConnectivity(w http.ResponseWriter, r *http.Request) {
+	newCluster, err := dto.NewClusterFromReader(r.Body, decoder.JSON)
+	if err != nil {
+		httpError(w, errInvalidJSONPayload(err))
+		return
+	}
+
+	cluster, err := newCluster.ToModel(s.config)
+	if err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
+
+	client, err := s.clientManager.GetClient(r.Context(), cluster, nil)
+	if err != nil {
+		httpError(w, errBadRequest(fmt.Errorf("failed to connect to aerospike cluster: %w", err)))
+		return
+	}
+	s.clientManager.Close(client) // Release the client immediately
+
+	httpOK(w, "Connection successful")
+}

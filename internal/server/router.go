@@ -42,6 +42,7 @@ func registerClusterRoutes(mux *http.ServeMux, apiPath string, service *handlers
 	mux.HandleFunc("GET "+apiPath+"/config/clusters/{name}", service.ReadAerospikeCluster)
 	mux.HandleFunc("PUT "+apiPath+"/config/clusters/{name}", service.UpdateAerospikeCluster)
 	mux.HandleFunc("DELETE "+apiPath+"/config/clusters/{name}", service.DeleteAerospikeCluster)
+	mux.HandleFunc("POST "+apiPath+"/config/clusters/check-connectivity", service.CheckAerospikeClusterConnectivity)
 }
 
 func registerStorageRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {

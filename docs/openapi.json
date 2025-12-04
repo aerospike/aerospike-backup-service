@@ -661,6 +661,50 @@
                 }
             }
         },
+        "/v1/config/clusters/check-connectivity": {
+            "post": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Checks connectivity to an Aerospike cluster.",
+                "operationId": "checkClusterConnectivity",
+                "requestBody": {
+                    "$ref": "#/components/requestBodies/dto.AerospikeCluster"
+                },
+                "responses": {
+                    "200": {
+                        "description": "Connection successful",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/config/clusters/{name}": {
             "get": {
                 "tags": [

@@ -23,6 +23,7 @@ type Service struct {
 	registry             RunningBackupsRegistry
 	configurationManager configuration.Manager
 	nsValidator          aerospike.NamespaceValidator
+	clientManager        aerospike.ClientManager
 
 	changeConfigLock sync.Mutex
 }
@@ -38,6 +39,7 @@ func NewService(
 	registry RunningBackupsRegistry,
 	configurationManager configuration.Manager,
 	nsValidator aerospike.NamespaceValidator,
+	clientManager aerospike.ClientManager,
 ) *Service {
 	return &Service{
 		ctx:                  ctx,
@@ -50,6 +52,7 @@ func NewService(
 		registry:             registry,
 		configurationManager: configurationManager,
 		nsValidator:          nsValidator,
+		clientManager:        clientManager,
 	}
 }
 

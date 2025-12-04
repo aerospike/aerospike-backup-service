@@ -161,6 +161,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		registry,
 		configurationManager,
 		nsValidator,
+		clientManager,
 	)
 
 	return config, scheduler, httpService, appLogger, nil
