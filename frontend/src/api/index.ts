@@ -71,5 +71,9 @@ export const api = {
 
     checkStorageConnectivity: async (storage: allGenerated.DtoStorage): Promise<string> => {
         return await configurationApi.checkStorageConnectivity({dtoStorage: storage});
+    },
+
+    checkSecretAgentConnectivity: async (secretAgent: allGenerated.DtoSecretAgent): Promise<string> => {
+        return await configurationApi.checkSecretAgentConnectivity({dtoSecretAgent: secretAgent});
     }
 };

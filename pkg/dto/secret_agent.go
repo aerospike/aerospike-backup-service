@@ -2,11 +2,25 @@ package dto
 
 import (
 	"fmt"
+	"io"
 	"os"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
 )
+
+// NewSecretAgentFromReader creates a new SecretAgent from a reader.
+func NewSecretAgentFromReader(r io.Reader, format decoder.SerializationFormat) (*SecretAgent, error) {
+	secretAgent := &SecretAgent{}
+	if err := decoder.Deserialize(secretAgent, r, format); err != nil {
+		return nil, err
+	}
+	if err := secretAgent.validate(); err != nil {
+		return nil, err
+	}
+	return secretAgent, nil
+}
 
 // SecretAgentConfig aggregates the SecretAgent configuration.
 // It is intended to be embedded into DTOs that require Secret Agent configuration.

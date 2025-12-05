@@ -29,3 +29,5 @@ jq '{
     "schemas": ( .components.schemas | del(.["dto.Config"]) )
   }
 }' "$WORKSPACE"/docs/openapi.json > "$WORKSPACE"/docs/config.schema.json
+
+openapi-generator generate -i "$WORKSPACE"/docs/openapi.json -g typescript-fetch -o "$WORKSPACE"/frontend/src/api/generated --additional-properties=typescriptThreePlus=true

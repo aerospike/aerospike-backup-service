@@ -15,6 +15,7 @@ func NewServeMux(apiPath, sysPath string, service *handlers.Service) *http.Serve
 	registerStorageRoutes(mux, apiPath, service)
 	registerPolicyRoutes(mux, apiPath, service)
 	registerRoutineRoutes(mux, apiPath, service)
+	registerSecretAgentRoutes(mux, apiPath, service)
 	registerBackupRoutes(mux, apiPath, service)
 	registerRestoreRoutes(mux, apiPath, service)
 
@@ -80,6 +81,10 @@ func registerBackupRoutes(mux *http.ServeMux, apiPath string, service *handlers.
 	mux.HandleFunc("POST "+apiPath+"/backups/schedule/{name}", service.ScheduleFullBackup)
 	mux.HandleFunc("GET "+apiPath+"/backups/currentBackup/{name}", service.GetCurrentBackupInfo)
 	mux.HandleFunc("POST "+apiPath+"/backups/cancel/{name}", service.CancelCurrentBackup)
+}
+
+func registerSecretAgentRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {
+	mux.HandleFunc("POST "+apiPath+"/config/secret-agents/check-connectivity", service.CheckSecretAgentConnectivity)
 }
 
 func registerRestoreRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {

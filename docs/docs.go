@@ -1186,6 +1186,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/config/secret-agents/check-connectivity": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Checks connectivity to a Secret Agent.",
+                "operationId": "checkSecretAgentConnectivity",
+                "parameters": [
+                    {
+                        "description": "Secret Agent details",
+                        "name": "secretAgent",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.SecretAgent"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Connection successful",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/config/storage": {
             "get": {
                 "produces": [

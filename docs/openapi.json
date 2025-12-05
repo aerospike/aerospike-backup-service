@@ -1360,6 +1360,58 @@
                 }
             }
         },
+        "/v1/config/secret-agents/check-connectivity": {
+            "post": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Checks connectivity to a Secret Agent.",
+                "operationId": "checkSecretAgentConnectivity",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/dto.SecretAgent"
+                            }
+                        }
+                    },
+                    "description": "Secret Agent details",
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Connection successful",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/config/storage": {
             "get": {
                 "tags": [

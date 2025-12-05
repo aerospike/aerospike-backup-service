@@ -6,7 +6,7 @@ import {ConfigSectionRoutines} from './ConfigSectionRoutines';
 import {ConfigSectionClusters} from './ConfigSectionClusters';
 import {ConfigSectionStorage} from './ConfigSectionStorage';
 import {ConfigSectionPolicies} from './ConfigSectionPolicies';
-import {ConfigSectionSecrets} from './ConfigSectionSecrets';
+import {ConfigSectionSecretAgents} from './ConfigSectionSecretAgents';
 import {ConfigSectionService} from './ConfigSectionService';
 import {ConfigSectionYaml} from './ConfigSectionYaml';
 
@@ -173,13 +173,14 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
                     />
                 }
                 {section === 'secrets' &&
-                    <ConfigSectionSecrets
+                    <ConfigSectionSecretAgents
                         config={config}
                         setConfig={setConfig}
                         selectedId={selectedId}
                         setSelectedId={setSelectedId}
                         generateId={generateId}
                         updateItem={updateItem}
+                        updateNested={updateNested} // ConfigSectionSecretAgents requires updateNested
                         deleteItem={deleteItem}
                         renameItem={renameItem}
                     />

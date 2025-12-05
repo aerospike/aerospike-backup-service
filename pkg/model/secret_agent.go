@@ -2,12 +2,18 @@ package model
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"os"
 	"sync"
+	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
+	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
+	saConnection "github.com/aerospike/backup-go/pkg/secret-agent/connection"
 )
 
 // SecretAgent represents the configuration of an Aerospike Secret Agent
@@ -84,4 +90,44 @@ func (s *SecretAgent) String() string {
 		ptr.ValueOrZero(s.Timeout),
 		ptr.ValueOrZero(s.TLSCAString),
 		ptr.ValueOrZero(s.IsBase64))
+}
+
+// CheckSecretAgentConnection checks if the secret agent is available.
+func (s *SecretAgent) CheckSecretAgentConnection() error {
+	cfg := s.ToSecretAgentConfig()
+
+	var tlsConfig *tls.Config
+	if cfg.CaFile != nil && *cfg.CaFile != "" {
+		caCert, err := os.ReadFile(*cfg.CaFile)
+		if err != nil {
+			return fmt.Errorf("failed to read ca file: %w", err)
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+		tlsConfig = &tls.Config{
+			RootCAs: caCertPool,
+			//nolint:gosec // We want to support older TLS versions for now.
+			MinVersion: tls.VersionTLS12,
+		}
+	}
+
+	address := *cfg.Address
+	if *cfg.ConnectionType == saClient.ConnectionTypeTCP {
+		if cfg.Port == nil {
+			return fmt.Errorf("port is required for tcp connection")
+		}
+		address = fmt.Sprintf("%s:%d", *cfg.Address, *cfg.Port)
+	}
+
+	timeout := 1000 * time.Millisecond
+	if cfg.TimeoutMillisecond != nil {
+		timeout = time.Duration(*cfg.TimeoutMillisecond) * time.Millisecond
+	}
+
+	conn, err := saConnection.Get(*cfg.ConnectionType, address, timeout, tlsConfig)
+	if err != nil {
+		return err
+	}
+
+	return conn.Close()
 }

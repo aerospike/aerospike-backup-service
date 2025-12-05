@@ -36,7 +36,7 @@ export const Button = ({ children, variant = 'primary', icon: Icon, className, l
       {...props}
     >
       {loading ? <Loader size={16} className="animate-spin" /> : (Icon && <Icon size={16} />)}
-      {children}
+      <span className="whitespace-nowrap overflow-hidden text-ellipsis">{children}</span>
     </button>
   );
 };
