@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * SeedNode represents details of a node in the Aerospike cluster.
  * @export
@@ -57,7 +57,7 @@ export function DtoSeedNodeFromJSONTyped(json: any, ignoreDiscriminator: boolean
         return json;
     }
     return {
-
+        
         'hostName': json['host-name'],
         'port': json['port'],
         'tlsName': json['tls-name'] == null ? undefined : json['tls-name'],
@@ -74,7 +74,7 @@ export function DtoSeedNodeToJSONTyped(value?: DtoSeedNode | null, ignoreDiscrim
     }
 
     return {
-
+        
         'host-name': value['hostName'],
         'port': value['port'],
         'tls-name': value['tlsName'],

@@ -5,16 +5,16 @@ TLS represents the Aerospike cluster TLS configuration options.
 
 ## Properties
 
- Name              | Type   
--------------------|--------
- `caFile`          | string 
- `caPath`          | string 
- `certFile`        | string 
- `cipherSuite`     | string 
- `keyFile`         | string 
- `keyFilePassword` | string 
- `name`            | string 
- `protocols`       | string 
+Name | Type
+------------ | -------------
+`caFile` | string
+`caPath` | string
+`certFile` | string
+`cipherSuite` | string
+`keyFile` | string
+`keyFilePassword` | string
+`name` | string
+`protocols` | string
 
 ## Example
 

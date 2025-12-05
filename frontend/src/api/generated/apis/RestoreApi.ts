@@ -15,9 +15,9 @@
 
 import * as runtime from '../runtime';
 import type {
-    DtoRestoreJobStatus,
-    DtoRestoreRequest,
-    DtoRestoreTimestampRequest,
+  DtoRestoreJobStatus,
+  DtoRestoreRequest,
+  DtoRestoreTimestampRequest,
 } from '../models/index';
 import {
     DtoRestoreJobStatusFromJSON,
@@ -321,9 +321,7 @@ export class RestoreApi extends runtime.BaseAPI {
     /**
      * Retrieve restore jobs.
      */
-    async retrieveRestoreJobsRaw(requestParameters: RetrieveRestoreJobsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{
-        [key: string]: DtoRestoreJobStatus;
-    }>> {
+    async retrieveRestoreJobsRaw(requestParameters: RetrieveRestoreJobsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: DtoRestoreJobStatus; }>> {
         const queryParameters: any = {};
 
         if (requestParameters['from'] != null) {
@@ -356,9 +354,7 @@ export class RestoreApi extends runtime.BaseAPI {
     /**
      * Retrieve restore jobs.
      */
-    async retrieveRestoreJobs(requestParameters: RetrieveRestoreJobsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{
-        [key: string]: DtoRestoreJobStatus;
-    }> {
+    async retrieveRestoreJobs(requestParameters: RetrieveRestoreJobsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: DtoRestoreJobStatus; }> {
         const response = await this.retrieveRestoreJobsRaw(requestParameters, initOverrides);
         return await response.value();
     }

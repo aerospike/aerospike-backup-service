@@ -5,9 +5,9 @@ GcpStorageClass represents the configuration for GCP Storage Class.
 
 ## Properties
 
- Name   | Type   
---------|--------
- `data` | string 
+Name | Type
+------------ | -------------
+`data` | string
 
 ## Example
 

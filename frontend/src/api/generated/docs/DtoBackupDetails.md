@@ -5,23 +5,23 @@ BackupDetails contains information about a finished backup.
 
 ## Properties
 
- Name                  | Type                        
------------------------|-----------------------------
- `byteCount`           | number                      
- `compression`         | string                      
- `created`             | string                      
- `duration`            | number                      
- `encryption`          | string                      
- `fileCount`           | number                      
- `finished`            | string                      
- `from`                | string                      
- `key`                 | string                      
- `namespace`           | string                      
- `recordCount`         | number                      
- `secondaryIndexCount` | number                      
- `storage`             | [DtoStorage](DtoStorage.md) 
- `timestamp`           | number                      
- `udfCount`            | number                      
+Name | Type
+------------ | -------------
+`byteCount` | number
+`compression` | string
+`created` | string
+`duration` | number
+`encryption` | string
+`fileCount` | number
+`finished` | string
+`from` | string
+`key` | string
+`namespace` | string
+`recordCount` | number
+`secondaryIndexCount` | number
+`storage` | [DtoStorage](DtoStorage.md)
+`timestamp` | number
+`udfCount` | number
 
 ## Example
 

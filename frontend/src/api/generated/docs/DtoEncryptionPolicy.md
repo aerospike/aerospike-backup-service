@@ -5,12 +5,12 @@ EncryptionPolicy contains backup encryption information.
 
 ## Properties
 
- Name        | Type   
--------------|--------
- `keyEnv`    | string 
- `keyFile`   | string 
- `keySecret` | string 
- `mode`      | string 
+Name | Type
+------------ | -------------
+`keyEnv` | string
+`keyFile` | string
+`keySecret` | string
+`mode` | string
 
 ## Example
 

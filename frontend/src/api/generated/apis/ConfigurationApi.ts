@@ -15,11 +15,11 @@
 
 import * as runtime from '../runtime';
 import type {
-    DtoAerospikeCluster,
-    DtoBackupPolicy,
-    DtoBackupRoutine,
-    DtoConfig,
-    DtoStorage,
+  DtoAerospikeCluster,
+  DtoBackupPolicy,
+  DtoBackupRoutine,
+  DtoConfig,
+  DtoStorage,
 } from '../models/index';
 import {
     DtoAerospikeClusterFromJSON,
@@ -56,6 +56,10 @@ export interface AddStorageRequest {
 
 export interface CheckClusterConnectivityRequest {
     dtoAerospikeCluster: DtoAerospikeCluster;
+}
+
+export interface CheckStorageConnectivityRequest {
+    dtoStorage: DtoStorage;
 }
 
 export interface DeleteClusterRequest {
@@ -342,7 +346,7 @@ export class ConfigurationApi extends runtime.BaseAPI {
     /**
      * Checks connectivity to an Aerospike cluster.
      */
-    async checkClusterConnectivityRaw(requestParameters: CheckClusterConnectivityRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
+    async checkClusterConnectivityRaw(requestParameters: CheckClusterConnectivityRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: Array<string>; }>> {
         if (requestParameters['dtoAerospikeCluster'] == null) {
             throw new runtime.RequiredError(
                 'dtoAerospikeCluster',
@@ -367,6 +371,45 @@ export class ConfigurationApi extends runtime.BaseAPI {
             body: DtoAerospikeClusterToJSON(requestParameters['dtoAerospikeCluster']),
         }, initOverrides);
 
+        return new runtime.JSONApiResponse<any>(response);
+    }
+
+    /**
+     * Checks connectivity to an Aerospike cluster.
+     */
+    async checkClusterConnectivity(requestParameters: CheckClusterConnectivityRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: Array<string>; }> {
+        const response = await this.checkClusterConnectivityRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Checks connectivity to a backup storage.
+     */
+    async checkStorageConnectivityRaw(requestParameters: CheckStorageConnectivityRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
+        if (requestParameters['dtoStorage'] == null) {
+            throw new runtime.RequiredError(
+                'dtoStorage',
+                'Required parameter "dtoStorage" was null or undefined when calling checkStorageConnectivity().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/v1/config/storage/check-connectivity`;
+
+        const response = await this.request({
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: DtoStorageToJSON(requestParameters['dtoStorage']),
+        }, initOverrides);
+
         if (this.isJsonMime(response.headers.get('content-type'))) {
             return new runtime.JSONApiResponse<string>(response);
         } else {
@@ -375,10 +418,10 @@ export class ConfigurationApi extends runtime.BaseAPI {
     }
 
     /**
-     * Checks connectivity to an Aerospike cluster.
+     * Checks connectivity to a backup storage.
      */
-    async checkClusterConnectivity(requestParameters: CheckClusterConnectivityRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
-        const response = await this.checkClusterConnectivityRaw(requestParameters, initOverrides);
+    async checkStorageConnectivity(requestParameters: CheckStorageConnectivityRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
+        const response = await this.checkStorageConnectivityRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -601,9 +644,7 @@ export class ConfigurationApi extends runtime.BaseAPI {
     /**
      * Reads all Aerospike clusters from the configuration.
      */
-    async readAllClustersRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{
-        [key: string]: DtoAerospikeCluster;
-    }>> {
+    async readAllClustersRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: DtoAerospikeCluster; }>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -624,9 +665,7 @@ export class ConfigurationApi extends runtime.BaseAPI {
     /**
      * Reads all Aerospike clusters from the configuration.
      */
-    async readAllClusters(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{
-        [key: string]: DtoAerospikeCluster;
-    }> {
+    async readAllClusters(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: DtoAerospikeCluster; }> {
         const response = await this.readAllClustersRaw(initOverrides);
         return await response.value();
     }
@@ -634,9 +673,7 @@ export class ConfigurationApi extends runtime.BaseAPI {
     /**
      * Reads all storage from the configuration.
      */
-    async readAllStorageRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{
-        [key: string]: DtoStorage;
-    }>> {
+    async readAllStorageRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: DtoStorage; }>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -657,9 +694,7 @@ export class ConfigurationApi extends runtime.BaseAPI {
     /**
      * Reads all storage from the configuration.
      */
-    async readAllStorage(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{
-        [key: string]: DtoStorage;
-    }> {
+    async readAllStorage(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: DtoStorage; }> {
         const response = await this.readAllStorageRaw(initOverrides);
         return await response.value();
     }
@@ -733,9 +768,7 @@ export class ConfigurationApi extends runtime.BaseAPI {
     /**
      * Reads all policies from the configuration.
      */
-    async readPoliciesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{
-        [key: string]: DtoBackupPolicy;
-    }>> {
+    async readPoliciesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: DtoBackupPolicy; }>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -756,9 +789,7 @@ export class ConfigurationApi extends runtime.BaseAPI {
     /**
      * Reads all policies from the configuration.
      */
-    async readPolicies(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{
-        [key: string]: DtoBackupPolicy;
-    }> {
+    async readPolicies(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: DtoBackupPolicy; }> {
         const response = await this.readPoliciesRaw(initOverrides);
         return await response.value();
     }
@@ -840,9 +871,7 @@ export class ConfigurationApi extends runtime.BaseAPI {
     /**
      * Reads all routines from the configuration.
      */
-    async readRoutinesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{
-        [key: string]: DtoBackupRoutine;
-    }>> {
+    async readRoutinesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: DtoBackupRoutine; }>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -863,9 +892,7 @@ export class ConfigurationApi extends runtime.BaseAPI {
     /**
      * Reads all routines from the configuration.
      */
-    async readRoutines(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{
-        [key: string]: DtoBackupRoutine;
-    }> {
+    async readRoutines(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: DtoBackupRoutine; }> {
         const response = await this.readRoutinesRaw(initOverrides);
         return await response.value();
     }

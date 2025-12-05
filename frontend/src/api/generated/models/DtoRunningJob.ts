@@ -12,8 +12,8 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoMetrics} from './DtoMetrics';
+import { mapValues } from '../runtime';
+import type { DtoMetrics } from './DtoMetrics';
 import {
     DtoMetricsFromJSON,
     DtoMetricsFromJSONTyped,
@@ -98,7 +98,7 @@ export function DtoRunningJobFromJSONTyped(json: any, ignoreDiscriminator: boole
         return json;
     }
     return {
-
+        
         'doneRecords': json['done-records'] == null ? undefined : json['done-records'],
         'duration': json['duration'] == null ? undefined : json['duration'],
         'estimatedEndTime': json['estimated-end-time'] == null ? undefined : json['estimated-end-time'],
@@ -120,7 +120,7 @@ export function DtoRunningJobToJSONTyped(value?: DtoRunningJob | null, ignoreDis
     }
 
     return {
-
+        
         'done-records': value['doneRecords'],
         'duration': value['duration'],
         'estimated-end-time': value['estimatedEndTime'],

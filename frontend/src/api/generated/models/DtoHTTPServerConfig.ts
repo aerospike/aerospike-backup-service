@@ -12,8 +12,8 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoRateLimiterConfig} from './DtoRateLimiterConfig';
+import { mapValues } from '../runtime';
+import type { DtoRateLimiterConfig } from './DtoRateLimiterConfig';
 import {
     DtoRateLimiterConfigFromJSON,
     DtoRateLimiterConfigFromJSONTyped,
@@ -75,7 +75,7 @@ export function DtoHTTPServerConfigFromJSONTyped(json: any, ignoreDiscriminator:
         return json;
     }
     return {
-
+        
         'address': json['address'] == null ? undefined : json['address'],
         'contextPath': json['context-path'] == null ? undefined : json['context-path'],
         'port': json['port'] == null ? undefined : json['port'],
@@ -94,7 +94,7 @@ export function DtoHTTPServerConfigToJSONTyped(value?: DtoHTTPServerConfig | nul
     }
 
     return {
-
+        
         'address': value['address'],
         'context-path': value['contextPath'],
         'port': value['port'],

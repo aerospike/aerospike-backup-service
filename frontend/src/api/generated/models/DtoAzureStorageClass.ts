@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * AzureStorageClass represents the configuration for Azure Blob Storage access tiers.
  * @export
@@ -72,7 +72,7 @@ export function DtoAzureStorageClassFromJSONTyped(json: any, ignoreDiscriminator
         return json;
     }
     return {
-
+        
         'data': json['data'] == null ? undefined : json['data'],
         'metadata': json['metadata'] == null ? undefined : json['metadata'],
     };
@@ -88,7 +88,7 @@ export function DtoAzureStorageClassToJSONTyped(value?: DtoAzureStorageClass | n
     }
 
     return {
-
+        
         'data': value['data'],
         'metadata': value['metadata'],
     };

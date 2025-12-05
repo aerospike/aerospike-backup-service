@@ -5,14 +5,14 @@ Config represents the service configuration file.
 
 ## Properties
 
- Name                | Type                                                              
----------------------|-------------------------------------------------------------------
- `aerospikeClusters` | [{ [key: string]: DtoAerospikeCluster; }](DtoAerospikeCluster.md) 
- `backupPolicies`    | [{ [key: string]: DtoBackupPolicy; }](DtoBackupPolicy.md)         
- `backupRoutines`    | [{ [key: string]: DtoBackupRoutine; }](DtoBackupRoutine.md)       
- `secretAgents`      | [{ [key: string]: DtoSecretAgent; }](DtoSecretAgent.md)           
- `service`           | [DtoServiceConfig](DtoServiceConfig.md)                           
- `storage`           | [{ [key: string]: DtoStorage; }](DtoStorage.md)                   
+Name | Type
+------------ | -------------
+`aerospikeClusters` | [{ [key: string]: DtoAerospikeCluster; }](DtoAerospikeCluster.md)
+`backupPolicies` | [{ [key: string]: DtoBackupPolicy; }](DtoBackupPolicy.md)
+`backupRoutines` | [{ [key: string]: DtoBackupRoutine; }](DtoBackupRoutine.md)
+`secretAgents` | [{ [key: string]: DtoSecretAgent; }](DtoSecretAgent.md)
+`service` | [DtoServiceConfig](DtoServiceConfig.md)
+`storage` | [{ [key: string]: DtoStorage; }](DtoStorage.md)
 
 ## Example
 

@@ -5,12 +5,12 @@ Storage represents the configuration for a backup storage details.
 
 ## Properties
 
- Name           | Type                                  
-----------------|---------------------------------------
- `azureStorage` | [DtoAzureStorage](DtoAzureStorage.md) 
- `gcpStorage`   | [DtoGcpStorage](DtoGcpStorage.md)     
- `localStorage` | [DtoLocalStorage](DtoLocalStorage.md) 
- `s3Storage`    | [DtoS3Storage](DtoS3Storage.md)       
+Name | Type
+------------ | -------------
+`azureStorage` | [DtoAzureStorage](DtoAzureStorage.md)
+`gcpStorage` | [DtoGcpStorage](DtoGcpStorage.md)
+`localStorage` | [DtoLocalStorage](DtoLocalStorage.md)
+`s3Storage` | [DtoS3Storage](DtoS3Storage.md)
 
 ## Example
 

@@ -2,15 +2,17 @@
 
 All URIs are relative to *http://localhost:8080*
 
-| Method                                                           | HTTP request                                          | Description                                                          |
-|------------------------------------------------------------------|-------------------------------------------------------|----------------------------------------------------------------------|
-| [**cancelRestore**](RestoreApi.md#cancelrestore)                 | **POST** /v1/restore/cancel/{jobId}                   | Cancel a running restore operation.                                  |
-| [**restoreFull**](RestoreApi.md#restorefull)                     | **POST** /v1/restore/full                             | Trigger an asynchronous full restore operation.                      |
-| [**restoreIncremental**](RestoreApi.md#restoreincremental)       | **POST** /v1/restore/incremental                      | Trigger an asynchronous incremental restore operation.               |
-| [**restoreStatus**](RestoreApi.md#restorestatus)                 | **GET** /v1/restore/status/{jobId}                    | Retrieve status for a restore job.                                   |
-| [**restoreTimestamp**](RestoreApi.md#restoretimestamp)           | **POST** /v1/restore/timestamp                        | Trigger an asynchronous restore operation to specific point in time. |
-| [**retrieveConfiguration**](RestoreApi.md#retrieveconfiguration) | **GET** /v1/retrieve/configuration/{name}/{timestamp} | Retrieve Aerospike cluster configuration backup                      |
-| [**retrieveRestoreJobs**](RestoreApi.md#retrieverestorejobs)     | **GET** /v1/restore/jobs                              | Retrieve restore jobs.                                               |
+| Method | HTTP request | Description |
+|------------- | ------------- | -------------|
+| [**cancelRestore**](RestoreApi.md#cancelrestore) | **POST** /v1/restore/cancel/{jobId} | Cancel a running restore operation. |
+| [**restoreFull**](RestoreApi.md#restorefull) | **POST** /v1/restore/full | Trigger an asynchronous full restore operation. |
+| [**restoreIncremental**](RestoreApi.md#restoreincremental) | **POST** /v1/restore/incremental | Trigger an asynchronous incremental restore operation. |
+| [**restoreStatus**](RestoreApi.md#restorestatus) | **GET** /v1/restore/status/{jobId} | Retrieve status for a restore job. |
+| [**restoreTimestamp**](RestoreApi.md#restoretimestamp) | **POST** /v1/restore/timestamp | Trigger an asynchronous restore operation to specific point in time. |
+| [**retrieveConfiguration**](RestoreApi.md#retrieveconfiguration) | **GET** /v1/retrieve/configuration/{name}/{timestamp} | Retrieve Aerospike cluster configuration backup |
+| [**retrieveRestoreJobs**](RestoreApi.md#retrieverestorejobs) | **GET** /v1/restore/jobs | Retrieve restore jobs. |
+
+
 
 ## cancelRestore
 
@@ -50,6 +52,7 @@ example().catch(console.error);
 
 ### Parameters
 
+
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **jobId** | `number` | Restore job ID | [Defaults to `undefined`] |
@@ -69,13 +72,12 @@ No authorization required
 
 
 ### HTTP response details
-
-| Status code | Description                       | Response headers |
-|-------------|-----------------------------------|------------------|
-| **202**     | Restore job canceled successfully | -                |
-| **400**     | Invalid job ID                    | -                |
-| **404**     | Job not found                     | -                |
-| **500**     | Internal server error             | -                |
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **202** | Restore job canceled successfully |  -  |
+| **400** | Invalid job ID |  -  |
+| **404** | Job not found |  -  |
+| **500** | Internal server error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -118,6 +120,7 @@ example().catch(console.error);
 
 ### Parameters
 
+
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **dtoRestoreRequest** | [DtoRestoreRequest](DtoRestoreRequest.md) | Restore request details | |
@@ -137,12 +140,11 @@ No authorization required
 
 
 ### HTTP response details
-
-| Status code | Description              | Response headers |
-|-------------|--------------------------|------------------|
-| **202**     | Restore operation job id | -                |
-| **400**     | Bad Request              | -                |
-| **405**     | Method Not Allowed       | -                |
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **202** | Restore operation job id |  -  |
+| **400** | Bad Request |  -  |
+| **405** | Method Not Allowed |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -185,6 +187,7 @@ example().catch(console.error);
 
 ### Parameters
 
+
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **dtoRestoreRequest** | [DtoRestoreRequest](DtoRestoreRequest.md) | Restore request details | |
@@ -204,12 +207,11 @@ No authorization required
 
 
 ### HTTP response details
-
-| Status code | Description              | Response headers |
-|-------------|--------------------------|------------------|
-| **202**     | Restore operation job id | -                |
-| **400**     | Bad Request              | -                |
-| **405**     | Method Not Allowed       | -                |
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **202** | Restore operation job id |  -  |
+| **400** | Bad Request |  -  |
+| **405** | Method Not Allowed |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -252,6 +254,7 @@ example().catch(console.error);
 
 ### Parameters
 
+
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **jobId** | `number` | Job ID to retrieve the status | [Defaults to `undefined`] |
@@ -271,11 +274,10 @@ No authorization required
 
 
 ### HTTP response details
-
-| Status code | Description                | Response headers |
-|-------------|----------------------------|------------------|
-| **200**     | Restore job status details | -                |
-| **400**     | Bad Request                | -                |
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Restore job status details |  -  |
+| **400** | Bad Request |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -320,6 +322,7 @@ example().catch(console.error);
 
 ### Parameters
 
+
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **dtoRestoreTimestampRequest** | [DtoRestoreTimestampRequest](DtoRestoreTimestampRequest.md) | Restore request details | |
@@ -337,15 +340,16 @@ No authorization required
 - **Content-Type**: `application/json`
 - **Accept**: `*/*`
 
-### HTTP response details
 
-| Status code | Description              | Response headers |
-|-------------|--------------------------|------------------|
-| **202**     | Restore operation job id | -                |
-| **400**     | Bad Request              | -                |
-| **405**     | Method Not Allowed       | -                |
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **202** | Restore operation job id |  -  |
+| **400** | Bad Request |  -  |
+| **405** | Method Not Allowed |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## retrieveConfiguration
 
@@ -387,6 +391,7 @@ example().catch(console.error);
 
 ### Parameters
 
+
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup routine name | [Defaults to `undefined`] |
@@ -405,15 +410,16 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/zip`
 
-### HTTP response details
 
-| Status code | Description        | Response headers |
-|-------------|--------------------|------------------|
-| **200**     | OK                 | -                |
-| **400**     | Bad Request        | -                |
-| **405**     | Method Not Allowed | -                |
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | OK |  -  |
+| **400** | Bad Request |  -  |
+| **405** | Method Not Allowed |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## retrieveRestoreJobs
 
@@ -457,6 +463,7 @@ example().catch(console.error);
 
 ### Parameters
 
+
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **from** | `number` | Lower bound timestamp filter | [Optional] [Defaults to `undefined`] |
@@ -476,13 +483,13 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
-### HTTP response details
 
-| Status code | Description           | Response headers |
-|-------------|-----------------------|------------------|
-| **200**     | Restore jobs          | -                |
-| **400**     | Bad Request           | -                |
-| **500**     | Internal Server Error | -                |
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Restore jobs |  -  |
+| **400** | Bad Request |  -  |
+| **500** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

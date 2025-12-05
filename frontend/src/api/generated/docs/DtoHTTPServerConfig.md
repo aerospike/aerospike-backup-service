@@ -5,13 +5,13 @@ HTTPServerConfig represents the service\'s HTTP server configuration.
 
 ## Properties
 
- Name          | Type                                            
----------------|-------------------------------------------------
- `address`     | string                                          
- `contextPath` | string                                          
- `port`        | number                                          
- `rate`        | [DtoRateLimiterConfig](DtoRateLimiterConfig.md) 
- `timeout`     | number                                          
+Name | Type
+------------ | -------------
+`address` | string
+`contextPath` | string
+`port` | number
+`rate` | [DtoRateLimiterConfig](DtoRateLimiterConfig.md)
+`timeout` | number
 
 ## Example
 

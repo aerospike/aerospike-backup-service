@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * RateLimiterConfig is the HTTP server rate limiter configuration.
  * @export
@@ -56,7 +56,7 @@ export function DtoRateLimiterConfigFromJSONTyped(json: any, ignoreDiscriminator
         return json;
     }
     return {
-
+        
         'size': json['size'] == null ? undefined : json['size'],
         'tps': json['tps'] == null ? undefined : json['tps'],
         'whiteList': json['white-list'] == null ? undefined : json['white-list'],
@@ -73,7 +73,7 @@ export function DtoRateLimiterConfigToJSONTyped(value?: DtoRateLimiterConfig | n
     }
 
     return {
-
+        
         'size': value['size'],
         'tps': value['tps'],
         'white-list': value['whiteList'],

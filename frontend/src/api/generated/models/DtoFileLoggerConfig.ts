@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * FileLoggerConfig represents the configuration for the file logger writer.
  * @export
@@ -72,7 +72,7 @@ export function DtoFileLoggerConfigFromJSONTyped(json: any, ignoreDiscriminator:
         return json;
     }
     return {
-
+        
         'compress': json['compress'] == null ? undefined : json['compress'],
         'filename': json['filename'],
         'maxage': json['maxage'] == null ? undefined : json['maxage'],
@@ -91,7 +91,7 @@ export function DtoFileLoggerConfigToJSONTyped(value?: DtoFileLoggerConfig | nul
     }
 
     return {
-
+        
         'compress': value['compress'],
         'filename': value['filename'],
         'maxage': value['maxage'],

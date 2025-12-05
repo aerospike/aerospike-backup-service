@@ -5,10 +5,10 @@ CompressionPolicy contains backup compression information.
 
 ## Properties
 
- Name    | Type   
----------|--------
- `level` | number 
- `mode`  | string 
+Name | Type
+------------ | -------------
+`level` | number
+`mode` | string
 
 ## Example
 

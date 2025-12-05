@@ -12,8 +12,8 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoRunningJob} from './DtoRunningJob';
+import { mapValues } from '../runtime';
+import type { DtoRunningJob } from './DtoRunningJob';
 import {
     DtoRunningJobFromJSON,
     DtoRunningJobFromJSONTyped,
@@ -83,7 +83,7 @@ export function DtoRoutineStateFromJSONTyped(json: any, ignoreDiscriminator: boo
         return json;
     }
     return {
-
+        
         'full': json['full'] == null ? undefined : DtoRunningJobFromJSON(json['full']),
         'incremental': json['incremental'] == null ? undefined : DtoRunningJobFromJSON(json['incremental']),
         'lastFull': json['last-full'] == null ? undefined : json['last-full'],
@@ -103,7 +103,7 @@ export function DtoRoutineStateToJSONTyped(value?: DtoRoutineState | null, ignor
     }
 
     return {
-
+        
         'full': DtoRunningJobToJSON(value['full']),
         'incremental': DtoRunningJobToJSON(value['incremental']),
         'last-full': value['lastFull'],

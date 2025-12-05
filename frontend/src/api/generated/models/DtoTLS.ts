@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * TLS represents the Aerospike cluster TLS configuration options.
  * @export
@@ -85,7 +85,7 @@ export function DtoTLSFromJSONTyped(json: any, ignoreDiscriminator: boolean): Dt
         return json;
     }
     return {
-
+        
         'caFile': json['ca-file'] == null ? undefined : json['ca-file'],
         'caPath': json['ca-path'] == null ? undefined : json['ca-path'],
         'certFile': json['cert-file'] == null ? undefined : json['cert-file'],
@@ -107,7 +107,7 @@ export function DtoTLSToJSONTyped(value?: DtoTLS | null, ignoreDiscriminator: bo
     }
 
     return {
-
+        
         'ca-file': value['caFile'],
         'ca-path': value['caPath'],
         'cert-file': value['certFile'],

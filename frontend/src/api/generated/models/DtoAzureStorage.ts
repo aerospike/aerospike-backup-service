@@ -12,15 +12,15 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoSecretAgent} from './DtoSecretAgent';
+import { mapValues } from '../runtime';
+import type { DtoSecretAgent } from './DtoSecretAgent';
 import {
     DtoSecretAgentFromJSON,
     DtoSecretAgentFromJSONTyped,
     DtoSecretAgentToJSON,
     DtoSecretAgentToJSONTyped,
 } from './DtoSecretAgent';
-import type {DtoAzureStorageClass} from './DtoAzureStorageClass';
+import type { DtoAzureStorageClass } from './DtoAzureStorageClass';
 import {
     DtoAzureStorageClassFromJSON,
     DtoAzureStorageClassFromJSONTyped,
@@ -131,7 +131,7 @@ export function DtoAzureStorageFromJSONTyped(json: any, ignoreDiscriminator: boo
         return json;
     }
     return {
-
+        
         'accountKey': json['account-key'] == null ? undefined : json['account-key'],
         'accountName': json['account-name'] == null ? undefined : json['account-name'],
         'clientId': json['client-id'] == null ? undefined : json['client-id'],
@@ -157,7 +157,7 @@ export function DtoAzureStorageToJSONTyped(value?: DtoAzureStorage | null, ignor
     }
 
     return {
-
+        
         'account-key': value['accountKey'],
         'account-name': value['accountName'],
         'client-id': value['clientId'],

@@ -5,12 +5,12 @@ LoggerConfig represents the backup service logger configuration.
 
 ## Properties
 
- Name           | Type                                          
-----------------|-----------------------------------------------
- `fileWriter`   | [DtoFileLoggerConfig](DtoFileLoggerConfig.md) 
- `format`       | string                                        
- `level`        | string                                        
- `stdoutWriter` | boolean                                       
+Name | Type
+------------ | -------------
+`fileWriter` | [DtoFileLoggerConfig](DtoFileLoggerConfig.md)
+`format` | string
+`level` | string
+`stdoutWriter` | boolean
 
 ## Example
 

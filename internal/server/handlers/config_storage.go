@@ -7,6 +7,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
+	"github.com/aerospike/backup-go/io/storage/options"
 )
 
 // AddStorage
@@ -147,4 +149,38 @@ func (s *Service) DeleteStorage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// CheckStorageConnectivity
+// @Summary     Checks connectivity to a backup storage.
+// @ID          checkStorageConnectivity
+// @Tags        Configuration
+// @Router      /v1/config/storage/check-connectivity [post]
+// @Accept      json
+// @Param       storage body dto.Storage true "Backup storage details"
+// @Success     200 {string} string "Connection successful"
+// @Failure     400 {string} string
+// @Failure     500 {string} string
+func (s *Service) CheckStorageConnectivity(w http.ResponseWriter, r *http.Request) {
+	newStorage, err := dto.NewStorageFromReader(r.Body, decoder.JSON)
+	if err != nil {
+		httpError(w, errInvalidJSONPayload(err))
+		return
+	}
+
+	storageModel, err := newStorage.ToModel(s.config)
+	if err != nil {
+		httpError(w, errBadRequest(err))
+		return
+	}
+
+	// Attempt to create a directory reader to check connectivity.
+	// We pass an empty path and WithSkipDirCheck() as we only want to test the connection itself.
+	_, err = storage.CreateDirWriter(r.Context(), storageModel, "", options.WithSkipDirCheck())
+	if err != nil {
+		httpError(w, errBadRequest(fmt.Errorf("failed to connect to storage: %w", err)))
+		return
+	}
+
+	httpOK(w, "Connection successful")
 }

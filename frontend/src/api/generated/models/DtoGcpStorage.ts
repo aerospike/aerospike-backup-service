@@ -12,15 +12,15 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoSecretAgent} from './DtoSecretAgent';
+import { mapValues } from '../runtime';
+import type { DtoSecretAgent } from './DtoSecretAgent';
 import {
     DtoSecretAgentFromJSON,
     DtoSecretAgentFromJSONTyped,
     DtoSecretAgentToJSON,
     DtoSecretAgentToJSONTyped,
 } from './DtoSecretAgent';
-import type {DtoGcpStorageClass} from './DtoGcpStorageClass';
+import type { DtoGcpStorageClass } from './DtoGcpStorageClass';
 import {
     DtoGcpStorageClassFromJSON,
     DtoGcpStorageClassFromJSONTyped,
@@ -111,7 +111,7 @@ export function DtoGcpStorageFromJSONTyped(json: any, ignoreDiscriminator: boole
         return json;
     }
     return {
-
+        
         'bucketName': json['bucket-name'],
         'endpoint': json['endpoint'] == null ? undefined : json['endpoint'],
         'key': json['key'] == null ? undefined : json['key'],
@@ -134,7 +134,7 @@ export function DtoGcpStorageToJSONTyped(value?: DtoGcpStorage | null, ignoreDis
     }
 
     return {
-
+        
         'bucket-name': value['bucketName'],
         'endpoint': value['endpoint'],
         'key': value['key'],

@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * BackupCommonConfig represents service-level backup settings.
  * @export
@@ -59,7 +59,7 @@ export function DtoBackupCommonConfigFromJSONTyped(json: any, ignoreDiscriminato
         return json;
     }
     return {
-
+        
         'timestampFormat': json['timestamp-format'] == null ? undefined : json['timestamp-format'],
     };
 }
@@ -74,7 +74,7 @@ export function DtoBackupCommonConfigToJSONTyped(value?: DtoBackupCommonConfig |
     }
 
     return {
-
+        
         'timestamp-format': value['timestampFormat'],
     };
 }

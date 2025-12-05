@@ -51,6 +51,7 @@ func registerStorageRoutes(mux *http.ServeMux, apiPath string, service *handlers
 	mux.HandleFunc("GET "+apiPath+"/config/storage/{name}", service.ReadStorage)
 	mux.HandleFunc("PUT "+apiPath+"/config/storage/{name}", service.UpdateStorage)
 	mux.HandleFunc("DELETE "+apiPath+"/config/storage/{name}", service.DeleteStorage)
+	mux.HandleFunc("POST "+apiPath+"/config/storage/check-connectivity", service.CheckStorageConnectivity)
 }
 
 func registerPolicyRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {

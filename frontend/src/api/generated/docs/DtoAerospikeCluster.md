@@ -5,16 +5,16 @@ AerospikeCluster represents the configuration for an Aerospike cluster for backu
 
 ## Properties
 
- Name                   | Type                                       
-------------------------|--------------------------------------------
- `connTimeout`          | number                                     
- `credentials`          | [DtoCredentials](DtoCredentials.md)        
- `label`                | string                                     
- `maxParallelScans`     | number                                     
- `preferRacks`          | Array&lt;number&gt;                        
- `seedNodes`            | [Array&lt;DtoSeedNode&gt;](DtoSeedNode.md) 
- `tls`                  | [DtoTLS](DtoTLS.md)                        
- `useServicesAlternate` | boolean                                    
+Name | Type
+------------ | -------------
+`connTimeout` | number
+`credentials` | [DtoCredentials](DtoCredentials.md)
+`label` | string
+`maxParallelScans` | number
+`preferRacks` | Array&lt;number&gt;
+`seedNodes` | [Array&lt;DtoSeedNode&gt;](DtoSeedNode.md)
+`tls` | [DtoTLS](DtoTLS.md)
+`useServicesAlternate` | boolean
 
 ## Example
 

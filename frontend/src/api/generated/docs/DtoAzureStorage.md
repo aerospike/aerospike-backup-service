@@ -5,20 +5,20 @@ AzureStorage represents the configuration for Azure Blob storage.
 
 ## Properties
 
- Name              | Type                                            
--------------------|-------------------------------------------------
- `accountKey`      | string                                          
- `accountName`     | string                                          
- `clientId`        | string                                          
- `clientSecret`    | string                                          
- `containerName`   | string                                          
- `endpoint`        | string                                          
- `minPartSize`     | number                                          
- `path`            | string                                          
- `secretAgent`     | [DtoSecretAgent](DtoSecretAgent.md)             
- `secretAgentName` | string                                          
- `storageClass`    | [DtoAzureStorageClass](DtoAzureStorageClass.md) 
- `tenantId`        | string                                          
+Name | Type
+------------ | -------------
+`accountKey` | string
+`accountName` | string
+`clientId` | string
+`clientSecret` | string
+`containerName` | string
+`endpoint` | string
+`minPartSize` | number
+`path` | string
+`secretAgent` | [DtoSecretAgent](DtoSecretAgent.md)
+`secretAgentName` | string
+`storageClass` | [DtoAzureStorageClass](DtoAzureStorageClass.md)
+`tenantId` | string
 
 ## Example
 

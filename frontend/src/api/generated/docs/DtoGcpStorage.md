@@ -5,17 +5,17 @@ GcpStorage represents the configuration for GCP storage.
 
 ## Properties
 
- Name              | Type                                        
--------------------|---------------------------------------------
- `bucketName`      | string                                      
- `endpoint`        | string                                      
- `key`             | string                                      
- `keyFilePath`     | string                                      
- `minPartSize`     | number                                      
- `path`            | string                                      
- `secretAgent`     | [DtoSecretAgent](DtoSecretAgent.md)         
- `secretAgentName` | string                                      
- `storageClass`    | [DtoGcpStorageClass](DtoGcpStorageClass.md) 
+Name | Type
+------------ | -------------
+`bucketName` | string
+`endpoint` | string
+`key` | string
+`keyFilePath` | string
+`minPartSize` | number
+`path` | string
+`secretAgent` | [DtoSecretAgent](DtoSecretAgent.md)
+`secretAgentName` | string
+`storageClass` | [DtoGcpStorageClass](DtoGcpStorageClass.md)
 
 ## Example
 

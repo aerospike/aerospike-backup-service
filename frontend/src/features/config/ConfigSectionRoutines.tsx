@@ -1,8 +1,8 @@
 import React from 'react';
 import {Clock, Plus} from 'lucide-react';
 import {Button} from '@/components/ui/Button';
-import {Input, Select} from '@/components/ui/Inputs';
-import {DtoBackupRoutine, DtoConfig} from '@/api';
+import {Input, MultiSelect, Select} from '@/components/ui/Inputs';
+import {DtoBackupRoutine, DtoConfig, api} from '@/api';
 import {Card, SectionHeader} from './ConfigEditorShared';
 
 interface ConfigSectionRoutinesProps {
@@ -32,6 +32,19 @@ export const ConfigSectionRoutines = (
   { config, setConfig, selectedId, setSelectedId, generateId, updateItem, deleteItem, renameItem }: ConfigSectionRoutinesProps
 ) => {
   const items = config.backupRoutines || {};
+  const [connectivity, setConnectivity] = React.useState<Record<string, string[]>>({});
+  const currentCluster = selectedId && items[selectedId] ? items[selectedId].sourceCluster : "";
+
+  React.useEffect(() => {
+    if (currentCluster && config.aerospikeClusters && config.aerospikeClusters[currentCluster]) {
+      api.checkClusterConnectivity(config.aerospikeClusters[currentCluster])
+          .then((data) => setConnectivity(data as any))
+          .catch(e => console.error("Failed to check connectivity", e));
+    } else {
+      setConnectivity({});
+    }
+  }, [currentCluster, config.aerospikeClusters]);
+
   return (
     <div className="flex h-full">
       <div className="w-1/3 border-r border-gray-800 p-4 flex flex-col">
@@ -103,18 +116,35 @@ export const ConfigSectionRoutines = (
              </div>
 
              <SectionHeader title="Scope" />
-             <Input
-               label="Namespaces (Comma separated)"
-               value={items[selectedId].namespaces?.join(', ') || ''}
-               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('backupRoutines', selectedId, 'namespaces', e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))}
+             <MultiSelect
+               label="Namespaces"
+               value={items[selectedId].namespaces || []}
+               onChange={(newValues) => updateItem('backupRoutines', selectedId, 'namespaces', newValues)}
+               options={Object.keys(connectivity)}
                placeholder="All namespaces if empty"
              />
-             <Input
-               label="Set List (Comma separated)"
-               value={items[selectedId].setList?.join(', ') || ''}
-               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('backupRoutines', selectedId, 'setList', e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))}
+
+             <MultiSelect
+               label="Set List"
+               value={items[selectedId].setList || []}
+               onChange={(newValues) => updateItem('backupRoutines', selectedId, 'setList', newValues)}
+               options={Array.from(new Set(
+                  (items[selectedId].namespaces && items[selectedId].namespaces.length > 0
+                      ? items[selectedId].namespaces
+                      : Object.keys(connectivity)
+                  ).flatMap(ns => connectivity[ns] || [])
+               ))}
                placeholder="Optional"
              />
+
+             <MultiSelect
+               label="Bin List"
+               value={items[selectedId].binList || []}
+               onChange={(newValues) => updateItem('backupRoutines', selectedId, 'binList', newValues)}
+               options={[]}
+               placeholder="Optional"
+             />
+
              <Checkbox
                label="Disable Routine"
                checked={items[selectedId].disabled || false}

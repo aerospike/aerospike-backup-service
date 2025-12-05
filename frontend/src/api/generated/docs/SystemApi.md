@@ -2,14 +2,16 @@
 
 All URIs are relative to *http://localhost:8080*
 
-| Method                              | HTTP request       | Description                     |
-|-------------------------------------|--------------------|---------------------------------|
+| Method | HTTP request | Description |
+|------------- | ------------- | -------------|
 | [**apiDocs**](SystemApi.md#apidocs) | **GET** /api-docs/ | OpenAPI specification endpoint. |
-| [**health**](SystemApi.md#health)   | **GET** /health    | Health endpoint.                |
-| [**metrics**](SystemApi.md#metrics) | **GET** /metrics   | Prometheus metrics endpoint.    |
-| [**ready**](SystemApi.md#ready)     | **GET** /ready     | Readiness endpoint.             |
-| [**root**](SystemApi.md#root)       | **GET** /          | Root endpoint.                  |
-| [**version**](SystemApi.md#version) | **GET** /version   | Returns application version.    |
+| [**health**](SystemApi.md#health) | **GET** /health | Health endpoint. |
+| [**metrics**](SystemApi.md#metrics) | **GET** /metrics | Prometheus metrics endpoint. |
+| [**ready**](SystemApi.md#ready) | **GET** /ready | Readiness endpoint. |
+| [**root**](SystemApi.md#root) | **GET** / | Root endpoint. |
+| [**version**](SystemApi.md#version) | **GET** /version | Returns application version. |
+
+
 
 ## apiDocs
 
@@ -65,7 +67,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200**     | OK          | -                |
+| **200** | OK |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -122,7 +124,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200**     | OK          | -                |
+| **200** | OK |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -179,7 +181,7 @@ No authorization required
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200**     | OK          | -                |
+| **200** | OK |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -232,12 +234,14 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: Not defined
 
+
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200**     | OK          | -                |
+| **200** | OK |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## root
 
@@ -287,12 +291,14 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: Not defined
 
+
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200**     | OK          | -                |
+| **200** | OK |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## version
 
@@ -342,10 +348,11 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `*/*`
 
+
 ### HTTP response details
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
-| **200**     | version     | -                |
+| **200** | version |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

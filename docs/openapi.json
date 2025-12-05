@@ -673,11 +673,17 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Connection successful",
+                        "description": "OK",
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1379,6 +1385,50 @@
                         "description": "Internal Server Error",
                         "content": {
                             "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/config/storage/check-connectivity": {
+            "post": {
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Checks connectivity to a backup storage.",
+                "operationId": "checkStorageConnectivity",
+                "requestBody": {
+                    "$ref": "#/components/requestBodies/dto.Storage"
+                },
+                "responses": {
+                    "200": {
+                        "description": "Connection successful",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "content": {
+                            "*/*": {
                                 "schema": {
                                     "type": "string"
                                 }

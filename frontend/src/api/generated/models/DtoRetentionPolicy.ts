@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * RetentionPolicy specifies how many full and incremental backups to keep.
  * @export
@@ -56,7 +56,7 @@ export function DtoRetentionPolicyFromJSONTyped(json: any, ignoreDiscriminator: 
         return json;
     }
     return {
-
+        
         'full': json['full'] == null ? undefined : json['full'],
         'incremental': json['incremental'] == null ? undefined : json['incremental'],
     };
@@ -72,7 +72,7 @@ export function DtoRetentionPolicyToJSONTyped(value?: DtoRetentionPolicy | null,
     }
 
     return {
-
+        
         'full': value['full'],
         'incremental': value['incremental'],
     };

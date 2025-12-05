@@ -5,8 +5,8 @@ JobStatus represents possible states of restore jobs.
 
 ## Properties
 
- Name | Type 
-------|------
+Name | Type
+------------ | -------------
 
 ## Example
 

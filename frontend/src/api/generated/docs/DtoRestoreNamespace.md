@@ -5,10 +5,10 @@ RestoreNamespace specifies an alternative namespace name for the restore operati
 
 ## Properties
 
- Name          | Type   
----------------|--------
- `destination` | string 
- `source`      | string 
+Name | Type
+------------ | -------------
+`destination` | string
+`source` | string
 
 ## Example
 

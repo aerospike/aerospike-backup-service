@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * LocalStorage represents the configuration for local storage.
  * @export
@@ -50,7 +50,7 @@ export function DtoLocalStorageFromJSONTyped(json: any, ignoreDiscriminator: boo
         return json;
     }
     return {
-
+        
         'minPartSize': json['min-part-size'] == null ? undefined : json['min-part-size'],
         'path': json['path'],
     };
@@ -66,7 +66,7 @@ export function DtoLocalStorageToJSONTyped(value?: DtoLocalStorage | null, ignor
     }
 
     return {
-
+        
         'min-part-size': value['minPartSize'],
         'path': value['path'],
     };

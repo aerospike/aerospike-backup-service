@@ -2,15 +2,17 @@
 
 All URIs are relative to *http://localhost:8080*
 
-| Method                                                                              | HTTP request                             | Description                                   |
-|-------------------------------------------------------------------------------------|------------------------------------------|-----------------------------------------------|
-| [**cancelCurrentBackup**](BackupApi.md#cancelcurrentbackup)                         | **POST** /v1/backups/cancel/{name}       | Cancel current backup.                        |
-| [**getCurrentBackup**](BackupApi.md#getcurrentbackup)                               | **GET** /v1/backups/currentBackup/{name} | Get current backup statistics.                |
-| [**getFullBackups**](BackupApi.md#getfullbackups)                                   | **GET** /v1/backups/full                 | Get available full backups.                   |
-| [**getFullBackupsForRoutine**](BackupApi.md#getfullbackupsforroutine)               | **GET** /v1/backups/full/{name}          | Get available full backups for routine.       |
-| [**getIncrementalBackups**](BackupApi.md#getincrementalbackups)                     | **GET** /v1/backups/incremental          | Get available incremental backups.            |
-| [**getIncrementalBackupsForRoutine**](BackupApi.md#getincrementalbackupsforroutine) | **GET** /v1/backups/incremental/{name}   | Get incremental backups for routine.          |
-| [**scheduleFullBackup**](BackupApi.md#schedulefullbackup)                           | **POST** /v1/backups/schedule/{name}     | Schedule a full backup once per routine name. |
+| Method | HTTP request | Description |
+|------------- | ------------- | -------------|
+| [**cancelCurrentBackup**](BackupApi.md#cancelcurrentbackup) | **POST** /v1/backups/cancel/{name} | Cancel current backup. |
+| [**getCurrentBackup**](BackupApi.md#getcurrentbackup) | **GET** /v1/backups/currentBackup/{name} | Get current backup statistics. |
+| [**getFullBackups**](BackupApi.md#getfullbackups) | **GET** /v1/backups/full | Get available full backups. |
+| [**getFullBackupsForRoutine**](BackupApi.md#getfullbackupsforroutine) | **GET** /v1/backups/full/{name} | Get available full backups for routine. |
+| [**getIncrementalBackups**](BackupApi.md#getincrementalbackups) | **GET** /v1/backups/incremental | Get available incremental backups. |
+| [**getIncrementalBackupsForRoutine**](BackupApi.md#getincrementalbackupsforroutine) | **GET** /v1/backups/incremental/{name} | Get incremental backups for routine. |
+| [**scheduleFullBackup**](BackupApi.md#schedulefullbackup) | **POST** /v1/backups/schedule/{name} | Schedule a full backup once per routine name. |
+
+
 
 ## cancelCurrentBackup
 
@@ -50,6 +52,7 @@ example().catch(console.error);
 
 ### Parameters
 
+
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup routine name | [Defaults to `undefined`] |
@@ -69,12 +72,11 @@ No authorization required
 
 
 ### HTTP response details
-
-| Status code | Description           | Response headers |
-|-------------|-----------------------|------------------|
-| **202**     | Accepted              | -                |
-| **404**     | Not Found             | -                |
-| **500**     | Internal Server Error | -                |
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **202** | Accepted |  -  |
+| **404** | Not Found |  -  |
+| **500** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -117,6 +119,7 @@ example().catch(console.error);
 
 ### Parameters
 
+
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup routine name | [Defaults to `undefined`] |
@@ -136,13 +139,12 @@ No authorization required
 
 
 ### HTTP response details
-
-| Status code | Description               | Response headers |
-|-------------|---------------------------|------------------|
-| **200**     | Current backup statistics | -                |
-| **400**     | Bad Request               | -                |
-| **404**     | Not Found                 | -                |
-| **500**     | Internal Server Error     | -                |
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Current backup statistics |  -  |
+| **400** | Bad Request |  -  |
+| **404** | Not Found |  -  |
+| **500** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -187,10 +189,11 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description                  | Notes                                |
-|----------|----------|------------------------------|--------------------------------------|
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **from** | `number` | Lower bound timestamp filter | [Optional] [Defaults to `undefined`] |
-| **to**   | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
+| **to** | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -207,12 +210,11 @@ No authorization required
 
 
 ### HTTP response details
-
-| Status code | Description             | Response headers |
-|-------------|-------------------------|------------------|
-| **200**     | Full backups by routine | -                |
-| **400**     | Bad Request             | -                |
-| **500**     | Internal Server Error   | -                |
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Full backups by routine |  -  |
+| **400** | Bad Request |  -  |
+| **500** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -259,11 +261,12 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description                  | Notes                                |
-|----------|----------|------------------------------|--------------------------------------|
-| **name** | `string` | Backup routine name          | [Defaults to `undefined`]            |
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Backup routine name | [Defaults to `undefined`] |
 | **from** | `number` | Lower bound timestamp filter | [Optional] [Defaults to `undefined`] |
-| **to**   | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
+| **to** | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -280,12 +283,11 @@ No authorization required
 
 
 ### HTTP response details
-
-| Status code | Description              | Response headers |
-|-------------|--------------------------|------------------|
-| **200**     | Full backups for routine | -                |
-| **400**     | Bad Request              | -                |
-| **500**     | Internal Server Error    | -                |
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Full backups for routine |  -  |
+| **400** | Bad Request |  -  |
+| **500** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -330,10 +332,11 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description                  | Notes                                |
-|----------|----------|------------------------------|--------------------------------------|
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
 | **from** | `number` | Lower bound timestamp filter | [Optional] [Defaults to `undefined`] |
-| **to**   | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
+| **to** | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -348,15 +351,16 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
-### HTTP response details
 
-| Status code | Description                    | Response headers |
-|-------------|--------------------------------|------------------|
-| **200**     | Incremental backups by routine | -                |
-| **400**     | Bad Request                    | -                |
-| **500**     | Internal Server Error          | -                |
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Incremental backups by routine |  -  |
+| **400** | Bad Request |  -  |
+| **500** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## getIncrementalBackupsForRoutine
 
@@ -400,11 +404,12 @@ example().catch(console.error);
 
 ### Parameters
 
-| Name     | Type     | Description                  | Notes                                |
-|----------|----------|------------------------------|--------------------------------------|
-| **name** | `string` | Backup routine name          | [Defaults to `undefined`]            |
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **name** | `string` | Backup routine name | [Defaults to `undefined`] |
 | **from** | `number` | Lower bound timestamp filter | [Optional] [Defaults to `undefined`] |
-| **to**   | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
+| **to** | `number` | Upper bound timestamp filter | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -419,15 +424,16 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `application/json`
 
-### HTTP response details
 
-| Status code | Description                     | Response headers |
-|-------------|---------------------------------|------------------|
-| **200**     | Incremental backups for routine | -                |
-| **400**     | Bad Request                     | -                |
-| **500**     | Internal Server Error           | -                |
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Incremental backups for routine |  -  |
+| **400** | Bad Request |  -  |
+| **500** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
 
 ## scheduleFullBackup
 
@@ -469,6 +475,7 @@ example().catch(console.error);
 
 ### Parameters
 
+
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
 | **name** | `string` | Backup routine name | [Defaults to `undefined`] |
@@ -487,14 +494,14 @@ No authorization required
 - **Content-Type**: Not defined
 - **Accept**: `*/*`
 
-### HTTP response details
 
-| Status code | Description           | Response headers |
-|-------------|-----------------------|------------------|
-| **202**     | Accepted              | -                |
-| **400**     | Bad Request           | -                |
-| **404**     | Not Found             | -                |
-| **500**     | Internal Server Error | -                |
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **202** | Accepted |  -  |
+| **400** | Bad Request |  -  |
+| **404** | Not Found |  -  |
+| **500** | Internal Server Error |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

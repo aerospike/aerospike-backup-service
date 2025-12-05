@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * EncryptionPolicy contains backup encryption information.
  * @export
@@ -73,7 +73,7 @@ export function DtoEncryptionPolicyFromJSONTyped(json: any, ignoreDiscriminator:
         return json;
     }
     return {
-
+        
         'keyEnv': json['key-env'] == null ? undefined : json['key-env'],
         'keyFile': json['key-file'] == null ? undefined : json['key-file'],
         'keySecret': json['key-secret'] == null ? undefined : json['key-secret'],
@@ -91,7 +91,7 @@ export function DtoEncryptionPolicyToJSONTyped(value?: DtoEncryptionPolicy | nul
     }
 
     return {
-
+        
         'key-env': value['keyEnv'],
         'key-file': value['keyFile'],
         'key-secret': value['keySecret'],

@@ -5,27 +5,27 @@ BackupPolicy represents a scheduled backup policy.
 
 ## Properties
 
- Name                       | Type                                            
-----------------------------|-------------------------------------------------
- `bandwidth`                | number                                          
- `compression`              | [DtoCompressionPolicy](DtoCompressionPolicy.md) 
- `concurrentIncremental`    | boolean                                         
- `encryption`               | [DtoEncryptionPolicy](DtoEncryptionPolicy.md)   
- `fileLimit`                | number                                          
- `maxConcurrentNodes`       | number                                          
- `noIndexes`                | boolean                                         
- `noRecords`                | boolean                                         
- `noUdfs`                   | boolean                                         
- `parallel`                 | number                                          
- `parallelWrite`            | number                                          
- `recordsPerSecond`         | number                                          
- `retention`                | [DtoRetentionPolicy](DtoRetentionPolicy.md)     
- `retryPolicy`              | [DtoRetryPolicy](DtoRetryPolicy.md)             
- `sealed`                   | boolean                                         
- `socketTimeout`            | number                                          
- `totalTimeout`             | number                                          
- `useScanCompression`       | boolean                                         
- `withClusterConfiguration` | boolean                                         
+Name | Type
+------------ | -------------
+`bandwidth` | number
+`compression` | [DtoCompressionPolicy](DtoCompressionPolicy.md)
+`concurrentIncremental` | boolean
+`encryption` | [DtoEncryptionPolicy](DtoEncryptionPolicy.md)
+`fileLimit` | number
+`maxConcurrentNodes` | number
+`noIndexes` | boolean
+`noRecords` | boolean
+`noUdfs` | boolean
+`parallel` | number
+`parallelWrite` | number
+`recordsPerSecond` | number
+`retention` | [DtoRetentionPolicy](DtoRetentionPolicy.md)
+`retryPolicy` | [DtoRetryPolicy](DtoRetryPolicy.md)
+`sealed` | boolean
+`socketTimeout` | number
+`totalTimeout` | number
+`useScanCompression` | boolean
+`withClusterConfiguration` | boolean
 
 ## Example
 

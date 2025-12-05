@@ -12,15 +12,15 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoRunningJob} from './DtoRunningJob';
+import { mapValues } from '../runtime';
+import type { DtoRunningJob } from './DtoRunningJob';
 import {
     DtoRunningJobFromJSON,
     DtoRunningJobFromJSONTyped,
     DtoRunningJobToJSON,
     DtoRunningJobToJSONTyped,
 } from './DtoRunningJob';
-import type {DtoJobStatus} from './DtoJobStatus';
+import type { DtoJobStatus } from './DtoJobStatus';
 import {
     DtoJobStatusFromJSON,
     DtoJobStatusFromJSONTyped,
@@ -129,6 +129,7 @@ export interface DtoRestoreJobStatus {
 }
 
 
+
 /**
  * Check if a given object implements the DtoRestoreJobStatus interface.
  */
@@ -145,7 +146,7 @@ export function DtoRestoreJobStatusFromJSONTyped(json: any, ignoreDiscriminator:
         return json;
     }
     return {
-
+        
         'currentJob': json['current-job'] == null ? undefined : DtoRunningJobFromJSON(json['current-job']),
         'error': json['error'] == null ? undefined : json['error'],
         'errorsInDoubt': json['errors-in-doubt'] == null ? undefined : json['errors-in-doubt'],
@@ -173,7 +174,7 @@ export function DtoRestoreJobStatusToJSONTyped(value?: DtoRestoreJobStatus | nul
     }
 
     return {
-
+        
         'current-job': DtoRunningJobToJSON(value['currentJob']),
         'error': value['error'],
         'errors-in-doubt': value['errorsInDoubt'],

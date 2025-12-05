@@ -5,11 +5,11 @@ Metrics represents the current job speed.
 
 ## Properties
 
- Name                 | Type   
-----------------------|--------
- `kilobytesPerSecond` | number 
- `pipeline`           | number 
- `recordsPerSecond`   | number 
+Name | Type
+------------ | -------------
+`kilobytesPerSecond` | number
+`pipeline` | number
+`recordsPerSecond` | number
 
 ## Example
 

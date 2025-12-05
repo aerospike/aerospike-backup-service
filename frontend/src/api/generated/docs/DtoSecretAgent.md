@@ -5,14 +5,14 @@ SecretAgent represents the configuration of an Aerospike Secret Agent.
 
 ## Properties
 
- Name             | Type    
-------------------|---------
- `address`        | string  
- `connectionType` | string  
- `isBase64`       | boolean 
- `port`           | number  
- `timeout`        | number  
- `tlsCaFile`      | string  
+Name | Type
+------------ | -------------
+`address` | string
+`connectionType` | string
+`isBase64` | boolean
+`port` | number
+`timeout` | number
+`tlsCaFile` | string
 
 ## Example
 

@@ -5,11 +5,11 @@ ServiceConfig represents the backup service configuration properties.
 
 ## Properties
 
- Name     | Type                                              
-----------|---------------------------------------------------
- `backup` | [DtoBackupCommonConfig](DtoBackupCommonConfig.md) 
- `http`   | [DtoHTTPServerConfig](DtoHTTPServerConfig.md)     
- `logger` | [DtoLoggerConfig](DtoLoggerConfig.md)             
+Name | Type
+------------ | -------------
+`backup` | [DtoBackupCommonConfig](DtoBackupCommonConfig.md)
+`http` | [DtoHTTPServerConfig](DtoHTTPServerConfig.md)
+`logger` | [DtoLoggerConfig](DtoLoggerConfig.md)
 
 ## Example
 

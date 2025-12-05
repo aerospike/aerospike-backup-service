@@ -5,14 +5,14 @@ Credentials represents authentication details to the Aerospike cluster.
 
 ## Properties
 
- Name              | Type                                
--------------------|-------------------------------------
- `authMode`        | string                              
- `password`        | string                              
- `passwordPath`    | string                              
- `secretAgent`     | [DtoSecretAgent](DtoSecretAgent.md) 
- `secretAgentName` | string                              
- `user`            | string                              
+Name | Type
+------------ | -------------
+`authMode` | string
+`password` | string
+`passwordPath` | string
+`secretAgent` | [DtoSecretAgent](DtoSecretAgent.md)
+`secretAgentName` | string
+`user` | string
 
 ## Example
 

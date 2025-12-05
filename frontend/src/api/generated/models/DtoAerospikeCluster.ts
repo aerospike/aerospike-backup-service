@@ -12,22 +12,22 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoTLS} from './DtoTLS';
+import { mapValues } from '../runtime';
+import type { DtoTLS } from './DtoTLS';
 import {
     DtoTLSFromJSON,
     DtoTLSFromJSONTyped,
     DtoTLSToJSON,
     DtoTLSToJSONTyped,
 } from './DtoTLS';
-import type {DtoSeedNode} from './DtoSeedNode';
+import type { DtoSeedNode } from './DtoSeedNode';
 import {
     DtoSeedNodeFromJSON,
     DtoSeedNodeFromJSONTyped,
     DtoSeedNodeToJSON,
     DtoSeedNodeToJSONTyped,
 } from './DtoSeedNode';
-import type {DtoCredentials} from './DtoCredentials';
+import type { DtoCredentials } from './DtoCredentials';
 import {
     DtoCredentialsFromJSON,
     DtoCredentialsFromJSONTyped,
@@ -113,7 +113,7 @@ export function DtoAerospikeClusterFromJSONTyped(json: any, ignoreDiscriminator:
         return json;
     }
     return {
-
+        
         'connTimeout': json['conn-timeout'] == null ? undefined : json['conn-timeout'],
         'credentials': json['credentials'] == null ? undefined : DtoCredentialsFromJSON(json['credentials']),
         'label': json['label'] == null ? undefined : json['label'],
@@ -135,7 +135,7 @@ export function DtoAerospikeClusterToJSONTyped(value?: DtoAerospikeCluster | nul
     }
 
     return {
-
+        
         'conn-timeout': value['connTimeout'],
         'credentials': DtoCredentialsToJSON(value['credentials']),
         'label': value['label'],

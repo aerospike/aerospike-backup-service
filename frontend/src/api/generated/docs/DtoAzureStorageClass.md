@@ -5,10 +5,10 @@ AzureStorageClass represents the configuration for Azure Blob Storage access tie
 
 ## Properties
 
- Name       | Type   
-------------|--------
- `data`     | string 
- `metadata` | string 
+Name | Type
+------------ | -------------
+`data` | string
+`metadata` | string
 
 ## Example
 

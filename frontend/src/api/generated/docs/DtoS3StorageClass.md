@@ -5,10 +5,10 @@ S3StorageClass represents the configuration for S3 Storage Class.
 
 ## Properties
 
- Name       | Type   
-------------|--------
- `data`     | string 
- `metadata` | string 
+Name | Type
+------------ | -------------
+`data` | string
+`metadata` | string
 
 ## Example
 

@@ -12,7 +12,7 @@ import {
 } from '@/api';
 import {Button} from '@/components/ui/Button';
 import {Modal} from '@/components/ui/Feedback';
-import {Checkbox, Input, RadioGroup, Select} from '@/components/ui/Inputs';
+import {Checkbox, Input, MultiSelect, RadioGroup, Select} from '@/components/ui/Inputs';
 import {Database, Filter, Lock, RefreshCcw, Settings, Zap} from 'lucide-react';
 
 interface RestoreFormProps {
@@ -55,7 +55,7 @@ export const RestoreForm = ({
     // Policy State
     const [bandwidth, setBandwidth] = useState<number | undefined>(undefined);
     const [batchSize, setBatchSize] = useState<number | undefined>(undefined);
-    const [binList, setBinList] = useState<string>('');
+    const [binList, setBinList] = useState<string[]>([]);
     const [disableBatchWrites, setDisableBatchWrites] = useState<boolean>(false);
     const [extraTtl, setExtraTtl] = useState<number | undefined>(undefined);
     const [maxAsyncBatches, setMaxAsyncBatches] = useState<number | undefined>(undefined);
@@ -63,7 +63,7 @@ export const RestoreForm = ({
     const [noRecords, setNoRecords] = useState<boolean>(false);
     const [noUdfs, setNoUdfs] = useState<boolean>(false);
     const [parallel, setParallel] = useState<number | undefined>(undefined);
-    const [setList, setSetList] = useState<string>('');
+    const [setList, setSetList] = useState<string[]>([]);
     const [socketTimeout, setSocketTimeout] = useState<number | undefined>(undefined);
     const [totalTimeout, setTotalTimeout] = useState<number | undefined>(undefined);
     const [tps, setTps] = useState<number | undefined>(undefined);
@@ -103,7 +103,7 @@ export const RestoreForm = ({
 
         if (bandwidth !== undefined) policy.bandwidth = bandwidth;
         if (batchSize !== undefined) policy.batchSize = batchSize;
-        if (binList) policy.binList = binList.split(',').map(s => s.trim()).filter(Boolean);
+        if (binList.length > 0) policy.binList = binList;
         if (disableBatchWrites) policy.disableBatchWrites = disableBatchWrites;
         if (extraTtl !== undefined) policy.extraTtl = extraTtl;
         if (maxAsyncBatches !== undefined) policy.maxAsyncBatches = maxAsyncBatches;
@@ -117,7 +117,7 @@ export const RestoreForm = ({
         if (noRecords) policy.noRecords = noRecords;
         if (noUdfs) policy.noUdfs = noUdfs;
         if (parallel !== undefined) policy.parallel = parallel;
-        if (setList) policy.setList = setList.split(',').map(s => s.trim()).filter(Boolean);
+        if (setList.length > 0) policy.setList = setList;
         if (socketTimeout !== undefined) policy.socketTimeout = socketTimeout;
         if (totalTimeout !== undefined) policy.totalTimeout = totalTimeout;
         if (tps !== undefined) policy.tps = tps;
@@ -283,19 +283,21 @@ export const RestoreForm = ({
                 return (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200">
                         <div className="space-y-4">
-                            <Input
+                            <MultiSelect
                                 label="Bin List"
                                 value={binList}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBinList(e.target.value)}
-                                placeholder="e.g. bin1, bin2"
-                                description="Comma separated list of bins to restore. Only the bins specified here will be restored. Empty implies restoring all bins."
+                                onChange={setBinList}
+                                options={[]}
+                                placeholder="Optional"
+                                description="List of bins to restore. Only the bins specified here will be restored. Empty implies restoring all bins."
                             />
-                            <Input
+                            <MultiSelect
                                 label="Set List"
                                 value={setList}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSetList(e.target.value)}
-                                placeholder="e.g. set1, set2"
-                                description="Comma separated list of sets to restore. Only the sets specified here will be restored. Empty implies restoring all sets."
+                                onChange={setSetList}
+                                options={[]}
+                                placeholder="Optional"
+                                description="List of sets to restore. Only the sets specified here will be restored. Empty implies restoring all sets."
                             />
                         </div>
                         <div className="border-t border-gray-200 pt-4 space-y-4">

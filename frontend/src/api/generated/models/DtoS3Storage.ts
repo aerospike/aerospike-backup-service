@@ -12,15 +12,15 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoSecretAgent} from './DtoSecretAgent';
+import { mapValues } from '../runtime';
+import type { DtoSecretAgent } from './DtoSecretAgent';
 import {
     DtoSecretAgentFromJSON,
     DtoSecretAgentFromJSONTyped,
     DtoSecretAgentToJSON,
     DtoSecretAgentToJSONTyped,
 } from './DtoSecretAgent';
-import type {DtoS3StorageClass} from './DtoS3StorageClass';
+import type { DtoS3StorageClass } from './DtoS3StorageClass';
 import {
     DtoS3StorageClassFromJSON,
     DtoS3StorageClassFromJSONTyped,
@@ -153,7 +153,7 @@ export function DtoS3StorageFromJSONTyped(json: any, ignoreDiscriminator: boolea
         return json;
     }
     return {
-
+        
         'accessKeyId': json['access-key-id'] == null ? undefined : json['access-key-id'],
         'bucket': json['bucket'],
         'maxAsyncConnections': json['max-async-connections'] == null ? undefined : json['max-async-connections'],
@@ -180,7 +180,7 @@ export function DtoS3StorageToJSONTyped(value?: DtoS3Storage | null, ignoreDiscr
     }
 
     return {
-
+        
         'access-key-id': value['accessKeyId'],
         'bucket': value['bucket'],
         'max-async-connections': value['maxAsyncConnections'],

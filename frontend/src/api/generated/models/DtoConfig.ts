@@ -12,43 +12,43 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoServiceConfig} from './DtoServiceConfig';
+import { mapValues } from '../runtime';
+import type { DtoServiceConfig } from './DtoServiceConfig';
 import {
     DtoServiceConfigFromJSON,
     DtoServiceConfigFromJSONTyped,
     DtoServiceConfigToJSON,
     DtoServiceConfigToJSONTyped,
 } from './DtoServiceConfig';
-import type {DtoBackupPolicy} from './DtoBackupPolicy';
+import type { DtoBackupPolicy } from './DtoBackupPolicy';
 import {
     DtoBackupPolicyFromJSON,
     DtoBackupPolicyFromJSONTyped,
     DtoBackupPolicyToJSON,
     DtoBackupPolicyToJSONTyped,
 } from './DtoBackupPolicy';
-import type {DtoSecretAgent} from './DtoSecretAgent';
+import type { DtoSecretAgent } from './DtoSecretAgent';
 import {
     DtoSecretAgentFromJSON,
     DtoSecretAgentFromJSONTyped,
     DtoSecretAgentToJSON,
     DtoSecretAgentToJSONTyped,
 } from './DtoSecretAgent';
-import type {DtoStorage} from './DtoStorage';
+import type { DtoStorage } from './DtoStorage';
 import {
     DtoStorageFromJSON,
     DtoStorageFromJSONTyped,
     DtoStorageToJSON,
     DtoStorageToJSONTyped,
 } from './DtoStorage';
-import type {DtoAerospikeCluster} from './DtoAerospikeCluster';
+import type { DtoAerospikeCluster } from './DtoAerospikeCluster';
 import {
     DtoAerospikeClusterFromJSON,
     DtoAerospikeClusterFromJSONTyped,
     DtoAerospikeClusterToJSON,
     DtoAerospikeClusterToJSONTyped,
 } from './DtoAerospikeCluster';
-import type {DtoBackupRoutine} from './DtoBackupRoutine';
+import type { DtoBackupRoutine } from './DtoBackupRoutine';
 import {
     DtoBackupRoutineFromJSON,
     DtoBackupRoutineFromJSONTyped,
@@ -116,7 +116,7 @@ export function DtoConfigFromJSONTyped(json: any, ignoreDiscriminator: boolean):
         return json;
     }
     return {
-
+        
         'aerospikeClusters': json['aerospike-clusters'] == null ? undefined : (mapValues(json['aerospike-clusters'], DtoAerospikeClusterFromJSON)),
         'backupPolicies': json['backup-policies'] == null ? undefined : (mapValues(json['backup-policies'], DtoBackupPolicyFromJSON)),
         'backupRoutines': json['backup-routines'] == null ? undefined : (mapValues(json['backup-routines'], DtoBackupRoutineFromJSON)),
@@ -136,7 +136,7 @@ export function DtoConfigToJSONTyped(value?: DtoConfig | null, ignoreDiscriminat
     }
 
     return {
-
+        
         'aerospike-clusters': value['aerospikeClusters'] == null ? undefined : (mapValues(value['aerospikeClusters'], DtoAerospikeClusterToJSON)),
         'backup-policies': value['backupPolicies'] == null ? undefined : (mapValues(value['backupPolicies'], DtoBackupPolicyToJSON)),
         'backup-routines': value['backupRoutines'] == null ? undefined : (mapValues(value['backupRoutines'], DtoBackupRoutineToJSON)),

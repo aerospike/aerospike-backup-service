@@ -65,7 +65,7 @@ export const api = {
         await backupApi.cancelCurrentBackup({name: routine});
     },
 
-    checkClusterConnectivity: async (cluster: allGenerated.DtoAerospikeCluster): Promise<string> => {
-        return await configurationApi.checkClusterConnectivity({dtoAerospikeCluster: cluster});
+    checkClusterConnectivity: async (cluster: allGenerated.DtoAerospikeCluster): Promise<Record<string, string[]>> => {
+        return await configurationApi.checkClusterConnectivity({dtoAerospikeCluster: cluster}) as unknown as Record<string, string[]>;
     }
 };

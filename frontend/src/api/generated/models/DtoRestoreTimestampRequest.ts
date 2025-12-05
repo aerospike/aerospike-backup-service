@@ -12,22 +12,22 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoRestorePolicy} from './DtoRestorePolicy';
+import { mapValues } from '../runtime';
+import type { DtoRestorePolicy } from './DtoRestorePolicy';
 import {
     DtoRestorePolicyFromJSON,
     DtoRestorePolicyFromJSONTyped,
     DtoRestorePolicyToJSON,
     DtoRestorePolicyToJSONTyped,
 } from './DtoRestorePolicy';
-import type {DtoSecretAgent} from './DtoSecretAgent';
+import type { DtoSecretAgent } from './DtoSecretAgent';
 import {
     DtoSecretAgentFromJSON,
     DtoSecretAgentFromJSONTyped,
     DtoSecretAgentToJSON,
     DtoSecretAgentToJSONTyped,
 } from './DtoSecretAgent';
-import type {DtoAerospikeCluster} from './DtoAerospikeCluster';
+import type { DtoAerospikeCluster } from './DtoAerospikeCluster';
 import {
     DtoAerospikeClusterFromJSON,
     DtoAerospikeClusterFromJSONTyped,
@@ -113,7 +113,7 @@ export function DtoRestoreTimestampRequestFromJSONTyped(json: any, ignoreDiscrim
         return json;
     }
     return {
-
+        
         'destination': json['destination'] == null ? undefined : DtoAerospikeClusterFromJSON(json['destination']),
         'destinationName': json['destination-name'] == null ? undefined : json['destination-name'],
         'disableReordering': json['disable-reordering'] == null ? undefined : json['disable-reordering'],
@@ -135,7 +135,7 @@ export function DtoRestoreTimestampRequestToJSONTyped(value?: DtoRestoreTimestam
     }
 
     return {
-
+        
         'destination': DtoAerospikeClusterToJSON(value['destination']),
         'destination-name': value['destinationName'],
         'disable-reordering': value['disableReordering'],

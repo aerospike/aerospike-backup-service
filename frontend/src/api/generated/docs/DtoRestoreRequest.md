@@ -5,16 +5,16 @@ RestoreRequest represents a restore operation request.
 
 ## Properties
 
- Name              | Type                                          
--------------------|-----------------------------------------------
- `backupDataPath`  | string                                        
- `destination`     | [DtoAerospikeCluster](DtoAerospikeCluster.md) 
- `destinationName` | string                                        
- `policy`          | [DtoRestorePolicy](DtoRestorePolicy.md)       
- `secretAgent`     | [DtoSecretAgent](DtoSecretAgent.md)           
- `secretAgentName` | string                                        
- `source`          | [DtoStorage](DtoStorage.md)                   
- `sourceName`      | string                                        
+Name | Type
+------------ | -------------
+`backupDataPath` | string
+`destination` | [DtoAerospikeCluster](DtoAerospikeCluster.md)
+`destinationName` | string
+`policy` | [DtoRestorePolicy](DtoRestorePolicy.md)
+`secretAgent` | [DtoSecretAgent](DtoSecretAgent.md)
+`secretAgentName` | string
+`source` | [DtoStorage](DtoStorage.md)
+`sourceName` | string
 
 ## Example
 

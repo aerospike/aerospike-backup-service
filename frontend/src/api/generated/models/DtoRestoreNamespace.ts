@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * RestoreNamespace specifies an alternative namespace name for the restore operation.
  * @export
@@ -52,7 +52,7 @@ export function DtoRestoreNamespaceFromJSONTyped(json: any, ignoreDiscriminator:
         return json;
     }
     return {
-
+        
         'destination': json['destination'],
         'source': json['source'],
     };
@@ -68,7 +68,7 @@ export function DtoRestoreNamespaceToJSONTyped(value?: DtoRestoreNamespace | nul
     }
 
     return {
-
+        
         'destination': value['destination'],
         'source': value['source'],
     };

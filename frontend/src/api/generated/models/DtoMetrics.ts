@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * Metrics represents the current job speed.
  * @export
@@ -60,7 +60,7 @@ export function DtoMetricsFromJSONTyped(json: any, ignoreDiscriminator: boolean)
         return json;
     }
     return {
-
+        
         'kilobytesPerSecond': json['kilobytes-per-second'] == null ? undefined : json['kilobytes-per-second'],
         'pipeline': json['pipeline'] == null ? undefined : json['pipeline'],
         'recordsPerSecond': json['records-per-second'] == null ? undefined : json['records-per-second'],
@@ -77,7 +77,7 @@ export function DtoMetricsToJSONTyped(value?: DtoMetrics | null, ignoreDiscrimin
     }
 
     return {
-
+        
         'kilobytes-per-second': value['kilobytesPerSecond'],
         'pipeline': value['pipeline'],
         'records-per-second': value['recordsPerSecond'],

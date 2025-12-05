@@ -5,14 +5,14 @@ RoutineState represent the current state of backups (full and incremental).
 
 ## Properties
 
- Name              | Type                              
--------------------|-----------------------------------
- `full`            | [DtoRunningJob](DtoRunningJob.md) 
- `incremental`     | [DtoRunningJob](DtoRunningJob.md) 
- `lastFull`        | string                            
- `lastIncremental` | string                            
- `nextFull`        | string                            
- `nextIncremental` | string                            
+Name | Type
+------------ | -------------
+`full` | [DtoRunningJob](DtoRunningJob.md)
+`incremental` | [DtoRunningJob](DtoRunningJob.md)
+`lastFull` | string
+`lastIncremental` | string
+`nextFull` | string
+`nextIncremental` | string
 
 ## Example
 

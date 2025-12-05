@@ -5,11 +5,11 @@ RetryPolicy defines the configuration for retry attempts in case of failures.
 
 ## Properties
 
- Name          | Type   
----------------|--------
- `baseTimeout` | number 
- `maxRetries`  | number 
- `multiplier`  | number 
+Name | Type
+------------ | -------------
+`baseTimeout` | number
+`maxRetries` | number
+`multiplier` | number
 
 ## Example
 

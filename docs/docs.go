@@ -582,9 +582,15 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Connection successful",
+                        "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
                         }
                     },
                     "400": {
@@ -1198,6 +1204,49 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "$ref": "#/definitions/dto.Storage"
                             }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/config/storage/check-connectivity": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Checks connectivity to a backup storage.",
+                "operationId": "checkStorageConnectivity",
+                "parameters": [
+                    {
+                        "description": "Backup storage details",
+                        "name": "storage",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.Storage"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Connection successful",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
                         }
                     },
                     "500": {

@@ -5,29 +5,29 @@ RestorePolicy represents a policy for the restore operation.
 
 ## Properties
 
- Name                 | Type                                            
-----------------------|-------------------------------------------------
- `bandwidth`          | number                                          
- `batchSize`          | number                                          
- `binList`            | Array&lt;string&gt;                             
- `compression`        | [DtoCompressionPolicy](DtoCompressionPolicy.md) 
- `disableBatchWrites` | boolean                                         
- `encryption`         | [DtoEncryptionPolicy](DtoEncryptionPolicy.md)   
- `extraTtl`           | number                                          
- `maxAsyncBatches`    | number                                          
- `namespace`          | [DtoRestoreNamespace](DtoRestoreNamespace.md)   
- `noGeneration`       | boolean                                         
- `noIndexes`          | boolean                                         
- `noRecords`          | boolean                                         
- `noUdfs`             | boolean                                         
- `parallel`           | number                                          
- `replace`            | boolean                                         
- `retryPolicy`        | [DtoRetryPolicy](DtoRetryPolicy.md)             
- `setList`            | Array&lt;string&gt;                             
- `socketTimeout`      | number                                          
- `totalTimeout`       | number                                          
- `tps`                | number                                          
- `unique`             | boolean                                         
+Name | Type
+------------ | -------------
+`bandwidth` | number
+`batchSize` | number
+`binList` | Array&lt;string&gt;
+`compression` | [DtoCompressionPolicy](DtoCompressionPolicy.md)
+`disableBatchWrites` | boolean
+`encryption` | [DtoEncryptionPolicy](DtoEncryptionPolicy.md)
+`extraTtl` | number
+`maxAsyncBatches` | number
+`namespace` | [DtoRestoreNamespace](DtoRestoreNamespace.md)
+`noGeneration` | boolean
+`noIndexes` | boolean
+`noRecords` | boolean
+`noUdfs` | boolean
+`parallel` | number
+`replace` | boolean
+`retryPolicy` | [DtoRetryPolicy](DtoRetryPolicy.md)
+`setList` | Array&lt;string&gt;
+`socketTimeout` | number
+`totalTimeout` | number
+`tps` | number
+`unique` | boolean
 
 ## Example
 

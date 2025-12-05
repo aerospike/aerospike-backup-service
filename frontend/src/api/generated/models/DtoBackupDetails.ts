@@ -12,8 +12,8 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoStorage} from './DtoStorage';
+import { mapValues } from '../runtime';
+import type { DtoStorage } from './DtoStorage';
 import {
     DtoStorageFromJSON,
     DtoStorageFromJSONTyped,
@@ -136,7 +136,7 @@ export function DtoBackupDetailsFromJSONTyped(json: any, ignoreDiscriminator: bo
         return json;
     }
     return {
-
+        
         'byteCount': json['byte-count'] == null ? undefined : json['byte-count'],
         'compression': json['compression'] == null ? undefined : json['compression'],
         'created': json['created'] == null ? undefined : json['created'],
@@ -165,7 +165,7 @@ export function DtoBackupDetailsToJSONTyped(value?: DtoBackupDetails | null, ign
     }
 
     return {
-
+        
         'byte-count': value['byteCount'],
         'compression': value['compression'],
         'created': value['created'],

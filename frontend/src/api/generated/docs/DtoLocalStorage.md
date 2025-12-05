@@ -5,10 +5,10 @@ LocalStorage represents the configuration for local storage.
 
 ## Properties
 
- Name          | Type   
----------------|--------
- `minPartSize` | number 
- `path`        | string 
+Name | Type
+------------ | -------------
+`minPartSize` | number
+`path` | string
 
 ## Example
 

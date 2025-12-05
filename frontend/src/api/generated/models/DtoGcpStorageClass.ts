@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * GcpStorageClass represents the configuration for GCP Storage Class.
  * @export
@@ -56,7 +56,7 @@ export function DtoGcpStorageClassFromJSONTyped(json: any, ignoreDiscriminator: 
         return json;
     }
     return {
-
+        
         'data': json['data'] == null ? undefined : json['data'],
     };
 }
@@ -71,7 +71,7 @@ export function DtoGcpStorageClassToJSONTyped(value?: DtoGcpStorageClass | null,
     }
 
     return {
-
+        
         'data': value['data'],
     };
 }

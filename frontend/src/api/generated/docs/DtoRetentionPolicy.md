@@ -5,10 +5,10 @@ RetentionPolicy specifies how many full and incremental backups to keep.
 
 ## Properties
 
- Name          | Type   
----------------|--------
- `full`        | number 
- `incremental` | number 
+Name | Type
+------------ | -------------
+`full` | number
+`incremental` | number
 
 ## Example
 

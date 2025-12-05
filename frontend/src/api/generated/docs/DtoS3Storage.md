@@ -5,21 +5,21 @@ S3Storage represents the configuration for S3 storage.
 
 ## Properties
 
- Name                  | Type                                      
------------------------|-------------------------------------------
- `accessKeyId`         | string                                    
- `bucket`              | string                                    
- `maxAsyncConnections` | number                                    
- `minPartSize`         | number                                    
- `path`                | string                                    
- `s3EndpointOverride`  | string                                    
- `s3LogLevel`          | string                                    
- `s3Profile`           | string                                    
- `s3Region`            | string                                    
- `secretAccessKey`     | string                                    
- `secretAgent`         | [DtoSecretAgent](DtoSecretAgent.md)       
- `secretAgentName`     | string                                    
- `storageClass`        | [DtoS3StorageClass](DtoS3StorageClass.md) 
+Name | Type
+------------ | -------------
+`accessKeyId` | string
+`bucket` | string
+`maxAsyncConnections` | number
+`minPartSize` | number
+`path` | string
+`s3EndpointOverride` | string
+`s3LogLevel` | string
+`s3Profile` | string
+`s3Region` | string
+`secretAccessKey` | string
+`secretAgent` | [DtoSecretAgent](DtoSecretAgent.md)
+`secretAgentName` | string
+`storageClass` | [DtoS3StorageClass](DtoS3StorageClass.md)
 
 ## Example
 

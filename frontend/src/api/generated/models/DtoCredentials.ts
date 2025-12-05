@@ -12,8 +12,8 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoSecretAgent} from './DtoSecretAgent';
+import { mapValues } from '../runtime';
+import type { DtoSecretAgent } from './DtoSecretAgent';
 import {
     DtoSecretAgentFromJSON,
     DtoSecretAgentFromJSONTyped,
@@ -96,7 +96,7 @@ export function DtoCredentialsFromJSONTyped(json: any, ignoreDiscriminator: bool
         return json;
     }
     return {
-
+        
         'authMode': json['auth-mode'] == null ? undefined : json['auth-mode'],
         'password': json['password'] == null ? undefined : json['password'],
         'passwordPath': json['password-path'] == null ? undefined : json['password-path'],
@@ -116,7 +116,7 @@ export function DtoCredentialsToJSONTyped(value?: DtoCredentials | null, ignoreD
     }
 
     return {
-
+        
         'auth-mode': value['authMode'],
         'password': value['password'],
         'password-path': value['passwordPath'],

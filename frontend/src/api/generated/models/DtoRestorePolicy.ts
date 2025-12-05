@@ -12,29 +12,29 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoCompressionPolicy} from './DtoCompressionPolicy';
+import { mapValues } from '../runtime';
+import type { DtoCompressionPolicy } from './DtoCompressionPolicy';
 import {
     DtoCompressionPolicyFromJSON,
     DtoCompressionPolicyFromJSONTyped,
     DtoCompressionPolicyToJSON,
     DtoCompressionPolicyToJSONTyped,
 } from './DtoCompressionPolicy';
-import type {DtoRestoreNamespace} from './DtoRestoreNamespace';
+import type { DtoRestoreNamespace } from './DtoRestoreNamespace';
 import {
     DtoRestoreNamespaceFromJSON,
     DtoRestoreNamespaceFromJSONTyped,
     DtoRestoreNamespaceToJSON,
     DtoRestoreNamespaceToJSONTyped,
 } from './DtoRestoreNamespace';
-import type {DtoRetryPolicy} from './DtoRetryPolicy';
+import type { DtoRetryPolicy } from './DtoRetryPolicy';
 import {
     DtoRetryPolicyFromJSON,
     DtoRetryPolicyFromJSONTyped,
     DtoRetryPolicyToJSON,
     DtoRetryPolicyToJSONTyped,
 } from './DtoRetryPolicy';
-import type {DtoEncryptionPolicy} from './DtoEncryptionPolicy';
+import type { DtoEncryptionPolicy } from './DtoEncryptionPolicy';
 import {
     DtoEncryptionPolicyFromJSON,
     DtoEncryptionPolicyFromJSONTyped,
@@ -211,7 +211,7 @@ export function DtoRestorePolicyFromJSONTyped(json: any, ignoreDiscriminator: bo
         return json;
     }
     return {
-
+        
         'bandwidth': json['bandwidth'] == null ? undefined : json['bandwidth'],
         'batchSize': json['batch-size'] == null ? undefined : json['batch-size'],
         'binList': json['bin-list'] == null ? undefined : json['bin-list'],
@@ -246,7 +246,7 @@ export function DtoRestorePolicyToJSONTyped(value?: DtoRestorePolicy | null, ign
     }
 
     return {
-
+        
         'bandwidth': value['bandwidth'],
         'batch-size': value['batchSize'],
         'bin-list': value['binList'],

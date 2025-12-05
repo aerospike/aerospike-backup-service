@@ -173,7 +173,7 @@ func (s *Service) DeleteAerospikeCluster(w http.ResponseWriter, r *http.Request)
 // @Router      /v1/config/clusters/check-connectivity [post]
 // @Accept      json
 // @Param       cluster body dto.AerospikeCluster true "Aerospike cluster details"
-// @Success     200 {string} string "Connection successful"
+// @Success     200 {object} map[string][]string
 // @Failure     400 {string} string
 // @Failure     500 {string} string
 func (s *Service) CheckAerospikeClusterConnectivity(w http.ResponseWriter, r *http.Request) {
@@ -194,7 +194,23 @@ func (s *Service) CheckAerospikeClusterConnectivity(w http.ResponseWriter, r *ht
 		httpError(w, errBadRequest(fmt.Errorf("failed to connect to aerospike cluster: %w", err)))
 		return
 	}
+
+	nss, err := client.InfoClient().GetNamespacesList(r.Context())
+	if err != nil {
+		s.clientManager.Close(client)
+		httpError(w, errBadRequest(fmt.Errorf("failed to get namespaces: %w", err)))
+		return
+	}
+
+	result := make(map[string][]string)
+	for _, ns := range nss {
+		setsList, err := client.InfoClient().GetSetsList(r.Context(), ns)
+		if err != nil {
+			setsList = []string{}
+		}
+		result[ns] = setsList
+	}
 	s.clientManager.Close(client) // Release the client immediately
 
-	httpOK(w, "Connection successful")
+	httpOK(w, result)
 }

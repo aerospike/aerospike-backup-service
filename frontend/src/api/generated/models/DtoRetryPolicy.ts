@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * RetryPolicy defines the configuration for retry attempts in case of failures.
  * @export
@@ -57,7 +57,7 @@ export function DtoRetryPolicyFromJSONTyped(json: any, ignoreDiscriminator: bool
         return json;
     }
     return {
-
+        
         'baseTimeout': json['base-timeout'] == null ? undefined : json['base-timeout'],
         'maxRetries': json['max-retries'] == null ? undefined : json['max-retries'],
         'multiplier': json['multiplier'] == null ? undefined : json['multiplier'],
@@ -74,7 +74,7 @@ export function DtoRetryPolicyToJSONTyped(value?: DtoRetryPolicy | null, ignoreD
     }
 
     return {
-
+        
         'base-timeout': value['baseTimeout'],
         'max-retries': value['maxRetries'],
         'multiplier': value['multiplier'],

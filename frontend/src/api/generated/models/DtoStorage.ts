@@ -12,29 +12,29 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoGcpStorage} from './DtoGcpStorage';
+import { mapValues } from '../runtime';
+import type { DtoGcpStorage } from './DtoGcpStorage';
 import {
     DtoGcpStorageFromJSON,
     DtoGcpStorageFromJSONTyped,
     DtoGcpStorageToJSON,
     DtoGcpStorageToJSONTyped,
 } from './DtoGcpStorage';
-import type {DtoS3Storage} from './DtoS3Storage';
+import type { DtoS3Storage } from './DtoS3Storage';
 import {
     DtoS3StorageFromJSON,
     DtoS3StorageFromJSONTyped,
     DtoS3StorageToJSON,
     DtoS3StorageToJSONTyped,
 } from './DtoS3Storage';
-import type {DtoAzureStorage} from './DtoAzureStorage';
+import type { DtoAzureStorage } from './DtoAzureStorage';
 import {
     DtoAzureStorageFromJSON,
     DtoAzureStorageFromJSONTyped,
     DtoAzureStorageToJSON,
     DtoAzureStorageToJSONTyped,
 } from './DtoAzureStorage';
-import type {DtoLocalStorage} from './DtoLocalStorage';
+import type { DtoLocalStorage } from './DtoLocalStorage';
 import {
     DtoLocalStorageFromJSON,
     DtoLocalStorageFromJSONTyped,
@@ -90,7 +90,7 @@ export function DtoStorageFromJSONTyped(json: any, ignoreDiscriminator: boolean)
         return json;
     }
     return {
-
+        
         'azureStorage': json['azure-storage'] == null ? undefined : DtoAzureStorageFromJSON(json['azure-storage']),
         'gcpStorage': json['gcp-storage'] == null ? undefined : DtoGcpStorageFromJSON(json['gcp-storage']),
         'localStorage': json['local-storage'] == null ? undefined : DtoLocalStorageFromJSON(json['local-storage']),
@@ -108,7 +108,7 @@ export function DtoStorageToJSONTyped(value?: DtoStorage | null, ignoreDiscrimin
     }
 
     return {
-
+        
         'azure-storage': DtoAzureStorageToJSON(value['azureStorage']),
         'gcp-storage': DtoGcpStorageToJSON(value['gcpStorage']),
         'local-storage': DtoLocalStorageToJSON(value['localStorage']),

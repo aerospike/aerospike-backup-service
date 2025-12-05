@@ -5,11 +5,11 @@ RateLimiterConfig is the HTTP server rate limiter configuration.
 
 ## Properties
 
- Name        | Type                
--------------|---------------------
- `size`      | number              
- `tps`       | number              
- `whiteList` | Array&lt;string&gt; 
+Name | Type
+------------ | -------------
+`size` | number
+`tps` | number
+`whiteList` | Array&lt;string&gt;
 
 ## Example
 

@@ -12,8 +12,8 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoFileLoggerConfig} from './DtoFileLoggerConfig';
+import { mapValues } from '../runtime';
+import type { DtoFileLoggerConfig } from './DtoFileLoggerConfig';
 import {
     DtoFileLoggerConfigFromJSON,
     DtoFileLoggerConfigFromJSONTyped,
@@ -93,7 +93,7 @@ export function DtoLoggerConfigFromJSONTyped(json: any, ignoreDiscriminator: boo
         return json;
     }
     return {
-
+        
         'fileWriter': json['file-writer'] == null ? undefined : DtoFileLoggerConfigFromJSON(json['file-writer']),
         'format': json['format'] == null ? undefined : json['format'],
         'level': json['level'] == null ? undefined : json['level'],
@@ -111,7 +111,7 @@ export function DtoLoggerConfigToJSONTyped(value?: DtoLoggerConfig | null, ignor
     }
 
     return {
-
+        
         'file-writer': DtoFileLoggerConfigToJSON(value['fileWriter']),
         'format': value['format'],
         'level': value['level'],

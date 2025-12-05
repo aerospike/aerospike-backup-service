@@ -15,8 +15,8 @@
 
 import * as runtime from '../runtime';
 import type {
-    DtoBackupDetails,
-    DtoRoutineState,
+  DtoBackupDetails,
+  DtoRoutineState,
 } from '../models/index';
 import {
     DtoBackupDetailsFromJSON,
@@ -141,9 +141,7 @@ export class BackupApi extends runtime.BaseAPI {
     /**
      * Get available full backups.
      */
-    async getFullBackupsRaw(requestParameters: GetFullBackupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{
-        [key: string]: Array<DtoBackupDetails>;
-    }>> {
+    async getFullBackupsRaw(requestParameters: GetFullBackupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: Array<DtoBackupDetails>; }>> {
         const queryParameters: any = {};
 
         if (requestParameters['from'] != null) {
@@ -172,9 +170,7 @@ export class BackupApi extends runtime.BaseAPI {
     /**
      * Get available full backups.
      */
-    async getFullBackups(requestParameters: GetFullBackupsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{
-        [key: string]: Array<DtoBackupDetails>;
-    }> {
+    async getFullBackups(requestParameters: GetFullBackupsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: Array<DtoBackupDetails>; }> {
         const response = await this.getFullBackupsRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -227,9 +223,7 @@ export class BackupApi extends runtime.BaseAPI {
     /**
      * Get available incremental backups.
      */
-    async getIncrementalBackupsRaw(requestParameters: GetIncrementalBackupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{
-        [key: string]: Array<DtoBackupDetails>;
-    }>> {
+    async getIncrementalBackupsRaw(requestParameters: GetIncrementalBackupsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<{ [key: string]: Array<DtoBackupDetails>; }>> {
         const queryParameters: any = {};
 
         if (requestParameters['from'] != null) {
@@ -258,9 +252,7 @@ export class BackupApi extends runtime.BaseAPI {
     /**
      * Get available incremental backups.
      */
-    async getIncrementalBackups(requestParameters: GetIncrementalBackupsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{
-        [key: string]: Array<DtoBackupDetails>;
-    }> {
+    async getIncrementalBackups(requestParameters: GetIncrementalBackupsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<{ [key: string]: Array<DtoBackupDetails>; }> {
         const response = await this.getIncrementalBackupsRaw(requestParameters, initOverrides);
         return await response.value();
     }

@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * CompressionPolicy contains backup compression information.
  * @export
@@ -61,7 +61,7 @@ export function DtoCompressionPolicyFromJSONTyped(json: any, ignoreDiscriminator
         return json;
     }
     return {
-
+        
         'level': json['level'] == null ? undefined : json['level'],
         'mode': json['mode'] == null ? undefined : json['mode'],
     };
@@ -77,7 +77,7 @@ export function DtoCompressionPolicyToJSONTyped(value?: DtoCompressionPolicy | n
     }
 
     return {
-
+        
         'level': value['level'],
         'mode': value['mode'],
     };

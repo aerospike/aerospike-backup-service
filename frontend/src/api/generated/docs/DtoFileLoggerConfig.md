@@ -5,13 +5,13 @@ FileLoggerConfig represents the configuration for the file logger writer.
 
 ## Properties
 
- Name         | Type    
---------------|---------
- `compress`   | boolean 
- `filename`   | string  
- `maxage`     | number  
- `maxbackups` | number  
- `maxsize`    | number  
+Name | Type
+------------ | -------------
+`compress` | boolean
+`filename` | string
+`maxage` | number
+`maxbackups` | number
+`maxsize` | number
 
 ## Example
 

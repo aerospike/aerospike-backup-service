@@ -5,11 +5,11 @@ SeedNode represents details of a node in the Aerospike cluster.
 
 ## Properties
 
- Name       | Type   
-------------|--------
- `hostName` | string 
- `port`     | number 
- `tlsName`  | string 
+Name | Type
+------------ | -------------
+`hostName` | string
+`port` | number
+`tlsName` | string
 
 ## Example
 

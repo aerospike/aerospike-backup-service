@@ -254,5 +254,6 @@ func setupTestService() *Service {
 		mockRegistry,
 		mockConfigurationManager,
 		nil,
+		nil,
 	)
 }

@@ -5,16 +5,16 @@ RunningJob tracks progress of currently running job.
 
 ## Properties
 
- Name               | Type                        
---------------------|-----------------------------
- `doneRecords`      | number                      
- `duration`         | number                      
- `estimatedEndTime` | string                      
- `finishTime`       | string                      
- `metrics`          | [DtoMetrics](DtoMetrics.md) 
- `percentageDone`   | number                      
- `startTime`        | string                      
- `totalRecords`     | number                      
+Name | Type
+------------ | -------------
+`doneRecords` | number
+`duration` | number
+`estimatedEndTime` | string
+`finishTime` | string
+`metrics` | [DtoMetrics](DtoMetrics.md)
+`percentageDone` | number
+`startTime` | string
+`totalRecords` | number
 
 ## Example
 

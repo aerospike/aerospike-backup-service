@@ -5,9 +5,9 @@ BackupCommonConfig represents service-level backup settings.
 
 ## Properties
 
- Name              | Type   
--------------------|--------
- `timestampFormat` | string 
+Name | Type
+------------ | -------------
+`timestampFormat` | string
 
 ## Example
 

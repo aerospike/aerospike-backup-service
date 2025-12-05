@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * SecretAgent represents the configuration of an Aerospike Secret Agent.
  * @export
@@ -86,7 +86,7 @@ export function DtoSecretAgentFromJSONTyped(json: any, ignoreDiscriminator: bool
         return json;
     }
     return {
-
+        
         'address': json['address'],
         'connectionType': json['connection-type'],
         'isBase64': json['is-base64'] == null ? undefined : json['is-base64'],
@@ -106,7 +106,7 @@ export function DtoSecretAgentToJSONTyped(value?: DtoSecretAgent | null, ignoreD
     }
 
     return {
-
+        
         'address': value['address'],
         'connection-type': value['connectionType'],
         'is-base64': value['isBase64'],

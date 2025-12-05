@@ -12,22 +12,22 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoLoggerConfig} from './DtoLoggerConfig';
+import { mapValues } from '../runtime';
+import type { DtoLoggerConfig } from './DtoLoggerConfig';
 import {
     DtoLoggerConfigFromJSON,
     DtoLoggerConfigFromJSONTyped,
     DtoLoggerConfigToJSON,
     DtoLoggerConfigToJSONTyped,
 } from './DtoLoggerConfig';
-import type {DtoHTTPServerConfig} from './DtoHTTPServerConfig';
+import type { DtoHTTPServerConfig } from './DtoHTTPServerConfig';
 import {
     DtoHTTPServerConfigFromJSON,
     DtoHTTPServerConfigFromJSONTyped,
     DtoHTTPServerConfigToJSON,
     DtoHTTPServerConfigToJSONTyped,
 } from './DtoHTTPServerConfig';
-import type {DtoBackupCommonConfig} from './DtoBackupCommonConfig';
+import type { DtoBackupCommonConfig } from './DtoBackupCommonConfig';
 import {
     DtoBackupCommonConfigFromJSON,
     DtoBackupCommonConfigFromJSONTyped,
@@ -77,7 +77,7 @@ export function DtoServiceConfigFromJSONTyped(json: any, ignoreDiscriminator: bo
         return json;
     }
     return {
-
+        
         'backup': json['backup'] == null ? undefined : DtoBackupCommonConfigFromJSON(json['backup']),
         'http': json['http'] == null ? undefined : DtoHTTPServerConfigFromJSON(json['http']),
         'logger': json['logger'] == null ? undefined : DtoLoggerConfigFromJSON(json['logger']),
@@ -94,7 +94,7 @@ export function DtoServiceConfigToJSONTyped(value?: DtoServiceConfig | null, ign
     }
 
     return {
-
+        
         'backup': DtoBackupCommonConfigToJSON(value['backup']),
         'http': DtoHTTPServerConfigToJSON(value['http']),
         'logger': DtoLoggerConfigToJSON(value['logger']),

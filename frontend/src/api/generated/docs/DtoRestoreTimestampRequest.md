@@ -5,16 +5,16 @@ RestoreTimestampRequest represents a restore by timestamp operation request.
 
 ## Properties
 
- Name                | Type                                          
----------------------|-----------------------------------------------
- `destination`       | [DtoAerospikeCluster](DtoAerospikeCluster.md) 
- `destinationName`   | string                                        
- `disableReordering` | boolean                                       
- `policy`            | [DtoRestorePolicy](DtoRestorePolicy.md)       
- `routine`           | string                                        
- `secretAgent`       | [DtoSecretAgent](DtoSecretAgent.md)           
- `secretAgentName`   | string                                        
- `time`              | number                                        
+Name | Type
+------------ | -------------
+`destination` | [DtoAerospikeCluster](DtoAerospikeCluster.md)
+`destinationName` | string
+`disableReordering` | boolean
+`policy` | [DtoRestorePolicy](DtoRestorePolicy.md)
+`routine` | string
+`secretAgent` | [DtoSecretAgent](DtoSecretAgent.md)
+`secretAgentName` | string
+`time` | number
 
 ## Example
 

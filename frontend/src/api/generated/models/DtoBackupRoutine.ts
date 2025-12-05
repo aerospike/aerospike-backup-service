@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * BackupRoutine represents a scheduled backup operation routine.
  * @export
@@ -142,7 +142,7 @@ export function DtoBackupRoutineFromJSONTyped(json: any, ignoreDiscriminator: bo
         return json;
     }
     return {
-
+        
         'backupPolicy': json['backup-policy'] == null ? undefined : json['backup-policy'],
         'binList': json['bin-list'] == null ? undefined : json['bin-list'],
         'disabled': json['disabled'] == null ? undefined : json['disabled'],
@@ -169,7 +169,7 @@ export function DtoBackupRoutineToJSONTyped(value?: DtoBackupRoutine | null, ign
     }
 
     return {
-
+        
         'backup-policy': value['backupPolicy'],
         'bin-list': value['binList'],
         'disabled': value['disabled'],

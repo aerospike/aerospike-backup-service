@@ -12,7 +12,7 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
+import { mapValues } from '../runtime';
 /**
  * S3StorageClass represents the configuration for S3 Storage Class.
  * @export
@@ -81,7 +81,7 @@ export function DtoS3StorageClassFromJSONTyped(json: any, ignoreDiscriminator: b
         return json;
     }
     return {
-
+        
         'data': json['data'] == null ? undefined : json['data'],
         'metadata': json['metadata'] == null ? undefined : json['metadata'],
     };
@@ -97,7 +97,7 @@ export function DtoS3StorageClassToJSONTyped(value?: DtoS3StorageClass | null, i
     }
 
     return {
-
+        
         'data': value['data'],
         'metadata': value['metadata'],
     };

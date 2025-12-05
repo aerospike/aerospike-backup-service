@@ -5,22 +5,22 @@ RestoreJobStatus represents restore job status.
 
 ## Properties
 
- Name              | Type                              
--------------------|-----------------------------------
- `currentJob`      | [DtoRunningJob](DtoRunningJob.md) 
- `error`           | string                            
- `errorsInDoubt`   | number                            
- `existedRecords`  | number                            
- `expiredRecords`  | number                            
- `fresherRecords`  | number                            
- `ignoredRecords`  | number                            
- `indexCount`      | number                            
- `insertedRecords` | number                            
- `readRecords`     | number                            
- `skippedRecords`  | number                            
- `status`          | [DtoJobStatus](DtoJobStatus.md)   
- `totalBytes`      | number                            
- `udfCount`        | number                            
+Name | Type
+------------ | -------------
+`currentJob` | [DtoRunningJob](DtoRunningJob.md)
+`error` | string
+`errorsInDoubt` | number
+`existedRecords` | number
+`expiredRecords` | number
+`fresherRecords` | number
+`ignoredRecords` | number
+`indexCount` | number
+`insertedRecords` | number
+`readRecords` | number
+`skippedRecords` | number
+`status` | [DtoJobStatus](DtoJobStatus.md)
+`totalBytes` | number
+`udfCount` | number
 
 ## Example
 

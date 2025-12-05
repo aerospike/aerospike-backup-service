@@ -12,29 +12,29 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoRestorePolicy} from './DtoRestorePolicy';
+import { mapValues } from '../runtime';
+import type { DtoRestorePolicy } from './DtoRestorePolicy';
 import {
     DtoRestorePolicyFromJSON,
     DtoRestorePolicyFromJSONTyped,
     DtoRestorePolicyToJSON,
     DtoRestorePolicyToJSONTyped,
 } from './DtoRestorePolicy';
-import type {DtoSecretAgent} from './DtoSecretAgent';
+import type { DtoSecretAgent } from './DtoSecretAgent';
 import {
     DtoSecretAgentFromJSON,
     DtoSecretAgentFromJSONTyped,
     DtoSecretAgentToJSON,
     DtoSecretAgentToJSONTyped,
 } from './DtoSecretAgent';
-import type {DtoStorage} from './DtoStorage';
+import type { DtoStorage } from './DtoStorage';
 import {
     DtoStorageFromJSON,
     DtoStorageFromJSONTyped,
     DtoStorageToJSON,
     DtoStorageToJSONTyped,
 } from './DtoStorage';
-import type {DtoAerospikeCluster} from './DtoAerospikeCluster';
+import type { DtoAerospikeCluster } from './DtoAerospikeCluster';
 import {
     DtoAerospikeClusterFromJSON,
     DtoAerospikeClusterFromJSONTyped,
@@ -124,7 +124,7 @@ export function DtoRestoreRequestFromJSONTyped(json: any, ignoreDiscriminator: b
         return json;
     }
     return {
-
+        
         'backupDataPath': json['backup-data-path'],
         'destination': json['destination'] == null ? undefined : DtoAerospikeClusterFromJSON(json['destination']),
         'destinationName': json['destination-name'] == null ? undefined : json['destination-name'],
@@ -146,7 +146,7 @@ export function DtoRestoreRequestToJSONTyped(value?: DtoRestoreRequest | null, i
     }
 
     return {
-
+        
         'backup-data-path': value['backupDataPath'],
         'destination': DtoAerospikeClusterToJSON(value['destination']),
         'destination-name': value['destinationName'],

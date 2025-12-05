@@ -12,29 +12,29 @@
  * Do not edit the class manually.
  */
 
-import {mapValues} from '../runtime';
-import type {DtoCompressionPolicy} from './DtoCompressionPolicy';
+import { mapValues } from '../runtime';
+import type { DtoCompressionPolicy } from './DtoCompressionPolicy';
 import {
     DtoCompressionPolicyFromJSON,
     DtoCompressionPolicyFromJSONTyped,
     DtoCompressionPolicyToJSON,
     DtoCompressionPolicyToJSONTyped,
 } from './DtoCompressionPolicy';
-import type {DtoRetentionPolicy} from './DtoRetentionPolicy';
+import type { DtoRetentionPolicy } from './DtoRetentionPolicy';
 import {
     DtoRetentionPolicyFromJSON,
     DtoRetentionPolicyFromJSONTyped,
     DtoRetentionPolicyToJSON,
     DtoRetentionPolicyToJSONTyped,
 } from './DtoRetentionPolicy';
-import type {DtoRetryPolicy} from './DtoRetryPolicy';
+import type { DtoRetryPolicy } from './DtoRetryPolicy';
 import {
     DtoRetryPolicyFromJSON,
     DtoRetryPolicyFromJSONTyped,
     DtoRetryPolicyToJSON,
     DtoRetryPolicyToJSONTyped,
 } from './DtoRetryPolicy';
-import type {DtoEncryptionPolicy} from './DtoEncryptionPolicy';
+import type { DtoEncryptionPolicy } from './DtoEncryptionPolicy';
 import {
     DtoEncryptionPolicyFromJSON,
     DtoEncryptionPolicyFromJSONTyped,
@@ -196,7 +196,7 @@ export function DtoBackupPolicyFromJSONTyped(json: any, ignoreDiscriminator: boo
         return json;
     }
     return {
-
+        
         'bandwidth': json['bandwidth'] == null ? undefined : json['bandwidth'],
         'compression': json['compression'] == null ? undefined : DtoCompressionPolicyFromJSON(json['compression']),
         'concurrentIncremental': json['concurrent-incremental'] == null ? undefined : json['concurrent-incremental'],
@@ -229,7 +229,7 @@ export function DtoBackupPolicyToJSONTyped(value?: DtoBackupPolicy | null, ignor
     }
 
     return {
-
+        
         'bandwidth': value['bandwidth'],
         'compression': DtoCompressionPolicyToJSON(value['compression']),
         'concurrent-incremental': value['concurrentIncremental'],
