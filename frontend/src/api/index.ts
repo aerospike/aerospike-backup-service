@@ -67,5 +67,9 @@ export const api = {
 
     checkClusterConnectivity: async (cluster: allGenerated.DtoAerospikeCluster): Promise<Record<string, string[]>> => {
         return await configurationApi.checkClusterConnectivity({dtoAerospikeCluster: cluster}) as unknown as Record<string, string[]>;
+    },
+
+    checkStorageConnectivity: async (storage: allGenerated.DtoStorage): Promise<string> => {
+        return await configurationApi.checkStorageConnectivity({dtoStorage: storage});
     }
 };

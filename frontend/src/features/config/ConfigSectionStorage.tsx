@@ -1,9 +1,10 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {HardDrive, Plus} from 'lucide-react';
 import {Button} from '@/components/ui/Button';
 import {Input, Select} from '@/components/ui/Inputs';
-import {DtoConfig, DtoStorage} from '@/api';
+import {api, DtoConfig, DtoStorage} from '@/api';
 import {Card, SectionHeader} from './ConfigEditorShared';
+import {ConnectivityCheckButton} from '@/components/ui/ConnectivityCheckButton';
 
 interface ConfigSectionStorageProps {
   config: DtoConfig;
@@ -68,7 +69,9 @@ export const ConfigSectionStorage = (
               title={k}
               sub={getStorageType(v).replace('Storage','').toUpperCase()}
               active={selectedId === k}
-              onClick={() => setSelectedId(k)}
+              onClick={() => {
+                setSelectedId(k);
+              }}
               onDelete={() => deleteItem('storage', k)}
             />
           ))}
@@ -78,7 +81,20 @@ export const ConfigSectionStorage = (
         {selectedId && items[selectedId] ? (
           <div className="animate-in fade-in slide-in-from-right-4 duration-200">
              <div className="mb-6">
-                <Input label="Storage Name" value={selectedId} onChange={(e: React.ChangeEvent<HTMLInputElement>) => renameItem('storage', selectedId, e.target.value)} />
+                <div className="flex items-end gap-4 mb-4">
+                    <div className="flex-1">
+                        <Input label="Storage Name" value={selectedId} onChange={(e: React.ChangeEvent<HTMLInputElement>) => renameItem('storage', selectedId, e.target.value)} />
+                    </div>
+                    <ConnectivityCheckButton
+                        className="mb-3"
+                        onCheck={async () => {
+                            if (selectedId && items[selectedId]) {
+                                await api.checkStorageConnectivity(items[selectedId]);
+                            }
+                        }}
+                    />
+                </div>
+
                 <Select
                   label="Type"
                   value={getStorageType(items[selectedId])}

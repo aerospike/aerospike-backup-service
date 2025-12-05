@@ -1,9 +1,10 @@
 import React, {useState} from 'react';
-import {Activity, Key, Plus, Server, Trash2} from 'lucide-react';
+import {Key, Plus, Server, Trash2} from 'lucide-react';
 import {Button} from '@/components/ui/Button';
 import {Input, Select} from '@/components/ui/Inputs';
 import {api, DtoAerospikeCluster, DtoConfig} from '@/api';
 import {Card, SectionHeader} from './ConfigEditorShared';
+import {ConnectivityCheckButton} from '@/components/ui/ConnectivityCheckButton';
 
 interface ConfigSectionClustersProps {
     config: DtoConfig;
@@ -31,22 +32,6 @@ export const ConfigSectionClusters = (
     }: ConfigSectionClustersProps
 ) => {
     const items = config.aerospikeClusters || {};
-    const [isChecking, setIsChecking] = useState(false);
-    const [checkResult, setCheckResult] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-
-    const handleCheckConnectivity = async () => {
-        if (!selectedId || !items[selectedId]) return;
-        setIsChecking(true);
-        setCheckResult(null);
-        try {
-            await api.checkClusterConnectivity(items[selectedId]);
-            setCheckResult({type: 'success', message: 'Connectivity check successful'});
-        } catch (e: any) {
-            setCheckResult({type: 'error', message: 'Connectivity check failed'});
-        } finally {
-            setIsChecking(false);
-        }
-    };
 
     return (
         <div className="flex h-full">
@@ -79,7 +64,6 @@ export const ConfigSectionClusters = (
                                 active={selectedId === k}
                                 onClick={() => {
                                     setSelectedId(k);
-                                    setCheckResult(null);
                                 }}
                                 onDelete={() => deleteItem('aerospikeClusters', k)}
                             />
@@ -94,23 +78,15 @@ export const ConfigSectionClusters = (
                                 <Input label="Cluster Name" value={selectedId}
                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => renameItem('aerospikeClusters', selectedId, e.target.value)}/>
                             </div>
-                            <Button
-                                variant="secondary"
+                            <ConnectivityCheckButton
                                 className="mb-3"
-                                onClick={handleCheckConnectivity}
-                                loading={isChecking}
-                                icon={Activity}
-                            >
-                                Check Connectivity
-                            </Button>
+                                onCheck={async () => {
+                                    if (selectedId && items[selectedId]) {
+                                        await api.checkClusterConnectivity(items[selectedId]);
+                                    }
+                                }}
+                            />
                         </div>
-
-                        {checkResult && (
-                            <div
-                                className={`mb-6 p-3 rounded border text-sm ${checkResult.type === 'success' ? 'bg-green-100 border-green-200 text-green-700' : 'bg-red-100 border-red-200 text-red-700'}`}>
-                                {checkResult.message}
-                            </div>
-                        )}
 
                         <SectionHeader title="Seed Nodes" icon={Server}/>
                         <div className="space-y-2 mb-6">
