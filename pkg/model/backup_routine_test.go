@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections/optional"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,6 +50,9 @@ func TestBackupRoutineCopy_GobRegistrations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &BackupRoutine{Storage: tt.storage}
+			r.BackupPolicy = &BackupPolicy{}
+			r.BackupPolicy.RetentionPolicy = &RetentionPolicy{}
+			r.BackupPolicy.RetentionPolicy.FullBackups = optional.Of(1)
 
 			// Assert Copy does not panic
 			var out *BackupRoutine

@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections/optional"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 )
@@ -119,17 +120,6 @@ func (p *BackupPolicy) GetFileLimitOrDefault() int {
 }
 
 type RetentionPolicy struct {
-	FullBackups *int // Number of full backups to store
-	IncrBackups *int // Number of full backups to store incremental backups for
-}
-
-// GetIncrementalRetentionCount returns the effective number of full backups
-// for which to retain incremental backups. When IncrBackups is nil (meaning
-// "retain all incrementals"), this returns the FullBackups value since
-// incremental backups cannot exist without their corresponding full backup.
-func (r *RetentionPolicy) GetIncrementalRetentionCount() *int {
-	if r.IncrBackups == nil {
-		return r.FullBackups
-	}
-	return r.IncrBackups
+	FullBackups optional.Optional[int] // Number of full backups to store
+	IncrBackups optional.Optional[int] // Number of full backups to store incremental backups for
 }

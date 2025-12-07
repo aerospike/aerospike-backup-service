@@ -6,7 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections/optional"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -20,7 +20,7 @@ func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 	backendService := NewMockBackupReaderWriter(ctrl)
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
-		FullBackups: ptr.Of(2),
+		FullBackups: optional.Of(2),
 	})
 
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
@@ -68,7 +68,7 @@ func TestRetentionManager_FullAndIncremental(t *testing.T) {
 	backendService := NewMockBackupReaderWriter(ctrl)
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
-		FullBackups: ptr.Of(1),
+		FullBackups: optional.Of(1),
 	})
 
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
@@ -115,8 +115,8 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 	defer ctrl.Finish()
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
-		FullBackups: ptr.Of(2),
-		IncrBackups: ptr.Of(1),
+		FullBackups: optional.Of(2),
+		IncrBackups: optional.Of(1),
 	})
 
 	backendService := NewMockBackupReaderWriter(ctrl)
@@ -178,7 +178,7 @@ func TestRetentionManager_NoneToDelete(t *testing.T) {
 	backendService := NewMockBackupReaderWriter(ctrl)
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
-		FullBackups: ptr.Of(5),
+		FullBackups: optional.Of(5),
 	})
 
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
@@ -204,7 +204,7 @@ func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 	defer ctrl.Finish()
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
-		IncrBackups: ptr.Of(0),
+		IncrBackups: optional.Of(0),
 	})
 
 	backendService := NewMockBackupReaderWriter(ctrl)
@@ -229,7 +229,7 @@ func TestRetentionManager_ConcurrencyLock(t *testing.T) {
 	defer ctrl.Finish()
 
 	routine := routineWithRetentionPolicy(&model.RetentionPolicy{
-		FullBackups: ptr.Of(1),
+		FullBackups: optional.Of(1),
 	})
 
 	backendService := NewMockBackupReaderWriter(ctrl) // Expects no calls
