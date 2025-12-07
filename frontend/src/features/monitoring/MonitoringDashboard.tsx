@@ -5,6 +5,9 @@ import {api, BackupApi} from '@/api';
 import {MonitoringSidebar} from './MonitoringSidebar';
 import {LiveActivity} from './LiveActivity';
 import {BackupHistory} from './BackupHistory';
+import {ServiceLogs} from './ServiceLogs';
+
+type MonitoringViewMode = 'routines' | 'logs';
 
 interface MonitoringDashboardProps {
     config: DtoConfig;
@@ -14,6 +17,7 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
     // We can safely cast the keys because we know the shape of config
     const routineKeys = Object.keys(config.backupRoutines || {});
     const [activeRoutine, setActiveRoutine] = useState<string>(routineKeys[0] || '');
+    const [viewMode, setViewMode] = useState<MonitoringViewMode>('routines');
 
     const [currentBackup, setCurrentBackup] = useState<DtoRoutineState | null>(null);
     const [restoreJobs, setRestoreJobs] = useState<{ [key: string]: DtoRestoreJobStatus }>({});
@@ -31,6 +35,8 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
     const backupApi = new BackupApi();
 
     const loadData = async () => {
+        if (viewMode !== 'routines') return; // Only load routine data if in routines view
+
         try {
             const rJobs = await api.fetchRestoreJobs();
             setRestoreJobs(rJobs);
@@ -55,7 +61,7 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
 
 
     const handleRestore = async (request: allGenerated.DtoRestoreTimestampRequest) => {
-        if (!activeRoutine || !selectedBackupId) return;
+        if (viewMode !== 'routines' || !activeRoutine || !selectedBackupId) return;
 
         setIsRestoring(true);
         setRestoreError(null);
@@ -71,7 +77,7 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
     };
 
     const handleScheduleFullBackup = async () => {
-        if (!activeRoutine) return;
+        if (viewMode !== 'routines' || !activeRoutine) return;
         setIsSchedulingBackup(true);
         try {
             await backupApi.scheduleFullBackup({name: activeRoutine});
@@ -88,7 +94,7 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
     };
 
     const handleCancelBackup = async () => {
-        if (!activeRoutine) return;
+        if (viewMode !== 'routines' || !activeRoutine) return;
         setIsCancellingBackup(true);
         try {
             await api.cancelBackup(activeRoutine);
@@ -104,6 +110,7 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
     };
 
     const handleCancelRestore = async (jobId: number) => {
+        if (viewMode !== 'routines') return; // Should not happen, but defensive check
         setIsCancellingRestore(true);
         try {
             await api.cancelRestore(jobId);
@@ -121,7 +128,7 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
         loadData();
         const interval = setInterval(loadData, 5000);
         return () => clearInterval(interval);
-    }, [activeRoutine]);
+    }, [activeRoutine, viewMode]); // Added viewMode to dependencies
 
     const handleBackupSelect = (key: string) => { // Changed id to key
         if (selectedBackupId === key) { // Use key here
@@ -166,42 +173,51 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
                 activeRoutine={activeRoutine}
                 setActiveRoutine={(r) => {
                     setActiveRoutine(r);
+                    setViewMode('routines'); // Ensure viewMode is 'routines' when a routine is selected
                     setSelectedBackupId(null);
                     setChain([]);
                 }}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
                 currentBackup={currentBackup}
             />
 
-            <div className="flex-1 p-6 overflow-y-auto">
-                <LiveActivity
-                    activeRoutine={activeRoutine}
-                    runningJobs={runningJobs}
-                    restoreJobs={restoreJobs}
-                    isSchedulingBackup={isSchedulingBackup}
-                    isCancellingBackup={isCancellingBackup}
-                    isCancellingRestore={isCancellingRestore}
-                    handleScheduleFullBackup={handleScheduleFullBackup}
-                    handleCancelBackup={handleCancelBackup}
-                    handleCancelRestore={handleCancelRestore}
-                />
+            {viewMode === 'logs' ? (
+                <div className="flex-1 h-full overflow-hidden">
+                    <ServiceLogs />
+                </div>
+            ) : (
+                <div className="flex-1 p-6 overflow-y-auto">
+                    <LiveActivity
+                        activeRoutine={activeRoutine}
+                        runningJobs={runningJobs}
+                        restoreJobs={restoreJobs}
+                        isSchedulingBackup={isSchedulingBackup}
+                        isCancellingBackup={isCancellingBackup}
+                        isCancellingRestore={isCancellingRestore}
+                        handleScheduleFullBackup={handleScheduleFullBackup}
+                        handleCancelBackup={handleCancelBackup}
+                        handleCancelRestore={handleCancelRestore}
+                    />
 
-                <BackupHistory
-                    config={config}
-                    activeRoutine={activeRoutine}
-                    history={history}
-                    selectedBackupId={selectedBackupId}
-                    setSelectedBackupId={setSelectedBackupId}
-                    chain={chain}
-                    setChain={setChain}
-                    isRestoreModalOpen={isRestoreModalOpen}
-                    setRestoreModalOpen={setRestoreModalOpen}
-                    isRestoring={isRestoring}
-                    restoreError={restoreError}
-                    handleRestore={handleRestore}
-                    handleBackupSelect={handleBackupSelect}
-                    getSelectedTimestamp={getSelectedTimestamp}
-                />
-            </div>
+                    <BackupHistory
+                        config={config}
+                        activeRoutine={activeRoutine}
+                        history={history}
+                        selectedBackupId={selectedBackupId}
+                        setSelectedBackupId={setSelectedBackupId}
+                        chain={chain}
+                        setChain={setChain}
+                        isRestoreModalOpen={isRestoreModalOpen}
+                        setRestoreModalOpen={setRestoreModalOpen}
+                        isRestoring={isRestoring}
+                        restoreError={restoreError}
+                        handleRestore={handleRestore}
+                        handleBackupSelect={handleBackupSelect}
+                        getSelectedTimestamp={getSelectedTimestamp}
+                    />
+                </div>
+            )}
         </div>
     );
 }

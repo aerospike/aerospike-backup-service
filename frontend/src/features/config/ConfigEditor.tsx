@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {motion, AnimatePresence} from 'framer-motion';
-import {Clock, HardDrive, Key, Play, Server, Settings, Shield, FileText} from 'lucide-react'; // Add FileText
+import {Clock, HardDrive, Key, Play, Server, Settings, Shield} from 'lucide-react';
 import type {DtoConfig} from '@/api';
 import {api} from '@/api';
 import {ConfigSectionRoutines} from './ConfigSectionRoutines';
@@ -10,7 +10,6 @@ import {ConfigSectionPolicies} from './ConfigSectionPolicies';
 import {ConfigSectionSecretAgents} from './ConfigSectionSecretAgents';
 import {ConfigSectionService} from './ConfigSectionService';
 import {ConfigSectionYaml} from './ConfigSectionYaml';
-import {ConfigSectionLogs} from './ConfigSectionLogs'; // Import the new Logs section
 
 // --- Main Editor ---
 
@@ -19,7 +18,7 @@ interface ConfigEditorProps {
     setConfig: React.Dispatch<React.SetStateAction<DtoConfig>>;
 }
 
-type SectionId = 'routines' | 'clusters' | 'storage' | 'policies' | 'secrets' | 'service' | 'yaml' | 'logs'; // Add 'logs'
+type SectionId = 'routines' | 'clusters' | 'storage' | 'policies' | 'secrets' | 'service' | 'yaml';
 
 export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
     const [section, setSection] = useState<SectionId>('routines');
@@ -122,7 +121,6 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
                 <NavItem id="service" label="Service" icon={Settings}/>
                 <div className="my-4 border-t border-gray-200"></div>
                 <NavItem id="yaml" label="Apply Config" icon={Play}/>
-                <NavItem id="logs" label="Logs" icon={FileText}/> {/* New Logs NavItem */}
             </div>
             <div className="col-span-10 bg-white h-full overflow-hidden">
                 <AnimatePresence mode="wait">
@@ -257,18 +255,6 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
                                 isSaving={isSaving}
                                 saveError={saveError}
                             />
-                        </motion.div>
-                    }
-                    {section === 'logs' &&
-                        <motion.div
-                            key="logs"
-                            initial={{x: 10, opacity: 0}}
-                            animate={{x: 0, opacity: 1}}
-                            exit={{x: -10, opacity: 0}}
-                            transition={{duration: 0.2}}
-                            className="h-full"
-                        >
-                            <ConfigSectionLogs /> {/* New Logs Section */}
                         </motion.div>
                     }
                 </AnimatePresence>
