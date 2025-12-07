@@ -15,11 +15,11 @@
 
 import * as runtime from '../runtime';
 import type {
-  LogLogEntry,
+  LogEntry,
 } from '../models/index';
 import {
-    LogLogEntryFromJSON,
-    LogLogEntryToJSON,
+    LogEntryFromJSON,
+    LogEntryToJSON,
 } from '../models/index';
 
 /**
@@ -93,7 +93,7 @@ export class SystemApi extends runtime.BaseAPI {
     /**
      * Returns system logs.
      */
-    async logsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<LogLogEntry>>> {
+    async logsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<LogEntry>>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -108,13 +108,13 @@ export class SystemApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(LogLogEntryFromJSON));
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(LogEntryFromJSON));
     }
 
     /**
      * Returns system logs.
      */
-    async logs(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<LogLogEntry>> {
+    async logs(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<LogEntry>> {
         const response = await this.logsRaw(initOverrides);
         return await response.value();
     }

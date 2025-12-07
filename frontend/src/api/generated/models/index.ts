@@ -36,4 +36,4 @@ export * from './DtoSeedNode';
 export * from './DtoServiceConfig';
 export * from './DtoStorage';
 export * from './DtoTLS';
-export * from './LogLogEntry';
+export * from './LogEntry';

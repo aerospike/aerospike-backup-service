@@ -9,7 +9,7 @@ const restoreApi = new allGenerated.RestoreApi();
 const systemApi = new allGenerated.SystemApi();
 
 // Define LogEntry interface
-export type LogEntry = allGenerated.LogLogEntry;
+export type LogEntry = allGenerated.LogEntry;
 
 // We will replace the old Backup type with DtoBackupDetails and add the type property.
 export type Backup = allGenerated.DtoBackupDetails & {

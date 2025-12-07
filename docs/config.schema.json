@@ -1735,7 +1735,7 @@
           }
         }
       },
-      "log.LogEntry": {
+      "log.Entry": {
         "type": "object",
         "properties": {
           "attrs": {

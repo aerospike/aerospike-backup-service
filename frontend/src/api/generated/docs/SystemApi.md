@@ -132,7 +132,7 @@ No authorization required
 
 ## logs
 
-> Array&lt;LogLogEntry&gt; logs()
+> Array&lt;LogEntry&gt; logs()
 
 Returns system logs.
 
@@ -167,7 +167,7 @@ This endpoint does not need any parameter.
 
 ### Return type
 
-[**Array&lt;LogLogEntry&gt;**](LogLogEntry.md)
+[**Array&lt;LogEntry&gt;**](LogEntry.md)
 
 ### Authorization
 

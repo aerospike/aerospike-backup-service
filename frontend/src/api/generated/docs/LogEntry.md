@@ -1,5 +1,5 @@
 
-# LogLogEntry
+# LogEntry
 
 
 ## Properties
@@ -14,7 +14,7 @@ Name | Type
 ## Example
 
 ```typescript
-import type { LogLogEntry } from ''
+import type { LogEntry } from ''
 
 // TODO: Update the object below with actual values
 const example = {
@@ -22,7 +22,7 @@ const example = {
   "level": null,
   "msg": null,
   "time": null,
-} satisfies LogLogEntry
+} satisfies LogEntry
 
 console.log(example)
 
@@ -31,7 +31,7 @@ const exampleJSON: string = JSON.stringify(example)
 console.log(exampleJSON)
 
 // Parse the JSON string back to an object
-const exampleParsed = JSON.parse(exampleJSON) as LogLogEntry
+const exampleParsed = JSON.parse(exampleJSON) as LogEntry
 console.log(exampleParsed)
 ```
 

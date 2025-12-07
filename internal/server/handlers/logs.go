@@ -13,7 +13,7 @@ import (
 // @ID	        logs
 // @Tags        System
 // @Router      /logs [get]
-// @Success 	200 {array} log.LogEntry
+// @Success 	200 {array} log.Entry
 func (s *Service) LogsActionHandler(w http.ResponseWriter, _ *http.Request) {
 	if s.logCaptureHandler == nil {
 		http.Error(w, "Log capture is not enabled", http.StatusServiceUnavailable)

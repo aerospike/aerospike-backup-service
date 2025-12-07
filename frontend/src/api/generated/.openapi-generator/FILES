@@ -41,7 +41,7 @@ docs/DtoSeedNode.md
 docs/DtoServiceConfig.md
 docs/DtoStorage.md
 docs/DtoTLS.md
-docs/LogLogEntry.md
+docs/LogEntry.md
 docs/RestoreApi.md
 docs/SystemApi.md
 index.ts
@@ -81,6 +81,6 @@ models/DtoSeedNode.ts
 models/DtoServiceConfig.ts
 models/DtoStorage.ts
 models/DtoTLS.ts
-models/LogLogEntry.ts
+models/LogEntry.ts
 models/index.ts
 runtime.ts

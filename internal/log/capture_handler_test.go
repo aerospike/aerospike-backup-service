@@ -7,7 +7,7 @@ import (
 )
 
 func TestLogCaptureHandler(t *testing.T) {
-	handler := NewLogCaptureHandler(5)
+	handler := NewCaptureHandler(5)
 	logger := slog.New(handler)
 
 	// Log some entries
@@ -52,7 +52,7 @@ func TestLogCaptureHandler(t *testing.T) {
 }
 
 func TestLogCaptureHandler_WithAttrs(t *testing.T) {
-	handler := NewLogCaptureHandler(10)
+	handler := NewCaptureHandler(10)
 	logger := slog.New(handler).With(slog.String("common", "attr"))
 
 	logger.Info("test")
@@ -68,7 +68,7 @@ func TestLogCaptureHandler_WithAttrs(t *testing.T) {
 }
 
 func TestLogCaptureHandler_WithGroup(t *testing.T) {
-	handler := NewLogCaptureHandler(10)
+	handler := NewCaptureHandler(10)
 	logger := slog.New(handler).WithGroup("g")
 
 	logger.Info("test", slog.String("key", "val"))
@@ -88,7 +88,7 @@ func TestLogCaptureHandler_WithGroup(t *testing.T) {
 }
 
 func TestLogCaptureHandler_Concurrency(t *testing.T) {
-	handler := NewLogCaptureHandler(100)
+	handler := NewCaptureHandler(100)
 	logger := slog.New(handler)
 	var wg sync.WaitGroup
 
@@ -110,8 +110,8 @@ func TestLogCaptureHandler_Concurrency(t *testing.T) {
 }
 
 func TestMultiHandler(t *testing.T) {
-	h1 := NewLogCaptureHandler(10)
-	h2 := NewLogCaptureHandler(10)
+	h1 := NewCaptureHandler(10)
+	h2 := NewCaptureHandler(10)
 	multi := NewMultiHandler(h1, h2)
 	logger := slog.New(multi)
 

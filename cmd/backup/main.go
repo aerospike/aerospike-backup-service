@@ -107,7 +107,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		return nil, nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	logCaptureHandler := log.NewLogCaptureHandler(1000)
+	logCaptureHandler := log.NewCaptureHandler(5_000)
 	appLogger := setDefaultLogger(config.ServiceConfig.GetLoggerOrDefault(), logCaptureHandler)
 
 	// Re-log build metadata now that the app-logger is active.

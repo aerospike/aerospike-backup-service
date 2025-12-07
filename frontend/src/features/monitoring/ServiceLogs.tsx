@@ -2,7 +2,7 @@ import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {api, LogEntry} from '@/api';
 import {Input, Select, MultiSelect} from '@/components/ui/Inputs';
 import { motion } from 'framer-motion';
-import { Play, Pause, Download, Copy, Ban, Trash2 } from 'lucide-react';
+import { Play, Pause, Download, Copy, Ban, Trash2, ArrowDownUp } from 'lucide-react'; // Add ArrowDownUp
 
 type Severity = 'ALL' | 'INFO' | 'WARN' | 'ERROR' | 'DEBUG' | 'TRACE';
 
@@ -50,6 +50,7 @@ export const ServiceLogs = () => {
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [excludeTerms, setExcludeTerms] = useState<string[]>([]); // Changed from excludeTerm (string)
     const [isLive, setIsLive] = useState<boolean>(false);
+    const [isReversed, setIsReversed] = useState<boolean>(false); // New state for log order
 
     const fetchLogs = useCallback(async (isPolling = false) => {
         try {
@@ -116,8 +117,12 @@ export const ServiceLogs = () => {
             });
         }
 
-        return currentLogs;
-    }, [logs, severityFilter, searchTerm, excludeTerms]); // Added excludeTerms to dependencies
+        let finalLogs = [...currentLogs]; // Create a copy to avoid mutating original 'logs'
+        if (isReversed) {
+            finalLogs.reverse();
+        }
+        return finalLogs;
+    }, [logs, severityFilter, searchTerm, excludeTerms, isReversed]); // Add isReversed to dependencies
 
     const handleDownload = () => {
         const jsonString = JSON.stringify(filteredLogs, null, 2);
@@ -159,6 +164,16 @@ export const ServiceLogs = () => {
                     >
                         <Download size={16} />
                         Export
+                    </button>
+                    <button
+                        onClick={() => setIsReversed(prev => !prev)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                            isReversed ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                        title={isReversed ? "Show Newest First" : "Show Oldest First"}
+                    >
+                        <ArrowDownUp size={16} />
+                        <span>Order</span>
                     </button>
                 </div>
             </h2>

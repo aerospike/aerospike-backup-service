@@ -106,7 +106,7 @@ func (s *SecretAgent) CheckSecretAgentConnection() error {
 		caCertPool.AppendCertsFromPEM(caCert)
 		tlsConfig = &tls.Config{
 			RootCAs: caCertPool,
-			//nolint:gosec // We want to support older TLS versions for now.
+
 			MinVersion: tls.VersionTLS12,
 		}
 	}

@@ -81,7 +81,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/log.LogEntry"
+                                "$ref": "#/definitions/log.Entry"
                             }
                         }
                     }
@@ -3545,7 +3545,7 @@ const docTemplate = `{
                 }
             }
         },
-        "log.LogEntry": {
+        "log.Entry": {
             "type": "object",
             "properties": {
                 "attrs": {

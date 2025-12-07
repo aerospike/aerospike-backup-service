@@ -76,7 +76,7 @@
                                 "schema": {
                                     "type": "array",
                                     "items": {
-                                        "$ref": "#/components/schemas/log.LogEntry"
+                                        "$ref": "#/components/schemas/log.Entry"
                                     }
                                 }
                             }
@@ -3892,7 +3892,7 @@
                     }
                 }
             },
-            "log.LogEntry": {
+            "log.Entry": {
                 "type": "object",
                 "properties": {
                     "attrs": {

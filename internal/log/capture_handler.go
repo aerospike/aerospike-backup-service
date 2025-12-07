@@ -7,37 +7,37 @@ import (
 	"time"
 )
 
-// LogEntry represents a structured log entry.
-type LogEntry struct {
+// Entry represents a structured log entry.
+type Entry struct {
 	Time    time.Time      `json:"time"`
 	Level   string         `json:"level"`
 	Message string         `json:"msg"`
 	Attrs   map[string]any `json:"attrs,omitempty"`
 }
 
-// LogCaptureHandler captures log records in a circular buffer.
-type LogCaptureHandler struct {
+// CaptureHandler captures log records in a circular buffer.
+type CaptureHandler struct {
 	buffer *ringBuffer
 	attrs  []slog.Attr
 	groups []string
 }
 
-// NewLogCaptureHandler creates a new LogCaptureHandler with the specified capacity.
-func NewLogCaptureHandler(capacity int) *LogCaptureHandler {
-	return &LogCaptureHandler{
+// NewCaptureHandler creates a new CaptureHandler with the specified capacity.
+func NewCaptureHandler(capacity int) *CaptureHandler {
+	return &CaptureHandler{
 		buffer: newRingBuffer(capacity),
 	}
 }
 
-// Enabled always returns true for LogCaptureHandler as it captures everything.
+// Enabled always returns true for CaptureHandler as it captures everything.
 // Filtering can be done when querying.
-func (h *LogCaptureHandler) Enabled(_ context.Context, _ slog.Level) bool {
+func (h *CaptureHandler) Enabled(_ context.Context, _ slog.Level) bool {
 	return true
 }
 
-// Handle converts the record to a LogEntry and stores it.
-func (h *LogCaptureHandler) Handle(_ context.Context, r slog.Record) error {
-	entry := LogEntry{
+// Handle converts the record to a Entry and stores it.
+func (h *CaptureHandler) Handle(_ context.Context, r slog.Record) error {
+	entry := Entry{
 		Time:    r.Time,
 		Level:   r.Level.String(),
 		Message: r.Message,
@@ -61,7 +61,7 @@ func (h *LogCaptureHandler) Handle(_ context.Context, r slog.Record) error {
 }
 
 // addToMap adds an attribute to the map, respecting groups.
-func (h *LogCaptureHandler) addToMap(m map[string]any, attr slog.Attr, groups []string) {
+func (h *CaptureHandler) addToMap(m map[string]any, attr slog.Attr, groups []string) {
 	if attr.Key == "" {
 		return
 	}
@@ -90,8 +90,8 @@ func (h *LogCaptureHandler) addToMap(m map[string]any, attr slog.Attr, groups []
 }
 
 // WithAttrs returns a new handler with the attributes.
-func (h *LogCaptureHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return &LogCaptureHandler{
+func (h *CaptureHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &CaptureHandler{
 		buffer: h.buffer,
 		attrs:  append(h.attrs[:len(h.attrs):len(h.attrs)], attrs...),
 		groups: h.groups,
@@ -99,8 +99,8 @@ func (h *LogCaptureHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 }
 
 // WithGroup returns a new handler with the group.
-func (h *LogCaptureHandler) WithGroup(name string) slog.Handler {
-	return &LogCaptureHandler{
+func (h *CaptureHandler) WithGroup(name string) slog.Handler {
+	return &CaptureHandler{
 		buffer: h.buffer,
 		attrs:  h.attrs,
 		groups: append(h.groups[:len(h.groups):len(h.groups)], name),
@@ -108,25 +108,25 @@ func (h *LogCaptureHandler) WithGroup(name string) slog.Handler {
 }
 
 // GetEntries returns a copy of the captured log entries.
-func (h *LogCaptureHandler) GetEntries() []LogEntry {
+func (h *CaptureHandler) GetEntries() []Entry {
 	return h.buffer.get()
 }
 
-// ringBuffer is a thread-safe circular buffer for LogEntry.
+// ringBuffer is a thread-safe circular buffer for Entry.
 type ringBuffer struct {
-	entries []LogEntry
+	entries []Entry
 	size    int
 	mu      sync.RWMutex
 }
 
 func newRingBuffer(size int) *ringBuffer {
 	return &ringBuffer{
-		entries: make([]LogEntry, 0, size),
+		entries: make([]Entry, 0, size),
 		size:    size,
 	}
 }
 
-func (rb *ringBuffer) add(entry LogEntry) {
+func (rb *ringBuffer) add(entry Entry) {
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
 
@@ -139,11 +139,11 @@ func (rb *ringBuffer) add(entry LogEntry) {
 	}
 }
 
-func (rb *ringBuffer) get() []LogEntry {
+func (rb *ringBuffer) get() []Entry {
 	rb.mu.RLock()
 	defer rb.mu.RUnlock()
 
-	result := make([]LogEntry, len(rb.entries))
+	result := make([]Entry, len(rb.entries))
 	copy(result, rb.entries)
 	return result
 }

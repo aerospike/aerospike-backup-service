@@ -16,47 +16,47 @@ import { mapValues } from '../runtime';
 /**
  * 
  * @export
- * @interface LogLogEntry
+ * @interface LogEntry
  */
-export interface LogLogEntry {
+export interface LogEntry {
     /**
      * 
      * @type {{ [key: string]: any; }}
-     * @memberof LogLogEntry
+     * @memberof LogEntry
      */
     attrs?: { [key: string]: any; };
     /**
      * 
      * @type {string}
-     * @memberof LogLogEntry
+     * @memberof LogEntry
      */
     level?: string;
     /**
      * 
      * @type {string}
-     * @memberof LogLogEntry
+     * @memberof LogEntry
      */
     msg?: string;
     /**
      * 
      * @type {string}
-     * @memberof LogLogEntry
+     * @memberof LogEntry
      */
     time?: string;
 }
 
 /**
- * Check if a given object implements the LogLogEntry interface.
+ * Check if a given object implements the LogEntry interface.
  */
-export function instanceOfLogLogEntry(value: object): value is LogLogEntry {
+export function instanceOfLogEntry(value: object): value is LogEntry {
     return true;
 }
 
-export function LogLogEntryFromJSON(json: any): LogLogEntry {
-    return LogLogEntryFromJSONTyped(json, false);
+export function LogEntryFromJSON(json: any): LogEntry {
+    return LogEntryFromJSONTyped(json, false);
 }
 
-export function LogLogEntryFromJSONTyped(json: any, ignoreDiscriminator: boolean): LogLogEntry {
+export function LogEntryFromJSONTyped(json: any, ignoreDiscriminator: boolean): LogEntry {
     if (json == null) {
         return json;
     }
@@ -69,11 +69,11 @@ export function LogLogEntryFromJSONTyped(json: any, ignoreDiscriminator: boolean
     };
 }
 
-export function LogLogEntryToJSON(json: any): LogLogEntry {
-    return LogLogEntryToJSONTyped(json, false);
+export function LogEntryToJSON(json: any): LogEntry {
+    return LogEntryToJSONTyped(json, false);
 }
 
-export function LogLogEntryToJSONTyped(value?: LogLogEntry | null, ignoreDiscriminator: boolean = false): any {
+export function LogEntryToJSONTyped(value?: LogEntry | null, ignoreDiscriminator: boolean = false): any {
     if (value == null) {
         return value;
     }

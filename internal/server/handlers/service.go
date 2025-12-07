@@ -25,7 +25,7 @@ type Service struct {
 	configurationManager configuration.Manager
 	nsValidator          aerospike.NamespaceValidator
 	clientManager        aerospike.ClientManager
-	logCaptureHandler    *log.LogCaptureHandler
+	logCaptureHandler    *log.CaptureHandler
 
 	changeConfigLock sync.Mutex
 }
@@ -42,7 +42,7 @@ func NewService(
 	configurationManager configuration.Manager,
 	nsValidator aerospike.NamespaceValidator,
 	clientManager aerospike.ClientManager,
-	logCaptureHandler *log.LogCaptureHandler,
+	logCaptureHandler *log.CaptureHandler,
 ) *Service {
 	return &Service{
 		ctx:                  ctx,
