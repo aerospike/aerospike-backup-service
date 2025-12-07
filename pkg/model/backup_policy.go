@@ -119,7 +119,21 @@ func (p *BackupPolicy) GetFileLimitOrDefault() int {
 	return *defaultConfig.backupPolicy.FileLimit
 }
 
+// RetentionPolicy defines the rules for automatically removing old full and incremental backups.
+// This policy is applied by the Retention Manager after each successful full backup.
 type RetentionPolicy struct {
-	FullBackups optional.Optional[int] // Number of full backups to store
-	IncrBackups optional.Optional[int] // Number of full backups to store incremental backups for
+	// FullBackups specifies the maximum number of the latest full backups to retain.
+	// Not set: All full backups are retained.
+	// Set to N >= 1: Only the last N successful full backups will be kept.
+	FullBackups optional.Optional[int]
+
+	// IncrBackups specifies the number of the latest full backups for which to retain
+	// their associated incremental backup chains.
+	// This field uses Optional[int] to distinguish three states:
+	// 1. Not set: All incremental backups are retained.
+	// 2. Set to 0: Explicitly keep NO incremental backups.
+	// 3. Set to M > 0: Keep the incremental chain only for the last M full backups.
+	//
+	// Note: M must not exceed the value set for FullBackups (N).
+	IncrBackups optional.Optional[int]
 }
