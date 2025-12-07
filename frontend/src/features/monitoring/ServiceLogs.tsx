@@ -42,7 +42,7 @@ const LogLevel = ({ level }: { level: Severity | string }) => {
     return <span className={`font-semibold ${colorClass}`}>{normalizedLevel}</span>;
 };
 
-export const ConfigSectionLogs = () => {
+export const ServiceLogs = () => {
     const [logs, setLogs] = useState<LogEntry[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
