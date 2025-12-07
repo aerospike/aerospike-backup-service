@@ -178,12 +178,12 @@ func (c *Config) ToModel(opts ...ValidationOption) (*model.Config, error) {
 	backupConfig := modelConfig.BackupConfigCopy()
 	// routines must be added after storage, secret agents and policies.
 	for k, v := range c.BackupRoutines {
-		toModel, err := v.ToModel(backupConfig)
+		toModel, err := v.ToModel(backupConfig, k)
 		if err != nil {
 			return nil, fmt.Errorf("invalid backup routine %q: %w", k, err)
 		}
 
-		if err := modelConfig.AddRoutine(k, toModel); err != nil {
+		if err := modelConfig.AddRoutine(toModel); err != nil {
 			return nil, err
 		}
 	}

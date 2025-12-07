@@ -33,7 +33,7 @@ func (m *MockBackupBackendService) WriteBackupMetadata(
 }
 
 // Delete removes a specific backup folder.
-func (m *MockBackupBackendService) Delete(ctx context.Context, routineName, path string) error {
+func (m *MockBackupBackendService) Delete(ctx context.Context, routineName *model.BackupRoutine, path string) error {
 	args := m.Called(ctx, routineName, path)
 	return args.Error(0)
 }
@@ -138,40 +138,6 @@ func (m *MockScheduler) Stop() {
 	m.Called()
 }
 
-// MockRestoreManager mocks the RestoreManager interface.
-type MockRestoreManager struct {
-	mock.Mock
-}
-
-func (m *MockRestoreManager) Restore(request *model.RestoreRequest) (model.RestoreJobID, error) {
-	args := m.Called(request)
-	return args.Get(0).(model.RestoreJobID), args.Error(1)
-}
-
-func (m *MockRestoreManager) RestoreByTime(
-	ctx context.Context, request *model.RestoreTimestampRequest,
-) (model.RestoreJobID, error) {
-	args := m.Called(ctx, request)
-	return args.Get(0).(model.RestoreJobID), args.Error(1)
-}
-
-func (m *MockRestoreManager) JobStatus(jobID model.RestoreJobID) (*model.RestoreJobStatus, error) {
-	args := m.Called(jobID)
-	return args.Get(0).(*model.RestoreJobStatus), args.Error(1)
-}
-
-func (m *MockRestoreManager) RetrieveConfiguration(
-	ctx context.Context, routine string, toTime *time.Time,
-) ([]byte, error) {
-	args := m.Called(ctx, routine, toTime)
-	return args.Get(0).([]byte), args.Error(1)
-}
-
-func (m *MockRestoreManager) CancelRestore(jobID model.RestoreJobID) error {
-	args := m.Called(jobID)
-	return args.Error(0)
-}
-
 type configurationManagerMock struct{}
 
 func (mock configurationManagerMock) Read(_ context.Context) (*model.Config, error) {
@@ -195,8 +161,8 @@ type mockRunningBackupsRegistry struct {
 	mock.Mock
 }
 
-func (m *mockRunningBackupsRegistry) GetRoutineState(routineName string) *model.RoutineState {
-	args := m.Called(routineName)
+func (m *mockRunningBackupsRegistry) GetRoutineState(routine *model.BackupRoutine) *model.RoutineState {
+	args := m.Called(routine)
 	if state, ok := args.Get(0).(*model.RoutineState); ok {
 		return state
 	}

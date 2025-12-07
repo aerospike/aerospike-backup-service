@@ -24,7 +24,7 @@ type testMocks struct {
 	backendService *MockBackupReaderWriter
 }
 
-func initMocks(t *testing.T) (testMocks, *BackupNamespaceRunner) {
+func initMocks(t *testing.T) (testMocks, *BackupNamespaceRunner, *model.BackupRoutine) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 
@@ -32,8 +32,12 @@ func initMocks(t *testing.T) (testMocks, *BackupNamespaceRunner) {
 	mockBackupHandler := backupexecutor.NewMockBackupHandler(ctrl)
 	mockBackendService := NewMockBackupReaderWriter(ctrl)
 
+	routine := &model.BackupRoutine{
+		Name: routineName,
+	}
+
 	runner := NewBackupNamespaceRunner(
-		routineName,
+		routine,
 		mockBackupExecutor,
 		&simpleExecutor{},
 		mockBackendService,
@@ -46,14 +50,14 @@ func initMocks(t *testing.T) (testMocks, *BackupNamespaceRunner) {
 		backupExecutor: mockBackupExecutor,
 		backupHandler:  mockBackupHandler,
 		backendService: mockBackendService,
-	}, runner
+	}, runner, routine
 }
 
 func TestRun_SuccessfulFullBackup(t *testing.T) {
 	now := time.UnixMilli(123456789000)
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 
-	mocks, runner := initMocks(t)
+	mocks, runner, routine := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	client := &backup.Client{}
@@ -76,8 +80,8 @@ func TestRun_SuccessfulFullBackup(t *testing.T) {
 		Return(backupStats)
 
 	mocks.backendService.EXPECT().
-		WriteBackupMetadata(gomock.Any(), routineName, backupFolder, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _, _ string, metadata model.BackupMetadata) error {
+		WriteBackupMetadata(gomock.Any(), routine, backupFolder, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *model.BackupRoutine, _ string, metadata model.BackupMetadata) error {
 			// Check that metadata contains expected data
 			assert.Equal(t, testNamespace, metadata.Namespace)
 			assert.Equal(t, now, metadata.Created)
@@ -98,7 +102,7 @@ func TestSuccessfulIncrementalBackup(t *testing.T) {
 	fromTime := time.UnixMilli(100000000000)
 	backupFolder := "test-routine/incremental/123456789000/data/test-ns"
 
-	mocks, runner := initMocks(t)
+	mocks, runner, routine := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	client := &backup.Client{}
@@ -123,8 +127,8 @@ func TestSuccessfulIncrementalBackup(t *testing.T) {
 		Return(backupStats)
 
 	mocks.backendService.EXPECT().
-		WriteBackupMetadata(gomock.Any(), routineName, backupFolder, gomock.Any()).
-		DoAndReturn(func(_ context.Context, _, _ string, metadata model.BackupMetadata) error {
+		WriteBackupMetadata(gomock.Any(), routine, backupFolder, gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *model.BackupRoutine, _ string, metadata model.BackupMetadata) error {
 			// Check that metadata contains expected data
 			assert.Equal(t, testNamespace, metadata.Namespace)
 			assert.Equal(t, now, metadata.Created)
@@ -145,7 +149,7 @@ func TestEmptyIncrementalBackup(t *testing.T) {
 	fromTime := time.UnixMilli(100000000000)
 	backupFolder := "test-routine/incremental/123456789000/data/test-ns"
 
-	mocks, runner := initMocks(t)
+	mocks, runner, _ := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	client := &backup.Client{}
@@ -181,7 +185,7 @@ func TestBackupExecutorError(t *testing.T) {
 	now := time.UnixMilli(123456789000)
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 
-	mocks, runner := initMocks(t)
+	mocks, runner, _ := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	client := &backup.Client{}
@@ -206,7 +210,7 @@ func TestBackupHandlerError(t *testing.T) {
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 	timestampPath := "test-routine/backup/123456789000"
 
-	mocks, runner := initMocks(t)
+	mocks, runner, routine := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	client := &backup.Client{}
@@ -222,7 +226,7 @@ func TestBackupHandlerError(t *testing.T) {
 		Return(errors.New("handler error"))
 
 	mocks.backendService.EXPECT(). // Important: delete all backup files, including configuration
-					Delete(gomock.Any(), routineName, timestampPath).
+					Delete(gomock.Any(), routine, timestampPath).
 					Return(nil)
 
 	handler := runner.Run(ctx, client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
@@ -238,7 +242,7 @@ func TestMetadataWriteError(t *testing.T) {
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 	timestampPath := "test-routine/backup/123456789000"
 
-	mocks, runner := initMocks(t)
+	mocks, runner, routine := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	client := &backup.Client{}
@@ -261,11 +265,11 @@ func TestMetadataWriteError(t *testing.T) {
 		Return(backupStats)
 
 	mocks.backendService.EXPECT(). // backup succeeded, but could not write metadata => delete all
-					WriteBackupMetadata(gomock.Any(), routineName, backupFolder, gomock.Any()).
+					WriteBackupMetadata(gomock.Any(), routine, backupFolder, gomock.Any()).
 					Return(metadataError)
 
 	mocks.backendService.EXPECT().
-		Delete(gomock.Any(), routineName, timestampPath).
+		Delete(gomock.Any(), routine, timestampPath).
 		Return(nil)
 
 	handler := runner.Run(ctx, client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
@@ -281,7 +285,7 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 	backupFolder := "test-routine/backup/123456789000/data/test-ns"
 	timestampPath := "test-routine/backup/123456789000"
 
-	mocks, runner := initMocks(t)
+	mocks, runner, routine := initMocks(t)
 	defer mocks.ctrl.Finish()
 
 	client := &backup.Client{}
@@ -307,7 +311,7 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 		})
 
 	mocks.backendService.EXPECT(). // backup cancelled => delete all
-					Delete(gomock.Any(), routineName, timestampPath).
+					Delete(gomock.Any(), routine, timestampPath).
 					Return(nil)
 
 	handler := runner.Run(ctx, client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)

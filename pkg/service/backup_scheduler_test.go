@@ -30,6 +30,7 @@ func TestScheduleRoutines(t *testing.T) {
 			name: "successful scheduling of full and incremental backups",
 			routines: map[string]*model.BackupRoutine{
 				"routine": {
+					Name:             "routine",
 					IntervalCron:     "0 0 * * * *",
 					IncrIntervalCron: "0 */6 * * * *",
 				},
@@ -41,6 +42,7 @@ func TestScheduleRoutines(t *testing.T) {
 			name: "skip disabled routine",
 			routines: map[string]*model.BackupRoutine{
 				"disabled-routine": {
+					Name:             "disabled-routine",
 					IntervalCron:     "0 0 * * * *",
 					IncrIntervalCron: "0 */6 * * * *",
 					Disabled:         true,
@@ -53,6 +55,7 @@ func TestScheduleRoutines(t *testing.T) {
 			name: "full backup only",
 			routines: map[string]*model.BackupRoutine{
 				"full-only": {
+					Name:         "full-only",
 					IntervalCron: "0 0 * * * *",
 				},
 			},
@@ -67,8 +70,8 @@ func TestScheduleRoutines(t *testing.T) {
 			scheduler.On("ScheduleJob", mock.Anything, mock.Anything).Return(nil)
 
 			config := model.NewConfig()
-			for name, routine := range tt.routines {
-				_ = config.AddRoutine(name, routine)
+			for _, routine := range tt.routines {
+				_ = config.AddRoutine(routine)
 			}
 			err := scheduleRoutines(scheduler, config, &BackupComponents{}, nil)
 

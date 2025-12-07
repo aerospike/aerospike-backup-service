@@ -17,12 +17,11 @@ import (
 // ClusterConfigWriter handles writing cluster configuration to storage.
 type ClusterConfigWriter interface {
 	// Write writes the cluster configuration for the given routine and timestamp.
-	Write(ctx context.Context, routineName string, timestamp time.Time) error
+	Write(ctx context.Context, routine *model.BackupRoutine, timestamp time.Time) error
 }
 
 // DefaultClusterConfigWriter is the default implementation of ClusterConfigWriter.
 type DefaultClusterConfigWriter struct {
-	config        *model.Config
 	clientManager aerospike.ClientManager
 	pathService   PathService
 }
@@ -30,11 +29,9 @@ type DefaultClusterConfigWriter struct {
 // NewClusterConfigWriter returns a new DefaultClusterConfigWriter instance.
 func NewClusterConfigWriter(
 	clientManager aerospike.ClientManager,
-	config *model.Config,
 	pathService PathService,
 ) *DefaultClusterConfigWriter {
 	return &DefaultClusterConfigWriter{
-		config:        config,
 		clientManager: clientManager,
 		pathService:   pathService,
 	}
@@ -42,14 +39,10 @@ func NewClusterConfigWriter(
 
 func (w *DefaultClusterConfigWriter) Write(
 	ctx context.Context,
-	routineName string,
+	routine *model.BackupRoutine,
 	timestamp time.Time,
 ) error {
-	logger := slog.Default().With(attr.Routine(routineName))
-	routine, found := w.config.Routine(routineName)
-	if !found {
-		return ErrRoutineNotFound(routineName)
-	}
+	logger := slog.Default().With(attr.Routine(routine.Name))
 
 	client, err := w.clientManager.GetClient(ctx, routine.SourceCluster, logger)
 	if err != nil {
@@ -64,7 +57,7 @@ func (w *DefaultClusterConfigWriter) Write(
 	}
 
 	for i, info := range infos {
-		confFilePath := w.pathService.GetConfigurationFilePath(routineName, timestamp, i)
+		confFilePath := w.pathService.GetConfigurationFilePath(routine.Name, timestamp, i)
 		err := storage.WriteDataFile(ctx, routine.Storage, confFilePath, []byte(info))
 		if err != nil {
 			logger.Error("Failed to write cluster configuration backup",
