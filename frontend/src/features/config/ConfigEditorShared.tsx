@@ -1,4 +1,5 @@
 import React from 'react';
+import {motion} from 'framer-motion';
 import {ChevronDown, Trash2} from 'lucide-react';
 
 interface SectionHeaderProps {
@@ -28,13 +29,22 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, icon: Icon,
 };
 
 export const Card = ({ title, sub, active, onClick, onDelete }: { title: string, sub?: string, active: boolean, onClick: () => void, onDelete?: () => void }) => (
-  <div
+  <motion.div
     onClick={onClick}
     className={`p-3 rounded border cursor-pointer transition-all mb-2 flex justify-between items-center group ${
       active
         ? 'bg-white border-aerospike-primary shadow-sm'
         : 'bg-gray-50 border-gray-200 hover:border-gray-300 hover:bg-gray-100'
     }`}
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+    animate={{
+        scale: active ? 1.01 : 1,
+        backgroundColor: active ? 'rgba(255, 255, 255, 1)' : 'rgba(249, 250, 251, 1)', // Tailwind's bg-white and bg-gray-50
+        borderColor: active ? '#ef4444' : 'rgb(229 231 235)', // Tailwind's border-aerospike-primary and border-gray-200
+        boxShadow: active ? '0 1px 2px 0 rgba(0, 0, 0, 0.05)' : 'none',
+    }}
+    transition={{ duration: 0.1 }}
   >
     <div className="overflow-hidden">
       <div className="font-bold text-sm text-gray-900 truncate">{title}</div>
@@ -48,5 +58,5 @@ export const Card = ({ title, sub, active, onClick, onDelete }: { title: string,
         <Trash2 size={14} />
       </button>
     )}
-  </div>
+  </motion.div>
 );

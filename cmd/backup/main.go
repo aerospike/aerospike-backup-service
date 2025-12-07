@@ -107,7 +107,8 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		return nil, nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	appLogger := setDefaultLogger(config.ServiceConfig.GetLoggerOrDefault())
+	logCaptureHandler := log.NewLogCaptureHandler(1000)
+	appLogger := setDefaultLogger(config.ServiceConfig.GetLoggerOrDefault(), logCaptureHandler)
 
 	// Re-log build metadata now that the app-logger is active.
 	// Duplication with the bootstrap log is intentional.
@@ -162,14 +163,15 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		configurationManager,
 		nsValidator,
 		clientManager,
+		logCaptureHandler,
 	)
 
 	return config, scheduler, httpService, appLogger, nil
 }
 
-func setDefaultLogger(loggerConfig *model.LoggerConfig) *slog.Logger {
+func setDefaultLogger(loggerConfig *model.LoggerConfig, extraHandlers ...slog.Handler) *slog.Logger {
 	appLogger := slog.New(
-		log.NewHandler(loggerConfig),
+		log.NewHandler(loggerConfig, extraHandlers...),
 	)
 	slog.SetDefault(appLogger)
 	return appLogger

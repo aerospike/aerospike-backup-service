@@ -9,7 +9,7 @@ import (
 func NewServeMux(apiPath, sysPath string, service *handlers.Service) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	registerSystemRoutes(mux, sysPath)
+	registerSystemRoutes(mux, sysPath, service)
 	registerConfigRoutes(mux, apiPath, service)
 	registerClusterRoutes(mux, apiPath, service)
 	registerStorageRoutes(mux, apiPath, service)
@@ -22,13 +22,14 @@ func NewServeMux(apiPath, sysPath string, service *handlers.Service) *http.Serve
 	return mux
 }
 
-func registerSystemRoutes(mux *http.ServeMux, sysPath string) {
+func registerSystemRoutes(mux *http.ServeMux, sysPath string, service *handlers.Service) {
 	mux.HandleFunc("GET "+sysPath, handlers.RootActionHandler)
 	mux.HandleFunc("GET "+sysPath+"health", handlers.HealthActionHandler)
 	mux.HandleFunc("GET "+sysPath+"ready", handlers.ReadyActionHandler)
 	mux.HandleFunc("GET "+sysPath+"version", handlers.VersionActionHandler)
 	mux.Handle("GET "+sysPath+"metrics", handlers.MetricsActionHandler())
 	mux.Handle("GET "+sysPath+"api-docs/", handlers.APIDocsActionHandler()) // Note the trailing slash
+	mux.HandleFunc("GET "+sysPath+"logs", service.LogsActionHandler)
 }
 
 func registerConfigRoutes(mux *http.ServeMux, apiPath string, service *handlers.Service) {

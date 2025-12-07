@@ -18,18 +18,20 @@ func init() {
 }
 
 // NewHandler returns the application log handler with the configured level.
-func NewHandler(config *model.LoggerConfig) slog.Handler {
+func NewHandler(config *model.LoggerConfig, extraHandlers ...slog.Handler) slog.Handler {
 	const addSource = true
 	writer := newRedactingWriter(logWriter(config))
+	var mainHandler slog.Handler
+
 	switch strings.ToUpper(config.GetFormatOrDefault()) {
 	case "PLAIN":
-		return slog.NewTextHandler(writer, &slog.HandlerOptions{
+		mainHandler = slog.NewTextHandler(writer, &slog.HandlerOptions{
 			Level:       logLevel(config.GetLevelOrDefault()),
 			AddSource:   addSource,
 			ReplaceAttr: handlerReplaceAttr,
 		})
 	case "JSON":
-		return slog.NewJSONHandler(writer, &slog.HandlerOptions{
+		mainHandler = slog.NewJSONHandler(writer, &slog.HandlerOptions{
 			Level:       logLevel(config.GetLevelOrDefault()),
 			AddSource:   addSource,
 			ReplaceAttr: handlerReplaceAttr,
@@ -37,6 +39,13 @@ func NewHandler(config *model.LoggerConfig) slog.Handler {
 	default:
 		panic(fmt.Sprintf("unsupported log format: %s", *config.Format))
 	}
+
+	if len(extraHandlers) > 0 {
+		handlers := append([]slog.Handler{mainHandler}, extraHandlers...)
+		return NewMultiHandler(handlers...)
+	}
+
+	return mainHandler
 }
 
 // handlerReplaceAttr customizes the TRACE level string representation in logs.

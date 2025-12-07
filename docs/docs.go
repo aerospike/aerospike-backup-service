@@ -68,6 +68,26 @@ const docTemplate = `{
                 }
             }
         },
+        "/logs": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "summary": "Returns system logs.",
+                "operationId": "logs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/log.LogEntry"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/metrics": {
             "get": {
                 "tags": [
@@ -3522,6 +3542,24 @@ const docTemplate = `{
                     "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
                     "type": "string",
                     "default": "TLSv1.2"
+                }
+            }
+        },
+        "log.LogEntry": {
+            "type": "object",
+            "properties": {
+                "attrs": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "level": {
+                    "type": "string"
+                },
+                "msg": {
+                    "type": "string"
+                },
+                "time": {
+                    "type": "string"
                 }
             }
         }

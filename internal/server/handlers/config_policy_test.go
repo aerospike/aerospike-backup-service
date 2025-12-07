@@ -255,5 +255,6 @@ func setupTestService() *Service {
 		mockConfigurationManager,
 		nil,
 		nil,
+		nil,
 	)
 }

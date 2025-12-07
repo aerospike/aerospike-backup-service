@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
-import {Clock, HardDrive, Key, Play, Server, Settings, Shield} from 'lucide-react';
+import {motion, AnimatePresence} from 'framer-motion';
+import {Clock, HardDrive, Key, Play, Server, Settings, Shield, FileText} from 'lucide-react'; // Add FileText
 import type {DtoConfig} from '@/api';
 import {api} from '@/api';
 import {ConfigSectionRoutines} from './ConfigSectionRoutines';
@@ -9,6 +10,7 @@ import {ConfigSectionPolicies} from './ConfigSectionPolicies';
 import {ConfigSectionSecretAgents} from './ConfigSectionSecretAgents';
 import {ConfigSectionService} from './ConfigSectionService';
 import {ConfigSectionYaml} from './ConfigSectionYaml';
+import {ConfigSectionLogs} from './ConfigSectionLogs'; // Import the new Logs section
 
 // --- Main Editor ---
 
@@ -17,7 +19,7 @@ interface ConfigEditorProps {
     setConfig: React.Dispatch<React.SetStateAction<DtoConfig>>;
 }
 
-type SectionId = 'routines' | 'clusters' | 'storage' | 'policies' | 'secrets' | 'service' | 'yaml';
+type SectionId = 'routines' | 'clusters' | 'storage' | 'policies' | 'secrets' | 'service' | 'yaml' | 'logs'; // Add 'logs'
 
 export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
     const [section, setSection] = useState<SectionId>('routines');
@@ -120,85 +122,156 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
                 <NavItem id="service" label="Service" icon={Settings}/>
                 <div className="my-4 border-t border-gray-200"></div>
                 <NavItem id="yaml" label="Apply Config" icon={Play}/>
+                <NavItem id="logs" label="Logs" icon={FileText}/> {/* New Logs NavItem */}
             </div>
-            <div className="col-span-10 bg-white overflow-hidden">
-                {section === 'routines' &&
-                    <ConfigSectionRoutines
-                        config={config}
-                        setConfig={setConfig}
-                        selectedId={selectedId}
-                        setSelectedId={setSelectedId}
-                        generateId={generateId}
-                        updateItem={updateItem}
-                        deleteItem={deleteItem}
-                        renameItem={renameItem}
-                    />}
-                {section === 'clusters' &&
-                    <ConfigSectionClusters
-                        config={config}
-                        setConfig={setConfig}
-                        selectedId={selectedId}
-                        setSelectedId={setSelectedId}
-                        generateId={generateId}
-                        updateItem={updateItem}
-                        updateNested={updateNested}
-                        deleteItem={deleteItem}
-                        renameItem={renameItem}
-                    />
-                }
-                {section === 'storage' &&
-                    <ConfigSectionStorage
-                        config={config}
-                        setConfig={setConfig}
-                        selectedId={selectedId}
-                        setSelectedId={setSelectedId}
-                        generateId={generateId}
-                        updateItem={updateItem}
-                        updateNested={updateNested}
-                        deleteItem={deleteItem}
-                        renameItem={renameItem}
-                    />
-                }
-                {section === 'policies' &&
-                    <ConfigSectionPolicies
-                        config={config}
-                        setConfig={setConfig}
-                        selectedId={selectedId}
-                        setSelectedId={setSelectedId}
-                        generateId={generateId}
-                        updateItem={updateItem}
-                        updateNested={updateNested}
-                        deleteItem={deleteItem}
-                        renameItem={renameItem}
-                    />
-                }
-                {section === 'secrets' &&
-                    <ConfigSectionSecretAgents
-                        config={config}
-                        setConfig={setConfig}
-                        selectedId={selectedId}
-                        setSelectedId={setSelectedId}
-                        generateId={generateId}
-                        updateItem={updateItem}
-                        updateNested={updateNested} // ConfigSectionSecretAgents requires updateNested
-                        deleteItem={deleteItem}
-                        renameItem={renameItem}
-                    />
-                }
-                {section === 'service' &&
-                    <ConfigSectionService
-                        config={config}
-                        setConfig={setConfig}
-                    />
-                }
-                {section === 'yaml' &&
-                    <ConfigSectionYaml
-                        config={config}
-                        handleApply={handleApply}
-                        isSaving={isSaving}
-                        saveError={saveError}
-                    />
-                }
+            <div className="col-span-10 bg-white h-full overflow-hidden">
+                <AnimatePresence mode="wait">
+                    {section === 'routines' &&
+                        <motion.div
+                            key="routines"
+                            initial={{x: 10, opacity: 0}}
+                            animate={{x: 0, opacity: 1}}
+                            exit={{x: -10, opacity: 0}}
+                            transition={{duration: 0.2}}
+                        >
+                            <ConfigSectionRoutines
+                                config={config}
+                                setConfig={setConfig}
+                                selectedId={selectedId}
+                                setSelectedId={setSelectedId}
+                                generateId={generateId}
+                                updateItem={updateItem}
+                                deleteItem={deleteItem}
+                                renameItem={renameItem}
+                            />
+                        </motion.div>}
+                    {section === 'clusters' &&
+                        <motion.div
+                            key="clusters"
+                            initial={{x: 10, opacity: 0}}
+                            animate={{x: 0, opacity: 1}}
+                            exit={{x: -10, opacity: 0}}
+                            transition={{duration: 0.2}}
+                        >
+                            <ConfigSectionClusters
+                                config={config}
+                                setConfig={setConfig}
+                                selectedId={selectedId}
+                                setSelectedId={setSelectedId}
+                                generateId={generateId}
+                                updateItem={updateItem}
+                                updateNested={updateNested}
+                                deleteItem={deleteItem}
+                                renameItem={renameItem}
+                            />
+                        </motion.div>
+                    }
+                    {section === 'storage' &&
+                        <motion.div
+                            key="storage"
+                            initial={{x: 10, opacity: 0}}
+                            animate={{x: 0, opacity: 1}}
+                            exit={{x: -10, opacity: 0}}
+                            transition={{duration: 0.2}}
+                        >
+                            <ConfigSectionStorage
+                                config={config}
+                                setConfig={setConfig}
+                                selectedId={selectedId}
+                                setSelectedId={setSelectedId}
+                                generateId={generateId}
+                                updateItem={updateItem}
+                                updateNested={updateNested}
+                                deleteItem={deleteItem}
+                                renameItem={renameItem}
+                            />
+                        </motion.div>
+                    }
+                    {section === 'policies' &&
+                        <motion.div
+                            key="policies"
+                            initial={{x: 10, opacity: 0}}
+                            animate={{x: 0, opacity: 1}}
+                            exit={{x: -10, opacity: 0}}
+                            transition={{duration: 0.2}}
+                        >
+                            <ConfigSectionPolicies
+                                config={config}
+                                setConfig={setConfig}
+                                selectedId={selectedId}
+                                setSelectedId={setSelectedId}
+                                generateId={generateId}
+                                updateItem={updateItem}
+                                updateNested={updateNested}
+                                deleteItem={deleteItem}
+                                renameItem={renameItem}
+                            />
+                        </motion.div>
+                    }
+                    {section === 'secrets' &&
+                        <motion.div
+                            key="secrets"
+                            initial={{x: 10, opacity: 0}}
+                            animate={{x: 0, opacity: 1}}
+                            exit={{x: -10, opacity: 0}}
+                            transition={{duration: 0.2}}
+                        >
+                            <ConfigSectionSecretAgents
+                                config={config}
+                                setConfig={setConfig}
+                                selectedId={selectedId}
+                                setSelectedId={setSelectedId}
+                                generateId={generateId}
+                                updateItem={updateItem}
+                                updateNested={updateNested} // ConfigSectionSecretAgents requires updateNested
+                                deleteItem={deleteItem}
+                                renameItem={renameItem}
+                            />
+                        </motion.div>
+                    }
+                    {section === 'service' &&
+                        <motion.div
+                            key="service"
+                            initial={{x: 10, opacity: 0}}
+                            animate={{x: 0, opacity: 1}}
+                            exit={{x: -10, opacity: 0}}
+                            transition={{duration: 0.2}}
+                        >
+                            <ConfigSectionService
+                                config={config}
+                                setConfig={setConfig}
+                            />
+                        </motion.div>
+                    }
+                    {section === 'yaml' &&
+                        <motion.div
+                            key="yaml"
+                            initial={{x: 10, opacity: 0}}
+                            animate={{x: 0, opacity: 1}}
+                            exit={{x: -10, opacity: 0}}
+                            transition={{duration: 0.2}}
+                        >
+                            <ConfigSectionYaml
+                                config={config}
+                                handleApply={handleApply}
+                                isSaving={isSaving}
+                                saveError={saveError}
+                            />
+                        </motion.div>
+                    }
+                    {section === 'logs' &&
+                        <motion.div
+                            key="logs"
+                            initial={{x: 10, opacity: 0}}
+                            animate={{x: 0, opacity: 1}}
+                            exit={{x: -10, opacity: 0}}
+                            transition={{duration: 0.2}}
+                            className="h-full"
+                        >
+                            <ConfigSectionLogs /> {/* New Logs Section */}
+                        </motion.div>
+                    }
+                </AnimatePresence>
             </div>
         </div>
     );

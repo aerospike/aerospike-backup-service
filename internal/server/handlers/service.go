@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/aerospike/aerospike-backup-service/v3/internal/log"
 	"github.com/aerospike/aerospike-backup-service/v3/internal/server/configuration"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service"
@@ -24,6 +25,7 @@ type Service struct {
 	configurationManager configuration.Manager
 	nsValidator          aerospike.NamespaceValidator
 	clientManager        aerospike.ClientManager
+	logCaptureHandler    *log.LogCaptureHandler
 
 	changeConfigLock sync.Mutex
 }
@@ -40,6 +42,7 @@ func NewService(
 	configurationManager configuration.Manager,
 	nsValidator aerospike.NamespaceValidator,
 	clientManager aerospike.ClientManager,
+	logCaptureHandler *log.LogCaptureHandler,
 ) *Service {
 	return &Service{
 		ctx:                  ctx,
@@ -53,6 +56,7 @@ func NewService(
 		configurationManager: configurationManager,
 		nsValidator:          nsValidator,
 		clientManager:        clientManager,
+		logCaptureHandler:    logCaptureHandler,
 	}
 }
 

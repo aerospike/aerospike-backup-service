@@ -6,6 +6,10 @@ export * from './generated';
 const backupApi = new allGenerated.BackupApi();
 const configurationApi = new allGenerated.ConfigurationApi();
 const restoreApi = new allGenerated.RestoreApi();
+const systemApi = new allGenerated.SystemApi();
+
+// Define LogEntry interface
+export type LogEntry = allGenerated.LogLogEntry;
 
 // We will replace the old Backup type with DtoBackupDetails and add the type property.
 export type Backup = allGenerated.DtoBackupDetails & {
@@ -75,5 +79,9 @@ export const api = {
 
     checkSecretAgentConnectivity: async (secretAgent: allGenerated.DtoSecretAgent): Promise<string> => {
         return await configurationApi.checkSecretAgentConnectivity({dtoSecretAgent: secretAgent});
+    },
+
+    fetchLogs: async (): Promise<LogEntry[]> => {
+        return await systemApi.logs();
     }
 };
