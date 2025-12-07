@@ -12,6 +12,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/backupexecutor"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections/optional"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/models"
@@ -29,8 +30,8 @@ func testRoutine() *model.BackupRoutine {
 		SourceCluster: &model.AerospikeCluster{},
 		BackupPolicy: &model.BackupPolicy{
 			RetryPolicy: &model.RetryPolicy{
-				BaseTimeout: ptr.Of(100 * time.Millisecond),
-				MaxRetries:  ptr.Of(1),
+				BaseTimeout: optional.Of(100 * time.Millisecond),
+				MaxRetries:  optional.Of(1),
 				Multiplier:  ptr.Of(1.0),
 			},
 			WithClusterConfig: ptr.Of(true),
