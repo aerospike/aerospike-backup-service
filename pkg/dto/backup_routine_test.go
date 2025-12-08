@@ -80,7 +80,7 @@ func TestBackupRoutine_ToModel(t *testing.T) {
 		},
 	}
 
-	m, err := routineDTO.ToModel(config)
+	m, err := routineDTO.ToModel(config, "r")
 	assert.NoError(t, err)
 
 	assert.Equal(t, config.BackupPolicies["policy1"], m.BackupPolicy)
@@ -115,7 +115,7 @@ func TestBackupRoutine_ToModel_PolicyNotFound(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config)
+	_, err := routineDTO.ToModel(config, "r")
 	assert.Error(t, err)
 }
 
@@ -137,7 +137,7 @@ func TestBackupRoutine_ToModel_ClusterNotFound(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config)
+	_, err := routineDTO.ToModel(config, "r")
 	assert.Error(t, err)
 }
 
@@ -159,7 +159,7 @@ func TestBackupRoutine_ToModel_StorageNotFound(t *testing.T) {
 		Storage: map[string]model.Storage{},
 	}
 
-	_, err := routineDTO.ToModel(config)
+	_, err := routineDTO.ToModel(config, "r")
 	assert.Error(t, err)
 }
 
@@ -185,7 +185,7 @@ func TestBackupRoutine_ToModel_SecretAgentNotFound(t *testing.T) {
 		SecretAgents: map[string]*model.SecretAgent{},
 	}
 
-	_, err := routineDTO.ToModel(config)
+	_, err := routineDTO.ToModel(config, "r")
 	assert.Error(t, err)
 }
 
@@ -246,7 +246,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithPartitionList(t *testing
 		},
 	}
 
-	_, err := routineDTO.ToModel(config)
+	_, err := routineDTO.ToModel(config, "r")
 	assert.Error(t, err)
 }
 
@@ -271,7 +271,7 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithNodeList(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config)
+	_, err := routineDTO.ToModel(config, "r")
 	assert.Error(t, err)
 }
 
@@ -296,6 +296,6 @@ func TestBackupRoutine_ToModel_PreferRacks_ConflictsWithRackList(t *testing.T) {
 		},
 	}
 
-	_, err := routineDTO.ToModel(config)
+	_, err := routineDTO.ToModel(config, "r")
 	assert.Error(t, err)
 }

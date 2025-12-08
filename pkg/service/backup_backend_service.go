@@ -30,14 +30,14 @@ type BaseFilter struct {
 // RoutineFilter for filtering by routine and job type.
 type RoutineFilter struct {
 	BaseFilter
-	routine string
+	routine *model.BackupRoutine
 	JobType jobType
 
 	onlyLast bool // return last backup only
 }
 
 // NewFullBackupFilter creates a filter for full backups.
-func NewFullBackupFilter(routine string) *RoutineFilter {
+func NewFullBackupFilter(routine *model.BackupRoutine) *RoutineFilter {
 	return &RoutineFilter{
 		routine: routine,
 		JobType: jobTypeFull,
@@ -45,7 +45,7 @@ func NewFullBackupFilter(routine string) *RoutineFilter {
 }
 
 // NewIncrementalBackupFilter creates a filter for incremental backups.
-func NewIncrementalBackupFilter(routine string) *RoutineFilter {
+func NewIncrementalBackupFilter(routine *model.BackupRoutine) *RoutineFilter {
 	return &RoutineFilter{
 		routine: routine,
 		JobType: jobTypeIncremental,
@@ -74,7 +74,7 @@ func (f *RoutineFilter) WithToTime(toTime time.Time) *RoutineFilter {
 
 func (f *RoutineFilter) getUpperBoundary(pathService PathService) string {
 	if f.ToTime != nil {
-		return pathService.GetTimestampPath(f.routine, *f.ToTime, f.JobType)
+		return pathService.GetTimestampPath(f.routine.Name, *f.ToTime, f.JobType)
 	}
 
 	return "\uffff"
@@ -92,7 +92,7 @@ func (f *RoutineFilter) String() string {
 }
 
 func (f *RoutineFilter) getPath() string {
-	return backupRootPath(f.routine, f.JobType)
+	return backupRootPath(f.routine.Name, f.JobType)
 }
 
 // PathFilter for filtering by explicit path.
@@ -149,17 +149,13 @@ type BackupReader interface {
 // BackupWriter defines operations for writing backups metadata.
 type BackupWriter interface {
 	// WriteBackupMetadata stores metadata for a specific backup.
-	WriteBackupMetadata(ctx context.Context, routineName, path string, metadata model.BackupMetadata) error
+	WriteBackupMetadata(context.Context, *model.BackupRoutine, string, model.BackupMetadata) error
 
 	// Delete removes a specific backup folder.
-	Delete(ctx context.Context, routineName, path string) error
+	Delete(ctx context.Context, routine *model.BackupRoutine, path string) error
 }
 
 var ErrNotFound = fmt.Errorf("not found")
-
-func ErrRoutineNotFound(routineName string) error {
-	return fmt.Errorf("routine %s %w", routineName, ErrNotFound)
-}
 
 // BackupBackendServiceImpl default implementation of BackupReaderWriter.
 type BackupBackendServiceImpl struct {
@@ -192,13 +188,8 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 	ctx context.Context,
 	filter *RoutineFilter,
 ) ([]model.BackupDetails, error) {
-	routine, found := b.config.Routine(filter.routine)
-	if !found {
-		return nil, ErrRoutineNotFound(filter.routine)
-	}
-
-	backupStorage := routine.Storage
-	lock := b.locks.Get(filter.routine)
+	backupStorage := filter.routine.Storage
+	lock := b.locks.Get(filter.routine.Name)
 	lock.RLock()
 	defer lock.RUnlock()
 
@@ -227,7 +218,7 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 		}
 		if filter.timeBounds().Contains(metadata.Created) {
 			key := backupKey(fileName, storagePrefix)
-			details := model.NewBackupDetails(*metadata, key, backupStorage, filter.routine)
+			details := model.NewBackupDetails(*metadata, key, backupStorage)
 			backups = append(backups, details)
 		}
 	}
@@ -279,15 +270,10 @@ func (b *BackupBackendServiceImpl) findHighestTimestamp(files []string) string {
 
 func (b *BackupBackendServiceImpl) WriteBackupMetadata(
 	ctx context.Context,
-	routineName string,
+	routine *model.BackupRoutine,
 	path string,
 	metadata model.BackupMetadata,
 ) error {
-	routine, ok := b.config.Routine(routineName)
-	if !ok {
-		return ErrRoutineNotFound(routineName)
-	}
-
 	dataYaml, err := yaml.Marshal(metadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
@@ -295,20 +281,15 @@ func (b *BackupBackendServiceImpl) WriteBackupMetadata(
 
 	metadataFilePath := filepath.Join(path, metadataFile)
 
-	lock := b.locks.Get(routineName)
+	lock := b.locks.Get(routine.Name)
 	lock.Lock()
 	defer lock.Unlock()
 
 	return storage.WriteMetadataFile(ctx, routine.Storage, metadataFilePath, dataYaml)
 }
 
-func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName string, path string) error {
-	routine, ok := b.config.Routine(routineName)
-	if !ok {
-		return ErrRoutineNotFound(routineName)
-	}
-
-	lock := b.locks.Get(routineName)
+func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routine *model.BackupRoutine, path string) error {
+	lock := b.locks.Get(routine.Name)
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -317,7 +298,7 @@ func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routineName strin
 		return fmt.Errorf("failed to delete folder: %w", err)
 	}
 
-	slog.Info("Deleted folder", slog.String("path", path), attr.Routine(routineName))
+	slog.Info("Deleted folder", slog.String("path", path), attr.Routine(routine.Name))
 
 	return err
 }
@@ -345,7 +326,7 @@ func (b *BackupBackendServiceImpl) getPathBackups(
 
 		if filter.timeBounds().Contains(metadata.Created) {
 			key := backupKey(fileName, storagePrefix)
-			details := model.NewBackupDetails(*metadata, key, filter.storage, "")
+			details := model.NewBackupDetails(*metadata, key, filter.storage)
 			backups = append(backups, details)
 		}
 	}

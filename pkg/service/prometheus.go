@@ -202,16 +202,16 @@ const (
 	BackupOutcomeSkip    BackupOutcome = "skip"
 )
 
-func observeBackupEvent(routine string, backupType jobType, outcome BackupOutcome, duration time.Duration) {
+func observeBackupEvent(routineName string, backupType jobType, outcome BackupOutcome, duration time.Duration) {
 	backupCounters.With(prometheus.Labels{
-		"routine": routine,
+		"routine": routineName,
 		"type":    string(backupType),
 		"outcome": string(outcome),
 	}).Inc()
 
 	if duration > 0 {
 		backupDurations.With(prometheus.Labels{
-			"routine": routine,
+			"routine": routineName,
 			"type":    string(backupType),
 		}).Observe(duration.Seconds())
 	}

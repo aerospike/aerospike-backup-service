@@ -2,6 +2,7 @@ package dto
 
 import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections/optional"
 )
 
 // RetryPolicy defines the configuration for retry attempts in case of failures.
@@ -52,9 +53,9 @@ func (r *RetryPolicy) ToModel() *model.RetryPolicy {
 	}
 
 	return &model.RetryPolicy{
-		BaseTimeout: millisToDuration(r.BaseTimeout),
+		BaseTimeout: optional.FromPtr(millisToDuration(r.BaseTimeout)),
 		Multiplier:  r.Multiplier,
-		MaxRetries:  r.MaxRetries,
+		MaxRetries:  optional.FromPtr(r.MaxRetries),
 	}
 }
 func newRetryPolicyFromModel(m *model.RetryPolicy) *RetryPolicy {
@@ -63,8 +64,8 @@ func newRetryPolicyFromModel(m *model.RetryPolicy) *RetryPolicy {
 	}
 
 	return &RetryPolicy{
-		BaseTimeout: durationToMillis(m.BaseTimeout),
+		BaseTimeout: durationToMillis(m.BaseTimeout.ToPtr()),
 		Multiplier:  m.Multiplier,
-		MaxRetries:  m.MaxRetries,
+		MaxRetries:  m.MaxRetries.ToPtr(),
 	}
 }

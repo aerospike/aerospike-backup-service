@@ -195,7 +195,7 @@ func (r *dataRestorer) RestoreByTime(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (model.RestoreJobID, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	jobID := r.restoreJobs.newJob(request.RoutineName, cancel)
+	jobID := r.restoreJobs.newJob(request.Routine.Name, cancel)
 	logger := slog.With(slog.Any("jobId", jobID))
 	logger.Info("New restore by time job", slog.Any("request", *request))
 
@@ -218,7 +218,7 @@ func (r *dataRestorer) findBackupsToRestore(
 	ctx context.Context, request *model.RestoreTimestampRequest,
 ) (map[string][]model.BackupDetails, error) {
 	backups, err := r.backupReader.GetBackups(ctx,
-		NewFullBackupFilter(request.RoutineName).
+		NewFullBackupFilter(request.Routine).
 			WithToTime(request.Time).
 			Last(),
 	)
@@ -234,7 +234,7 @@ func (r *dataRestorer) findBackupsToRestore(
 
 	// Find incremental backups.
 	incrementalBackups, err := r.backupReader.GetBackups(ctx,
-		NewIncrementalBackupFilter(request.RoutineName).
+		NewIncrementalBackupFilter(request.Routine).
 			WithFromTime(backups[0].Created).
 			WithToTime(request.Time))
 	if err != nil {
@@ -261,7 +261,7 @@ func (r *dataRestorer) restoreByTimeSync(
 ) error {
 	// Lock the routine storage from retention manager for the duration of restore.
 	// Restore holds RLock to allow concurrent restores for the same routine.
-	routineStorageLock := r.routineStorage.Get(request.RoutineName)
+	routineStorageLock := r.routineStorage.Get(request.Routine.Name)
 	routineStorageLock.RLock()
 	defer routineStorageLock.RUnlock()
 
@@ -295,7 +295,7 @@ func (r *dataRestorer) restoreByTimeSync(
 				errMu.Lock()
 				multiError = errors.Join(multiError,
 					fmt.Errorf("failed to restore routine %s, namespace %s by timestamp: %w",
-						request.RoutineName, namespace, err))
+						request.Routine.Name, namespace, err))
 				errMu.Unlock()
 			}
 		}(namespace, nsBackup)

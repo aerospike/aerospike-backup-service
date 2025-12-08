@@ -64,7 +64,7 @@ func NewService(
 // this is public version of service.RunningBackupsRegistry.
 type RunningBackupsRegistry interface {
 	// GetRoutineState returns the current backup statistics for a routine.
-	GetRoutineState(routineName string) *model.RoutineState
+	GetRoutineState(routine *model.BackupRoutine) *model.RoutineState
 	// GetRunningState returns statistics for all current backups.
 	GetRunningState() map[string]*model.RoutineState
 	// Cancel stops all ongoing backups for a specific routine.

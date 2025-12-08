@@ -30,7 +30,7 @@ func TestService_GetAllFullBackups(t *testing.T) {
 			},
 			setupMock: func(m *MockBackupBackendService) {
 				m.On("GetBackups", mock.Anything, mock.Anything).
-					Return([]model.BackupDetails{{Key: "backup1", Routine: "routine1", BackupMetadata: model.BackupMetadata{
+					Return([]model.BackupDetails{{Key: "backup1", BackupMetadata: model.BackupMetadata{
 						Created:  time.UnixMilli(1000).In(time.UTC),
 						Finished: time.UnixMilli(5000).In(time.UTC),
 					}}}, nil)
@@ -63,7 +63,7 @@ func TestService_GetAllFullBackups(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockBackends := &MockBackupBackendService{}
 			cfg := model.NewConfig()
-			_ = cfg.AddRoutine("routine1", &model.BackupRoutine{})
+			_ = cfg.AddRoutine(&model.BackupRoutine{Name: "routine1"})
 
 			tt.setupMock(mockBackends)
 

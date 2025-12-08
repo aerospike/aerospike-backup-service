@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -18,8 +19,6 @@ import (
 // @Param       routine body dto.BackupRoutine true "Backup routine details"
 // @Success     201
 // @Failure     400 {string} string
-//
-//nolint:dupl
 func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -32,14 +31,14 @@ func (s *Service) AddRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	toModel, err := newRoutine.ToModel(s.config.BackupConfigCopy())
+	toModel, err := newRoutine.ToModel(s.config.BackupConfigCopy(), name)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
 	}
 
 	if err = s.changeConfig(r.Context(), func(config *model.Config) error {
-		err := config.AddRoutine(name, toModel)
+		err := config.AddRoutine(toModel)
 		if err != nil {
 			return err
 		}
@@ -87,8 +86,8 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	routine, ok := s.config.Routines()[routineName]
-	if !ok {
+	routine, found := s.config.Routine(routineName)
+	if !found {
 		httpError(w, errRoutineNotFound(routineName))
 		return
 	}
@@ -106,8 +105,6 @@ func (s *Service) ReadRoutine(w http.ResponseWriter, r *http.Request) {
 // @Param        routine body dto.BackupRoutine true "Backup routine details"
 // @Success      200
 // @Failure      400 {string} string
-//
-//nolint:dupl
 func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if name == "" {
@@ -121,7 +118,7 @@ func (s *Service) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	toModel, err := updatedRoutine.ToModel(s.config.BackupConfigCopy())
+	toModel, err := updatedRoutine.ToModel(s.config.BackupConfigCopy(), name)
 	if err != nil {
 		httpError(w, errBadRequest(err))
 		return
@@ -184,16 +181,15 @@ func (s *Service) EnableRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	_, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
-		return
-	}
 
 	err := s.changeConfig(r.Context(), func(config *model.Config) error {
 		return config.ToggleRoutineDisabled(routineName, false)
 	})
 	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			httpError(w, errRoutineNotFound(routineName))
+			return
+		}
 		httpError(w, errBadRequest(err))
 		return
 	}
@@ -216,16 +212,15 @@ func (s *Service) DisableRoutine(w http.ResponseWriter, r *http.Request) {
 		httpError(w, errMissingRoutineName)
 		return
 	}
-	_, found := s.config.Routine(routineName)
-	if !found {
-		httpError(w, errRoutineNotFound(routineName))
-		return
-	}
 
 	err := s.changeConfig(r.Context(), func(config *model.Config) error {
 		return config.ToggleRoutineDisabled(routineName, true)
 	})
 	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			httpError(w, errRoutineNotFound(routineName))
+			return
+		}
 		httpError(w, errBadRequest(err))
 		return
 	}

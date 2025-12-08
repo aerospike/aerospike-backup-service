@@ -195,8 +195,8 @@ func (s *Service) RetrieveRestoreJobs(w http.ResponseWriter, r *http.Request) {
 // @Failure     400 {string} string
 // @Failure     405 {string} string
 func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
-	name := r.PathValue("name")
-	if name == "" {
+	routineName := r.PathValue("name")
+	if routineName == "" {
 		httpError(w, errMissingRoutineName)
 		return
 	}
@@ -212,7 +212,13 @@ func (s *Service) RetrieveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	buf, err := s.configRetriever.RetrieveConfiguration(s.ctx, name, time.UnixMilli(timestamp))
+	routine, found := s.config.Routine(routineName)
+	if !found {
+		httpError(w, errRoutineNotFound(routineName))
+		return
+	}
+
+	buf, err := s.configRetriever.RetrieveConfiguration(s.ctx, routine, time.UnixMilli(timestamp))
 	if err != nil {
 		httpError(w, err)
 		return

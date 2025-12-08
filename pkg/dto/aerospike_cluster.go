@@ -81,6 +81,10 @@ func (a *AerospikeCluster) Validate(opts ...ValidationOption) error {
 		}
 	}
 
+	if a.MaxParallelScans != nil && *a.MaxParallelScans < 1 {
+		return errValidationNonPositive("max-parallel-scans", *a.MaxParallelScans)
+	}
+
 	return nil
 }
 

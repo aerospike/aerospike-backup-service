@@ -193,7 +193,7 @@ func isValidPartitionID(entry string) bool {
 	return err == nil && id >= 0 && id <= 4095
 }
 
-func (r *BackupRoutine) ToModel(config *model.BackupConfig) (*model.BackupRoutine, error) {
+func (r *BackupRoutine) ToModel(config *model.BackupConfig, name string) (*model.BackupRoutine, error) {
 	policy, err := resolveBackupPolicy(r.BackupPolicy, config.BackupPolicies)
 	if err != nil {
 		return nil, err
@@ -231,6 +231,7 @@ func (r *BackupRoutine) ToModel(config *model.BackupConfig) (*model.BackupRoutin
 	}
 
 	return &model.BackupRoutine{
+		Name:             name,
 		BackupPolicy:     policy,
 		SourceCluster:    cluster,
 		Storage:          storage,

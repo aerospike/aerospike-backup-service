@@ -11,7 +11,7 @@ import (
 
 type HistoryManager interface {
 	// FindLastRun finds the last backup run for a given routine.
-	FindLastRun(ctx context.Context, routineName string) (*model.BackupTime, error)
+	FindLastRun(ctx context.Context, routine *model.BackupRoutine) (*model.BackupTime, error)
 }
 
 // HistoryManagerImpl is a stateless service responsible for scanning
@@ -32,9 +32,9 @@ func NewHistoryManager(
 // FindLastRun performs the I/O to find the last backup for a single routine.
 func (hm *HistoryManagerImpl) FindLastRun(
 	ctx context.Context,
-	routineName string,
+	routine *model.BackupRoutine,
 ) (*model.BackupTime, error) {
-	lastFullBackup, err := hm.backupReader.GetBackups(ctx, NewFullBackupFilter(routineName).Last())
+	lastFullBackup, err := hm.backupReader.GetBackups(ctx, NewFullBackupFilter(routine).Last())
 	if err != nil {
 		return nil, fmt.Errorf("read last full backup failed: %w", err)
 	}
@@ -45,7 +45,7 @@ func (hm *HistoryManagerImpl) FindLastRun(
 	lastFullTime := lastFullBackup[0].Created
 
 	lastIncrBackup, err := hm.backupReader.GetBackups(ctx,
-		NewIncrementalBackupFilter(routineName).WithFromTime(lastFullTime).Last())
+		NewIncrementalBackupFilter(routine).WithFromTime(lastFullTime).Last())
 	if err != nil {
 		return nil, fmt.Errorf("read last incremental backup failed: %w", err)
 	}
@@ -58,7 +58,7 @@ func (hm *HistoryManagerImpl) FindLastRun(
 	}
 
 	slog.Debug("Last backup time scan completed for routine",
-		attr.Routine(routineName),
+		attr.Routine(routine.Name),
 		slog.String("lastRun", lastRun.String()))
 
 	return lastRun, nil

@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections/optional"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 )
@@ -31,7 +32,7 @@ type BackupPolicy struct {
 	// Back up Aerospike cluster configuration.
 	WithClusterConfig *bool
 	// Throttles backup write operations to the backup file(s) to not exceed the given
-	// bandwidth in MiB/s.
+	// bandwidth in MiB/s. Zero (default) means no limit is applied.
 	Bandwidth *int64
 	// Limit total returned records per second (RPS). If RPS is zero (the default),
 	// the records-per-second limit is not applied.
@@ -118,18 +119,21 @@ func (p *BackupPolicy) GetFileLimitOrDefault() int {
 	return *defaultConfig.backupPolicy.FileLimit
 }
 
+// RetentionPolicy defines the rules for automatically removing old full and incremental backups.
+// This policy is applied by the Retention Manager after each successful full backup.
 type RetentionPolicy struct {
-	FullBackups *int // Number of full backups to store
-	IncrBackups *int // Number of full backups to store incremental backups for
-}
+	// FullBackups specifies the maximum number of the latest full backups to retain.
+	// Not set: All full backups are retained.
+	// Set to N >= 1: Only the last N successful full backups will be kept.
+	FullBackups optional.Optional[int]
 
-// GetIncrementalRetentionCount returns the effective number of full backups
-// for which to retain incremental backups. When IncrBackups is nil (meaning
-// "retain all incrementals"), this returns the FullBackups value since
-// incremental backups cannot exist without their corresponding full backup.
-func (r *RetentionPolicy) GetIncrementalRetentionCount() *int {
-	if r.IncrBackups == nil {
-		return r.FullBackups
-	}
-	return r.IncrBackups
+	// IncrBackups specifies the number of the latest full backups for which to retain
+	// their associated incremental backup chains.
+	// This field uses Optional[int] to distinguish three states:
+	// 1. Not set: All incremental backups are retained.
+	// 2. Set to 0: Explicitly keep NO incremental backups.
+	// 3. Set to M > 0: Keep the incremental chain only for the last M full backups.
+	//
+	// Note: M must not exceed the value set for FullBackups (N).
+	IncrBackups optional.Optional[int]
 }
