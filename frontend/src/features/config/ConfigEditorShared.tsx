@@ -1,6 +1,6 @@
 import React from 'react';
 import {motion} from 'framer-motion';
-import {ChevronDown, Trash2} from 'lucide-react';
+import {ChevronDown, Trash2, LucideIcon} from 'lucide-react';
 
 interface SectionHeaderProps {
   title: string;
@@ -28,7 +28,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, icon: Icon,
   );
 };
 
-export const Card = ({ title, sub, active, onClick, onDelete }: { title: string, sub?: string, active: boolean, onClick: () => void, onDelete?: () => void }) => (
+export const Card = ({ title, sub, active, onClick, onDelete, icon: Icon }: { title: string, sub?: string, active: boolean, onClick: () => void, onDelete?: () => void, icon?: LucideIcon }) => (
   <motion.div
     onClick={onClick}
     className={`p-3 rounded border cursor-pointer transition-all mb-2 flex justify-between items-center group ${
@@ -46,9 +46,12 @@ export const Card = ({ title, sub, active, onClick, onDelete }: { title: string,
     }}
     transition={{ duration: 0.1 }}
   >
-    <div className="overflow-hidden">
-      <div className="font-bold text-sm text-gray-900 truncate">{title}</div>
-      {sub && <div className="text-xs text-gray-600 truncate">{sub}</div>}
+    <div className="flex items-center gap-2 overflow-hidden">
+        {Icon && <Icon size={16} className="text-gray-500 shrink-0" />}
+        <div>
+            <div className="font-bold text-sm text-gray-900 truncate">{title}</div>
+            {sub && <div className="text-xs text-gray-600 truncate">{sub}</div>}
+        </div>
     </div>
     {onDelete && (
       <button

@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {HardDrive, Plus} from 'lucide-react';
+import {HardDrive, Plus, Cloud} from 'lucide-react';
 import {Button} from '@/components/ui/Button';
 import {Input} from '@/components/ui/Inputs';
 import {api, DtoConfig, DtoStorage} from '@/api';
@@ -26,6 +26,7 @@ export const ConfigSectionStorage = (
   { config, setConfig, selectedId, setSelectedId, generateId, updateItem, updateNested, deleteItem, renameItem }: ConfigSectionStorageProps
 ) => {
   const items = config.storage || {};
+  const secretAgentOptions = [{label: "None", value: ""}, ...Object.keys(config.secretAgents || {}).map(k => ({ label: k, value: k }))];
   
   const getActiveStorageType = (s: DtoStorage) => {
       if (s.s3Storage) return "s3Storage";
@@ -82,10 +83,10 @@ export const ConfigSectionStorage = (
   };
 
   const storageTypeOptions = [
-      { id: "s3Storage", label: "Amazon S3 / MinIO" },
-      { id: "localStorage", label: "Local Filesystem" },
-      { id: "gcpStorage", label: "Google Cloud Storage" },
-      { id: "azureStorage", label: "Azure Blob Storage" },
+      { id: "s3Storage", label: "Amazon S3 / MinIO", icon: Cloud },
+      { id: "localStorage", label: "Local Filesystem", icon: HardDrive },
+      { id: "gcpStorage", label: "Google Cloud Storage", icon: Cloud },
+      { id: "azureStorage", label: "Azure Blob Storage", icon: Cloud },
   ];
 
   const currentItem = selectedId && items[selectedId];
@@ -110,18 +111,22 @@ export const ConfigSectionStorage = (
         <div className="overflow-y-auto flex-1 custom-scroll">
           {Object.entries(items)
             .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([k, v]: [string, DtoStorage]) => (
-            <Card
-              key={k}
-              title={k}
-              sub={getActiveStorageType(v).replace('Storage','').toUpperCase()}
-              active={selectedId === k}
-              onClick={() => {
-                setSelectedId(k);
-              }}
-              onDelete={() => deleteItem('storage', k)}
-            />
-          ))}
+            .map(([k, v]: [string, DtoStorage]) => {
+              const IconComponent = storageTypeOptions.find(opt => opt.id === getActiveStorageType(v))?.icon || HardDrive; // Default to HardDrive
+              return (
+                <Card
+                  key={k}
+                  title={k}
+                  sub={getActiveStorageType(v).replace('Storage','').toUpperCase()}
+                  active={selectedId === k}
+                  onClick={() => {
+                    setSelectedId(k);
+                  }}
+                  onDelete={() => deleteItem('storage', k)}
+                  icon={IconComponent}
+                />
+              );
+            })}
         </div>
       </div>
       <div className="w-2/3 p-6 overflow-y-auto custom-scroll">
@@ -144,26 +149,31 @@ export const ConfigSectionStorage = (
 
                 {/* Tab-based selection for Storage Type */}
                 <nav className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 text-sm mb-4">
-                    {storageTypeOptions.map((option) => (
-                        <button
-                            key={option.id}
-                            onClick={() => changeStorageType(selectedId, option.id)}
-                            className={`px-3 py-1.5 rounded-md font-medium transition-colors flex-1 text-center ${
-                                activeTab === option.id
-                                    ? 'bg-white text-gray-900 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-900'
-                            }`}
-                        >
-                            {option.label}
-                        </button>
-                    ))}
+                    {storageTypeOptions.map((option) => {
+                        const Icon = option.icon;
+                        return (
+                            <button
+                                key={option.id}
+                                onClick={() => changeStorageType(selectedId, option.id)}
+                                className={`px-3 py-1.5 rounded-md font-medium transition-colors flex-1 text-center flex items-center justify-center gap-1 ${
+                                    activeTab === option.id
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-900'
+                                }`}
+                            >
+                                {Icon && <Icon size={16} />}
+                                <span>{option.label}</span>
+                            </button>
+                        );
+                    })}
                 </nav>
              </div>
 
              {activeTab === "s3Storage" && currentItem.s3Storage && (
                  <ConfigStorageS3 
                     data={currentItem.s3Storage} 
-                    onChange={(field, value) => updateStorageField('s3Storage', field, value)} 
+                    onChange={(field, value) => updateStorageField('s3Storage', field, value)}
+                    secretAgentOptions={secretAgentOptions}
                  />
              )}
 

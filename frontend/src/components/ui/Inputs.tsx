@@ -14,13 +14,13 @@ export const Input = ({label, className, hint, description, ...props}: InputProp
                 className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wide flex items-center gap-1">
                 {label}
                 {hint && (
-                    <span className="relative group">
-            <Info size={14} className="text-gray-500 cursor-help"/>
-            <span
-                className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case">
-              {hint}
-            </span>
-          </span>
+                    <span className="relative inline-flex group">
+                        <Info size={14} className="text-gray-500 cursor-help"/>
+                        <span
+                            className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case pointer-events-none">
+                            {hint}
+                        </span>
+                    </span>
                 )}
             </label>
         )}
@@ -51,13 +51,13 @@ export const Select = ({label, options, hint, description, ...props}: SelectProp
                 className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide flex items-center gap-1">
                 {label}
                 {hint && (
-                    <span className="relative group">
-            <Info size={14} className="text-gray-400 cursor-help"/>
-            <span
-                className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case">
-              {hint}
-            </span>
-          </span>
+                    <span className="relative inline-flex group">
+                        <Info size={14} className="text-gray-400 cursor-help"/>
+                        <span
+                            className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case pointer-events-none">
+                            {hint}
+                        </span>
+                    </span>
                 )}
             </label>
         )}
@@ -97,13 +97,13 @@ export const Checkbox = ({label, checked, onChange, hint, description}: Checkbox
                    onClick={() => onChange(!checked)}>
                 {label}
                 {hint && (
-                    <span className="relative group">
-                  <Info size={14} className="text-gray-400 cursor-help"/>
-                  <span
-                      className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case">
-                      {hint}
-                  </span>
-              </span>
+                    <span className="relative inline-flex group">
+                        <Info size={14} className="text-gray-400 cursor-help"/>
+                        <span
+                            className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case pointer-events-none">
+                            {hint}
+                        </span>
+                    </span>
                 )}
             </label>
         </div>
@@ -132,13 +132,13 @@ export const RadioGroup = ({label, options, value, onChange, hint}: RadioGroupPr
                 className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide flex items-center gap-1">
                 {label}
                 {hint && (
-                    <span className="relative group">
-            <Info size={14} className="text-gray-400 cursor-help"/>
-            <span
-                className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case">
-              {hint}
-            </span>
-          </span>
+                    <span className="relative inline-flex group">
+                        <Info size={14} className="text-gray-400 cursor-help"/>
+                        <span
+                            className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case pointer-events-none">
+                            {hint}
+                        </span>
+                    </span>
                 )}
             </label>
         )}
@@ -230,9 +230,9 @@ export const MultiSelect = ({ label, value, onChange, options, placeholder, hint
                 <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wide flex items-center gap-1">
                     {label}
                     {hint && (
-                        <span className="relative group">
-                            <Info size={14} className="text-gray-400 cursor-help" />
-                            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case">
+                        <span className="relative inline-flex group">
+                            <Info size={14} className="text-gray-400 cursor-help"/>
+                            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-48 p-2 text-xs text-white bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 normal-case pointer-events-none">
                                 {hint}
                             </span>
                         </span>
