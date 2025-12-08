@@ -1,6 +1,7 @@
 
 # LogEntry
 
+Entry represents a structured log entry.
 
 ## Properties
 
@@ -19,9 +20,9 @@ import type { LogEntry } from ''
 // TODO: Update the object below with actual values
 const example = {
   "attrs": null,
-  "level": null,
-  "msg": null,
-  "time": null,
+  "level": INFO,
+  "msg": Hello world!,
+  "time": 2006-01-02T15:04:05Z07:00,
 } satisfies LogEntry
 
 console.log(example)

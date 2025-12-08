@@ -3546,20 +3546,28 @@ const docTemplate = `{
             }
         },
         "log.Entry": {
+            "description": "Entry represents a structured log entry.",
             "type": "object",
             "properties": {
                 "attrs": {
+                    "description": "Attrs is a map of additional attributes.",
                     "type": "object",
                     "additionalProperties": {}
                 },
                 "level": {
-                    "type": "string"
+                    "description": "Level is the log level.",
+                    "type": "string",
+                    "example": "INFO"
                 },
                 "msg": {
-                    "type": "string"
+                    "description": "Message is the log message.",
+                    "type": "string",
+                    "example": "Hello world!"
                 },
                 "time": {
-                    "type": "string"
+                    "description": "Time is the time of the log entry.",
+                    "type": "string",
+                    "example": "2006-01-02T15:04:05Z07:00"
                 }
             }
         }

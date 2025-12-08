@@ -14,31 +14,31 @@
 
 import { mapValues } from '../runtime';
 /**
- * 
+ * Entry represents a structured log entry.
  * @export
  * @interface LogEntry
  */
 export interface LogEntry {
     /**
-     * 
+     * Attrs is a map of additional attributes.
      * @type {{ [key: string]: any; }}
      * @memberof LogEntry
      */
     attrs?: { [key: string]: any; };
     /**
-     * 
+     * Level is the log level.
      * @type {string}
      * @memberof LogEntry
      */
     level?: string;
     /**
-     * 
+     * Message is the log message.
      * @type {string}
      * @memberof LogEntry
      */
     msg?: string;
     /**
-     * 
+     * Time is the time of the log entry.
      * @type {string}
      * @memberof LogEntry
      */

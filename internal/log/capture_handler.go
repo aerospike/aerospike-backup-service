@@ -8,11 +8,16 @@ import (
 )
 
 // Entry represents a structured log entry.
+// @Description Entry represents a structured log entry.
 type Entry struct {
-	Time    time.Time      `json:"time"`
-	Level   string         `json:"level"`
-	Message string         `json:"msg"`
-	Attrs   map[string]any `json:"attrs,omitempty"`
+	// Time is the time of the log entry.
+	Time time.Time `json:"time" example:"2006-01-02T15:04:05Z07:00"`
+	// Level is the log level.
+	Level string `json:"level" example:"INFO"`
+	// Message is the log message.
+	Message string `json:"msg" example:"Hello world!"`
+	// Attrs is a map of additional attributes.
+	Attrs map[string]any `json:"attrs,omitempty"`
 }
 
 // CaptureHandler captures log records in a circular buffer.
