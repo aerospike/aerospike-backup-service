@@ -16,7 +16,16 @@ interface MonitoringDashboardProps {
 export default function MonitoringDashboard({config}: MonitoringDashboardProps) {
     // We can safely cast the keys because we know the shape of config
     const routineKeys = Object.keys(config.backupRoutines || {});
-    const [activeRoutine, setActiveRoutine] = useState<string>(routineKeys[0] || '');
+    
+    // Initialize activeRoutine from localStorage or default to first routine
+    const [activeRoutine, setActiveRoutine] = useState<string>(() => {
+        const saved = localStorage.getItem('abs_sel_routines');
+        if (saved && routineKeys.includes(saved)) {
+            return saved;
+        }
+        return routineKeys[0] || '';
+    });
+
     const [viewMode, setViewMode] = useState<MonitoringViewMode>('routines');
 
     const [currentBackup, setCurrentBackup] = useState<DtoRoutineState | null>(null);
@@ -33,6 +42,13 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
     const [restoreError, setRestoreError] = useState<string | null>(null);
 
     const backupApi = new BackupApi();
+
+    // Persist activeRoutine to localStorage to share with ConfigEditor
+    useEffect(() => {
+        if (activeRoutine) {
+            localStorage.setItem('abs_sel_routines', activeRoutine);
+        }
+    }, [activeRoutine]);
 
     const loadData = async () => {
         if (viewMode !== 'routines') return; // Only load routine data if in routines view

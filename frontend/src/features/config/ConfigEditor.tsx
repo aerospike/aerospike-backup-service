@@ -21,10 +21,43 @@ interface ConfigEditorProps {
 type SectionId = 'routines' | 'clusters' | 'storage' | 'policies' | 'secrets' | 'service' | 'yaml';
 
 export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
-    const [section, setSection] = useState<SectionId>('routines');
-    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [section, setSection] = useState<SectionId>(() => {
+        return (localStorage.getItem('abs_config_section') as SectionId) || 'routines';
+    });
+    
+    // Initialize selectedId based on the loaded section
+    const [selectedId, setSelectedId] = useState<string | null>(() => {
+        const initialSection = (localStorage.getItem('abs_config_section') as SectionId) || 'routines';
+        return localStorage.getItem(`abs_sel_${initialSection}`);
+    });
+    
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+
+    // Persist current section
+    React.useEffect(() => {
+        localStorage.setItem('abs_config_section', section);
+    }, [section]);
+
+    // Persist selectedId for the current section
+    React.useEffect(() => {
+        if (selectedId) {
+            localStorage.setItem(`abs_sel_${section}`, selectedId);
+        } else {
+            localStorage.removeItem(`abs_sel_${section}`);
+        }
+    }, [selectedId, section]);
+
+    const handleSectionChange = (newSection: SectionId) => {
+        if (newSection === section) return;
+        
+        // Load the saved selection for the new section
+        const prevSelection = localStorage.getItem(`abs_sel_${newSection}`);
+        
+        // Batch update to avoid "render with old ID in new section" race conditions
+        setSection(newSection);
+        setSelectedId(prevSelection);
+    };
 
     const handleApply = async () => {
         setIsSaving(true);
@@ -94,10 +127,7 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
 
     const NavItem = ({id, label, icon: Icon}: { id: SectionId; label: string; icon: any }) => (
         <button
-            onClick={() => {
-                setSection(id);
-                setSelectedId(null);
-            }}
+            onClick={() => handleSectionChange(id)}
             className={`flex items-center gap-3 w-full px-3 py-2 rounded-md transition-all text-sm mb-1 ${
                 section === id ? 'bg-aerospike-light-blue text-gray-900 border-l-2 border-aerospike-border-blue' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
             }`}
