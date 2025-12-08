@@ -4,10 +4,6 @@ import ConfigEditor from './features/config/ConfigEditor';
 import MonitoringDashboard from './features/monitoring/MonitoringDashboard';
 import {api} from './api';
 import type {DtoConfig} from './api/generated';
-import {SystemApi} from './api/generated/apis/SystemApi';
-import {Configuration} from './api/generated/runtime';
-
-const systemApi = new SystemApi(new Configuration({basePath: ''}));
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'monitor' | 'config'>('monitor');
@@ -33,7 +29,7 @@ export default function App() {
 
     const checkHealth = async () => {
       try {
-        await systemApi.health();
+        await api.checkHealth();
         setIsSystemHealthy(true);
       } catch (e) {
         setIsSystemHealthy(false);

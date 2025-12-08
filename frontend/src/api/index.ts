@@ -82,6 +82,10 @@ export const api = {
         return await configurationApi.checkSecretAgentConnectivity({dtoSecretAgent: secretAgent});
     },
 
+    checkHealth: async (): Promise<void> => {
+        await systemApi.health();
+    },
+
     fetchLogs: async (): Promise<LogEntry[]> => {
         return await systemApi.logs();
     }
