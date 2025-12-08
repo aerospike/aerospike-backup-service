@@ -32,7 +32,7 @@ type BackupPolicy struct {
 	// Back up Aerospike cluster configuration.
 	WithClusterConfig *bool
 	// Throttles backup write operations to the backup file(s) to not exceed the given
-	// bandwidth in MiB/s.
+	// bandwidth in MiB/s. Zero (default) means no limit is applied.
 	Bandwidth *int64
 	// Limit total returned records per second (RPS). If RPS is zero (the default),
 	// the records-per-second limit is not applied.

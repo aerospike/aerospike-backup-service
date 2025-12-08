@@ -83,8 +83,13 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Contex
 		return
 	}
 
+	names := make([]string, len(invalidatedRoutines))
+	for i, t := range invalidatedRoutines {
+		names[i] = t.Name
+	}
+
 	slog.Info("Start backup history synchronization",
-		slog.Any("routines", invalidatedRoutines),
+		slog.Any("routines", names),
 		slog.Int("len", len(invalidatedRoutines)),
 	)
 
@@ -96,7 +101,7 @@ func (r *RunningBackupsRegistryImpl) SynchroniseBackupHistory(ctx context.Contex
 		slog.Error("History synchronization failed", attr.Error(err))
 	} else {
 		slog.Info("History synchronization completed",
-			slog.Any("routines", invalidatedRoutines),
+			slog.Any("routines", names),
 			slog.Int("len", len(invalidatedRoutines)),
 			slog.Duration("duration", duration),
 		)
