@@ -3,10 +3,11 @@ import {type DtoConfig} from './generated';
 
 export * from './generated';
 
-const backupApi = new allGenerated.BackupApi();
-const configurationApi = new allGenerated.ConfigurationApi();
-const restoreApi = new allGenerated.RestoreApi();
-const systemApi = new allGenerated.SystemApi();
+const config = new allGenerated.Configuration({basePath: ""});
+const backupApi = new allGenerated.BackupApi(config);
+const configurationApi = new allGenerated.ConfigurationApi(config);
+const restoreApi = new allGenerated.RestoreApi(config);
+const systemApi = new allGenerated.SystemApi(config);
 
 // Define LogEntry interface
 export type LogEntry = allGenerated.LogEntry;
