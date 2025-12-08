@@ -2,6 +2,7 @@ import React from 'react';
 import {Clock, Plus} from 'lucide-react';
 import {Button} from '@/components/ui/Button';
 import {Input, MultiSelect, Select} from '@/components/ui/Inputs';
+import {CronInput} from '@/components/ui/CronInput';
 import {DtoBackupRoutine, DtoConfig, api} from '@/api';
 import {Card, SectionHeader} from './ConfigEditorShared';
 
@@ -47,7 +48,7 @@ export const ConfigSectionRoutines = (
 
   return (
     <div className="flex h-full">
-      <div className="w-1/3 border-r border-gray-800 p-4 flex flex-col">
+      <div className="w-1/3 border-r border-gray-800 p-4 flex flex-col h-full">
         <Button
           className="mb-4 w-full justify-center"
           icon={Plus}
@@ -66,7 +67,6 @@ export const ConfigSectionRoutines = (
             <Card
               key={k}
               title={k}
-              sub={v.intervalCron}
               active={selectedId === k}
               onClick={() => setSelectedId(k)}
               onDelete={() => deleteItem('backupRoutines', k)}
@@ -111,8 +111,8 @@ export const ConfigSectionRoutines = (
 
              <SectionHeader title="Scheduling" />
              <div className="grid grid-cols-2 gap-4">
-                <Input label="Full Backup Cron" value={items[selectedId].intervalCron} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('backupRoutines', selectedId, 'intervalCron', e.target.value)} placeholder="@daily" />
-                <Input label="Incremental Cron" value={items[selectedId].incrIntervalCron || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('backupRoutines', selectedId, 'incrIntervalCron', e.target.value)} placeholder="Optional" />
+                <CronInput label="Full Backup Cron" value={items[selectedId].intervalCron} onChange={(value) => updateItem('backupRoutines', selectedId, 'intervalCron', value)} placeholder="e.g. 0 0 12 * * ?" />
+                <CronInput label="Incremental Cron" value={items[selectedId].incrIntervalCron || ''} onChange={(value) => updateItem('backupRoutines', selectedId, 'incrIntervalCron', value)} placeholder="Optional" />
              </div>
 
              <SectionHeader title="Scope" />

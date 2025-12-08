@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "clsx": "^2.0.0",
+    "cronstrue": "^3.9.0",
     "framer-motion": "^12.23.25",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",

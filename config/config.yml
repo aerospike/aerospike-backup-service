@@ -258,6 +258,7 @@ backup-routines:
         source-cluster: absDefaultCluster
         storage: local
         interval-cron: '@yearly'
+        incr-interval-cron: 0 0 0/3 * * ?
         namespaces:
             - source-ns7
     noIndexesUdfsRecords:

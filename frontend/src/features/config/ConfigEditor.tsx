@@ -131,6 +131,7 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
                             animate={{x: 0, opacity: 1}}
                             exit={{x: -10, opacity: 0}}
                             transition={{duration: 0.2}}
+                            className="h-full"
                         >
                             <ConfigSectionRoutines
                                 config={config}
