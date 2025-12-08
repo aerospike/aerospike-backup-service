@@ -45,7 +45,7 @@ export const CronInput = ({ value, onChange, label, hint, description, placehold
         }
     }, [value]);
 
-    // Simple heuristic to init state
+    // Parse value to sync internal state
     useEffect(() => {
         if (!value) {
             setMode('preset');
@@ -53,22 +53,48 @@ export const CronInput = ({ value, onChange, label, hint, description, placehold
             return;
         }
 
-        // Daily: 0 0 12 * * ? (Quartz)
-        if (value && (value.includes('* * ?') || value.includes('? * *'))) {
-            if (value.startsWith('0 0 *')) {
-                 setMode('preset');
-                 setPresetType('hourly');
-            } else if (value.match(/^0 \d+ \d+ \? \* [A-Z]{3}$/)) {
-                 setMode('preset');
-                 setPresetType('weekly');
-                 // Extract time/day logic could go here if needed for perfect bi-directional sync
-            } else {
-                 setMode('preset');
-                 setPresetType('daily');
-            }
-        } 
-        // Default to raw if complex
-    }, []);
+        const pad = (n: string | number) => n.toString().padStart(2, '0');
+
+        // Interval: 0 0 0/x * * ?
+        const intervalMatch = value.match(/^0 0 0\/(\d+) \* \* \?$/);
+        if (intervalMatch) {
+            setMode('preset');
+            setPresetType('interval');
+            setIntervalHours(intervalMatch[1]!);
+            return;
+        }
+
+        // Weekly: 0 m h ? * DAY
+        const weeklyMatch = value.match(/^0 (\d+) (\d+) \? \* ([A-Z]{3})$/);
+        if (weeklyMatch) {
+            setMode('preset');
+            setPresetType('weekly');
+            setTime(`${pad(weeklyMatch[2]!)}:${pad(weeklyMatch[1]!)}`);
+            setWeekDay(weeklyMatch[3]!);
+            return;
+        }
+
+        // Daily: 0 m h * * ?
+        const dailyMatch = value.match(/^0 (\d+) (\d+) \* \* \?$/);
+        if (dailyMatch) {
+            setMode('preset');
+            setPresetType('daily');
+            setTime(`${pad(dailyMatch[2]!)}:${pad(dailyMatch[1]!)}`);
+            return;
+        }
+
+        // Hourly: 0 0 * * * ?
+        if (value === '0 0 * * * ?') {
+            setMode('preset');
+            setPresetType('hourly');
+            return;
+        }
+
+        // If no match and not empty, assume raw/custom
+        // We only switch to raw if we can't map it to a preset.
+        // This effectively resets the view to Raw for complex crons.
+        setMode('raw');
+    }, [value]);
 
     const updateCronFromPreset = (type: Preset, t: string, day: string, hours: string) => {
         let cron = '';
