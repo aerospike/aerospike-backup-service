@@ -1,10 +1,14 @@
 import React, {useState} from 'react';
 import {HardDrive, Plus} from 'lucide-react';
 import {Button} from '@/components/ui/Button';
-import {Input, Select} from '@/components/ui/Inputs';
+import {Input} from '@/components/ui/Inputs';
 import {api, DtoConfig, DtoStorage} from '@/api';
 import {Card, SectionHeader} from './ConfigEditorShared';
 import {ConnectivityCheckButton} from '@/components/ui/ConnectivityCheckButton';
+import {ConfigStorageS3} from './storage/ConfigStorageS3';
+import {ConfigStorageLocal} from './storage/ConfigStorageLocal';
+import {ConfigStorageGcp} from './storage/ConfigStorageGcp';
+import {ConfigStorageAzure} from './storage/ConfigStorageAzure';
 
 interface ConfigSectionStorageProps {
   config: DtoConfig;
@@ -22,29 +26,70 @@ export const ConfigSectionStorage = (
   { config, setConfig, selectedId, setSelectedId, generateId, updateItem, updateNested, deleteItem, renameItem }: ConfigSectionStorageProps
 ) => {
   const items = config.storage || {};
-  const getStorageType = (s: DtoStorage) => {
+  
+  const getActiveStorageType = (s: DtoStorage) => {
       if (s.s3Storage) return "s3Storage";
       if (s.localStorage) return "localStorage";
       if (s.gcpStorage) return "gcpStorage";
       if (s.azureStorage) return "azureStorage";
-      return "s3Storage";
+      return "s3Storage"; // Default to S3 if none found
   };
 
-  const changeStorageType = (id: string, type: string) => {
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (selectedId && items[selectedId]) {
+      return getActiveStorageType(items[selectedId]);
+    }
+    return "s3Storage"; // Default tab
+  });
+
+  // Effect to update activeTab when selectedId changes or config changes
+  React.useEffect(() => {
+    if (selectedId && items[selectedId]) {
+      setActiveTab(getActiveStorageType(items[selectedId]));
+    } else {
+      setActiveTab("s3Storage"); // Reset to default if no item selected
+    }
+  }, [selectedId, items]);
+
+
+  const changeStorageType = (id: string, newType: string) => {
       const defaults: any = {
           s3Storage: { bucket: "new-bucket", s3Region: "us-east-1" },
           localStorage: { path: "/backups" },
           gcpStorage: { bucketName: "new-bucket" },
           azureStorage: { containerName: "backup-container", endpoint: "" }
       };
+
+      // Ensure only one storage type object exists and replace if necessary
+      const currentStorage: DtoStorage = items[id] || {};
+      const newStorage: DtoStorage = {};
+      newStorage[newType as keyof DtoStorage] = defaults[newType];
+
       setConfig((prev: DtoConfig) => ({
           ...prev,
           storage: {
               ...prev.storage,
-              [id]: { [type]: defaults[type] }
+              [id]: newStorage
           }
       }));
+      setActiveTab(newType); // Update the active tab directly
   };
+
+  // Generic updater for specific storage type fields
+  const updateStorageField = (storageTypeKey: keyof DtoStorage, field: string, value: any) => {
+      if (!selectedId) return;
+      updateNested('storage', selectedId, storageTypeKey as string, field, value);
+  };
+
+  const storageTypeOptions = [
+      { id: "s3Storage", label: "Amazon S3 / MinIO" },
+      { id: "localStorage", label: "Local Filesystem" },
+      { id: "gcpStorage", label: "Google Cloud Storage" },
+      { id: "azureStorage", label: "Azure Blob Storage" },
+  ];
+
+  const currentItem = selectedId && items[selectedId];
+  const currentStorageTypeKey = currentItem ? getActiveStorageType(currentItem) : null;
 
   return (
     <div className="flex h-full">
@@ -54,8 +99,10 @@ export const ConfigSectionStorage = (
           icon={Plus}
           onClick={() => {
             const id = generateId('storage');
+            // Default new storage to S3, which is also the default active tab
             setConfig((p: DtoConfig) => ({...p, storage: {...p.storage, [id]: { s3Storage: { bucket: "my-bucket", s3Region: "us-east-1" } }}}));
             setSelectedId(id);
+            setActiveTab("s3Storage"); // Ensure new item opens with S3 tab active
           }}
         >
           New Storage
@@ -67,7 +114,7 @@ export const ConfigSectionStorage = (
             <Card
               key={k}
               title={k}
-              sub={getStorageType(v).replace('Storage','').toUpperCase()}
+              sub={getActiveStorageType(v).replace('Storage','').toUpperCase()}
               active={selectedId === k}
               onClick={() => {
                 setSelectedId(k);
@@ -78,76 +125,67 @@ export const ConfigSectionStorage = (
         </div>
       </div>
       <div className="w-2/3 p-6 overflow-y-auto custom-scroll">
-        {selectedId && items[selectedId] ? (
+        {selectedId && currentItem ? (
           <div className="animate-in fade-in slide-in-from-right-4 duration-200">
              <div className="mb-6">
                 <div className="flex items-end gap-4 mb-4">
                     <div className="flex-1">
                         <Input label="Storage Name" value={selectedId} onChange={(e: React.ChangeEvent<HTMLInputElement>) => renameItem('storage', selectedId, e.target.value)} />
                     </div>
-                    <ConnectivityCheckButton
-                        className="mb-3"
-                        onCheck={async () => {
-                            if (selectedId && items[selectedId]) {
-                                await api.checkStorageConnectivity(items[selectedId]);
-                            }
-                        }}
-                    />
+                    {currentStorageTypeKey && currentItem[currentStorageTypeKey] && (
+                        <ConnectivityCheckButton
+                            className="mb-3"
+                            onCheck={async () => {
+                                await api.checkStorageConnectivity(currentItem);
+                            }}
+                        />
+                    )}
                 </div>
 
-                <Select
-                  label="Type"
-                  value={getStorageType(items[selectedId])}
-                  options={[
-                      { label: "Amazon S3 / MinIO", value: "s3Storage" },
-                      { label: "Local Filesystem", value: "localStorage" },
-                      { label: "Google Cloud Storage", value: "gcpStorage" },
-                      { label: "Azure Blob Storage", value: "azureStorage" },
-                  ]}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => changeStorageType(selectedId, e.target.value)}
-                />
+                {/* Tab-based selection for Storage Type */}
+                <nav className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 text-sm mb-4">
+                    {storageTypeOptions.map((option) => (
+                        <button
+                            key={option.id}
+                            onClick={() => changeStorageType(selectedId, option.id)}
+                            className={`px-3 py-1.5 rounded-md font-medium transition-colors flex-1 text-center ${
+                                activeTab === option.id
+                                    ? 'bg-white text-gray-900 shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-900'
+                            }`}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </nav>
              </div>
 
-             {items[selectedId].s3Storage && (
-                 <>
-                   <SectionHeader title="S3 Configuration" icon={HardDrive} />
-                   <div className="grid grid-cols-2 gap-4">
-                      <Input label="Bucket" value={items[selectedId].s3Storage?.bucket || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('storage', selectedId, 's3Storage', 'bucket', e.target.value)} />
-                      <Input label="Region" value={items[selectedId].s3Storage?.s3Region || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('storage', selectedId, 's3Storage', 's3Region', e.target.value)} />
-                      <Input label="Path Prefix" value={items[selectedId].s3Storage?.path || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('storage', selectedId, 's3Storage', 'path', e.target.value)} />
-                      <Input label="Endpoint (Optional)" value={items[selectedId].s3Storage?.s3EndpointOverride || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('storage', selectedId, 's3Storage', 's3EndpointOverride', e.target.value)} placeholder="e.g. localhost:9000" />
-                   </div>
-                   <SectionHeader title="Credentials" />
-                   <div className="grid grid-cols-2 gap-4">
-                      <Input label="Access Key ID" value={items[selectedId].s3Storage?.accessKeyId || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('storage', selectedId, 's3Storage', 'accessKeyId', e.target.value)} />
-                      <Input label="Secret Access Key" type="password" value={items[selectedId].s3Storage?.secretAccessKey || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('storage', selectedId, 's3Storage', 'secretAccessKey', e.target.value)} />
-                   </div>
-                 </>
+             {activeTab === "s3Storage" && currentItem.s3Storage && (
+                 <ConfigStorageS3 
+                    data={currentItem.s3Storage} 
+                    onChange={(field, value) => updateStorageField('s3Storage', field, value)} 
+                 />
              )}
 
-             {items[selectedId].localStorage && (
-                 <>
-                   <SectionHeader title="Local Filesystem" icon={HardDrive} />
-                   <Input label="Root Path" value={items[selectedId].localStorage?.path || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('storage', selectedId, 'localStorage', 'path', e.target.value)} />
-                 </>
+             {activeTab === "localStorage" && currentItem.localStorage && (
+                 <ConfigStorageLocal 
+                    data={currentItem.localStorage} 
+                    onChange={(field, value) => updateStorageField('localStorage', field, value)} 
+                 />
              )}
 
-             {items[selectedId].gcpStorage && (
-                 <>
-                   <SectionHeader title="Google Cloud" icon={HardDrive} />
-                   <Input label="Bucket Name" value={items[selectedId].gcpStorage?.bucketName || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('storage', selectedId, 'gcpStorage', 'bucketName', e.target.value)} />
-                   <Input label="Key File Path" value={items[selectedId].gcpStorage?.keyFilePath || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('storage', selectedId, 'gcpStorage', 'keyFilePath', e.target.value)} />
-                 </>
+             {activeTab === "gcpStorage" && currentItem.gcpStorage && (
+                 <ConfigStorageGcp 
+                    data={currentItem.gcpStorage} 
+                    onChange={(field, value) => updateStorageField('gcpStorage', field, value)} 
+                 />
              )}
 
-             {items[selectedId].azureStorage && (
-                 <>
-                   <SectionHeader title="Azure Blob" icon={HardDrive} />
-                   <div className="grid grid-cols-2 gap-4">
-                      <Input label="Container Name" value={items[selectedId].azureStorage?.containerName || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('storage', selectedId, 'azureStorage', 'containerName', e.target.value)} />
-                      <Input label="Account Name" value={items[selectedId].azureStorage?.accountName || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('storage', selectedId, 'azureStorage', 'accountName', e.target.value)} />
-                   </div>
-                 </>
+             {activeTab === "azureStorage" && currentItem.azureStorage && (
+                 <ConfigStorageAzure 
+                    data={currentItem.azureStorage} 
+                    onChange={(field, value) => updateStorageField('azureStorage', field, value)} 
+                 />
              )}
           </div>
         ) : (
