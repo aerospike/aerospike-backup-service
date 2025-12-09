@@ -88,5 +88,9 @@ export const api = {
 
     fetchLogs: async (): Promise<LogEntry[]> => {
         return await systemApi.logs();
+    },
+
+    scheduleFullBackup: async (routine: string): Promise<void> => {
+        await backupApi.scheduleFullBackup({name: routine});
     }
 };

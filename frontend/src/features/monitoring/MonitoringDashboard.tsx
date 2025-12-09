@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import type {Backup, DtoConfig, DtoRestoreJobStatus, DtoRoutineState, DtoRunningJob} from '@/api';
 import * as allGenerated from '@/api'; // Import allGenerated here
-import {api, BackupApi} from '@/api';
+import {api} from '@/api';
 import {MonitoringSidebar} from './MonitoringSidebar';
 import {LiveActivity} from './LiveActivity';
 import {BackupHistory} from './BackupHistory';
@@ -40,8 +40,6 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
     const [isRestoreModalOpen, setRestoreModalOpen] = useState<boolean>(false);
     const [isRestoring, setIsRestoring] = useState(false);
     const [restoreError, setRestoreError] = useState<string | null>(null);
-
-    const backupApi = new BackupApi();
 
     // Persist activeRoutine to localStorage to share with ConfigEditor
     useEffect(() => {
@@ -96,7 +94,7 @@ export default function MonitoringDashboard({config}: MonitoringDashboardProps) 
         if (viewMode !== 'routines' || !activeRoutine) return;
         setIsSchedulingBackup(true);
         try {
-            await backupApi.scheduleFullBackup({name: activeRoutine});
+            await api.scheduleFullBackup(activeRoutine);
             // Delay refresh by 100ms
             setTimeout(() => {
                 loadData(); //refresh active jobs after scheduling
