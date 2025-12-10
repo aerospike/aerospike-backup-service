@@ -2147,7 +2147,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "level": {
-                    "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).",
+                    "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).\nThis field is ignored if the compression mode is NONE.\nThis field is ignored during restoration.",
                     "type": "integer",
                     "default": 0,
                     "maximum": 22,
@@ -2703,7 +2703,7 @@ const docTemplate = `{
                     ]
                 },
                 "compression": {
-                    "description": "Compression details (algorithm). Default is no compression.",
+                    "description": "Compression details (algorithm). Default is no compression.\nThis field is ignored during point-in-time restores as the system automatically detects compression.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.CompressionPolicy"

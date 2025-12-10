@@ -17,6 +17,8 @@ type CompressionPolicy struct {
 	Mode string `yaml:"mode,omitempty" json:"mode,omitempty" default:"NONE" enums:"NONE,ZSTD"`
 	// The compression level to use.
 	// Algorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).
+	// This field is ignored if the compression mode is NONE.
+	// This field is ignored during restoration.
 	Level int32 `yaml:"level,omitempty" json:"level,omitempty" default:"0" minimum:"-1" maximum:"22"`
 }
 

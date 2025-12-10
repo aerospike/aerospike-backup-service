@@ -64,6 +64,7 @@ type RestorePolicy struct {
 	// Encryption details (algorithm and key). Default is no encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
 	// Compression details (algorithm). Default is no compression.
+	// This field is ignored during point-in-time restores as the system automatically detects compression.
 	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
 	// Configuration of retries for each restore write operation.
 	// If nil, the default policy is used (5 retries with a one-minute delay between attempts).

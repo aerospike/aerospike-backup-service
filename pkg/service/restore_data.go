@@ -260,6 +260,10 @@ func (r *dataRestorer) restoreByTimeSync(
 		return err
 	}
 
+	if err := validateEncryption(backupsByNamespace, request); err != nil {
+		return err
+	}
+
 	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster, logger)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
@@ -294,6 +298,41 @@ func (r *dataRestorer) restoreByTimeSync(
 	wg.Wait()
 
 	return multiError
+}
+
+func validateEncryption(
+	backupsByNamespace map[string][]model.BackupDetails,
+	request *model.RestoreTimestampRequest,
+) error {
+	for _, backups := range backupsByNamespace {
+		for _, b := range backups {
+			if b.Encryption != "" && b.Encryption != model.EncryptNone { // Backup is encrypted
+				// Check if user provided an encryption policy in the request
+				if request.Policy == nil || request.Policy.EncryptionPolicy == nil {
+					return fmt.Errorf("backup is encrypted with mode '%s', "+
+						"but no encryption policy was provided in the restore request", b.Encryption)
+				}
+
+				userEncryptionPolicy := request.Policy.EncryptionPolicy
+
+				// Check if the provided encryption mode matches the backup's encryption mode
+				if userEncryptionPolicy.Mode != b.Encryption {
+					return fmt.Errorf("backup is encrypted with mode '%s', "+
+						"but the provided encryption policy specifies mode '%s'", b.Encryption, userEncryptionPolicy.Mode)
+				}
+
+				// Check if an encryption key is provided
+				if userEncryptionPolicy.KeyFile == nil &&
+					userEncryptionPolicy.KeyEnv == nil &&
+					userEncryptionPolicy.KeySecret == nil {
+					return fmt.Errorf("backup is encrypted, " +
+						"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func (r *dataRestorer) restoreNamespace(
@@ -336,6 +375,11 @@ func (r *dataRestorer) restoreNamespace(
 			slog.Any("backup", b))
 		if b.FileCount == 0 { // skip empty namespaces
 			continue
+		}
+
+		// for restore by time we can extract compression from metadata
+		effectivePolicy.CompressionPolicy = &model.CompressionPolicy{
+			Mode: b.Compression,
 		}
 
 		handler, err := r.restoreFromPath(ctx, client, request, b.Key, b.Storage, &effectivePolicy)
