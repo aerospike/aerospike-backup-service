@@ -1,7 +1,8 @@
 import React from 'react';
-import {Plus, Settings, Shield} from 'lucide-react';
+import {Archive, Lock, Minimize, Plus, Settings, Shield} from 'lucide-react';
 import {Button} from '@/components/ui/Button';
 import {Input, Select} from '@/components/ui/Inputs';
+import {Slider} from '@/components/ui/Slider';
 import {DtoBackupPolicy, DtoConfig} from '@/api';
 import {Card, SectionHeader} from './ConfigEditorShared';
 
@@ -31,6 +32,7 @@ export const ConfigSectionPolicies = (
     }: ConfigSectionPoliciesProps
 ) => {
     const items = config.backupPolicies || {};
+
     return (
         <div className="flex h-full">
             <div className="w-1/3 border-r border-gray-200 p-4 flex flex-col">
@@ -60,15 +62,15 @@ export const ConfigSectionPolicies = (
                     {Object.entries(items)
                         .sort((a, b) => a[0].localeCompare(b[0]))
                         .map(([k, v]: [string, DtoBackupPolicy]) => (
-                        <Card
-                            key={k}
-                            title={k}
-                            sub={`Parallel: ${v.parallel}`}
-                            active={selectedId === k}
-                            onClick={() => setSelectedId(k)}
-                            onDelete={() => deleteItem('backupPolicies', k)}
-                        />
-                    ))}
+                            <Card
+                                key={k}
+                                title={k}
+                                sub={`Parallel: ${v.parallel}`}
+                                active={selectedId === k}
+                                onClick={() => setSelectedId(k)}
+                                onDelete={() => deleteItem('backupPolicies', k)}
+                            />
+                        ))}
                 </div>
             </div>
             <div className="w-2/3 p-6 overflow-y-auto custom-scroll">
@@ -87,17 +89,30 @@ export const ConfigSectionPolicies = (
                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateItem('backupPolicies', selectedId, 'parallelWrite', Number(e.target.value))}/>
                         </div>
 
-                        <SectionHeader title="Retention & Compression" icon={Shield}/>
-                        <div className="p-4 bg-gray-50 rounded border border-gray-200 mb-4">
+                        {/* Retention Section */}
+                        <SectionHeader title="Retention" icon={Archive}/>
+                        <p className="text-sm text-gray-600 mb-4">Specifies how long to retain full and incremental
+                            backups. Cleanup runs asynchronously after each successful full backup, never deleting
+                            backups preemptively. Ensure storage capacity for at least one extra full backup beyond the
+                            retention configuration.</p>
+                        <div className="p-4 bg-gray-50 rounded border border-gray-200 mb-6">
                             <div className="grid grid-cols-2 gap-4">
-                                <Input label="Keep Full Backups" type="number" value={items[selectedId].retention?.full || ''}
+                                <Input label="Keep Full Backups" type="number"
+                                       value={items[selectedId].retention?.full || ''}
                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('backupPolicies', selectedId, 'retention', 'full', Number(e.target.value))}/>
                                 <Input label="Keep Incremental" type="number"
                                        value={items[selectedId].retention?.incremental || ''}
                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('backupPolicies', selectedId, 'retention', 'incremental', Number(e.target.value))}/>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+
+                        {/* Compression Section */}
+                        <SectionHeader title="Compression" icon={Minimize}/>
+                        <p className="text-sm text-gray-600 mb-4">Compression details (algorithm and mode). Default is
+                            no compression. Enabling compression reduces storage and network usage, but increases CPU
+                            usage during the backup. Depending on the system configuration, compression may improve or
+                            degrade overall performance.</p>
+                        <div className="grid grid-cols-2 gap-4 mb-6">
                             <Select
                                 label="Compression"
                                 value={items[selectedId].compression?.mode || "NONE"}
@@ -105,9 +120,23 @@ export const ConfigSectionPolicies = (
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateNested('backupPolicies', selectedId, 'compression', 'mode', e.target.value)}
                             />
                             {items[selectedId].compression?.mode === "ZSTD" && (
-                                <Input label="Level (1-22)" type="number" value={items[selectedId].compression?.level || ''}
-                                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('backupPolicies', selectedId, 'compression', 'level', Number(e.target.value))}/>
+                                <Slider
+                                    label="Level (1-22)"
+                                    value={items[selectedId].compression?.level || 1}
+                                    min={1}
+                                    max={22}
+                                    step={1}
+                                    onChange={(val: number) => updateNested('backupPolicies', selectedId, 'compression', 'level', val)}
+                                    description="Lower value: faster compression; Higher value: max compressed."
+                                />
                             )}
+                        </div>
+
+                        {/* Encryption Section */}
+                        <SectionHeader title="Encryption" icon={Lock}/>
+                        <p className="text-sm text-gray-600 mb-4">Encryption details (algorithm and key). Default is no
+                            encryption.</p>
+                        <div className="grid grid-cols-2 gap-4 mb-6">
                             <Select
                                 label="Encryption"
                                 value={items[selectedId].encryption?.mode || "NONE"}
@@ -117,6 +146,31 @@ export const ConfigSectionPolicies = (
                                 }, {label: "AES256", value: "AES256"}]}
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateNested('backupPolicies', selectedId, 'encryption', 'mode', e.target.value)}
                             />
+                            {items[selectedId].encryption && items[selectedId].encryption.mode !== "NONE" && (
+                                <>
+                                    <Input
+                                        label="Key Environment Variable"
+                                        type="text"
+                                        value={items[selectedId].encryption?.keyEnv || ''}
+                                        disabled={!!items[selectedId].encryption?.keyFile || !!items[selectedId].encryption?.keySecret}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('backupPolicies', selectedId, 'encryption', 'keyEnv', e.target.value)}
+                                    />
+                                    <Input
+                                        label="Key File Path"
+                                        type="text"
+                                        value={items[selectedId].encryption?.keyFile || ''}
+                                        disabled={!!items[selectedId].encryption?.keyEnv || !!items[selectedId].encryption?.keySecret}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('backupPolicies', selectedId, 'encryption', 'keyFile', e.target.value)}
+                                    />
+                                    <Input
+                                        label="Key Secret Agent Keyword"
+                                        type="text"
+                                        value={items[selectedId].encryption?.keySecret || ''}
+                                        disabled={!!items[selectedId].encryption?.keyEnv || !!items[selectedId].encryption?.keyFile}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('backupPolicies', selectedId, 'encryption', 'keySecret', e.target.value)}
+                                    />
+                                </>
+                            )}
                         </div>
                     </div>
                 ) : (
