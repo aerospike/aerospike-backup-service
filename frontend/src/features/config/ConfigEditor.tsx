@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {motion, AnimatePresence} from 'framer-motion';
 import {Clock, HardDrive, Key, Play, Server, Settings, Shield} from 'lucide-react';
 import type {DtoConfig} from '@/api';
-import {api} from '@/api';
+import {api, ResponseError} from '@/api';
 import {ConfigSectionRoutines} from './ConfigSectionRoutines';
 import {ConfigSectionClusters} from './ConfigSectionClusters';
 import {ConfigSectionStorage} from './ConfigSectionStorage';
@@ -66,7 +66,18 @@ export default function ConfigEditor({config, setConfig}: ConfigEditorProps) {
             await api.applyConfig(config);
             // Maybe show a success toast here
         } catch (e: any) {
-            setSaveError(e.message || 'Failed to save.');
+            let message = e.message || 'Failed to save.';
+            if (e instanceof ResponseError) {
+                try {
+                    const text = await e.response.text();
+                    if (text) {
+                        message = text;
+                    }
+                } catch (readErr) {
+                    console.warn("Failed to read error response body", readErr);
+                }
+            }
+            setSaveError(message);
         } finally {
             setIsSaving(false);
         }
