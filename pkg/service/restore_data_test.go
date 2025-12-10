@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/mocks"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
@@ -366,4 +367,111 @@ func (env *testRestoreEnv) expectSuccessfulClientInteraction(
 		Times(1)
 
 	return client
+}
+
+func TestRestoreByTime_CompressionAndEncryptionHandling(t *testing.T) {
+	tests := []struct {
+		name              string
+		policy            *model.RestorePolicy
+		backupEncryption  string
+		backupCompression string
+		shouldSucceed     bool
+	}{
+		{
+			name:              "sets compression policy from backup",
+			policy:            &model.RestorePolicy{},
+			backupCompression: "ZSTD",
+			shouldSucceed:     true,
+		},
+		{
+			name:             "fails when encrypted backup has no policy",
+			policy:           nil,
+			backupEncryption: "AES128",
+			shouldSucceed:    false,
+		},
+		{
+			name: "fails when encryption mode mismatches",
+			policy: &model.RestorePolicy{
+				EncryptionPolicy: &model.EncryptionPolicy{Mode: "AES256"},
+			},
+			backupEncryption: "AES128",
+			shouldSucceed:    false,
+		},
+		{
+			name: "fails when encryption key is missing",
+			policy: &model.RestorePolicy{
+				EncryptionPolicy: &model.EncryptionPolicy{Mode: "AES128"},
+			},
+			backupEncryption: "AES128",
+			shouldSucceed:    false,
+		},
+		{
+			name: "succeeds with valid encryption policy",
+			policy: &model.RestorePolicy{
+				EncryptionPolicy: &model.EncryptionPolicy{
+					Mode:   "AES128",
+					KeyEnv: ptr.Of("AES_KEY"),
+				},
+			},
+			backupEncryption: "AES128",
+			shouldSucceed:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := setupTestRestoreEnv(t)
+			defer env.ctrl.Finish()
+
+			request := &model.RestoreTimestampRequest{
+				DestinationCluster: &model.AerospikeCluster{},
+				Policy:             tt.policy,
+				Routine:            &model.BackupRoutine{Name: "test-routine"},
+				Time:               time.Now(),
+				DisableReordering:  true,
+			}
+
+			backup := model.BackupDetails{
+				BackupMetadata: model.BackupMetadata{
+					Created:     time.Now().Add(-1 * time.Hour),
+					Namespace:   "ns1",
+					Encryption:  tt.backupEncryption,
+					Compression: tt.backupCompression,
+					FileCount:   1,
+				},
+				Key:     "backup/path/test",
+				Storage: &model.LocalStorage{},
+			}
+
+			env.mockBackupReader.EXPECT().
+				GetBackups(gomock.Any(), gomock.Any()).
+				Return([]model.BackupDetails{backup}, nil).
+				Times(2)
+
+			if tt.shouldSucceed {
+				client := env.expectSuccessfulClientInteraction(t, request.DestinationCluster)
+				mockRestoreHandler := restoreexecutor.NewMockRestoreHandler(env.ctrl)
+				mockRestoreHandler.EXPECT().Wait(gomock.Any()).Return(nil).AnyTimes()
+				mockRestoreHandler.EXPECT().GetStats().Return(models.NewRestoreStats()).AnyTimes()
+				mockRestoreHandler.EXPECT().GetMetrics().Return(&models.Metrics{}).AnyTimes()
+
+				env.mockRestore.EXPECT().
+					Run(gomock.Any(), client, gomock.Any()).
+					Return(mockRestoreHandler, nil).AnyTimes()
+			}
+
+			jobID, err := env.restoreManager.RestoreByTime(context.Background(), request)
+			require.NoError(t, err)
+
+			jobStatus, err := waitForRestore(t, env.restoreManager, jobID)
+			require.NoError(t, err)
+
+			if tt.shouldSucceed {
+				assert.Equal(t, model.JobStatusDone, jobStatus.Status)
+			} else {
+				assert.Equal(t, model.JobStatusFailed, jobStatus.Status)
+				assert.NotNil(t, jobStatus.Error)
+			}
+		})
+	}
 }
