@@ -1,7 +1,7 @@
-import React, {useState} from 'react';
-import {Key, Plus, Server, Trash2} from 'lucide-react';
+import React, {useState, useEffect} from 'react';
+import {Key, Plus, Server, Trash2, Lock, Shield} from 'lucide-react';
 import {Button} from '@/components/ui/Button';
-import {Input, Select} from '@/components/ui/Inputs';
+import {Input, Select, Checkbox} from '@/components/ui/Inputs';
 import {api, DtoAerospikeCluster, DtoConfig} from '@/api';
 import {Card, SectionHeader} from './ConfigEditorShared';
 import {ConnectivityCheckButton} from '@/components/ui/ConnectivityCheckButton';
@@ -32,10 +32,47 @@ export const ConfigSectionClusters = (
     }: ConfigSectionClustersProps
 ) => {
     const items = config.aerospikeClusters || {};
+    
+    // Authentication mode state (including NONE)
+    const [authModeSelection, setAuthModeSelection] = useState<'NONE' | 'INTERNAL' | 'EXTERNAL' | 'PKI'>('NONE');
+
+    useEffect(() => {
+        if (!selectedId || !items[selectedId]) return;
+        
+        const creds = items[selectedId].credentials;
+        if (!creds) {
+            setAuthModeSelection('NONE');
+        } else {
+             // If credentials exist but authMode is undefined, default to INTERNAL in the UI selection if user/pass are present, or just INTERNAL as default.
+             // However, DtoCredentials usually has authMode set.
+             setAuthModeSelection(creds.authMode as 'INTERNAL' | 'EXTERNAL' | 'PKI' || 'INTERNAL');
+        }
+    }, [selectedId, items]);
+
+    const handleAuthModeChange = (newMode: 'NONE' | 'INTERNAL' | 'EXTERNAL' | 'PKI') => {
+        setAuthModeSelection(newMode);
+        if (!selectedId) return;
+
+        if (newMode === 'NONE') {
+            updateItem('aerospikeClusters', selectedId, 'credentials', null);
+        } else {
+            // Initialize credentials if null, or update authMode
+            const cluster = items[selectedId];
+            if (!cluster) return;
+            const currentCreds = cluster.credentials || {};
+            const newCreds = {
+                ...currentCreds,
+                authMode: newMode,
+                // Ensure user is initialized if empty
+                user: currentCreds.user || '', 
+            };
+            updateItem('aerospikeClusters', selectedId, 'credentials', newCreds);
+        }
+    };
 
     return (
         <div className="flex h-full">
-            <div className="w-1/3 border-r border-gray-800 p-4 flex flex-col">
+            <div className="w-1/3 border-r border-gray-200 p-4 flex flex-col">
                 <Button
                     className="mb-4 w-full justify-center"
                     icon={Plus}
@@ -142,21 +179,75 @@ export const ConfigSectionClusters = (
                         </div>
 
                         <SectionHeader title="Authentication" icon={Key}/>
-                        <Input label="User" value={items[selectedId].credentials?.user || ''}
-                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'user', e.target.value)}/>
-                        <Input label="Password" type="password" value={items[selectedId].credentials?.password || ''}
-                               onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'password', e.target.value)}/>
                         <Select
                             label="Auth Mode"
-                            value={items[selectedId].credentials?.authMode || "INTERNAL"}
-                            options={[{label: "INTERNAL", value: "INTERNAL"}, {
-                                label: "EXTERNAL",
-                                value: "EXTERNAL"
-                            }, {label: "PKI", value: "PKI"}]}
-                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'authMode', e.target.value)}
+                            value={authModeSelection}
+                            options={[
+                                {label: "NONE", value: "NONE"},
+                                {label: "INTERNAL", value: "INTERNAL"},
+                                {label: "EXTERNAL", value: "EXTERNAL"},
+                                {label: "PKI", value: "PKI"}
+                            ]}
+                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleAuthModeChange(e.target.value as any)}
                         />
 
+                        {authModeSelection !== 'NONE' && (
+                            <div className="pl-4 border-l-2 border-gray-100 mt-4">
+                                <Input label="User" value={items[selectedId].credentials?.user || ''}
+                                       onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'user', e.target.value)}/>
+                                
+                                <Input
+                                    label="Password"
+                                    type="password"
+                                    value={items[selectedId].credentials?.password || ''}
+                                    disabled={!!items[selectedId].credentials?.passwordPath}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'password', e.target.value)}
+                                />
+                                <Input
+                                    label="Password File Path"
+                                    value={items[selectedId].credentials?.passwordPath || ''}
+                                    disabled={!!items[selectedId].credentials?.password}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'credentials', 'passwordPath', e.target.value)}
+                                />
+                            </div>
+                        )}
+
+                        <SectionHeader title="TLS" icon={Lock}/>
+                        <p className="text-sm text-gray-600 mb-4">Transport Layer Security (TLS) configuration.</p>
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <Input label="Name" value={items[selectedId].tls?.name || ''}
+                                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'tls', 'name', e.target.value)}/>
+                            <Input label="Protocols" value={items[selectedId].tls?.protocols || ''}
+                                   placeholder="e.g. TLSv1.2"
+                                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'tls', 'protocols', e.target.value)}/>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <Input label="CA File" value={items[selectedId].tls?.caFile || ''}
+                                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'tls', 'caFile', e.target.value)}/>
+                            <Input label="CA Path" value={items[selectedId].tls?.caPath || ''}
+                                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'tls', 'caPath', e.target.value)}/>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <Input label="Cert File" value={items[selectedId].tls?.certFile || ''}
+                                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'tls', 'certFile', e.target.value)}/>
+                             <Input label="Key File" value={items[selectedId].tls?.keyFile || ''}
+                                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'tls', 'keyFile', e.target.value)}/>
+                        </div>
+                         <div className="grid grid-cols-2 gap-4 mb-6">
+                            <Input label="Key File Password" type="password" value={items[selectedId].tls?.keyFilePassword || ''}
+                                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'tls', 'keyFilePassword', e.target.value)}/>
+                            <Input label="Cipher Suite" value={items[selectedId].tls?.cipherSuite || ''}
+                                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateNested('aerospikeClusters', selectedId, 'tls', 'cipherSuite', e.target.value)}/>
+                        </div>
+
                         <SectionHeader title="Advanced"/>
+                        <div className="mb-4">
+                            <Checkbox 
+                                label="Use Services Alternate" 
+                                checked={!!items[selectedId].useServicesAlternate}
+                                onChange={(checked: boolean) => updateItem('aerospikeClusters', selectedId, 'useServicesAlternate', checked)}
+                            />
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                             <Input label="Max Parallel Scans" type="number"
                                    value={items[selectedId].maxParallelScans || ''}
