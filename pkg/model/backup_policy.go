@@ -65,7 +65,24 @@ func (p *BackupPolicy) IsSealedOrDefault() bool {
 	if p != nil && p.Sealed != nil {
 		return *p.Sealed
 	}
-	return defaultConfig.backupPolicy.Sealed != nil && *defaultConfig.backupPolicy.Sealed
+
+	return *defaultConfig.backupPolicy.Sealed
+}
+
+func (p *BackupPolicy) AllowConcurrentIncremental() bool {
+	if p != nil && p.ConcurrentIncremental != nil {
+		return *p.ConcurrentIncremental
+	}
+
+	return *defaultConfig.backupPolicy.ConcurrentIncremental
+}
+
+func (p *BackupPolicy) UseCompressionOrDefault() bool {
+	if p != nil && p.UseCompression != nil {
+		return *p.UseCompression
+	}
+
+	return *defaultConfig.backupPolicy.UseCompression
 }
 
 // CopyWithNoRecords creates a new instance of the BackupPolicy struct with identical field values.

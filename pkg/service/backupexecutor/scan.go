@@ -101,7 +101,7 @@ func scanPolicy(
 	}
 
 	scanPolicy.SocketTimeout = calculateSocketTimeout(backupRoutine, isFullBackup(timeBounds), time.Now())
-	scanPolicy.UseCompression = ptr.ValueOrZero(backupPolicy.UseCompression)
+	scanPolicy.UseCompression = backupPolicy.UseCompressionOrDefault()
 	scanPolicy.MaxConcurrentNodes = ptr.ValueOrZero(backupPolicy.MaxConcurrentNodes)
 
 	scanPolicy.MaxRetries = int(model.ScanRetryPolicy.MaxRetries)

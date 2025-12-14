@@ -43,8 +43,11 @@ var defaultConfig = struct {
 			MaxRetries:  optional.Of(5),
 			Multiplier:  ptr.Of(1.5),
 		},
-		Parallel:  ptr.Of(8),
-		FileLimit: ptr.Of(250),
+		Parallel:              ptr.Of(8),
+		FileLimit:             ptr.Of(250),
+		Sealed:                ptr.Of(false),
+		UseCompression:        ptr.Of(false),
+		ConcurrentIncremental: ptr.Of(false),
 	},
 	restorePolicy: RestorePolicy{
 		Parallel: ptr.Of(8),
