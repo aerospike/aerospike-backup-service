@@ -6,7 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections/optional"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )

@@ -19,8 +19,9 @@ func Of[T any](val T) Optional[T] {
 // nil -> Empty, non-nil -> Of(*ptr).
 func FromPtr[T any](ptr *T) Optional[T] {
 	if ptr == nil {
-		return Optional[T]{Present: false}
+		return Empty[T]()
 	}
+
 	return Optional[T]{Value: *ptr, Present: true}
 }
 
@@ -30,8 +31,8 @@ func (o Optional[T]) ToPtr() *T {
 	if !o.Present {
 		return nil
 	}
-	v := o.Value // copy value to allow taking address
-	return &v
+
+	return &o.Value
 }
 
 // Empty returns a missing value.

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections/optional"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 	"github.com/stretchr/testify/require"
 )
 

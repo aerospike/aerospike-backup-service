@@ -2,7 +2,7 @@ package dto
 
 import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections/optional"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 )
 
 // RetryPolicy defines the configuration for retry attempts in case of failures.

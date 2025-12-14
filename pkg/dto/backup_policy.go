@@ -7,7 +7,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections/optional"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 )
 
 // BackupPolicy represents a scheduled backup policy.

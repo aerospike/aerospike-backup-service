@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections/optional"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 	"github.com/aerospike/backup-go/models"
 )
 
