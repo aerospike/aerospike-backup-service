@@ -123,6 +123,9 @@ func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreT
 	if err != nil {
 		return nil, fmt.Errorf("invalid secret agent: %w", err)
 	}
+	if secretAgent == nil {
+		secretAgent = routine.SecretAgent // use routine's secret agent if not specified.
+	}
 
 	return &model.RestoreTimestampRequest{
 		DestinationCluster: cluster,
