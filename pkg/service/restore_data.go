@@ -264,15 +264,10 @@ func (r *dataRestorer) restoreByTimeSync(
 		return err
 	}
 
-	var effectiveCluster = request.DestinationCluster
-	if effectiveCluster == nil {
-		effectiveCluster = request.Routine.SourceCluster
-	}
-
-	client, err := r.clientManager.GetClient(ctx, effectiveCluster, logger)
+	client, err := r.clientManager.GetClient(ctx, request.DestinationCluster, logger)
 	if err != nil {
 		return fmt.Errorf("failed to get client for cluster %s: %w",
-			ptr.ValueOrZero(effectiveCluster.ClusterLabel), err)
+			ptr.ValueOrZero(request.DestinationCluster.ClusterLabel), err)
 	}
 	defer r.clientManager.Close(client)
 

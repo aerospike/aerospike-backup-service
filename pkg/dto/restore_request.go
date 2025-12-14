@@ -105,13 +105,18 @@ func (r *RestoreTimestampRequest) Validate(opts ...ValidationOption) error {
 }
 
 func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
+	routine, found := config.Routine(r.Routine)
+	if !found {
+		return nil, errValidationNotFound("routine", r.Routine)
+	}
+
 	cluster, err := r.DestinationClusterConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid cluster: %w", err)
 	}
-	routine, found := config.Routine(r.Routine)
-	if !found {
-		return nil, errValidationNotFound("routine", r.Routine)
+
+	if cluster == nil { // if cluster is not specified, use routine's cluster.
+		cluster = routine.SourceCluster
 	}
 
 	secretAgent, err := r.SecretAgentConfig.ToModel(config)
@@ -165,6 +170,10 @@ type DestinationClusterConfig struct {
 	Name string `json:"destination-name,omitempty" extensions:"x-nullable"`
 }
 
+func (c *DestinationClusterConfig) IsEmpty() bool {
+	return c.Name == "" && c.Cluster == nil
+}
+
 func (c *DestinationClusterConfig) Validate(opts ...ValidationOption) error {
 	if c.Cluster == nil && c.Name == "" && !slices.Contains(opts, ValidationAllowEmpty) {
 		return errValidationRequiredEither("destination", "destination-name")
@@ -182,6 +191,10 @@ func (c *DestinationClusterConfig) Validate(opts ...ValidationOption) error {
 }
 
 func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.AerospikeCluster, error) {
+	if c.IsEmpty() {
+		return nil, nil
+	}
+
 	if c.Cluster != nil {
 		return c.Cluster.ToModel(config)
 	}
