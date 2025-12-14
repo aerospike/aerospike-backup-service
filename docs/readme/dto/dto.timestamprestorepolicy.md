@@ -1,12 +1,11 @@
-## dto.RestorePolicy
-RestorePolicy represents a policy for the restore operation.
+## dto.TimestampRestorePolicy
+TimestampRestorePolicy represents a policy for the point-in-time restore operation.
 
 | Field                  | Description                                                                                                                                                                                                                                                       | Default Value |
 |------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
 | `bandwidth`            | Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in MiB/s.<br>Default: no limit.                                                                                                                                           |               |
 | `batch-size`           | The max allowed number of records per an async batch write call.<br>Only applicable when using batch writes.                                                                                                                                                      | `128`         |
 | `bin-list`             | The bins to restore (optional, an empty list implies restoring all bins).                                                                                                                                                                                         |               |
-| `compression`          | Compression details (algorithm). Default is no compression.<br>See: [dto.RestoreCompressionPolicy](dto.restorecompressionpolicy.md)                                                                                                                               |               |
 | `disable-batch-writes` | Disables the use of batch writes when restoring records to the Aerospike cluster.<br>By default, the cluster is checked for batch write support.                                                                                                                  | `false`       |
 | `encryption`           | Encryption details (algorithm and key). Default is no encryption.<br>See: [dto.EncryptionPolicy](dto.encryptionpolicy.md)                                                                                                                                         |               |
 | `extra-ttl`            | Amount of extra time-to-live to add to records that have expirable void-times.<br>Must be set in seconds.                                                                                                                                                         | `0`           |
