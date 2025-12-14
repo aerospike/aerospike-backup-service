@@ -76,14 +76,18 @@ func TestRestorePolicy_Validate_Duplicates(t *testing.T) {
 		{
 			name: "duplicate set-list",
 			policy: &RestorePolicy{
-				SetList: []string{"set1", "set1"},
+				BaseRestorePolicy: BaseRestorePolicy{
+					SetList: []string{"set1", "set1"},
+				},
 			},
 			wantErr: "set-list contains duplicate value",
 		},
 		{
 			name: "duplicate bin-list",
 			policy: &RestorePolicy{
-				BinList: []string{"bin1", "bin1"},
+				BaseRestorePolicy: BaseRestorePolicy{
+					BinList: []string{"bin1", "bin1"},
+				},
 			},
 			wantErr: "bin-list contains duplicate value",
 		},

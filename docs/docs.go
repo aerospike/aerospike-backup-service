@@ -2562,6 +2562,21 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.RestoreCompressionPolicy": {
+            "description": "RestoreCompressionPolicy contains restore compression information.",
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "description": "The compression mode to be used (default is NONE).",
+                    "type": "string",
+                    "default": "NONE",
+                    "enum": [
+                        "NONE",
+                        "ZSTD"
+                    ]
+                }
+            }
+        },
         "dto.RestoreJobStatus": {
             "description": "RestoreJobStatus represents restore job status.",
             "type": "object",
@@ -2703,10 +2718,10 @@ const docTemplate = `{
                     ]
                 },
                 "compression": {
-                    "description": "Compression details (algorithm). Default is no compression.\nThis field is ignored during point-in-time restores as the system automatically detects compression.",
+                    "description": "Compression details (algorithm). Default is no compression.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/dto.CompressionPolicy"
+                            "$ref": "#/definitions/dto.RestoreCompressionPolicy"
                         }
                     ]
                 },
@@ -2909,7 +2924,7 @@ const docTemplate = `{
                     "description": "Restore policy to use in the operation.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/dto.RestorePolicy"
+                            "$ref": "#/definitions/dto.TimestampRestorePolicy"
                         }
                     ]
                 },
@@ -3387,6 +3402,143 @@ const docTemplate = `{
                     "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",
                     "type": "string",
                     "default": "TLSv1.2"
+                }
+            }
+        },
+        "dto.TimestampRestorePolicy": {
+            "description": "TimestampRestorePolicy represents a policy for the point-in-time restore operation.",
+            "type": "object",
+            "properties": {
+                "bandwidth": {
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given I/O bandwidth in MiB/s.\nDefault: no limit.",
+                    "type": "integer",
+                    "x-nullable": true,
+                    "example": 50000
+                },
+                "batch-size": {
+                    "description": "The max allowed number of records per an async batch write call.\nOnly applicable when using batch writes.",
+                    "type": "integer",
+                    "default": 128,
+                    "example": 32
+                },
+                "bin-list": {
+                    "description": "The bins to restore (optional, an empty list implies restoring all bins).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "x-nullable": true,
+                    "example": [
+                        "bin1",
+                        "bin2"
+                    ]
+                },
+                "disable-batch-writes": {
+                    "description": "Disables the use of batch writes when restoring records to the Aerospike cluster.\nBy default, the cluster is checked for batch write support.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "encryption": {
+                    "description": "Encryption details (algorithm and key). Default is no encryption.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.EncryptionPolicy"
+                        }
+                    ]
+                },
+                "extra-ttl": {
+                    "description": "Amount of extra time-to-live to add to records that have expirable void-times.\nMust be set in seconds.",
+                    "type": "integer",
+                    "default": 0,
+                    "example": 86400
+                },
+                "max-async-batches": {
+                    "description": "The max number of outstanding async record batch write calls at a time.",
+                    "type": "integer",
+                    "default": 128,
+                    "example": 32
+                },
+                "namespace": {
+                    "description": "Namespace optionally specifies an alternative namespace name for the restore operation.\nBy default, the data is restored to the namespace from which it was taken.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RestoreNamespace"
+                        }
+                    ]
+                },
+                "no-generation": {
+                    "description": "Records from backups take precedence. This option disables the generation check.\nWith this option, records from the backup always overwrite records that already exist in\nthe namespace, regardless of generation numbers.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "no-indexes": {
+                    "description": "Do not restore any secondary index definitions.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "no-records": {
+                    "description": "Do not restore any record data (metadata or bin data).\nBy default, record data, secondary index definitions, and UDF modules will be restored.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "no-udfs": {
+                    "description": "Do not restore any UDF modules.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "parallel": {
+                    "description": "The number of concurrent record readers from backup files.\nThis value controls the level of parallelism used by the backup service when\nreading backup files.\nThe optimal value depends on hardware and network configuration.",
+                    "type": "integer",
+                    "default": 8,
+                    "example": 8
+                },
+                "replace": {
+                    "description": "Replace records. This controls how records from the backup overwrite existing records in\nthe namespace. By default, restoring a record from a backup only replaces the bins\ncontained in the backup; all other bins of an existing record remain untouched.",
+                    "type": "boolean",
+                    "default": false
+                },
+                "retry-policy": {
+                    "description": "Configuration of retries for each restore write operation.\nIf nil, the default policy is used (5 retries with a one-minute delay between attempts).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.RetryPolicy"
+                        }
+                    ]
+                },
+                "set-list": {
+                    "description": "The sets to restore (optional, an empty list implies restoring all sets).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "x-nullable": true,
+                    "example": [
+                        "set1",
+                        "set2"
+                    ]
+                },
+                "socket-timeout": {
+                    "description": "Timeout (ms) for Aerospike commands to write records, create indexes and create UDFs.\nSocket timeout in milliseconds. Default is 10 minutes. If this value is 0, it is set to total-timeout.\nIf both are 0, there is no socket idle time limit.",
+                    "type": "integer",
+                    "default": 60000,
+                    "example": 1000
+                },
+                "total-timeout": {
+                    "description": "Total socket timeout in milliseconds. Default is 0, that is, no timeout.",
+                    "type": "integer",
+                    "default": 0,
+                    "example": 2000
+                },
+                "tps": {
+                    "description": "Throttles read operations from the backup file(s) to not exceed the given number of transactions per second.\nDefault: no limit.",
+                    "type": "integer",
+                    "x-nullable": true,
+                    "example": 4000
+                },
+                "unique": {
+                    "description": "Existing records take precedence. With this option, only records that do not exist in\nthe namespace are restored, regardless of generation numbers. If a record exists in\nthe namespace, the record from the backup is ignored.",
+                    "type": "boolean",
+                    "default": false
                 }
             }
         }

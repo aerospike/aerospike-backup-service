@@ -259,7 +259,7 @@ func TestRestoreTimestampRequest_Validate(t *testing.T) {
 	validCluster := &AerospikeCluster{
 		SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 	}
-	validPolicy := &RestorePolicy{}
+	validPolicy := &TimestampRestorePolicy{}
 
 	tests := []struct {
 		name    string
@@ -476,7 +476,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 				},
 				Time:    1739538000000,
 				Routine: "daily",
-				Policy:  &RestorePolicy{},
+				Policy:  &TimestampRestorePolicy{},
 			},
 			want: &model.RestoreTimestampRequest{
 				DestinationCluster: cluster,

@@ -7,9 +7,8 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 )
 
-// RestorePolicy represents a policy for the restore operation.
-// @Description RestorePolicy represents a policy for the restore operation.
-type RestorePolicy struct {
+// BaseRestorePolicy represents the common policy for restore operations.
+type BaseRestorePolicy struct {
 	// The number of concurrent record readers from backup files.
 	// This value controls the level of parallelism used by the backup service when
 	// reading backup files.
@@ -63,9 +62,6 @@ type RestorePolicy struct {
 	Tps *int `json:"tps,omitempty" example:"4000" extensions:"x-nullable"`
 	// Encryption details (algorithm and key). Default is no encryption.
 	EncryptionPolicy *EncryptionPolicy `yaml:"encryption,omitempty" json:"encryption,omitempty"`
-	// Compression details (algorithm). Default is no compression.
-	// This field is ignored during point-in-time restores as the system automatically detects compression.
-	CompressionPolicy *CompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
 	// Configuration of retries for each restore write operation.
 	// If nil, the default policy is used (5 retries with a one-minute delay between attempts).
 	RetryPolicy *RetryPolicy `yaml:"retry-policy,omitempty" json:"retry-policy,omitempty"`
@@ -74,8 +70,22 @@ type RestorePolicy struct {
 	ExtraTTL *int64 `yaml:"extra-ttl" json:"extra-ttl,omitempty" example:"86400" default:"0"`
 }
 
-// Validate validates the restore policy.
-func (p *RestorePolicy) Validate() error {
+// RestorePolicy represents a policy for the restore operation.
+// @Description RestorePolicy represents a policy for the restore operation.
+type RestorePolicy struct {
+	BaseRestorePolicy
+	// Compression details (algorithm). Default is no compression.
+	CompressionPolicy *RestoreCompressionPolicy `yaml:"compression,omitempty" json:"compression,omitempty"`
+}
+
+// TimestampRestorePolicy represents a policy for the point-in-time restore operation.
+// @Description TimestampRestorePolicy represents a policy for the point-in-time restore operation.
+type TimestampRestorePolicy struct {
+	BaseRestorePolicy
+}
+
+// Validate validates the base restore policy.
+func (p *BaseRestorePolicy) Validate() error {
 	if p == nil {
 		return nil
 	}
@@ -121,9 +131,6 @@ func (p *RestorePolicy) Validate() error {
 	if err := p.EncryptionPolicy.Validate(); err != nil {
 		return err
 	}
-	if err := p.CompressionPolicy.Validate(); err != nil {
-		return err
-	}
 	if err := p.RetryPolicy.Validate(); err != nil {
 		return fmt.Errorf("retry policy invalid: %w", err)
 	}
@@ -134,7 +141,29 @@ func (p *RestorePolicy) Validate() error {
 	return nil
 }
 
-func (p *RestorePolicy) validateExistingRecordPolicy() error {
+// Validate validates the restore policy.
+func (p *RestorePolicy) Validate() error {
+	if p == nil {
+		return nil
+	}
+	if err := p.BaseRestorePolicy.Validate(); err != nil {
+		return err
+	}
+	if err := p.CompressionPolicy.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Validate validates the timestamp restore policy.
+func (p *TimestampRestorePolicy) Validate() error {
+	if p == nil {
+		return nil
+	}
+	return p.BaseRestorePolicy.Validate()
+}
+
+func (p *BaseRestorePolicy) validateExistingRecordPolicy() error {
 	if p.Replace != nil && *p.Replace && p.Unique != nil && *p.Unique {
 		return errValidationMutuallyExclusive("replace", "unique")
 	}
@@ -145,7 +174,7 @@ func (p *RestorePolicy) validateExistingRecordPolicy() error {
 	return nil
 }
 
-func (p *RestorePolicy) ToModel() *model.RestorePolicy {
+func (p *BaseRestorePolicy) ToModel() *model.RestorePolicy {
 	if p == nil {
 		return &model.RestorePolicy{}
 	}
@@ -169,8 +198,24 @@ func (p *RestorePolicy) ToModel() *model.RestorePolicy {
 		Bandwidth:          p.Bandwidth,
 		Tps:                p.Tps,
 		EncryptionPolicy:   p.EncryptionPolicy.ToModel(),
-		CompressionPolicy:  p.CompressionPolicy.ToModel(),
 		RetryPolicy:        p.RetryPolicy.ToModel(),
 		ExtraTTL:           p.ExtraTTL,
 	}
+}
+
+func (p *RestorePolicy) ToModel() *model.RestorePolicy {
+	if p == nil {
+		return nil
+	}
+
+	m := p.BaseRestorePolicy.ToModel()
+	m.CompressionPolicy = p.CompressionPolicy.ToModel()
+	return m
+}
+
+func (p *TimestampRestorePolicy) ToModel() *model.RestorePolicy {
+	if p == nil {
+		return nil
+	}
+	return p.BaseRestorePolicy.ToModel()
 }

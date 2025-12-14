@@ -42,7 +42,7 @@ type RestoreTimestampRequest struct {
 	DestinationClusterConfig
 	*SecretAgentConfig
 	// Restore policy to use in the operation.
-	Policy *RestorePolicy `json:"policy,omitempty"`
+	Policy *TimestampRestorePolicy `json:"policy,omitempty"`
 	// Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.
 	Time int64 `json:"time" format:"int64" example:"1739538000000" validate:"required" minimum:"1000000000000"`
 	// The backup routine name.
