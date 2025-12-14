@@ -2147,7 +2147,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "level": {
-                    "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).\nThis field is ignored if the compression mode is NONE.\nThis field is ignored during restoration.",
+                    "description": "The compression level to use.\nAlgorithm-specific; for zstd: from -1 (fastest) to 22 (best compression).\nThis field is ignored if the compression mode is NONE.",
                     "type": "integer",
                     "default": 0,
                     "maximum": 22,
