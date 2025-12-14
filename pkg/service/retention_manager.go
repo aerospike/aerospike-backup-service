@@ -40,7 +40,7 @@ func NewBackupRetentionManager(
 
 func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routine *model.BackupRoutine) error {
 	policy := routine.BackupPolicy.RetentionPolicy
-	if policy == nil || (!policy.FullBackups.Present && !policy.IncrBackups.Present) {
+	if policy.IsEmpty() {
 		return nil // Retention policy is not enabled, do nothing.
 	}
 

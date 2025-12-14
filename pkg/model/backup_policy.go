@@ -154,3 +154,11 @@ type RetentionPolicy struct {
 	// Note: M must not exceed the value set for FullBackups (N).
 	IncrBackups optional.Optional[int]
 }
+
+func (r *RetentionPolicy) IsEmpty() bool {
+	if r == nil {
+		return true
+	}
+
+	return !r.FullBackups.Present && !r.IncrBackups.Present
+}
