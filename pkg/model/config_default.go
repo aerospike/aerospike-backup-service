@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/aerospike/backup-go/models"
 )
@@ -38,18 +39,21 @@ var defaultConfig = struct {
 	},
 	backupPolicy: BackupPolicy{
 		RetryPolicy: &RetryPolicy{
-			BaseTimeout: ptr.Of(1 * time.Minute),
-			MaxRetries:  ptr.Of(5),
+			BaseTimeout: optional.Of(1 * time.Minute),
+			MaxRetries:  optional.Of(5),
 			Multiplier:  ptr.Of(1.5),
 		},
-		Parallel:  ptr.Of(8),
-		FileLimit: ptr.Of(250),
+		Parallel:              ptr.Of(8),
+		FileLimit:             ptr.Of(250),
+		Sealed:                ptr.Of(false),
+		UseCompression:        ptr.Of(false),
+		ConcurrentIncremental: ptr.Of(false),
 	},
 	restorePolicy: RestorePolicy{
 		Parallel: ptr.Of(8),
 		RetryPolicy: &RetryPolicy{
-			BaseTimeout: ptr.Of(2 * time.Second),
-			MaxRetries:  ptr.Of(5),
+			BaseTimeout: optional.Of(2 * time.Second),
+			MaxRetries:  optional.Of(5),
 			Multiplier:  ptr.Of(2.0),
 		},
 		MaxAsyncBatches: ptr.Of(128),
@@ -64,8 +68,8 @@ var defaultConfig = struct {
 		ResultQueueSize: ptr.Of(256),
 		AckQueueSize:    ptr.Of(256),
 		InfoRetryPolicy: &RetryPolicy{
-			BaseTimeout: ptr.Of(2 * time.Second),
-			MaxRetries:  ptr.Of(5),
+			BaseTimeout: optional.Of(2 * time.Second),
+			MaxRetries:  optional.Of(5),
 			Multiplier:  ptr.Of(2.0),
 		},
 	},

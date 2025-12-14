@@ -40,7 +40,7 @@ func NewBackupRetentionManager(
 
 func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routine *model.BackupRoutine) error {
 	policy := routine.BackupPolicy.RetentionPolicy
-	if policy == nil || (policy.FullBackups == nil && policy.IncrBackups == nil) {
+	if policy.IsEmpty() {
 		return nil // Retention policy is not enabled, do nothing.
 	}
 
@@ -56,15 +56,18 @@ func (e *RetentionManagerImpl) deleteOldBackups(ctx context.Context, routine *mo
 	}
 
 	timestamps := getTimestamps(fullBackups)
-	if policy.FullBackups != nil {
-		if err := e.deleteFullBackups(ctx, timestamps, *policy.FullBackups, routine, fullBackups); err != nil {
+	if policy.FullBackups.Present {
+		if err := e.deleteFullBackups(ctx, timestamps, policy.FullBackups.Value, routine, fullBackups); err != nil {
 			return fmt.Errorf("failed to delete excess full backups: %w", err)
 		}
 	}
 
-	effectiveIncrementalRetention := policy.GetIncrementalRetentionCount()
-	if effectiveIncrementalRetention != nil {
-		if err := e.deleteIncrementalBackups(ctx, timestamps, *effectiveIncrementalRetention, routine); err != nil {
+	// Incremental backups cannot exist without their corresponding full backup.
+	// If retention policy is not set for incremental (meaning keep all incrementals),
+	// delete them based on full backups.
+	effectiveIncrementalRetention := policy.IncrBackups.Or(policy.FullBackups)
+	if effectiveIncrementalRetention.Present {
+		if err := e.deleteIncrementalBackups(ctx, timestamps, effectiveIncrementalRetention.Value, routine); err != nil {
 			return fmt.Errorf("failed to delete excess incremental backups: %w", err)
 		}
 	}

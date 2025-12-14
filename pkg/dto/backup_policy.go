@@ -7,6 +7,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
 )
 
 // BackupPolicy represents a scheduled backup policy.
@@ -286,8 +287,8 @@ func (rp *RetentionPolicy) toModel() *model.RetentionPolicy {
 	}
 
 	return &model.RetentionPolicy{
-		FullBackups: rp.FullBackups,
-		IncrBackups: rp.IncrBackups,
+		FullBackups: optional.FromPtr(rp.FullBackups),
+		IncrBackups: optional.FromPtr(rp.IncrBackups),
 	}
 }
 
@@ -297,7 +298,7 @@ func newRetentionPolicyFromModel(m *model.RetentionPolicy) *RetentionPolicy {
 	}
 
 	return &RetentionPolicy{
-		FullBackups: m.FullBackups,
-		IncrBackups: m.IncrBackups,
+		FullBackups: m.FullBackups.ToPtr(),
+		IncrBackups: m.IncrBackups.ToPtr(),
 	}
 }

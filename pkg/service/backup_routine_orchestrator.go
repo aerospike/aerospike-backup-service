@@ -242,8 +242,7 @@ func (h *BackupRoutineOrchestrator) skipIncrementalBackup(now time.Time) bool {
 	}
 
 	// Concurrent incremental are only allowed when explicitly set (default is false).
-	if allowConcurrent := h.routine.BackupPolicy.ConcurrentIncremental != nil &&
-		*h.routine.BackupPolicy.ConcurrentIncremental; allowConcurrent {
+	if h.routine.BackupPolicy.AllowConcurrentIncremental() {
 		return false
 	}
 
