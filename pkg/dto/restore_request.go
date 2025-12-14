@@ -3,6 +3,7 @@ package dto
 import (
 	"fmt"
 	"io"
+	"slices"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
@@ -80,7 +81,8 @@ func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
 
 // Validate validates the restore operation request.
 func (r *RestoreTimestampRequest) Validate(opts ...ValidationOption) error {
-	if err := r.DestinationClusterConfig.Validate(opts...); err != nil {
+	// If no cluster is specified, routine's cluster will be used.
+	if err := r.DestinationClusterConfig.Validate(append(opts, ValidationAllowEmpty)...); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
@@ -164,7 +166,7 @@ type DestinationClusterConfig struct {
 }
 
 func (c *DestinationClusterConfig) Validate(opts ...ValidationOption) error {
-	if c.Cluster == nil && c.Name == "" {
+	if c.Cluster == nil && c.Name == "" && !slices.Contains(opts, ValidationAllowEmpty) {
 		return errValidationRequiredEither("destination", "destination-name")
 	}
 	if c.Cluster != nil && c.Name != "" {

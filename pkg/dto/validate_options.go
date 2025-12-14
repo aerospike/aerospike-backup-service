@@ -5,4 +5,5 @@ type ValidationOption int
 
 const (
 	ValidationSkipTLSFiles ValidationOption = iota
+	ValidationAllowEmpty
 )

@@ -57,6 +57,12 @@ func TestDestinationClusterConfig_Validate(t *testing.T) {
 	}
 }
 
+func TestDestinationClusterConfig_Validate_AllowEmpty(t *testing.T) {
+	config := DestinationClusterConfig{}
+	err := config.Validate(ValidationAllowEmpty)
+	require.NoError(t, err)
+}
+
 func TestStorageConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -313,7 +319,6 @@ func TestRestoreTimestampRequest_Validate(t *testing.T) {
 				Policy:  validPolicy,
 				Routine: "daily",
 			},
-			err: errRequiredEither,
 		},
 		{
 			name: "valid request",
