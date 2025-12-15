@@ -61,7 +61,7 @@ func (a *AerospikeCluster) Validate(opts ...ValidationOption) error {
 		return err
 	}
 
-	if err := a.Credentials.Validate(); err != nil {
+	if err := a.Credentials.Validate(opts...); err != nil {
 		return fmt.Errorf("credentials validation error: %w", err)
 	}
 
@@ -209,7 +209,7 @@ func (c *Credentials) fromModel(m *model.Credentials, config *model.BackupConfig
 }
 
 // Validate validates the credentials configuration.
-func (c *Credentials) Validate() error {
+func (c *Credentials) Validate(opts ...ValidationOption) error {
 	if c == nil {
 		return nil
 	}
@@ -231,7 +231,7 @@ func (c *Credentials) Validate() error {
 		return fmt.Errorf("auth-mode %q incorrect, should be one of: INTERNAL,EXTERNAL,PKI", *c.AuthMode)
 	}
 	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
-	return c.SecretAgentConfig.validate()
+	return c.SecretAgentConfig.validate(opts...)
 }
 
 func (c *Credentials) toModel(config *model.Config) (*model.Credentials, error) {

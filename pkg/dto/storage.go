@@ -23,7 +23,7 @@ type Storage struct {
 }
 
 // Validate checks if the Storage is valid.
-func (s *Storage) Validate() error {
+func (s *Storage) Validate(opts ...ValidationOption) error {
 	if s == nil {
 		return errors.New("storage is not specified")
 	}
@@ -54,7 +54,7 @@ func (s *Storage) Validate() error {
 		return fmt.Errorf("multiple storage types specified (%d). Exactly one storage type should be specified", count)
 	}
 
-	return validStorage.Validate()
+	return validStorage.Validate(opts...)
 }
 
 // ToModel converts the Storage DTO to its corresponding model.

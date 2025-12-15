@@ -72,7 +72,7 @@ func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
 	if err := r.Policy.Validate(); err != nil {
 		return err
 	}
-	if err := r.StorageConfig.Validate(); err != nil {
+	if err := r.StorageConfig.Validate(opts...); err != nil {
 		return err
 	}
 
@@ -221,7 +221,7 @@ type StorageConfig struct {
 	Name string `json:"source-name,omitempty" extensions:"x-nullable"`
 }
 
-func (c *StorageConfig) Validate() error {
+func (c *StorageConfig) Validate(opts ...ValidationOption) error {
 	if c.Storage == nil && c.Name == "" {
 		return errValidationRequiredEither("source", "source-name")
 	}
@@ -229,7 +229,7 @@ func (c *StorageConfig) Validate() error {
 		return errValidationMutuallyExclusive("source", "source-name")
 	}
 	if c.Storage != nil {
-		if err := c.Storage.Validate(); err != nil {
+		if err := c.Storage.Validate(opts...); err != nil {
 			return err
 		}
 	}
