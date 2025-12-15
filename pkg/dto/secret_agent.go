@@ -82,7 +82,7 @@ func (s *SecretAgent) ToModel() *model.SecretAgent {
 		Address:        s.Address,
 		Port:           s.Port.ToModel(),
 		Timeout:        s.Timeout,
-		ClientTLS:      *s.ClientTLS.ToModel(),
+		ClientTLS:      s.ClientTLS.ToModel(),
 		IsBase64:       s.IsBase64,
 	}
 }

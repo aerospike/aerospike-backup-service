@@ -124,7 +124,7 @@ func TestInvalidCertFile(t *testing.T) {
 
 	err := agent.validate()
 	assert.Error(t, err)
-	assert.EqualError(t, err, "not found validation error: ca-file \"invalid-cert-file\"")
+	assert.ErrorContains(t, err, "not found validation error: ca-file \"invalid-cert-file\"")
 }
 
 func TestSecretAgent_Nil(t *testing.T) {

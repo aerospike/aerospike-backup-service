@@ -64,12 +64,12 @@ func (c *ClientTLS) Validate(opts ...ValidationOption) error {
 	return nil
 }
 
-func (c *ClientTLS) ToModel() *model.ClientTLS {
+func (c *ClientTLS) ToModel() model.ClientTLS {
 	if c == nil {
-		return nil
+		return model.ClientTLS{}
 	}
 
-	return &model.ClientTLS{
+	return model.ClientTLS{
 		CAFile:   c.CAFile,
 		Name:     c.Name,
 		Certfile: c.Certfile,

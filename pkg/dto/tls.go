@@ -93,7 +93,7 @@ func (t *TLS) toModel() *model.TLS {
 	}
 
 	return &model.TLS{
-		ClientTLS:       *t.ToModel(),
+		ClientTLS:       t.ToModel(),
 		CAPath:          t.CAPath,
 		Protocols:       t.Protocols,
 		CipherSuite:     t.CipherSuite,
