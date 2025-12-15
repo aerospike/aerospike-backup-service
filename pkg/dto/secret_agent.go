@@ -137,7 +137,7 @@ func (s *SecretAgent) validate(opts ...ValidationOption) error {
 	}
 
 	if err := s.Validate(opts...); err != nil {
-		return err
+		return fmt.Errorf("client TLS validation: %w", err)
 	}
 
 	if s.ConnectionType == "" {
