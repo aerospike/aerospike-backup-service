@@ -136,7 +136,7 @@ func (s *SecretAgent) validate(opts ...ValidationOption) error {
 		return errValidationNegative("timeout", *s.Timeout)
 	}
 
-	if err := s.ClientTLS.Validate(opts...); err != nil {
+	if err := s.Validate(opts...); err != nil {
 		return err
 	}
 
