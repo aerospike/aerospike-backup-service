@@ -3,6 +3,8 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -75,6 +77,7 @@ func getAzureClient(_ context.Context, a *model.AzureStorage) (*azblob.Client, e
 func clientFromSharedKey(
 	endpoint string, auth model.AzureSharedKeyAuth, sa *model.SecretAgent,
 ) (*azblob.Client, error) {
+	slog.Info("Using Shared key Azure credentials", slog.Any("auth", auth))
 	accountKey, err := sa.Read(auth.AccountKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve account key from secret agent: %w", err)
@@ -89,10 +92,19 @@ func clientFromSharedKey(
 		return nil, fmt.Errorf("failed to create Azure Blob client with shared key: %w", err)
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err = client.ServiceClient().GetAccountInfo(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("azure blob storage connectivity check failed: %w", err)
+	}
+
 	return client, nil
 }
 
 func clientFromAD(endpoint string, auth model.AzureADAuth, sa *model.SecretAgent) (*azblob.Client, error) {
+	slog.Info("Using AD Azure credentials", slog.Any("auth", auth))
 	clientSecret, err := sa.Read(auth.ClientSecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve client-secret from secret agent: %w", err)
@@ -123,10 +135,19 @@ func clientFromAD(endpoint string, auth model.AzureADAuth, sa *model.SecretAgent
 		return nil, fmt.Errorf("failed to create Azure Blob client with AAD: %w", err)
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err = client.ServiceClient().GetAccountInfo(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("azure blob storage connectivity check failed: %w", err)
+	}
+
 	return client, nil
 }
 
 func clientWithDefaultCredential(endpoint string) (*azblob.Client, error) {
+	slog.Info("Using default Azure credentials", slog.String("endpoint", endpoint))
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to obtain default Azure credentials: %w", err)
@@ -135,6 +156,14 @@ func clientWithDefaultCredential(endpoint string) (*azblob.Client, error) {
 	client, err := azblob.NewClient(endpoint, cred, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob client with default credentials: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err = client.ServiceClient().GetAccountInfo(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("azure blob storage connectivity check failed: %w", err)
 	}
 
 	return client, nil
