@@ -114,7 +114,7 @@ func TestNewTLSConfig(t *testing.T) {
 
 	t.Run("With Server Name", func(t *testing.T) {
 		serverName := "my.test.server"
-		cfg, err := NewTLSConfig(&model.TLS{Name: &serverName})
+		cfg, err := NewTLSConfig(&model.TLS{ClientTLS: model.ClientTLS{Name: &serverName}})
 		require.NoError(t, err)
 		assert.Equal(t, serverName, cfg.ServerName)
 	})
@@ -124,7 +124,10 @@ func TestNewTLSConfig(t *testing.T) {
 		require.NoError(t, os.Mkdir(caSubDir, 0755))
 		require.NoError(t, os.WriteFile(filepath.Join(caSubDir, "ca.crt"), caCertPEM, 0600))
 
-		cfg, err := NewTLSConfig(&model.TLS{CAFile: &caCertFile, CAPath: &caSubDir})
+		cfg, err := NewTLSConfig(&model.TLS{
+			ClientTLS: model.ClientTLS{CAFile: &caCertFile},
+			CAPath:    &caSubDir,
+		})
 		require.NoError(t, err)
 		//noinspection GoDeprecation
 		assert.NotEmpty(t, cfg.RootCAs.Subjects(), "RootCAs should be populated") //nolint:staticcheck
@@ -177,8 +180,10 @@ func TestNewTLSConfig(t *testing.T) {
 
 	t.Run("With Client Certs", func(t *testing.T) {
 		cfg, err := NewTLSConfig(&model.TLS{
-			Certfile: &serverCertFile,
-			Keyfile:  &serverKeyFile,
+			ClientTLS: model.ClientTLS{
+				Certfile: &serverCertFile,
+				Keyfile:  &serverKeyFile,
+			},
 		})
 		require.NoError(t, err)
 		assert.Len(t, cfg.Certificates, 1)
@@ -187,8 +192,10 @@ func TestNewTLSConfig(t *testing.T) {
 	t.Run("With Encrypted Client Key", func(t *testing.T) {
 		t.Run("Correct Password", func(t *testing.T) {
 			cfg, err := NewTLSConfig(&model.TLS{
-				Certfile:        &serverCertFile,
-				Keyfile:         &encKeyFile,
+				ClientTLS: model.ClientTLS{
+					Certfile: &serverCertFile,
+					Keyfile:  &encKeyFile,
+				},
 				KeyfilePassword: &encKeyPassword,
 			})
 			require.NoError(t, err)
@@ -198,8 +205,10 @@ func TestNewTLSConfig(t *testing.T) {
 		t.Run("Wrong Password", func(t *testing.T) {
 			wrongPass := "wrong"
 			_, err := NewTLSConfig(&model.TLS{
-				Certfile:        &serverCertFile,
-				Keyfile:         &encKeyFile,
+				ClientTLS: model.ClientTLS{
+					Certfile: &serverCertFile,
+					Keyfile:  &encKeyFile,
+				},
 				KeyfilePassword: &wrongPass,
 			})
 			assert.Error(t, err, "Should fail with wrong password")
@@ -207,8 +216,10 @@ func TestNewTLSConfig(t *testing.T) {
 
 		t.Run("No Password", func(t *testing.T) {
 			_, err := NewTLSConfig(&model.TLS{
-				Certfile: &serverCertFile,
-				Keyfile:  &encKeyFile,
+				ClientTLS: model.ClientTLS{
+					Certfile: &serverCertFile,
+					Keyfile:  &encKeyFile,
+				},
 			})
 			assert.Error(t, err, "Should fail when no password is provided for an encrypted key")
 		})

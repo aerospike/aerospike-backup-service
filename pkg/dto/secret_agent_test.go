@@ -117,12 +117,14 @@ func TestInvalidCertFile(t *testing.T) {
 	agent := &SecretAgent{
 		Address:        "localhost",
 		ConnectionType: "tcp",
-		TLSCAString:    ptr.Of("invalid-cert-file"),
+		ClientTLS: ClientTLS{
+			CAFile: ptr.Of("invalid-cert-file"),
+		},
 	}
 
 	err := agent.validate()
 	assert.Error(t, err)
-	assert.EqualError(t, err, "not found validation error: tls-ca-file \"invalid-cert-file\"")
+	assert.EqualError(t, err, "not found validation error: ca-file \"invalid-cert-file\"")
 }
 
 func TestSecretAgent_Nil(t *testing.T) {

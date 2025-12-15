@@ -110,10 +110,12 @@ func TestInvalidTlsFile(t *testing.T) {
 	cluster := config.AerospikeClusters["cluster1"]
 	cluster.SeedNodes[0].TLSName = "tls name"
 	cluster.TLS = &TLS{
-		Name:     ptr.Of("tls name"),
-		Keyfile:  ptr.Of("path to key file"),
-		Certfile: ptr.Of("path to cert file"),
-		CAFile:   ptr.Of("path to ca file"),
+		ClientTLS: ClientTLS{
+			Name:     ptr.Of("tls name"),
+			Keyfile:  ptr.Of("path to key file"),
+			Certfile: ptr.Of("path to cert file"),
+			CAFile:   ptr.Of("path to ca file"),
+		},
 	}
 
 	_, err := config.ToModel()

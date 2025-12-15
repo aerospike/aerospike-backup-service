@@ -48,7 +48,7 @@ func TestMakeRestoreConfig(t *testing.T) {
 			Address:        "127.0.0.1",
 			Port:           ptr.Of(model.Port(1234)),
 			Timeout:        ptr.Of(2000),
-			TLSCAString:    ptr.Of("ca-cert"),
+			ClientTLS:      model.ClientTLS{CAFile: ptr.Of("ca-cert")},
 			IsBase64:       ptr.Of(true),
 		},
 	}

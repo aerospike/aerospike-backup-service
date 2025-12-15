@@ -13,8 +13,7 @@ import (
 //
 //nolint:lll
 type TLS struct {
-	// Path to a trusted CA certificate file.
-	CAFile *string `yaml:"ca-file,omitempty" json:"ca-file,omitempty" example:"/path/to/cafile.pem" extensions:"x-nullable"`
+	ClientTLS `yaml:",inline"`
 	// Path to a directory of trusted CA certificates.
 	CAPath *string `yaml:"ca-path,omitempty" json:"ca-path,omitempty" example:"/path/to/ca" extensions:"x-nullable"`
 	// TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.
@@ -22,16 +21,8 @@ type TLS struct {
 	// TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.
 	CipherSuite *string `yaml:"cipher-suite,omitempty" json:"cipher-suite,omitempty" example:"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA" extensions:"x-nullable"`
 
-	// mTLS configuration:
-
-	// The default TLS name used to authenticate each TLS socket connection.
-	Name *string `yaml:"name,omitempty" json:"name,omitempty" example:"tls-name" extensions:"x-nullable"`
-	// Path to the key for mutual authentication (if Aerospike cluster supports it).
-	Keyfile *string `yaml:"key-file,omitempty" json:"key-file,omitempty" example:"/path/to/keyfile.pem" extensions:"x-nullable"`
 	// Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).
 	KeyfilePassword *string `yaml:"key-file-password,omitempty" json:"key-file-password,omitempty" example:"file:/path/to/password" extensions:"x-nullable"`
-	// Path to the chain file for mutual authentication (if Aerospike Cluster supports it).
-	Certfile *string `yaml:"cert-file,omitempty" json:"cert-file,omitempty" example:"/path/to/certfile.pem" extensions:"x-nullable"`
 }
 
 func (t *TLS) Validate(opts ...ValidationOption) error {
@@ -39,11 +30,11 @@ func (t *TLS) Validate(opts ...ValidationOption) error {
 		return nil // TLS is optional
 	}
 
-	if err := t.validateCACertificates(); err != nil {
+	if err := t.ClientTLS.Validate(opts...); err != nil {
 		return err
 	}
 
-	if err := t.validateMutualTLS(); err != nil {
+	if err := t.validateCACertificates(); err != nil {
 		return err
 	}
 
@@ -60,40 +51,6 @@ func (t *TLS) validateCACertificates() error {
 		return errValidationMutuallyExclusive("ca-file", "ca-path")
 	}
 
-	return nil
-}
-
-// validateMutualTLS ensures that if any mTLS field is set, all required fields are present.
-func (t *TLS) validateMutualTLS() error {
-	nameSet := hasText(t.Name)
-	keyfileSet := hasText(t.Keyfile)
-	certfileSet := hasText(t.Certfile)
-
-	// each of fields require two others to be set as well
-	if nameSet {
-		if !keyfileSet {
-			return errValidationRequires("name", "key-file")
-		}
-		if !certfileSet {
-			return errValidationRequires("name", "cert-file")
-		}
-	}
-
-	if keyfileSet {
-		if !nameSet {
-			return errValidationRequires("key-file", "name")
-		}
-		// certfileSet is always set here
-	}
-
-	if certfileSet {
-		if !nameSet {
-			return errValidationRequires("cert-file", "name")
-		}
-		// keyfileSet is always set here
-	}
-
-	// no mTLS fields are set
 	return nil
 }
 
@@ -136,13 +93,10 @@ func (t *TLS) toModel() *model.TLS {
 	}
 
 	return &model.TLS{
-		CAFile:          t.CAFile,
+		ClientTLS:       *t.ClientTLS.ToModel(),
 		CAPath:          t.CAPath,
-		Name:            t.Name,
 		Protocols:       t.Protocols,
 		CipherSuite:     t.CipherSuite,
-		Keyfile:         t.Keyfile,
 		KeyfilePassword: t.KeyfilePassword,
-		Certfile:        t.Certfile,
 	}
 }

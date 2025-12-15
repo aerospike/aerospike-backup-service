@@ -142,7 +142,9 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "valid TLS with CAFile only",
 			tls: &TLS{
-				CAFile: &certs.caFile,
+				ClientTLS: ClientTLS{
+					CAFile: &certs.caFile,
+				},
 			},
 			wantErr: false,
 		},
@@ -156,7 +158,9 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "CAFile and CAPath are mutually exclusive",
 			tls: &TLS{
-				CAFile: &certs.caFile,
+				ClientTLS: ClientTLS{
+					CAFile: &certs.caFile,
+				},
 				CAPath: &certs.caDir,
 			},
 			wantErr: true,
@@ -165,28 +169,34 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "valid complete mTLS configuration",
 			tls: &TLS{
-				Name:     ptr.Of("tls-name"),
-				Keyfile:  &certs.keyFile,
-				Certfile: &certs.certFile,
+				ClientTLS: ClientTLS{
+					Name:     ptr.Of("tls-name"),
+					Keyfile:  &certs.keyFile,
+					Certfile: &certs.certFile,
+				},
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid mTLS with CA and password",
 			tls: &TLS{
-				CAFile:          &certs.caFile,
-				Name:            ptr.Of("tls-name"),
-				Keyfile:         &certs.keyFile,
+				ClientTLS: ClientTLS{
+					CAFile:   &certs.caFile,
+					Name:     ptr.Of("tls-name"),
+					Keyfile:  &certs.keyFile,
+					Certfile: &certs.certFile,
+				},
 				KeyfilePassword: ptr.Of(""), // Empty password for unencrypted key
-				Certfile:        &certs.certFile,
 			},
 			wantErr: false,
 		},
 		{
 			name: "mTLS missing name",
 			tls: &TLS{
-				Keyfile:  &certs.keyFile,
-				Certfile: &certs.certFile,
+				ClientTLS: ClientTLS{
+					Keyfile:  &certs.keyFile,
+					Certfile: &certs.certFile,
+				},
 			},
 			wantErr: true,
 			errType: errMissingDependency,
@@ -194,8 +204,10 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "mTLS missing keyfile",
 			tls: &TLS{
-				Name:     ptr.Of("tls-name"),
-				Certfile: &certs.certFile,
+				ClientTLS: ClientTLS{
+					Name:     ptr.Of("tls-name"),
+					Certfile: &certs.certFile,
+				},
 			},
 			wantErr: true,
 			errType: errMissingDependency,
@@ -203,8 +215,10 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "mTLS missing certfile",
 			tls: &TLS{
-				Name:    ptr.Of("tls-name"),
-				Keyfile: &certs.keyFile,
+				ClientTLS: ClientTLS{
+					Name:    ptr.Of("tls-name"),
+					Keyfile: &certs.keyFile,
+				},
 			},
 			wantErr: true,
 			errType: errMissingDependency,
@@ -220,7 +234,9 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "only name set should fail",
 			tls: &TLS{
-				Name: ptr.Of("tls-name"),
+				ClientTLS: ClientTLS{
+					Name: ptr.Of("tls-name"),
+				},
 			},
 			wantErr: true,
 			errType: errMissingDependency,
@@ -228,7 +244,9 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "only keyfile set should fail",
 			tls: &TLS{
-				Keyfile: &certs.keyFile,
+				ClientTLS: ClientTLS{
+					Keyfile: &certs.keyFile,
+				},
 			},
 			wantErr: true,
 			errType: errMissingDependency,
@@ -236,7 +254,9 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "only certfile set should fail",
 			tls: &TLS{
-				Certfile: &certs.certFile,
+				ClientTLS: ClientTLS{
+					Certfile: &certs.certFile,
+				},
 			},
 			wantErr: true,
 			errType: errMissingDependency,
@@ -252,37 +272,45 @@ func TestTLS_Validate(t *testing.T) {
 		{
 			name: "complex valid configuration",
 			tls: &TLS{
-				CAFile:      &certs.caFile,
+				ClientTLS: ClientTLS{
+					CAFile:   &certs.caFile,
+					Name:     ptr.Of("tls-name"),
+					Keyfile:  &certs.keyFile,
+					Certfile: &certs.certFile,
+				},
 				Protocols:   ptr.Of("TLSv1.2"),
 				CipherSuite: ptr.Of("TLS_AES_128_GCM_SHA256"),
-				Name:        ptr.Of("tls-name"),
-				Keyfile:     &certs.keyFile,
-				Certfile:    &certs.certFile,
 			},
 			wantErr: false,
 		},
 		{
 			name: "invalid CA file path",
 			tls: &TLS{
-				CAFile: ptr.Of("/nonexistent/path/ca.pem"),
+				ClientTLS: ClientTLS{
+					CAFile: ptr.Of("/nonexistent/path/ca.pem"),
+				},
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid key file path",
 			tls: &TLS{
-				Name:     ptr.Of("tls-name"),
-				Keyfile:  ptr.Of("/nonexistent/path/key.pem"),
-				Certfile: &certs.certFile,
+				ClientTLS: ClientTLS{
+					Name:     ptr.Of("tls-name"),
+					Keyfile:  ptr.Of("/nonexistent/path/key.pem"),
+					Certfile: &certs.certFile,
+				},
 			},
 			wantErr: true,
 		},
 		{
 			name: "invalid cert file path",
 			tls: &TLS{
-				Name:     ptr.Of("tls-name"),
-				Keyfile:  &certs.keyFile,
-				Certfile: ptr.Of("/nonexistent/path/cert.pem"),
+				ClientTLS: ClientTLS{
+					Name:     ptr.Of("tls-name"),
+					Keyfile:  &certs.keyFile,
+					Certfile: ptr.Of("/nonexistent/path/cert.pem"),
+				},
 			},
 			wantErr: true,
 		},
@@ -321,7 +349,9 @@ func TestTLS_validateCACertificates(t *testing.T) {
 		{
 			name: "only CAFile",
 			tls: &TLS{
-				CAFile: &certs.caFile,
+				ClientTLS: ClientTLS{
+					CAFile: &certs.caFile,
+				},
 			},
 			wantErr: false,
 		},
@@ -335,7 +365,9 @@ func TestTLS_validateCACertificates(t *testing.T) {
 		{
 			name: "both CAFile and CAPath",
 			tls: &TLS{
-				CAFile: &certs.caFile,
+				ClientTLS: ClientTLS{
+					CAFile: &certs.caFile,
+				},
 				CAPath: &certs.caDir,
 			},
 			wantErr: true,
