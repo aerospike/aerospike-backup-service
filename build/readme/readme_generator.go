@@ -116,7 +116,9 @@ var jsonExamples = map[string]any{
 			Cluster: &cluster,
 		},
 		Policy: &dto.RestorePolicy{
-			NoGeneration: ptr.Of(true),
+			BaseRestorePolicy: dto.BaseRestorePolicy{
+				NoGeneration: ptr.Of(true),
+			},
 		},
 		StorageConfig: dto.StorageConfig{
 			Storage: &dto.Storage{

@@ -3,6 +3,7 @@ package dto
 import (
 	"fmt"
 	"io"
+	"slices"
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
@@ -41,7 +42,7 @@ type RestoreTimestampRequest struct {
 	DestinationClusterConfig
 	*SecretAgentConfig
 	// Restore policy to use in the operation.
-	Policy *RestorePolicy `json:"policy,omitempty"`
+	Policy *TimestampRestorePolicy `json:"policy,omitempty"`
 	// Required epoch time (in millis) for recovery. The closest backup before the timestamp will be applied.
 	Time int64 `json:"time" format:"int64" example:"1739538000000" validate:"required" minimum:"1000000000000"`
 	// The backup routine name.
@@ -80,7 +81,8 @@ func (r *RestoreRequest) Validate(opts ...ValidationOption) error {
 
 // Validate validates the restore operation request.
 func (r *RestoreTimestampRequest) Validate(opts ...ValidationOption) error {
-	if err := r.DestinationClusterConfig.Validate(opts...); err != nil {
+	// If no cluster is specified, routine's cluster will be used.
+	if err := r.DestinationClusterConfig.Validate(append(opts, ValidationAllowEmpty)...); err != nil {
 		return err
 	}
 	if err := r.Policy.Validate(); err != nil {
@@ -103,18 +105,26 @@ func (r *RestoreTimestampRequest) Validate(opts ...ValidationOption) error {
 }
 
 func (r *RestoreTimestampRequest) ToModel(config *model.Config) (*model.RestoreTimestampRequest, error) {
-	cluster, err := r.DestinationClusterConfig.ToModel(config)
-	if err != nil {
-		return nil, fmt.Errorf("invalid cluster: %w", err)
-	}
 	routine, found := config.Routine(r.Routine)
 	if !found {
 		return nil, errValidationNotFound("routine", r.Routine)
 	}
 
+	cluster, err := r.DestinationClusterConfig.ToModel(config)
+	if err != nil {
+		return nil, fmt.Errorf("invalid cluster: %w", err)
+	}
+
+	if cluster == nil { // if cluster is not specified, use routine's cluster.
+		cluster = routine.SourceCluster
+	}
+
 	secretAgent, err := r.SecretAgentConfig.ToModel(config)
 	if err != nil {
 		return nil, fmt.Errorf("invalid secret agent: %w", err)
+	}
+	if secretAgent == nil {
+		secretAgent = routine.SecretAgent // use routine's secret agent if not specified.
 	}
 
 	return &model.RestoreTimestampRequest{
@@ -163,8 +173,12 @@ type DestinationClusterConfig struct {
 	Name string `json:"destination-name,omitempty" extensions:"x-nullable"`
 }
 
+func (c *DestinationClusterConfig) IsEmpty() bool {
+	return c.Name == "" && c.Cluster == nil
+}
+
 func (c *DestinationClusterConfig) Validate(opts ...ValidationOption) error {
-	if c.Cluster == nil && c.Name == "" {
+	if c.Cluster == nil && c.Name == "" && !slices.Contains(opts, ValidationAllowEmpty) {
 		return errValidationRequiredEither("destination", "destination-name")
 	}
 	if c.Cluster != nil && c.Name != "" {
@@ -180,6 +194,10 @@ func (c *DestinationClusterConfig) Validate(opts ...ValidationOption) error {
 }
 
 func (c *DestinationClusterConfig) ToModel(config *model.Config) (*model.AerospikeCluster, error) {
+	if c.IsEmpty() {
+		return nil, nil
+	}
+
 	if c.Cluster != nil {
 		return c.Cluster.ToModel(config)
 	}

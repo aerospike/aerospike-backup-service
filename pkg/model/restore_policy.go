@@ -55,6 +55,7 @@ type RestorePolicy struct {
 	// Encryption details.
 	EncryptionPolicy *EncryptionPolicy
 	// Compression details.
+	// This field is ignored during point-in-time restores as the system automatically detects compression.
 	CompressionPolicy *CompressionPolicy
 	// Configuration of retries for each restore write operation.
 	RetryPolicy *RetryPolicy

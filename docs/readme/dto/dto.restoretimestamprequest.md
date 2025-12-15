@@ -8,7 +8,7 @@ RestoreTimestampRequest represents a restore by timestamp operation request.
 | `destination`        | The details of the Aerospike destination cluster.<br>Mutually exclusive with 'destination-name'.<br>See: [dto.AerospikeCluster](dto.aerospikecluster.md) |               |
 | `destination-name`   | Link to one of preconfigured clusters.<br>Mutually exclusive with 'destination'.                                                                         |               |
 | `disable-reordering` | Disable reverse order of incremental backups optimisation.                                                                                               | `false`       |
-| `policy`             | Restore policy to use in the operation.<br>See: [dto.RestorePolicy](dto.restorepolicy.md)                                                                |               |
+| `policy`             | Restore policy to use in the operation.<br>See: [dto.TimestampRestorePolicy](dto.timestamprestorepolicy.md)                                              |               |
 | `secret-agent`       | Secret Agent configuration (optional).<br>Mutually exclusive with 'secret-agent-name'.<br>See: [dto.SecretAgent](dto.secretagent.md)                     |               |
 | `secret-agent-name`  | Secret Agent configuration (optional). Link to one of preconfigured agents.<br>Mutually exclusive with 'secret-agent'.                                   |               |
 

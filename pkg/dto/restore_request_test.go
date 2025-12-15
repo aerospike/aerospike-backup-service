@@ -57,6 +57,12 @@ func TestDestinationClusterConfig_Validate(t *testing.T) {
 	}
 }
 
+func TestDestinationClusterConfig_Validate_AllowEmpty(t *testing.T) {
+	config := DestinationClusterConfig{}
+	err := config.Validate(ValidationAllowEmpty)
+	require.NoError(t, err)
+}
+
 func TestStorageConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -253,7 +259,7 @@ func TestRestoreTimestampRequest_Validate(t *testing.T) {
 	validCluster := &AerospikeCluster{
 		SeedNodes: []SeedNode{{HostName: "host", Port: 80}},
 	}
-	validPolicy := &RestorePolicy{}
+	validPolicy := &TimestampRestorePolicy{}
 
 	tests := []struct {
 		name    string
@@ -313,7 +319,6 @@ func TestRestoreTimestampRequest_Validate(t *testing.T) {
 				Policy:  validPolicy,
 				Routine: "daily",
 			},
-			err: errRequiredEither,
 		},
 		{
 			name: "valid request",
@@ -471,7 +476,7 @@ func TestRestoreTimestampRequest_ToModel(t *testing.T) {
 				},
 				Time:    1739538000000,
 				Routine: "daily",
-				Policy:  &RestorePolicy{},
+				Policy:  &TimestampRestorePolicy{},
 			},
 			want: &model.RestoreTimestampRequest{
 				DestinationCluster: cluster,
