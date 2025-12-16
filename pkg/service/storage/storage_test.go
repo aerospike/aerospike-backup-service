@@ -103,7 +103,10 @@ func TestGetAzureClient_Connectivity(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" && r.URL.Query().Get("comp") == "properties" && r.URL.Query().Get("restype") == "account" {
+		isAccountCheck := r.URL.Query().Get("comp") == "properties" && r.URL.Query().Get("restype") == "account"
+		isContainerCheck := r.URL.Query().Get("restype") == "container"
+
+		if r.Method == "GET" && (isAccountCheck || isContainerCheck) {
 			w.Header().Set("x-ms-request-id", "req-id")
 			w.Header().Set("x-ms-version", "2019-12-12")
 			w.Header().Set("x-ms-sku-name", "Standard_LRS")

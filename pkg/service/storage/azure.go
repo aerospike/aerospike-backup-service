@@ -69,7 +69,7 @@ func getAzureClient(ctx context.Context, a *model.AzureStorage) (*azblob.Client,
 		return nil, err
 	}
 
-	if err := checkAzureConnectivity(ctx, client); err != nil {
+	if err := checkAzureConnectivity(ctx, client, a.ContainerName); err != nil {
 		return nil, err
 	}
 
@@ -174,11 +174,12 @@ func clientWithDefaultCredential(endpoint string) (*azblob.Client, error) {
 	return client, nil
 }
 
-func checkAzureConnectivity(ctx context.Context, client *azblob.Client) error {
+func checkAzureConnectivity(ctx context.Context, client *azblob.Client, container string) error {
 	ctx, cancel := context.WithTimeout(ctx, connectivityTimeout)
 	defer cancel()
 
-	_, err := client.ServiceClient().GetAccountInfo(ctx, nil)
+	cc := client.ServiceClient().NewContainerClient(container)
+	_, err := cc.GetProperties(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("azure blob storage connectivity check failed: %w", err)
 	}
