@@ -2,4 +2,4 @@ package storage
 
 import "time"
 
-var connectivityTimeout = 5 * time.Second
+var connectivityTimeout = 15 * time.Second

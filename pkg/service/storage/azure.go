@@ -184,5 +184,7 @@ func checkAzureConnectivity(ctx context.Context, client *azblob.Client, containe
 		return fmt.Errorf("azure blob storage connectivity check failed: %w", err)
 	}
 
+	slog.Info("Azure connectivity check succeeded")
+
 	return nil
 }
