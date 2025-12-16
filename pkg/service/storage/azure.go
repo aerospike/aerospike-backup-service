@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -63,7 +62,21 @@ func init() {
 	registerAccessor(NewAzureStorageAccessor())
 }
 
-func getAzureClient(_ context.Context, a *model.AzureStorage) (*azblob.Client, error) {
+func getAzureClient(ctx context.Context, a *model.AzureStorage) (*azblob.Client, error) {
+	client, err := createAzureClient(a)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err := checkAzureConnectivity(ctx, client); err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+func createAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
 	switch auth := a.Auth.(type) {
 	case model.AzureSharedKeyAuth:
 		return clientFromSharedKey(a.Endpoint, auth, a.SecretAgent)
@@ -87,17 +100,17 @@ func clientFromSharedKey(
 		return nil, fmt.Errorf("failed to create Azure shared key credentials: %w", err)
 	}
 
-	client, err := azblob.NewClientWithSharedKeyCredential(endpoint, cred, nil)
+	client, err := azblob.NewClientWithSharedKeyCredential(endpoint, cred, &azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Retry: policy.RetryOptions{
+				MaxRetries:    int32(model.StorageRetryPolicy.MaxRetries),
+				RetryDelay:    model.StorageRetryPolicy.BaseTimeout,
+				MaxRetryDelay: model.StorageRetryPolicy.MaxBackoffDuration,
+			},
+		},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob client with shared key: %w", err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err = client.ServiceClient().GetAccountInfo(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("azure blob storage connectivity check failed: %w", err)
 	}
 
 	return client, nil
@@ -135,14 +148,6 @@ func clientFromAD(endpoint string, auth model.AzureADAuth, sa *model.SecretAgent
 		return nil, fmt.Errorf("failed to create Azure Blob client with AAD: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err = client.ServiceClient().GetAccountInfo(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("azure blob storage connectivity check failed: %w", err)
-	}
-
 	return client, nil
 }
 
@@ -153,18 +158,30 @@ func clientWithDefaultCredential(endpoint string) (*azblob.Client, error) {
 		return nil, fmt.Errorf("failed to obtain default Azure credentials: %w", err)
 	}
 
-	client, err := azblob.NewClient(endpoint, cred, nil)
+	client, err := azblob.NewClient(endpoint, cred, &azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Retry: policy.RetryOptions{
+				MaxRetries:    int32(model.StorageRetryPolicy.MaxRetries),
+				RetryDelay:    model.StorageRetryPolicy.BaseTimeout,
+				MaxRetryDelay: model.StorageRetryPolicy.MaxBackoffDuration,
+			},
+		},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob client with default credentials: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	return client, nil
+}
+
+func checkAzureConnectivity(ctx context.Context, client *azblob.Client) error {
+	ctx, cancel := context.WithTimeout(ctx, connectivityTimeout)
 	defer cancel()
 
-	_, err = client.ServiceClient().GetAccountInfo(ctx, nil)
+	_, err := client.ServiceClient().GetAccountInfo(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("azure blob storage connectivity check failed: %w", err)
+		return fmt.Errorf("azure blob storage connectivity check failed: %w", err)
 	}
 
-	return client, nil
+	return nil
 }

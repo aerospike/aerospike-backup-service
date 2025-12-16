@@ -103,5 +103,21 @@ func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, er
 	// TODO: replace with runtime.AddCleanup when upgrading to go1.24
 	runtime.SetFinalizer(client, (*storage.Client).Close)
 
+	if err := checkGcpConnectivity(ctx, client, g.BucketName); err != nil {
+		return nil, err
+	}
+
 	return client, nil
+}
+
+func checkGcpConnectivity(ctx context.Context, client *storage.Client, bucket string) error {
+	ctx, cancel := context.WithTimeout(ctx, connectivityTimeout)
+	defer cancel()
+
+	_, err := client.Bucket(bucket).Attrs(ctx)
+	if err != nil {
+		return fmt.Errorf("gcp storage connectivity check failed: %w", err)
+	}
+
+	return nil
 }
