@@ -56,7 +56,7 @@ streamline setup.
     - **Detailed Error Reporting**: Displays comprehensive error messages from the backend API during configuration
       application, with copy-to-clipboard functionality.
     - **Context-Aware Input**: Dynamic dropdowns and autocompletion for resources, ensuring referenced items (like
-      Clusters or Policies) exist.
+      Namespaces and Sets) exist.
 
 This dashboard aims to provide a robust, validated, and user-friendly experience for managing Aerospike backup
 operations.
