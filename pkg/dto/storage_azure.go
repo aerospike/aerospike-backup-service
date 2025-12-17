@@ -3,7 +3,6 @@ package dto
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
@@ -89,27 +88,19 @@ func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
 
 func getAzureAuth(a *AzureStorage) model.AzureAuth {
 	if a.AccountName != "" && a.AccountKey != "" {
-		auth := model.AzureSharedKeyAuth{
+		return &model.AzureSharedKeyAuth{
 			AccountName: a.AccountName,
 			AccountKey:  a.AccountKey,
 		}
-		slog.Info("Using Azure Account name", slog.Any("auth", auth))
-		return &auth
 	}
 
 	if a.TenantID != "" && a.ClientID != "" && a.ClientSecret != "" {
-		auth := model.AzureADAuth{
+		return &model.AzureADAuth{
 			TenantID:     a.TenantID,
 			ClientID:     a.ClientID,
 			ClientSecret: a.ClientSecret,
 		}
-		slog.Info("Using Azure Active Directory authentication", slog.Any("auth", auth))
-		return &auth
 	}
-
-	slog.Info("Using default Azure credentials (unknown type)",
-		slog.Any("a_type", fmt.Sprintf("%T", a)),
-		slog.Any("a", a))
 
 	return nil
 }

@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -83,9 +82,6 @@ func createAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
 	case *model.AzureADAuth:
 		return clientFromAD(a.Endpoint, auth, a.SecretAgent)
 	default:
-		slog.Info("Using default Azure credentials (unknown type)",
-			slog.Any("auth_type", fmt.Sprintf("%T", auth)),
-			slog.Any("auth", auth))
 		return clientWithDefaultCredential(a.Endpoint)
 	}
 }
@@ -93,7 +89,6 @@ func createAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
 func clientFromSharedKey(
 	endpoint string, auth *model.AzureSharedKeyAuth, sa *model.SecretAgent,
 ) (*azblob.Client, error) {
-	slog.Info("Using Shared key Azure credentials", slog.Any("auth", auth))
 	accountKey, err := sa.Read(auth.AccountKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve account key from secret agent: %w", err)
@@ -120,7 +115,6 @@ func clientFromSharedKey(
 }
 
 func clientFromAD(endpoint string, auth *model.AzureADAuth, sa *model.SecretAgent) (*azblob.Client, error) {
-	slog.Info("Using AD Azure credentials", slog.Any("auth", auth))
 	clientSecret, err := sa.Read(auth.ClientSecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve client-secret from secret agent: %w", err)
@@ -155,7 +149,6 @@ func clientFromAD(endpoint string, auth *model.AzureADAuth, sa *model.SecretAgen
 }
 
 func clientWithDefaultCredential(endpoint string) (*azblob.Client, error) {
-	slog.Info("Using default Azure credentials", slog.String("endpoint", endpoint))
 	cred, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to obtain default Azure credentials: %w", err)
@@ -186,8 +179,6 @@ func checkAzureConnectivity(ctx context.Context, client *azblob.Client, containe
 	if err != nil {
 		return fmt.Errorf("azure blob storage connectivity check failed: %w", err)
 	}
-
-	slog.Info("Azure connectivity check succeeded")
 
 	return nil
 }
