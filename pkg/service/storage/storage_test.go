@@ -99,7 +99,6 @@ func TestGetGcpClient_Connectivity(t *testing.T) {
 }
 
 func TestGetAzureClient_Connectivity(t *testing.T) {
-	t.Logf("Connectivity timeout: %v", connectivityTimeout)
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
