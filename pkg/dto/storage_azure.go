@@ -107,7 +107,9 @@ func getAzureAuth(a *AzureStorage) model.AzureAuth {
 		return &auth
 	}
 
-	slog.Info("Using default")
+	slog.Info("Using default Azure credentials (unknown type)",
+		slog.Any("a_type", fmt.Sprintf("%T", a)),
+		slog.Any("a", a))
 
 	return nil
 }

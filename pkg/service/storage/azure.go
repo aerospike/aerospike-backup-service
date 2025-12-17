@@ -83,7 +83,9 @@ func createAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
 	case *model.AzureADAuth:
 		return clientFromAD(a.Endpoint, auth, a.SecretAgent)
 	default:
-		slog.Info("Using default Azure credentials", slog.Any("auth", auth))
+		slog.Info("Using default Azure credentials (unknown type)",
+			slog.Any("auth_type", fmt.Sprintf("%T", auth)),
+			slog.Any("auth", auth))
 		return clientWithDefaultCredential(a.Endpoint)
 	}
 }
