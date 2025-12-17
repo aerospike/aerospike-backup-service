@@ -119,7 +119,7 @@ func (c *Config) Validate(opts ...ValidationOption) error {
 		if name == "" {
 			return errValidationEmptyField("secret agent name")
 		}
-		if err := agent.validate(); err != nil {
+		if err := agent.validate(opts...); err != nil {
 			return fmt.Errorf("secret agent '%s' validation error: %w", name, err)
 		}
 	}

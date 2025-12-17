@@ -15,6 +15,7 @@ import (
 // Aerospike Secret Agent acts as a proxy layer between Aerospike server and one or more
 // external secrets management services, fetching secrets on behalf of the server.
 type SecretAgent struct {
+	ClientTLS
 	once sync.Once
 	// Connection type: tcp, unix.
 	ConnectionType string
@@ -24,8 +25,6 @@ type SecretAgent struct {
 	Port *Port
 	// Timeout in milliseconds.
 	Timeout *int
-	// The path to a trusted CA certificate file in PEM format.
-	TLSCAString *string
 	// Flag that shows if secret agent responses are encrypted with base64.
 	IsBase64 *bool
 	cache    *collections.LoadingCache[string, string]
@@ -41,7 +40,10 @@ func (s *SecretAgent) ToSecretAgentConfig() *backup.SecretAgentConfig {
 		Address:            &s.Address,
 		Port:               (*int)(s.Port),
 		TimeoutMillisecond: s.Timeout,
-		CaFile:             s.TLSCAString,
+		CaFile:             s.CAFile,
+		TLSName:            s.Name,
+		CertFile:           s.Certfile,
+		KeyFile:            s.Keyfile,
 		IsBase64:           s.IsBase64,
 	}
 }
@@ -82,6 +84,6 @@ func (s *SecretAgent) String() string {
 		s.Address,
 		ptr.ValueOrZero(s.Port),
 		ptr.ValueOrZero(s.Timeout),
-		ptr.ValueOrZero(s.TLSCAString),
+		s.ClientTLS.String(),
 		ptr.ValueOrZero(s.IsBase64))
 }

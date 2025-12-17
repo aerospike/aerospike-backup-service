@@ -3223,6 +3223,18 @@ const docTemplate = `{
                     "type": "string",
                     "example": "localhost"
                 },
+                "ca-file": {
+                    "description": "Path to a trusted CA certificate file in PEM format.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/ca.pem"
+                },
+                "cert-file": {
+                    "description": "Path to a client certificate file for mutual TLS authentication.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/cert.pem"
+                },
                 "connection-type": {
                     "description": "Connection type.",
                     "type": "string",
@@ -3237,6 +3249,18 @@ const docTemplate = `{
                     "type": "boolean",
                     "default": false
                 },
+                "key-file": {
+                    "description": "Path to a client private key file for mutual TLS authentication.",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "/path/to/key.pem"
+                },
+                "name": {
+                    "description": "TLSName used for server certificate verification (ServerName for SNI).",
+                    "type": "string",
+                    "x-nullable": true,
+                    "example": "example.com"
+                },
                 "port": {
                     "description": "Port the Secret Agent is running on.",
                     "type": "integer",
@@ -3247,12 +3271,6 @@ const docTemplate = `{
                     "description": "Timeout in milliseconds.",
                     "type": "integer",
                     "default": 1000
-                },
-                "tls-ca-file": {
-                    "description": "The path to a trusted CA certificate file in PEM format.",
-                    "type": "string",
-                    "x-nullable": true,
-                    "example": "/path/to/ca.pem"
                 }
             }
         },
@@ -3357,10 +3375,10 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "ca-file": {
-                    "description": "Path to a trusted CA certificate file.",
+                    "description": "Path to a trusted CA certificate file in PEM format.",
                     "type": "string",
                     "x-nullable": true,
-                    "example": "/path/to/cafile.pem"
+                    "example": "/path/to/ca.pem"
                 },
                 "ca-path": {
                     "description": "Path to a directory of trusted CA certificates.",
@@ -3369,10 +3387,10 @@ const docTemplate = `{
                     "example": "/path/to/ca"
                 },
                 "cert-file": {
-                    "description": "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
+                    "description": "Path to a client certificate file for mutual TLS authentication.",
                     "type": "string",
                     "x-nullable": true,
-                    "example": "/path/to/certfile.pem"
+                    "example": "/path/to/cert.pem"
                 },
                 "cipher-suite": {
                     "description": "TLS cipher selection criteria. The format is the same as OpenSSL's Cipher List Format.",
@@ -3381,10 +3399,10 @@ const docTemplate = `{
                     "example": "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA"
                 },
                 "key-file": {
-                    "description": "Path to the key for mutual authentication (if Aerospike cluster supports it).",
+                    "description": "Path to a client private key file for mutual TLS authentication.",
                     "type": "string",
                     "x-nullable": true,
-                    "example": "/path/to/keyfile.pem"
+                    "example": "/path/to/key.pem"
                 },
                 "key-file-password": {
                     "description": "Password to load protected TLS-keyfile (env:VAR, file:PATH, PASSWORD).",
@@ -3393,10 +3411,10 @@ const docTemplate = `{
                     "example": "file:/path/to/password"
                 },
                 "name": {
-                    "description": "The default TLS name used to authenticate each TLS socket connection.",
+                    "description": "TLSName used for server certificate verification (ServerName for SNI).",
                     "type": "string",
                     "x-nullable": true,
-                    "example": "tls-name"
+                    "example": "example.com"
                 },
                 "protocols": {
                     "description": "TLS protocol selection criteria. This format is the same as Apache's SSL Protocol.",

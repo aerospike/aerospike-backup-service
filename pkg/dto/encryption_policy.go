@@ -81,7 +81,16 @@ func (p *EncryptionPolicy) ToModel() *model.EncryptionPolicy {
 	}
 }
 
-func (p *EncryptionPolicy) FromModel(m *model.EncryptionPolicy) {
+func newEncryptionPolicyFromModel(m *model.EncryptionPolicy) *EncryptionPolicy {
+	if m == nil {
+		return nil
+	}
+	e := &EncryptionPolicy{}
+	e.fromModel(m)
+	return e
+}
+
+func (p *EncryptionPolicy) fromModel(m *model.EncryptionPolicy) {
 	p.Mode = m.Mode
 	p.KeyFile = m.KeyFile
 	p.KeyEnv = m.KeyEnv

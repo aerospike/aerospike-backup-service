@@ -2,7 +2,6 @@ package dto
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	saClient "github.com/aerospike/backup-go/pkg/secret-agent"
@@ -19,11 +18,11 @@ type SecretAgentConfig struct {
 	SecretAgentName string `yaml:"secret-agent-name,omitempty" json:"secret-agent-name,omitempty" extensions:"x-nullable"`
 }
 
-func (c SecretAgentConfig) validate() error {
+func (c SecretAgentConfig) validate(opts ...ValidationOption) error {
 	if c.SecretAgent != nil && c.SecretAgentName != "" {
 		return errValidationMutuallyExclusive("secret-agent-name", "secret-agent")
 	}
-	if err := c.SecretAgent.validate(); err != nil {
+	if err := c.SecretAgent.validate(opts...); err != nil {
 		return fmt.Errorf("secret-agent validation error: %w", err)
 	}
 
@@ -59,6 +58,7 @@ func (c *SecretAgentConfig) ToModel(config *model.Config) (*model.SecretAgent, e
 //
 //nolint:lll
 type SecretAgent struct {
+	ClientTLS `yaml:",inline"`
 	// Connection type.
 	//nolint:lll
 	ConnectionType string `yaml:"connection-type,omitempty" json:"connection-type,omitempty" example:"tcp" validate:"required" enums:"tcp,unix"`
@@ -68,8 +68,6 @@ type SecretAgent struct {
 	Port *Port `yaml:"port,omitempty" json:"port,omitempty" example:"8080" extensions:"x-nullable"`
 	// Timeout in milliseconds.
 	Timeout *int `yaml:"timeout,omitempty" json:"timeout,omitempty" default:"1000"`
-	// The path to a trusted CA certificate file in PEM format.
-	TLSCAString *string `yaml:"tls-ca-file,omitempty" json:"tls-ca-file,omitempty" example:"/path/to/ca.pem" extensions:"x-nullable"`
 	// Flag that shows if secret agent responses are encrypted with base64.
 	IsBase64 *bool `yaml:"is-base64,omitempty" json:"is-base64,omitempty" default:"false"`
 }
@@ -84,7 +82,7 @@ func (s *SecretAgent) ToModel() *model.SecretAgent {
 		Address:        s.Address,
 		Port:           s.Port.ToModel(),
 		Timeout:        s.Timeout,
-		TLSCAString:    s.TLSCAString,
+		ClientTLS:      s.ClientTLS.ToModel(),
 		IsBase64:       s.IsBase64,
 	}
 }
@@ -117,12 +115,15 @@ func (s *SecretAgent) fromModel(m *model.SecretAgent) {
 	s.Address = m.Address
 	s.Port = NewPortFromModel(m.Port)
 	s.Timeout = m.Timeout
-	s.TLSCAString = m.TLSCAString
+	s.CAFile = m.CAFile
+	s.Name = m.Name
+	s.Certfile = m.Certfile
+	s.Keyfile = m.Keyfile
 	s.IsBase64 = m.IsBase64
 }
 
 // validate validates the SecretAgent.
-func (s *SecretAgent) validate() error {
+func (s *SecretAgent) validate(opts ...ValidationOption) error {
 	if s == nil {
 		return nil
 	}
@@ -135,11 +136,8 @@ func (s *SecretAgent) validate() error {
 		return errValidationNegative("timeout", *s.Timeout)
 	}
 
-	if s.TLSCAString != nil {
-		_, err := os.Stat(*s.TLSCAString)
-		if err != nil {
-			return errValidationNotFound("tls-ca-file", *s.TLSCAString)
-		}
+	if err := s.Validate(opts...); err != nil {
+		return fmt.Errorf("client TLS validation: %w", err)
 	}
 
 	if s.ConnectionType == "" {

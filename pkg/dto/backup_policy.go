@@ -229,14 +229,8 @@ func (p *BackupPolicy) fromModel(m *model.BackupPolicy) {
 	p.Bandwidth = m.Bandwidth
 	p.RecordsPerSecond = m.RecordsPerSecond
 	p.FileLimit = m.FileLimit
-	if m.EncryptionPolicy != nil {
-		p.EncryptionPolicy = &EncryptionPolicy{}
-		p.EncryptionPolicy.FromModel(m.EncryptionPolicy)
-	}
-	if m.CompressionPolicy != nil {
-		p.CompressionPolicy = &CompressionPolicy{}
-		p.CompressionPolicy.fromModel(m.CompressionPolicy)
-	}
+	p.EncryptionPolicy = newEncryptionPolicyFromModel(m.EncryptionPolicy)
+	p.CompressionPolicy = newCompressionPolicyFromModel(m.CompressionPolicy)
 	p.Sealed = m.Sealed
 	// p.XDRConfig = newXDRConfigFromModel(m.XDRConfig)
 	p.ConcurrentIncremental = m.ConcurrentIncremental

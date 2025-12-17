@@ -74,7 +74,7 @@ func makeXDRConfig(
 		ResultQueueSize:   xdrConfig.GetResultQueueSizeOrDefault(),
 		AckQueueSize:      xdrConfig.GetAckQueueSizeOrDefault(),
 		MaxConnections:    xdrConfig.GetMaxConnsOrDefault(),
-		InfoPolingPeriod:  xdrConfig.GetPollingPeriodOrDefault(),
+		InfoPollingPeriod: xdrConfig.GetPollingPeriodOrDefault(),
 		StartTimeout:      xdrConfig.GetStartTimeoutOrDefault(),
 	}, nil
 }
