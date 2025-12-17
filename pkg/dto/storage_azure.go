@@ -94,7 +94,7 @@ func getAzureAuth(a *AzureStorage) model.AzureAuth {
 			AccountKey:  a.AccountKey,
 		}
 		slog.Info("Using Azure Account name", slog.Any("auth", auth))
-		return auth
+		return &auth
 	}
 
 	if a.TenantID != "" && a.ClientID != "" && a.ClientSecret != "" {
@@ -104,7 +104,7 @@ func getAzureAuth(a *AzureStorage) model.AzureAuth {
 			ClientSecret: a.ClientSecret,
 		}
 		slog.Info("Using Azure Active Directory authentication", slog.Any("auth", auth))
-		return auth
+		return &auth
 	}
 
 	slog.Info("Using default")
@@ -123,10 +123,10 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 	}
 
 	switch auth := s.Auth.(type) {
-	case model.AzureSharedKeyAuth:
+	case *model.AzureSharedKeyAuth:
 		azureStorage.AccountName = auth.AccountName
 		azureStorage.AccountKey = auth.AccountKey
-	case model.AzureADAuth:
+	case *model.AzureADAuth:
 		azureStorage.TenantID = auth.TenantID
 		azureStorage.ClientID = auth.ClientID
 		azureStorage.ClientSecret = auth.ClientSecret

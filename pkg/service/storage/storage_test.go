@@ -124,7 +124,7 @@ func TestGetAzureClient_Connectivity(t *testing.T) {
 	// Success case
 	azureConfig := &model.AzureStorage{
 		Endpoint: ts.URL,
-		Auth: model.AzureSharedKeyAuth{
+		Auth: &model.AzureSharedKeyAuth{
 			AccountName: "testaccount",
 			AccountKey:  key,
 		},
@@ -142,7 +142,7 @@ func TestGetAzureClient_Connectivity(t *testing.T) {
 
 	azureConfigFail := &model.AzureStorage{
 		Endpoint: failServer.URL,
-		Auth: model.AzureSharedKeyAuth{
+		Auth: &model.AzureSharedKeyAuth{
 			AccountName: "testaccount",
 			AccountKey:  key,
 		},

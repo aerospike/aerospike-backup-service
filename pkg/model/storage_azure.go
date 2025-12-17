@@ -43,7 +43,7 @@ type AzureSharedKeyAuth struct {
 	AccountKey string
 }
 
-func (AzureSharedKeyAuth) azureAuth() {}
+func (*AzureSharedKeyAuth) azureAuth() {}
 
 // AzureADAuth represents Azure Active Directory authentication for Azure Blob storage.
 type AzureADAuth struct {
@@ -55,7 +55,7 @@ type AzureADAuth struct {
 	ClientSecret string
 }
 
-func (AzureADAuth) azureAuth() {}
+func (*AzureADAuth) azureAuth() {}
 
 func (s *AzureStorage) GetStorageClass() StorageClass {
 	if s.StorageClass == nil {

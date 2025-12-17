@@ -78,9 +78,9 @@ func getAzureClient(ctx context.Context, a *model.AzureStorage) (*azblob.Client,
 
 func createAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
 	switch auth := a.Auth.(type) {
-	case model.AzureSharedKeyAuth:
+	case *model.AzureSharedKeyAuth:
 		return clientFromSharedKey(a.Endpoint, auth, a.SecretAgent)
-	case model.AzureADAuth:
+	case *model.AzureADAuth:
 		return clientFromAD(a.Endpoint, auth, a.SecretAgent)
 	default:
 		slog.Info("Using default Azure credentials", slog.Any("auth", auth))
@@ -89,7 +89,7 @@ func createAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
 }
 
 func clientFromSharedKey(
-	endpoint string, auth model.AzureSharedKeyAuth, sa *model.SecretAgent,
+	endpoint string, auth *model.AzureSharedKeyAuth, sa *model.SecretAgent,
 ) (*azblob.Client, error) {
 	slog.Info("Using Shared key Azure credentials", slog.Any("auth", auth))
 	accountKey, err := sa.Read(auth.AccountKey)
@@ -117,7 +117,7 @@ func clientFromSharedKey(
 	return client, nil
 }
 
-func clientFromAD(endpoint string, auth model.AzureADAuth, sa *model.SecretAgent) (*azblob.Client, error) {
+func clientFromAD(endpoint string, auth *model.AzureADAuth, sa *model.SecretAgent) (*azblob.Client, error) {
 	slog.Info("Using AD Azure credentials", slog.Any("auth", auth))
 	clientSecret, err := sa.Read(auth.ClientSecret)
 	if err != nil {
