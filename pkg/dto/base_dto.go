@@ -7,7 +7,7 @@ import (
 // Validator interface for types that can be validated.
 type Validator interface {
 	// Validate validates the object.
-	Validate() error
+	Validate(opts ...ValidationOption) error
 }
 
 // ConvertModelsToDTO converts an array of models to an array of DTOs.

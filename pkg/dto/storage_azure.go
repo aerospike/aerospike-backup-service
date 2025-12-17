@@ -42,7 +42,7 @@ type AzureStorage struct {
 const azureMinUploadBlockSize = 1024 * 1024 // 1 MiB
 
 // Validate checks if the AzureStorage is valid.
-func (a *AzureStorage) Validate() error {
+func (a *AzureStorage) Validate(opts ...ValidationOption) error {
 	if a.Endpoint == "" {
 		return errors.New("azure storage endpoint is not specified")
 	}
@@ -66,7 +66,8 @@ use either AccountName/AccountKey or TenantID/ClientID/ClientSecret, not both`)
 		return errValidationInvalidValue("min-part-size", *a.MinPartSize, "at least 1MiB")
 	}
 
-	return nil
+	//nolint:staticcheck // We want to call embedded methods with embedded struct name.
+	return a.SecretAgentConfig.validate(opts...)
 }
 
 func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {

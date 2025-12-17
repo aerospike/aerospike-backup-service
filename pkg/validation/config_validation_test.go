@@ -21,10 +21,12 @@ func TestValidateConfiguration(t *testing.T) {
 					},
 				},
 				TLS: &dto.TLS{ // validation will pass even with non-existent files
-					Name:     ptr.Of("name"),
-					CAFile:   ptr.Of("/tmp/non-existent-ca-file"),
-					Keyfile:  ptr.Of("/tmp/non-existent-key-file"),
-					Certfile: ptr.Of("/tmp/non-existent-cert-file"),
+					ClientTLS: dto.ClientTLS{
+						Name:     ptr.Of("name"),
+						CAFile:   ptr.Of("/tmp/non-existent-ca-file"),
+						Keyfile:  ptr.Of("/tmp/non-existent-key-file"),
+						Certfile: ptr.Of("/tmp/non-existent-cert-file"),
+					},
 				},
 			},
 		},
@@ -48,10 +50,12 @@ func TestValidateRestoreRequest(t *testing.T) {
 					},
 				},
 				TLS: &dto.TLS{ // validation will pass even with non-existent files
-					Name:     ptr.Of("name"),
-					CAFile:   ptr.Of("/tmp/non-existent-ca-file"),
-					Keyfile:  ptr.Of("/tmp/non-existent-key-file"),
-					Certfile: ptr.Of("/tmp/non-existent-cert-file"),
+					ClientTLS: dto.ClientTLS{
+						Name:     ptr.Of("name"),
+						CAFile:   ptr.Of("/tmp/non-existent-ca-file"),
+						Keyfile:  ptr.Of("/tmp/non-existent-key-file"),
+						Certfile: ptr.Of("/tmp/non-existent-cert-file"),
+					},
 				},
 			},
 		},
@@ -113,10 +117,12 @@ func TestValidateRestoreTimestampRequest(t *testing.T) {
 				},
 			},
 			TLS: &dto.TLS{ // validation will pass even with non-existent files
-				Name:     ptr.Of("name"),
-				CAFile:   ptr.Of("/tmp/non-existent-ca-file"),
-				Keyfile:  ptr.Of("/tmp/non-existent-key-file"),
-				Certfile: ptr.Of("/tmp/non-existent-cert-file"),
+				ClientTLS: dto.ClientTLS{
+					Name:     ptr.Of("name"),
+					CAFile:   ptr.Of("/tmp/non-existent-ca-file"),
+					Keyfile:  ptr.Of("/tmp/non-existent-key-file"),
+					Certfile: ptr.Of("/tmp/non-existent-cert-file"),
+				},
 			},
 		},
 	}

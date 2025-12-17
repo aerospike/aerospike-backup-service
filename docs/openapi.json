@@ -3555,6 +3555,18 @@
                         "type": "string",
                         "example": "localhost"
                     },
+                    "ca-file": {
+                        "description": "Path to a trusted CA certificate file in PEM format.",
+                        "type": "string",
+                        "example": "/path/to/ca.pem",
+                        "nullable": true
+                    },
+                    "cert-file": {
+                        "description": "Path to a client certificate file for mutual TLS authentication.",
+                        "type": "string",
+                        "example": "/path/to/cert.pem",
+                        "nullable": true
+                    },
                     "connection-type": {
                         "description": "Connection type.",
                         "type": "string",
@@ -3569,6 +3581,18 @@
                         "type": "boolean",
                         "default": false
                     },
+                    "key-file": {
+                        "description": "Path to a client private key file for mutual TLS authentication.",
+                        "type": "string",
+                        "example": "/path/to/key.pem",
+                        "nullable": true
+                    },
+                    "name": {
+                        "description": "TLSName used for server certificate verification (ServerName for SNI).",
+                        "type": "string",
+                        "example": "example.com",
+                        "nullable": true
+                    },
                     "port": {
                         "description": "Port the Secret Agent is running on.",
                         "type": "integer",
@@ -3579,12 +3603,6 @@
                         "description": "Timeout in milliseconds.",
                         "type": "integer",
                         "default": 1000
-                    },
-                    "tls-ca-file": {
-                        "description": "The path to a trusted CA certificate file in PEM format.",
-                        "type": "string",
-                        "example": "/path/to/ca.pem",
-                        "nullable": true
                     }
                 }
             },
@@ -3689,9 +3707,9 @@
                 "type": "object",
                 "properties": {
                     "ca-file": {
-                        "description": "Path to a trusted CA certificate file.",
+                        "description": "Path to a trusted CA certificate file in PEM format.",
                         "type": "string",
-                        "example": "/path/to/cafile.pem",
+                        "example": "/path/to/ca.pem",
                         "nullable": true
                     },
                     "ca-path": {
@@ -3701,9 +3719,9 @@
                         "nullable": true
                     },
                     "cert-file": {
-                        "description": "Path to the chain file for mutual authentication (if Aerospike Cluster supports it).",
+                        "description": "Path to a client certificate file for mutual TLS authentication.",
                         "type": "string",
-                        "example": "/path/to/certfile.pem",
+                        "example": "/path/to/cert.pem",
                         "nullable": true
                     },
                     "cipher-suite": {
@@ -3713,9 +3731,9 @@
                         "nullable": true
                     },
                     "key-file": {
-                        "description": "Path to the key for mutual authentication (if Aerospike cluster supports it).",
+                        "description": "Path to a client private key file for mutual TLS authentication.",
                         "type": "string",
-                        "example": "/path/to/keyfile.pem",
+                        "example": "/path/to/key.pem",
                         "nullable": true
                     },
                     "key-file-password": {
@@ -3725,9 +3743,9 @@
                         "nullable": true
                     },
                     "name": {
-                        "description": "The default TLS name used to authenticate each TLS socket connection.",
+                        "description": "TLSName used for server certificate verification (ServerName for SNI).",
                         "type": "string",
-                        "example": "tls-name",
+                        "example": "example.com",
                         "nullable": true
                     },
                     "protocols": {
