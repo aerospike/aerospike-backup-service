@@ -34,6 +34,10 @@ func TestGetS3Client_Connectivity(t *testing.T) {
 		Bucket:             "test-bucket",
 		S3Region:           "us-east-1",
 		S3EndpointOverride: ptr.Of(ts.URL),
+		Auth: &model.S3Authentication{
+			KeyIDSecret:     "key",
+			AccessKeySecret: "secret",
+		},
 	}
 
 	client, err := getS3Client(t.Context(), s3Config)
@@ -50,6 +54,10 @@ func TestGetS3Client_Connectivity(t *testing.T) {
 		Bucket:             "test-bucket",
 		S3Region:           "us-east-1",
 		S3EndpointOverride: ptr.Of(failServer.URL),
+		Auth: &model.S3Authentication{
+			KeyIDSecret:     "key",
+			AccessKeySecret: "secret",
+		},
 	}
 
 	clientFail, err := getS3Client(t.Context(), s3ConfigFail)
