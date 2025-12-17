@@ -66,7 +66,7 @@ func getAzureClient(ctx context.Context, a *model.AzureStorage) (*azblob.Client,
 	client, err := createAzureClient(a)
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create Azure Blob client: %w", err)
 	}
 
 	if err := checkAzureConnectivity(ctx, client, a.ContainerName); err != nil {
@@ -83,6 +83,7 @@ func createAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
 	case model.AzureADAuth:
 		return clientFromAD(a.Endpoint, auth, a.SecretAgent)
 	default:
+		slog.Info("Using default Azure credentials", slog.Any("auth", auth))
 		return clientWithDefaultCredential(a.Endpoint)
 	}
 }
