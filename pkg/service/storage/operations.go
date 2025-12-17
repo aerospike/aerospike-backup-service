@@ -16,6 +16,8 @@ import (
 	"github.com/aerospike/backup-go/models"
 )
 
+var connectivityTimeout = 15 * time.Second
+
 // CreateFileReader creates a reader for a file in the specified storage.
 func CreateFileReader(
 	ctx context.Context,
