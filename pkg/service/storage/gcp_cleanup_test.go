@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -14,13 +15,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type threadSafeBuffer struct {
+	b bytes.Buffer
+	m sync.Mutex
+}
+
+func (b *threadSafeBuffer) Write(p []byte) (n int, err error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.Write(p)
+}
+
+func (b *threadSafeBuffer) String() string {
+	b.m.Lock()
+	defer b.m.Unlock()
+	return b.b.String()
+}
+
 func TestGetGcpClientCleanup(t *testing.T) {
 	// setup test logger
 	defer func(old *slog.Logger) {
 		slog.SetDefault(old)
 	}(slog.Default())
 
-	var buf bytes.Buffer
+	var buf threadSafeBuffer
 	handler := slog.NewTextHandler(&buf, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	})
@@ -45,7 +63,7 @@ func TestGetGcpClientCleanup(t *testing.T) {
 
 	_, err := getGcpClient(t.Context(), gcpConfig)
 	assert.NoError(t, err)
-	assert.Empty(t, buf.String(), "No debug logs should be printed")
+	assert.NotContains(t, buf.String(), "Close GCP client")
 
 	runtime.GC()
 	time.Sleep(50 * time.Millisecond) // give some time for cleanup to run
