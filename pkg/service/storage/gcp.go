@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"runtime"
 
 	"cloud.google.com/go/storage"
@@ -15,13 +16,18 @@ import (
 	"google.golang.org/api/option"
 )
 
+// GcpClientHandle wraps the client to manage its lifecycle via AddCleanup.
+type GcpClientHandle struct {
+	Client *storage.Client
+}
+
 type GcpStorageAccessor struct {
-	clientMap *collections.LoadingCache[*model.GcpStorage, *storage.Client]
+	clientMap *collections.LoadingCache[*model.GcpStorage, *GcpClientHandle]
 }
 
 func NewGcpStorageAccessor() *GcpStorageAccessor {
 	return &GcpStorageAccessor{
-		clientMap: collections.NewLoadingCache[*model.GcpStorage, *storage.Client](context.Background(), getGcpClient),
+		clientMap: collections.NewLoadingCache[*model.GcpStorage, *GcpClientHandle](context.Background(), getGcpClient),
 	}
 }
 
@@ -30,25 +36,44 @@ func (a *GcpStorageAccessor) supports(storage model.Storage) bool {
 	return ok
 }
 
+// keepAliveReader ensures the Handle (and thus the cleanup) waits until the Reader is done.
+type keepAliveReader struct {
+	backup.StreamingReader
+	handle *GcpClientHandle
+}
+
 func (a *GcpStorageAccessor) createReader(
 	ctx context.Context,
-	storage model.Storage,
+	s model.Storage,
 	opts ...options.Opt,
 ) (backup.StreamingReader, error) {
-	gcps := storage.(*model.GcpStorage)
-	client, err := a.clientMap.GetWithContext(ctx, gcps)
+	gcps := s.(*model.GcpStorage)
+	handle, err := a.clientMap.GetWithContext(ctx, gcps)
 	if err != nil {
 		return nil, fmt.Errorf("reader failed to create GCP client: %w", err)
 	}
 
-	return gcp.NewReader(ctx, client, gcps.BucketName, opts...)
+	// Use the inner Client for the actual work
+	r, err := gcp.NewReader(ctx, handle.Client, gcps.BucketName, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return a wrapper that holds the reference to 'handle'
+	return &keepAliveReader{StreamingReader: r, handle: handle}, nil
+}
+
+// keepAliveWriter ensures the Handle (and thus the cleanup) waits until the Writer is done.
+type keepAliveWriter struct {
+	backup.Writer
+	handle *GcpClientHandle
 }
 
 func (a *GcpStorageAccessor) createWriter(
-	ctx context.Context, storage model.Storage, opts ...options.Opt,
+	ctx context.Context, s model.Storage, opts ...options.Opt,
 ) (backup.Writer, error) {
-	gcps := storage.(*model.GcpStorage)
-	client, err := a.clientMap.GetWithContext(ctx, gcps)
+	gcps := s.(*model.GcpStorage)
+	handle, err := a.clientMap.GetWithContext(ctx, gcps)
 	if err != nil {
 		return nil, fmt.Errorf("writer failed to create GCP client: %w", err)
 	}
@@ -57,14 +82,19 @@ func (a *GcpStorageAccessor) createWriter(
 		opts = append(opts, options.WithChunkSize(*gcps.MinPartSize))
 	}
 
-	return gcp.NewWriter(ctx, client, gcps.BucketName, opts...)
+	w, err := gcp.NewWriter(ctx, handle.Client, gcps.BucketName, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &keepAliveWriter{Writer: w, handle: handle}, nil
 }
 
 func init() {
 	registerAccessor(NewGcpStorageAccessor())
 }
 
-func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, error) {
+func getGcpClient(ctx context.Context, g *model.GcpStorage) (*GcpClientHandle, error) {
 	opts := make([]option.ClientOption, 0)
 
 	if g.KeyFile != "" {
@@ -76,7 +106,6 @@ func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, er
 		if err != nil {
 			return nil, fmt.Errorf("failed to read key json from secret agent: %w", err)
 		}
-
 		opts = append(opts, option.WithCredentialsJSON([]byte(key)))
 	}
 
@@ -99,9 +128,17 @@ func getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, er
 		}),
 	)
 
-	// Set finalizer for the client to release allocated resources.
-	// TODO: replace with runtime.AddCleanup when upgrading to go1.24
-	runtime.SetFinalizer(client, (*storage.Client).Close)
+	handle := &GcpClientHandle{Client: client}
 
-	return client, nil
+	// REGISTER CLEANUP:
+	// 1. We track 'handle'. When 'handle' is unreachable, cleanup runs.
+	// 2. We pass 'client' as the argument.
+	// 3. IMPORTANT: 'handle' points to 'client', but 'client' does NOT point to 'handle'.
+	//    This prevents the reference cycle that would stop GC.
+	runtime.AddCleanup(handle, func(c *storage.Client) {
+		slog.Debug("Close GCP client", slog.String("storage", g.String()))
+		_ = c.Close()
+	}, client)
+
+	return handle, nil
 }
