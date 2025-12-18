@@ -2,7 +2,6 @@ package storage
 
 import (
 	"bytes"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -46,19 +45,12 @@ func TestGetGcpClientCleanup(t *testing.T) {
 	slog.SetDefault(logger)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" && r.URL.Path == "/b/test-bucket" {
-			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(map[string]string{"name": "test-bucket"})
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()
 
-	// Success case
 	gcpConfig := &model.GcpStorage{
-		BucketName: "test-bucket",
-		Endpoint:   ts.URL,
+		Endpoint: ts.URL,
 	}
 
 	_, err := getGcpClient(t.Context(), gcpConfig)
