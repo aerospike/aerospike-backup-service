@@ -89,14 +89,14 @@ func (a *AzureStorage) toModel(config *model.Config) (model.Storage, error) {
 
 func getAzureAuth(a *AzureStorage) model.AzureAuth {
 	if a.AccountName != "" && a.AccountKey != "" {
-		return model.AzureSharedKeyAuth{
+		return &model.AzureSharedKeyAuth{
 			AccountName: a.AccountName,
 			AccountKey:  a.AccountKey,
 		}
 	}
 
 	if a.TenantID != "" && a.ClientID != "" && a.ClientSecret != "" {
-		return model.AzureADAuth{
+		return &model.AzureADAuth{
 			TenantID:     a.TenantID,
 			ClientID:     a.ClientID,
 			ClientSecret: a.ClientSecret,
@@ -117,10 +117,10 @@ func newAzureStorageFromModel(s *model.AzureStorage, config *model.BackupConfig)
 	}
 
 	switch auth := s.Auth.(type) {
-	case model.AzureSharedKeyAuth:
+	case *model.AzureSharedKeyAuth:
 		azureStorage.AccountName = auth.AccountName
 		azureStorage.AccountKey = auth.AccountKey
-	case model.AzureADAuth:
+	case *model.AzureADAuth:
 		azureStorage.TenantID = auth.TenantID
 		azureStorage.ClientID = auth.ClientID
 		azureStorage.ClientSecret = auth.ClientSecret

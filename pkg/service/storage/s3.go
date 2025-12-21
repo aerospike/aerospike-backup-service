@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -129,6 +130,10 @@ func getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error)
 		}
 	})
 
+	if err := checkS3Connectivity(ctx, client, s.Bucket); err != nil {
+		return nil, err
+	}
+
 	return client, nil
 }
 
@@ -149,4 +154,19 @@ func withCredentialsProvider(a *model.S3Authentication) (config.LoadOptionsFunc,
 			AccessKeyID: keyID, SecretAccessKey: accessKey,
 		},
 	}), nil
+}
+
+func checkS3Connectivity(ctx context.Context, client *awsS3.Client, bucket string) error {
+	ctx, cancel := context.WithTimeout(ctx, connectivityTimeout)
+	defer cancel()
+
+	_, err := client.HeadBucket(ctx, &awsS3.HeadBucketInput{
+		Bucket: aws.String(bucket),
+	})
+
+	if err != nil {
+		return fmt.Errorf("s3 storage connectivity check failed: %w", err)
+	}
+
+	return nil
 }

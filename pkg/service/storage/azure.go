@@ -61,11 +61,25 @@ func init() {
 	registerAccessor(NewAzureStorageAccessor())
 }
 
-func getAzureClient(_ context.Context, a *model.AzureStorage) (*azblob.Client, error) {
+func getAzureClient(ctx context.Context, a *model.AzureStorage) (*azblob.Client, error) {
+	client, err := createAzureClient(a)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Azure Blob client: %w", err)
+	}
+
+	if err := checkAzureConnectivity(ctx, client, a.ContainerName); err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+func createAzureClient(a *model.AzureStorage) (*azblob.Client, error) {
 	switch auth := a.Auth.(type) {
-	case model.AzureSharedKeyAuth:
+	case *model.AzureSharedKeyAuth:
 		return clientFromSharedKey(a.Endpoint, auth, a.SecretAgent)
-	case model.AzureADAuth:
+	case *model.AzureADAuth:
 		return clientFromAD(a.Endpoint, auth, a.SecretAgent)
 	default:
 		return clientWithDefaultCredential(a.Endpoint)
@@ -73,7 +87,7 @@ func getAzureClient(_ context.Context, a *model.AzureStorage) (*azblob.Client, e
 }
 
 func clientFromSharedKey(
-	endpoint string, auth model.AzureSharedKeyAuth, sa *model.SecretAgent,
+	endpoint string, auth *model.AzureSharedKeyAuth, sa *model.SecretAgent,
 ) (*azblob.Client, error) {
 	accountKey, err := sa.Read(auth.AccountKey)
 	if err != nil {
@@ -84,7 +98,7 @@ func clientFromSharedKey(
 		return nil, fmt.Errorf("failed to create Azure shared key credentials: %w", err)
 	}
 
-	client, err := azblob.NewClientWithSharedKeyCredential(endpoint, cred, nil)
+	client, err := azblob.NewClientWithSharedKeyCredential(endpoint, cred, azureOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob client with shared key: %w", err)
 	}
@@ -92,7 +106,7 @@ func clientFromSharedKey(
 	return client, nil
 }
 
-func clientFromAD(endpoint string, auth model.AzureADAuth, sa *model.SecretAgent) (*azblob.Client, error) {
+func clientFromAD(endpoint string, auth *model.AzureADAuth, sa *model.SecretAgent) (*azblob.Client, error) {
 	clientSecret, err := sa.Read(auth.ClientSecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve client-secret from secret agent: %w", err)
@@ -110,15 +124,7 @@ func clientFromAD(endpoint string, auth model.AzureADAuth, sa *model.SecretAgent
 		return nil, fmt.Errorf("failed to create Azure AAD credentials: %w", err)
 	}
 
-	client, err := azblob.NewClient(endpoint, cred, &azblob.ClientOptions{
-		ClientOptions: azcore.ClientOptions{
-			Retry: policy.RetryOptions{
-				MaxRetries:    int32(model.StorageRetryPolicy.MaxRetries),
-				RetryDelay:    model.StorageRetryPolicy.BaseTimeout,
-				MaxRetryDelay: model.StorageRetryPolicy.MaxBackoffDuration,
-			},
-		},
-	})
+	client, err := azblob.NewClient(endpoint, cred, azureOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob client with AAD: %w", err)
 	}
@@ -132,10 +138,35 @@ func clientWithDefaultCredential(endpoint string) (*azblob.Client, error) {
 		return nil, fmt.Errorf("failed to obtain default Azure credentials: %w", err)
 	}
 
-	client, err := azblob.NewClient(endpoint, cred, nil)
+	client, err := azblob.NewClient(endpoint, cred, azureOptions())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Azure Blob client with default credentials: %w", err)
 	}
 
 	return client, nil
+}
+
+func azureOptions() *azblob.ClientOptions {
+	return &azblob.ClientOptions{
+		ClientOptions: azcore.ClientOptions{
+			Retry: policy.RetryOptions{
+				MaxRetries:    int32(model.StorageRetryPolicy.MaxRetries),
+				RetryDelay:    model.StorageRetryPolicy.BaseTimeout,
+				MaxRetryDelay: model.StorageRetryPolicy.MaxBackoffDuration,
+			},
+		},
+	}
+}
+
+func checkAzureConnectivity(ctx context.Context, client *azblob.Client, container string) error {
+	ctx, cancel := context.WithTimeout(ctx, connectivityTimeout)
+	defer cancel()
+
+	cc := client.ServiceClient().NewContainerClient(container)
+	_, err := cc.GetProperties(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("azure blob storage connectivity check failed: %w", err)
+	}
+
+	return nil
 }
