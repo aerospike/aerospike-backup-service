@@ -219,7 +219,7 @@ func (r *dataRestorer) findBackupsToRestore(
 	}
 
 	if len(backups) == 0 {
-		return nil, fmt.Errorf("no full backups found")
+		return nil, errors.New("no full backups found")
 	}
 
 	// Find incremental backups.
@@ -325,7 +325,7 @@ func validateEncryption(
 				if userEncryptionPolicy.KeyFile == nil &&
 					userEncryptionPolicy.KeyEnv == nil &&
 					userEncryptionPolicy.KeySecret == nil {
-					return fmt.Errorf("backup is encrypted, " +
+					return errors.New("backup is encrypted, " +
 						"but no encryption key (KeyFile, KeyEnv, or KeySecret) was provided in the encryption policy")
 				}
 			}

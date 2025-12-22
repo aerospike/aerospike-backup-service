@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"slices"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -146,5 +147,5 @@ func getRewind(bounds model.TimeBounds) string {
 	}
 	seconds := int(time.Since(*bounds.FromTime).Seconds()) + 1
 
-	return fmt.Sprintf("%d", seconds)
+	return strconv.Itoa(seconds)
 }

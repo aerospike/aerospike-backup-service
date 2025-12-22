@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -145,7 +146,7 @@ func validatePartitionList(partitionList string) error {
 	for entry := range strings.SplitSeq(partitionList, ",") {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
-			return fmt.Errorf("empty entry in partition list")
+			return errors.New("empty entry in partition list")
 		}
 
 		if err := validatePartitionEntry(entry); err != nil {

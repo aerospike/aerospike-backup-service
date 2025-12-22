@@ -26,6 +26,7 @@ linters:
     - nlreturn
     - nolintlint
     - nilerr
+    - perfsprint
     - prealloc
     - predeclared
     - promlinter

@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"sync"
 	"testing"
@@ -230,7 +229,7 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 	mockHandler.EXPECT().Wait(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 		select {
 		case <-time.After(1 * time.Second):
-			return fmt.Errorf("cancel was not called")
+			return errors.New("cancel was not called")
 		case <-ctx.Done():
 			return ctx.Err()
 		}

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -64,7 +63,7 @@ func newIPWhiteList(ipList []string) *IPWhiteList {
 		if err != nil {
 			ipAddr, err := netip.ParseAddr(ip)
 			if err != nil {
-				panic(fmt.Sprintf("invalid ip configuration: %s", ip))
+				panic("invalid ip configuration: " + ip)
 			}
 			addresses[ip] = &ipAddr
 		} else {

@@ -280,7 +280,7 @@ func TestParseCipherSuites(t *testing.T) {
 			[]uint16{validSuiteID1, validSuiteID2}, false},
 		{"InvalidSuiteName", ptr.Of("TLS_BOGUS_SUITE"), nil, true},
 		{"MixedValidity",
-			ptr.Of(fmt.Sprintf("%s:TLS_BOGUS_SUITE", validSuite1)), nil, true},
+			ptr.Of(validSuite1 + ":TLS_BOGUS_SUITE"), nil, true},
 		{"EmptyStringBetweenColons",
 			ptr.Of(fmt.Sprintf("%s::%s", validSuite1, validSuite2)),
 			[]uint16{validSuiteID1, validSuiteID2}, false},

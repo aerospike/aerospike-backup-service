@@ -27,7 +27,7 @@ func NewHTTPServer(serverConfig *model.HTTPServerConfig, service *handlers.Servi
 
 	// Create router
 	mux := NewServeMux(
-		fmt.Sprintf("/%s", restAPIVersion),
+		"/"+restAPIVersion,
 		"/",
 		service,
 	)
