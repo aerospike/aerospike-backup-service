@@ -86,7 +86,7 @@ func runLineByLineLogging(b *testing.B, name string, wrapWriter func(io.Writer) 
 
 	b.Run(name, func(b *testing.B) {
 		for range b.N {
-			f, err := os.CreateTemp("", name+"_*.log")
+			f, err := os.CreateTemp(b.TempDir(), name+"_*.log")
 			if err != nil {
 				b.Fatal(err)
 			}

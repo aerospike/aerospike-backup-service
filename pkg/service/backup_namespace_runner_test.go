@@ -90,10 +90,10 @@ func TestRun_SuccessfulFullBackup(t *testing.T) {
 			return nil
 		})
 
-	handler := runner.Run(ctx, client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
+	handler := runner.Run(t.Context(), client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
 
 	require.NotNil(t, handler)
-	err := handler.Wait(ctx)
+	err := handler.Wait(t.Context())
 	require.NoError(t, err)
 }
 
@@ -137,10 +137,10 @@ func TestSuccessfulIncrementalBackup(t *testing.T) {
 			return nil
 		})
 
-	handler := runner.Run(ctx, client, backupRoutine, jobTypeIncremental, testNamespace, now, timeBounds)
+	handler := runner.Run(t.Context(), client, backupRoutine, jobTypeIncremental, testNamespace, now, timeBounds)
 
 	require.NotNil(t, handler)
-	err := handler.Wait(ctx)
+	err := handler.Wait(t.Context())
 	require.NoError(t, err)
 }
 
@@ -174,10 +174,10 @@ func TestEmptyIncrementalBackup(t *testing.T) {
 
 	// No WriteBackupMetadata call expected for empty incremental backup.
 
-	handler := runner.Run(ctx, client, backupRoutine, jobTypeIncremental, testNamespace, now, timeBounds)
+	handler := runner.Run(t.Context(), client, backupRoutine, jobTypeIncremental, testNamespace, now, timeBounds)
 
 	require.NotNil(t, handler)
-	err := handler.Wait(ctx)
+	err := handler.Wait(t.Context())
 	require.NoError(t, err)
 }
 
@@ -197,10 +197,10 @@ func TestBackupExecutorError(t *testing.T) {
 		Return(nil, errors.New("executor error"))
 
 	// backup fails to start => nothing is written via backendService
-	handler := runner.Run(ctx, client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
+	handler := runner.Run(t.Context(), client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
 
 	require.NotNil(t, handler)
-	err := handler.Wait(ctx)
+	err := handler.Wait(t.Context())
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "failed to start backup")
 }
@@ -229,10 +229,10 @@ func TestBackupHandlerError(t *testing.T) {
 					Delete(gomock.Any(), routine, timestampPath).
 					Return(nil)
 
-	handler := runner.Run(ctx, client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
+	handler := runner.Run(t.Context(), client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
 
 	require.NotNil(t, handler)
-	err := handler.Wait(ctx)
+	err := handler.Wait(t.Context())
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "backup failed")
 }
@@ -272,10 +272,10 @@ func TestMetadataWriteError(t *testing.T) {
 		Delete(gomock.Any(), routine, timestampPath).
 		Return(nil)
 
-	handler := runner.Run(ctx, client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
+	handler := runner.Run(t.Context(), client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
 
 	require.NotNil(t, handler)
-	err := handler.Wait(ctx)
+	err := handler.Wait(t.Context())
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "could not write backup metadata")
 }
@@ -314,7 +314,7 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 					Delete(gomock.Any(), routine, timestampPath).
 					Return(nil)
 
-	handler := runner.Run(ctx, client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
+	handler := runner.Run(t.Context(), client, backupRoutine, jobTypeFull, testNamespace, now, timeBounds)
 
 	// Wait for the handler.Wait to be called
 	wg.Wait()
@@ -323,7 +323,7 @@ func TestRetryableBackupHandler_Cancel(t *testing.T) {
 	handler.Cancel()
 
 	// Assert - the Wait method should eventually return with context.Canceled
-	err := handler.Wait(ctx)
+	err := handler.Wait(t.Context())
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "context canceled")
 }

@@ -43,6 +43,7 @@ linters:
     - unconvert
     - unparam
     - unused
+    - usetesting
     - whitespace
   settings:
     godot:
@@ -75,6 +76,10 @@ linters:
             - checkPrivateReceivers
           exclude:
             - test
+    usetesting:
+      context-background: true
+      context-todo: true
+      os-temp-dir: true
   exclusions:
     generated: lax
     presets:

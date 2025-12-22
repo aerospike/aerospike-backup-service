@@ -22,7 +22,6 @@ var retry = newRetryExecutor(models.RetryPolicy{
 }, slog.Default())
 
 func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
-	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -52,8 +51,8 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 		retryCount++
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, onRetry)
-	err := handler.Wait(ctx)
+	handler := newRetryableBackupHandler(t.Context(), retry, start, onFail, onSuccess, onRetry)
+	err := handler.Wait(t.Context())
 
 	require.NoError(t, err)
 	assert.Equal(t, 0, failureCount)
@@ -62,7 +61,6 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 }
 
 func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
-	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -100,8 +98,8 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 		retryCount++
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, onRetry)
-	err := handler.Wait(ctx)
+	handler := newRetryableBackupHandler(t.Context(), retry, start, onFail, onSuccess, onRetry)
+	err := handler.Wait(t.Context())
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, failureCount)
@@ -110,7 +108,7 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 }
 
 func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -159,7 +157,6 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 }
 
 func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
-	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -182,8 +179,8 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, func() {})
-	err := handler.Wait(ctx)
+	handler := newRetryableBackupHandler(t.Context(), retry, start, onFail, onSuccess, func() {})
+	err := handler.Wait(t.Context())
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "backup failed after 3 attempts")
@@ -192,7 +189,6 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 }
 
 func TestStartRetryableBackup_StartFails(t *testing.T) {
-	ctx := context.Background()
 	successCount := 0
 	failureCount := 0
 
@@ -209,8 +205,8 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, func() {})
-	err := handler.Wait(ctx)
+	handler := newRetryableBackupHandler(t.Context(), retry, start, onFail, onSuccess, func() {})
+	err := handler.Wait(t.Context())
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to start backup")
@@ -219,7 +215,6 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 }
 
 func TestStartRetryableBackup_Cancel(t *testing.T) {
-	ctx := context.Background()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -251,12 +246,12 @@ func TestStartRetryableBackup_Cancel(t *testing.T) {
 		return nil
 	}
 
-	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, func() {})
+	handler := newRetryableBackupHandler(t.Context(), retry, start, onFail, onSuccess, func() {})
 	var err error
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		err = handler.Wait(ctx)
+		err = handler.Wait(t.Context())
 		wg.Done()
 	}()
 
