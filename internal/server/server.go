@@ -57,6 +57,6 @@ func (s *HTTPServer) Start() {
 }
 
 // Shutdown shutdowns the HTTP server.
-func (s *HTTPServer) Shutdown() error {
-	return s.server.Shutdown(context.Background())
+func (s *HTTPServer) Shutdown(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }

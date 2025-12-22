@@ -198,7 +198,7 @@ func runHTTPServer(
 	<-ctx.Done()
 	time.Sleep(time.Millisecond * 100) // wait for other goroutines to exit
 	// shutdown the HTTP server gracefully
-	if err := httpServer.Shutdown(); err != nil {
+	if err := httpServer.Shutdown(ctx); err != nil {
 		slog.Error("HTTP server shutdown failed", attr.Error(err))
 		return err
 	}
