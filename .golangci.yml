@@ -12,6 +12,7 @@ linters:
     - funlen
     - goconst
     - gocritic
+    - gocognit
     - gocyclo
     - godot
     - gosec
@@ -48,6 +49,8 @@ linters:
     gosec:
       excludes:
         - G115
+    gocognit:
+        min-complexity: 25
     exhaustive:
       default-signifies-exhaustive: true
     nlreturn:

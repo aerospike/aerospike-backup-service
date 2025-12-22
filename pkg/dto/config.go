@@ -78,6 +78,8 @@ func NewConfigFromReader(r io.Reader, format decoder.SerializationFormat) (*Conf
 }
 
 // Validate validates the configuration.
+//
+// nolint: gocognit
 func (c *Config) Validate(opts ...ValidationOption) error {
 	for name, routine := range c.BackupRoutines {
 		if name == "" {

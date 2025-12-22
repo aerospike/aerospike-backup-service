@@ -74,6 +74,8 @@ type BackupRoutine struct {
 }
 
 // Validate validates the backup routine configuration.
+//
+//nolint:gocognit
 func (r *BackupRoutine) Validate() error {
 	if r.SourceCluster == "" {
 		return errValidationEmptyField("source-cluster")
