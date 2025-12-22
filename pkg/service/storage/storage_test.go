@@ -22,7 +22,7 @@ func TestGetS3Client_Connectivity(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "HEAD" && r.URL.Path == "/test-bucket" {
+		if r.Method == http.MethodHead && r.URL.Path == "/test-bucket" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -71,7 +71,7 @@ func TestGetGcpClient_Connectivity(t *testing.T) {
 	t.Parallel()
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" && r.URL.Path == "/b/test-bucket" {
+		if r.Method == http.MethodGet && r.URL.Path == "/b/test-bucket" {
 			w.WriteHeader(http.StatusOK)
 			_ = json.NewEncoder(w).Encode(map[string]string{"name": "test-bucket"})
 			return
@@ -114,7 +114,7 @@ func TestGetAzureClient_Connectivity(t *testing.T) {
 		isAccountCheck := r.URL.Query().Get("comp") == "properties" && r.URL.Query().Get("restype") == "account"
 		isContainerCheck := r.URL.Query().Get("restype") == "container"
 
-		if r.Method == "GET" && (isAccountCheck || isContainerCheck) {
+		if r.Method == http.MethodGet && (isAccountCheck || isContainerCheck) {
 			w.Header().Set("x-ms-request-id", "req-id")
 			w.Header().Set("x-ms-version", "2019-12-12")
 			w.Header().Set("x-ms-sku-name", "Standard_LRS")
