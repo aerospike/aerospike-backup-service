@@ -142,8 +142,7 @@ func validatePartitionList(partitionList string) error {
 		return nil // empty list is valid
 	}
 
-	entries := strings.Split(partitionList, ",")
-	for _, entry := range entries {
+	for entry := range strings.SplitSeq(partitionList, ",") {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
 			return fmt.Errorf("empty entry in partition list")

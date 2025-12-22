@@ -14,7 +14,7 @@ import (
 //nolint:lll
 type Config struct {
 	// ServiceConfig contains general service settings.
-	ServiceConfig ServiceConfig `yaml:"service,omitempty" json:"service,omitempty"`
+	ServiceConfig ServiceConfig `yaml:"service,omitempty" json:"service,omitzero"`
 	// AerospikeClusters is a map of Aerospike clusters that can be used by backup routines.
 	AerospikeClusters map[string]*AerospikeCluster `yaml:"aerospike-clusters,omitempty" json:"aerospike-clusters,omitempty"`
 	// Storage is a map of storages that can be used by backup routines.

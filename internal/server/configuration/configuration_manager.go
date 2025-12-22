@@ -83,7 +83,7 @@ func writeConfig(writer io.Writer, config *model.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration: %w", err)
 	}
-	dataWithScheme := append([]byte(fmt.Sprintf(schemaHeader, backup.Version)), data...)
+	dataWithScheme := append(fmt.Appendf(nil, schemaHeader, backup.Version), data...)
 	_, err = writer.Write(dataWithScheme)
 	return err
 }

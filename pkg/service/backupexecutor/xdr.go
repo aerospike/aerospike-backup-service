@@ -128,7 +128,7 @@ func generateUniqueDCName(ctx context.Context, infoGetter backup.InfoGetter) (st
 	}
 
 	// Try a reasonable number of times to avoid infinite loop
-	for i := 0; i < limit; i++ {
+	for range limit {
 		name := fmt.Sprintf("abs_dc%d", dcCounter.Add(1)%dcUpperBound) // each time generate a different name
 		if !slices.Contains(existingDCs, name) {
 			return name, nil

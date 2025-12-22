@@ -18,7 +18,7 @@ type BackupDetails struct {
 	// Duration represents the elapsed time taken by the backup process in seconds.
 	Duration uint `yaml:"duration" json:"duration"`
 	// The lower time bound of backup entities in the ISO 8601 format (for incremental backups only).
-	From time.Time `yaml:"from,omitempty" json:"from,omitempty" example:"2023-03-19T14:50:00Z"`
+	From time.Time `yaml:"from,omitempty" json:"from,omitzero" example:"2023-03-19T14:50:00Z"`
 	// The namespace of a backup.
 	Namespace string `yaml:"namespace" json:"namespace" example:"testNamespace"`
 	// The total number of records backed up.

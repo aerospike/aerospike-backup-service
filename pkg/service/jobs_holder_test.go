@@ -46,7 +46,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(numGoroutines * 2)
 
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			// Concurrently add handlers
 			go func() {
 				defer wg.Done()
@@ -101,7 +101,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(numGoroutines*2 + 1)
 
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			go func() {
 				defer wg.Done()
 				holder.addHandler(jobID, &mockRestoreHandler{})
@@ -143,7 +143,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		var wg sync.WaitGroup
 		wg.Add(numGoroutines*2 + 1)
 
-		for i := 0; i < numGoroutines; i++ {
+		for range numGoroutines {
 			go func() {
 				defer wg.Done()
 				holder.addHandler(jobID, &mockRestoreHandler{})

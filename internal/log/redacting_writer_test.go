@@ -61,24 +61,23 @@ func BenchmarkLoggerComparison(b *testing.B) {
 	})
 }
 
-//nolint:lll
 func generateLogLine(i int) []byte {
 	if i%redactEveryNthLine == 0 {
-		return []byte(fmt.Sprintf("WARN %d: key found -----BEGIN PRIVATE KEY-----\nKEY_%d\n-----END PRIVATE KEY-----\n", i, i))
+		return fmt.Appendf(nil, "WARN %d: key found -----BEGIN PRIVATE KEY-----\nKEY_%d\n-----END PRIVATE KEY-----\n", i, i)
 	}
 	switch i % 5 {
 	case 0:
-		return []byte(fmt.Sprintf("INFO %d: user logged in from IP 192.168.%d.%d\n", i, i%255, (i+50)%255))
+		return fmt.Appendf(nil, "INFO %d: user logged in from IP 192.168.%d.%d\n", i, i%255, (i+50)%255)
 	case 1:
-		return []byte(fmt.Sprintf("DEBUG %d: health check passed for service=db latency=%dms\n", i, i%100))
+		return fmt.Appendf(nil, "DEBUG %d: health check passed for service=db latency=%dms\n", i, i%100)
 	case 2:
-		return []byte(fmt.Sprintf("WARN %d: unusual login time detected for user_id=%d\n", i, i*3))
+		return fmt.Appendf(nil, "WARN %d: unusual login time detected for user_id=%d\n", i, i*3)
 	case 3:
-		return []byte(fmt.Sprintf("TRACE %d: payload received {\"req_id\":%d,\"action\":\"ping\"}\n", i, 10000+i))
+		return fmt.Appendf(nil, "TRACE %d: payload received {\"req_id\":%d,\"action\":\"ping\"}\n", i, 10000+i)
 	case 4:
-		return []byte(fmt.Sprintf("ERROR %d: failed to decode stream: %%x=0x%X ☠️\n", i, i*7))
+		return fmt.Appendf(nil, "ERROR %d: failed to decode stream: %%x=0x%X ☠️\n", i, i*7)
 	default:
-		return []byte(fmt.Sprintf("line %d: fallback log line\n", i))
+		return fmt.Appendf(nil, "line %d: fallback log line\n", i)
 	}
 }
 
@@ -94,7 +93,7 @@ func runLineByLineLogging(b *testing.B, name string, wrapWriter func(io.Writer) 
 
 			writer := wrapWriter(f)
 
-			for line := 0; line < totalLogLines; line++ {
+			for line := range totalLogLines {
 				line := generateLogLine(line)
 				_, err := writer.Write(line)
 				if err != nil {
