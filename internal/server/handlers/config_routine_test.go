@@ -10,6 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddRoutine(t *testing.T) {
@@ -70,7 +71,7 @@ func TestReadRoutines(t *testing.T) {
 
 	var response map[string]dto.BackupRoutine
 	err := json.NewDecoder(w.Body).Decode(&response)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, response, 2)
 	assert.Contains(t, response, "routine1")
 	assert.Contains(t, response, "routine2")

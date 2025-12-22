@@ -48,12 +48,12 @@ func Test_GetClient(t *testing.T) {
 
 	// First call will create a new client
 	client, err := clientManager.GetClient(context.Background(), cluster, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, client)
 
 	// Second call will reuse the existing client
 	client2, err := clientManager.GetClient(context.Background(), cluster, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, client2)
 	assert.Equal(t, client, client2)
 }
@@ -181,7 +181,7 @@ func Test_CreateClient_Errors(t *testing.T) {
 
 	client, err := clientManager.GetClient(context.Background(), aeroCluster, nil)
 	assert.Nil(t, client)
-	assert.ErrorContains(t, err, "failed to connect to aerospike")
+	require.ErrorContains(t, err, "failed to connect to aerospike")
 }
 
 func Test_Close(t *testing.T) {
@@ -208,7 +208,7 @@ func Test_Close(t *testing.T) {
 	)
 
 	client, err := clientManager.GetClient(context.Background(), cluster, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, client)
 	assertClientExists(t, clientManager, cluster, true)
 
@@ -243,10 +243,10 @@ func Test_Close_Multiple(t *testing.T) {
 	)
 
 	client, err := clientManager.GetClient(context.Background(), cluster, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, client)
 	client, err = clientManager.GetClient(context.Background(), cluster, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, client)
 
 	clientManager.Close(client)
@@ -280,7 +280,7 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 	)
 
 	client, err := clientManager.GetClient(context.Background(), cluster, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, client)
 
 	// Schedule closing
@@ -289,7 +289,7 @@ func Test_Close_CancelOnReuse(t *testing.T) {
 	// Reuse the client before it's closed
 	time.Sleep(50 * time.Millisecond)
 	client2, err := clientManager.GetClient(context.Background(), cluster, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, client, client2)
 
 	// Wait longer than the close delay

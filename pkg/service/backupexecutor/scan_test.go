@@ -80,7 +80,7 @@ func TestCalculateSocketTimeout(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := calculateSocketTimeout(tt.routine, tt.isFullBackup, now)
-			assert.Equal(t, result, tt.expected)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
@@ -141,23 +141,23 @@ func TestMakeBackupConfigWithFullBackup(t *testing.T) {
 	assert.Equal(t, 4, config.ParallelRead)
 	assert.Equal(t, 8, config.ParallelWrite)
 	assert.Equal(t, uint64(100*megabyte), config.FileLimit)
-	assert.Equal(t, true, config.NoRecords)
-	assert.Equal(t, true, config.NoIndexes)
-	assert.Equal(t, true, config.NoUDFs)
+	assert.True(t, config.NoRecords)
+	assert.True(t, config.NoIndexes)
+	assert.True(t, config.NoUDFs)
 	assert.Equal(t, int64(10*megabyte), config.Bandwidth)
 	assert.Equal(t, timeBounds.ToTime, config.ModBefore)
 	assert.Nil(t, config.ModAfter)
 	assert.NotNil(t, config.ScanPolicy)
 	assert.Equal(t, 10, config.ScanPolicy.MaxRetries)
-	assert.Equal(t, config.MetricsEnabled, true)
+	assert.True(t, config.MetricsEnabled)
 
 	assert.NotNil(t, config.SecretAgentConfig)
-	assert.Equal(t, *config.SecretAgentConfig.Address, "localhost")
-	assert.Equal(t, *config.SecretAgentConfig.Port, 9000)
-	assert.Equal(t, *config.SecretAgentConfig.ConnectionType, "tcp")
-	assert.Equal(t, *config.SecretAgentConfig.TimeoutMillisecond, 1000)
-	assert.Equal(t, *config.SecretAgentConfig.CaFile, "ca-string")
-	assert.Equal(t, *config.SecretAgentConfig.IsBase64, true)
+	assert.Equal(t, "localhost", *config.SecretAgentConfig.Address)
+	assert.Equal(t, 9000, *config.SecretAgentConfig.Port)
+	assert.Equal(t, "tcp", *config.SecretAgentConfig.ConnectionType)
+	assert.Equal(t, 1000, *config.SecretAgentConfig.TimeoutMillisecond)
+	assert.Equal(t, "ca-string", *config.SecretAgentConfig.CaFile)
+	assert.True(t, *config.SecretAgentConfig.IsBase64)
 
 	encryptionPolicy := config.EncryptionPolicy
 	require.NotNil(t, encryptionPolicy)
@@ -209,9 +209,9 @@ func TestMakeBackupConfigWithIncrementalBackup(t *testing.T) {
 	assert.Equal(t, 4, config.ParallelRead)
 	assert.Equal(t, 8, config.ParallelWrite)
 	assert.Equal(t, uint64(100*megabyte), config.FileLimit)
-	assert.Equal(t, false, config.NoRecords)
-	assert.Equal(t, true, config.NoIndexes) // Incremental backup should have NoIndexes=true
-	assert.Equal(t, true, config.NoUDFs)    // Incremental backup should have NoUDFs=true
+	assert.False(t, config.NoRecords)
+	assert.True(t, config.NoIndexes) // Incremental backup should have NoIndexes=true
+	assert.True(t, config.NoUDFs)    // Incremental backup should have NoUDFs=true
 	assert.Equal(t, int64(10*megabyte), config.Bandwidth)
 	assert.Equal(t, timeBounds.ToTime, config.ModBefore)
 	assert.Equal(t, timeBounds.FromTime, config.ModAfter)
@@ -268,7 +268,7 @@ func TestMakeBackupConfigWithPreferRacks(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotNil(t, config.ScanPolicy)
-	assert.Equal(t, config.ScanPolicy.ReplicaPolicy, as.PREFER_RACK)
+	assert.Equal(t, as.PREFER_RACK, config.ScanPolicy.ReplicaPolicy)
 	assert.Nil(t, config.EncryptionPolicy)
 	assert.Nil(t, config.CompressionPolicy)
 }
@@ -286,7 +286,7 @@ func TestMakeBackupConfigWithRackList(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotNil(t, config.ScanPolicy)
-	assert.Equal(t, config.ScanPolicy.ReplicaPolicy, as.MASTER)
+	assert.Equal(t, as.MASTER, config.ScanPolicy.ReplicaPolicy)
 	assert.Nil(t, config.EncryptionPolicy)
 	assert.Nil(t, config.CompressionPolicy)
 }
@@ -304,7 +304,7 @@ func TestMakeBackupConfigWithNodeList(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.NotNil(t, config.ScanPolicy)
-	assert.Equal(t, config.ScanPolicy.ReplicaPolicy, as.MASTER)
+	assert.Equal(t, as.MASTER, config.ScanPolicy.ReplicaPolicy)
 	assert.Nil(t, config.EncryptionPolicy)
 	assert.Nil(t, config.CompressionPolicy)
 }

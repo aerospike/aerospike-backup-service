@@ -7,7 +7,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/collections"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/optional"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
@@ -55,7 +55,7 @@ func TestRetentionManager_FullBackupsOnly(t *testing.T) {
 		Return([]model.BackupDetails{}, nil)
 
 	err := retentionManager.deleteOldBackups(ctx, routine)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestRetentionManager_FullAndIncremental
@@ -106,7 +106,7 @@ func TestRetentionManager_FullAndIncremental(t *testing.T) {
 	backendService.EXPECT().Delete(ctx, routine, "test-routine/incremental/1200").Return(nil)
 
 	err := retentionManager.deleteOldBackups(ctx, routine)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestRetentionManager_IncrementalPolicy tests the incremental retention policy.
@@ -151,7 +151,7 @@ func TestRetentionManager_IncrementalPolicy(t *testing.T) {
 	backendService.EXPECT().Delete(ctx, routine, "test-routine/incremental/1200").Return(nil)
 
 	err := retentionManager.deleteOldBackups(ctx, routine)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestRetentionManager_NoPolicy tests the case where no retention policy is defined.
@@ -166,7 +166,7 @@ func TestRetentionManager_NoPolicy(t *testing.T) {
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
 
 	err := retentionManager.deleteOldBackups(ctx, routine)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestRetentionManager_NoneToDelete tests the case where the number of backups
@@ -194,7 +194,7 @@ func TestRetentionManager_NoneToDelete(t *testing.T) {
 	// No Delete calls are expected
 
 	err := retentionManager.deleteOldBackups(ctx, routine)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestRetentionManager_RetainZeroIncrementals
@@ -219,7 +219,7 @@ func TestRetentionManager_RetainZeroIncrementals(t *testing.T) {
 	backendService.EXPECT().Delete(ctx, routine, "test-routine/incremental").Return(nil)
 
 	err := retentionManager.deleteOldBackups(ctx, routine)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestRetentionManager_ConcurrencyLock
@@ -244,7 +244,7 @@ func TestRetentionManager_ConcurrencyLock(t *testing.T) {
 
 	// This call should be skipped due to the lock
 	err := retentionManager.deleteOldBackups(ctx, routine)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 // TestRetentionManager_PolicyWithNilCounts
@@ -260,7 +260,7 @@ func TestRetentionManager_PolicyWithNilCounts(t *testing.T) {
 	retentionManager := NewBackupRetentionManager(backendService, &collections.LockMap{})
 
 	err := retentionManager.deleteOldBackups(ctx, routine)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func routineWithRetentionPolicy(retentionPolicy *model.RetentionPolicy) *model.BackupRoutine {

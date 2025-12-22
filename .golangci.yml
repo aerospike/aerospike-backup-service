@@ -37,6 +37,7 @@ linters:
     - sloglint
     - staticcheck
     - tagliatelle
+    - testifylint
     - thelper
     - tparallel
     - unconvert
@@ -51,7 +52,7 @@ linters:
       excludes:
         - G115
     gocognit:
-        min-complexity: 25
+      min-complexity: 25
     exhaustive:
       default-signifies-exhaustive: true
     nlreturn:

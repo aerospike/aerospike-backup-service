@@ -8,6 +8,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
 
@@ -31,7 +32,7 @@ func TestGetState_BlockingAndTimeout(t *testing.T) {
 
 	// Test timeout
 	snapshot, err := tracker.getState(10 * time.Millisecond)
-	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
 	assert.Nil(t, snapshot)
 
 	// Test blocking and unblocking
@@ -44,7 +45,7 @@ func TestGetState_BlockingAndTimeout(t *testing.T) {
 	snapshot, err = tracker.getState(100 * time.Millisecond)
 	duration := time.Since(start)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, snapshot)
 	assert.GreaterOrEqual(t, duration, 50*time.Millisecond)
 }
@@ -75,7 +76,7 @@ func TestRegisterAndGetState(t *testing.T) {
 	tracker.register(jobTypeIncremental, incrHandler)
 
 	snapshot, err := tracker.getState(1 * time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, snapshot.full)
 	assert.NotNil(t, snapshot.incr)
 	assert.Equal(t, uint64(100), snapshot.full.TotalRecords)
@@ -97,7 +98,7 @@ func TestRecordSuccessfulBackup(t *testing.T) {
 	tracker.recordSuccessfulBackup(routineName, jobTypeFull, now)
 
 	snapshot, err := tracker.getState(1 * time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, snapshot.full) // handler should be removed
 	assert.Equal(t, now, *snapshot.lastRun.FullBackupTime())
 	assert.Nil(t, snapshot.lastRun.IncrementalBackupTime())
@@ -108,7 +109,7 @@ func TestRecordSuccessfulBackup(t *testing.T) {
 	tracker.recordSuccessfulBackup(routineName, jobTypeIncremental, nowIncr)
 
 	snapshotIncr, err := tracker.getState(1 * time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, snapshotIncr.incr) // handler should be removed
 	assert.Equal(t, now, *snapshotIncr.lastRun.FullBackupTime())
 	assert.Equal(t, nowIncr, *snapshotIncr.lastRun.IncrementalBackupTime())
@@ -128,7 +129,7 @@ func TestClearFailedBackup(t *testing.T) {
 	tracker.clearFailedBackup(jobTypeFull)
 
 	snapshot, err := tracker.getState(1 * time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, snapshot.full)                     // handler should be removed
 	assert.Nil(t, snapshot.lastRun.FullBackupTime()) // lastRun should not be updated
 }
@@ -142,7 +143,7 @@ func TestSetLastRun(t *testing.T) {
 	tracker.setLastRun(backupTime)
 
 	snapshot, err := tracker.getState(1 * time.Second)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, backupTime, snapshot.lastRun)
 }
 

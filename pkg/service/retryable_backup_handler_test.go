@@ -55,7 +55,7 @@ func TestStartRetryableBackup_SuccessfulFirstAttempt(t *testing.T) {
 	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, onRetry)
 	err := handler.Wait(ctx)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 0, failureCount)
 	assert.Equal(t, 1, successCount)
 	assert.Equal(t, 0, retryCount)
@@ -103,7 +103,7 @@ func TestStartRetryableBackup_WaitFailsThenSucceeds(t *testing.T) {
 	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, onRetry)
 	err := handler.Wait(ctx)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, failureCount)
 	assert.Equal(t, 1, successCount)
 	assert.Equal(t, 1, retryCount)
@@ -153,7 +153,7 @@ func TestStartRetryableBackup_ContextCancellation(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	assert.ErrorIs(t, err, context.Canceled)
+	require.ErrorIs(t, err, context.Canceled)
 	assert.Equal(t, 0, failureCount)
 	assert.Equal(t, 0, successCount)
 }
@@ -185,7 +185,7 @@ func TestStartRetryableBackup_AllWaitAttemptsFail(t *testing.T) {
 	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, func() {})
 	err := handler.Wait(ctx)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "backup failed after 3 attempts")
 	assert.Equal(t, 3, failureCount)
 	assert.Equal(t, 0, successCount)
@@ -212,7 +212,7 @@ func TestStartRetryableBackup_StartFails(t *testing.T) {
 	handler := newRetryableBackupHandler(ctx, retry, start, onFail, onSuccess, func() {})
 	err := handler.Wait(ctx)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to start backup")
 	assert.Equal(t, 0, failureCount)
 	assert.Equal(t, 0, successCount)

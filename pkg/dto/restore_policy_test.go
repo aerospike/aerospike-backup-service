@@ -5,6 +5,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRestorePolicy_ValidPolicy(t *testing.T) {
@@ -29,13 +30,13 @@ func TestRestorePolicy_ValidPolicy(t *testing.T) {
 		},
 	}
 	err := policy.Validate()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestRestorePolicy_NilPolicy(t *testing.T) {
 	var policy *RestorePolicy
 	err := policy.Validate()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestRestorePolicy_InvalidTotalTimeout(t *testing.T) {
@@ -45,7 +46,7 @@ func TestRestorePolicy_InvalidTotalTimeout(t *testing.T) {
 		},
 	}
 	err := policy.Validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "total-timeout")
 	assert.Contains(t, err.Error(), "should not be negative number")
 }
@@ -57,7 +58,7 @@ func TestRestorePolicy_InvalidSocketTimeout(t *testing.T) {
 		},
 	}
 	err := policy.Validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "socket-timeout")
 	assert.Contains(t, err.Error(), "should not be negative number")
 }
@@ -69,7 +70,7 @@ func TestRestorePolicy_SocketTimeoutZero(t *testing.T) {
 		},
 	}
 	err := policy.Validate()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestRestorePolicy_InvalidParallel(t *testing.T) {
@@ -79,7 +80,7 @@ func TestRestorePolicy_InvalidParallel(t *testing.T) {
 		},
 	}
 	err := policy.Validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "parallel")
 	assert.Contains(t, err.Error(), "should be positive number")
 }
@@ -91,7 +92,7 @@ func TestRestorePolicy_InvalidMaxAsyncBatches(t *testing.T) {
 		},
 	}
 	err := policy.Validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "max-async-batches")
 	assert.Contains(t, err.Error(), "should be positive number")
 }
@@ -103,7 +104,7 @@ func TestRestorePolicy_InvalidBatchSize(t *testing.T) {
 		},
 	}
 	err := policy.Validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "batch-size")
 	assert.Contains(t, err.Error(), "should be positive number")
 }
@@ -115,7 +116,7 @@ func TestRestorePolicy_InvalidBandwidth(t *testing.T) {
 		},
 	}
 	err := policy.Validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "bandwidth")
 	assert.Contains(t, err.Error(), "\"bandwidth\" -1 invalid, should not be negative number")
 }
@@ -127,7 +128,7 @@ func TestRestorePolicy_InvalidTps(t *testing.T) {
 		},
 	}
 	err := policy.Validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "tps")
 	assert.Contains(t, err.Error(), "should be positive number")
 }
@@ -140,7 +141,7 @@ func TestRestorePolicy_MutuallyExclusiveReplaceUnique(t *testing.T) {
 		},
 	}
 	err := policy.Validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "mutually exclusive fields")
 	assert.Contains(t, err.Error(), "replace")
 	assert.Contains(t, err.Error(), "unique")
@@ -153,7 +154,7 @@ func TestRestorePolicy_InvalidExtraTTL(t *testing.T) {
 		},
 	}
 	err := policy.Validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "extra-ttl")
 	assert.Contains(t, err.Error(), "should not be negative")
 }

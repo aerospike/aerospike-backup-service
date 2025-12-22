@@ -128,7 +128,7 @@ func TestLocalDeleteBackup(t *testing.T) {
 	// Verify backup no longer exists
 	backups, err = service.GetBackups(ctx, filter)
 	require.NoError(t, err)
-	assert.Len(t, backups, 0)
+	assert.Empty(t, backups)
 }
 
 func TestIncrementalBackup(t *testing.T) {

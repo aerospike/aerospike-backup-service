@@ -11,6 +11,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -41,7 +42,7 @@ func TestGetS3Client_Connectivity(t *testing.T) {
 	}
 
 	client, err := getS3Client(t.Context(), s3Config)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, client)
 
 	// Failure case
@@ -61,7 +62,7 @@ func TestGetS3Client_Connectivity(t *testing.T) {
 	}
 
 	clientFail, err := getS3Client(t.Context(), s3ConfigFail)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, clientFail)
 	assert.Contains(t, err.Error(), "s3 storage connectivity check failed")
 }
@@ -86,7 +87,7 @@ func TestGetGcpClient_Connectivity(t *testing.T) {
 	}
 
 	client, err := getGcpClient(t.Context(), gcpConfig)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, client)
 
 	// Failure case
@@ -101,7 +102,7 @@ func TestGetGcpClient_Connectivity(t *testing.T) {
 	}
 
 	clientFail, err := getGcpClient(t.Context(), gcpConfigFail)
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, clientFail)
 	assert.Contains(t, err.Error(), "gcp storage connectivity check failed")
 }
@@ -138,7 +139,7 @@ func TestGetAzureClient_Connectivity(t *testing.T) {
 	}
 
 	client, err := getAzureClient(t.Context(), azureConfig)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, client)
 
 	// Failure case
@@ -156,7 +157,7 @@ func TestGetAzureClient_Connectivity(t *testing.T) {
 	}
 	client, err = getAzureClient(t.Context(), azureConfigFail)
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Nil(t, client)
 	assert.Contains(t, err.Error(), "azure blob storage connectivity check failed")
 }

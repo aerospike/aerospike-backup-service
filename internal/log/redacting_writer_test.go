@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRedactingWriter(t *testing.T) {
@@ -19,8 +19,8 @@ func TestRedactingWriter(t *testing.T) {
 	expected := fmt.Sprintf(`{"user":"alice","privateKey":"%s"}`, redactedPlaceholder)
 
 	_, err := writer.Write([]byte(input))
-	assert.NoError(t, err)
-	assert.Equal(t, expected, buf.String())
+	require.NoError(t, err)
+	require.Equal(t, expected, buf.String())
 }
 
 func TestRedactingWriter_MultilineKey(t *testing.T) {
@@ -33,8 +33,8 @@ abc123
 	expected := fmt.Sprintf(`{"user":"alice","privateKey":"%s"}`, redactedPlaceholder)
 
 	_, err := writer.Write([]byte(input))
-	assert.NoError(t, err)
-	assert.Equal(t, expected, buf.String())
+	require.NoError(t, err)
+	require.Equal(t, expected, buf.String())
 }
 
 func TestRedactingWriter_NoRedactionNeeded(t *testing.T) {
@@ -44,8 +44,8 @@ func TestRedactingWriter_NoRedactionNeeded(t *testing.T) {
 	input := `{"user":"alice","role":"admin"}`
 
 	_, err := writer.Write([]byte(input))
-	assert.NoError(t, err)
-	assert.Equal(t, input, buf.String())
+	require.NoError(t, err)
+	require.Equal(t, input, buf.String())
 }
 
 const (

@@ -102,7 +102,7 @@ func TestNewTLSConfig(t *testing.T) {
 
 	t.Run("Nil TLS Input", func(t *testing.T) {
 		cfg, err := NewTLSConfig(nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Nil(t, cfg)
 	})
 
@@ -175,7 +175,7 @@ func TestNewTLSConfig(t *testing.T) {
 
 		//nolint:staticcheck
 		//noinspection GoDeprecation
-		assert.Equal(t, len(systemPool.Subjects())+1, len(cfg.RootCAs.Subjects()))
+		assert.Len(t, cfg.RootCAs.Subjects(), len(systemPool.Subjects())+1)
 	})
 
 	t.Run("With Client Certs", func(t *testing.T) {
@@ -211,7 +211,7 @@ func TestNewTLSConfig(t *testing.T) {
 				},
 				KeyfilePassword: &wrongPass,
 			})
-			assert.Error(t, err, "Should fail with wrong password")
+			require.Error(t, err, "Should fail with wrong password")
 		})
 
 		t.Run("No Password", func(t *testing.T) {
@@ -221,7 +221,7 @@ func TestNewTLSConfig(t *testing.T) {
 					Keyfile:  &encKeyFile,
 				},
 			})
-			assert.Error(t, err, "Should fail when no password is provided for an encrypted key")
+			require.Error(t, err, "Should fail when no password is provided for an encrypted key")
 		})
 	})
 }
@@ -246,9 +246,9 @@ func TestParseProtocols(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			minVersion, maxVersion, err := parseProtocols(tc.protocolStr)
 			if tc.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.wantMin, minVersion, "MinVersion mismatch")
 				assert.Equal(t, tc.wantMax, maxVersion, "MaxVersion mismatch")
 			}
@@ -290,9 +290,9 @@ func TestParseCipherSuites(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			suites, err := parseCipherSuites(tc.ciphersStr)
 			if tc.expectErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, tc.wantSuites, suites)
 			}
 		})

@@ -10,6 +10,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/restoreexecutor"
 	"github.com/aerospike/backup-go/models"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -63,7 +64,7 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		wg.Wait()
 
 		job, err := holder.getJob(jobID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		status := job.buildStatus()
 		assert.NotNil(t, status)
 
@@ -83,11 +84,11 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		// finish job
 		holder.finishJob(jobID, nil)
 		job, err = holder.getJob(jobID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		status = job.buildStatus()
 		assert.NotNil(t, status)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, status)
 
 		assert.Equal(t, model.JobStatusDone, status.Status)
@@ -121,17 +122,17 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		wg.Wait()
 
 		job, err := holder.getJob(jobID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		status := job.buildStatus()
 		assert.NotNil(t, status)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, status)
 
 		assert.Equal(t, model.JobStatusCancelled, status.Status)
 		job, err = holder.getJob(jobID)
-		assert.NoError(t, err)
-		assert.ErrorIs(t, job.err, context.Canceled)
+		require.NoError(t, err)
+		require.ErrorIs(t, job.err, context.Canceled)
 	})
 
 	t.Run("job is failed", func(t *testing.T) {
@@ -163,16 +164,16 @@ func TestRestoreJobsHolder_ConcurrentModification(t *testing.T) {
 		wg.Wait()
 
 		job, err := holder.getJob(jobID)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		status := job.buildStatus()
 		assert.NotNil(t, status)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.NotNil(t, status)
 
 		assert.Equal(t, model.JobStatusFailed, status.Status)
 		job, err = holder.getJob(jobID)
-		assert.NoError(t, err)
-		assert.ErrorIs(t, job.err, failErr)
+		require.NoError(t, err)
+		require.ErrorIs(t, job.err, failErr)
 	})
 }

@@ -21,7 +21,7 @@ func TestValidSecretAgent(t *testing.T) {
 	}
 
 	err := config.validate()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestValidSecretAgentName(t *testing.T) {
@@ -32,7 +32,7 @@ func TestValidSecretAgentName(t *testing.T) {
 	}
 
 	err := config.validate()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestMutuallyExclusive(t *testing.T) {
@@ -43,7 +43,7 @@ func TestMutuallyExclusive(t *testing.T) {
 	}
 
 	err := config.validate()
-	assert.ErrorIs(t, err, errMutuallyExclusive)
+	require.ErrorIs(t, err, errMutuallyExclusive)
 }
 
 func TestInvalidSecretAgent(t *testing.T) {
@@ -65,7 +65,7 @@ func TestSecretAgentConfig_Empty(t *testing.T) {
 	config := SecretAgentConfig{}
 
 	err := config.validate()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestNoConnectionType(t *testing.T) {
@@ -74,7 +74,7 @@ func TestNoConnectionType(t *testing.T) {
 	}
 
 	err := agent.validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.EqualError(t, err, errValidationEmptyField("connection-type").Error())
 }
 
@@ -85,7 +85,7 @@ func TestInvalidConnectionType(t *testing.T) {
 	}
 
 	err := agent.validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.EqualError(t, err,
 		"invalid value validation error: 'invalid' is not a valid connection-type. Allowed values: [tcp unix]")
 }
@@ -96,7 +96,7 @@ func TestMissingAddress(t *testing.T) {
 	}
 
 	err := agent.validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.EqualError(t, err, errValidationEmptyField("address").Error())
 }
 
@@ -109,7 +109,7 @@ func TestInvalidTimeout(t *testing.T) {
 	}
 
 	err := agent.validate()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.EqualError(t, err, errValidationNegative("timeout", -100).Error())
 }
 
@@ -123,12 +123,12 @@ func TestInvalidCertFile(t *testing.T) {
 	}
 
 	err := agent.validate()
-	assert.Error(t, err)
-	assert.ErrorContains(t, err, "not found validation error: ca-file \"invalid-cert-file\"")
+	require.Error(t, err)
+	require.ErrorContains(t, err, "not found validation error: ca-file \"invalid-cert-file\"")
 }
 
 func TestSecretAgent_Nil(t *testing.T) {
 	var agent *SecretAgent
 	err := agent.validate()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
