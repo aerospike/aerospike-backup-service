@@ -12,9 +12,9 @@ linters:
     - exptostd
     - fatcontext
     - funlen
+    - gocognit
     - goconst
     - gocritic
-    - gocognit
     - gocyclo
     - godot
     - gosec
@@ -26,9 +26,9 @@ linters:
     - modernize
     - nakedret
     - nestif
+    - nilerr
     - nlreturn
     - nolintlint
-    - nilerr
     - perfsprint
     - prealloc
     - predeclared
@@ -44,8 +44,8 @@ linters:
     - unconvert
     - unparam
     - unused
-    - usetesting
     - usestdlibvars
+    - usetesting
     - whitespace
   settings:
     godot:
