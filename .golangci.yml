@@ -9,6 +9,7 @@ linters:
     - errcheck
     - errorlint
     - exhaustive
+    - fatcontext
     - funlen
     - goconst
     - gocritic
