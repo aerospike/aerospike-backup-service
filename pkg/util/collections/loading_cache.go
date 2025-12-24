@@ -8,59 +8,63 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 )
 
-// LoadFunc is the LoadingCache value loader.
-type LoadFunc[K comparable, T any] func(context.Context, K) (T, error)
-
-// Cache is a generic cache interface.
+// Cache is the interface for a simple, context-free cache.
 type Cache[K comparable, T any] interface {
-	// GetWithContext returns the value for the given key.
-	// ctx is passed to load function
-	GetWithContext(ctx context.Context, key K) (T, error)
+	Get(key K) (T, error)
 }
 
-// LoadingCache maps keys to values where values are automatically loaded by the cache.
-type LoadingCache[K comparable, T any] struct {
-	data     sync.Map
-	loadFunc LoadFunc[K, T]
-	ttl      *time.Duration // nil means cache forever, 0 means no cache.
+// CacheContext is the interface for a context-aware cache.
+type CacheContext[K comparable, T any] interface {
+	Get(ctx context.Context, key K) (T, error)
 }
+
+type LoadFunc[K comparable, T any] func(K) (T, error)
+type LoadFuncContext[K comparable, T any] func(context.Context, K) (T, error)
+
+// provider is an internal helper to wrap the specific loading logic.
+type provider[T any] func() (T, error)
+
 type cacheItem[T any] struct {
+	sync.Mutex
+
 	value     T
-	expiresAt *time.Time // nil when ttl is nil.
-	loaded    bool       // indicates if the item was successfully loaded.
-	mu        sync.Mutex
+	expiresAt *time.Time
+	loaded    bool // true if the value has been successfully loaded at least once
 }
 
-func NewLoadingCache[K comparable, T any](
-	ctx context.Context,
-	loadFunc LoadFunc[K, T],
-	ttl *time.Duration,
-) *LoadingCache[K, T] {
-	c := &LoadingCache[K, T]{
-		loadFunc: loadFunc,
-		ttl:      ttl,
+// baseCache handles storage, locking, and expiration logic.
+// It is agnostic to the context or loading signature.
+type baseCache[K comparable, T any] struct {
+	data sync.Map
+	ttl  *time.Duration
+}
+
+func newBaseCache[K comparable, T any](ctx context.Context, ttl *time.Duration) *baseCache[K, T] {
+	b := &baseCache[K, T]{
+		ttl: ttl,
 	}
 
 	if ttl != nil && *ttl > 0 {
-		go c.startCleanup(ctx)
+		go b.startCleanup(ctx)
 	}
 
-	return c
+	return b
 }
 
-func (c *LoadingCache[K, T]) GetWithContext(ctx context.Context, key K) (T, error) {
+// fetch manages the retrieval, locking, and reloading of cache items.
+func (c *baseCache[K, T]) fetch(key K, loader provider[T]) (T, error) {
 	val, ok := c.data.Load(key)
-	if !ok { // new key
+	if !ok {
 		val, _ = c.data.LoadOrStore(key, &cacheItem[T]{})
 	}
 	item := val.(*cacheItem[T])
 
-	item.mu.Lock()
-	defer item.mu.Unlock()
+	item.Lock()
+	defer item.Unlock()
 
 	now := time.Now()
 
-	// Check if the cached value is still valid.
+	// 1. Check if the cached value is already valid
 	if item.loaded {
 		if c.ttl == nil {
 			return item.value, nil
@@ -71,15 +75,16 @@ func (c *LoadingCache[K, T]) GetWithContext(ctx context.Context, key K) (T, erro
 		}
 	}
 
-	// The item is expired or missing from the cache. Load a new value.
-	loadedValue, err := c.loadFunc(ctx, key)
+	// 2. Value is missing or expired; execute the loader
+	loadedValue, err := loader()
 	if err != nil {
+		// On error, we return the existing value (stale data) and the error.
 		return item.value, err
 	}
 
+	// 3. Update the item
 	item.value = loadedValue
 	item.loaded = true
-
 	if c.ttl != nil {
 		item.expiresAt = ptr.Of(now.Add(*c.ttl))
 	}
@@ -87,7 +92,7 @@ func (c *LoadingCache[K, T]) GetWithContext(ctx context.Context, key K) (T, erro
 	return loadedValue, nil
 }
 
-func (c *LoadingCache[K, T]) startCleanup(ctx context.Context) {
+func (c *baseCache[K, T]) startCleanup(ctx context.Context) {
 	interval := *c.ttl
 	if interval > time.Hour { // We don't want to trigger cleanup too often.
 		interval = time.Hour
@@ -106,18 +111,72 @@ func (c *LoadingCache[K, T]) startCleanup(ctx context.Context) {
 	}
 }
 
-func (c *LoadingCache[K, T]) deleteExpired() {
+func (c *baseCache[K, T]) deleteExpired() {
 	now := time.Now()
 	c.data.Range(func(key, value any) bool {
 		item := value.(*cacheItem[T])
 
-		item.mu.Lock()
+		item.Lock()
 		expired := item.loaded && item.expiresAt != nil && now.After(*item.expiresAt)
-		item.mu.Unlock()
+		item.Unlock()
 
 		if expired {
 			c.data.Delete(key)
 		}
 		return true
+	})
+}
+
+// --- Implementation 1: Context-Aware Cache ---
+
+var _ CacheContext[string, any] = (*LoadingCacheContext[string, any])(nil)
+
+type LoadingCacheContext[K comparable, T any] struct {
+	base     *baseCache[K, T]
+	loadFunc LoadFuncContext[K, T]
+}
+
+func NewLoadingCacheContext[K comparable, T any](
+	ctx context.Context, // Required for background cleanup goroutine
+	loadFunc LoadFuncContext[K, T],
+	ttl *time.Duration,
+) *LoadingCacheContext[K, T] {
+	return &LoadingCacheContext[K, T]{
+		base:     newBaseCache[K, T](ctx, ttl),
+		loadFunc: loadFunc,
+	}
+}
+
+// Get returns the value for the given key, passing the context to the loader if a reload is needed.
+func (c *LoadingCacheContext[K, T]) Get(ctx context.Context, key K) (T, error) {
+	return c.base.fetch(key, func() (T, error) {
+		return c.loadFunc(ctx, key)
+	})
+}
+
+// --- Implementation 2: Simple Cache ---
+
+var _ Cache[string, any] = (*LoadingCache[string, any])(nil)
+
+type LoadingCache[K comparable, T any] struct {
+	base     *baseCache[K, T]
+	loadFunc LoadFunc[K, T]
+}
+
+func NewLoadingCache[K comparable, T any](
+	ctx context.Context, // Required for background cleanup goroutine
+	loadFunc LoadFunc[K, T],
+	ttl *time.Duration,
+) *LoadingCache[K, T] {
+	return &LoadingCache[K, T]{
+		base:     newBaseCache[K, T](ctx, ttl),
+		loadFunc: loadFunc,
+	}
+}
+
+// Get returns the value for the given key.
+func (c *LoadingCache[K, T]) Get(key K) (T, error) {
+	return c.base.fetch(key, func() (T, error) {
+		return c.loadFunc(key)
 	})
 }

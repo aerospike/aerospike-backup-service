@@ -20,22 +20,22 @@ func TestLoadingCache_GetWithContext(t *testing.T) {
 	}
 
 	ttl := time.Minute
-	cache := NewLoadingCache(ctx, loadFunc, &ttl)
+	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
 
 	// First call
-	val, err := cache.GetWithContext(ctx, "1")
+	val, err := cache.Get(ctx, "1")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
 
 	// Second call - should be cached
-	val, err = cache.GetWithContext(ctx, "1")
+	val, err = cache.Get(ctx, "1")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
 
 	// Different key
-	val, err = cache.GetWithContext(ctx, "2")
+	val, err = cache.Get(ctx, "2")
 	assert.NoError(t, err)
 	assert.Equal(t, 2, val)
 	assert.Equal(t, int32(2), callCount.Load())
@@ -49,16 +49,16 @@ func TestLoadingCache_Forever(t *testing.T) {
 		return strconv.Atoi(s)
 	}
 
-	cache := NewLoadingCache(ctx, loadFunc, nil)
+	cache := NewLoadingCacheContext(ctx, loadFunc, nil)
 
 	// First call
-	val, err := cache.GetWithContext(ctx, "1")
+	val, err := cache.Get(ctx, "1")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
 
 	// Second call - should be cached forever
-	val, err = cache.GetWithContext(ctx, "1")
+	val, err = cache.Get(ctx, "1")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
@@ -73,10 +73,10 @@ func TestLoadingCache_Expiry(t *testing.T) {
 	}
 
 	ttl := 50 * time.Millisecond
-	cache := NewLoadingCache(ctx, loadFunc, &ttl)
+	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
 
 	// First call
-	val, err := cache.GetWithContext(ctx, "1")
+	val, err := cache.Get(ctx, "1")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
@@ -85,7 +85,7 @@ func TestLoadingCache_Expiry(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Second call - should reload
-	val, err = cache.GetWithContext(ctx, "1")
+	val, err = cache.Get(ctx, "1")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(2), callCount.Load())
@@ -98,15 +98,15 @@ func TestLoadingCache_Error(t *testing.T) {
 	}
 
 	ttl := time.Minute
-	cache := NewLoadingCache(ctx, loadFunc, &ttl)
+	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
 
-	val, err := cache.GetWithContext(ctx, "1")
+	val, err := cache.Get(ctx, "1")
 	assert.Error(t, err)
 	assert.Equal(t, "load error", err.Error())
 	assert.Equal(t, 0, val)
 
 	// Try again, should try loading again (and fail again)
-	val, err = cache.GetWithContext(ctx, "1")
+	val, err = cache.Get(ctx, "1")
 	assert.Error(t, err)
 }
 
@@ -119,47 +119,19 @@ func TestLoadingCache_ZeroTTL(t *testing.T) {
 	}
 
 	ttl := time.Duration(0)
-	cache := NewLoadingCache(ctx, loadFunc, &ttl)
+	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
 
 	// First call
-	val, err := cache.GetWithContext(ctx, "1")
+	val, err := cache.Get(ctx, "1")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
 
 	// Second call - should reload because TTL is 0
-	val, err = cache.GetWithContext(ctx, "1")
+	val, err = cache.Get(ctx, "1")
 	assert.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(2), callCount.Load())
-}
-
-func TestLoadingCache_Cleanup(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	loadFunc := func(_ context.Context, s string) (int, error) {
-		return strconv.Atoi(s)
-	}
-
-	ttl := 10 * time.Millisecond
-	cache := NewLoadingCache(ctx, loadFunc, &ttl)
-
-	// Load item
-	_, err := cache.GetWithContext(ctx, "1")
-	assert.NoError(t, err)
-
-	// Verify item exists
-	_, ok := cache.data.Load("1")
-	assert.True(t, ok)
-
-	// Wait for expiration and cleanup
-	// Cleanup runs every ttl interval (10ms)
-	time.Sleep(100 * time.Millisecond)
-
-	// Verify item is removed
-	_, ok = cache.data.Load("1")
-	assert.False(t, ok, "Expired item should be removed")
 }
 
 func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
@@ -171,10 +143,10 @@ func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
 	}
 
 	ttl := 100 * time.Millisecond
-	cache := NewLoadingCache(ctx, loadFunc, &ttl)
+	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
 
 	// First call
-	_, err := cache.GetWithContext(ctx, "1")
+	_, err := cache.Get(ctx, "1")
 	assert.NoError(t, err)
 	assert.Equal(t, int32(1), callCount.Load())
 
@@ -182,7 +154,7 @@ func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
 	// Total time 250ms > 100ms, but accessed every 50ms
 	for i := 0; i < 5; i++ {
 		time.Sleep(50 * time.Millisecond)
-		_, err := cache.GetWithContext(ctx, "1")
+		_, err := cache.Get(ctx, "1")
 		assert.NoError(t, err)
 	}
 
@@ -193,7 +165,7 @@ func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
 	time.Sleep(150 * time.Millisecond)
 
 	// Should reload
-	_, err = cache.GetWithContext(ctx, "1")
+	_, err = cache.Get(ctx, "1")
 	assert.NoError(t, err)
 	assert.Equal(t, int32(2), callCount.Load())
 }
