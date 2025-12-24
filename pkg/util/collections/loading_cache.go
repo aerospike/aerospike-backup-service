@@ -13,6 +13,8 @@ type LoadFunc[K comparable, T any] func(context.Context, K) (T, error)
 
 // Cache is a generic cache interface.
 type Cache[K comparable, T any] interface {
+	// GetWithContext returns the value for the given key.
+	// ctx is passed to load function
 	GetWithContext(ctx context.Context, key K) (T, error)
 }
 
