@@ -11,13 +11,17 @@ import (
 // LoadFunc is the LoadingCache value loader.
 type LoadFunc[K comparable, T any] func(context.Context, K) (T, error)
 
+// Cache is a generic cache interface.
+type Cache[K comparable, T any] interface {
+	GetWithContext(ctx context.Context, key K) (T, error)
+}
+
 // LoadingCache maps keys to values where values are automatically loaded by the cache.
 type LoadingCache[K comparable, T any] struct {
 	data     sync.Map
 	loadFunc LoadFunc[K, T]
 	ttl      *time.Duration // nil means cache forever, 0 means no cache.
 }
-
 type cacheItem[T any] struct {
 	value     T
 	expiresAt *time.Time // nil when ttl is nil.
