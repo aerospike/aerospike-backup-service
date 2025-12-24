@@ -40,7 +40,8 @@ func TestGetS3Client_Connectivity(t *testing.T) {
 		},
 	}
 
-	client, err := getS3Client(t.Context(), s3Config)
+	accessor := NewS3StorageAccessor()
+	client, err := accessor.getS3Client(t.Context(), s3Config)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -60,7 +61,7 @@ func TestGetS3Client_Connectivity(t *testing.T) {
 		},
 	}
 
-	clientFail, err := getS3Client(t.Context(), s3ConfigFail)
+	clientFail, err := accessor.getS3Client(t.Context(), s3ConfigFail)
 	assert.Error(t, err)
 	assert.Nil(t, clientFail)
 	assert.Contains(t, err.Error(), "s3 storage connectivity check failed")
@@ -85,7 +86,8 @@ func TestGetGcpClient_Connectivity(t *testing.T) {
 		Endpoint:   ts.URL,
 	}
 
-	client, err := getGcpClient(t.Context(), gcpConfig)
+	accessor := NewGcpStorageAccessor()
+	client, err := accessor.getGcpClient(t.Context(), gcpConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -100,7 +102,7 @@ func TestGetGcpClient_Connectivity(t *testing.T) {
 		Endpoint:   failServer.URL,
 	}
 
-	clientFail, err := getGcpClient(t.Context(), gcpConfigFail)
+	clientFail, err := accessor.getGcpClient(t.Context(), gcpConfigFail)
 	assert.Error(t, err)
 	assert.Nil(t, clientFail)
 	assert.Contains(t, err.Error(), "gcp storage connectivity check failed")
@@ -137,7 +139,8 @@ func TestGetAzureClient_Connectivity(t *testing.T) {
 		},
 	}
 
-	client, err := getAzureClient(t.Context(), azureConfig)
+	accessor := NewAzureStorageAccessor(t.Context())
+	client, err := accessor.getAzureClient(t.Context(), azureConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -154,7 +157,7 @@ func TestGetAzureClient_Connectivity(t *testing.T) {
 			AccountKey:  key,
 		},
 	}
-	client, err = getAzureClient(t.Context(), azureConfigFail)
+	client, err = accessor.getAzureClient(t.Context(), azureConfigFail)
 
 	assert.Error(t, err)
 	assert.Nil(t, client)
