@@ -68,10 +68,10 @@ func (s *SecretAgent) Read(path string) (string, error) {
 			return secret, nil
 		}
 
-		s.cache = collections.NewLoadingCache(context.Background(), readFromSecretAgentfunc)
+		s.cache = collections.NewLoadingCache(context.Background(), readFromSecretAgentfunc, nil)
 	})
 
-	return s.cache.Get(path)
+	return s.cache.GetWithContext(context.Background(), path)
 }
 
 // String returns a string representation of the SecretAgent.
