@@ -175,15 +175,7 @@ func setDefaultLogger(loggerConfig *model.LoggerConfig) *slog.Logger {
 }
 
 func systemCtx() context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		sigch := make(chan os.Signal, 1)
-		signal.Notify(sigch, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
-		<-sigch
-		slog.Debug("Got system signal")
-		cancel()
-	}()
-
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 	return ctx
 }
 
@@ -196,9 +188,12 @@ func runHTTPServer(
 	}()
 
 	<-ctx.Done()
-	time.Sleep(time.Millisecond * 100) // wait for other goroutines to exit
+
 	// shutdown the HTTP server gracefully
-	if err := httpServer.Shutdown(ctx); err != nil {
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		slog.Error("HTTP server shutdown failed", attr.Error(err))
 		return err
 	}
