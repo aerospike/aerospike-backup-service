@@ -23,9 +23,9 @@ type AzureStorageAccessor struct {
 	resolver  secrets.Resolver
 }
 
-func NewAzureStorageAccessor(ctx context.Context) *AzureStorageAccessor {
+func NewAzureStorageAccessor(ctx context.Context, resolver secrets.Resolver) *AzureStorageAccessor {
 	accessor := &AzureStorageAccessor{
-		resolver: secrets.NewResolver(ctx),
+		resolver: resolver,
 	}
 	accessor.clientMap = collections.NewLoadingCacheContext[*model.AzureStorage, *azblob.Client](
 		ctx,
@@ -65,10 +65,6 @@ func (a *AzureStorageAccessor) createWriter(
 	}
 
 	return azure.NewWriter(ctx, client, azures.ContainerName, opts...)
-}
-
-func init() {
-	registerAccessor(NewAzureStorageAccessor(context.Background()))
 }
 
 func (a *AzureStorageAccessor) getAzureClient(ctx context.Context, s *model.AzureStorage) (*azblob.Client, error) {

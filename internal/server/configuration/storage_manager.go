@@ -13,20 +13,26 @@ import (
 // storageManager implements Manager interface.
 // it stores service configuration in provided Storage (Local, s3 aws etc.)
 type storageManager struct {
-	storage     model.Storage
-	nsValidator aerospike.NamespaceValidator
+	storage        model.Storage
+	nsValidator    aerospike.NamespaceValidator
+	storageManager storage.Manager
 }
 
 // newStorageManager returns new instance of storageManager.
-func newStorageManager(configStorage model.Storage, nsValidator aerospike.NamespaceValidator) Manager {
+func newStorageManager(
+	configStorage model.Storage,
+	nsValidator aerospike.NamespaceValidator,
+	storMgr storage.Manager,
+) Manager {
 	return &storageManager{
-		storage:     configStorage,
-		nsValidator: nsValidator,
+		storage:        configStorage,
+		nsValidator:    nsValidator,
+		storageManager: storMgr,
 	}
 }
 
 func (m *storageManager) Read(ctx context.Context) (*model.Config, error) {
-	content, err := storage.ReadFile(ctx, m.storage, "")
+	content, err := m.storageManager.ReadFile(ctx, m.storage, "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration from storage: %w", err)
 	}
@@ -40,7 +46,7 @@ func (m *storageManager) Write(ctx context.Context, config *model.Config) error 
 		return err
 	}
 
-	if err := storage.WriteDataFile(ctx, m.storage, "", buf.Bytes()); err != nil {
+	if err := m.storageManager.WriteDataFile(ctx, m.storage, "", buf.Bytes()); err != nil {
 		return fmt.Errorf("failed to write configuration to storage %+v: %w", m.storage, err)
 	}
 

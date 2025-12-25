@@ -106,7 +106,7 @@ func TestLoadingCache_Error(t *testing.T) {
 	assert.Equal(t, 0, val)
 
 	// Try again, should try loading again (and fail again)
-	val, err = cache.Get(ctx, "1")
+	_, err = cache.Get(ctx, "1")
 	assert.Error(t, err)
 }
 

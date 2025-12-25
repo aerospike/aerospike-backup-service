@@ -257,5 +257,5 @@ func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, Pa
 	require.NoError(t, err)
 
 	pathService := NewPathService(nil)
-	return NewBackupBackendService(config, pathService), pathService, routine
+	return NewBackupBackendService(config, pathService, nil), pathService, routine
 }

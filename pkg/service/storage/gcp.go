@@ -21,10 +21,9 @@ type GcpStorageAccessor struct {
 	resolver  secrets.Resolver
 }
 
-func NewGcpStorageAccessor() *GcpStorageAccessor {
-	ctx := context.Background()
+func NewGcpStorageAccessor(ctx context.Context, resolver secrets.Resolver) *GcpStorageAccessor {
 	accessor := &GcpStorageAccessor{
-		resolver: secrets.NewResolver(ctx),
+		resolver: resolver,
 	}
 	accessor.clientMap = collections.NewLoadingCacheContext[*model.GcpStorage, *storage.Client](
 		ctx,
@@ -69,11 +68,7 @@ func (a *GcpStorageAccessor) createWriter(
 	return gcp.NewWriter(ctx, client, gcps.BucketName, opts...)
 }
 
-func init() {
-	registerAccessor(NewGcpStorageAccessor())
-}
-
-func (acc *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, error) {
+func (a *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpStorage) (*storage.Client, error) {
 	opts := make([]option.ClientOption, 0)
 
 	if g.KeyFile != "" {
@@ -81,7 +76,7 @@ func (acc *GcpStorageAccessor) getGcpClient(ctx context.Context, g *model.GcpSto
 	}
 
 	if g.KeyJSON != "" {
-		key, err := acc.resolver.Resolve(g.SecretAgent, g.KeyJSON)
+		key, err := a.resolver.Resolve(g.SecretAgent, g.KeyJSON)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read key json from secret agent: %w", err)
 		}

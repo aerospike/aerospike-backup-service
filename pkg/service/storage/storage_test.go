@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	secrets "github.com/aerospike/aerospike-backup-service/v3/pkg/service/secret"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
 )
@@ -40,8 +41,10 @@ func TestGetS3Client_Connectivity(t *testing.T) {
 		},
 	}
 
-	accessor := NewS3StorageAccessor()
-	client, err := accessor.getS3Client(t.Context(), s3Config)
+	ctx := t.Context()
+	resolver := secrets.NewResolver(ctx)
+	accessor := NewS3StorageAccessor(ctx, resolver)
+	client, err := accessor.getS3Client(ctx, s3Config)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -86,8 +89,10 @@ func TestGetGcpClient_Connectivity(t *testing.T) {
 		Endpoint:   ts.URL,
 	}
 
-	accessor := NewGcpStorageAccessor()
-	client, err := accessor.getGcpClient(t.Context(), gcpConfig)
+	ctx := t.Context()
+	resolver := secrets.NewResolver(ctx)
+	accessor := NewGcpStorageAccessor(ctx, resolver)
+	client, err := accessor.getGcpClient(ctx, gcpConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 
@@ -139,8 +144,10 @@ func TestGetAzureClient_Connectivity(t *testing.T) {
 		},
 	}
 
-	accessor := NewAzureStorageAccessor(t.Context())
-	client, err := accessor.getAzureClient(t.Context(), azureConfig)
+	ctx := t.Context()
+	resolver := secrets.NewResolver(ctx)
+	accessor := NewAzureStorageAccessor(ctx, resolver)
+	client, err := accessor.getAzureClient(ctx, azureConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
 

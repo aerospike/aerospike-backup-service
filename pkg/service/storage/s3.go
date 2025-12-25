@@ -26,10 +26,9 @@ type S3StorageAccessor struct {
 	resolver  secrets.Resolver
 }
 
-func NewS3StorageAccessor() *S3StorageAccessor {
-	ctx := context.Background()
+func NewS3StorageAccessor(ctx context.Context, resolver secrets.Resolver) *S3StorageAccessor {
 	accessor := &S3StorageAccessor{
-		resolver: secrets.NewResolver(ctx),
+		resolver: resolver,
 	}
 	accessor.clientMap = collections.NewLoadingCacheContext[*model.S3Storage, *awsS3.Client](
 		ctx,
@@ -73,10 +72,6 @@ func (a *S3StorageAccessor) createWriter(
 	}
 
 	return s3.NewWriter(ctx, client, s3s.Bucket, opts...)
-}
-
-func init() {
-	registerAccessor(NewS3StorageAccessor())
 }
 
 func (acc *S3StorageAccessor) getS3Client(ctx context.Context, s *model.S3Storage) (*awsS3.Client, error) {

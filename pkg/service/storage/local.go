@@ -11,6 +11,10 @@ import (
 
 type LocalStorageAccessor struct{}
 
+func NewLocalStorageAccessor() *LocalStorageAccessor {
+	return &LocalStorageAccessor{}
+}
+
 func (a *LocalStorageAccessor) supports(storage model.Storage) bool {
 	_, ok := storage.(*model.LocalStorage)
 	return ok
@@ -33,8 +37,4 @@ func (a *LocalStorageAccessor) createWriter(
 	}
 
 	return local.NewWriter(ctx, opts...)
-}
-
-func init() {
-	registerAccessor(&LocalStorageAccessor{})
 }

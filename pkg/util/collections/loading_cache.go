@@ -10,11 +10,13 @@ import (
 
 // Cache is the interface for a simple, context-free cache.
 type Cache[K comparable, T any] interface {
+	// Get returns the value for the given key.
 	Get(key K) (T, error)
 }
 
 // CacheContext is the interface for a context-aware cache.
 type CacheContext[K comparable, T any] interface {
+	// Get returns the value for the given key.
 	Get(ctx context.Context, key K) (T, error)
 }
 

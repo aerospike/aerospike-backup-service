@@ -6,6 +6,7 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go/io/storage/common"
 )
 
@@ -21,11 +22,14 @@ type Restore interface {
 
 // DefaultRestoreExecutor implements the [Restore] interface.
 type DefaultRestoreExecutor struct {
+	storageManager storage.Manager
 }
 
 // NewRestore returns a new DefaultRestoreExecutor instance.
-func NewRestore() *DefaultRestoreExecutor {
-	return &DefaultRestoreExecutor{}
+func NewRestore(storageManager storage.Manager) *DefaultRestoreExecutor {
+	return &DefaultRestoreExecutor{
+		storageManager: storageManager,
+	}
 }
 
 // Run initiates the restore operation.
@@ -36,8 +40,8 @@ func (r *DefaultRestoreExecutor) Run(
 	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
 	ops := []func() (RestoreHandler, error){
-		func() (RestoreHandler, error) { return runScanRestore(ctx, client, request) },
-		func() (RestoreHandler, error) { return runXDRRestore(ctx, client, request) },
+		func() (RestoreHandler, error) { return runScanRestore(ctx, client, request, r.storageManager) },
+		func() (RestoreHandler, error) { return runXDRRestore(ctx, client, request, r.storageManager) },
 	}
 
 	var (
