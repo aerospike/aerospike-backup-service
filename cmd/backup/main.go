@@ -105,7 +105,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	passwordResolver := secrets.NewPasswordResolver(resolver)
 	// Create all accessors with the shared resolver
 	// Create registry with all accessors
-	storageManager := storage.NewStorageService(
+	storageService := storage.NewStorageService(
 		storage.NewS3StorageAccessor(ctx, resolver),
 		storage.NewGcpStorageAccessor(ctx, resolver),
 		storage.NewAzureStorageAccessor(ctx, resolver),
@@ -114,7 +114,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	clientManager := aerospike.NewClientManager(aerospike.NewClientFactory(passwordResolver), 10*time.Second)
 	nsValidator := aerospike.NewNamespaceValidator(clientManager)
 
-	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, storageManager)
+	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, storageService)
 	if err != nil {
 		return nil, nil, nil, nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
@@ -137,14 +137,14 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	}
 
 	pathService := service.NewPathService(config.ServiceConfig.GetBackupCommonOrDefault().TimestampFormat)
-	backendService := service.NewBackupBackendService(config, pathService, storageManager)
+	backendService := service.NewBackupBackendService(config, pathService, storageService)
 	history := service.NewHistoryManager(backendService)
 	registry := service.NewRunningBackupsRegistry(history, config)
 
 	var routineStorage u.LockMap
 	retentionManager := service.NewBackupRetentionManager(backendService, &routineStorage)
-	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, storageManager)
-	backupExecutor := backupexecutor.NewDefaultBackupExecutor(storageManager)
+	clusterConfigWriter := service.NewClusterConfigWriter(clientManager, pathService, storageService)
+	backupExecutor := backupexecutor.NewDefaultBackupExecutor(storageService)
 	backupComponents := service.NewBackupComponents(
 		clientManager, backupExecutor, registry, retentionManager,
 		backendService, clusterConfigWriter)
@@ -159,9 +159,9 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	service.NewMetricsCollector(registry, restoreJobs).Start(ctx, 1*time.Second)
 
 	restoreMgr := service.NewRestoreManager(
-		restoreexecutor.NewRestore(storageManager), clientManager, restoreJobs, backendService, &routineStorage)
+		restoreexecutor.NewRestore(storageService), clientManager, restoreJobs, backendService, &routineStorage)
 
-	configRetriever := service.NewConfigRetriever(backendService, pathService, storageManager)
+	configRetriever := service.NewConfigRetriever(backendService, pathService, storageService)
 	httpService := handlers.NewService(
 		ctx,
 		config,

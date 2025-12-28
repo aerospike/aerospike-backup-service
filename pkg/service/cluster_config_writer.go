@@ -31,12 +31,12 @@ type DefaultClusterConfigWriter struct {
 func NewClusterConfigWriter(
 	clientManager aerospike.ClientManager,
 	pathService PathService,
-	storageManager storage.Service,
+	storageService storage.Service,
 ) *DefaultClusterConfigWriter {
 	return &DefaultClusterConfigWriter{
 		clientManager:  clientManager,
 		pathService:    pathService,
-		storageService: storageManager,
+		storageService: storageService,
 	}
 }
 

@@ -32,12 +32,12 @@ var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
 func NewConfigRetriever(
 	backupReader BackupReaderWriter,
 	pathService PathService,
-	storageManager storage.Service,
+	storageService storage.Service,
 ) *ConfigRetrieverImpl {
 	return &ConfigRetrieverImpl{
 		backupReader:   backupReader,
 		pathService:    pathService,
-		storageService: storageManager,
+		storageService: storageService,
 	}
 }
 
