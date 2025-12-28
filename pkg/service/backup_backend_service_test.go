@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -257,5 +258,6 @@ func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, Pa
 	require.NoError(t, err)
 
 	pathService := NewPathService(nil)
-	return NewBackupBackendService(config, pathService, nil), pathService, routine
+	return NewBackupBackendService(config, pathService,
+		storage.NewStorageService(storage.NewLocalStorageAccessor())), pathService, routine
 }

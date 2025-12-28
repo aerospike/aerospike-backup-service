@@ -170,12 +170,12 @@ var _ BackupReaderWriter = (*BackupBackendServiceImpl)(nil)
 func NewBackupBackendService(
 	config *model.Config,
 	pathService PathService,
-	storageManager storage.Service,
+	storageService storage.Service,
 ) *BackupBackendServiceImpl {
 	return &BackupBackendServiceImpl{
 		config:         config,
 		pathService:    pathService,
-		storageService: storageManager,
+		storageService: storageService,
 	}
 }
 
