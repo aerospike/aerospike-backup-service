@@ -34,13 +34,13 @@ func Load(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
-	sto storage.Operations,
+	operations storage.Operations,
 ) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
 		slog.Bool("remote", remote))
 
-	manager, err := newConfigManager(configFile, remote, nsValidator, sto)
+	manager, err := newConfigManager(configFile, remote, nsValidator, operations)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create config manager: %w", err)
 	}
