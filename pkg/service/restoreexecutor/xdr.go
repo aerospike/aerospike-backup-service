@@ -18,9 +18,9 @@ func runXDRRestore(
 	ctx context.Context,
 	client aerospike.Restorer,
 	request *model.RestoreRequest,
-	storageService storage.Service,
+	operations storage.Operations,
 ) (RestoreHandler, error) {
-	reader, err := storageService.CreateDirReader(
+	reader, err := operations.CreateDirReader(
 		ctx,
 		request.SourceStorage,
 		request.BackupDataPath,

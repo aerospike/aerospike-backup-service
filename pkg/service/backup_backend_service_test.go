@@ -259,5 +259,5 @@ func setupLocalBackupBackendService(t *testing.T) (*BackupBackendServiceImpl, Pa
 
 	pathService := NewPathService(nil)
 	return NewBackupBackendService(config, pathService,
-		storage.NewStorageService(storage.NewLocalStorageAccessor())), pathService, routine
+		storage.NewOperations(storage.NewLocalStorageAccessor())), pathService, routine
 }

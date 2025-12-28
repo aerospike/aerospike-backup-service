@@ -22,9 +22,9 @@ type ConfigRetriever interface {
 
 // ConfigRetrieverImpl default implementation of ConfigRetriever.
 type ConfigRetrieverImpl struct {
-	backupReader   BackupReader
-	pathService    PathService
-	storageService storage.Service
+	backupReader BackupReader
+	pathService  PathService
+	operations   storage.Operations
 }
 
 var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
@@ -32,12 +32,12 @@ var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
 func NewConfigRetriever(
 	backupReader BackupReaderWriter,
 	pathService PathService,
-	storageService storage.Service,
+	operations storage.Operations,
 ) *ConfigRetrieverImpl {
 	return &ConfigRetrieverImpl{
-		backupReader:   backupReader,
-		pathService:    pathService,
-		storageService: storageService,
+		backupReader: backupReader,
+		pathService:  pathService,
+		operations:   operations,
 	}
 }
 
@@ -55,7 +55,7 @@ func (cr *ConfigRetrieverImpl) RetrieveConfiguration(
 	}
 
 	path := cr.pathService.GetConfigurationPath(routine.Name, backups[0].Created)
-	configBackups, err := cr.storageService.ReadFiles(ctx, routine.Storage, path, configExt)
+	configBackups, err := cr.operations.ReadFiles(ctx, routine.Storage, path, configExt)
 	if err != nil && !errors.Is(err, common.ErrEmptyStorage) {
 		return nil, err
 	}

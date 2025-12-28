@@ -15,14 +15,14 @@ import (
 type storageManager struct {
 	storage        model.Storage
 	nsValidator    aerospike.NamespaceValidator
-	storageManager storage.Service
+	storageManager storage.Operations
 }
 
 // newStorageManager returns new instance of storageManager.
 func newStorageManager(
 	configStorage model.Storage,
 	nsValidator aerospike.NamespaceValidator,
-	storMgr storage.Service,
+	storMgr storage.Operations,
 ) Manager {
 	return &storageManager{
 		storage:        configStorage,

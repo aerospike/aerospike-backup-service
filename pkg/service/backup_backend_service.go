@@ -159,10 +159,10 @@ var ErrNotFound = fmt.Errorf("not found")
 
 // BackupBackendServiceImpl default implementation of BackupReaderWriter.
 type BackupBackendServiceImpl struct {
-	config         *model.Config
-	locks          collections.LockMap // lock per routine
-	pathService    PathService
-	storageService storage.Service
+	config      *model.Config
+	locks       collections.LockMap // lock per routine
+	pathService PathService
+	operations  storage.Operations
 }
 
 var _ BackupReaderWriter = (*BackupBackendServiceImpl)(nil)
@@ -170,12 +170,12 @@ var _ BackupReaderWriter = (*BackupBackendServiceImpl)(nil)
 func NewBackupBackendService(
 	config *model.Config,
 	pathService PathService,
-	storageService storage.Service,
+	operations storage.Operations,
 ) *BackupBackendServiceImpl {
 	return &BackupBackendServiceImpl{
-		config:         config,
-		pathService:    pathService,
-		storageService: storageService,
+		config:      config,
+		pathService: pathService,
+		operations:  operations,
 	}
 }
 
@@ -199,7 +199,7 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 	lock.RLock()
 	defer lock.RUnlock()
 
-	files, err := b.storageService.ReadFileNames(ctx, backupStorage, filter.getPath(), metadataFile, filter.FromTime)
+	files, err := b.operations.ReadFileNames(ctx, backupStorage, filter.getPath(), metadataFile, filter.FromTime)
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.FromTime, err)
 	}
@@ -214,7 +214,7 @@ func (b *BackupBackendServiceImpl) getRoutineBackups(
 
 	var backups []model.BackupDetails
 	for _, fileName := range eligibleFiles {
-		file, err := b.storageService.ReadFile(ctx, backupStorage, strings.TrimPrefix(fileName, storagePrefix))
+		file, err := b.operations.ReadFile(ctx, backupStorage, strings.TrimPrefix(fileName, storagePrefix))
 		if err != nil {
 			return nil, fmt.Errorf("read metadata file %q: %w", fileName, err)
 		}
@@ -291,7 +291,7 @@ func (b *BackupBackendServiceImpl) WriteBackupMetadata(
 	lock.Lock()
 	defer lock.Unlock()
 
-	return b.storageService.WriteMetadataFile(ctx, routine.Storage, metadataFilePath, dataYaml)
+	return b.operations.WriteMetadataFile(ctx, routine.Storage, metadataFilePath, dataYaml)
 }
 
 func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routine *model.BackupRoutine, path string) error {
@@ -299,7 +299,7 @@ func (b *BackupBackendServiceImpl) Delete(ctx context.Context, routine *model.Ba
 	lock.Lock()
 	defer lock.Unlock()
 
-	err := b.storageService.DeleteFolder(ctx, routine.Storage, path)
+	err := b.operations.DeleteFolder(ctx, routine.Storage, path)
 	if err != nil {
 		return fmt.Errorf("failed to delete folder: %w", err)
 	}
@@ -313,7 +313,7 @@ func (b *BackupBackendServiceImpl) getPathBackups(
 	ctx context.Context,
 	filter *PathFilter,
 ) ([]model.BackupDetails, error) {
-	files, err := b.storageService.ReadFileNames(ctx, filter.storage, filter.path, metadataFile, nil)
+	files, err := b.operations.ReadFileNames(ctx, filter.storage, filter.path, metadataFile, nil)
 	if err != nil {
 		return nil, fmt.Errorf("read metadata files in %s: %w", filter.String(), err)
 	}
@@ -321,7 +321,7 @@ func (b *BackupBackendServiceImpl) getPathBackups(
 	storagePrefix := filepath.Clean(filter.storage.GetPath())
 	var backups []model.BackupDetails
 	for _, fileName := range files {
-		file, err := b.storageService.ReadFile(ctx, filter.storage, strings.TrimPrefix(fileName, storagePrefix))
+		file, err := b.operations.ReadFile(ctx, filter.storage, strings.TrimPrefix(fileName, storagePrefix))
 		if err != nil {
 			return nil, fmt.Errorf("read metadata file %q: %w", fileName, err)
 		}
