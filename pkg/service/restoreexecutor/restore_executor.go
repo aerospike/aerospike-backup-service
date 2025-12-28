@@ -22,13 +22,13 @@ type Restore interface {
 
 // DefaultRestoreExecutor implements the [Restore] interface.
 type DefaultRestoreExecutor struct {
-	storageManager storage.Manager
+	storageService storage.Service
 }
 
 // NewRestore returns a new DefaultRestoreExecutor instance.
-func NewRestore(storageManager storage.Manager) *DefaultRestoreExecutor {
+func NewRestore(storageService storage.Service) *DefaultRestoreExecutor {
 	return &DefaultRestoreExecutor{
-		storageManager: storageManager,
+		storageService: storageService,
 	}
 }
 
@@ -40,8 +40,8 @@ func (r *DefaultRestoreExecutor) Run(
 	request *model.RestoreRequest,
 ) (RestoreHandler, error) {
 	ops := []func() (RestoreHandler, error){
-		func() (RestoreHandler, error) { return runScanRestore(ctx, client, request, r.storageManager) },
-		func() (RestoreHandler, error) { return runXDRRestore(ctx, client, request, r.storageManager) },
+		func() (RestoreHandler, error) { return runScanRestore(ctx, client, request, r.storageService) },
+		func() (RestoreHandler, error) { return runXDRRestore(ctx, client, request, r.storageService) },
 	}
 
 	var (

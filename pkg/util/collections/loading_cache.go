@@ -80,8 +80,8 @@ func (c *baseCache[K, T]) fetch(key K, loader provider[T]) (T, error) {
 	// 2. Value is missing or expired; execute the loader
 	loadedValue, err := loader()
 	if err != nil {
-		// On error, we return the existing value (stale data) and the error.
-		return item.value, err
+		var zeroValue T
+		return zeroValue, err
 	}
 
 	// 3. Update the item

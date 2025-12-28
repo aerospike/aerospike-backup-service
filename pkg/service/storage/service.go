@@ -18,16 +18,11 @@ import (
 
 var connectivityTimeout = 15 * time.Second
 
-// Manager provides storage operations across different storage backends.
-type Manager interface {
-	// CreateFileReader creates a reader for a file in the specified storage.
-	CreateFileReader(ctx context.Context, storage model.Storage, path string, opts ...options.Opt,
-	) (backup.StreamingReader, error)
+// Service provides storage operations across different storage backends.
+type Service interface {
 	// CreateDirReader creates a reader for a folder in the specified storage.
 	CreateDirReader(ctx context.Context, storage model.Storage, path string, opts ...options.Opt,
 	) (backup.StreamingReader, error)
-	// CreateFileWriter creates a writer for a file in the specified storage.
-	CreateFileWriter(ctx context.Context, storage model.Storage, path string, opts ...options.Opt) (backup.Writer, error)
 	// CreateDirWriter creates a writer for a folder in the specified storage.
 	CreateDirWriter(ctx context.Context, storage model.Storage, path string, opts ...options.Opt) (backup.Writer, error)
 	// ReadFile reads the content of a file in the specified storage.
@@ -45,22 +40,22 @@ type Manager interface {
 	DeleteFolder(ctx context.Context, storage model.Storage, path string) error
 }
 
-// ManagerImpl implements Manager using registered accessors.
-type ManagerImpl struct {
+// ServiceImpl implements Service using registered accessors.
+type ServiceImpl struct {
 	accessors []Accessor
 }
 
-var _ Manager = (*ManagerImpl)(nil)
+var _ Service = (*ServiceImpl)(nil)
 
 // NewStorageService creates a new storage service with the given accessors.
-func NewStorageService(accessors ...Accessor) Manager {
-	return &ManagerImpl{
+func NewStorageService(accessors ...Accessor) Service {
+	return &ServiceImpl{
 		accessors: accessors,
 	}
 }
 
 // getAccessor returns the appropriate accessor for the given storage.
-func (s *ManagerImpl) getAccessor(storage model.Storage) Accessor {
+func (s *ServiceImpl) getAccessor(storage model.Storage) Accessor {
 	for _, accessor := range s.accessors {
 		if accessor.supports(storage) {
 			return accessor
@@ -70,21 +65,8 @@ func (s *ManagerImpl) getAccessor(storage model.Storage) Accessor {
 	panic(fmt.Sprintf("unsupported storage type %T", storage))
 }
 
-// CreateFileReader creates a reader for a file in the specified storage.
-func (s *ManagerImpl) CreateFileReader(
-	ctx context.Context,
-	storage model.Storage,
-	path string,
-	opts ...options.Opt,
-) (backup.StreamingReader, error) {
-	opts = append(opts,
-		options.WithFile(filepath.Join(storage.GetPath(), path)),
-		options.WithLogger(slog.Default()))
-	return s.getAccessor(storage).createReader(ctx, storage, opts...)
-}
-
 // CreateDirReader creates a reader for a folder in the specified storage.
-func (s *ManagerImpl) CreateDirReader(
+func (s *ServiceImpl) CreateDirReader(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
@@ -98,7 +80,7 @@ func (s *ManagerImpl) CreateDirReader(
 }
 
 // CreateFileWriter creates a writer for a file in the specified storage.
-func (s *ManagerImpl) CreateFileWriter(
+func (s *ServiceImpl) createFileWriter(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
@@ -109,7 +91,7 @@ func (s *ManagerImpl) CreateFileWriter(
 }
 
 // CreateDirWriter creates a writer for a folder in the specified storage.
-func (s *ManagerImpl) CreateDirWriter(
+func (s *ServiceImpl) CreateDirWriter(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
@@ -120,8 +102,8 @@ func (s *ManagerImpl) CreateDirWriter(
 }
 
 // ReadFile reads the content of a file in the specified storage.
-func (s *ManagerImpl) ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
-	reader, err := s.CreateFileReader(ctx, storage, filepath)
+func (s *ServiceImpl) ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
+	reader, err := s.createFileReader(ctx, storage, filepath)
 
 	if err != nil {
 		return nil, err
@@ -142,8 +124,20 @@ func (s *ManagerImpl) ReadFile(ctx context.Context, storage model.Storage, filep
 	}
 }
 
+func (s *ServiceImpl) createFileReader(
+	ctx context.Context,
+	storage model.Storage,
+	path string,
+	opts ...options.Opt,
+) (backup.StreamingReader, error) {
+	opts = append(opts,
+		options.WithFile(filepath.Join(storage.GetPath(), path)),
+		options.WithLogger(slog.Default()))
+	return s.getAccessor(storage).createReader(ctx, storage, opts...)
+}
+
 // ReadFiles reads the content of files in the specified storage matching the filter.
-func (s *ManagerImpl) ReadFiles(
+func (s *ServiceImpl) ReadFiles(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
@@ -189,7 +183,7 @@ func (s *ManagerImpl) ReadFiles(
 }
 
 // ReadFileNames lists the names of files in the specified storage matching the filter.
-func (s *ManagerImpl) ReadFileNames(
+func (s *ServiceImpl) ReadFileNames(
 	ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
 ) ([]string, error) {
 	var startScanFrom string
@@ -212,7 +206,7 @@ func (s *ManagerImpl) ReadFileNames(
 }
 
 // WriteMetadataFile writes a metadata file to the specified storage.
-func (s *ManagerImpl) WriteMetadataFile(
+func (s *ServiceImpl) WriteMetadataFile(
 	ctx context.Context,
 	storage model.Storage,
 	fileName string,
@@ -222,7 +216,7 @@ func (s *ManagerImpl) WriteMetadataFile(
 }
 
 // WriteDataFile writes a data file to the specified storage.
-func (s *ManagerImpl) WriteDataFile(
+func (s *ServiceImpl) WriteDataFile(
 	ctx context.Context,
 	storage model.Storage,
 	fileName string,
@@ -231,13 +225,13 @@ func (s *ManagerImpl) WriteDataFile(
 	return s.writeFile(ctx, storage, fileName, storage.GetStorageClass().DataClass, content)
 }
 
-func (s *ManagerImpl) writeFile(
+func (s *ServiceImpl) writeFile(
 	ctx context.Context,
 	storage model.Storage,
 	fileName, storageClass string,
 	content []byte,
 ) error {
-	writer, err := s.CreateFileWriter(ctx, storage, fileName, options.WithStorageClass(storageClass))
+	writer, err := s.createFileWriter(ctx, storage, fileName, options.WithStorageClass(storageClass))
 	if err != nil {
 		return fmt.Errorf("failed to create writer: %w", err)
 	}
@@ -260,7 +254,7 @@ func (s *ManagerImpl) writeFile(
 }
 
 // DeleteFolder deletes a folder and its contents in the specified storage.
-func (s *ManagerImpl) DeleteFolder(ctx context.Context, storage model.Storage, path string) error {
+func (s *ServiceImpl) DeleteFolder(ctx context.Context, storage model.Storage, path string) error {
 	writer, err := s.CreateDirWriter(ctx, storage, path, options.WithNestedDir(), options.WithRemoveFiles())
 	if err != nil {
 		return err

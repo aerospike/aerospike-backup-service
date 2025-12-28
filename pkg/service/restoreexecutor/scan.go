@@ -21,9 +21,9 @@ func runScanRestore(
 	ctx context.Context,
 	client aerospike.Restorer,
 	request *model.RestoreRequest,
-	storageManager storage.Manager,
+	storageService storage.Service,
 ) (RestoreHandler, error) {
-	reader, err := storageManager.CreateDirReader(ctx,
+	reader, err := storageService.CreateDirReader(ctx,
 		request.SourceStorage, request.BackupDataPath, options.WithValidator(asb.NewValidator()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup reader, %w", err)

@@ -26,12 +26,12 @@ type Backup interface {
 
 // DefaultBackupExecutor implements the actual backup logic.
 type DefaultBackupExecutor struct {
-	storageManager storage.Manager
+	storageService storage.Service
 }
 
-func NewDefaultBackupExecutor(storageManager storage.Manager) *DefaultBackupExecutor {
+func NewDefaultBackupExecutor(storageService storage.Service) *DefaultBackupExecutor {
 	return &DefaultBackupExecutor{
-		storageManager: storageManager,
+		storageService: storageService,
 	}
 }
 
@@ -49,7 +49,7 @@ func (r *DefaultBackupExecutor) Run(
 ) (BackupHandler, error) {
 	xdrEnabled := routine.BackupPolicy.XDRConfig != nil
 	withStorageClass := options.WithStorageClass(routine.Storage.GetStorageClass().DataClass)
-	writer, err := r.storageManager.CreateDirWriter(ctx, routine.Storage, path, withStorageClass)
+	writer, err := r.storageService.CreateDirWriter(ctx, routine.Storage, path, withStorageClass)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create backup writer: %w", err)
 	}

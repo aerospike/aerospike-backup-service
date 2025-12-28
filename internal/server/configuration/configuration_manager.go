@@ -34,7 +34,7 @@ func Load(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
-	sto storage.Manager,
+	sto storage.Service,
 ) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
@@ -91,7 +91,7 @@ func writeConfig(writer io.Writer, config *model.Config) error {
 }
 
 func newConfigManager(
-	configFile string, remote bool, nsValidator aerospike.NamespaceValidator, manager storage.Manager,
+	configFile string, remote bool, nsValidator aerospike.NamespaceValidator, manager storage.Service,
 ) (Manager, error) {
 	if remote {
 		s, err := readStorage(configFile)

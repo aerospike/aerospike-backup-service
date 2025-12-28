@@ -24,7 +24,7 @@ type ConfigRetriever interface {
 type ConfigRetrieverImpl struct {
 	backupReader   BackupReader
 	pathService    PathService
-	storageManager storage.Manager
+	storageService storage.Service
 }
 
 var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
@@ -32,12 +32,12 @@ var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
 func NewConfigRetriever(
 	backupReader BackupReaderWriter,
 	pathService PathService,
-	storageManager storage.Manager,
+	storageManager storage.Service,
 ) *ConfigRetrieverImpl {
 	return &ConfigRetrieverImpl{
 		backupReader:   backupReader,
 		pathService:    pathService,
-		storageManager: storageManager,
+		storageService: storageManager,
 	}
 }
 
@@ -55,7 +55,7 @@ func (cr *ConfigRetrieverImpl) RetrieveConfiguration(
 	}
 
 	path := cr.pathService.GetConfigurationPath(routine.Name, backups[0].Created)
-	configBackups, err := cr.storageManager.ReadFiles(ctx, routine.Storage, path, configExt)
+	configBackups, err := cr.storageService.ReadFiles(ctx, routine.Storage, path, configExt)
 	if err != nil && !errors.Is(err, common.ErrEmptyStorage) {
 		return nil, err
 	}
