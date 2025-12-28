@@ -90,13 +90,15 @@ func writeConfig(writer io.Writer, config *model.Config) error {
 	return err
 }
 
-func newConfigManager(configFile string, remote bool, nsValidator aerospike.NamespaceValidator, manager storage.Manager) (Manager, error) {
+func newConfigManager(
+	configFile string, remote bool, nsValidator aerospike.NamespaceValidator, manager storage.Manager,
+) (Manager, error) {
 	if remote {
-		storage, err := readStorage(configFile)
+		s, err := readStorage(configFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read remote storage configuration: %w", err)
 		}
-		return newStorageManager(storage, nsValidator, manager), nil
+		return newStorageManager(s, nsValidator, manager), nil
 	}
 
 	if isHTTPPath(configFile) {

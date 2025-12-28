@@ -13,7 +13,7 @@ import (
 
 // Service holds all dependencies required to access business logic from endpoints.
 type Service struct {
-	ctx                  context.Context
+	sysCtx               context.Context //nolint:containedctx
 	config               *model.Config
 	configApplier        service.ConfigApplier
 	scheduler            quartz.Scheduler
@@ -40,7 +40,7 @@ func NewService(
 	nsValidator aerospike.NamespaceValidator,
 ) *Service {
 	return &Service{
-		ctx:                  ctx,
+		sysCtx:               ctx,
 		config:               config,
 		configApplier:        configApplier,
 		scheduler:            scheduler,

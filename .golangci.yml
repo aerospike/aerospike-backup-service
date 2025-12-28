@@ -3,6 +3,7 @@ linters:
   default: none
   enable:
     - bodyclose
+    - containedctx
     - dogsled
     - dupl
     - errcheck
@@ -20,9 +21,9 @@ linters:
     - misspell
     - nakedret
     - nestif
+    - nilerr
     - nlreturn
     - nolintlint
-    - nilerr
     - prealloc
     - predeclared
     - promlinter
