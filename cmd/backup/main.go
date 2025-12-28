@@ -28,11 +28,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	commitHash string
-	buildTime  string
-)
-
 // run parses the CLI parameters and executes backup.
 func run() int {
 	var (
@@ -44,8 +39,8 @@ func run() int {
 	// regardless of subsequent errors or execution flow.
 	slog.Info("Aerospike Backup Service",
 		slog.String("version", backup.Version),
-		slog.String("commit", commitHash),
-		slog.String("buildTime", buildTime))
+		slog.String("commit", backup.CommitHash),
+		slog.String("buildTime", backup.BuildTime))
 
 	validateFlags := func(_ *cobra.Command, _ []string) error {
 		if len(configFile) == 0 {
@@ -114,8 +109,8 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 	configStr, _ := json.Marshal(dto.NewConfigFromModel(config))
 	slog.Info("Aerospike Backup Service",
 		slog.String("version", backup.Version),
-		slog.String("commit", commitHash),
-		slog.String("buildTime", buildTime),
+		slog.String("commit", backup.CommitHash),
+		slog.String("buildTime", backup.BuildTime),
 		slog.String("config", string(configStr)))
 
 	// schedule all configured backup routines

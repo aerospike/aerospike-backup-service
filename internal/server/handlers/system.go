@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	backup "github.com/aerospike/aerospike-backup-service/v3"
 	_ "github.com/aerospike/aerospike-backup-service/v3/docs" // auto-generated Swagger spec
 	"github.com/aerospike/aerospike-backup-service/v3/internal/attr"
+	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
@@ -60,10 +62,16 @@ func ReadyActionHandler(w http.ResponseWriter, _ *http.Request) {
 // @ID	        version
 // @Tags        System
 // @Router      /version [get]
-// @Success 	200 {string} string "version"
+// @Success 	200 {object} dto.VersionResponse
 func VersionActionHandler(w http.ResponseWriter, _ *http.Request) {
-	_, err := fmt.Fprint(w, backup.Version)
-	if err != nil {
+	response := dto.VersionResponse{
+		Version:   backup.Version,
+		Commit:    backup.CommitHash,
+		BuildTime: backup.BuildTime,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		slog.Error("failed to write response", attr.Error(err))
 	}
 }
