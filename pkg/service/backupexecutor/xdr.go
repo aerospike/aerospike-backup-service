@@ -49,7 +49,7 @@ func makeXDRConfig(
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate unique DC name: %w", err)
 	}
-	port, err := getFreePortInRange(routine.BackupPolicy.XDRConfig.PortRange)
+	port, err := getFreePortInRange(ctx, routine.BackupPolicy.XDRConfig.PortRange)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find free port: %w", err)
 	}
@@ -81,13 +81,13 @@ func makeXDRConfig(
 }
 
 // getFreePortInRange finds a free TCP port within the specified range and listens on all interfaces.
-func getFreePortInRange(r *model.PortRange) (model.Port, error) {
+func getFreePortInRange(ctx context.Context, r *model.PortRange) (model.Port, error) {
 	if r == nil {
-		return getFreePort()
+		return getFreePort(ctx)
 	}
 
 	for port := r.Start; port <= r.End; port++ {
-		if isPortAvailable(port) {
+		if isPortAvailable(ctx, port) {
 			return port, nil
 		}
 	}
@@ -95,8 +95,9 @@ func getFreePortInRange(r *model.PortRange) (model.Port, error) {
 }
 
 // isPortAvailable checks if the port is available.
-func isPortAvailable(port model.Port) bool {
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+func isPortAvailable(ctx context.Context, port model.Port) bool {
+	lc := net.ListenConfig{}
+	listener, err := lc.Listen(ctx, "tcp", fmt.Sprintf("0.0.0.0:%d", port))
 	if err != nil {
 		return false
 	}
@@ -105,8 +106,9 @@ func isPortAvailable(port model.Port) bool {
 }
 
 // getFreePort finds a free TCP port on localhost.
-func getFreePort() (model.Port, error) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+func getFreePort(ctx context.Context) (model.Port, error) {
+	lc := net.ListenConfig{}
+	listener, err := lc.Listen(ctx, "tcp", "127.0.0.1:0")
 	if err != nil {
 		return 0, err
 	}
