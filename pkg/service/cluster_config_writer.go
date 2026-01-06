@@ -11,8 +11,12 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike/cluster"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 )
+
+type storageDataWriter interface {
+	// WriteDataFile writes a data file to the specified storage.
+	WriteDataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
+}
 
 // ClusterConfigWriter handles writing cluster configuration to storage.
 type ClusterConfigWriter interface {
@@ -24,14 +28,14 @@ type ClusterConfigWriter interface {
 type DefaultClusterConfigWriter struct {
 	clientManager aerospike.ClientManager
 	pathService   PathService
-	operations    storage.Operations
+	operations    storageDataWriter
 }
 
 // NewClusterConfigWriter returns a new DefaultClusterConfigWriter instance.
 func NewClusterConfigWriter(
 	clientManager aerospike.ClientManager,
 	pathService PathService,
-	operations storage.Operations,
+	operations storageDataWriter,
 ) *DefaultClusterConfigWriter {
 	return &DefaultClusterConfigWriter{
 		clientManager: clientManager,

@@ -6,10 +6,14 @@ import (
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go"
 	"github.com/aerospike/backup-go/io/storage/options"
 )
+
+type storageWriter interface {
+	// CreateDirWriter creates a writer for a folder in the specified storage.
+	CreateDirWriter(ctx context.Context, storage model.Storage, path string, opts ...options.Opt) (backup.Writer, error)
+}
 
 // Backup defines the interface for running backups.
 type Backup interface {
@@ -26,10 +30,10 @@ type Backup interface {
 
 // DefaultBackupExecutor implements the actual backup logic.
 type DefaultBackupExecutor struct {
-	operations storage.Operations
+	operations storageWriter
 }
 
-func NewDefaultBackupExecutor(operations storage.Operations) *DefaultBackupExecutor {
+func NewDefaultBackupExecutor(operations storageWriter) *DefaultBackupExecutor {
 	return &DefaultBackupExecutor{
 		operations: operations,
 	}

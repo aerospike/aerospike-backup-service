@@ -15,7 +15,6 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto/decoder"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/aerospike"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,7 +33,7 @@ func Load(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
-	operations storage.Operations,
+	operations storageReaderWriter,
 ) (*model.Config, Manager, error) {
 	slog.Info("Read service configuration from",
 		slog.String("file", configFile),
@@ -95,7 +94,7 @@ func newConfigManager(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
-	manager storage.Operations,
+	manager storageReaderWriter,
 ) (Manager, error) {
 	if remote {
 		s, err := readStorage(ctx, configFile)

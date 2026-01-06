@@ -18,44 +18,20 @@ import (
 
 var connectivityTimeout = 15 * time.Second
 
-// Operations provides storage operations across different storage backends.
-type Operations interface {
-	// CreateDirReader creates a reader for a folder in the specified storage.
-	CreateDirReader(ctx context.Context, storage model.Storage, path string, opts ...options.Opt,
-	) (backup.StreamingReader, error)
-	// CreateDirWriter creates a writer for a folder in the specified storage.
-	CreateDirWriter(ctx context.Context, storage model.Storage, path string, opts ...options.Opt) (backup.Writer, error)
-	// ReadFile reads the content of a file in the specified storage.
-	ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error)
-	// ReadFiles reads the content of files in the specified storage matching the filter.
-	ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error)
-	// ReadFileNames lists the names of files in the specified storage matching the filter.
-	ReadFileNames(ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
-	) ([]string, error)
-	// WriteMetadataFile writes a metadata file to the specified storage.
-	WriteMetadataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
-	// WriteDataFile writes a data file to the specified storage.
-	WriteDataFile(ctx context.Context, storage model.Storage, fileName string, content []byte) error
-	// DeleteFolder deletes a folder and its contents in the specified storage.
-	DeleteFolder(ctx context.Context, storage model.Storage, path string) error
-}
-
-// OperationsImpl implements Operations using registered accessors.
-type OperationsImpl struct {
+// Operations implements storage operations using registered accessors.
+type Operations struct {
 	accessors []Accessor
 }
 
-var _ Operations = (*OperationsImpl)(nil)
-
 // NewOperations creates a new storage service with the given accessors.
-func NewOperations(accessors ...Accessor) Operations {
-	return &OperationsImpl{
+func NewOperations(accessors ...Accessor) *Operations {
+	return &Operations{
 		accessors: accessors,
 	}
 }
 
 // getAccessor returns the appropriate accessor for the given storage.
-func (s *OperationsImpl) getAccessor(storage model.Storage) Accessor {
+func (s *Operations) getAccessor(storage model.Storage) Accessor {
 	for _, accessor := range s.accessors {
 		if accessor.supports(storage) {
 			return accessor
@@ -66,7 +42,7 @@ func (s *OperationsImpl) getAccessor(storage model.Storage) Accessor {
 }
 
 // CreateDirReader creates a reader for a folder in the specified storage.
-func (s *OperationsImpl) CreateDirReader(
+func (s *Operations) CreateDirReader(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
@@ -80,7 +56,7 @@ func (s *OperationsImpl) CreateDirReader(
 }
 
 // CreateFileWriter creates a writer for a file in the specified storage.
-func (s *OperationsImpl) createFileWriter(
+func (s *Operations) createFileWriter(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
@@ -91,7 +67,7 @@ func (s *OperationsImpl) createFileWriter(
 }
 
 // CreateDirWriter creates a writer for a folder in the specified storage.
-func (s *OperationsImpl) CreateDirWriter(
+func (s *Operations) CreateDirWriter(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
@@ -102,7 +78,7 @@ func (s *OperationsImpl) CreateDirWriter(
 }
 
 // ReadFile reads the content of a file in the specified storage.
-func (s *OperationsImpl) ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
+func (s *Operations) ReadFile(ctx context.Context, storage model.Storage, filepath string) ([]byte, error) {
 	reader, err := s.createFileReader(ctx, storage, filepath)
 
 	if err != nil {
@@ -124,7 +100,7 @@ func (s *OperationsImpl) ReadFile(ctx context.Context, storage model.Storage, fi
 	}
 }
 
-func (s *OperationsImpl) createFileReader(
+func (s *Operations) createFileReader(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
@@ -137,7 +113,7 @@ func (s *OperationsImpl) createFileReader(
 }
 
 // ReadFiles reads the content of files in the specified storage matching the filter.
-func (s *OperationsImpl) ReadFiles(
+func (s *Operations) ReadFiles(
 	ctx context.Context,
 	storage model.Storage,
 	path string,
@@ -183,7 +159,7 @@ func (s *OperationsImpl) ReadFiles(
 }
 
 // ReadFileNames lists the names of files in the specified storage matching the filter.
-func (s *OperationsImpl) ReadFileNames(
+func (s *Operations) ReadFileNames(
 	ctx context.Context, storage model.Storage, path string, filterStr string, fromTime *time.Time,
 ) ([]string, error) {
 	var startScanFrom string
@@ -206,7 +182,7 @@ func (s *OperationsImpl) ReadFileNames(
 }
 
 // WriteMetadataFile writes a metadata file to the specified storage.
-func (s *OperationsImpl) WriteMetadataFile(
+func (s *Operations) WriteMetadataFile(
 	ctx context.Context,
 	storage model.Storage,
 	fileName string,
@@ -216,7 +192,7 @@ func (s *OperationsImpl) WriteMetadataFile(
 }
 
 // WriteDataFile writes a data file to the specified storage.
-func (s *OperationsImpl) WriteDataFile(
+func (s *Operations) WriteDataFile(
 	ctx context.Context,
 	storage model.Storage,
 	fileName string,
@@ -225,7 +201,7 @@ func (s *OperationsImpl) WriteDataFile(
 	return s.writeFile(ctx, storage, fileName, storage.GetStorageClass().DataClass, content)
 }
 
-func (s *OperationsImpl) writeFile(
+func (s *Operations) writeFile(
 	ctx context.Context,
 	storage model.Storage,
 	fileName, storageClass string,
@@ -254,7 +230,7 @@ func (s *OperationsImpl) writeFile(
 }
 
 // DeleteFolder deletes a folder and its contents in the specified storage.
-func (s *OperationsImpl) DeleteFolder(ctx context.Context, storage model.Storage, path string) error {
+func (s *Operations) DeleteFolder(ctx context.Context, storage model.Storage, path string) error {
 	writer, err := s.CreateDirWriter(ctx, storage, path, options.WithNestedDir(), options.WithRemoveFiles())
 	if err != nil {
 		return err

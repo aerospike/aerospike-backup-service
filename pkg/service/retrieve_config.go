@@ -10,9 +10,13 @@ import (
 	"time"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
-	"github.com/aerospike/aerospike-backup-service/v3/pkg/service/storage"
 	"github.com/aerospike/backup-go/io/storage/common"
 )
+
+type storageFileReader interface {
+	// ReadFiles reads the content of files in the specified storage matching the filter.
+	ReadFiles(ctx context.Context, storage model.Storage, path string, filterStr string) ([]*bytes.Buffer, error)
+}
 
 // ConfigRetriever is used to read saved Aerospike configuration from backup.
 type ConfigRetriever interface {
@@ -24,7 +28,7 @@ type ConfigRetriever interface {
 type ConfigRetrieverImpl struct {
 	backupReader BackupReader
 	pathService  PathService
-	operations   storage.Operations
+	operations   storageFileReader
 }
 
 var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
@@ -32,7 +36,7 @@ var _ ConfigRetriever = (*ConfigRetrieverImpl)(nil)
 func NewConfigRetriever(
 	backupReader BackupReaderWriter,
 	pathService PathService,
-	operations storage.Operations,
+	operations storageFileReader,
 ) *ConfigRetrieverImpl {
 	return &ConfigRetrieverImpl{
 		backupReader: backupReader,
