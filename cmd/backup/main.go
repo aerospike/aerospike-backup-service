@@ -77,7 +77,9 @@ func run() int {
 }
 
 func startService(configFile string, remote bool) error {
-	ctx := systemCtx()
+	ctx, stop := systemCtx()
+	defer stop()
+
 	config, scheduler, httpService, appLogger, err := initComponents(ctx, configFile, remote)
 	if err != nil {
 		return err
@@ -174,9 +176,8 @@ func setDefaultLogger(loggerConfig *model.LoggerConfig) *slog.Logger {
 	return appLogger
 }
 
-func systemCtx() context.Context {
-	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
-	return ctx
+func systemCtx() (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
 }
 
 func runHTTPServer(
@@ -199,11 +200,7 @@ func runHTTPServer(
 	case <-ctx.Done():
 	}
 
-	// shutdown the HTTP server gracefully
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+	if err := httpServer.Shutdown(); err != nil {
 		slog.Error("HTTP server shutdown failed", attr.Error(err))
 		return err
 	}
