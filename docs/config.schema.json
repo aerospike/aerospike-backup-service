@@ -1904,6 +1904,24 @@
             "default": false
           }
         }
+      },
+      "dto.VersionResponse": {
+        "description": "VersionResponse represents the ABS version information.",
+        "type": "object",
+        "properties": {
+          "build-time": {
+            "description": "BuildTime of the application in UTC.",
+            "type": "string"
+          },
+          "commit": {
+            "description": "Commit hash of the build.",
+            "type": "string"
+          },
+          "version": {
+            "description": "Version of the application.",
+            "type": "string"
+          }
+        }
       }
     }
   }

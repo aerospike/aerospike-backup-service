@@ -1,8 +1,14 @@
 package dto
 
-// VersionResponse represents the application version information.
+// VersionResponse represents the ABS version information.
+// @Description VersionResponse represents the ABS version information.
 type VersionResponse struct {
-	Version   string `json:"version"`
-	Commit    string `json:"commit"`
-	BuildTime string `json:"build-time"`
+	// Version of the application.
+	Version string `json:"version"`
+
+	// Commit hash of the build.
+	Commit string `json:"commit"`
+
+	// BuildTime of the application in UTC.
+	BuildTime string `json:"build-time" `
 }
