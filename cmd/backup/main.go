@@ -191,11 +191,22 @@ func runHTTPServer(
 	ctx context.Context, serverConfig *model.HTTPServerConfig, service *handlers.Service, logger *slog.Logger,
 ) error {
 	httpServer := server.NewHTTPServer(serverConfig, service, logger)
+
+	// Channel to capture server startup errors
+	errCh := make(chan error, 1)
 	go func() {
-		httpServer.Start()
+		if err := httpServer.Start(); err != nil {
+			errCh <- err
+		}
 	}()
 
-	<-ctx.Done()
+	// Wait for either context cancellation or server error
+	select {
+	case err := <-errCh:
+		return fmt.Errorf("HTTP server failed: %w", err)
+	case <-ctx.Done():
+	}
+
 	time.Sleep(time.Millisecond * 100) // wait for other goroutines to exit
 	// shutdown the HTTP server gracefully
 	if err := httpServer.Shutdown(); err != nil {
