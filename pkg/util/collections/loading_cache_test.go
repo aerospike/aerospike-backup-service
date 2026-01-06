@@ -8,7 +8,7 @@ import (
 )
 
 func TestLoadingCache(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	var loadFunc = func(_ context.Context, s string) (int, error) { return strconv.Atoi(s) }
 	cache := NewLoadingCache(ctx, loadFunc)
 	value, _ := cache.Get("1")
@@ -29,7 +29,7 @@ func TestLoadingCache(t *testing.T) {
 }
 
 func TestLoadingCache_Error(t *testing.T) {
-	cache := NewLoadingCache(context.Background(), func(_ context.Context, _ string) (any, error) {
+	cache := NewLoadingCache(t.Context(), func(_ context.Context, _ string) (any, error) {
 		return nil, errors.New("error")
 	})
 	_, err := cache.Get("1")

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -49,7 +48,7 @@ func TestHistoryScan(t *testing.T) {
 	mockReader.EXPECT().PopInvalidatedRoutines().Return([]*model.BackupRoutine{{Name: routineName}}).Times(1)
 
 	registry := NewRunningBackupsRegistry(historyMgr, mockReader)
-	registry.SynchroniseBackupHistory(context.Background())
+	registry.SynchroniseBackupHistory(t.Context())
 
 	backupStats := models.NewBackupStats()
 	backupStats.TotalRecords.Store(100)

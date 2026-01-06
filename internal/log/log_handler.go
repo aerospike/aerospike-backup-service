@@ -1,7 +1,6 @@
 package log
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -35,7 +34,7 @@ func NewHandler(config *model.LoggerConfig) slog.Handler {
 			ReplaceAttr: handlerReplaceAttr,
 		})
 	default:
-		panic(fmt.Sprintf("unsupported log format: %s", *config.Format))
+		panic("unsupported log format: " + *config.Format)
 	}
 }
 
@@ -94,7 +93,7 @@ func logLevel(level string) slog.Level {
 	case "ERROR":
 		return slog.LevelError
 	default:
-		panic(fmt.Sprintf("invalid log level: %s", level))
+		panic("invalid log level: " + level)
 	}
 }
 

@@ -1,12 +1,13 @@
 package dto
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
 
 var (
-	errValidation        = fmt.Errorf("validation error")
+	errValidation        = errors.New("validation error")
 	errRequiredEither    = fmt.Errorf("required fields %w", errValidation)
 	errMutuallyExclusive = fmt.Errorf("mutually exclusive fields %w", errValidation)
 	errEmpty             = fmt.Errorf("empty field %w", errValidation)

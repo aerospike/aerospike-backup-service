@@ -12,7 +12,7 @@ import (
 // This test ensures that the `validate` and `dto` packages are not dependent on schema.
 func TestPackageDoesNotDependOnSchema(t *testing.T) {
 	// resolves to "github.com/aerospike/aerospike-backup-service/v#/modules/schema"
-	forbidden := reflect.TypeOf(schema.Schemas{}).PkgPath()
+	forbidden := reflect.TypeFor[schema.Schemas]().PkgPath()
 
 	current := getCurrentPackage(t)
 	seen := map[string]bool{}

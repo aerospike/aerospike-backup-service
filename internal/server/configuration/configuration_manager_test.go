@@ -44,7 +44,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 				return os.WriteFile(filepath.Join(tempDir, "local_config.yaml"), []byte("test: config"), 0600)
 			},
 			expectError:  false,
-			expectedType: reflect.TypeOf(&fileConfigurationManager{}),
+			expectedType: reflect.TypeFor[*fileConfigurationManager](),
 		},
 		{
 			name:         "HTTP file, non-remote",
@@ -52,7 +52,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			remote:       false,
 			setup:        func() error { return nil },
 			expectError:  false,
-			expectedType: reflect.TypeOf(&httpConfigurationManager{}),
+			expectedType: reflect.TypeFor[*httpConfigurationManager](),
 		},
 		{
 			name:         "HTTP file, remote",
@@ -60,7 +60,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			remote:       true,
 			setup:        func() error { return nil },
 			expectError:  false,
-			expectedType: reflect.TypeOf(&storageManager{}),
+			expectedType: reflect.TypeFor[*storageManager](),
 		},
 		{
 			name:       "Local file, remote",
@@ -70,7 +70,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 				return os.WriteFile(filepath.Join(tempDir, "storage_config.yaml"), []byte(storageDto), 0600)
 			},
 			expectError:  false,
-			expectedType: reflect.TypeOf(&storageManager{}),
+			expectedType: reflect.TypeFor[*storageManager](),
 		},
 		{
 			name:       "Local file, remote but invalid storage config",
@@ -88,7 +88,7 @@ func TestConfigManagerBuilder_NewConfigManager(t *testing.T) {
 			err := tt.setup()
 			require.NoError(t, err, "Setup failed")
 
-			config, err := newConfigManager(tt.configFile, tt.remote, nil)
+			config, err := newConfigManager(t.Context(), tt.configFile, tt.remote, nil)
 			if tt.expectError {
 				require.Error(t, err)
 				return

@@ -241,7 +241,7 @@ func parseCipherSuites(cipherSuiteStr *string) ([]uint16, error) {
 	}
 
 	if len(suites) == 0 {
-		return nil, fmt.Errorf("cipher suite string was provided but contained no valid ciphers")
+		return nil, errors.New("cipher suite string was provided but contained no valid ciphers")
 	}
 
 	return suites, nil

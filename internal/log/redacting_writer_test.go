@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRedactingWriter(t *testing.T) {
@@ -19,8 +19,8 @@ func TestRedactingWriter(t *testing.T) {
 	expected := fmt.Sprintf(`{"user":"alice","privateKey":"%s"}`, redactedPlaceholder)
 
 	_, err := writer.Write([]byte(input))
-	assert.NoError(t, err)
-	assert.Equal(t, expected, buf.String())
+	require.NoError(t, err)
+	require.Equal(t, expected, buf.String())
 }
 
 func TestRedactingWriter_MultilineKey(t *testing.T) {
@@ -33,8 +33,8 @@ abc123
 	expected := fmt.Sprintf(`{"user":"alice","privateKey":"%s"}`, redactedPlaceholder)
 
 	_, err := writer.Write([]byte(input))
-	assert.NoError(t, err)
-	assert.Equal(t, expected, buf.String())
+	require.NoError(t, err)
+	require.Equal(t, expected, buf.String())
 }
 
 func TestRedactingWriter_NoRedactionNeeded(t *testing.T) {
@@ -44,8 +44,8 @@ func TestRedactingWriter_NoRedactionNeeded(t *testing.T) {
 	input := `{"user":"alice","role":"admin"}`
 
 	_, err := writer.Write([]byte(input))
-	assert.NoError(t, err)
-	assert.Equal(t, input, buf.String())
+	require.NoError(t, err)
+	require.Equal(t, input, buf.String())
 }
 
 const (
@@ -61,24 +61,23 @@ func BenchmarkLoggerComparison(b *testing.B) {
 	})
 }
 
-//nolint:lll
 func generateLogLine(i int) []byte {
 	if i%redactEveryNthLine == 0 {
-		return []byte(fmt.Sprintf("WARN %d: key found -----BEGIN PRIVATE KEY-----\nKEY_%d\n-----END PRIVATE KEY-----\n", i, i))
+		return fmt.Appendf(nil, "WARN %d: key found -----BEGIN PRIVATE KEY-----\nKEY_%d\n-----END PRIVATE KEY-----\n", i, i)
 	}
 	switch i % 5 {
 	case 0:
-		return []byte(fmt.Sprintf("INFO %d: user logged in from IP 192.168.%d.%d\n", i, i%255, (i+50)%255))
+		return fmt.Appendf(nil, "INFO %d: user logged in from IP 192.168.%d.%d\n", i, i%255, (i+50)%255)
 	case 1:
-		return []byte(fmt.Sprintf("DEBUG %d: health check passed for service=db latency=%dms\n", i, i%100))
+		return fmt.Appendf(nil, "DEBUG %d: health check passed for service=db latency=%dms\n", i, i%100)
 	case 2:
-		return []byte(fmt.Sprintf("WARN %d: unusual login time detected for user_id=%d\n", i, i*3))
+		return fmt.Appendf(nil, "WARN %d: unusual login time detected for user_id=%d\n", i, i*3)
 	case 3:
-		return []byte(fmt.Sprintf("TRACE %d: payload received {\"req_id\":%d,\"action\":\"ping\"}\n", i, 10000+i))
+		return fmt.Appendf(nil, "TRACE %d: payload received {\"req_id\":%d,\"action\":\"ping\"}\n", i, 10000+i)
 	case 4:
-		return []byte(fmt.Sprintf("ERROR %d: failed to decode stream: %%x=0x%X ☠️\n", i, i*7))
+		return fmt.Appendf(nil, "ERROR %d: failed to decode stream: %%x=0x%X ☠️\n", i, i*7)
 	default:
-		return []byte(fmt.Sprintf("line %d: fallback log line\n", i))
+		return fmt.Appendf(nil, "line %d: fallback log line\n", i)
 	}
 }
 
@@ -86,15 +85,15 @@ func runLineByLineLogging(b *testing.B, name string, wrapWriter func(io.Writer) 
 	b.Helper()
 
 	b.Run(name, func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			f, err := os.CreateTemp("", name+"_*.log")
+		for range b.N {
+			f, err := os.CreateTemp(b.TempDir(), name+"_*.log")
 			if err != nil {
 				b.Fatal(err)
 			}
 
 			writer := wrapWriter(f)
 
-			for line := 0; line < totalLogLines; line++ {
+			for line := range totalLogLines {
 				line := generateLogLine(line)
 				_, err := writer.Write(line)
 				if err != nil {

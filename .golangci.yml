@@ -3,12 +3,16 @@ linters:
   default: none
   enable:
     - bodyclose
+    - copyloopvar
     - dogsled
     - dupl
     - errcheck
     - errorlint
     - exhaustive
+    - exptostd
+    - fatcontext
     - funlen
+    - gocognit
     - goconst
     - gocritic
     - gocyclo
@@ -18,11 +22,14 @@ linters:
     - ineffassign
     - lll
     - misspell
+    - modernize
     - nakedret
     - nestif
-    - nlreturn
-    - nolintlint
     - nilerr
+    - nlreturn
+    - noctx
+    - nolintlint
+    - perfsprint
     - prealloc
     - predeclared
     - promlinter
@@ -31,11 +38,14 @@ linters:
     - sloglint
     - staticcheck
     - tagliatelle
+    - testifylint
     - thelper
     - tparallel
     - unconvert
     - unparam
     - unused
+    - usestdlibvars
+    - usetesting
     - whitespace
   settings:
     godot:
@@ -44,6 +54,8 @@ linters:
     gosec:
       excludes:
         - G115
+    gocognit:
+      min-complexity: 25
     exhaustive:
       default-signifies-exhaustive: true
     nlreturn:
@@ -66,6 +78,10 @@ linters:
             - checkPrivateReceivers
           exclude:
             - test
+    usetesting:
+      context-background: true
+      context-todo: true
+      os-temp-dir: true
   exclusions:
     generated: lax
     presets:

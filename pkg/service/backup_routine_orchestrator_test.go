@@ -2,7 +2,6 @@ package service
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"log/slog"
 	"sync"
@@ -112,7 +111,7 @@ func TestRunFullBackupInternal_Success(t *testing.T) {
 	), NewPathService(nil))
 
 	backupCounters.Reset()
-	o.runFullBackup(context.Background(), now)
+	o.runFullBackup(t.Context(), now)
 
 	registryWG.Wait()
 	assert.Equal(t, uint64(10), stats.TotalRecords.Load(), "Backup stats should be correct")
@@ -151,12 +150,9 @@ func TestRunFullBackupInternal_SkipWhenBackupInProgress(t *testing.T) {
 		mockClusterConfigWriter,
 	), NewPathService(nil))
 
-	ctx := context.Background()
-	now := time.Now()
-
 	backupCounters.Reset()
 
-	o.runFullBackup(ctx, now)
+	o.runFullBackup(t.Context(), time.Now())
 
 	assert.Zero(t, prometheusCounter(jobTypeFull, BackupOutcomeSuccess))
 	assert.Equal(t, 1, prometheusCounter(jobTypeFull, BackupOutcomeSkip))
@@ -204,7 +200,7 @@ func TestRunFullBackupInternal_ClientConnectionFailure(t *testing.T) {
 	), NewPathService(nil))
 
 	backupCounters.Reset()
-	o.runFullBackup(context.Background(), time.Now())
+	o.runFullBackup(t.Context(), time.Now())
 
 	assert.Contains(t, buf.String(), connectionError.Error())
 
@@ -329,7 +325,7 @@ func TestRunIncrementalBackup_Skip(t *testing.T) {
 
 	backupCounters.Reset()
 
-	o.runIncrementalBackup(context.Background(), time.Now())
+	o.runIncrementalBackup(t.Context(), time.Now())
 
 	assert.Equal(t, 1, prometheusCounter(jobTypeIncremental, BackupOutcomeSkip))
 	assert.Zero(t, prometheusCounter(jobTypeIncremental, BackupOutcomeSuccess))
@@ -424,7 +420,7 @@ func runIncrementalBackup(t *testing.T, state *model.RoutineState, routine *mode
 		mockClusterConfigWriter,
 	), NewPathService(nil))
 
-	o.runIncrementalBackup(context.Background(), time.Now())
+	o.runIncrementalBackup(t.Context(), time.Now())
 	time.Sleep(10 * time.Millisecond) // time to unregister routine.
 
 	assert.Equal(t, uint64(5), stats.TotalRecords.Load(), "Backup stats should be correct")

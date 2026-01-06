@@ -1,6 +1,7 @@
 package dto
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
@@ -53,10 +54,10 @@ func (s *S3Storage) Validate(opts ...ValidationOption) error {
 	}
 
 	if s.AccessKeyID != nil && s.SecretAccessKey == nil {
-		return fmt.Errorf("access-key-id is set but secret-access-key is missing")
+		return errors.New("access-key-id is set but secret-access-key is missing")
 	}
 	if s.AccessKeyID == nil && s.SecretAccessKey != nil {
-		return fmt.Errorf("secret-access-key is set but access-key-id is missing")
+		return errors.New("secret-access-key is set but access-key-id is missing")
 	}
 	if s.MinPartSize != nil && *s.MinPartSize < s3MinUploadPartSize {
 		return errValidationInvalidValue("min-part-size", s.MinPartSize, "at least 5MiB")

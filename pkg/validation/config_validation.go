@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/dto"
@@ -14,7 +15,7 @@ func ValidateStaticFieldChanges(oldConf, newConf *dto.Config) error {
 
 func ValidateConfiguration(conf *dto.Config) error {
 	if conf == nil {
-		return fmt.Errorf("config is nil")
+		return errors.New("config is nil")
 	}
 
 	_, err := conf.ToModel(dto.ValidationSkipTLSFiles)
@@ -23,10 +24,10 @@ func ValidateConfiguration(conf *dto.Config) error {
 
 func ValidateRestoreRequest(request *dto.RestoreRequest, conf *dto.Config) error {
 	if conf == nil {
-		return fmt.Errorf("config is nil")
+		return errors.New("config is nil")
 	}
 	if request == nil {
-		return fmt.Errorf("restore request is nil")
+		return errors.New("restore request is nil")
 	}
 
 	model, err := conf.ToModel(dto.ValidationSkipTLSFiles)
@@ -46,10 +47,10 @@ func ValidateRestoreRequest(request *dto.RestoreRequest, conf *dto.Config) error
 
 func ValidateRestoreTimestampRequest(request *dto.RestoreTimestampRequest, conf *dto.Config) error {
 	if conf == nil {
-		return fmt.Errorf("config is nil")
+		return errors.New("config is nil")
 	}
 	if request == nil {
-		return fmt.Errorf("restore request is nil")
+		return errors.New("restore request is nil")
 	}
 
 	model, err := conf.ToModel(dto.ValidationSkipTLSFiles)
