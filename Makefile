@@ -40,7 +40,9 @@ BINDIR ?= $(PREFIX)/bin
 DESTDIR ?=
 
 GOBUILD = GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 $(GO) build \
--trimpath -ldflags="-s -w -X backup.CommitHash=$(GIT_COMMIT) -X backup.BuildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
+-trimpath -ldflags="-s -w \
+-X github.com/aerospike/aerospike-backup-service/v3.CommitHash=$(GIT_COMMIT) \
+-X github.com/aerospike/aerospike-backup-service/v3.BuildTime=$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')"
 GOTEST = $(GO) test
 GOCLEAN = $(GO) clean
 GOBIN_VERSION = $(shell $(GO) version 2>/dev/null)
