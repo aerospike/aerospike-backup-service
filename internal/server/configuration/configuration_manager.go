@@ -94,14 +94,14 @@ func newConfigManager(
 	configFile string,
 	remote bool,
 	nsValidator aerospike.NamespaceValidator,
-	manager storageReaderWriter,
+	operations storageReaderWriter,
 ) (Manager, error) {
 	if remote {
 		s, err := readStorage(ctx, configFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read remote storage configuration: %w", err)
 		}
-		return newStorageManager(s, nsValidator, manager), nil
+		return newStorageManager(s, nsValidator, operations), nil
 	}
 
 	if isHTTPPath(configFile) {
