@@ -91,7 +91,11 @@ func writeConfig(writer io.Writer, config *model.Config) error {
 }
 
 func newConfigManager(
-	ctx context.Context, configFile string, remote bool, nsValidator aerospike.NamespaceValidator, manager storage.Operations,
+	ctx context.Context,
+	configFile string,
+	remote bool,
+	nsValidator aerospike.NamespaceValidator,
+	manager storage.Operations,
 ) (Manager, error) {
 	if remote {
 		s, err := readStorage(ctx, configFile)

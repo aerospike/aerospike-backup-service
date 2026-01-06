@@ -95,10 +95,7 @@ func (c *baseCache[K, T]) fetch(key K, loader provider[T]) (T, error) {
 }
 
 func (c *baseCache[K, T]) startCleanup(ctx context.Context) {
-	interval := *c.ttl
-	if interval > time.Hour { // We don't want to trigger cleanup too often.
-		interval = time.Hour
-	}
+	interval := max(*c.ttl, time.Hour) // We don't want to trigger cleanup too often.
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()

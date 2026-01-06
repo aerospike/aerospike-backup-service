@@ -7,6 +7,7 @@ import (
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/model"
 	"github.com/aerospike/aerospike-backup-service/v3/pkg/util/ptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -75,9 +76,9 @@ func TestResolve(t *testing.T) {
 
 			password, err := resolver.Resolve(test.credentials)
 			if test.expectedErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				assert.Equal(t, test.expectedPassword, password)
 			}
 			_ = os.RemoveAll(testdataFolder)

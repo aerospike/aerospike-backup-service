@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoadingCache_GetWithContext(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	var callCount atomic.Int32
 	loadFunc := func(_ context.Context, s string) (int, error) {
 		callCount.Add(1)
@@ -24,25 +25,25 @@ func TestLoadingCache_GetWithContext(t *testing.T) {
 
 	// First call
 	val, err := cache.Get(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
 
 	// Second call - should be cached
 	val, err = cache.Get(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
 
 	// Different key
 	val, err = cache.Get(ctx, "2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 2, val)
 	assert.Equal(t, int32(2), callCount.Load())
 }
 
 func TestLoadingCache_Forever(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	var callCount atomic.Int32
 	loadFunc := func(_ context.Context, s string) (int, error) {
 		callCount.Add(1)
@@ -53,19 +54,19 @@ func TestLoadingCache_Forever(t *testing.T) {
 
 	// First call
 	val, err := cache.Get(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
 
 	// Second call - should be cached forever
 	val, err = cache.Get(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
 }
 
 func TestLoadingCache_Expiry(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	var callCount atomic.Int32
 	loadFunc := func(_ context.Context, s string) (int, error) {
 		callCount.Add(1)
@@ -77,7 +78,7 @@ func TestLoadingCache_Expiry(t *testing.T) {
 
 	// First call
 	val, err := cache.Get(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
 
@@ -86,13 +87,13 @@ func TestLoadingCache_Expiry(t *testing.T) {
 
 	// Second call - should reload
 	val, err = cache.Get(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(2), callCount.Load())
 }
 
 func TestLoadingCache_Error(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	loadFunc := func(_ context.Context, _ string) (int, error) {
 		return 0, errors.New("load error")
 	}
@@ -101,7 +102,7 @@ func TestLoadingCache_Error(t *testing.T) {
 	cache := NewLoadingCacheContext(ctx, loadFunc, &ttl)
 
 	val, err := cache.Get(ctx, "1")
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Equal(t, "load error", err.Error())
 	assert.Equal(t, 0, val)
 
@@ -111,7 +112,7 @@ func TestLoadingCache_Error(t *testing.T) {
 }
 
 func TestLoadingCache_ZeroTTL(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	var callCount atomic.Int32
 	loadFunc := func(_ context.Context, s string) (int, error) {
 		callCount.Add(1)
@@ -123,19 +124,19 @@ func TestLoadingCache_ZeroTTL(t *testing.T) {
 
 	// First call
 	val, err := cache.Get(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(1), callCount.Load())
 
 	// Second call - should reload because TTL is 0
 	val, err = cache.Get(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, 1, val)
 	assert.Equal(t, int32(2), callCount.Load())
 }
 
 func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	var callCount atomic.Int32
 	loadFunc := func(_ context.Context, s string) (int, error) {
 		callCount.Add(1)
@@ -147,15 +148,15 @@ func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
 
 	// First call
 	_, err := cache.Get(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, int32(1), callCount.Load())
 
 	// Access repeatedly to keep it alive
 	// Total time 250ms > 100ms, but accessed every 50ms
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		time.Sleep(50 * time.Millisecond)
 		_, err := cache.Get(ctx, "1")
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	// Should not have reloaded
@@ -166,6 +167,6 @@ func TestLoadingCache_AccessExtendsTTL(t *testing.T) {
 
 	// Should reload
 	_, err = cache.Get(ctx, "1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, int32(2), callCount.Load())
 }
