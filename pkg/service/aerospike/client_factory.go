@@ -1,6 +1,7 @@
 package aerospike
 
 import (
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -68,7 +69,7 @@ func (f *DefaultClientFactory) clientPolicy(c *model.AerospikeCluster) (*as.Clie
 		policy.User = ptr.ValueOrZero(c.GetUser())
 		password, err := f.passwordResolver.Resolve(c.Credentials)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to resolve password: %w", err)
 		}
 		policy.Password = ptr.ValueOrZero(password)
 		if c.Credentials.AuthMode != nil {

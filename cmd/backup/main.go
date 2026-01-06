@@ -113,7 +113,7 @@ func initComponents(ctx context.Context, configFile string, remote bool) (
 		storage.NewAzureStorageAccessor(ctx, resolver),
 		storage.NewLocalStorageAccessor(),
 	)
-	clientManager := aerospike.NewClientManager(aerospike.NewClientFactory(passwordResolver), 10*time.Second)
+	clientManager := aerospike.NewClientManager(aerospike.NewClientFactory(passwordResolver), aerospike.DefaultCloseDelay)
 	nsValidator := aerospike.NewNamespaceValidator(clientManager)
 
 	config, configurationManager, err := configuration.Load(ctx, configFile, remote, nsValidator, operations)
