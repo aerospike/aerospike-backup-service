@@ -30,15 +30,28 @@ func NewOperations(accessors ...Accessor) *Operations {
 	}
 }
 
-// getAccessor returns the appropriate accessor for the given storage.
-func (s *Operations) getAccessor(storage model.Storage) Accessor {
-	for _, accessor := range s.accessors {
-		if accessor.supports(storage) {
-			return accessor
-		}
+func (s *Operations) accessorCreateReader(
+	ctx context.Context,
+	storage model.Storage,
+	opts ...options.Opt,
+) (backup.StreamingReader, error) {
+	accessor, err := s.getAccessor(storage)
+	if err != nil {
+		return nil, err
 	}
+	return accessor.createReader(ctx, storage, opts...)
+}
 
-	panic(fmt.Sprintf("unsupported storage type %T", storage))
+func (s *Operations) accessorCreateWriter(
+	ctx context.Context,
+	storage model.Storage,
+	opts ...options.Opt,
+) (backup.Writer, error) {
+	accessor, err := s.getAccessor(storage)
+	if err != nil {
+		return nil, err
+	}
+	return accessor.createWriter(ctx, storage, opts...)
 }
 
 // CreateDirReader creates a reader for a folder in the specified storage.
@@ -52,7 +65,7 @@ func (s *Operations) CreateDirReader(
 		options.WithDir(filepath.Join(storage.GetPath(), path)),
 		options.WithNestedDir(),
 		options.WithLogger(slog.Default()))
-	return s.getAccessor(storage).createReader(ctx, storage, opts...)
+	return s.accessorCreateReader(ctx, storage, opts...)
 }
 
 // CreateFileWriter creates a writer for a file in the specified storage.
@@ -63,7 +76,7 @@ func (s *Operations) createFileWriter(
 	opts ...options.Opt,
 ) (backup.Writer, error) {
 	opts = append(opts, options.WithFile(filepath.Join(storage.GetPath(), path)))
-	return s.getAccessor(storage).createWriter(ctx, storage, opts...)
+	return s.accessorCreateWriter(ctx, storage, opts...)
 }
 
 // CreateDirWriter creates a writer for a folder in the specified storage.
@@ -74,7 +87,7 @@ func (s *Operations) CreateDirWriter(
 	opts ...options.Opt,
 ) (backup.Writer, error) {
 	opts = append(opts, options.WithDir(filepath.Join(storage.GetPath(), path)))
-	return s.getAccessor(storage).createWriter(ctx, storage, opts...)
+	return s.accessorCreateWriter(ctx, storage, opts...)
 }
 
 // ReadFile reads the content of a file in the specified storage.
@@ -109,7 +122,7 @@ func (s *Operations) createFileReader(
 	opts = append(opts,
 		options.WithFile(filepath.Join(storage.GetPath(), path)),
 		options.WithLogger(slog.Default()))
-	return s.getAccessor(storage).createReader(ctx, storage, opts...)
+	return s.accessorCreateReader(ctx, storage, opts...)
 }
 
 // ReadFiles reads the content of files in the specified storage matching the filter.
@@ -236,4 +249,15 @@ func (s *Operations) DeleteFolder(ctx context.Context, storage model.Storage, pa
 		return err
 	}
 	return writer.RemoveFiles(ctx)
+}
+
+// getAccessor returns the appropriate accessor for the given storage.
+func (s *Operations) getAccessor(storage model.Storage) (Accessor, error) {
+	for _, accessor := range s.accessors {
+		if accessor.supports(storage) {
+			return accessor, nil
+		}
+	}
+
+	return nil, fmt.Errorf("unsupported storage type %T", storage)
 }
