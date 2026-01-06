@@ -183,11 +183,21 @@ func runHTTPServer(
 	ctx context.Context, serverConfig *model.HTTPServerConfig, service *handlers.Service, logger *slog.Logger,
 ) error {
 	httpServer := server.NewHTTPServer(serverConfig, service, logger)
+
+	// Channel to capture server startup errors
+	errCh := make(chan error, 1)
 	go func() {
-		httpServer.Start()
+		if err := httpServer.Start(); err != nil {
+			errCh <- err
+		}
 	}()
 
-	<-ctx.Done()
+	// Wait for either context cancellation or server error
+	select {
+	case err := <-errCh:
+		return fmt.Errorf("HTTP server failed: %w", err)
+	case <-ctx.Done():
+	}
 
 	// shutdown the HTTP server gracefully
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
